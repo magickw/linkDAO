@@ -10,7 +10,8 @@
     "coverage": "hardhat coverage"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomicfoundation/hardhat-ethers": "^4.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "hardhat": "^3.0.0"
   },
   "dependencies": {
