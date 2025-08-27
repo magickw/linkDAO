@@ -1,169 +1,143 @@
 import { ethers } from 'ethers';
-import { UserProfile } from '../models/UserProfile';
-import { Post } from '../models/Post';
+import { UserProfileService } from './userProfileService';
+import { FollowService } from './followService';
+import { PostService } from './postService';
 
-// This would be replaced with actual contract ABIs and addresses
-const CONTRACT_ADDRESSES = {
-  PROFILE_REGISTRY: process.env.PROFILE_REGISTRY_ADDRESS || '0x0000000000000000000000000000000000000000',
-  FOLLOW_MODULE: process.env.FOLLOW_MODULE_ADDRESS || '0x0000000000000000000000000000000000000000',
-  PAYMENT_ROUTER: process.env.PAYMENT_ROUTER_ADDRESS || '0x0000000000000000000000000000000000000000',
-  GOVERNANCE: process.env.GOVERNANCE_ADDRESS || '0x0000000000000000000000000000000000000000',
-};
+// Contract ABIs (simplified for this example)
+const PROFILE_REGISTRY_ABI = [
+  "event ProfileCreated(address indexed owner, uint256 indexed tokenId, string handle, uint256 createdAt)",
+  "event ProfileUpdated(uint256 indexed tokenId, string handle, string avatarCid, string bioCid)"
+];
+
+const FOLLOW_MODULE_ABI = [
+  "event Followed(address indexed follower, address indexed following)",
+  "event Unfollowed(address indexed follower, address indexed following)"
+];
+
+const PAYMENT_ROUTER_ABI = [
+  "event PaymentSent(address indexed from, address indexed to, address token, uint256 amount, uint256 fee, string memo)"
+];
+
+const GOVERNANCE_ABI = [
+  "event ProposalCreated(uint256 id, address proposer, string title, string description, uint256 startBlock, uint256 endBlock)",
+  "event VoteCast(address voter, uint256 proposalId, bool support, uint256 votes, string reason)",
+  "event ProposalExecuted(uint256 id)"
+];
 
 export class IndexingService {
-  private provider: ethers.providers.JsonRpcProvider;
-  private profileRegistryContract: ethers.Contract;
-  private followModuleContract: ethers.Contract;
+  private provider: ethers.JsonRpcProvider;
+  private profileRegistry: ethers.Contract;
+  private followModule: ethers.Contract;
+  private paymentRouter: ethers.Contract;
+  private governance: ethers.Contract;
+  private profileService: UserProfileService;
+  private followService: FollowService;
+  private postService: PostService;
+  private lastBlock: number;
 
-  constructor() {
-    // Initialize provider with RPC URL
-    this.provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL || 'https://mainnet.base.org');
+  constructor(
+    rpcUrl: string,
+    profileRegistryAddress: string,
+    followModuleAddress: string,
+    paymentRouterAddress: string,
+    governanceAddress: string
+  ) {
+    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.profileRegistry = new ethers.Contract(profileRegistryAddress, PROFILE_REGISTRY_ABI, this.provider);
+    this.followModule = new ethers.Contract(followModuleAddress, FOLLOW_MODULE_ABI, this.provider);
+    this.paymentRouter = new ethers.Contract(paymentRouterAddress, PAYMENT_ROUTER_ABI, this.provider);
+    this.governance = new ethers.Contract(governanceAddress, GOVERNANCE_ABI, this.provider);
     
-    // Initialize contracts (these would be the actual contract ABIs)
-    // For now, we'll use simplified interfaces
-    this.profileRegistryContract = new ethers.Contract(
-      CONTRACT_ADDRESSES.PROFILE_REGISTRY,
-      [], // Simplified ABI
-      this.provider
-    );
+    this.profileService = new UserProfileService();
+    this.followService = new FollowService();
+    this.postService = new PostService();
     
-    this.followModuleContract = new ethers.Contract(
-      CONTRACT_ADDRESSES.FOLLOW_MODULE,
-      [], // Simplified ABI
-      this.provider
-    );
+    this.lastBlock = 0;
   }
 
-  /**
-   * Index profile creation events
-   */
-  async indexProfileCreations(fromBlock: number, toBlock: number): Promise<UserProfile[]> {
-    try {
-      // In a real implementation, we would:
-      // 1. Query the ProfileRegistry contract for ProfileCreated events
-      // 2. Extract profile data from the events
-      // 3. Store the data in our database
-      // 4. Return the indexed profiles
-      
-      console.log(`Indexing profile creations from block ${fromBlock} to ${toBlock}`);
-      
-      // This is a placeholder implementation
-      const profiles: UserProfile[] = [];
-      
-      // Simulate indexing process
-      // In reality, we would use:
-      // const events = await this.profileRegistryContract.queryFilter(
-      //   this.profileRegistryContract.filters.ProfileCreated(),
-      //   fromBlock,
-      //   toBlock
-      // );
-      
-      return profiles;
-    } catch (error) {
-      console.error('Error indexing profile creations:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Index follow events
-   */
-  async indexFollows(fromBlock: number, toBlock: number): Promise<any[]> {
-    try {
-      console.log(`Indexing follows from block ${fromBlock} to ${toBlock}`);
-      
-      // This is a placeholder implementation
-      const follows: any[] = [];
-      
-      // Simulate indexing process
-      // In reality, we would use:
-      // const events = await this.followModuleContract.queryFilter(
-      //   this.followModuleContract.filters.Followed(),
-      //   fromBlock,
-      //   toBlock
-      // );
-      
-      return follows;
-    } catch (error) {
-      console.error('Error indexing follows:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Index payment events
-   */
-  async indexPayments(fromBlock: number, toBlock: number): Promise<any[]> {
-    try {
-      console.log(`Indexing payments from block ${fromBlock} to ${toBlock}`);
-      
-      // This is a placeholder implementation
-      const payments: any[] = [];
-      
-      // Simulate indexing process
-      // In reality, we would query the PaymentRouter contract for PaymentSent events
-      
-      return payments;
-    } catch (error) {
-      console.error('Error indexing payments:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Index governance events
-   */
-  async indexGovernance(fromBlock: number, toBlock: number): Promise<any[]> {
-    try {
-      console.log(`Indexing governance events from block ${fromBlock} to ${toBlock}`);
-      
-      // This is a placeholder implementation
-      const proposals: any[] = [];
-      
-      // Simulate indexing process
-      // In reality, we would query the Governance contract for ProposalCreated, VoteCast, etc. events
-      
-      return proposals;
-    } catch (error) {
-      console.error('Error indexing governance:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the latest block number
-   */
-  async getLatestBlockNumber(): Promise<number> {
-    try {
-      return await this.provider.getBlockNumber();
-    } catch (error) {
-      console.error('Error getting latest block number:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Start continuous indexing
-   */
-  async startIndexing() {
-    console.log('Starting continuous indexing service...');
+  async start(): Promise<void> {
+    console.log('Starting blockchain indexer...');
     
-    // This would run in a loop, periodically checking for new events
-    // and indexing them
+    // Get the current block number
+    this.lastBlock = await this.provider.getBlockNumber();
+    console.log(`Current block number: ${this.lastBlock}`);
     
-    // For example:
-    // setInterval(async () => {
-    //   const latestBlock = await this.getLatestBlockNumber();
-    //   const lastIndexedBlock = await this.getLastIndexedBlock();
-    //   
-    //   if (latestBlock > lastIndexedBlock) {
-    //     await this.indexProfileCreations(lastIndexedBlock + 1, latestBlock);
-    //     await this.indexFollows(lastIndexedBlock + 1, latestBlock);
-    //     await this.indexPayments(lastIndexedBlock + 1, latestBlock);
-    //     await this.indexGovernance(lastIndexedBlock + 1, latestBlock);
-    //     
-    //     await this.updateLastIndexedBlock(latestBlock);
-    //   }
-    // }, 30000); // Check every 30 seconds
+    // Set up event listeners
+    this.setupEventListeners();
+    
+    // Start polling for new blocks
+    setInterval(() => this.pollNewBlocks(), 10000); // Poll every 10 seconds
+  }
+
+  private setupEventListeners(): void {
+    // Profile events
+    this.profileRegistry.on('ProfileCreated', (owner, tokenId, handle, createdAt, event) => {
+      console.log(`Profile created: ${owner} with handle ${handle}`);
+      // In a real implementation, we would update our database
+      // this.profileService.createProfile(owner, handle, tokenId.toString());
+    });
+
+    this.profileRegistry.on('ProfileUpdated', (tokenId, handle, avatarCid, bioCid, event) => {
+      console.log(`Profile updated: ${tokenId}`);
+      // In a real implementation, we would update our database
+      // this.profileService.updateProfile(tokenId.toString(), avatarCid, bioCid);
+    });
+
+    // Follow events
+    this.followModule.on('Followed', (follower, following, event) => {
+      console.log(`${follower} followed ${following}`);
+      // In a real implementation, we would update our database
+      // this.followService.follow(follower, following);
+    });
+
+    this.followModule.on('Unfollowed', (follower, following, event) => {
+      console.log(`${follower} unfollowed ${following}`);
+      // In a real implementation, we would update our database
+      // this.followService.unfollow(follower, following);
+    });
+
+    // Payment events
+    this.paymentRouter.on('PaymentSent', (from, to, token, amount, fee, memo, event) => {
+      console.log(`Payment sent: ${from} -> ${to}, ${amount.toString()} tokens`);
+      // In a real implementation, we would update our database
+    });
+
+    // Governance events
+    this.governance.on('ProposalCreated', (id, proposer, title, description, startBlock, endBlock, event) => {
+      console.log(`Proposal created: ${id} by ${proposer}`);
+      // In a real implementation, we would update our database
+    });
+
+    this.governance.on('VoteCast', (voter, proposalId, support, votes, reason, event) => {
+      console.log(`Vote cast: ${voter} on proposal ${proposalId}`);
+      // In a real implementation, we would update our database
+    });
+
+    this.governance.on('ProposalExecuted', (id, event) => {
+      console.log(`Proposal executed: ${id}`);
+      // In a real implementation, we would update our database
+    });
+  }
+
+  private async pollNewBlocks(): Promise<void> {
+    try {
+      const currentBlock = await this.provider.getBlockNumber();
+      
+      if (currentBlock > this.lastBlock) {
+        console.log(`Processing blocks ${this.lastBlock + 1} to ${currentBlock}`);
+        this.lastBlock = currentBlock;
+      }
+    } catch (error) {
+      console.error('Error polling new blocks:', error);
+    }
+  }
+
+  async stop(): Promise<void> {
+    console.log('Stopping blockchain indexer...');
+    // Remove event listeners
+    this.profileRegistry.removeAllListeners();
+    this.followModule.removeAllListeners();
+    this.paymentRouter.removeAllListeners();
+    this.governance.removeAllListeners();
   }
 }

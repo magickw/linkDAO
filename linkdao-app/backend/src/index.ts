@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import userProfileRoutes from './routes/userProfileRoutes';
 import postRoutes from './routes/postRoutes';
 import followRoutes from './routes/followRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { IndexerService } from './services/indexerService';
 
 // Load environment variables
@@ -32,6 +33,7 @@ app.get('/health', (req, res) => {
 app.use('/api/profiles', userProfileRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/follow', followRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Start indexer service
 const indexer = new IndexerService(
