@@ -1,25 +1,43 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
+import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { useWeb3 } from '@/context/Web3Context';
 
 export default function Wallet() {
+  const { address, balance } = useWeb3();
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
-  const [token, setToken] = useState('USDC');
-  const [balance, setBalance] = useState({
-    USDC: '1250.50',
-    USDT: '0.00',
-    ETH: '0.5432'
-  });
+  const [token, setToken] = useState('ETH');
+  
+  const {
+    sendEthPayment,
+    isSendingEth,
+    isEthSent,
+    sendTokenPayment,
+    isSendingToken,
+    isTokenSent
+  } = usePaymentRouter();
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would connect to the smart contract
-    console.log('Sending payment:', { amount, recipient, token });
-    alert(`Payment of ${amount} ${token} sent to ${recipient}!`);
     
-    // Reset form
-    setAmount('');
-    setRecipient('');
+    if (!recipient || !amount) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
+    const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
+    
+    if (token === 'ETH') {
+      sendEthPayment?.({
+        args: [recipient as `0x${string}`, amountInWei, ''],
+        value: amountInWei,
+      });
+    } else {
+      // For token payments, we would need the token address
+      // This is a simplified example
+      alert('Token payments not fully implemented in this example');
+    }
   };
 
   return (
@@ -30,21 +48,21 @@ export default function Wallet() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-lg font-medium text-gray-900">ETH Balance</h2>
+              <p className="text-3xl font-bold text-primary-600 mt-2">{balance} ETH</p>
+              <p className="text-gray-500 text-sm mt-1">Ethereum</p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-lg font-medium text-gray-900">USDC Balance</h2>
-              <p className="text-3xl font-bold text-primary-600 mt-2">{balance.USDC}</p>
+              <p className="text-3xl font-bold text-primary-600 mt-2">0.00</p>
               <p className="text-gray-500 text-sm mt-1">USD Coin</p>
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-lg font-medium text-gray-900">USDT Balance</h2>
-              <p className="text-3xl font-bold text-primary-600 mt-2">{balance.USDT}</p>
+              <p className="text-3xl font-bold text-primary-600 mt-2">0.00</p>
               <p className="text-gray-500 text-sm mt-1">Tether</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-lg font-medium text-gray-900">ETH Balance</h2>
-              <p className="text-3xl font-bold text-primary-600 mt-2">{balance.ETH}</p>
-              <p className="text-gray-500 text-sm mt-1">Ethereum</p>
             </div>
           </div>
           
@@ -62,9 +80,9 @@ export default function Wallet() {
                   onChange={(e) => setToken(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 >
+                  <option value="ETH">ETH</option>
                   <option value="USDC">USDC</option>
                   <option value="USDT">USDT</option>
-                  <option value="ETH">ETH</option>
                 </select>
               </div>
               
@@ -100,11 +118,18 @@ export default function Wallet() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  disabled={isSendingEth || isSendingToken}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                 >
-                  Send Payment
+                  {isSendingEth || isSendingToken ? 'Sending...' : 'Send Payment'}
                 </button>
               </div>
+              
+              {(isEthSent || isTokenSent) && (
+                <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md">
+                  Payment sent successfully!
+                </div>
+              )}
             </form>
           </div>
           

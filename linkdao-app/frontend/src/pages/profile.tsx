@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import { useProfileRegistry } from '@/hooks/useProfileRegistry';
+import { useWeb3 } from '@/context/Web3Context';
 
 export default function Profile() {
+  const { address, isConnected } = useWeb3();
+  const { useProfileByAddress, createProfile, isCreatingProfile, isProfileCreated, updateProfile, isUpdatingProfile, isProfileUpdated } = useProfileRegistry();
+  
   const [profile, setProfile] = useState({
     handle: '',
     ens: '',
     bio: '',
     avatar: '',
   });
+  
+  const { data: profileData, isLoading: isProfileLoading } = useProfileByAddress(address);
+
+  useEffect(() => {
+    if (profileData && profileData.handle) {
+      setProfile({
+        handle: profileData.handle,
+        ens: profileData.ens,
+        bio: profileData.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
+        avatar: profileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
+      });
+    }
+  }, [profileData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -16,16 +34,50 @@ export default function Profile() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would connect to the smart contract
-    console.log('Profile updated:', profile);
-    alert('Profile updated successfully!');
+    
+    if (!profile.handle) {
+      alert('Please enter a handle');
+      return;
+    }
+    
+    // If profile exists, update it, otherwise create it
+    if (profileData && profileData.handle) {
+      // Update existing profile (simplified - in reality tokenId would be stored)
+      updateProfile?.({
+        args: [1n, profile.avatar, profile.bio],
+      });
+    } else {
+      // Create new profile
+      createProfile?.({
+        args: [profile.handle, profile.ens, profile.avatar, profile.bio],
+      });
+    }
   };
+
+  if (!isConnected) {
+    return (
+      <Layout title="Profile - LinkDAO">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Your Profile</h1>
+            <p className="text-gray-600">Please connect your wallet to view and edit your profile.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Profile - LinkDAO">
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Your Profile</h1>
+          
+          {(isProfileLoading) && (
+            <div className="bg-white shadow rounded-lg p-6 mb-6">
+              <p>Loading profile...</p>
+            </div>
+          )}
           
           <div className="bg-white shadow rounded-lg p-6">
             <form onSubmit={handleSubmit}>
@@ -41,6 +93,7 @@ export default function Profile() {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="your-handle"
+                  disabled={!!(profileData && profileData.handle)}
                 />
               </div>
               
@@ -114,11 +167,18 @@ export default function Profile() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  disabled={isCreatingProfile || isUpdatingProfile}
+                  className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                 >
-                  Save Profile
+                  {(isCreatingProfile || isUpdatingProfile) ? 'Saving...' : 'Save Profile'}
                 </button>
               </div>
+              
+              {(isProfileCreated || isProfileUpdated) && (
+                <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md">
+                  Profile saved successfully!
+                </div>
+              )}
             </form>
           </div>
         </div>

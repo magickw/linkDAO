@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
+import { useGovernance } from '@/hooks/useGovernance';
+import { useWeb3 } from '@/context/Web3Context';
 
 export default function Governance() {
+  const { address, isConnected } = useWeb3();
+  const { propose, isProposing, isProposed, castVote, isVoting, isVoted, useProposalCount } = useGovernance();
+  
+  const { data: proposalCount } = useProposalCount();
+  
   const [proposals, setProposals] = useState([
     {
       id: 1,
@@ -36,13 +43,48 @@ export default function Governance() {
 
   const handleCreateProposal = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would connect to the smart contract
-    console.log('Creating proposal:', newProposal);
-    alert('Proposal created successfully!');
     
-    // Reset form
-    setNewProposal({ title: '', description: '' });
+    if (!newProposal.title || !newProposal.description) {
+      alert('Please fill in all fields');
+      return;
+    }
+    
+    // Create proposal on-chain
+    propose?.({
+      args: [
+        newProposal.title,
+        newProposal.description,
+        [], // targets
+        [], // values
+        [], // signatures
+        [], // calldatas
+      ],
+    });
   };
+
+  const handleVote = (proposalId: number, vote: boolean) => {
+    // Cast vote on-chain
+    castVote?.({
+      args: [
+        BigInt(proposalId),
+        vote,
+        '', // reason
+      ],
+    });
+  };
+
+  if (!isConnected) {
+    return (
+      <Layout title="Governance - LinkDAO">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Governance</h1>
+            <p className="text-gray-600">Please connect your wallet to participate in governance.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Governance - LinkDAO">
@@ -85,16 +127,28 @@ export default function Governance() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  disabled={isProposing}
+                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
                 >
-                  Create Proposal
+                  {isProposing ? 'Creating...' : 'Create Proposal'}
                 </button>
               </div>
+              
+              {isProposed && (
+                <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md">
+                  Proposal created successfully!
+                </div>
+              )}
             </form>
           </div>
           
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Active Proposals</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Active Proposals</h2>
+              <div className="text-sm text-gray-500">
+                Total Proposals: {proposalCount?.toString() || '0'}
+              </div>
+            </div>
             
             <div className="space-y-6">
               {proposals.map((proposal) => (
@@ -133,12 +187,26 @@ export default function Governance() {
                   
                   {proposal.status === 'Active' && (
                     <div className="mt-4 flex space-x-3">
-                      <button className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                        Vote Yes
+                      <button 
+                        className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                        onClick={() => handleVote(proposal.id, true)}
+                        disabled={isVoting}
+                      >
+                        {isVoting ? 'Voting...' : 'Vote Yes'}
                       </button>
-                      <button className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                        Vote No
+                      <button 
+                        className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                        onClick={() => handleVote(proposal.id, false)}
+                        disabled={isVoting}
+                      >
+                        {isVoting ? 'Voting...' : 'Vote No'}
                       </button>
+                    </div>
+                  )}
+                  
+                  {isVoted && (
+                    <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md">
+                      Vote cast successfully!
                     </div>
                   )}
                 </div>

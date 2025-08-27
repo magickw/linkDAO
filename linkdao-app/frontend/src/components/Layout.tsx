@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 interface LayoutProps {
   children: ReactNode;
@@ -21,30 +22,33 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
           <Link href="/" className="text-2xl font-bold text-primary-600">
             LinkDAO
           </Link>
-          <nav>
-            <ul className="flex space-x-4">
-              <li>
-                <Link href="/" className="text-gray-600 hover:text-primary-600">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/profile" className="text-gray-600 hover:text-primary-600">
-                  Profile
-                </Link>
-              </li>
-              <li>
-                <Link href="/wallet" className="text-gray-600 hover:text-primary-600">
-                  Wallet
-                </Link>
-              </li>
-              <li>
-                <Link href="/governance" className="text-gray-600 hover:text-primary-600">
-                  Governance
-                </Link>
-              </li>
-            </ul>
-          </nav>
+          <div className="flex items-center space-x-4">
+            <nav>
+              <ul className="flex space-x-4">
+                <li>
+                  <Link href="/" className="text-gray-600 hover:text-primary-600">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/profile" className="text-gray-600 hover:text-primary-600">
+                    Profile
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/wallet" className="text-gray-600 hover:text-primary-600">
+                    Wallet
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/governance" className="text-gray-600 hover:text-primary-600">
+                    Governance
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+            <ConnectButton />
+          </div>
         </div>
       </header>
 

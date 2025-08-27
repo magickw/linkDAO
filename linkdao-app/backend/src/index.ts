@@ -3,6 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import userProfileRoutes from './routes/userProfileRoutes';
+import postRoutes from './routes/postRoutes';
+import followRoutes from './routes/followRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -27,6 +29,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/profiles', userProfileRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/follow', followRoutes);
 
 // Start server
 app.listen(PORT, () => {
