@@ -199,5 +199,12 @@ export class AIBot {
   }
 }
 
-// Export singleton instance
-export const aiService = new AIService();
+// Export a factory function instead of a singleton instance
+let aiServiceInstance: AIService | null = null;
+
+export function getAIService(): AIService {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new AIService();
+  }
+  return aiServiceInstance;
+}

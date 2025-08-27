@@ -1,4 +1,4 @@
-import { AIBot, aiService, AIResponse } from '../aiService';
+import { AIBot, getAIService, AIResponse } from '../aiService';
 
 interface TransactionData {
   from: string;
@@ -20,7 +20,7 @@ export class WalletGuardBot extends AIBot {
         aiModel: 'gpt-4-turbo',
         persona: 'security-expert',
       },
-      aiService
+      getAIService()
     );
   }
 

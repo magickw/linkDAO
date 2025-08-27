@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * AI Bot Structure Verification Script
+ * AI Service Structure Verification Script
  * 
- * This script verifies that all AI bot files are in place.
+ * This script verifies that all AI service files are properly structured.
  * Run with: node scripts/verify-ai-structure.js
  */
 
@@ -19,65 +19,65 @@ function checkFileExists(filePath) {
   }
 }
 
-function verifyStructure() {
-  console.log('🔍 LinkDAO AI Bot Structure Verification');
-  console.log('========================================\n');
+function verifyAIStructure() {
+  console.log('🔍 LinkDAO AI Service Structure Verification');
+  console.log('==========================================\n');
 
-  // Check backend services
-  const backendServicesDir = path.join(__dirname, '..', 'backend', 'src', 'services');
-  const aiServiceFile = path.join(backendServicesDir, 'aiService.ts');
-  const botManagerFile = path.join(backendServicesDir, 'botManager.ts');
-  const botsDir = path.join(backendServicesDir, 'bots');
+  const backendDir = path.join(__dirname, '..', 'backend');
+  const srcDir = path.join(backendDir, 'src');
+  const servicesDir = path.join(srcDir, 'services');
+  const botsDir = path.join(servicesDir, 'bots');
+  const routesDir = path.join(srcDir, 'routes');
 
-  console.log('1. Checking core AI service files...');
+  // Check main AI service file
+  console.log('1. Checking main AI service...');
+  const aiServiceFile = path.join(servicesDir, 'aiService.ts');
   console.log(`   - AI Service: ${checkFileExists(aiServiceFile) ? '✅ Found' : '❌ Missing'}`);
+  
+  // Check bot manager
+  console.log('\n2. Checking bot manager...');
+  const botManagerFile = path.join(servicesDir, 'botManager.ts');
   console.log(`   - Bot Manager: ${checkFileExists(botManagerFile) ? '✅ Found' : '❌ Missing'}`);
-  console.log();
-
-  console.log('2. Checking individual bot files...');
+  
+  // Check individual bots
+  console.log('\n3. Checking individual bot implementations...');
   const botFiles = [
     'walletGuardBot.ts',
     'proposalSummarizerBot.ts',
     'communityModeratorBot.ts',
     'socialCopilotBot.ts'
   ];
-
+  
   botFiles.forEach(botFile => {
     const fullPath = path.join(botsDir, botFile);
     console.log(`   - ${botFile}: ${checkFileExists(fullPath) ? '✅ Found' : '❌ Missing'}`);
   });
-  console.log();
-
-  // Check API routes
-  const apiRoutesDir = path.join(__dirname, '..', 'backend', 'src', 'routes');
-  const aiRoutesFile = path.join(apiRoutesDir, 'aiRoutes.ts');
-
-  console.log('3. Checking API routes...');
+  
+  // Check AI routes
+  console.log('\n4. Checking AI routes...');
+  const aiRoutesFile = path.join(routesDir, 'aiRoutes.ts');
   console.log(`   - AI Routes: ${checkFileExists(aiRoutesFile) ? '✅ Found' : '❌ Missing'}`);
-  console.log();
-
+  
   // Check frontend components
-  const frontendComponentsDir = path.join(__dirname, '..', 'frontend', 'src', 'components');
-  const aiChatInterfaceFile = path.join(frontendComponentsDir, 'AIChatInterface.tsx');
-
-  console.log('4. Checking frontend components...');
+  console.log('\n5. Checking frontend components...');
+  const frontendDir = path.join(__dirname, '..', 'frontend');
+  const frontendSrcDir = path.join(frontendDir, 'src');
+  const componentsDir = path.join(frontendSrcDir, 'components');
+  const hooksDir = path.join(frontendSrcDir, 'hooks');
+  
+  const aiChatInterfaceFile = path.join(componentsDir, 'AIChatInterface.tsx');
   console.log(`   - AI Chat Interface: ${checkFileExists(aiChatInterfaceFile) ? '✅ Found' : '❌ Missing'}`);
-  console.log();
-
-  // Check frontend hooks
-  const frontendHooksDir = path.join(__dirname, '..', 'frontend', 'src', 'hooks');
-  const useAIBotsFile = path.join(frontendHooksDir, 'useAIBots.ts');
-
-  console.log('5. Checking frontend hooks...');
+  
+  const useAIBotsFile = path.join(hooksDir, 'useAIBots.ts');
   console.log(`   - useAIBots Hook: ${checkFileExists(useAIBotsFile) ? '✅ Found' : '❌ Missing'}`);
-  console.log();
-
-  console.log('🎉 Structure verification complete!');
+  
+  console.log('\n🎉 Structure verification complete!');
   console.log('\n📝 Next steps:');
-  console.log('   1. Set up environment variables (OPENAI_API_KEY, PINECONE_API_KEY)');
-  console.log('   2. Run the backend with: cd backend && npm run dev');
-  console.log('   3. Test the AI endpoints with the API documentation');
+  console.log('   1. Set up your environment variables in backend/.env');
+  console.log('   2. Build the backend: cd backend && npm run build');
+  console.log('   3. Run the backend: cd backend && npm run dev');
+  console.log('   4. Test the AI endpoints');
 }
 
 // Run the verification
-verifyStructure();
+verifyAIStructure();

@@ -66,6 +66,34 @@ npm run android      # Start on Android
 npm run ios          # Start on iOS
 ```
 
+## AI Features
+
+LinkDAO includes an advanced AI system with specialized bots for different functions:
+
+### AI Service Architecture
+- **AI Gateway**: Central service for LLM interactions
+- **Bot Framework**: Modular bot system
+- **Vector Database**: Pinecone for contextual retrieval
+- **On-chain Data**: Integration with Ethereum data
+
+### Available AI Bots
+1. **Wallet Guard**: Transaction safety analysis
+2. **Proposal Summarizer**: Governance proposal simplification
+3. **Community Moderator**: Content moderation
+4. **Social Copilot**: Content creation assistance
+
+### Running AI Demos
+```bash
+cd linkdao-app
+npx ts-node scripts/ai-demo.ts
+```
+
+### AI Development
+- Backend AI services: `/backend/src/services/aiService.ts`
+- Individual bots: `/backend/src/services/bots/`
+- Frontend components: `/frontend/src/components/AIChatInterface.tsx`
+- React hooks: `/frontend/src/hooks/useAIBots.ts`
+
 ## Development Workflow
 
 1. **Create a feature branch:**
@@ -92,6 +120,8 @@ npm run ios          # Start on iOS
 - [PRODUCT_SPEC.md](PRODUCT_SPEC.md) - Detailed product specifications
 - [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) - Technical architecture
 - [DELIVERY_PLAN.md](DELIVERY_PLAN.md) - Development timeline and milestones
+- [AI_INTEGRATION_PLAN.md](AI_INTEGRATION_PLAN.md) - AI integration strategy
+- [AI_DEVELOPER_GUIDE.md](AI_DEVELOPER_GUIDE.md) - AI development guidelines
 - [docs/DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md) - Coding standards and best practices
 
 ## Need Help?
@@ -106,6 +136,7 @@ npm run ios          # Start on iOS
 1. Get familiar with the codebase by exploring each workspace
 2. Set up your development environment
 3. Run the initialization script
-4. Start with a small task to get comfortable with the workflow
+4. Try the AI demo script
+5. Start with a small task to get comfortable with the workflow
 
 Happy coding!

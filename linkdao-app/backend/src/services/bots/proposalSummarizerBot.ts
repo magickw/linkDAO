@@ -1,4 +1,4 @@
-import { AIBot, aiService, AIResponse } from '../aiService';
+import { AIBot, getAIService, AIResponse } from '../aiService';
 
 interface ProposalData {
   id: string;
@@ -16,66 +16,42 @@ export class ProposalSummarizerBot extends AIBot {
     super(
       {
         name: 'Proposal Summarizer',
-        description: 'Explains DAO governance proposals in plain English',
+        description: 'Summarizes complex DAO governance proposals in plain language',
         scope: ['governance'],
         permissions: ['read-proposals'],
         aiModel: 'gpt-4-turbo',
-        persona: 'neutral-explainer',
+        persona: 'policy-analyst',
       },
-      aiService
+      getAIService()
     );
   }
 
-  async summarizeProposal(proposal: ProposalData): Promise<AIResponse> {
+  async processMessage(userMessage: string, userId: string): Promise<AIResponse> {
+    // In a real implementation, we would fetch the actual proposal data
+    // For now, we'll simulate with mock data
+    const proposalData = await this.aiService.getProposalData('proposal-123');
+    
     const prompt = `
-      Summarize this DAO governance proposal in plain English:
+      Summarize this DAO governance proposal for a non-technical community member:
       
-      Title: ${proposal.title}
-      Description: ${proposal.description}
+      Proposal Title: ${proposalData.title}
+      Description: ${proposalData.description}
       
       Voting Statistics:
-      For Votes: ${proposal.forVotes}
-      Against Votes: ${proposal.againstVotes}
-      
-      Proposal ID: ${proposal.id}
-      Proposer: ${proposal.proposer}
+      For Votes: ${proposalData.forVotes}
+      Against Votes: ${proposalData.againstVotes}
       
       Please provide:
-      1. A clear summary of what this proposal is about (2-3 sentences)
-      2. The key changes or actions being proposed
-      3. Potential impact on the DAO and its members
-      4. Current voting sentiment (if available)
-      
-      Use simple, non-technical language that any DAO member can understand.
+      1. A simple explanation of what this proposal does
+      2. The potential impact on the community
+      3. Key points to consider when voting
+      4. A recommendation in plain language
     `;
 
     return await this.aiService.generateText([
       {
         role: 'system',
-        content: 'You are an expert at explaining complex governance proposals in simple terms.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]);
-  }
-
-  async processMessage(userMessage: string, userId: string): Promise<AIResponse> {
-    const prompt = `
-      User is asking about governance proposals: "${userMessage}"
-      
-      Provide helpful information about:
-      1. How to understand governance proposals
-      2. What to look for when evaluating a proposal
-      3. How voting works in the DAO
-      4. The importance of participating in governance
-    `;
-
-    return await this.aiService.generateText([
-      {
-        role: 'system',
-        content: 'You are a DAO governance expert helping users understand and participate in governance.'
+        content: 'You are a policy analyst who specializes in explaining complex governance proposals in simple terms.'
       },
       {
         role: 'user',
