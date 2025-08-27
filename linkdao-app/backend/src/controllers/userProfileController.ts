@@ -5,43 +5,43 @@ import { CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserPr
 const userProfileService = new UserProfileService();
 
 export class UserProfileController {
-  async createProfile(req: Request, res: Response) {
+  async createProfile(req: Request, res: Response): Promise<Response> {
     try {
       const input: CreateUserProfileInput = req.body;
       const profile = await userProfileService.createProfile(input);
-      res.status(201).json(profile);
+      return res.status(201).json(profile);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 
-  async getProfileById(req: Request, res: Response) {
+  async getProfileById(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const profile = await userProfileService.getProfileById(id);
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      return res.json(profile);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
-  async getProfileByAddress(req: Request, res: Response) {
+  async getProfileByAddress(req: Request, res: Response): Promise<Response> {
     try {
       const { address } = req.params;
       const profile = await userProfileService.getProfileByAddress(address);
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      return res.json(profile);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
-  async updateProfile(req: Request, res: Response) {
+  async updateProfile(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const input: UpdateUserProfileInput = req.body;
@@ -49,31 +49,31 @@ export class UserProfileController {
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      return res.json(profile);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
-  async deleteProfile(req: Request, res: Response) {
+  async deleteProfile(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
       const deleted = await userProfileService.deleteProfile(id);
       if (!deleted) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 
-  async getAllProfiles(req: Request, res: Response) {
+  async getAllProfiles(req: Request, res: Response): Promise<Response> {
     try {
       const profiles = await userProfileService.getAllProfiles();
-      res.json(profiles);
+      return res.json(profiles);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   }
 }

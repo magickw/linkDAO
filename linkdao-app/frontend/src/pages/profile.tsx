@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { useProfileRegistry } from '@/hooks/useProfileRegistry';
+import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 
 export default function Profile() {
   const { address, isConnected } = useWeb3();
-  const { useProfileByAddress, createProfile, isCreatingProfile, isProfileCreated, updateProfile, isUpdatingProfile, isProfileUpdated } = useProfileRegistry();
+  const { data: profileData, isLoading: isProfileLoading } = useReadProfileRegistryGetProfileByAddress({
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address,
+    },
+  });
+  
+  const { 
+    writeContract: createProfile, 
+    isPending: isCreatingProfile, 
+    isSuccess: isProfileCreated 
+  } = useWriteProfileRegistryCreateProfile();
+  
+  const { 
+    writeContract: updateProfile, 
+    isPending: isUpdatingProfile, 
+    isSuccess: isProfileUpdated 
+  } = useWriteProfileRegistryUpdateProfile();
   
   const [profile, setProfile] = useState({
     handle: '',
@@ -13,8 +30,6 @@ export default function Profile() {
     bio: '',
     avatar: '',
   });
-  
-  const { data: profileData, isLoading: isProfileLoading } = useProfileByAddress(address);
 
   useEffect(() => {
     if (profileData && profileData.handle) {
@@ -43,12 +58,12 @@ export default function Profile() {
     // If profile exists, update it, otherwise create it
     if (profileData && profileData.handle) {
       // Update existing profile (simplified - in reality tokenId would be stored)
-      updateProfile?.({
+      updateProfile({
         args: [1n, profile.avatar, profile.bio],
       });
     } else {
       // Create new profile
-      createProfile?.({
+      createProfile({
         args: [profile.handle, profile.ens, profile.avatar, profile.bio],
       });
     }

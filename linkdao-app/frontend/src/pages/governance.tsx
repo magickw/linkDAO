@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
-import { useGovernance } from '@/hooks/useGovernance';
+import { useReadGovernanceProposalCount, useWriteGovernancePropose, useWriteGovernanceCastVote } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 
 export default function Governance() {
   const { address, isConnected } = useWeb3();
-  const { propose, isProposing, isProposed, castVote, isVoting, isVoted, useProposalCount } = useGovernance();
+  const { data: proposalCount } = useReadGovernanceProposalCount();
   
-  const { data: proposalCount } = useProposalCount();
+  const { 
+    writeContract: propose, 
+    isPending: isProposing, 
+    isSuccess: isProposed 
+  } = useWriteGovernancePropose();
+  
+  const { 
+    writeContract: castVote, 
+    isPending: isVoting, 
+    isSuccess: isVoted 
+  } = useWriteGovernanceCastVote();
   
   const [proposals, setProposals] = useState([
     {
@@ -50,7 +60,7 @@ export default function Governance() {
     }
     
     // Create proposal on-chain
-    propose?.({
+    propose({
       args: [
         newProposal.title,
         newProposal.description,
@@ -64,7 +74,7 @@ export default function Governance() {
 
   const handleVote = (proposalId: number, vote: boolean) => {
     // Cast vote on-chain
-    castVote?.({
+    castVote({
       args: [
         BigInt(proposalId),
         vote,
@@ -201,12 +211,6 @@ export default function Governance() {
                       >
                         {isVoting ? 'Voting...' : 'Vote No'}
                       </button>
-                    </div>
-                  )}
-                  
-                  {isVoted && (
-                    <div className="mt-4 p-4 bg-green-100 text-green-800 rounded-md">
-                      Vote cast successfully!
                     </div>
                   )}
                 </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Switch } from 'react-native';
 
 export default function WalletScreen() {
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [token, setToken] = useState('USDC');
+  const [useENS, setUseENS] = useState(false);
+  const [ensName, setEnsName] = useState('');
   
   const balances = {
     USDC: '1250.50',
@@ -13,13 +15,31 @@ export default function WalletScreen() {
   };
 
   const handleSend = () => {
+    // Validate input
+    if (!recipient && !useENS) {
+      Alert.alert('Error', 'Please enter a recipient address');
+      return;
+    }
+    
+    if (useENS && !ensName) {
+      Alert.alert('Error', 'Please enter an ENS name');
+      return;
+    }
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+    
     // In a real app, this would connect to the wallet service
-    console.log('Sending payment:', { amount, recipient, token });
-    Alert.alert('Success', `Payment of ${amount} ${token} sent to ${recipient}!`);
+    const recipientDisplay = useENS ? ensName : recipient;
+    console.log('Sending payment:', { amount, recipient: recipientDisplay, token });
+    Alert.alert('Success', `Payment of ${amount} ${token} sent to ${recipientDisplay}!`);
     
     // Reset form
     setAmount('');
     setRecipient('');
+    setEnsName('');
   };
 
   return (
@@ -85,18 +105,54 @@ export default function WalletScreen() {
         </View>
         
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Recipient Address</Text>
-          <TextInput
-            style={styles.input}
-            value={recipient}
-            onChangeText={setRecipient}
-            placeholder="0x..."
-          />
+          <View style={styles.switchContainer}>
+            <Text style={styles.label}>Use ENS Name</Text>
+            <Switch
+              value={useENS}
+              onValueChange={setUseENS}
+            />
+          </View>
+          
+          {useENS ? (
+            <TextInput
+              style={styles.input}
+              value={ensName}
+              onChangeText={setEnsName}
+              placeholder="username.eth"
+            />
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={recipient}
+              onChangeText={setRecipient}
+              placeholder="0x..."
+            />
+          )}
         </View>
         
         <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
           <Text style={styles.sendButtonText}>Send Payment</Text>
         </TouchableOpacity>
+      </View>
+      
+      <View style={styles.recentTransactions}>
+        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        
+        <View style={styles.transactionItem}>
+          <View style={styles.transactionInfo}>
+            <Text style={styles.transactionText}>Received from 0x1234...5678</Text>
+            <Text style={styles.transactionDate}>2023-07-15</Text>
+          </View>
+          <Text style={styles.transactionAmountPositive}>+100 USDC</Text>
+        </View>
+        
+        <View style={styles.transactionItem}>
+          <View style={styles.transactionInfo}>
+            <Text style={styles.transactionText}>Sent to 0x8765...4321</Text>
+            <Text style={styles.transactionDate}>2023-07-10</Text>
+          </View>
+          <Text style={styles.transactionAmountNegative}>-50 USDC</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -155,6 +211,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 8,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  recentTransactions: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -172,6 +242,12 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     marginBottom: 20,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   label: {
     fontSize: 16,
@@ -222,5 +298,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 4,
+  },
+  transactionDate: {
+    fontSize: 14,
+    color: '#999',
+  },
+  transactionAmountPositive: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10b981',
+  },
+  transactionAmountNegative: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ef4444',
   },
 });

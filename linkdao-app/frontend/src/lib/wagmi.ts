@@ -1,38 +1,26 @@
-import { createConfig, configureChains, mainnet } from 'wagmi'
-import { base, baseGoerli } from 'wagmi/chains'
-import { publicProvider } from 'wagmi/providers/public'
-import { InjectedConnector } from 'wagmi/connectors/injected'
-import { MetaMaskConnector } from 'wagmi/connectors/metaMask'
-import { WalletConnectConnector } from 'wagmi/connectors/walletConnect'
-
-// Configure chains & providers
-const { chains, publicClient, webSocketPublicClient } = configureChains(
-  [base, baseGoerli, mainnet],
-  [publicProvider()]
-)
+import { createConfig, http } from 'wagmi'
+import { base, baseGoerli, mainnet } from 'wagmi/chains'
+import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 
 // Set up wagmi config
 export const config = createConfig({
-  autoConnect: true,
+  chains: [base, baseGoerli, mainnet],
   connectors: [
-    new MetaMaskConnector({ chains }),
-    new InjectedConnector({
-      chains,
-      options: {
-        name: 'Injected',
-        shimDisconnect: true,
+    metaMask(),
+    injected({
+      target() {
+        return { id: 'injected', name: 'Injected', provider: typeof window !== 'undefined' ? window.ethereum : undefined }
       },
     }),
-    new WalletConnectConnector({
-      chains,
-      options: {
-        projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
-        showQrModal: true,
-      },
+    walletConnect({
+      projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
     }),
   ],
-  publicClient,
-  webSocketPublicClient,
+  transports: {
+    [base.id]: http(),
+    [baseGoerli.id]: http(),
+    [mainnet.id]: http(),
+  },
 })
 
-export { chains }
+export { base, baseGoerli, mainnet }

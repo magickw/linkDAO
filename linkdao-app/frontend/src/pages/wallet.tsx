@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '@/components/Layout';
-import { usePaymentRouter } from '@/hooks/usePaymentRouter';
+import { useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 
 export default function Wallet() {
@@ -10,13 +10,16 @@ export default function Wallet() {
   const [token, setToken] = useState('ETH');
   
   const {
-    sendEthPayment,
-    isSendingEth,
-    isEthSent,
-    sendTokenPayment,
-    isSendingToken,
-    isTokenSent
-  } = usePaymentRouter();
+    writeContract: sendEthPayment,
+    isPending: isSendingEth,
+    isSuccess: isEthSent,
+  } = useWritePaymentRouterSendEthPayment();
+
+  const {
+    writeContract: sendTokenPayment,
+    isPending: isSendingToken,
+    isSuccess: isTokenSent,
+  } = useWritePaymentRouterSendTokenPayment();
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +32,7 @@ export default function Wallet() {
     const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
     
     if (token === 'ETH') {
-      sendEthPayment?.({
+      sendEthPayment({
         args: [recipient as `0x${string}`, amountInWei, ''],
         value: amountInWei,
       });
