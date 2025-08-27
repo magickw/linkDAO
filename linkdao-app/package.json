@@ -1,0 +1,28 @@
+{
+  "name": "linkdao",
+  "version": "0.1.0",
+  "description": "A web3-based social platform with native cryptocurrency wallets and DAO governance",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "contracts",
+    "mobile"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "deploy:contracts": "npm run deploy --workspace=contracts",
+    "start:frontend": "npm start --workspace=frontend",
+    "start:backend": "npm start --workspace=backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

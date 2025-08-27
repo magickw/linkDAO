@@ -1,0 +1,19 @@
+{
+  "name": "@linkdao/contracts",
+  "version": "0.1.0",
+  "description": "Smart contracts for LinkDAO",
+  "type": "module",
+  "scripts": {
+    "build": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.ts",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "hardhat": "^3.0.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.0"
+  }
+}
