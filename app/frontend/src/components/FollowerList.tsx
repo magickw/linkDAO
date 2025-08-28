@@ -15,9 +15,9 @@ export default function FollowerList({ userAddress, className = '' }: FollowerLi
   if (isLoading) {
     return (
       <div className={className}>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
-        <div className="bg-white shadow rounded-lg p-6">
-          <p>Loading followers...</p>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers</h2>
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <p className="text-gray-600 dark:text-gray-300">Loading followers...</p>
         </div>
       </div>
     );
@@ -26,8 +26,8 @@ export default function FollowerList({ userAddress, className = '' }: FollowerLi
   if (error) {
     return (
       <div className={className}>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers</h2>
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
           <p>Error loading followers: {error}</p>
         </div>
       </div>
@@ -37,9 +37,9 @@ export default function FollowerList({ userAddress, className = '' }: FollowerLi
   if (followers.length === 0) {
     return (
       <div className={className}>
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
-        <div className="bg-white shadow rounded-lg p-6 text-center">
-          <p className="text-gray-500">No followers yet</p>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers</h2>
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
+          <p className="text-gray-500 dark:text-gray-400">No followers yet</p>
         </div>
       </div>
     );
@@ -72,7 +72,7 @@ export default function FollowerList({ userAddress, className = '' }: FollowerLi
 
   return (
     <div className={className}>
-      <h2 className="text-lg font-medium text-gray-900 mb-4">Followers ({followers.length})</h2>
+      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers ({followers.length})</h2>
       <div className="space-y-4">
         {followerProfiles.map((profile) => (
           <ProfileCard 

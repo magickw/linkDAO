@@ -13,11 +13,11 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
   const showFollowButton = currentUserAddress && profile.address !== currentUserAddress;
 
   return (
-    <div className={`bg-white shadow rounded-lg p-4 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-4 ${className}`}>
       <div className="flex items-center">
         <div className="flex-shrink-0">
           <img 
-            className="h-12 w-12 rounded-full" 
+            className="h-12 w-12 rounded-full border-2 border-primary-500" 
             src={profile.avatarCid || 'https://via.placeholder.com/48'} 
             alt={profile.handle} 
           />
@@ -25,11 +25,11 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
         <div className="ml-4 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <Link href={`/profile/${profile.address}`} className="text-sm font-medium text-gray-900 hover:text-primary-600">
+              <Link href={`/profile/${profile.address}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
                 {profile.handle}
               </Link>
               {profile.ens && (
-                <div className="text-xs text-gray-500">{profile.ens}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{profile.ens}</div>
               )}
             </div>
             {showFollowButton && (
@@ -40,7 +40,7 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
             )}
           </div>
           {profile.bioCid && (
-            <p className="mt-1 text-sm text-gray-600 truncate">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 truncate">
               {profile.bioCid}
             </p>
           )}

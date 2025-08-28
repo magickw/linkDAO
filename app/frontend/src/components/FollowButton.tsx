@@ -40,9 +40,9 @@ export default function FollowButton({ targetUserAddress, className = '' }: Foll
     <button
       onClick={handleFollowToggle}
       disabled={isLoading || !isConnected}
-      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${
+      className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800 ${
         isFollowing
-          ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600'
           : 'bg-primary-600 text-white hover:bg-primary-700'
       } ${className} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
