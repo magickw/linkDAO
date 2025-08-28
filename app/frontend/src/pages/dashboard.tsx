@@ -11,6 +11,17 @@ import BottomSheet, { PostActions } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
+// Helper function to determine post type based on tags
+const getPostType = (post: any) => {
+  if (post.tags && post.tags.length > 0) {
+    if (post.tags.includes('defi')) return 'defi';
+    if (post.tags.includes('nft')) return 'nft';
+    if (post.tags.includes('governance')) return 'governance';
+    if (post.tags.includes('marketplace')) return 'marketplace';
+  }
+  return 'default';
+};
+
 // Mock profile data - only used as fallback
 const mockProfiles: Record<string, any> = {
   '0x1234567890123456789012345678901234567890': {
@@ -53,8 +64,7 @@ const mockPosts = [
     onchainRef: '0x1234...5678',
     reputationScore: 750,
     commentCount: 24,
-    stakedValue: 120,
-    postType: 'defi' // Added post type for visual styling
+    stakedValue: 120
   },
   {
     id: '2',
@@ -68,8 +78,7 @@ const mockPosts = [
     onchainRef: '0x2345...6789',
     reputationScore: 420,
     commentCount: 18,
-    stakedValue: 85,
-    postType: 'nft' // Added post type for visual styling
+    stakedValue: 85
   },
   {
     id: '3',
@@ -83,8 +92,7 @@ const mockPosts = [
     onchainRef: '0x3456...7890',
     reputationScore: 890,
     commentCount: 56,
-    stakedValue: 210,
-    postType: 'governance' // Added post type for visual styling
+    stakedValue: 210
   },
   {
     id: '4',
@@ -98,8 +106,7 @@ const mockPosts = [
     onchainRef: '0x4567...8901',
     reputationScore: 750,
     commentCount: 42,
-    stakedValue: 165,
-    postType: 'defi' // Added post type for visual styling
+    stakedValue: 165
   },
   {
     id: '5',
@@ -113,8 +120,7 @@ const mockPosts = [
     onchainRef: '0x5678...9012',
     reputationScore: 890,
     commentCount: 12,
-    stakedValue: 95,
-    postType: 'marketplace' // Added post type for visual styling
+    stakedValue: 95
   }
 ];
 
@@ -560,10 +566,10 @@ export default function Dashboard() {
                         
                         return (
                           <div key={post.id} className={`relative rounded-2xl overflow-hidden ${
-                            post.postType === 'defi' ? 'border-l-4 border-l-green-500' :
-                            post.postType === 'nft' ? 'border-l-4 border-l-purple-500' :
-                            post.postType === 'governance' ? 'border-l-4 border-l-blue-500' :
-                            post.postType === 'marketplace' ? 'border-l-4 border-l-orange-500' :
+                            getPostType(post) === 'defi' ? 'border-l-4 border-l-green-500' :
+                            getPostType(post) === 'nft' ? 'border-l-4 border-l-purple-500' :
+                            getPostType(post) === 'governance' ? 'border-l-4 border-l-blue-500' :
+                            getPostType(post) === 'marketplace' ? 'border-l-4 border-l-orange-500' :
                             'border-l-4 border-l-gray-500'
                           }`}>
                             <Web3SocialPostCard 
@@ -593,10 +599,10 @@ export default function Dashboard() {
                       
                       return (
                         <div key={post.id} className={`relative rounded-2xl overflow-hidden ${
-                          post.postType === 'defi' ? 'border-l-4 border-l-green-500' :
-                          post.postType === 'nft' ? 'border-l-4 border-l-purple-500' :
-                          post.postType === 'governance' ? 'border-l-4 border-l-blue-500' :
-                          post.postType === 'marketplace' ? 'border-l-4 border-l-orange-500' :
+                          getPostType(post) === 'defi' ? 'border-l-4 border-l-green-500' :
+                          getPostType(post) === 'nft' ? 'border-l-4 border-l-purple-500' :
+                          getPostType(post) === 'governance' ? 'border-l-4 border-l-blue-500' :
+                          getPostType(post) === 'marketplace' ? 'border-l-4 border-l-orange-500' :
                           'border-l-4 border-l-gray-500'
                         }`}>
                           <Web3SocialPostCard 

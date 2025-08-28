@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { db } from '../db';
-import { tips, creatorRewards, rewardEpochs } from '../db/schema';
+import { tips } from '../db/schema';
+// import { creatorRewards, rewardEpochs } from '../db/schema'; // These tables don't exist in schema.ts
 import { eq, and, gte, lte } from 'drizzle-orm';
 
 export class TipService {
@@ -87,6 +88,7 @@ export class TipService {
   /**
    * Get user's claimable rewards
    */
+  /*
   async getClaimableRewards(userId: string) {
     try {
       const result = await db.select()
@@ -105,10 +107,12 @@ export class TipService {
       throw error;
     }
   }
+  */
 
   /**
    * Claim user rewards
    */
+  /*
   async claimRewards(userId: string) {
     try {
       // Mark rewards as claimed by setting claimedAt timestamp
@@ -126,6 +130,7 @@ export class TipService {
       throw error;
     }
   }
+  */
 
   /**
    * Get tips within a date range for reward calculation
@@ -147,6 +152,7 @@ export class TipService {
   /**
    * Create a new reward epoch
    */
+  /*
   async createRewardEpoch(epoch: number, fundedAmount: string, startAt: Date, endAt: Date) {
     try {
       const result = await db.insert(rewardEpochs).values({
@@ -162,10 +168,12 @@ export class TipService {
       throw error;
     }
   }
+  */
 
   /**
    * Credit rewards to a creator
    */
+  /*
   async creditCreatorRewards(epoch: number, userId: string, earned: string) {
     try {
       const result = await db.insert(creatorRewards).values({
@@ -180,4 +188,5 @@ export class TipService {
       throw error;
     }
   }
+  */
 }

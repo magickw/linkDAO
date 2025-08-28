@@ -8,7 +8,7 @@ export class TipController {
   /**
    * Create a new tip
    */
-  async createTip(req: Request, res: Response) {
+  async createTip(req: Request, res: Response): Promise<Response> {
     try {
       const { postId, creatorAddress, amount, message } = req.body;
       const { address: fromAddress } = req.user as { address: string };
@@ -72,7 +72,7 @@ export class TipController {
       //   message
       // );
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         permitData,
         tip: {
@@ -86,14 +86,14 @@ export class TipController {
       });
     } catch (error) {
       console.error('Error creating tip:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
   /**
    * Get earnings for a user
    */
-  async getUserEarnings(req: Request, res: Response) {
+  async getUserEarnings(req: Request, res: Response): Promise<Response> {
     try {
       const { id: userId } = req.params;
       
@@ -110,17 +110,17 @@ export class TipController {
         totalCreators: 1240,
       };
 
-      res.json(earnings);
+      return res.json(earnings);
     } catch (error) {
       console.error('Error fetching earnings:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
   /**
    * Claim rewards
    */
-  async claimRewards(req: Request, res: Response) {
+  async claimRewards(req: Request, res: Response): Promise<Response> {
     try {
       const { address: userAddress } = req.user as { address: string };
       
@@ -136,20 +136,20 @@ export class TipController {
         value: '0',
       };
 
-      res.json({
+      return res.json({
         success: true,
         transactionData,
       });
     } catch (error) {
       console.error('Error claiming rewards:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
   /**
    * Get tips for a post
    */
-  async getPostTips(req: Request, res: Response) {
+  async getPostTips(req: Request, res: Response): Promise<Response> {
     try {
       const { id: postId } = req.params;
       
@@ -182,10 +182,10 @@ export class TipController {
         },
       ];
 
-      res.json(tips);
+      return res.json(tips);
     } catch (error) {
       console.error('Error fetching post tips:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 }
