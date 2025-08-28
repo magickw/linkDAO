@@ -1,7 +1,8 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +10,20 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
+  const { address, isConnected } = useAccount();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // For demo purposes, we'll consider a specific address as admin
+  // In a real implementation, this would be checked against a backend service
+  useEffect(() => {
+    if (isConnected && address) {
+      // This is a placeholder - in a real app, you would check admin status via backend
+      // For demo, we'll use a specific address as admin
+      const adminAddress = process.env.NEXT_PUBLIC_ADMIN_ADDRESS?.toLowerCase();
+      setIsAdmin(address.toLowerCase() === adminAddress);
+    }
+  }, [address, isConnected]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
@@ -31,6 +46,11 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                   </Link>
                 </li>
                 <li>
+                  <Link href="/social" className="text-gray-600 hover:text-primary-600">
+                    Feed
+                  </Link>
+                </li>
+                <li>
                   <Link href="/profile" className="text-gray-600 hover:text-primary-600">
                     Profile
                   </Link>
@@ -45,6 +65,13 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                     Governance
                   </Link>
                 </li>
+                {isAdmin && (
+                  <li>
+                    <Link href="/admin" className="text-gray-600 hover:text-primary-600">
+                      Admin
+                    </Link>
+                  </li>
+                )}
               </ul>
             </nav>
             <ConnectButton />

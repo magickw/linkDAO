@@ -24,6 +24,11 @@ const GOVERNANCE_ABI = [
   "event ProposalExecuted(uint256 id)"
 ];
 
+// Token contract ABI for transfer events (optional)
+const TOKEN_ABI = [
+  "event Transfer(address indexed from, address indexed to, uint256 value)"
+];
+
 export class IndexerService {
   private provider: ethers.JsonRpcProvider;
   private profileRegistry: ethers.Contract | null = null;

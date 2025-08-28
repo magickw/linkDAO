@@ -42,6 +42,8 @@ const indexer = new IndexerService(
   process.env.FOLLOW_MODULE_ADDRESS || '0x2345678901245678901234567890123456789012',
   process.env.PAYMENT_ROUTER_ADDRESS || '0x3456789012345678901234567890123456789012',
   process.env.GOVERNANCE_ADDRESS || '0x4567890123456789012345678901234567890123'
+  // Note: Token contract events are typically not indexed in the same way as other contracts
+  // but we could add token transfer event indexing if needed
 );
 
 indexer.start().catch(console.error);

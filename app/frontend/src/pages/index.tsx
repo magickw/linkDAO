@@ -48,10 +48,10 @@ export default function Home() {
           
           <div className="mt-12">
             <Link 
-              href="/signup" 
+              href="/register" 
               className="inline-block bg-primary-600 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-primary-700 transition-colors"
             >
-              Get Started
+              Create Your Profile
             </Link>
           </div>
         </div>
