@@ -52,4 +52,57 @@ Each workspace has its own development commands. Check the respective README fil
 
 ## Deployment
 
-Deployment scripts are located in the `scripts/` directory.
+### Frontend Deployment (Vercel)
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Set the root directory to `app/frontend`
+4. Add the environment variables to Vercel
+5. Deploy
+
+The `legacyPeerDeps` configuration has been added to resolve dependency conflicts:
+- Root package.json
+- Frontend package.json
+- Backend package.json
+- Contracts package.json
+- Mobile package.json
+
+### Backend Deployment (Render and other platforms)
+
+1. Choose a hosting provider (Render, Railway, Heroku, etc.)
+2. Connect your GitHub repository
+3. Set the root directory to `app/backend`
+4. Set the build command to `npm run build`
+5. Set the start command to `npm start`
+6. Add the environment variables from `app/backend/.env`
+7. Deploy
+
+For Render specifically:
+- Set the root directory to `app/backend`
+- Set build command to `npm run build`
+- Set start command to `npm start`
+- Configure environment variables:
+  - `DATABASE_URL` (PostgreSQL connection string)
+  - `REDIS_URL` (Redis connection string)
+  - `JWT_SECRET` (Random string for JWT signing)
+  - Other variables as needed from `app/backend/.env`
+
+### Smart Contract Deployment
+
+1. Update the `.env` file in the `contracts` directory with your wallet private key
+2. Run the deployment script:
+
+```bash
+cd app/contracts
+npm run deploy
+```
+
+3. Note the deployed contract addresses and update the frontend and backend configurations accordingly
+
+For detailed deployment instructions, see:
+- [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - Comprehensive deployment guide
+- [RENDER_DEPLOYMENT_FIXES.md](docs/RENDER_DEPLOYMENT_FIXES.md) - Specific fixes for Render deployment issues
+
+## Troubleshooting
+
+If you encounter dependency conflicts during deployment, the `legacyPeerDeps` configuration should resolve them. This has been added to all package.json files and .npmrc files to ensure consistency across all environments.
