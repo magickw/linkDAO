@@ -15,17 +15,17 @@ const mockProfiles: Record<string, any> = {
   '0x1234567890123456789012345678901234567890': {
     handle: 'alexj',
     ens: 'alex.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
   '0x2345678901234567890123456789012345678901': {
     handle: 'samc',
     ens: 'sam.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
   '0x3456789012345678901234567890123456789012': {
     handle: 'taylorr',
     ens: 'taylor.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
 };
 
@@ -46,7 +46,7 @@ const mockPosts = [
     author: '0x2345678901234567890123456789012345678901',
     parentId: null,
     contentCid: 'Check out my latest NFT collection drop! Each piece represents a different DeFi protocol. Feedback welcome.',
-    mediaCids: ['https://via.placeholder.com/300'],
+    mediaCids: ['https://placehold.co/300'],
     tags: ['nft', 'art', 'defi'],
     createdAt: new Date(Date.now() - 7200000),
     onchainRef: '0x2345...6789',
@@ -247,7 +247,7 @@ export default function CommunityPage() {
                   const authorProfile = mockProfiles[post.author] || { 
                     handle: 'Unknown', 
                     ens: '', 
-                    avatarCid: 'https://via.placeholder.com/40' 
+                    avatarCid: 'https://placehold.co/40' 
                   };
                   
                   return (

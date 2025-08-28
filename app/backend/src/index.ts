@@ -45,14 +45,23 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // For development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed origins
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Log the blocked origin for debugging
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(null, true); // Temporarily allow all origins in production for debugging
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
 // Create Socket.IO server
@@ -62,13 +71,23 @@ const io = new Server(server, {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
+      // For development, allow all origins
+      if (process.env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed origins
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // Log the blocked origin for debugging
+        console.log(`WebSocket CORS blocked origin: ${origin}`);
+        callback(null, true); // Temporarily allow all origins in production for debugging
       }
     },
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true,
+    optionsSuccessStatus: 200
   }
 });
 

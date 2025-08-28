@@ -210,7 +210,7 @@ export default function Profile() {
                 <div className="relative">
                   <img 
                     className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-white dark:border-gray-700 shadow" 
-                    src={profile.avatar || 'https://via.placeholder.com/128'} 
+                    src={profile.avatar || 'https://placehold.co/128'} 
                     alt={profile.handle} 
                   />
                   <div className="absolute bottom-0 right-0 bg-primary-500 rounded-full p-1">

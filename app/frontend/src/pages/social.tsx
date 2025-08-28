@@ -16,17 +16,17 @@ const mockProfiles: Record<string, any> = {
   '0x1234567890123456789012345678901234567890': {
     handle: 'alexj',
     ens: 'alex.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
   '0x2345678901234567890123456789012345678901': {
     handle: 'samc',
     ens: 'sam.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
   '0x3456789012345678901234567890123456789012': {
     handle: 'taylorr',
     ens: 'taylor.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
   },
 };
 
@@ -238,7 +238,7 @@ export default function SocialFeed() {
                       const authorProfile = profiles[post.author] || { 
                         handle: 'Unknown', 
                         ens: '', 
-                        avatarCid: 'https://via.placeholder.com/40' 
+                        avatarCid: 'https://placehold.co/40' 
                       };
                       
                       return (

@@ -12,8 +12,13 @@ class WebSocketService {
       return;
     }
 
+    // Add additional options for better connection handling
     this.socket = io(BACKEND_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'], // Try WebSocket first, then polling
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
     });
 
     this.socket.on('connect', () => {
@@ -21,9 +26,14 @@ class WebSocketService {
       this.emit('connected');
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket server');
+    this.socket.on('disconnect', (reason) => {
+      console.log('Disconnected from WebSocket server:', reason);
       this.emit('disconnected');
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+      this.emit('error', error.message);
     });
 
     // Listen for all custom events and emit them to local listeners
@@ -78,6 +88,8 @@ class WebSocketService {
   send(event: string, data: any) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
+    } else {
+      console.warn('Cannot send message, WebSocket not connected');
     }
   }
 

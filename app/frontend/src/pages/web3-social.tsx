@@ -15,7 +15,7 @@ const mockProfiles: Record<string, any> = {
   '0x1234567890123456789012345678901234567890': {
     handle: 'alexj',
     ens: 'alex.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 750,
     reputationTier: 'Expert',
     verified: true
@@ -23,7 +23,7 @@ const mockProfiles: Record<string, any> = {
   '0x2345678901234567890123456789012345678901': {
     handle: 'samc',
     ens: 'sam.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 420,
     reputationTier: 'Apprentice',
     verified: false
@@ -31,7 +31,7 @@ const mockProfiles: Record<string, any> = {
   '0x3456789012345678901234567890123456789012': {
     handle: 'taylorr',
     ens: 'taylor.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 890,
     reputationTier: 'Master',
     verified: true
@@ -60,7 +60,7 @@ const mockPosts = [
     dao: 'nft-collectors',
     title: 'My Latest NFT Collection Drop',
     contentCid: 'Check out my latest NFT collection drop! Each piece represents a different DeFi protocol. Feedback welcome.',
-    mediaCids: ['https://via.placeholder.com/300'],
+    mediaCids: ['https://placehold.co/300'],
     tags: ['nft', 'art', 'defi'],
     createdAt: new Date(Date.now() - 7200000),
     onchainRef: '0x2345...6789',
@@ -298,7 +298,7 @@ export default function Web3SocialFeed() {
                   const authorProfile = profiles[post.author] || { 
                     handle: 'Unknown', 
                     ens: '', 
-                    avatarCid: 'https://via.placeholder.com/40',
+                    avatarCid: 'https://placehold.co/40',
                     reputationScore: 0,
                     reputationTier: 'Novice',
                     verified: false

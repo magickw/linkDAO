@@ -37,7 +37,7 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
     if (media) {
       // In a real implementation, we would upload the media to IPFS and store the CID
       // For now, we'll just add a placeholder
-      postData.media = ['https://via.placeholder.com/300'];
+      postData.media = ['https://placehold.co/300'];
     }
     
     // Add NFT information if it's an NFT post

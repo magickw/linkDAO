@@ -268,7 +268,7 @@ export default function Web3SocialPostCard({
         {
           id: '1',
           name: 'Crypto Punk #1234',
-          image: 'https://via.placeholder.com/300',
+          image: 'https://placehold.co/300',
           collection: 'Crypto Punks',
           tokenId: '1234',
           contractAddress: '0x1234567890123456789012345678901234567890'

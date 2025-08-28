@@ -11,12 +11,12 @@ import BottomSheet, { PostActions } from '@/components/BottomSheet';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// Mock profile data
+// Mock profile data - only used as fallback
 const mockProfiles: Record<string, any> = {
   '0x1234567890123456789012345678901234567890': {
     handle: 'alexj',
     ens: 'alex.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 750,
     reputationTier: 'Expert',
     verified: true
@@ -24,7 +24,7 @@ const mockProfiles: Record<string, any> = {
   '0x2345678901234567890123456789012345678901': {
     handle: 'samc',
     ens: 'sam.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 420,
     reputationTier: 'Apprentice',
     verified: false
@@ -32,14 +32,14 @@ const mockProfiles: Record<string, any> = {
   '0x3456789012345678901234567890123456789012': {
     handle: 'taylorr',
     ens: 'taylor.eth',
-    avatarCid: 'https://via.placeholder.com/40',
+    avatarCid: 'https://placehold.co/40',
     reputationScore: 890,
     reputationTier: 'Master',
     verified: true
   },
 };
 
-// Enhanced mock posts data with different content types
+// Enhanced mock posts data with different content types - only used as fallback
 const mockPosts = [
   {
     id: '1',
@@ -62,7 +62,7 @@ const mockPosts = [
     dao: 'nft-collectors',
     title: 'My Latest NFT Collection Drop',
     contentCid: 'Check out my latest NFT collection drop! Each piece represents a different DeFi protocol. Feedback welcome.',
-    mediaCids: ['https://via.placeholder.com/300'],
+    mediaCids: ['https://placehold.co/300'],
     tags: ['nft', 'art', 'defi'],
     createdAt: new Date(Date.now() - 7200000),
     onchainRef: '0x2345...6789',
@@ -107,7 +107,7 @@ const mockPosts = [
     dao: 'marketplace',
     title: 'Rare CryptoPunk Auction Ending Soon',
     contentCid: 'This Rare CryptoPunk is ending in 2 hours! Current bid is 45.2 ETH. Don\'t miss out on this opportunity!',
-    mediaCids: ['https://via.placeholder.com/300'],
+    mediaCids: ['https://placehold.co/300'],
     tags: ['marketplace', 'auction', 'nft'],
     createdAt: new Date(Date.now() - 1800000),
     onchainRef: '0x5678...9012',
@@ -129,9 +129,9 @@ const trendingDAOs = [
 
 // Mock suggested users
 const suggestedUsers = [
-  { id: '1', handle: 'web3dev', ens: 'dev.web3.eth', avatarCid: 'https://via.placeholder.com/40', followers: 1200, reputationScore: 650 },
-  { id: '2', handle: 'defiwhale', ens: 'whale.defi.eth', avatarCid: 'https://via.placeholder.com/40', followers: 8900, reputationScore: 920 },
-  { id: '3', handle: 'nftartist', ens: 'artist.nft.eth', avatarCid: 'https://via.placeholder.com/40', followers: 5600, reputationScore: 780 },
+  { id: '1', handle: 'web3dev', ens: 'dev.web3.eth', avatarCid: 'https://placehold.co/40', followers: 1200, reputationScore: 650 },
+  { id: '2', handle: 'defiwhale', ens: 'whale.defi.eth', avatarCid: 'https://placehold.co/40', followers: 8900, reputationScore: 920 },
+  { id: '3', handle: 'nftartist', ens: 'artist.nft.eth', avatarCid: 'https://placehold.co/40', followers: 5600, reputationScore: 780 },
 ];
 
 // Mock marketplace data
@@ -179,8 +179,9 @@ export default function Dashboard() {
     }
   }, [createPostError, addToast]);
 
-  // Load profiles for posts
+  // Load profiles for posts - in a real app, this would fetch from the backend
   useEffect(() => {
+    // For now, we'll use mock profiles, but in a real app this would fetch from the backend
     setProfiles(mockProfiles);
   }, []);
 
@@ -545,24 +546,46 @@ export default function Dashboard() {
                 ) : feedError ? (
                   <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
                     <p>Error loading feed: {feedError}</p>
+                    <p className="mt-2 text-sm">Displaying mock data as fallback:</p>
+                    <div className="mt-4 space-y-6">
+                      {mockPosts.map((post) => {
+                        const authorProfile = profiles[post.author] || { 
+                          handle: 'Unknown', 
+                          ens: '', 
+                          avatarCid: 'https://placehold.co/40',
+                          reputationScore: 0,
+                          reputationTier: 'Novice',
+                          verified: false
+                        };
+                        
+                        return (
+                          <div key={post.id} className={`relative rounded-2xl overflow-hidden ${
+                            post.postType === 'defi' ? 'border-l-4 border-l-green-500' :
+                            post.postType === 'nft' ? 'border-l-4 border-l-purple-500' :
+                            post.postType === 'governance' ? 'border-l-4 border-l-blue-500' :
+                            post.postType === 'marketplace' ? 'border-l-4 border-l-orange-500' :
+                            'border-l-4 border-l-gray-500'
+                          }`}>
+                            <Web3SocialPostCard 
+                              post={post} 
+                              profile={authorProfile} 
+                              onReaction={handleReaction}
+                              onTip={handleTip}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                ) : mockPosts.length === 0 ? (
-                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 p-6 text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No posts yet</h3>
-                    <p className="mt-1 text-gray-500 dark:text-gray-400">
-                      Be the first to post!
-                    </p>
-                  </div>
-                ) : (
+                ) : feed && feed.length > 0 ? (
                   <>
-                    {mockPosts.map((post) => {
+                    {feed.map((post) => {
+                      // In a real app, you would fetch the profile for each post author
+                      // For now, we'll use mock profiles
                       const authorProfile = profiles[post.author] || { 
                         handle: 'Unknown', 
                         ens: '', 
-                        avatarCid: 'https://via.placeholder.com/40',
+                        avatarCid: 'https://placehold.co/40',
                         reputationScore: 0,
                         reputationTier: 'Novice',
                         verified: false
@@ -586,6 +609,16 @@ export default function Dashboard() {
                       );
                     })}
                   </>
+                ) : (
+                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 p-6 text-center">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No posts yet</h3>
+                    <p className="mt-1 text-gray-500 dark:text-gray-400">
+                      Be the first to post!
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

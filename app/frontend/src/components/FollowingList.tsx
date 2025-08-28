@@ -51,23 +51,23 @@ export default function FollowingList({ userAddress, className = '' }: Following
     '0x1234567890123456789012345678901234567890': {
       handle: 'alexj',
       ens: 'alex.eth',
-      avatarCid: 'https://via.placeholder.com/48',
+      avatarCid: 'https://placehold.co/48',
     },
     '0x2345678901234567890123456789012345678901': {
       handle: 'samc',
       ens: 'sam.eth',
-      avatarCid: 'https://via.placeholder.com/48',
+      avatarCid: 'https://placehold.co/48',
     },
     '0x3456789012345678901234567890123456789012': {
       handle: 'taylorr',
       ens: 'taylor.eth',
-      avatarCid: 'https://via.placeholder.com/48',
+      avatarCid: 'https://placehold.co/48',
     },
   };
 
   const followingProfiles = following.map(address => ({
     address,
-    ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://via.placeholder.com/48' })
+    ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/48' })
   }));
 
   return (

@@ -37,7 +37,7 @@ export default function Web3PostCard({ post, profile, className = '' }: Web3Post
         <div className="flex-shrink-0 mr-4">
           <img 
             className="h-12 w-12 rounded-full border-2 border-primary-500" 
-            src={profile.avatarCid || 'https://via.placeholder.com/48'} 
+            src={profile.avatarCid || 'https://placehold.co/48'} 
             alt={profile.handle} 
           />
         </div>
