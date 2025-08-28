@@ -46,12 +46,20 @@ describe('AIService', () => {
         tokenAddress: '0x456',
         price: '1000000000000000000',
         quantity: 1,
-        itemType: 'DIGITAL',
-        listingType: 'FIXED_PRICE',
-        status: 'ACTIVE',
+        itemType: 'DIGITAL' as const,
+        listingType: 'FIXED_PRICE' as const,
+        status: 'ACTIVE' as const,
         startTime: new Date().toISOString(),
+        endTime: undefined,
+        highestBid: undefined,
+        highestBidder: undefined,
         metadataURI: 'Test item',
         isEscrowed: false,
+        nftStandard: undefined,
+        tokenId: undefined,
+        reservePrice: undefined,
+        minIncrement: undefined,
+        reserveMet: undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -66,7 +74,7 @@ describe('AIService', () => {
         id: '1',
         objectType: 'listing',
         objectId: '1',
-        status: 'APPROVED',
+        status: 'APPROVED' as const,
         aiAnalysis: '{"analysis":"Mock analysis","riskScore":20,"status":"APPROVED"}',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -100,8 +108,10 @@ describe('AIService', () => {
         escrowId: '1',
         reporterAddress: '0x123',
         reason: 'Item not received',
-        status: 'OPEN',
+        status: 'OPEN' as const,
         createdAt: new Date().toISOString(),
+        resolvedAt: undefined,
+        resolution: undefined,
         evidence: ['evidence1', 'evidence2']
       };
       
@@ -114,7 +124,9 @@ describe('AIService', () => {
         buyerApproved: false,
         sellerApproved: false,
         disputeOpened: true,
+        resolverAddress: undefined,
         createdAt: new Date().toISOString(),
+        resolvedAt: undefined,
         deliveryInfo: 'Shipped via UPS',
         deliveryConfirmed: false
       };
@@ -135,7 +147,7 @@ describe('AIService', () => {
         id: '1',
         objectType: 'dispute',
         objectId: '1',
-        status: 'PENDING',
+        status: 'PENDING' as const,
         aiAnalysis: 'Mock analysis',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -177,9 +189,10 @@ describe('AIService', () => {
           listingId: '1',
           buyerAddress: '0x123',
           sellerAddress: '0x456',
+          escrowId: undefined,
           amount: '1000000000000000000',
           paymentToken: '0x0000000000000000000000000000000000000000',
-          status: 'COMPLETED',
+          status: 'COMPLETED' as const,
           createdAt: new Date().toISOString()
         }
       ];
@@ -190,8 +203,11 @@ describe('AIService', () => {
           escrowId: '1',
           reporterAddress: '0x123',
           reason: 'Item not received',
-          status: 'RESOLVED',
-          createdAt: new Date().toISOString()
+          status: 'RESOLVED' as const,
+          createdAt: new Date().toISOString(),
+          resolvedAt: undefined,
+          resolution: undefined,
+          evidence: undefined
         }
       ];
       
@@ -226,7 +242,7 @@ describe('AIService', () => {
           id: '1',
           objectType: 'listing',
           objectId: '1',
-          status: 'PENDING',
+          status: 'PENDING' as const,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
@@ -234,7 +250,7 @@ describe('AIService', () => {
           id: '2',
           objectType: 'dispute',
           objectId: '1',
-          status: 'PENDING',
+          status: 'PENDING' as const,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         }
@@ -246,12 +262,20 @@ describe('AIService', () => {
         tokenAddress: '0x456',
         price: '1000000000000000000',
         quantity: 1,
-        itemType: 'DIGITAL',
-        listingType: 'FIXED_PRICE',
-        status: 'ACTIVE',
+        itemType: 'DIGITAL' as const,
+        listingType: 'FIXED_PRICE' as const,
+        status: 'ACTIVE' as const,
         startTime: new Date().toISOString(),
+        endTime: undefined,
+        highestBid: undefined,
+        highestBidder: undefined,
         metadataURI: 'Test item',
         isEscrowed: false,
+        nftStandard: undefined,
+        tokenId: undefined,
+        reservePrice: undefined,
+        minIncrement: undefined,
+        reserveMet: undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -261,8 +285,11 @@ describe('AIService', () => {
         escrowId: '1',
         reporterAddress: '0x123',
         reason: 'Item not received',
-        status: 'OPEN',
-        createdAt: new Date().toISOString()
+        status: 'OPEN' as const,
+        createdAt: new Date().toISOString(),
+        resolvedAt: undefined,
+        resolution: undefined,
+        evidence: undefined
       };
       
       jest.spyOn(marketplaceService, 'getPendingAIModeration').mockResolvedValue(mockPendingRecords);

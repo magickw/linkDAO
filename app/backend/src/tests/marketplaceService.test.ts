@@ -22,8 +22,12 @@ describe('MarketplaceService', () => {
         id: 'user1',
         address: '0x123',
         handle: 'testuser',
+        ens: '',
+        avatarCid: '',
+        bioCid: '',
         profileCid: 'profile_cid',
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       const mockListing = {
@@ -32,11 +36,20 @@ describe('MarketplaceService', () => {
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
-        itemType: 'DIGITAL',
-        listingType: 'FIXED_PRICE',
+        itemType: 'DIGITAL' as const,
+        listingType: 'FIXED_PRICE' as const,
         status: 'active',
+        startTime: new Date(),
+        endTime: null,
+        highestBid: null,
+        highestBidder: null,
         metadataURI: 'ipfs://test',
         isEscrowed: false,
+        nftStandard: null,
+        tokenId: null,
+        reservePrice: null,
+        minIncrement: null,
+        reserveMet: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -81,8 +94,12 @@ describe('MarketplaceService', () => {
         id: 'user1',
         address: '0x123',
         handle: 'testuser',
+        ens: '',
+        avatarCid: '',
+        bioCid: '',
         profileCid: 'profile_cid',
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       const mockListing = {
@@ -91,9 +108,13 @@ describe('MarketplaceService', () => {
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
-        itemType: 'NFT',
-        listingType: 'AUCTION',
+        itemType: 'NFT' as const,
+        listingType: 'AUCTION' as const,
         status: 'active',
+        startTime: new Date(),
+        endTime: null,
+        highestBid: null,
+        highestBidder: null,
         metadataURI: 'ipfs://test',
         isEscrowed: false,
         nftStandard: 'ERC721',
@@ -152,8 +173,12 @@ describe('MarketplaceService', () => {
         id: 'user1',
         address: '0x123',
         handle: 'bidder',
+        ens: '',
+        avatarCid: '',
+        bioCid: '',
         profileCid: 'profile_cid',
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       const mockBid = {
@@ -188,8 +213,12 @@ describe('MarketplaceService', () => {
         id: 'user1',
         address: '0x123',
         handle: 'buyer',
+        ens: '',
+        avatarCid: '',
+        bioCid: '',
         profileCid: 'profile_cid',
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       const mockOffer = {
@@ -225,8 +254,12 @@ describe('MarketplaceService', () => {
         id: 'user1',
         address: '0x123',
         handle: 'disputer',
+        ens: '',
+        avatarCid: '',
+        bioCid: '',
         profileCid: 'profile_cid',
-        createdAt: new Date()
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
       
       const mockDispute = {
@@ -234,8 +267,10 @@ describe('MarketplaceService', () => {
         escrowId: 1,
         reporterId: 'user1',
         reason: 'Item not received',
-        status: 'open',
+        status: 'open' as const,
         createdAt: new Date(),
+        resolvedAt: null,
+        resolution: null,
         evidence: '["ipfs://evidence1", "ipfs://evidence2"]'
       };
       
@@ -265,7 +300,7 @@ describe('MarketplaceService', () => {
         id: 1,
         objectType: 'listing',
         objectId: 1,
-        status: 'pending',
+        status: 'pending' as const,
         aiAnalysis: '{"riskScore": 20}',
         createdAt: new Date(),
         updatedAt: new Date()
@@ -291,7 +326,7 @@ describe('MarketplaceService', () => {
           id: 1,
           objectType: 'listing',
           objectId: 1,
-          status: 'pending',
+          status: 'pending' as const,
           aiAnalysis: '{"riskScore": 20}',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -300,7 +335,7 @@ describe('MarketplaceService', () => {
           id: 2,
           objectType: 'dispute',
           objectId: 1,
-          status: 'pending',
+          status: 'pending' as const,
           aiAnalysis: '{"confidence": 85}',
           createdAt: new Date(),
           updatedAt: new Date()

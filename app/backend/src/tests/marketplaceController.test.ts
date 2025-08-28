@@ -55,9 +55,9 @@ describe('MarketplaceController', () => {
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
-        itemType: 'DIGITAL',
-        listingType: 'FIXED_PRICE',
-        status: 'ACTIVE',
+        itemType: 'DIGITAL' as const,
+        listingType: 'FIXED_PRICE' as const,
+        status: 'ACTIVE' as const,
         startTime: new Date().toISOString(),
         metadataURI: 'ipfs://test',
         isEscrowed: false,
@@ -111,7 +111,7 @@ describe('MarketplaceController', () => {
         escrowId: '1',
         reporterAddress: '0x123',
         reason: 'Item not received',
-        status: 'OPEN',
+        status: 'OPEN' as const,
         createdAt: new Date().toISOString(),
         evidence: ['ipfs://evidence1', 'ipfs://evidence2']
       };
@@ -147,7 +147,7 @@ describe('MarketplaceController', () => {
         id: '1',
         objectType: 'listing',
         objectId: '1',
-        status: 'PENDING',
+        status: 'PENDING' as const,
         aiAnalysis: '{"riskScore": 20}',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -182,7 +182,7 @@ describe('MarketplaceController', () => {
         id: '1',
         objectType: 'listing',
         objectId: '1',
-        status: 'PENDING',
+        status: 'PENDING' as const,
         aiAnalysis: '{"riskScore": 20}',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -229,7 +229,7 @@ describe('MarketplaceController', () => {
       };
       
       mockRequest.body = {
-        status: 'APPROVED',
+        status: 'APPROVED' as const,
         aiAnalysis: '{"riskScore": 5}'
       };
       
@@ -255,7 +255,7 @@ describe('MarketplaceController', () => {
       };
       
       mockRequest.body = {
-        status: 'APPROVED'
+        status: 'APPROVED' as const
       };
       
       mockMarketplaceService.updateAIModerationStatus.mockResolvedValue(false);
@@ -273,7 +273,7 @@ describe('MarketplaceController', () => {
           id: '1',
           objectType: 'listing',
           objectId: '1',
-          status: 'PENDING',
+          status: 'PENDING' as const,
           aiAnalysis: '{"riskScore": 20}',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
