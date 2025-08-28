@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { FollowService } from '../services/followService';
+import { APIError, ValidationError } from '../middleware/errorHandler';
 
 const followService = new FollowService();
 
@@ -9,11 +10,11 @@ export class FollowController {
       const { follower, following } = req.body;
       
       if (!follower || !following) {
-        return res.status(400).json({ error: 'Both follower and following addresses are required' });
+        throw new ValidationError('Both follower and following addresses are required');
       }
       
       if (follower === following) {
-        return res.status(400).json({ error: 'Cannot follow yourself' });
+        throw new ValidationError('Cannot follow yourself');
       }
       
       const result = await followService.follow(follower, following);
@@ -21,10 +22,13 @@ export class FollowController {
       if (result) {
         return res.status(201).json({ message: 'Successfully followed' });
       } else {
-        return res.status(400).json({ error: 'Already following this user' });
+        throw new ValidationError('Already following this user');
       }
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
     }
   }
 
@@ -33,7 +37,7 @@ export class FollowController {
       const { follower, following } = req.body;
       
       if (!follower || !following) {
-        return res.status(400).json({ error: 'Both follower and following addresses are required' });
+        throw new ValidationError('Both follower and following addresses are required');
       }
       
       const result = await followService.unfollow(follower, following);
@@ -41,10 +45,13 @@ export class FollowController {
       if (result) {
         return res.json({ message: 'Successfully unfollowed' });
       } else {
-        return res.status(400).json({ error: 'Not following this user' });
+        throw new ValidationError('Not following this user');
       }
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
     }
   }
 
@@ -54,7 +61,7 @@ export class FollowController {
       const followers = await followService.getFollowers(address);
       return res.json(followers);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -64,7 +71,7 @@ export class FollowController {
       const following = await followService.getFollowing(address);
       return res.json(following);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -74,7 +81,7 @@ export class FollowController {
       const isFollowing = await followService.isFollowing(follower, following);
       return res.json({ isFollowing });
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -84,7 +91,7 @@ export class FollowController {
       const count = await followService.getFollowCount(address);
       return res.json(count);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 }

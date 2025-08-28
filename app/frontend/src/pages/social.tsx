@@ -4,7 +4,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
-import { CreatePostInput } from '../../../backend/src/models/Post';
+import { CreatePostInput } from '@/models/Post';
 import PostCard from '@/components/PostCard';
 
 // Mock profile data

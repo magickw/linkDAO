@@ -66,6 +66,11 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                     Governance
                   </Link>
                 </li>
+                <li>
+                  <Link href="/marketplace" className="text-gray-600 hover:text-primary-600">
+                    Marketplace
+                  </Link>
+                </li>
                 {isAdmin && (
                   <li>
                     <Link href="/admin" className="text-gray-600 hover:text-primary-600">

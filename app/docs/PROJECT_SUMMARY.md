@@ -61,7 +61,7 @@ LinkDAO is a web3-based social platform that combines social networking with nat
 ## Project Structure
 
 ```
-linkdao-app/
+app/
 ├── contracts/          # Smart contracts (Solidity)
 ├── frontend/           # Web application (Next.js/React)
 ├── backend/            # API and services (Node.js)

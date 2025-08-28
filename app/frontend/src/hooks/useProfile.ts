@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ProfileService } from '../services/profileService';
-import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../../../backend/src/models/UserProfile';
+import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
 
 /**
  * Custom hook to fetch a profile by wallet address

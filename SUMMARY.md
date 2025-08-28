@@ -10,36 +10,36 @@ This document provides a comprehensive overview of LinkDAO, a web3-based social 
 2. [PRODUCT_SPEC.md](PRODUCT_SPEC.md) - Detailed product specification including features, architecture, and data models
 3. [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) - Technical architecture with system design and component interactions
 4. [DELIVERY_PLAN.md](DELIVERY_PLAN.md) - Development milestones, resource requirements, and delivery timeline
-5. [linkdao-app/docs/PROJECT_SUMMARY.md](linkdao-app/docs/PROJECT_SUMMARY.md) - Project structure and current development status
-6. [linkdao-app/docs/GETTING_STARTED.md](linkdao-app/docs/GETTING_STARTED.md) - Developer onboarding and setup instructions
-7. [linkdao-app/docs/DEVELOPMENT_GUIDELINES.md](linkdao-app/docs/DEVELOPMENT_GUIDELINES.md) - Coding standards and best practices
+5. [app/docs/PROJECT_SUMMARY.md](app/docs/PROJECT_SUMMARY.md) - Project structure and current development status
+6. [app/docs/GETTING_STARTED.md](app/docs/GETTING_STARTED.md) - Developer onboarding and setup instructions
+7. [app/docs/DEVELOPMENT_GUIDELINES.md](app/docs/DEVELOPMENT_GUIDELINES.md) - Coding standards and best practices
 
 ## Implementation Status
 
 The project has been initialized with the following components:
 
-### Smart Contracts (`linkdao-app/contracts/`)
+### Smart Contracts (`app/contracts/`)
 - ProfileRegistry.sol - User profile management
 - FollowModule.sol - Social graph implementation
 - Hardhat configuration and deployment scripts
 
-### Frontend (`linkdao-app/frontend/`)
+### Frontend (`app/frontend/`)
 - Next.js/React application with TypeScript
 - Core pages: Home, Profile, Wallet, Governance
 - Tailwind CSS styling
 - Navigation and layout components
 
-### Backend (`linkdao-app/backend/`)
+### Backend (`app/backend/`)
 - Node.js/Express API with TypeScript
 - User profile management service
 - Basic routing and middleware
 
-### Mobile (`linkdao-app/mobile/`)
+### Mobile (`app/mobile/`)
 - React Native application
 - Navigation setup with React Navigation
 - Core screens: Home, Profile, Wallet, Governance
 
-### Documentation (`linkdao-app/docs/`)
+### Documentation (`app/docs/`)
 - Getting started guide
 - Development guidelines
 - Project summary
@@ -64,7 +64,7 @@ To continue development of LinkDAO, the team should:
 ├── TECHNICAL_ARCHITECTURE.md
 ├── DELIVERY_PLAN.md
 ├── SUMMARY.md
-└── linkdao-app/
+└── app/
     ├── package.json
     ├── README.md
     ├── contracts/

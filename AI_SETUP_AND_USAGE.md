@@ -22,7 +22,7 @@ Before setting up the AI features, ensure you have:
 4. Add it to your backend environment variables:
 
 ```bash
-# In linkdao-app/backend/.env
+# In app/backend/.env
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
@@ -34,7 +34,7 @@ OPENAI_API_KEY=your_openai_api_key_here
 4. Add them to your backend environment variables:
 
 ```bash
-# In linkdao-app/backend/.env
+# In app/backend/.env
 PINECONE_API_KEY=your_pinecone_api_key_here
 PINECONE_ENVIRONMENT=your_pinecone_environment_here
 PINECONE_INDEX_NAME=your_index_name_here
@@ -45,7 +45,7 @@ PINECONE_INDEX_NAME=your_index_name_here
 Add an RPC URL for Ethereum data access:
 
 ```bash
-# In linkdao-app/backend/.env
+# In app/backend/.env
 RPC_URL=https://mainnet.base.org
 ```
 
@@ -56,7 +56,7 @@ RPC_URL=https://mainnet.base.org
 Navigate to the backend directory and install dependencies:
 
 ```bash
-cd linkdao-app/backend
+cd app/backend
 npm install
 ```
 
@@ -65,7 +65,7 @@ npm install
 Navigate to the frontend directory and install dependencies:
 
 ```bash
-cd linkdao-app/frontend
+cd app/frontend
 npm install
 ```
 
@@ -74,7 +74,7 @@ npm install
 ### 1. Start the Backend
 
 ```bash
-cd linkdao-app/backend
+cd app/backend
 npm run dev
 ```
 
@@ -83,7 +83,7 @@ The backend will start on port 3002 by default.
 ### 2. Start the Frontend
 
 ```bash
-cd linkdao-app/frontend
+cd app/frontend
 npm run dev
 ```
 
@@ -224,7 +224,7 @@ All AI interactions are logged for monitoring and debugging:
 
 ```bash
 # Check backend logs
-cd linkdao-app/backend
+cd app/backend
 tail -f logs/ai-service.log
 ```
 
@@ -242,7 +242,7 @@ To update the AI services:
 
 ```bash
 # Update backend dependencies
-cd linkdao-app/backend
+cd app/backend
 npm update openai @pinecone-database/pinecone
 
 # Rebuild the backend

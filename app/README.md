@@ -5,7 +5,7 @@ This is the main application repository for LinkDAO, a web3-based social platfor
 ## Project Structure
 
 ```
-linkdao-app/
+app/
 ├── contracts/          # Smart contracts (Solidity)
 ├── frontend/           # Web application (Next.js/React)
 ├── backend/            # API and services (Node.js)

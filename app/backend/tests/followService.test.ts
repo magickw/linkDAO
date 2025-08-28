@@ -4,11 +4,12 @@ describe('FollowService', () => {
   let followService: FollowService;
 
   beforeEach(() => {
-    followService = new FollowService();
+    // Reset the Jest module registry to force re-import of modules
+    jest.resetModules();
     
-    // Clear any existing follows before each test
-    // Access the private properties through type assertion
-    (followService as any).follows = [];
+    // Re-import the module after reset
+    const { FollowService } = require('../src/services/followService');
+    followService = new FollowService();
   });
 
   describe('follow', () => {
@@ -61,9 +62,10 @@ describe('FollowService', () => {
 
   describe('getFollowers', () => {
     it('should return all followers for a user', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { FollowService } = require('../src/services/followService');
       followService = new FollowService();
-      (followService as any).follows = [];
       
       const user1 = '0x1234567890123456789012345678901234567890';
       const user2 = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
@@ -91,9 +93,10 @@ describe('FollowService', () => {
 
   describe('getFollowing', () => {
     it('should return all users that a user is following', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { FollowService } = require('../src/services/followService');
       followService = new FollowService();
-      (followService as any).follows = [];
       
       const user1 = '0x1234567890123456789012345678901234567890';
       const user2 = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
@@ -143,9 +146,10 @@ describe('FollowService', () => {
 
   describe('getFollowCount', () => {
     it('should return correct follower and following counts', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { FollowService } = require('../src/services/followService');
       followService = new FollowService();
-      (followService as any).follows = [];
       
       const user1 = '0x1234567890123456789012345678901234567890';
       const user2 = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';

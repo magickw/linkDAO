@@ -25,12 +25,12 @@ describe('PostService', () => {
   let postService: PostService;
 
   beforeEach(() => {
-    postService = new PostService();
+    // Reset the Jest module registry to force re-import of modules
+    jest.resetModules();
     
-    // Clear any existing posts before each test
-    // Access the private properties through type assertion
-    (postService as any).posts = [];
-    (postService as any).nextId = 1;
+    // Re-import the module after reset
+    const { PostService } = require('../src/services/postService');
+    postService = new PostService();
   });
 
   describe('createPost', () => {
@@ -49,10 +49,10 @@ describe('PostService', () => {
       expect(post.id).toBeDefined();
       expect(post.author).toBe(input.author);
       expect(post.parentId).toBeNull();
-      expect(post.contentCid).toBe('QmThisisate');
+      expect(post.contentCid).toBe('QmThisisates'); // "Thisisatest" truncated to 10 chars
       expect(post.mediaCids).toHaveLength(2);
-      expect(post.mediaCids[0]).toBe('Qmimage1.jpg');
-      expect(post.mediaCids[1]).toBe('Qmimage2.jpg');
+      expect(post.mediaCids[0]).toBe('Qmimage1.jpg'); // "image1.jpg" truncated to 10 chars
+      expect(post.mediaCids[1]).toBe('Qmimage2.jpg'); // "image2.jpg" truncated to 10 chars
       expect(post.tags).toEqual(input.tags);
       expect(post.createdAt).toBeInstanceOf(Date);
       expect(post.onchainRef).toBe(input.onchainRef);
@@ -94,10 +94,10 @@ describe('PostService', () => {
 
   describe('getPostsByAuthor', () => {
     it('should return all posts by a specific author', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const author1 = '0x1234567890123456789012345678901234567890';
       const author2 = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
@@ -121,30 +121,30 @@ describe('PostService', () => {
       await postService.createPost(input2);
       await postService.createPost(input3);
 
-      const posts = await postService.getPostsByAuthor(author1);
+      const postsResult = await postService.getPostsByAuthor(author1);
 
-      expect(posts).toHaveLength(2);
-      expect(posts.every(post => post.author === author1)).toBe(true);
+      expect(postsResult).toHaveLength(2);
+      expect(postsResult.every(post => post.author === author1)).toBe(true);
     });
 
     it('should return an empty array when an author has no posts', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const author = '0x1234567890123456789012345678901234567890';
-      const posts = await postService.getPostsByAuthor(author);
-      expect(posts).toHaveLength(0);
+      const postsResult = await postService.getPostsByAuthor(author);
+      expect(postsResult).toHaveLength(0);
     });
   });
 
   describe('getPostsByTag', () => {
     it('should return all posts with a specific tag', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
@@ -175,13 +175,13 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when no posts have the specified tag', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
-      const posts = await postService.getPostsByTag('nonexistent-tag');
-      expect(posts).toHaveLength(0);
+      const postsResult = await postService.getPostsByTag('nonexistent-tag');
+      expect(postsResult).toHaveLength(0);
     });
   });
 
@@ -207,9 +207,9 @@ describe('PostService', () => {
       expect(updatedPost).toBeDefined();
       expect(updatedPost?.id).toBe(createdPost.id);
       expect(updatedPost?.author).toBe(createdPost.author);
-      expect(updatedPost?.contentCid).toBe('QmUpdatedcon');
+      expect(updatedPost?.contentCid).toBe('QmUpdatedcon'); // "Updatedcon" truncated to 10 chars
       expect(updatedPost?.mediaCids).toHaveLength(1);
-      expect(updatedPost?.mediaCids[0]).toBe('Qmupdated.jp'); // Truncated to 10 chars
+      expect(updatedPost?.mediaCids[0]).toBe('Qmupdated.jp'); // "updated.jpg" truncated to 10 chars
       expect(updatedPost?.tags).toEqual(updateInput.tags);
       expect(updatedPost?.createdAt).toEqual(createdPost.createdAt);
     });
@@ -249,10 +249,10 @@ describe('PostService', () => {
 
   describe('getAllPosts', () => {
     it('should return all posts', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
@@ -267,30 +267,30 @@ describe('PostService', () => {
       await postService.createPost(input1);
       await postService.createPost(input2);
 
-      const posts = await postService.getAllPosts();
+      const postsResult = await postService.getAllPosts();
 
-      expect(posts).toHaveLength(2);
-      expect(posts[0].contentCid).toBe('QmFirstpost');
-      expect(posts[1].contentCid).toBe('QmSecondpos');
+      expect(postsResult).toHaveLength(2);
+      expect(postsResult[0].contentCid).toBe('QmFirstpost'); // "Firstpost" truncated to 10 chars
+      expect(postsResult[1].contentCid).toBe('QmSecondpost'); // "Secondpost" truncated to 10 chars
     });
 
     it('should return an empty array when there are no posts', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
-      const posts = await postService.getAllPosts();
-      expect(posts).toHaveLength(0);
+      const postsResult = await postService.getAllPosts();
+      expect(postsResult).toHaveLength(0);
     });
   });
 
   describe('getFeed', () => {
     it('should return all posts sorted by creation time (newest first)', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
@@ -315,10 +315,10 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when there are no posts', async () => {
-      // Reset service for clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { PostService } = require('../src/services/postService');
       postService = new PostService();
-      (postService as any).posts = [];
-      (postService as any).nextId = 1;
       
       const feed = await postService.getFeed();
       expect(feed).toHaveLength(0);

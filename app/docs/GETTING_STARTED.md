@@ -22,7 +22,7 @@ The LinkDAO project is organized as a monorepo with the following workspaces:
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd linkdao-app
+   cd app
    ```
 
 2. Install dependencies for all workspaces:

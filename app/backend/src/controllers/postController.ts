@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PostService } from '../services/postService';
 import { CreatePostInput, UpdatePostInput } from '../models/Post';
+import { APIError, NotFoundError } from '../middleware/errorHandler';
 
 const postService = new PostService();
 
@@ -11,7 +12,7 @@ export class PostController {
       const post = await postService.createPost(input);
       return res.status(201).json(post);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      throw new APIError(400, error.message);
     }
   }
 
@@ -20,11 +21,14 @@ export class PostController {
       const { id } = req.params;
       const post = await postService.getPostById(id);
       if (!post) {
-        return res.status(404).json({ error: 'Post not found' });
+        throw new NotFoundError('Post not found');
       }
       return res.json(post);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
     }
   }
 
@@ -34,7 +38,7 @@ export class PostController {
       const posts = await postService.getPostsByAuthor(author);
       return res.json(posts);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -44,7 +48,7 @@ export class PostController {
       const posts = await postService.getPostsByTag(tag);
       return res.json(posts);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -54,11 +58,14 @@ export class PostController {
       const input: UpdatePostInput = req.body;
       const post = await postService.updatePost(id, input);
       if (!post) {
-        return res.status(404).json({ error: 'Post not found' });
+        throw new NotFoundError('Post not found');
       }
       return res.json(post);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
     }
   }
 
@@ -67,11 +74,14 @@ export class PostController {
       const { id } = req.params;
       const deleted = await postService.deletePost(id);
       if (!deleted) {
-        return res.status(404).json({ error: 'Post not found' });
+        throw new NotFoundError('Post not found');
       }
       return res.status(204).send();
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
     }
   }
 
@@ -80,7 +90,7 @@ export class PostController {
       const posts = await postService.getAllPosts();
       return res.json(posts);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 
@@ -91,7 +101,7 @@ export class PostController {
       const posts = await postService.getFeed(forUser);
       return res.json(posts);
     } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      throw new APIError(500, error.message);
     }
   }
 }

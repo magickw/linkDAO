@@ -5,7 +5,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useProfile, useCreateProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useFollowCount } from '@/hooks/useFollow';
 import { useToast } from '@/context/ToastContext';
-import { CreateUserProfileInput, UpdateUserProfileInput } from '../../../backend/src/models/UserProfile';
+import { CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
 
@@ -79,6 +79,16 @@ export default function Profile() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      // In a real app, you would upload the file to IPFS or a similar service
+      // and get a CID. For now, we'll just use the file name as a placeholder.
+      setProfile(prev => ({ ...prev, avatar: file.name }));
+      addToast(`Selected file: ${file.name}`, 'info');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -322,6 +332,7 @@ export default function Profile() {
                               name="avatar-upload" 
                               type="file" 
                               className="sr-only" 
+                              onChange={handleFileChange}
                             />
                           </label>
                           <p className="pl-1">or drag and drop</p>

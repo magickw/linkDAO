@@ -5,12 +5,12 @@ describe('UserProfileService', () => {
   let userProfileService: UserProfileService;
 
   beforeEach(() => {
-    userProfileService = new UserProfileService();
+    // Reset the Jest module registry to force re-import of modules
+    jest.resetModules();
     
-    // Clear any existing profiles before each test
-    // Access the private properties through type assertion
-    (userProfileService as any).profiles = [];
-    (userProfileService as any).nextId = 1;
+    // Re-import the module after reset
+    const { UserProfileService } = require('../src/services/userProfileService');
+    userProfileService = new UserProfileService();
   });
 
   describe('createProfile', () => {
@@ -155,10 +155,10 @@ describe('UserProfileService', () => {
 
   describe('getAllProfiles', () => {
     it('should return all profiles', async () => {
-      // Reset the service to ensure clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { UserProfileService } = require('../src/services/userProfileService');
       userProfileService = new UserProfileService();
-      (userProfileService as any).profiles = [];
-      (userProfileService as any).nextId = 1;
       
       const input1: CreateUserProfileInput = {
         address: '0x1234567890123456789012345678901234567890',
@@ -173,21 +173,21 @@ describe('UserProfileService', () => {
       await userProfileService.createProfile(input1);
       await userProfileService.createProfile(input2);
 
-      const profiles = await userProfileService.getAllProfiles();
+      const profilesResult = await userProfileService.getAllProfiles();
 
-      expect(profiles).toHaveLength(2);
-      expect(profiles[0].handle).toBe(input1.handle);
-      expect(profiles[1].handle).toBe(input2.handle);
+      expect(profilesResult).toHaveLength(2);
+      expect(profilesResult[0].handle).toBe(input1.handle);
+      expect(profilesResult[1].handle).toBe(input2.handle);
     });
 
     it('should return an empty array when there are no profiles', async () => {
-      // Reset the service to ensure clean state
+      // Reset modules and re-import
+      jest.resetModules();
+      const { UserProfileService } = require('../src/services/userProfileService');
       userProfileService = new UserProfileService();
-      (userProfileService as any).profiles = [];
-      (userProfileService as any).nextId = 1;
       
-      const profiles = await userProfileService.getAllProfiles();
-      expect(profiles).toHaveLength(0);
+      const profilesResult = await userProfileService.getAllProfiles();
+      expect(profilesResult).toHaveLength(0);
     });
   });
 });

@@ -9,7 +9,7 @@ LinkDAO is a web3-based social platform with native cryptocurrency wallets and D
 ## Repository Structure
 
 ```
-linkdao-app/
+app/
 ├── contracts/     # Smart contracts (Solidity)
 ├── frontend/      # Web application (Next.js/React)
 ├── backend/       # API services (Node.js)
@@ -22,7 +22,7 @@ linkdao-app/
 
 1. **Navigate to the project directory:**
    ```bash
-   cd linkdao-app
+   cd app
    ```
 
 2. **Run the initialization script:**
@@ -84,7 +84,7 @@ LinkDAO includes an advanced AI system with specialized bots for different funct
 
 ### Running AI Demos
 ```bash
-cd linkdao-app
+cd app
 npx ts-node scripts/ai-demo.ts
 ```
 
@@ -126,7 +126,7 @@ npx ts-node scripts/ai-demo.ts
 
 ## Need Help?
 
-1. Check the documentation in the [docs/](linkdao-app/docs/) directory
+1. Check the documentation in the [docs/](app/docs/) directory
 2. Look at existing code for examples
 3. Ask questions in the team chat
 4. Create an issue if you find a problem

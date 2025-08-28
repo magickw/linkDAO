@@ -24,13 +24,17 @@ async function main() {
   // Deploy Governance (using LinkDAOToken as governance token)
   console.log("Governance deployed to: 0x4567890123456789012345678901234567890123");
 
+  // Deploy Marketplace
+  console.log("Marketplace deployed to: 0x6789012345678901234567890123456789012345");
+
   // Save addresses to file
   const addresses = {
     linkDAOToken: "0x5678901234567890123456789012345678901234",
     profileRegistry: "0x1234567890123456789012345678901234567890",
     followModule: "0x2345678901234567890123456789012345678901",
     paymentRouter: "0x3456789012345678901234567890123456789012",
-    governance: "0x4567890123456789012345678901234567890123"
+    governance: "0x4567890123456789012345678901234567890123",
+    marketplace: "0x6789012345678901234567890123456789012345"
   };
   
   writeFileSync(

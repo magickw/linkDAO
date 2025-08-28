@@ -37,7 +37,7 @@ This guide provides step-by-step instructions for setting up all AI features in 
 Navigate to the backend directory and edit the `.env` file:
 
 ```bash
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
 nano .env
 ```
 
@@ -80,11 +80,11 @@ Ensure all dependencies are installed:
 
 ```bash
 # Install backend dependencies
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
 npm install
 
 # Install frontend dependencies
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/frontend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend
 npm install
 ```
 
@@ -93,7 +93,7 @@ npm install
 Compile the TypeScript code:
 
 ```bash
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
 npm run build
 ```
 
@@ -101,13 +101,13 @@ npm run build
 
 ### Run Verification Script
 ```bash
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app
 node scripts/verify-env.js
 ```
 
 ### Start the Backend
 ```bash
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
 npm run dev
 ```
 
@@ -132,7 +132,7 @@ curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/process \
 In a new terminal window:
 
 ```bash
-cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/frontend
+cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend
 npm run dev
 ```
 
@@ -163,13 +163,13 @@ Visit http://localhost:3004 to access the frontend and test the AI chat interfac
 
 1. **Check Backend Logs**
    ```bash
-   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
    tail -f logs/server.log
    ```
 
 2. **Test Environment Variables**
    ```bash
-   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app
+   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app
    node scripts/verify-env.js
    ```
 

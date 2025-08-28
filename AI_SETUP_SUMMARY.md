@@ -80,13 +80,13 @@ Backend has been successfully compiled and is ready for use.
 ### Starting the Services
 1. **Start the Backend**:
    ```bash
-   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/backend
+   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend
    npm run dev
    ```
 
 2. **Start the Frontend**:
    ```bash
-   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/linkdao-app/frontend
+   cd /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend
    npm run dev
    ```
 

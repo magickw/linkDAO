@@ -1,79 +1,83 @@
 import { Request, Response } from 'express';
 import { UserProfileService } from '../services/userProfileService';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
+import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 const userProfileService = new UserProfileService();
 
 export class UserProfileController {
-  async createProfile(req: Request, res: Response): Promise<Response> {
-    try {
-      const input: CreateUserProfileInput = req.body;
-      const profile = await userProfileService.createProfile(input);
-      return res.status(201).json(profile);
-    } catch (error: any) {
-      return res.status(400).json({ error: error.message });
-    }
+  createProfile = async (req: Request, res: Response): Promise<Response> => {
+    // Use the authenticated user's address
+    const input: CreateUserProfileInput = {
+      ...req.body,
+      address: req.user?.address || req.body.address
+    };
+    
+    const profile = await userProfileService.createProfile(input);
+    return res.status(201).json(profile);
   }
 
-  async getProfileById(req: Request, res: Response): Promise<Response> {
-    try {
-      const { id } = req.params;
-      const profile = await userProfileService.getProfileById(id);
-      if (!profile) {
-        return res.status(404).json({ error: 'Profile not found' });
-      }
-      return res.json(profile);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+  getProfileById = async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const profile = await userProfileService.getProfileById(id);
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
     }
+    return res.json(profile);
   }
 
-  async getProfileByAddress(req: Request, res: Response): Promise<Response> {
-    try {
-      const { address } = req.params;
-      const profile = await userProfileService.getProfileByAddress(address);
-      if (!profile) {
-        return res.status(404).json({ error: 'Profile not found' });
-      }
-      return res.json(profile);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+  getProfileByAddress = async (req: Request, res: Response): Promise<Response> => {
+    const { address } = req.params;
+    const profile = await userProfileService.getProfileByAddress(address);
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
     }
+    return res.json(profile);
   }
 
-  async updateProfile(req: Request, res: Response): Promise<Response> {
-    try {
-      const { id } = req.params;
-      const input: UpdateUserProfileInput = req.body;
-      const profile = await userProfileService.updateProfile(id, input);
-      if (!profile) {
-        return res.status(404).json({ error: 'Profile not found' });
-      }
-      return res.json(profile);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+  updateProfile = async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    const input: UpdateUserProfileInput = req.body;
+    
+    // Verify the user is updating their own profile
+    const existingProfile = await userProfileService.getProfileById(id);
+    if (!existingProfile) {
+      throw new NotFoundError('Profile not found');
     }
+    
+    if (req.user?.address !== existingProfile.address) {
+      throw new APIError(403, 'You can only update your own profile');
+    }
+    
+    const profile = await userProfileService.updateProfile(id, input);
+    if (!profile) {
+      throw new NotFoundError('Profile not found');
+    }
+    return res.json(profile);
   }
 
-  async deleteProfile(req: Request, res: Response): Promise<Response> {
-    try {
-      const { id } = req.params;
-      const deleted = await userProfileService.deleteProfile(id);
-      if (!deleted) {
-        return res.status(404).json({ error: 'Profile not found' });
-      }
-      return res.status(204).send();
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+  deleteProfile = async (req: Request, res: Response): Promise<Response> => {
+    const { id } = req.params;
+    
+    // Verify the user is deleting their own profile
+    const existingProfile = await userProfileService.getProfileById(id);
+    if (!existingProfile) {
+      throw new NotFoundError('Profile not found');
     }
+    
+    if (req.user?.address !== existingProfile.address) {
+      throw new APIError(403, 'You can only delete your own profile');
+    }
+    
+    const deleted = await userProfileService.deleteProfile(id);
+    if (!deleted) {
+      throw new NotFoundError('Profile not found');
+    }
+    return res.status(204).send();
   }
 
-  async getAllProfiles(req: Request, res: Response): Promise<Response> {
-    try {
-      const profiles = await userProfileService.getAllProfiles();
-      return res.json(profiles);
-    } catch (error: any) {
-      return res.status(500).json({ error: error.message });
-    }
+  getAllProfiles = async (req: Request, res: Response): Promise<Response> => {
+    const profiles = await userProfileService.getAllProfiles();
+    return res.json(profiles);
   }
 }

@@ -8,10 +8,21 @@ import userProfileRoutes from './routes/userProfileRoutes';
 import postRoutes from './routes/postRoutes';
 import followRoutes from './routes/followRoutes';
 import aiRoutes from './routes/aiRoutes';
+import authRoutes from './routes/authRoutes';
+import marketplaceRoutes from './routes/marketplaceRoutes';
+import { errorHandler, notFound } from './middleware/errorHandler';
 import { IndexerService } from './services/indexerService';
 
 // Load environment variables
 dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = ['JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(`Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+}
 
 // Create Express app
 const app = express();
@@ -61,10 +72,12 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/auth', authRoutes);
 app.use('/api/profiles', userProfileRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/follow', followRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // WebSocket endpoint info
 app.get('/ws', (req, res) => {
@@ -73,6 +86,12 @@ app.get('/ws', (req, res) => {
     endpoint: `ws://localhost:${PORT}` 
   });
 });
+
+// 404 handler
+app.use(notFound);
+
+// Global error handler
+app.use(errorHandler);
 
 // Start indexer service
 const indexer = new IndexerService(

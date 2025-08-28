@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PostService } from '../services/postService';
-import { Post, CreatePostInput } from '../../../backend/src/models/Post';
+import { Post, CreatePostInput } from '../models/Post';
 
 /**
  * Custom hook to fetch user feed

@@ -7,33 +7,35 @@ import { SocialCopilotBot } from '../services/bots/socialCopilotBot';
 // Mock the OpenAI and Pinecone imports since we don't want to test actual API calls
 jest.mock('openai', () => {
   return {
-    Configuration: jest.fn().mockImplementation(() => ({})),
-    OpenAIApi: jest.fn().mockImplementation(() => ({
-      createChatCompletion: jest.fn().mockResolvedValue({
-        data: {
-          choices: [{ message: { content: 'Mock response' } }],
-          usage: { total_tokens: 10 },
-          model: 'gpt-4-turbo'
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: jest.fn().mockResolvedValue({
+            choices: [{ message: { content: 'Mock response' } }],
+            usage: { total_tokens: 10 },
+            model: 'gpt-4-turbo'
+          })
         }
-      }),
-      createModeration: jest.fn().mockResolvedValue({
-        data: {
+      },
+      moderations: {
+        create: jest.fn().mockResolvedValue({
           results: [{ flagged: false }]
-        }
-      }),
-      createEmbedding: jest.fn().mockResolvedValue({
-        data: {
+        })
+      },
+      embeddings: {
+        create: jest.fn().mockResolvedValue({
           data: [{ embedding: [0.1, 0.2, 0.3] }]
-        }
-      })
+        })
+      }
     }))
   };
 });
 
 jest.mock('@pinecone-database/pinecone', () => {
   return {
-    PineconeClient: jest.fn().mockImplementation(() => ({
-      init: jest.fn(),
+    __esModule: true,
+    Pinecone: jest.fn().mockImplementation(() => ({
       Index: jest.fn().mockReturnValue({
         query: jest.fn().mockResolvedValue({ matches: [] })
       })
@@ -45,6 +47,8 @@ describe('AI Service', () => {
   let aiService: AIService;
 
   beforeEach(() => {
+    // Reset the mock
+    jest.clearAllMocks();
     aiService = new AIService();
   });
 
