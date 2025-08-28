@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import http from 'http';
+import { Server } from 'socket.io';
 import userProfileRoutes from './routes/userProfileRoutes';
 import postRoutes from './routes/postRoutes';
 import followRoutes from './routes/followRoutes';
@@ -13,7 +15,36 @@ dotenv.config();
 
 // Create Express app
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3002;
+
+// Create Socket.IO server
+const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
+// Store connected users
+const connectedUsers = new Map<string, string>(); // socketId -> userAddress
+
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+  
+  // Register user with their address
+  socket.on('register', (address: string) => {
+    connectedUsers.set(socket.id, address);
+    console.log(`User ${address} registered with socket ${socket.id}`);
+  });
+  
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    connectedUsers.delete(socket.id);
+    console.log('User disconnected:', socket.id);
+  });
+});
 
 // Middleware
 app.use(helmet());
@@ -35,6 +66,14 @@ app.use('/api/posts', postRoutes);
 app.use('/api/follow', followRoutes);
 app.use('/api/ai', aiRoutes);
 
+// WebSocket endpoint info
+app.get('/ws', (req, res) => {
+  res.json({ 
+    message: 'WebSocket server is running', 
+    endpoint: `ws://localhost:${PORT}` 
+  });
+});
+
 // Start indexer service
 const indexer = new IndexerService(
   process.env.RPC_URL || 'http://localhost:8545',
@@ -42,8 +81,6 @@ const indexer = new IndexerService(
   process.env.FOLLOW_MODULE_ADDRESS || '0x2345678901245678901234567890123456789012',
   process.env.PAYMENT_ROUTER_ADDRESS || '0x3456789012345678901234567890123456789012',
   process.env.GOVERNANCE_ADDRESS || '0x4567890123456789012345678901234567890123'
-  // Note: Token contract events are typically not indexed in the same way as other contracts
-  // but we could add token transfer event indexing if needed
 );
 
 indexer.start().catch(console.error);
@@ -52,18 +89,27 @@ indexer.start().catch(console.error);
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
   await indexer.stop();
-  process.exit(0);
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
   await indexer.stop();
-  process.exit(0);
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`LinkDAO backend server running on port ${PORT}`);
+  console.log(`WebSocket server running on ws://localhost:${PORT}`);
 });
 
+// Export io for use in other modules
+export { io, connectedUsers };
 export default app;
