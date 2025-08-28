@@ -19,6 +19,7 @@
   "dependencies": {
     "@pinecone-database/pinecone": "^6.1.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "axios": "^1.6.0",
     "bullmq": "^4.12.6",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { IPFSHTTPClient } from 'ipfs-http-client';
+import type { IPFSHTTPClient } from 'ipfs-http-client';
 
 // IPFS configuration
 const IPFS_CONFIG = {
@@ -24,9 +24,9 @@ export class MetadataService {
 
   private async initializeIpfsClient(): Promise<IPFSHTTPClient | null> {
     try {
-      // Use dynamic import with the correct path to avoid export configuration issues
-      const ipfsModule = await import('ipfs-http-client/src/index.js');
-      const client = ipfsModule.create({
+      // Use dynamic import to avoid issues with module resolution in different environments
+      const { create } = await import('ipfs-http-client');
+      const client = create({
         host: IPFS_CONFIG.host,
         port: IPFS_CONFIG.port,
         protocol: IPFS_CONFIG.protocol,
