@@ -1,8 +1,22 @@
 import { ethers } from 'ethers';
-import { db } from '../db';
-import { tips } from '../db/schema';
-// import { creatorRewards, rewardEpochs } from '../db/schema'; // These tables don't exist in schema.ts
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import * as schema from "../db/schema";
 import { eq, and, gte, lte } from 'drizzle-orm';
+import dotenv from "dotenv";
+
+dotenv.config();
+
+// Create a postgres client with connection pooling
+const client = postgres(process.env.DATABASE_URL || "", { 
+  prepare: false,
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10
+});
+
+// Create Drizzle ORM instance
+const db = drizzle(client, { schema });
 
 export class TipService {
   /**
@@ -18,7 +32,7 @@ export class TipService {
     txHash?: string
   ) {
     try {
-      const result = await db.insert(tips).values({
+      const result = await db.insert(schema.tips).values({
         postId,
         fromUserId,
         toUserId,
@@ -40,7 +54,7 @@ export class TipService {
    */
   async getTipsForPost(postId: number) {
     try {
-      return await db.select().from(tips).where(eq(tips.postId, postId));
+      return await db.select().from(schema.tips).where(eq(schema.tips.postId, postId));
     } catch (error) {
       console.error('Error getting tips for post:', error);
       throw error;
@@ -52,9 +66,9 @@ export class TipService {
    */
   async getTotalTipsReceived(userId: string) {
     try {
-      const result = await db.select({ total: tips.amount })
-        .from(tips)
-        .where(eq(tips.toUserId, userId));
+      const result = await db.select({ total: schema.tips.amount })
+        .from(schema.tips)
+        .where(eq(schema.tips.toUserId, userId));
       
       // Sum up all the tips
       return result.reduce((sum, tip) => {
@@ -71,9 +85,9 @@ export class TipService {
    */
   async getTotalTipsSent(userId: string) {
     try {
-      const result = await db.select({ total: tips.amount })
-        .from(tips)
-        .where(eq(tips.fromUserId, userId));
+      const result = await db.select({ total: schema.tips.amount })
+        .from(schema.tips)
+        .where(eq(schema.tips.fromUserId, userId));
       
       // Sum up all the tips
       return result.reduce((sum, tip) => {
@@ -138,10 +152,10 @@ export class TipService {
   async getTipsInDateRange(startDate: Date, endDate: Date) {
     try {
       return await db.select()
-        .from(tips)
+        .from(schema.tips)
         .where(and(
-          gte(tips.createdAt, startDate),
-          lte(tips.createdAt, endDate)
+          gte(schema.tips.createdAt, startDate),
+          lte(schema.tips.createdAt, endDate)
         ));
     } catch (error) {
       console.error('Error getting tips in date range:', error);

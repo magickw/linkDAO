@@ -101,11 +101,24 @@ export class IndexerService {
     
     // Get the current block number
     try {
-      this.lastBlock = await this.provider.getBlockNumber();
+      // Set a timeout for blockchain connection
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout')), 5000)
+      );
+      
+      this.lastBlock = await Promise.race([
+        this.provider.getBlockNumber(),
+        timeoutPromise
+      ]) as number;
+      
       console.log(`Current block number: ${this.lastBlock}`);
     } catch (error) {
-      console.error('Error getting current block number:', error);
-      return;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('Could not connect to blockchain node:', errorMessage);
+      console.log('Running in offline mode - blockchain features will be disabled');
+      this.useEventListeners = false;
+      this.lastBlock = 0;
+      return; // Continue without blockchain
     }
     
     // Set up event listeners only if we're configured to use them
@@ -186,6 +199,11 @@ export class IndexerService {
   }
 
   private async pollNewBlocks(): Promise<void> {
+    // Skip polling if event listeners are disabled (offline mode)
+    if (!this.useEventListeners) {
+      return;
+    }
+    
     try {
       const currentBlock = await this.provider.getBlockNumber();
       
@@ -194,7 +212,10 @@ export class IndexerService {
         this.lastBlock = currentBlock;
       }
     } catch (error) {
-      console.error('Error polling new blocks:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('Error polling new blocks (blockchain offline):', errorMessage);
+      // Disable further polling attempts if we consistently can't connect
+      this.useEventListeners = false;
     }
   }
 

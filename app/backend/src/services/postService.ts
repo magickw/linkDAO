@@ -66,12 +66,35 @@ export class PostService {
       return undefined;
     }
     
-    // Fetch all posts (in a real implementation, you'd query by ID directly)
-    const dbPosts = await databaseService.getAllListings(); // This is a placeholder
-    
-    // In a full implementation, you would fetch the post from the database
-    // For now, we'll return undefined
-    return undefined;
+    // Fetch the post from database
+    try {
+      const dbPosts = await databaseService.getAllPosts();
+      const dbPost = dbPosts.find(p => p.id === postId);
+      
+      if (!dbPost) {
+        return undefined;
+      }
+      
+      // Get user profile for author info
+      const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
+      if (!author) {
+        return undefined;
+      }
+      
+      return {
+        id: dbPost.id.toString(),
+        author: author.address,
+        parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        contentCid: dbPost.contentCid,
+        mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+        tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+        createdAt: dbPost.createdAt || new Date(),
+        onchainRef: '',
+      };
+    } catch (error) {
+      console.error('Error getting post by ID:', error);
+      return undefined;
+    }
   }
 
   async getPostsByAuthor(author: string): Promise<Post[]> {
@@ -123,9 +146,39 @@ export class PostService {
   }
 
   async getAllPosts(): Promise<Post[]> {
-    // In a full implementation, you would fetch all posts from the database
-    // For now, we'll return an empty array
-    return [];
+    try {
+      // Get all posts from database
+      const dbPosts = await databaseService.getAllPosts();
+      
+      // Convert to Post model with proper author information
+      const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
+        // Get the author's profile
+        const author = await userProfileService.getProfileById(dbPost.authorId);
+        const authorAddress = author ? author.address : 'unknown';
+        
+        // Handle potential null dates by providing default values
+        const createdAt = dbPost.createdAt || new Date();
+        
+        return {
+          id: dbPost.id.toString(),
+          author: authorAddress,
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          contentCid: dbPost.contentCid,
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt,
+          onchainRef: '' // Would need to store onchainRef in database
+        };
+      }));
+      
+      // Sort by creation date (newest first)
+      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      
+      return posts;
+    } catch (error) {
+      console.error('Error getting all posts:', error);
+      return [];
+    }
   }
 
   async getFeed(forUser?: string): Promise<Post[]> {
