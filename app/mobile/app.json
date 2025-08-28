@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "linkdao-mobile",
+    "slug": "linkdao-mobile",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.linkdao.mobile"
+    },
+    "android": {
+      "package": "com.linkdao.mobile"
+    }
+  }
+}
