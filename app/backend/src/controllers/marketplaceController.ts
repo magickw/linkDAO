@@ -4,7 +4,8 @@ import { EnhancedEscrowService } from '../services/enhancedEscrowService';
 import { 
   CreateListingInput, 
   UpdateListingInput, 
-  PlaceBidInput 
+  PlaceBidInput,
+  MakeOfferInput
 } from '../models/Marketplace';
 import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
@@ -41,6 +42,23 @@ export class MarketplaceController {
       // For auctions, duration is required
       if (input.listingType === 'AUCTION' && !input.duration) {
         throw new ValidationError('Duration is required for auction listings');
+      }
+      
+      // For NFT items, nftStandard and tokenId are required
+      if (input.itemType === 'NFT') {
+        if (!input.nftStandard || !input.tokenId) {
+          throw new ValidationError('NFT standard and token ID are required for NFT items');
+        }
+      }
+      
+      // For auctions, reservePrice and minIncrement are optional but should be valid if provided
+      if (input.listingType === 'AUCTION') {
+        if (input.reservePrice && isNaN(parseFloat(input.reservePrice))) {
+          throw new ValidationError('Invalid reserve price');
+        }
+        if (input.minIncrement && isNaN(parseFloat(input.minIncrement))) {
+          throw new ValidationError('Invalid minimum increment');
+        }
       }
       
       const listing = await marketplaceService.createListing(input);
@@ -184,17 +202,82 @@ export class MarketplaceController {
     }
   }
 
+  // Offers
+  async makeOffer(req: Request, res: Response): Promise<Response> {
+    try {
+      const { listingId } = req.params;
+      const input: MakeOfferInput = req.body;
+      
+      // Validate required fields
+      if (!input.buyerAddress || !input.amount) {
+        throw new ValidationError('Missing required fields');
+      }
+      
+      const offer = await marketplaceService.makeOffer(listingId, input);
+      
+      if (!offer) {
+        throw new NotFoundError('Listing not found or not active');
+      }
+      
+      return res.status(201).json(offer);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getOffersByListing(req: Request, res: Response): Promise<Response> {
+    try {
+      const { listingId } = req.params;
+      const listingOffers = await marketplaceService.getOffersByListing(listingId);
+      return res.json(listingOffers);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getOffersByBuyer(req: Request, res: Response): Promise<Response> {
+    try {
+      const { buyerAddress } = req.params;
+      const buyerOffers = await marketplaceService.getOffersByBuyer(buyerAddress);
+      return res.json(buyerOffers);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async acceptOffer(req: Request, res: Response): Promise<Response> {
+    try {
+      const { offerId } = req.params;
+      
+      const success = await marketplaceService.acceptOffer(offerId);
+      
+      if (!success) {
+        throw new NotFoundError('Offer not found or already accepted');
+      }
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
   // Escrow
   async createEscrow(req: Request, res: Response): Promise<Response> {
     try {
       const { listingId } = req.params;
-      const { buyerAddress } = req.body;
+      const { buyerAddress, deliveryInfo } = req.body;
       
       if (!buyerAddress) {
         throw new ValidationError('Buyer address is required');
       }
       
-      const escrow = await marketplaceService.createEscrow(listingId, buyerAddress);
+      const escrow = await marketplaceService.createEscrow(listingId, buyerAddress, deliveryInfo);
       
       if (!escrow) {
         throw new NotFoundError('Listing not found or not active');
@@ -257,6 +340,33 @@ export class MarketplaceController {
     }
   }
 
+  /**
+   * Confirm delivery for an escrow (basic version)
+   */
+  async confirmDelivery(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { deliveryInfo } = req.body;
+      
+      if (!deliveryInfo) {
+        throw new ValidationError('Delivery info is required');
+      }
+      
+      const success = await marketplaceService.confirmDelivery(escrowId, deliveryInfo);
+      
+      if (!success) {
+        throw new NotFoundError('Escrow not found');
+      }
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
   async getEscrowById(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
@@ -280,6 +390,260 @@ export class MarketplaceController {
       const { userAddress } = req.params;
       const userEscrows = await marketplaceService.getEscrowsByUser(userAddress);
       return res.json(userEscrows);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  // Orders
+  async createOrder(req: Request, res: Response): Promise<Response> {
+    try {
+      const { listingId, buyerAddress, sellerAddress, amount, paymentToken, escrowId } = req.body;
+      
+      if (!listingId || !buyerAddress || !sellerAddress || !amount || !paymentToken) {
+        throw new ValidationError('Missing required fields');
+      }
+      
+      const order = await marketplaceService.createOrder(
+        listingId, 
+        buyerAddress, 
+        sellerAddress, 
+        amount, 
+        paymentToken, 
+        escrowId
+      );
+      
+      if (!order) {
+        throw new APIError(500, 'Failed to create order');
+      }
+      
+      return res.status(201).json(order);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getOrderById(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const order = await marketplaceService.getOrderById(id);
+      
+      if (!order) {
+        throw new NotFoundError('Order not found');
+      }
+      
+      return res.json(order);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getOrdersByUser(req: Request, res: Response): Promise<Response> {
+    try {
+      const { userAddress } = req.params;
+      const userOrders = await marketplaceService.getOrdersByUser(userAddress);
+      return res.json(userOrders);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async updateOrderStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const { orderId } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        throw new ValidationError('Status is required');
+      }
+      
+      const validStatuses = ['PENDING', 'COMPLETED', 'DISPUTED', 'REFUNDED'];
+      if (!validStatuses.includes(status)) {
+        throw new ValidationError('Invalid status');
+      }
+      
+      const success = await marketplaceService.updateOrderStatus(orderId, status as any);
+      
+      if (!success) {
+        throw new NotFoundError('Order not found');
+      }
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  // Disputes
+  async createDispute(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId, reporterAddress, reason, evidence } = req.body;
+      
+      if (!escrowId || !reporterAddress || !reason) {
+        throw new ValidationError('Missing required fields');
+      }
+      
+      const dispute = await marketplaceService.createDispute(escrowId, reporterAddress, reason, evidence);
+      
+      if (!dispute) {
+        throw new APIError(500, 'Failed to create dispute');
+      }
+      
+      return res.status(201).json(dispute);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getDisputeById(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const dispute = await marketplaceService.getDisputeById(id);
+      
+      if (!dispute) {
+        throw new NotFoundError('Dispute not found');
+      }
+      
+      return res.json(dispute);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getDisputesByUser(req: Request, res: Response): Promise<Response> {
+    try {
+      const { userAddress } = req.params;
+      const userDisputes = await marketplaceService.getDisputesByUser(userAddress);
+      return res.json(userDisputes);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async updateDisputeStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const { disputeId } = req.params;
+      const { status, resolution } = req.body;
+      
+      if (!status) {
+        throw new ValidationError('Status is required');
+      }
+      
+      const validStatuses = ['OPEN', 'IN_REVIEW', 'RESOLVED', 'ESCALATED'];
+      if (!validStatuses.includes(status)) {
+        throw new ValidationError('Invalid status');
+      }
+      
+      const success = await marketplaceService.updateDisputeStatus(disputeId, status as any, resolution);
+      
+      if (!success) {
+        throw new NotFoundError('Dispute not found');
+      }
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  // AI Moderation
+  async createAIModeration(req: Request, res: Response): Promise<Response> {
+    try {
+      const { objectType, objectId, aiAnalysis } = req.body;
+      
+      if (!objectType || !objectId) {
+        throw new ValidationError('Missing required fields');
+      }
+      
+      const aiModeration = await marketplaceService.createAIModeration(objectType, objectId, aiAnalysis);
+      
+      if (!aiModeration) {
+        throw new APIError(500, 'Failed to create AI moderation record');
+      }
+      
+      return res.status(201).json(aiModeration);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getAIModerationByObject(req: Request, res: Response): Promise<Response> {
+    try {
+      const { objectType, objectId } = req.params;
+      
+      if (!objectType || !objectId) {
+        throw new ValidationError('Missing required parameters');
+      }
+      
+      const aiModeration = await marketplaceService.getAIModerationByObject(objectType, objectId);
+      
+      if (!aiModeration) {
+        return res.status(404).json({ message: 'AI moderation record not found' });
+      }
+      
+      return res.json(aiModeration);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async updateAIModerationStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const { id } = req.params;
+      const { status, aiAnalysis } = req.body;
+      
+      if (!status) {
+        throw new ValidationError('Status is required');
+      }
+      
+      const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'FLAGGED'];
+      if (!validStatuses.includes(status)) {
+        throw new ValidationError('Invalid status');
+      }
+      
+      const success = await marketplaceService.updateAIModerationStatus(id, status as any, aiAnalysis);
+      
+      if (!success) {
+        throw new NotFoundError('AI moderation record not found');
+      }
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getPendingAIModeration(req: Request, res: Response): Promise<Response> {
+    try {
+      const aiModerations = await marketplaceService.getPendingAIModeration();
+      return res.json(aiModerations);
     } catch (error: any) {
       throw new APIError(500, error.message);
     }
@@ -331,7 +695,10 @@ export class MarketplaceController {
     }
   }
 
-  async confirmDelivery(req: Request, res: Response): Promise<Response> {
+  /**
+   * Confirm delivery for an enhanced escrow
+   */
+  async confirmDeliveryEnhanced(req: Request, res: Response): Promise<Response> {
     try {
       const { escrowId } = req.params;
       const { deliveryInfo } = req.body;

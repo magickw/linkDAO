@@ -2,10 +2,15 @@ import {
   CreateListingInput, 
   UpdateListingInput, 
   PlaceBidInput, 
+  MakeOfferInput,
   MarketplaceListing, 
   MarketplaceBid, 
+  MarketplaceOffer,
   MarketplaceEscrow,
-  UserReputation
+  MarketplaceOrder,
+  MarketplaceDispute,
+  UserReputation,
+  AIModeration
 } from '../models/Marketplace';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
@@ -36,7 +41,11 @@ export class MarketplaceService {
       input.quantity,
       input.itemType,
       input.listingType,
-      input.metadataURI
+      input.metadataURI,
+      input.nftStandard,
+      input.tokenId,
+      input.reservePrice,
+      input.minIncrement
     );
     
     const now = new Date().toISOString();
@@ -50,9 +59,16 @@ export class MarketplaceService {
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
       status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
       startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime?.toISOString(),
+      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+      highestBid: dbListing.highestBid?.toString(),
+      highestBidder: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
+      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+      tokenId: dbListing.tokenId || undefined,
+      reservePrice: dbListing.reservePrice?.toString(),
+      minIncrement: dbListing.minIncrement?.toString(),
+      reserveMet: dbListing.reserveMet || false,
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
@@ -79,9 +95,16 @@ export class MarketplaceService {
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
       status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
       startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime?.toISOString(),
+      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+      highestBid: dbListing.highestBid?.toString(),
+      highestBidder: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
+      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+      tokenId: dbListing.tokenId || undefined,
+      reservePrice: dbListing.reservePrice?.toString(),
+      minIncrement: dbListing.minIncrement?.toString(),
+      reserveMet: dbListing.reserveMet || false,
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
@@ -108,9 +131,16 @@ export class MarketplaceService {
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
         startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime?.toISOString(),
+        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+        highestBid: dbListing.highestBid?.toString(),
+        highestBidder: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
+        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+        tokenId: dbListing.tokenId || undefined,
+        reservePrice: dbListing.reservePrice?.toString(),
+        minIncrement: dbListing.minIncrement?.toString(),
+        reserveMet: dbListing.reserveMet || false,
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -140,9 +170,16 @@ export class MarketplaceService {
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
         startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime?.toISOString(),
+        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+        highestBid: dbListing.highestBid?.toString(),
+        highestBidder: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
+        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+        tokenId: dbListing.tokenId || undefined,
+        reservePrice: dbListing.reservePrice?.toString(),
+        minIncrement: dbListing.minIncrement?.toString(),
+        reserveMet: dbListing.reserveMet || false,
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -172,9 +209,16 @@ export class MarketplaceService {
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
         status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
         startTime: dbListing.startTime?.toISOString() || now,
-        endTime: dbListing.endTime?.toISOString(),
+        endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+        highestBid: dbListing.highestBid?.toString(),
+        highestBidder: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
+        nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+        tokenId: dbListing.tokenId || undefined,
+        reservePrice: dbListing.reservePrice?.toString(),
+        minIncrement: dbListing.minIncrement?.toString(),
+        reserveMet: dbListing.reserveMet || false,
         createdAt: dbListing.createdAt?.toISOString() || now,
         updatedAt: dbListing.updatedAt?.toISOString() || now
       };
@@ -207,9 +251,16 @@ export class MarketplaceService {
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
       status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
       startTime: dbListing.startTime?.toISOString() || now,
-      endTime: dbListing.endTime?.toISOString(),
+      endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
+      highestBid: dbListing.highestBid?.toString(),
+      highestBidder: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
+      nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
+      tokenId: dbListing.tokenId || undefined,
+      reservePrice: dbListing.reservePrice?.toString(),
+      minIncrement: dbListing.minIncrement?.toString(),
+      reserveMet: dbListing.reserveMet || false,
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
@@ -298,8 +349,92 @@ export class MarketplaceService {
     return bids;
   }
 
+  // Offers
+  async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer | null> {
+    // Ensure buyer exists
+    let buyerUser = await userProfileService.getProfileByAddress(input.buyerAddress);
+    if (!buyerUser) {
+      buyerUser = await userProfileService.createProfile({
+        address: input.buyerAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
+    }
+    
+    const dbOffer = await databaseService.makeOffer(
+      parseInt(listingId),
+      buyerUser.id,
+      input.amount
+    );
+    
+    if (!dbOffer) return null;
+    
+    const offer: MarketplaceOffer = {
+      id: dbOffer.id.toString(),
+      listingId: listingId,
+      buyerAddress: input.buyerAddress,
+      amount: dbOffer.amount,
+      createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
+      accepted: dbOffer.accepted || false
+    };
+    
+    return offer;
+  }
+
+  async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
+    const dbOffers = await databaseService.getOffersByListing(parseInt(listingId));
+    
+    const offers: MarketplaceOffer[] = [];
+    for (const dbOffer of dbOffers) {
+      // Get buyer address
+      const buyer = await userProfileService.getProfileById(dbOffer.buyerId || '');
+      if (!buyer) continue;
+      
+      const offer: MarketplaceOffer = {
+        id: dbOffer.id.toString(),
+        listingId: listingId,
+        buyerAddress: buyer.address,
+        amount: dbOffer.amount,
+        createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
+        accepted: dbOffer.accepted || false
+      };
+      offers.push(offer);
+    }
+    
+    return offers;
+  }
+
+  async getOffersByBuyer(buyerAddress: string): Promise<MarketplaceOffer[]> {
+    const buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
+    if (!buyerUser) return [];
+    
+    const dbOffers = await databaseService.getOffersByBuyer(buyerUser.id);
+    
+    const offers: MarketplaceOffer[] = [];
+    for (const dbOffer of dbOffers) {
+      const offer: MarketplaceOffer = {
+        id: dbOffer.id.toString(),
+        listingId: dbOffer.listingId?.toString() || '',
+        buyerAddress: buyerAddress,
+        amount: dbOffer.amount,
+        createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
+        accepted: dbOffer.accepted || false
+      };
+      offers.push(offer);
+    }
+    
+    return offers;
+  }
+
+  async acceptOffer(offerId: string): Promise<boolean> {
+    const dbOffer = await databaseService.acceptOffer(parseInt(offerId));
+    return dbOffer !== null;
+  }
+
   // Escrow
-  async createEscrow(listingId: string, buyerAddress: string): Promise<MarketplaceEscrow | null> {
+  async createEscrow(listingId: string, buyerAddress: string, deliveryInfo?: string): Promise<MarketplaceEscrow | null> {
     // Get listing
     const listing = await this.getListingById(listingId);
     if (!listing) return null;
@@ -324,7 +459,8 @@ export class MarketplaceService {
       parseInt(listingId),
       buyerUser.id,
       sellerUser.id,
-      listing.price
+      listing.price,
+      deliveryInfo
     );
     
     if (!dbEscrow) return null;
@@ -340,7 +476,9 @@ export class MarketplaceService {
       disputeOpened: dbEscrow.disputeOpened || false,
       resolverAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-      resolvedAt: dbEscrow.resolvedAt?.toISOString()
+      resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+      deliveryInfo: dbEscrow.deliveryInfo || undefined,
+      deliveryConfirmed: dbEscrow.deliveryConfirmed || false
     };
     
     return escrow;
@@ -390,6 +528,11 @@ export class MarketplaceService {
     return updatedEscrow !== null;
   }
 
+  async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<boolean> {
+    const updatedEscrow = await databaseService.confirmDelivery(parseInt(escrowId), deliveryInfo);
+    return updatedEscrow !== null;
+  }
+
   async getEscrowById(id: string): Promise<MarketplaceEscrow | null> {
     const dbEscrow = await databaseService.getEscrowById(parseInt(id));
     if (!dbEscrow) return null;
@@ -410,7 +553,9 @@ export class MarketplaceService {
       disputeOpened: dbEscrow.disputeOpened || false,
       resolverAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-      resolvedAt: dbEscrow.resolvedAt?.toISOString()
+      resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+      deliveryInfo: dbEscrow.deliveryInfo || undefined,
+      deliveryConfirmed: dbEscrow.deliveryConfirmed || false
     };
     
     return escrow;
@@ -440,12 +585,255 @@ export class MarketplaceService {
         disputeOpened: dbEscrow.disputeOpened || false,
         resolverAddress: dbEscrow.resolverAddress || undefined,
         createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-        resolvedAt: dbEscrow.resolvedAt?.toISOString()
+        resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+        deliveryInfo: dbEscrow.deliveryInfo || undefined,
+        deliveryConfirmed: dbEscrow.deliveryConfirmed || false
       };
       escrows.push(escrow);
     }
     
     return escrows;
+  }
+
+  // Orders
+  async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
+                    amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder | null> {
+    // Ensure buyer exists
+    let buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
+    if (!buyerUser) {
+      buyerUser = await userProfileService.createProfile({
+        address: buyerAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
+    }
+    
+    // Ensure seller exists
+    let sellerUser = await userProfileService.getProfileByAddress(sellerAddress);
+    if (!sellerUser) {
+      sellerUser = await userProfileService.createProfile({
+        address: sellerAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
+    }
+    
+    const dbOrder = await databaseService.createOrder(
+      parseInt(listingId),
+      buyerUser.id,
+      sellerUser.id,
+      amount,
+      paymentToken,
+      escrowId ? parseInt(escrowId) : undefined
+    );
+    
+    if (!dbOrder) return null;
+    
+    const order: MarketplaceOrder = {
+      id: dbOrder.id.toString(),
+      listingId: listingId,
+      buyerAddress: buyerAddress,
+      sellerAddress: sellerAddress,
+      escrowId: escrowId,
+      amount: dbOrder.amount,
+      paymentToken: dbOrder.paymentToken || '',
+      status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
+      createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
+    };
+    
+    return order;
+  }
+
+  async getOrderById(id: string): Promise<MarketplaceOrder | null> {
+    const dbOrder = await databaseService.getOrderById(parseInt(id));
+    if (!dbOrder) return null;
+    
+    // Get buyer and seller addresses
+    const buyer = await userProfileService.getProfileById(dbOrder.buyerId || '');
+    const seller = await userProfileService.getProfileById(dbOrder.sellerId || '');
+    if (!buyer || !seller) return null;
+    
+    const order: MarketplaceOrder = {
+      id: dbOrder.id.toString(),
+      listingId: dbOrder.listingId?.toString() || '',
+      buyerAddress: buyer.address,
+      sellerAddress: seller.address,
+      escrowId: dbOrder.escrowId?.toString(),
+      amount: dbOrder.amount,
+      paymentToken: dbOrder.paymentToken || '',
+      status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
+      createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
+    };
+    
+    return order;
+  }
+
+  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
+    const user = await userProfileService.getProfileByAddress(userAddress);
+    if (!user) return [];
+    
+    const dbOrders = await databaseService.getOrdersByUser(user.id);
+    
+    const orders: MarketplaceOrder[] = [];
+    for (const dbOrder of dbOrders) {
+      // Get buyer and seller addresses
+      const buyer = await userProfileService.getProfileById(dbOrder.buyerId || '');
+      const seller = await userProfileService.getProfileById(dbOrder.sellerId || '');
+      if (!buyer || !seller) continue;
+      
+      const order: MarketplaceOrder = {
+        id: dbOrder.id.toString(),
+        listingId: dbOrder.listingId?.toString() || '',
+        buyerAddress: buyer.address,
+        sellerAddress: seller.address,
+        escrowId: dbOrder.escrowId?.toString(),
+        amount: dbOrder.amount,
+        paymentToken: dbOrder.paymentToken || '',
+        status: (dbOrder.status?.toUpperCase() as 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED') || 'PENDING',
+        createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString()
+      };
+      orders.push(order);
+    }
+    
+    return orders;
+  }
+
+  async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<boolean> {
+    const updatedOrder = await databaseService.updateOrder(parseInt(orderId), {
+      status: status.toLowerCase()
+    });
+    
+    return updatedOrder !== null;
+  }
+
+  // Disputes
+  async createDispute(escrowId: string, reporterAddress: string, reason: string, evidence?: string[]): Promise<MarketplaceDispute | null> {
+    // Ensure reporter exists
+    let reporterUser = await userProfileService.getProfileByAddress(reporterAddress);
+    if (!reporterUser) {
+      reporterUser = await userProfileService.createProfile({
+        address: reporterAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
+    }
+    
+    const evidenceString = evidence ? JSON.stringify(evidence) : undefined;
+    
+    const dbDispute = await databaseService.createDispute(
+      parseInt(escrowId),
+      reporterUser.id,
+      reason,
+      evidenceString
+    );
+    
+    if (!dbDispute) return null;
+    
+    const dispute: MarketplaceDispute = {
+      id: dbDispute.id.toString(),
+      escrowId: escrowId,
+      reporterAddress: reporterAddress,
+      reason: dbDispute.reason || '',
+      status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
+      createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
+      resolvedAt: dbDispute.resolvedAt ? dbDispute.resolvedAt.toISOString() : undefined,
+      resolution: dbDispute.resolution || undefined,
+      evidence: evidence
+    };
+    
+    return dispute;
+  }
+
+  async getDisputeById(id: string): Promise<MarketplaceDispute | null> {
+    const dbDispute = await databaseService.getDisputeById(parseInt(id));
+    if (!dbDispute) return null;
+    
+    // Get reporter address
+    const reporter = await userProfileService.getProfileById(dbDispute.reporterId || '');
+    if (!reporter) return null;
+    
+    let evidence: string[] | undefined;
+    if (dbDispute.evidence) {
+      try {
+        evidence = JSON.parse(dbDispute.evidence);
+      } catch (e) {
+        evidence = undefined;
+      }
+    }
+    
+    const dispute: MarketplaceDispute = {
+      id: dbDispute.id.toString(),
+      escrowId: dbDispute.escrowId?.toString() || '',
+      reporterAddress: reporter.address,
+      reason: dbDispute.reason || '',
+      status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
+      createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
+      resolvedAt: dbDispute.resolvedAt ? dbDispute.resolvedAt.toISOString() : undefined,
+      resolution: dbDispute.resolution || undefined,
+      evidence: evidence
+    };
+    
+    return dispute;
+  }
+
+  async getDisputesByUser(userAddress: string): Promise<MarketplaceDispute[]> {
+    const user = await userProfileService.getProfileByAddress(userAddress);
+    if (!user) return [];
+    
+    const dbDisputes = await databaseService.getDisputesByUser(user.id);
+    
+    const disputes: MarketplaceDispute[] = [];
+    for (const dbDispute of dbDisputes) {
+      // Get reporter address
+      const reporter = await userProfileService.getProfileById(dbDispute.reporterId || '');
+      if (!reporter) continue;
+      
+      let evidence: string[] | undefined;
+      if (dbDispute.evidence) {
+        try {
+          evidence = JSON.parse(dbDispute.evidence);
+        } catch (e) {
+          evidence = undefined;
+        }
+      }
+      
+      const dispute: MarketplaceDispute = {
+        id: dbDispute.id.toString(),
+        escrowId: dbDispute.escrowId?.toString() || '',
+        reporterAddress: reporter.address,
+        reason: dbDispute.reason || '',
+        status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
+        createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
+        resolvedAt: dbDispute.resolvedAt ? dbDispute.resolvedAt.toISOString() : undefined,
+        resolution: dbDispute.resolution || undefined,
+        evidence: evidence
+      };
+      disputes.push(dispute);
+    }
+    
+    return disputes;
+  }
+
+  async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED', 
+                            resolution?: string): Promise<boolean> {
+    const updates: any = {
+      status: status.toLowerCase()
+    };
+    
+    if (resolution) {
+      updates.resolution = resolution;
+      updates.resolvedAt = new Date();
+    }
+    
+    const updatedDispute = await databaseService.updateDispute(parseInt(disputeId), updates);
+    
+    return updatedDispute !== null;
   }
 
   // Reputation
@@ -496,6 +884,82 @@ export class MarketplaceService {
     }));
     
     return reputations;
+  }
+
+  // AI Moderation
+  async createAIModeration(objectType: string, objectId: string, aiAnalysis?: string): Promise<AIModeration | null> {
+    const dbAIModeration = await databaseService.createAIModeration(
+      objectType,
+      parseInt(objectId),
+      aiAnalysis
+    );
+    
+    if (!dbAIModeration) return null;
+    
+    const aiModeration: AIModeration = {
+      id: dbAIModeration.id.toString(),
+      objectType: dbAIModeration.objectType,
+      objectId: dbAIModeration.objectId.toString(),
+      status: (dbAIModeration.status?.toUpperCase() as 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED') || 'PENDING',
+      aiAnalysis: dbAIModeration.aiAnalysis || undefined,
+      createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
+    };
+    
+    return aiModeration;
+  }
+
+  async getAIModerationByObject(objectType: string, objectId: string): Promise<AIModeration | null> {
+    const dbAIModeration = await databaseService.getAIModerationByObject(
+      objectType,
+      parseInt(objectId)
+    );
+    
+    if (!dbAIModeration) return null;
+    
+    const aiModeration: AIModeration = {
+      id: dbAIModeration.id.toString(),
+      objectType: dbAIModeration.objectType,
+      objectId: dbAIModeration.objectId.toString(),
+      status: (dbAIModeration.status?.toUpperCase() as 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED') || 'PENDING',
+      aiAnalysis: dbAIModeration.aiAnalysis || undefined,
+      createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
+    };
+    
+    return aiModeration;
+  }
+
+  async updateAIModerationStatus(id: string, status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED', 
+                                aiAnalysis?: string): Promise<boolean> {
+    const updates: any = {
+      status: status.toLowerCase()
+    };
+    
+    if (aiAnalysis) {
+      updates.aiAnalysis = aiAnalysis;
+      updates.updatedAt = new Date();
+    }
+    
+    const updatedAIModeration = await databaseService.updateAIModeration(parseInt(id), updates);
+    
+    return updatedAIModeration !== null;
+  }
+
+  async getPendingAIModeration(): Promise<AIModeration[]> {
+    const dbAIModerations = await databaseService.getPendingAIModeration();
+    
+    const aiModerations: AIModeration[] = dbAIModerations.map(dbAIModeration => ({
+      id: dbAIModeration.id.toString(),
+      objectType: dbAIModeration.objectType,
+      objectId: dbAIModeration.objectId.toString(),
+      status: (dbAIModeration.status?.toUpperCase() as 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED') || 'PENDING',
+      aiAnalysis: dbAIModeration.aiAnalysis || undefined,
+      createdAt: dbAIModeration.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: dbAIModeration.updatedAt?.toISOString() || new Date().toISOString()
+    }));
+    
+    return aiModerations;
   }
 
   // Utility methods

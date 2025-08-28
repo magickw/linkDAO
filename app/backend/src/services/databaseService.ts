@@ -219,7 +219,8 @@ export class DatabaseService {
 
   // Marketplace operations
   async createListing(sellerId: string, tokenAddress: string, price: string, quantity: number, 
-                     itemType: string, listingType: string, metadataURI: string) {
+                     itemType: string, listingType: string, metadataURI: string, 
+                     nftStandard?: string, tokenId?: string, reservePrice?: string, minIncrement?: string) {
     try {
       const result = await db.insert(schema.listings).values({
         sellerId,
@@ -228,7 +229,11 @@ export class DatabaseService {
         quantity,
         itemType,
         listingType,
-        metadataURI
+        metadataURI,
+        nftStandard: nftStandard || null,
+        tokenId: tokenId || null,
+        reservePrice: reservePrice || null,
+        minIncrement: minIncrement || null
       }).returning();
       
       return result[0];
@@ -328,13 +333,59 @@ export class DatabaseService {
     }
   }
 
-  async createEscrow(listingId: number, buyerId: string, sellerId: string, amount: string) {
+  async makeOffer(listingId: number, buyerId: string, amount: string) {
+    try {
+      const result = await db.insert(schema.offers).values({
+        listingId,
+        buyerId,
+        amount
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error making offer:", error);
+      throw error;
+    }
+  }
+
+  async getOffersByListing(listingId: number) {
+    try {
+      return await db.select().from(schema.offers).where(eq(schema.offers.listingId, listingId));
+    } catch (error) {
+      console.error("Error getting offers by listing:", error);
+      throw error;
+    }
+  }
+
+  async getOffersByBuyer(buyerId: string) {
+    try {
+      return await db.select().from(schema.offers).where(eq(schema.offers.buyerId, buyerId));
+    } catch (error) {
+      console.error("Error getting offers by buyer:", error);
+      throw error;
+    }
+  }
+
+  async acceptOffer(offerId: number) {
+    try {
+      const result = await db.update(schema.offers).set({ accepted: true }).where(eq(schema.offers.id, offerId)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error accepting offer:", error);
+      throw error;
+    }
+  }
+
+  async createEscrow(listingId: number, buyerId: string, sellerId: string, amount: string, 
+                     deliveryInfo?: string) {
     try {
       const result = await db.insert(schema.escrows).values({
         listingId,
         buyerId,
         sellerId,
-        amount
+        amount,
+        deliveryInfo: deliveryInfo || null,
+        deliveryConfirmed: false
       }).returning();
       
       return result[0];
@@ -371,6 +422,114 @@ export class DatabaseService {
       return result[0] || null;
     } catch (error) {
       console.error("Error updating escrow:", error);
+      throw error;
+    }
+  }
+
+  async confirmDelivery(escrowId: number, deliveryInfo: string) {
+    try {
+      const result = await db.update(schema.escrows).set({ 
+        deliveryInfo, 
+        deliveryConfirmed: true 
+      }).where(eq(schema.escrows.id, escrowId)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error confirming delivery:", error);
+      throw error;
+    }
+  }
+
+  async createOrder(listingId: number, buyerId: string, sellerId: string, amount: string, 
+                    paymentToken: string, escrowId?: number) {
+    try {
+      const result = await db.insert(schema.orders).values({
+        listingId,
+        buyerId,
+        sellerId,
+        amount,
+        paymentToken,
+        escrowId: escrowId || null
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating order:", error);
+      throw error;
+    }
+  }
+
+  async getOrderById(id: number) {
+    try {
+      const result = await db.select().from(schema.orders).where(eq(schema.orders.id, id));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting order by ID:", error);
+      throw error;
+    }
+  }
+
+  async getOrdersByUser(userId: string) {
+    try {
+      return await db.select().from(schema.orders).where(
+        or(eq(schema.orders.buyerId, userId), eq(schema.orders.sellerId, userId))
+      );
+    } catch (error) {
+      console.error("Error getting orders by user:", error);
+      throw error;
+    }
+  }
+
+  async updateOrder(id: number, updates: Partial<typeof schema.orders.$inferInsert>) {
+    try {
+      const result = await db.update(schema.orders).set(updates).where(eq(schema.orders.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating order:", error);
+      throw error;
+    }
+  }
+
+  async createDispute(escrowId: number, reporterId: string, reason: string, evidence?: string) {
+    try {
+      const result = await db.insert(schema.disputes).values({
+        escrowId,
+        reporterId,
+        reason,
+        evidence: evidence || null
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating dispute:", error);
+      throw error;
+    }
+  }
+
+  async getDisputeById(id: number) {
+    try {
+      const result = await db.select().from(schema.disputes).where(eq(schema.disputes.id, id));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting dispute by ID:", error);
+      throw error;
+    }
+  }
+
+  async getDisputesByUser(userId: string) {
+    try {
+      return await db.select().from(schema.disputes).where(eq(schema.disputes.reporterId, userId));
+    } catch (error) {
+      console.error("Error getting disputes by user:", error);
+      throw error;
+    }
+  }
+
+  async updateDispute(id: number, updates: Partial<typeof schema.disputes.$inferInsert>) {
+    try {
+      const result = await db.update(schema.disputes).set(updates).where(eq(schema.disputes.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating dispute:", error);
       throw error;
     }
   }
@@ -415,6 +574,56 @@ export class DatabaseService {
       return await db.select().from(schema.reputations).where(eq(schema.reputations.daoApproved, true));
     } catch (error) {
       console.error("Error getting DAO approved vendors:", error);
+      throw error;
+    }
+  }
+
+  // AI Moderation operations
+  async createAIModeration(objectType: string, objectId: number, aiAnalysis?: string) {
+    try {
+      const result = await db.insert(schema.aiModeration).values({
+        objectType,
+        objectId,
+        aiAnalysis: aiAnalysis || null
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating AI moderation record:", error);
+      throw error;
+    }
+  }
+
+  async getAIModerationByObject(objectType: string, objectId: number) {
+    try {
+      const result = await db.select().from(schema.aiModeration).where(
+        and(
+          eq(schema.aiModeration.objectType, objectType),
+          eq(schema.aiModeration.objectId, objectId)
+        )
+      );
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting AI moderation record:", error);
+      throw error;
+    }
+  }
+
+  async updateAIModeration(id: number, updates: Partial<typeof schema.aiModeration.$inferInsert>) {
+    try {
+      const result = await db.update(schema.aiModeration).set(updates).where(eq(schema.aiModeration.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating AI moderation record:", error);
+      throw error;
+    }
+  }
+
+  async getPendingAIModeration() {
+    try {
+      return await db.select().from(schema.aiModeration).where(eq(schema.aiModeration.status, 'pending'));
+    } catch (error) {
+      console.error("Error getting pending AI moderation records:", error);
       throw error;
     }
   }

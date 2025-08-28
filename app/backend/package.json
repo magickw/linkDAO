@@ -11,6 +11,7 @@
     "lint": "eslint src/**/*.ts",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "tsx src/scripts/migrate.ts",
+    "db:sync": "tsx src/scripts/schemaMigration.ts",
     "db:push": "drizzle-kit push",
     "db:reset": "tsx src/scripts/resetDatabase.ts",
     "db:studio": "drizzle-kit studio",

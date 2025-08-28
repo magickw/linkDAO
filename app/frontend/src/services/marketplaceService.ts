@@ -10,6 +10,9 @@ export interface CreateListingInput {
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration?: number;
   metadataURI: string;
+  // NFT specific fields
+  nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
+  tokenId?: string; // Only for NFT items
 }
 
 export interface UpdateListingInput {
@@ -19,6 +22,11 @@ export interface UpdateListingInput {
 
 export interface PlaceBidInput {
   bidderAddress: string;
+  amount: string;
+}
+
+export interface MakeOfferInput {
+  buyerAddress: string;
   amount: string;
 }
 
@@ -37,6 +45,9 @@ export interface MarketplaceListing {
   highestBidder?: string;
   metadataURI: string;
   isEscrowed: boolean;
+  // NFT specific fields
+  nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
+  tokenId?: string; // Only for NFT items
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +58,15 @@ export interface MarketplaceBid {
   bidderAddress: string;
   amount: string;
   timestamp: string;
+}
+
+export interface MarketplaceOffer {
+  id: string;
+  listingId: string;
+  buyerAddress: string;
+  amount: string;
+  createdAt: string;
+  accepted: boolean;
 }
 
 export interface MarketplaceEscrow {
@@ -61,6 +81,32 @@ export interface MarketplaceEscrow {
   resolverAddress?: string;
   createdAt: string;
   resolvedAt?: string;
+  // Delivery tracking
+  deliveryInfo?: string;
+  deliveryConfirmed: boolean;
+}
+
+export interface MarketplaceOrder {
+  id: string;
+  listingId: string;
+  buyerAddress: string;
+  sellerAddress: string;
+  escrowId?: string;
+  amount: string;
+  paymentToken: string;
+  status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED';
+  createdAt: string;
+}
+
+export interface MarketplaceDispute {
+  id: string;
+  escrowId: string;
+  reporterAddress: string;
+  reason: string;
+  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED';
+  createdAt: string;
+  resolvedAt?: string;
+  resolution?: string;
 }
 
 export interface UserReputation {
@@ -144,11 +190,33 @@ export class MarketplaceService {
     return this.request(`/marketplace/bids/bidder/${bidderAddress}`);
   }
 
+  // Offers
+  async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer> {
+    return this.request(`/marketplace/offers/listing/${listingId}`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
+    return this.request(`/marketplace/offers/listing/${listingId}`);
+  }
+
+  async getOffersByBuyer(buyerAddress: string): Promise<MarketplaceOffer[]> {
+    return this.request(`/marketplace/offers/buyer/${buyerAddress}`);
+  }
+
+  async acceptOffer(offerId: string): Promise<void> {
+    await this.request(`/marketplace/offers/${offerId}/accept`, {
+      method: 'POST',
+    });
+  }
+
   // Escrow
-  async createEscrow(listingId: string, buyerAddress: string): Promise<MarketplaceEscrow> {
+  async createEscrow(listingId: string, buyerAddress: string, deliveryInfo?: string): Promise<MarketplaceEscrow> {
     return this.request(`/marketplace/escrows/listing/${listingId}`, {
       method: 'POST',
-      body: JSON.stringify({ buyerAddress }),
+      body: JSON.stringify({ buyerAddress, deliveryInfo }),
     });
   }
 
@@ -166,12 +234,67 @@ export class MarketplaceService {
     });
   }
 
+  async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<void> {
+    await this.request(`/marketplace/escrows/${escrowId}/confirm-delivery`, {
+      method: 'POST',
+      body: JSON.stringify({ deliveryInfo }),
+    });
+  }
+
   async getEscrowById(id: string): Promise<MarketplaceEscrow> {
     return this.request(`/marketplace/escrows/${id}`);
   }
 
   async getEscrowsByUser(userAddress: string): Promise<MarketplaceEscrow[]> {
     return this.request(`/marketplace/escrows/user/${userAddress}`);
+  }
+
+  // Orders
+  async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
+                    amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder> {
+    return this.request('/marketplace/orders', {
+      method: 'POST',
+      body: JSON.stringify({ listingId, buyerAddress, sellerAddress, amount, paymentToken, escrowId }),
+    });
+  }
+
+  async getOrderById(id: string): Promise<MarketplaceOrder> {
+    return this.request(`/marketplace/orders/${id}`);
+  }
+
+  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
+    return this.request(`/marketplace/orders/user/${userAddress}`);
+  }
+
+  async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<void> {
+    await this.request(`/marketplace/orders/${orderId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // Disputes
+  async createDispute(escrowId: string, reporterAddress: string, reason: string): Promise<MarketplaceDispute> {
+    return this.request('/marketplace/disputes', {
+      method: 'POST',
+      body: JSON.stringify({ escrowId, reporterAddress, reason }),
+    });
+  }
+
+  async getDisputeById(id: string): Promise<MarketplaceDispute> {
+    return this.request(`/marketplace/disputes/${id}`);
+  }
+
+  async getDisputesByUser(userAddress: string): Promise<MarketplaceDispute[]> {
+    return this.request(`/marketplace/disputes/user/${userAddress}`);
+  }
+
+  async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED', 
+                            resolution?: string): Promise<void> {
+    await this.request(`/marketplace/disputes/${disputeId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, resolution }),
+    });
   }
 
   // Reputation

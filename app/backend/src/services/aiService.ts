@@ -1,276 +1,345 @@
 import OpenAI from 'openai';
-import { Pinecone } from '@pinecone-database/pinecone';
-import { ethers } from 'ethers';
+import { DatabaseService } from './databaseService';
+import { MarketplaceService } from './marketplaceService';
 
-// Types
-export interface AIBotConfig {
-  name: string;
-  description: string;
-  scope: string[];
-  permissions: string[];
-  aiModel: string;
-  persona: string;
-  settings?: Record<string, any>;
-}
+const databaseService = new DatabaseService();
+const marketplaceService = new MarketplaceService();
 
-export interface AIResponse {
-  content: string;
-  tokensUsed: number;
-  model: string;
-}
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || ''
+});
 
-export interface ProposalData {
-  id: number;
-  title: string;
-  description: string;
-  proposer: string;
-  startBlock: number;
-  endBlock: number;
-  forVotes: string;
-  againstVotes: string;
-  targets: string[];
-  values: string[];
-  signatures: string[];
-  calldatas: string[];
-}
-
-interface Message {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-// AI Service Class
 export class AIService {
-  private openai: OpenAI;
-  private pinecone: Pinecone;
-  private provider: ethers.JsonRpcProvider;
-
-  constructor() {
-    // Initialize OpenAI
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
-    // Initialize Pinecone for RAG
-    this.pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_KEY || '',
-    });
-    
-    // Initialize Ethereum provider for on-chain data
-    this.provider = new ethers.JsonRpcProvider(
-      process.env.RPC_URL || 'http://localhost:8545'
-    );
-  }
-
   /**
-   * Generate text using OpenAI GPT models
+   * Analyze a marketplace listing for prohibited content
+   * @param listingId ID of the listing to analyze
+   * @returns Analysis results
    */
-  async generateText(
-    messages: Message[],
-    model: string = 'gpt-4-turbo',
-    maxTokens: number = 1000
-  ): Promise<AIResponse> {
+  async analyzeListing(listingId: string): Promise<any> {
     try {
-      const completion = await this.openai.chat.completions.create({
-        model,
-        messages,
-        max_tokens: maxTokens,
+      // Get listing details
+      const listing = await marketplaceService.getListingById(listingId);
+      if (!listing) {
+        throw new Error('Listing not found');
+      }
+
+      // Get user reputation
+      const reputation = await marketplaceService.getUserReputation(listing.sellerAddress);
+      
+      // Create prompt for AI analysis
+      const prompt = `
+        Analyze this marketplace listing for prohibited content, fraud risk, and policy violations.
+        
+        Listing Details:
+        - Title/Description: ${listing.metadataURI}
+        - Item Type: ${listing.itemType}
+        - Price: ${listing.price}
+        - Seller Reputation Score: ${reputation?.score || 0}
+        - Seller DAO Approved: ${reputation?.daoApproved ? 'Yes' : 'No'}
+        
+        Check for:
+        1. Prohibited items (weapons, illegal substances, stolen goods)
+        2. Counterfeit trademarks or copyrighted material
+        3. Fraudulent pricing or misleading descriptions
+        4. Seller reputation risk factors
+        5. Policy violations
+        
+        Provide a risk score (0-100) and detailed explanation.
+      `;
+
+      // Call OpenAI API
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a marketplace content moderator AI. Analyze listings for prohibited content and policy violations.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
       });
 
+      const analysis = response.choices[0].message.content || '';
+      
+      // Parse risk score from analysis (simple extraction)
+      const riskScoreMatch = analysis.match(/risk score[:\s]*(\d+)/i);
+      const riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : 50;
+      
+      // Determine status based on risk score
+      let status: 'APPROVED' | 'FLAGGED' | 'REJECTED' = 'APPROVED';
+      if (riskScore > 80) {
+        status = 'REJECTED';
+      } else if (riskScore > 50) {
+        status = 'FLAGGED';
+      }
+      
+      // Save analysis to database
+      const aiModeration = await marketplaceService.createAIModeration(
+        'listing',
+        listingId,
+        JSON.stringify({
+          analysis,
+          riskScore,
+          status
+        })
+      );
+      
       return {
-        content: completion.choices[0].message.content || '',
-        tokensUsed: completion.usage?.total_tokens || 0,
-        model: completion.model,
+        listingId,
+        riskScore,
+        status,
+        analysis,
+        aiModerationId: aiModeration?.id
       };
     } catch (error) {
-      console.error('Error generating text:', error);
+      console.error('Error analyzing listing:', error);
       throw error;
     }
   }
 
   /**
-   * Moderate content using OpenAI's moderation API
+   * Assist with dispute resolution
+   * @param disputeId ID of the dispute to analyze
+   * @returns Analysis results and recommendation
    */
-  async moderateContent(input: string): Promise<{ flagged: boolean; categories: any }> {
+  async assistDisputeResolution(disputeId: string): Promise<any> {
     try {
-      const moderation = await this.openai.moderations.create({
-        input,
+      // Get dispute details
+      const dispute = await marketplaceService.getDisputeById(disputeId);
+      if (!dispute) {
+        throw new Error('Dispute not found');
+      }
+
+      // Get escrow details
+      const escrow = await marketplaceService.getEscrowById(dispute.escrowId);
+      if (!escrow) {
+        throw new Error('Escrow not found');
+      }
+
+      // Get user reputations
+      const buyerReputation = await marketplaceService.getUserReputation(escrow.buyerAddress);
+      const sellerReputation = await marketplaceService.getUserReputation(escrow.sellerAddress);
+      
+      // Get evidence if available
+      const evidenceText = dispute.evidence ? dispute.evidence.join('\n') : 'No evidence provided';
+      
+      // Create prompt for AI analysis
+      const prompt = `
+        Assist with this marketplace dispute resolution.
+        
+        Dispute Details:
+        - Reason: ${dispute.reason}
+        - Evidence: ${evidenceText}
+        
+        Transaction Details:
+        - Amount: ${escrow.amount}
+        - Buyer: ${escrow.buyerAddress}
+        - Seller: ${escrow.sellerAddress}
+        
+        User Reputations:
+        - Buyer Score: ${buyerReputation?.score || 0}
+        - Buyer DAO Approved: ${buyerReputation?.daoApproved ? 'Yes' : 'No'}
+        - Seller Score: ${sellerReputation?.score || 0}
+        - Seller DAO Approved: ${sellerReputation?.daoApproved ? 'Yes' : 'No'}
+        
+        Analyze the evidence and provide:
+        1. Likelihood of buyer winning (0-100%)
+        2. Key factors in the decision
+        3. Recommended resolution (refund to buyer, pay seller, split, etc.)
+        4. Confidence level in recommendation (0-100%)
+      `;
+
+      // Call OpenAI API
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a dispute resolution AI assistant. Provide fair and balanced recommendations for marketplace disputes.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 800
       });
 
+      const analysis = response.choices[0].message.content || '';
+      
+      // Save analysis to database
+      const aiModeration = await marketplaceService.createAIModeration(
+        'dispute',
+        disputeId,
+        analysis
+      );
+      
       return {
-        flagged: moderation.results[0].flagged,
-        categories: moderation.results[0].categories,
+        disputeId,
+        analysis,
+        aiModerationId: aiModeration?.id
       };
     } catch (error) {
-      console.error('Error moderating content:', error);
+      console.error('Error assisting dispute resolution:', error);
       throw error;
     }
   }
 
   /**
-   * Generate embeddings for semantic search
+   * Detect fraudulent patterns in user behavior
+   * @param userAddress Address of the user to analyze
+   * @returns Fraud risk assessment
    */
-  async generateEmbeddings(input: string | string[]): Promise<number[][]> {
+  async detectFraud(userAddress: string): Promise<any> {
     try {
-      const embeddings = await this.openai.embeddings.create({
-        model: 'text-embedding-3-large',
-        input,
+      // Get user reputation
+      const reputation = await marketplaceService.getUserReputation(userAddress);
+      
+      // Get user's recent transactions
+      const userOrders = await marketplaceService.getOrdersByUser(userAddress);
+      const userDisputes = await marketplaceService.getDisputesByUser(userAddress);
+      
+      // Create prompt for AI analysis
+      const prompt = `
+        Assess fraud risk for this marketplace user.
+        
+        User Details:
+        - Address: ${userAddress}
+        - Reputation Score: ${reputation?.score || 0}
+        - DAO Approved: ${reputation?.daoApproved ? 'Yes' : 'No'}
+        
+        Recent Activity:
+        - Orders Placed: ${userOrders.length}
+        - Disputes Initiated: ${userDisputes.length}
+        
+        Check for:
+        1. Pattern of disputes (frequent buyer or seller disputes)
+        2. Rapid account creation and activity
+        3. Unusual transaction patterns
+        4. History of policy violations
+        
+        Provide a fraud risk score (0-100) and detailed explanation.
+      `;
+
+      // Call OpenAI API
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a fraud detection AI. Analyze user behavior for potential fraudulent activity.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
       });
 
-      return embeddings.data.map(item => item.embedding);
+      const analysis = response.choices[0].message.content || '';
+      
+      // Parse risk score from analysis (simple extraction)
+      const riskScoreMatch = analysis.match(/risk score[:\s]*(\d+)/i);
+      const riskScore = riskScoreMatch ? parseInt(riskScoreMatch[1]) : 50;
+      
+      return {
+        userAddress,
+        riskScore,
+        analysis
+      };
     } catch (error) {
-      console.error('Error generating embeddings:', error);
+      console.error('Error detecting fraud:', error);
       throw error;
     }
   }
 
   /**
-   * Retrieve relevant context from Pinecone
+   * Suggest listing price based on comparable sales
+   * @param itemType Type of item
+   * @param metadataURI Metadata URI for the item
+   * @returns Price suggestion
    */
-  async retrieveContext(query: string, namespace: string = 'default', topK: number = 5): Promise<any[]> {
+  async suggestPrice(itemType: string, metadataURI: string): Promise<any> {
     try {
-      // Generate embedding for the query
-      const queryEmbedding = (await this.generateEmbeddings(query))[0];
-      
-      // Query Pinecone
-      const index = this.pinecone.Index(process.env.PINECONE_INDEX_NAME || 'linkdao');
-      const queryResponse = await index.namespace(namespace).query({
-        vector: queryEmbedding,
-        topK,
-        includeMetadata: true,
+      // Create prompt for AI analysis
+      const prompt = `
+        Suggest a marketplace listing price for this item.
+        
+        Item Details:
+        - Type: ${itemType}
+        - Description: ${metadataURI}
+        
+        Consider:
+        1. Comparable sales in similar marketplaces
+        2. Item condition and rarity
+        3. Current market demand
+        4. Seasonal factors
+        
+        Provide a price range suggestion and explanation.
+      `;
+
+      // Call OpenAI API
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a pricing advisor AI. Suggest fair market prices for items based on descriptions.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 300
       });
 
-      return queryResponse.matches || [];
+      const analysis = response.choices[0].message.content || '';
+      
+      return {
+        itemType,
+        metadataURI,
+        suggestion: analysis
+      };
     } catch (error) {
-      console.error('Error retrieving context:', error);
-      return [];
+      console.error('Error suggesting price:', error);
+      throw error;
     }
   }
 
   /**
-   * Get on-chain governance data
+   * Process pending AI moderation records
    */
-  async getProposalData(proposalId: string): Promise<any> {
-    // In a real implementation, this would fetch from our governance contract
-    // or a subgraph indexing the governance data
-    
-    // For now, we'll return a mock structure
-    return {
-      id: proposalId,
-      title: 'Sample Proposal',
-      description: 'This is a sample governance proposal for demonstration purposes.',
-      proposer: '0x1234567890123456789012345678901234567890',
-      startBlock: 1000000,
-      endBlock: 1001000,
-      forVotes: '1000000',
-      againstVotes: '500000',
-    };
-  }
-
-  /**
-   * Analyze a governance proposal
-   */
-  async analyzeProposal(proposal: ProposalData): Promise<AIResponse> {
-    const prompt = `
-      Analyze this DAO governance proposal comprehensively:
+  async processPendingModeration(): Promise<void> {
+    try {
+      // Get pending AI moderation records
+      const pendingRecords = await marketplaceService.getPendingAIModeration();
       
-      Proposal ID: ${proposal.id}
-      Title: ${proposal.title}
-      Description: ${proposal.description}
-      Proposer: ${proposal.proposer}
-      
-      Voting Statistics:
-      For Votes: ${proposal.forVotes}
-      Against Votes: ${proposal.againstVotes}
-      
-      Please provide:
-      1. Executive Summary (2-3 sentences)
-      2. Key Benefits
-      3. Potential Risks
-      4. Technical Feasibility Assessment
-      5. Financial Impact Analysis
-      6. Community Impact Evaluation
-      7. Recommendation (Approve/Reject/Needs Revision)
-      8. Key Considerations for Voters
-    `;
-
-    return await this.generateText([
-      {
-        role: 'system',
-        content: 'You are a governance expert specializing in DAO proposal analysis. Provide clear, actionable insights.'
-      },
-      {
-        role: 'user',
-        content: prompt
+      // Process each record
+      for (const record of pendingRecords) {
+        try {
+          if (record.objectType === 'listing') {
+            await this.analyzeListing(record.objectId);
+          } else if (record.objectType === 'dispute') {
+            await this.assistDisputeResolution(record.objectId);
+          }
+        } catch (error) {
+          console.error(`Error processing ${record.objectType} ${record.objectId}:`, error);
+        }
       }
-    ], 'gpt-4-turbo', 1500);
+    } catch (error) {
+      console.error('Error processing pending moderation:', error);
+      throw error;
+    }
   }
-
-  /**
-   * Generate voting guidance for a user
-   */
-  async generateVotingGuidance(proposal: ProposalData, userAddress: string): Promise<AIResponse> {
-    const prompt = `
-      Provide personalized voting guidance for this DAO member:
-      
-      User Address: ${userAddress}
-      Proposal Title: ${proposal.title}
-      Description: ${proposal.description}
-      
-      Based on the proposal analysis, provide clear guidance on:
-      1. Whether to vote yes or no
-      2. Key points to consider
-      3. How this affects the user's interests
-      4. Any risks to be aware of
-      
-      Keep the guidance concise and actionable.
-    `;
-
-    return await this.generateText([
-      {
-        role: 'system',
-        content: 'You are a governance advisor helping DAO members make informed voting decisions.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]);
-  }
-}
-
-// Bot Framework
-export class AIBot {
-  protected config: AIBotConfig;
-  protected aiService: AIService;
-
-  constructor(config: AIBotConfig, aiService: AIService) {
-    this.config = config;
-    this.aiService = aiService;
-  }
-
-  /**
-   * Process a user message and generate a response
-   */
-  async processMessage(userMessage: string, userId: string): Promise<AIResponse> {
-    // This should be implemented by specific bot types
-    throw new Error('processMessage must be implemented by bot subclass');
-  }
-
-  /**
-   * Get bot configuration
-   */
-  getConfig(): AIBotConfig {
-    return this.config;
-  }
-}
-
-// Export a singleton instance
-let aiServiceInstance: AIService | null = null;
-
-export function getAIService(): AIService {
-  if (!aiServiceInstance) {
-    aiServiceInstance = new AIService();
-  }
-  return aiServiceInstance;
 }

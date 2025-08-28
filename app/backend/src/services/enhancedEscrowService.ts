@@ -261,7 +261,9 @@ export class EnhancedEscrowService {
         disputeOpened: dbEscrow.disputeOpened || false,
         resolverAddress: dbEscrow.resolverAddress || undefined,
         createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
-        resolvedAt: dbEscrow.resolvedAt?.toISOString()
+        resolvedAt: dbEscrow.resolvedAt?.toISOString(),
+        deliveryInfo: dbEscrow.deliveryInfo || undefined,
+        deliveryConfirmed: dbEscrow.deliveryConfirmed || false
       };
       
       return escrow;
