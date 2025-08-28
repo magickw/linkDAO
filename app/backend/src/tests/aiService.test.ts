@@ -47,32 +47,50 @@ describe('AI Service', () => {
   let aiService: AIService;
 
   beforeEach(() => {
-    // Reset the mock
-    jest.clearAllMocks();
     aiService = new AIService();
   });
 
-  it('should initialize without errors', () => {
-    expect(aiService).toBeInstanceOf(AIService);
-  });
-
-  it('should generate text with mock response', async () => {
-    const messages = [{ role: 'user' as const, content: 'Hello' }];
-    const response = await aiService.generateText(messages);
+  it('should generate text', async () => {
+    const messages = [
+      { role: 'user' as const, content: 'Hello, world!' }
+    ];
     
-    expect(response.content).toBe('Mock response');
-    expect(response.tokensUsed).toBe(10);
-    expect(response.model).toBe('gpt-4-turbo');
+    const result = await aiService.generateText(messages);
+    
+    expect(result.content).toBe('Mock response');
+    expect(result.tokensUsed).toBe(10);
+    expect(result.model).toBe('gpt-4-turbo');
   });
 
   it('should moderate content', async () => {
-    const isFlagged = await aiService.moderateContent('Test content');
-    expect(isFlagged).toBe(false);
+    const input = 'Test content';
+    
+    const result = await aiService.moderateContent(input);
+    
+    expect(result.flagged).toBe(false);
   });
 
-  it('should embed text', async () => {
-    const embedding = await aiService.embedText('Test text');
-    expect(embedding).toEqual([0.1, 0.2, 0.3]);
+  it('should generate embeddings', async () => {
+    const input = 'Test text';
+    
+    const result = await aiService.generateEmbeddings(input);
+    
+    expect(result).toEqual([[0.1, 0.2, 0.3]]);
+  });
+
+  it('should retrieve context', async () => {
+    const query = 'Test query';
+    
+    const result = await aiService.retrieveContext(query);
+    
+    expect(result).toEqual([]);
+  });
+
+  it('should get proposal data', async () => {
+    const result = await aiService.getProposalData('123');
+    
+    expect(result).toBeDefined();
+    expect(result.id).toBe('123');
   });
 });
 

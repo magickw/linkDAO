@@ -25,6 +25,16 @@ router.post('/bids/listing/:listingId', authenticateToken, (req, res) => marketp
 router.post('/escrows/listing/:listingId', authenticateToken, (req, res) => marketplaceController.createEscrow(req, res));
 router.post('/escrows/:escrowId/approve', authenticateToken, (req, res) => marketplaceController.approveEscrow(req, res));
 router.post('/escrows/:escrowId/dispute', authenticateToken, (req, res) => marketplaceController.openDispute(req, res));
+
+// Enhanced Escrow routes
+router.post('/enhanced-escrows', authenticateToken, (req, res) => marketplaceController.createEnhancedEscrow(req, res));
+router.post('/enhanced-escrows/:escrowId/lock-funds', authenticateToken, (req, res) => marketplaceController.lockFunds(req, res));
+router.post('/enhanced-escrows/:escrowId/confirm-delivery', authenticateToken, (req, res) => marketplaceController.confirmDelivery(req, res));
+router.post('/enhanced-escrows/:escrowId/approve', authenticateToken, (req, res) => marketplaceController.approveEnhancedEscrow(req, res));
+router.post('/enhanced-escrows/:escrowId/dispute', authenticateToken, (req, res) => marketplaceController.openEnhancedDispute(req, res));
+router.post('/enhanced-escrows/:escrowId/evidence', authenticateToken, (req, res) => marketplaceController.submitEvidence(req, res));
+router.post('/enhanced-escrows/:escrowId/vote', authenticateToken, (req, res) => marketplaceController.castVote(req, res));
+
 router.put('/reputation/:address', authenticateToken, (req, res) => marketplaceController.updateUserReputation(req, res));
 
 export default router;

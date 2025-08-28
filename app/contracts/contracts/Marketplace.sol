@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./LinkDAOToken.sol";
+import "./EnhancedEscrow.sol";
 
 /**
  * @title LinkDAO Marketplace
@@ -86,6 +87,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
     
     // Minimum reputation score to be a vendor
     uint256 public minReputationScore = 50;
+    
+    // Reference to EnhancedEscrow contract
+    EnhancedEscrow public enhancedEscrow;
     
     // Events
     event ListingCreated(
@@ -199,6 +203,13 @@ contract Marketplace is ReentrancyGuard, Ownable {
     modifier listingActive(uint256 listingId) {
         require(listings[listingId].status == ListingStatus.ACTIVE, "Listing not active");
         _;
+    }
+    
+    /**
+     * @notice Constructor
+     */
+    constructor() {
+        // EnhancedEscrow will be deployed separately and set later
     }
     
     /**

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { MarketplaceService } from '../services/marketplaceService';
+import { EnhancedEscrowService } from '../services/enhancedEscrowService';
 import { 
   CreateListingInput, 
   UpdateListingInput, 
@@ -8,6 +9,11 @@ import {
 import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 const marketplaceService = new MarketplaceService();
+const enhancedEscrowService = new EnhancedEscrowService(
+  process.env.RPC_URL || 'http://localhost:8545',
+  process.env.ENHANCED_ESCROW_CONTRACT_ADDRESS || '',
+  process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
+);
 
 export class MarketplaceController {
   // Listings
@@ -275,6 +281,152 @@ export class MarketplaceController {
       const userEscrows = await marketplaceService.getEscrowsByUser(userAddress);
       return res.json(userEscrows);
     } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  // Enhanced Escrow methods
+  async createEnhancedEscrow(req: Request, res: Response): Promise<Response> {
+    try {
+      const { listingId, buyerAddress, sellerAddress, tokenAddress, amount } = req.body;
+      
+      if (!listingId || !buyerAddress || !sellerAddress || !tokenAddress || !amount) {
+        throw new ValidationError('Missing required fields');
+      }
+      
+      const escrowId = await enhancedEscrowService.createEscrow(
+        listingId, 
+        buyerAddress, 
+        sellerAddress, 
+        tokenAddress, 
+        amount
+      );
+      
+      return res.status(201).json({ escrowId });
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async lockFunds(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { amount, tokenAddress } = req.body;
+      
+      if (!amount || !tokenAddress) {
+        throw new ValidationError('Amount and token address are required');
+      }
+      
+      await enhancedEscrowService.lockFunds(escrowId, amount, tokenAddress);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async confirmDelivery(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { deliveryInfo } = req.body;
+      
+      if (!deliveryInfo) {
+        throw new ValidationError('Delivery info is required');
+      }
+      
+      await enhancedEscrowService.confirmDelivery(escrowId, deliveryInfo);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async approveEnhancedEscrow(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { buyerAddress } = req.body;
+      
+      if (!buyerAddress) {
+        throw new ValidationError('Buyer address is required');
+      }
+      
+      await enhancedEscrowService.approveEscrow(escrowId, buyerAddress);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async openEnhancedDispute(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { userAddress, reason } = req.body;
+      
+      if (!userAddress || !reason) {
+        throw new ValidationError('User address and reason are required');
+      }
+      
+      await enhancedEscrowService.openDispute(escrowId, userAddress, reason);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async submitEvidence(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { userAddress, evidence } = req.body;
+      
+      if (!userAddress || !evidence) {
+        throw new ValidationError('User address and evidence are required');
+      }
+      
+      await enhancedEscrowService.submitEvidence(escrowId, userAddress, evidence);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async castVote(req: Request, res: Response): Promise<Response> {
+    try {
+      const { escrowId } = req.params;
+      const { voterAddress, voteForBuyer } = req.body;
+      
+      if (!voterAddress || voteForBuyer === undefined) {
+        throw new ValidationError('Voter address and vote are required');
+      }
+      
+      await enhancedEscrowService.castVote(escrowId, voterAddress, voteForBuyer);
+      
+      return res.status(204).send();
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
       throw new APIError(500, error.message);
     }
   }

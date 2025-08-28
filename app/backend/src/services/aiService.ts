@@ -19,6 +19,21 @@ export interface AIResponse {
   model: string;
 }
 
+export interface ProposalData {
+  id: number;
+  title: string;
+  description: string;
+  proposer: string;
+  startBlock: number;
+  endBlock: number;
+  forVotes: string;
+  againstVotes: string;
+  targets: string[];
+  values: string[];
+  signatures: string[];
+  calldatas: string[];
+}
+
 interface Message {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -53,74 +68,79 @@ export class AIService {
   async generateText(
     messages: Message[],
     model: string = 'gpt-4-turbo',
-    temperature: number = 0.7
+    maxTokens: number = 1000
   ): Promise<AIResponse> {
     try {
-      const response = await this.openai.chat.completions.create({
+      const completion = await this.openai.chat.completions.create({
         model,
         messages,
-        temperature,
+        max_tokens: maxTokens,
       });
 
       return {
-        content: response.choices[0].message?.content || '',
-        tokensUsed: response.usage?.total_tokens || 0,
-        model: response.model,
+        content: completion.choices[0].message.content || '',
+        tokensUsed: completion.usage?.total_tokens || 0,
+        model: completion.model,
       };
     } catch (error) {
       console.error('Error generating text:', error);
-      throw new Error('Failed to generate text with AI model');
+      throw error;
     }
   }
 
   /**
    * Moderate content using OpenAI's moderation API
    */
-  async moderateContent(content: string): Promise<boolean> {
+  async moderateContent(input: string): Promise<{ flagged: boolean; categories: any }> {
     try {
-      const response = await this.openai.moderations.create({
-        input: content,
+      const moderation = await this.openai.moderations.create({
+        input,
       });
 
-      return response.results[0].flagged;
+      return {
+        flagged: moderation.results[0].flagged,
+        categories: moderation.results[0].categories,
+      };
     } catch (error) {
       console.error('Error moderating content:', error);
-      return false;
+      throw error;
     }
   }
 
   /**
-   * Embed text for similarity search using OpenAI embeddings
+   * Generate embeddings for semantic search
    */
-  async embedText(text: string): Promise<number[]> {
+  async generateEmbeddings(input: string | string[]): Promise<number[][]> {
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: text,
+      const embeddings = await this.openai.embeddings.create({
+        model: 'text-embedding-3-large',
+        input,
       });
 
-      return response.data[0].embedding;
+      return embeddings.data.map(item => item.embedding);
     } catch (error) {
-      console.error('Error embedding text:', error);
-      throw new Error('Failed to embed text');
+      console.error('Error generating embeddings:', error);
+      throw error;
     }
   }
 
   /**
-   * Retrieve relevant context from vector database
+   * Retrieve relevant context from Pinecone
    */
-  async retrieveContext(query: string, namespace: string, topK: number = 5): Promise<any[]> {
+  async retrieveContext(query: string, namespace: string = 'default', topK: number = 5): Promise<any[]> {
     try {
-      const index = this.pinecone.Index(process.env.PINECONE_INDEX_NAME || 'linkdao');
-      const queryEmbedding = await this.embedText(query);
+      // Generate embedding for the query
+      const queryEmbedding = (await this.generateEmbeddings(query))[0];
       
-      const response = await index.query({
+      // Query Pinecone
+      const index = this.pinecone.Index(process.env.PINECONE_INDEX_NAME || 'linkdao');
+      const queryResponse = await index.namespace(namespace).query({
         vector: queryEmbedding,
         topK,
         includeMetadata: true,
       });
 
-      return response.matches || [];
+      return queryResponse.matches || [];
     } catch (error) {
       console.error('Error retrieving context:', error);
       return [];
@@ -128,32 +148,7 @@ export class AIService {
   }
 
   /**
-   * Get user's on-chain activity
-   */
-  async getUserOnChainActivity(address: string): Promise<any> {
-    try {
-      // Get transaction count
-      const transactionCount = await this.provider.getTransactionCount(address);
-      
-      // Get balance
-      const balance = await this.provider.getBalance(address);
-      
-      // In a real implementation, we would fetch more detailed activity
-      // like token transfers, contract interactions, etc.
-      
-      return {
-        address,
-        transactionCount,
-        balance: ethers.formatEther(balance),
-      };
-    } catch (error) {
-      console.error('Error fetching on-chain activity:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get governance proposal data
+   * Get on-chain governance data
    */
   async getProposalData(proposalId: string): Promise<any> {
     // In a real implementation, this would fetch from our governance contract
@@ -170,6 +165,77 @@ export class AIService {
       forVotes: '1000000',
       againstVotes: '500000',
     };
+  }
+
+  /**
+   * Analyze a governance proposal
+   */
+  async analyzeProposal(proposal: ProposalData): Promise<AIResponse> {
+    const prompt = `
+      Analyze this DAO governance proposal comprehensively:
+      
+      Proposal ID: ${proposal.id}
+      Title: ${proposal.title}
+      Description: ${proposal.description}
+      Proposer: ${proposal.proposer}
+      
+      Voting Statistics:
+      For Votes: ${proposal.forVotes}
+      Against Votes: ${proposal.againstVotes}
+      
+      Please provide:
+      1. Executive Summary (2-3 sentences)
+      2. Key Benefits
+      3. Potential Risks
+      4. Technical Feasibility Assessment
+      5. Financial Impact Analysis
+      6. Community Impact Evaluation
+      7. Recommendation (Approve/Reject/Needs Revision)
+      8. Key Considerations for Voters
+    `;
+
+    return await this.generateText([
+      {
+        role: 'system',
+        content: 'You are a governance expert specializing in DAO proposal analysis. Provide clear, actionable insights.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ], 'gpt-4-turbo', 1500);
+  }
+
+  /**
+   * Generate voting guidance for a user
+   */
+  async generateVotingGuidance(proposal: ProposalData, userAddress: string): Promise<AIResponse> {
+    const prompt = `
+      Provide personalized voting guidance for this DAO member:
+      
+      User Address: ${userAddress}
+      Proposal Title: ${proposal.title}
+      Description: ${proposal.description}
+      
+      Based on the proposal analysis, provide clear guidance on:
+      1. Whether to vote yes or no
+      2. Key points to consider
+      3. How this affects the user's interests
+      4. Any risks to be aware of
+      
+      Keep the guidance concise and actionable.
+    `;
+
+    return await this.generateText([
+      {
+        role: 'system',
+        content: 'You are a governance advisor helping DAO members make informed voting decisions.'
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ]);
   }
 }
 
@@ -199,7 +265,7 @@ export class AIBot {
   }
 }
 
-// Export a factory function instead of a singleton instance
+// Export a singleton instance
 let aiServiceInstance: AIService | null = null;
 
 export function getAIService(): AIService {
