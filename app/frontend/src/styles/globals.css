@@ -67,6 +67,17 @@
   transition: color 0.15s ease, background-color 0.15s ease;
 }
 
+/* Touch target optimization for mobile */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  margin: -8px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .container {

@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey } from "drizzle-orm/pg-core";
 
 // Users / Profiles
 export const users = pgTable("users", {
@@ -13,19 +13,100 @@ export const users = pgTable("users", {
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
   authorId: uuid("author_id").references(() => users.id),
+  title: text("title"), // Making title nullable to handle existing data
   contentCid: text("content_cid").notNull(),
   parentId: integer("parent_id"),
+  mediaCids: text("media_cids"), // JSON array of media IPFS CIDs
+  tags: text("tags"), // JSON array of tags
+  stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
+  reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
+  dao: varchar("dao", { length: 64 }), // DAO community this post belongs to
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  authorFk: foreignKey({
+    columns: [t.authorId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Post Tags - for efficient querying of posts by tags
+export const postTags = pgTable("post_tags", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id),
+  tag: varchar("tag", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("post_tag_idx").on(t.postId, t.tag),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  })
+}));
+
+// Reactions - token-based reactions to posts
+export const reactions = pgTable("reactions", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id),
+  userId: uuid("user_id").references(() => users.id),
+  type: varchar("type", { length: 32 }).notNull(), // 'hot', 'diamond', 'bullish', 'governance', 'art'
+  amount: numeric("amount").notNull(), // Amount of tokens staked
+  rewardsEarned: numeric("rewards_earned").default('0'), // Rewards earned by the post author
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("reaction_post_user_idx").on(t.postId, t.userId),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Tips - direct token transfers to post authors
+export const tips = pgTable("tips", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").references(() => posts.id),
+  fromUserId: uuid("from_user_id").references(() => users.id),
+  toUserId: uuid("to_user_id").references(() => users.id),
+  token: varchar("token", { length: 64 }).notNull(), // e.g. USDC, LNK
+  amount: numeric("amount").notNull(),
+  message: text("message"), // Optional message with the tip
+  txHash: varchar("tx_hash", { length: 66 }), // Blockchain transaction hash
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  idx: index("tip_post_idx").on(t.postId),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  fromUserFk: foreignKey({
+    columns: [t.fromUserId],
+    foreignColumns: [users.id]
+  }),
+  toUserFk: foreignKey({
+    columns: [t.toUserId],
+    foreignColumns: [users.id]
+  })
+}));
 
 // Follows
 export const follows = pgTable("follows", {
-  followerId: uuid("follower_id").references(() => users.id),
-  followingId: uuid("following_id").references(() => users.id),
+  followerId: uuid("follower_id").notNull(),
+  followingId: uuid("following_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   pk: primaryKey({ columns: [t.followerId, t.followingId] }),
-  idx: index("follow_idx").on(t.followerId, t.followingId)
+  idx: index("follow_idx").on(t.followerId, t.followingId),
+  followerFk: foreignKey({
+    columns: [t.followerId],
+    foreignColumns: [users.id]
+  }),
+  followingFk: foreignKey({
+    columns: [t.followingId],
+    foreignColumns: [users.id]
+  })
 }));
 
 // Payments

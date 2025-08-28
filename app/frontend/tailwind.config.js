@@ -54,6 +54,19 @@ module.exports = {
         'gradient-primary': 'linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%)',
         'gradient-secondary': 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
         'gradient-accent': 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+      },
+      // Add custom animations
+      animation: {
+        'fadeIn': 'fadeIn 0.3s ease-in-out',
+        'bounce': 'bounce 1s infinite',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      // Add keyframes for custom animations
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
       }
     },
   },

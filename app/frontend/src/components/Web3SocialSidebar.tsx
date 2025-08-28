@@ -1,248 +1,245 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
+import { useToast } from '@/context/ToastContext';
+import DeFiSynergyDashboard from '@/components/DeFiSynergyDashboard';
 
-interface Community {
+interface DAO {
   id: string;
   name: string;
   members: number;
-  treasuryBalance?: string;
-  token?: string;
+  treasuryValue: number;
 }
 
-interface TrendingDAO {
-  id: string;
-  name: string;
-  token: string;
-  treasuryBalance?: string;
-}
+export default function Web3SocialSidebar({ className = '' }: { className?: string }) {
+  const { address, isConnected } = useWeb3();
+  const { addToast } = useToast();
+  const [activeTab, setActiveTab] = useState<'trending' | 'wallet' | 'defi'>('trending');
 
-interface WalletStats {
-  balance: string;
-  token: string;
-  change: string;
-  reputationScore?: number;
-  reputationTier?: string;
-}
+  // Mock DAO data
+  const trendingDAOs: DAO[] = [
+    { id: '1', name: 'Ethereum Builders', members: 12400, treasuryValue: 2500000 },
+    { id: '2', name: 'DeFi Traders', members: 8900, treasuryValue: 1800000 },
+    { id: '3', name: 'NFT Collectors', members: 15600, treasuryValue: 3200000 },
+    { id: '4', name: 'DAO Governance', members: 7800, treasuryValue: 1500000 },
+    { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
+  ];
 
-export default function Web3SocialSidebar() {
-  const { address, isConnected, balance } = useWeb3();
-  const [walletStats, setWalletStats] = useState<WalletStats>({
-    balance: '0.00',
-    token: 'ETH',
-    change: '+0.0%',
-    reputationScore: 0,
-    reputationTier: 'Novice'
-  });
-  const [communities, setCommunities] = useState<Community[]>([]);
-  const [trendingDAOs, setTrendingDAOs] = useState<TrendingDAO[]>([]);
-
-  // Mock data
-  useEffect(() => {
-    // In a real implementation, this data would come from API calls
-    setCommunities([
-      { id: '1', name: 'ethereum-builders', members: 125000, treasuryBalance: '125.4K', token: 'ETH' },
-      { id: '2', name: 'defi-traders', members: 89000, treasuryBalance: '89.2K', token: 'USDC' },
-      { id: '3', name: 'nft-collectors', members: 67000, treasuryBalance: '45.7K', token: 'WETH' },
-      { id: '4', name: 'dao-governance', members: 45000, treasuryBalance: '32.1K', token: 'GOV' },
-      { id: '5', name: 'web3-developers', members: 38000, treasuryBalance: '28.9K', token: 'DEV' },
-    ]);
-
-    setTrendingDAOs([
-      { id: '1', name: 'Ethereum Foundation', token: 'ETH', treasuryBalance: '1.2M' },
-      { id: '2', name: 'Uniswap', token: 'UNI', treasuryBalance: '890K' },
-      { id: '3', name: 'Aave', token: 'AAVE', treasuryBalance: '650K' },
-      { id: '4', name: 'Compound', token: 'COMP', treasuryBalance: '420K' },
-    ]);
-
-    // Update wallet stats with real data when connected
-    if (isConnected && address) {
-      setWalletStats({
-        balance: parseFloat(balance).toFixed(4),
-        token: 'ETH',
-        change: '+2.3%',
-        reputationScore: 750,
-        reputationTier: 'Expert'
-      });
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
     }
-  }, [address, isConnected, balance]);
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
   return (
-    <div className="space-y-4">
-      {/* User Info Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="flex items-center mb-3">
-          <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
-          <div className="ml-3">
-            <h3 className="font-medium text-gray-900 dark:text-white">
-              {isConnected ? `0x${address?.substring(2, 6)}...${address?.substring(38)}` : 'Guest'}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isConnected ? `u/${address?.substring(0, 8)}` : 'Connect Wallet'}
-            </p>
+    <div className={`space-y-6 ${className}`}>
+      {/* Wallet & Reputation Card */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+        <div className="border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('trending')}
+              className={`flex-1 py-3 px-4 text-sm font-medium ${
+                activeTab === 'trending'
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Trending
+            </button>
+            <button
+              onClick={() => setActiveTab('wallet')}
+              className={`flex-1 py-3 px-4 text-sm font-medium ${
+                activeTab === 'wallet'
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Wallet
+            </button>
+            <button
+              onClick={() => setActiveTab('defi')}
+              className={`flex-1 py-3 px-4 text-sm font-medium ${
+                activeTab === 'defi'
+                  ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              DeFi
+            </button>
           </div>
         </div>
         
-        {isConnected ? (
-          <>
-            <div className="flex justify-between text-sm mb-3">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{walletStats.reputationScore}</p>
-                <p className="text-gray-500 dark:text-gray-400">Reputation</p>
+        <div className="p-4">
+          {activeTab === 'trending' && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Trending DAOs</h3>
+              <div className="space-y-3">
+                {trendingDAOs.map((dao) => (
+                  <Link 
+                    key={dao.id} 
+                    href={`/dao/${dao.id}`}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">{dao.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatNumber(dao.members)} members</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(dao.treasuryValue)}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Treasury</p>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">{walletStats.reputationTier}</p>
-                <p className="text-gray-500 dark:text-gray-400">Tier</p>
+            </div>
+          )}
+          
+          {activeTab === 'wallet' && (
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Wallet Stats</h3>
+              
+              {isConnected ? (
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500 dark:text-gray-400">Total Balance</span>
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                        2.45 ETH
+                      </span>
+                    </div>
+                    <div className="mt-2 flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">$4,165.00 USD</span>
+                      <span className="text-green-500">+2.3%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                      <div className="text-2xl mb-1">📤</div>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Send</span>
+                    </button>
+                    <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                      <div className="text-2xl mb-1">📥</div>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Receive</span>
+                    </button>
+                    <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                      <div className="text-2xl mb-1">🔄</div>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Swap</span>
+                    </button>
+                    <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                      <div className="text-2xl mb-1">📈</div>
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Bridge</span>
+                    </button>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Recent Activity</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mr-2">
+                            <span className="text-green-600 dark:text-green-400">+</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">Received</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs">From: 0x1234...5678</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-gray-900 dark:text-white">+0.5 ETH</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs">2 hours ago</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="mx-auto bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">Connect your wallet to view stats</p>
+                  <button className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
+                    Connect Wallet
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'defi' && (
+            <DeFiSynergyDashboard />
+          )}
+        </div>
+      </div>
+      
+      {/* Community Highlights */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Community Highlights</h3>
+        </div>
+        <div className="p-4">
+          <div className="space-y-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-6 w-6 rounded-md bg-primary-500 text-white">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Token-Native Reactions</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Stake tokens to react to posts and earn rewards
+                </p>
               </div>
             </div>
             
-            <div className="flex justify-between text-sm">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {walletStats.balance} {walletStats.token}
-                </p>
-                <p className="text-gray-500 dark:text-gray-400">Balance</p>
-              </div>
-              <div>
-                <p className={`font-medium ${walletStats.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                  {walletStats.change}
-                </p>
-                <p className="text-gray-500 dark:text-gray-400">24h</p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-              Connect your wallet to see your stats
-            </p>
-            <button className="w-full bg-primary-600 hover:bg-primary-700 text-white py-1.5 px-3 rounded text-sm font-medium">
-              Connect Wallet
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Communities List */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <h3 className="font-medium text-gray-900 dark:text-white">Top Communities</h3>
-        </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {communities.map((community, index) => (
-            <div key={community.id} className="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <span className="text-gray-500 dark:text-gray-400 w-6 text-sm">{index + 1}</span>
-                  <div className="ml-2">
-                    <Link href={`/dao/${community.name}`} className="font-medium text-gray-900 hover:underline dark:text-white">
-                      /dao/{community.name}
-                    </Link>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {community.members.toLocaleString()} members
-                    </p>
-                  </div>
-                </div>
-                {community.treasuryBalance && (
-                  <div className="text-right">
-                    <p className="text-xs font-medium text-gray-900 dark:text-white">
-                      {community.treasuryBalance} {community.token}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Treasury</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-          <button className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 text-sm font-medium">
-            View All
-          </button>
-        </div>
-      </div>
-
-      {/* Trending DAOs */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <h3 className="font-medium text-gray-900 dark:text-white">Trending DAOs</h3>
-        </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {trendingDAOs.map((dao) => (
-            <div key={dao.id} className="px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex justify-between items-center">
-                <Link href={`/dao/${dao.name.toLowerCase()}`} className="font-medium text-gray-900 hover:underline dark:text-white">
-                  {dao.name}
-                </Link>
-                <div className="text-right">
-                  <span className="text-xs font-medium bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 mr-2">
-                    {dao.token}
-                  </span>
-                  {dao.treasuryBalance && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {dao.treasuryBalance}
-                    </span>
-                  )}
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-6 w-6 rounded-md bg-primary-500 text-white">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Wallet Stats */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="border-b border-gray-200 dark:border-gray-700 pb-3 mb-3">
-          <h3 className="font-medium text-gray-900 dark:text-white">Wallet Quick Stats</h3>
-        </div>
-        {isConnected ? (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {walletStats.balance} {walletStats.token}
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Governance Integration</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Participate in DAO governance directly from posts
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Portfolio Value</p>
-              </div>
-              <div className={`text-right ${walletStats.change.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                <p className="font-medium">{walletStats.change}</p>
-                <p className="text-sm">24h change</p>
               </div>
             </div>
-            <div className="mt-4 flex space-x-2">
-              <button className="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 px-3 rounded text-sm font-medium">
-                Buy
-              </button>
-              <button className="flex-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 px-3 rounded text-sm font-medium">
-                Swap
-              </button>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-6 w-6 rounded-md bg-primary-500 text-white">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">DeFi Analytics</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Embed live DeFi data and charts in your posts
+                </p>
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="text-center py-2">
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-              Connect your wallet to see quick stats
-            </p>
-            <button className="w-full bg-primary-600 hover:bg-primary-700 text-white py-1.5 px-3 rounded text-sm font-medium">
-              Connect Wallet
-            </button>
           </div>
-        )}
-      </div>
-
-      {/* Community Rules */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <h3 className="font-medium text-gray-900 dark:text-white">Community Rules</h3>
-        </div>
-        <div className="p-4 text-sm text-gray-600 dark:text-gray-300">
-          <ul className="list-disc pl-5 space-y-2">
-            <li>Be respectful and constructive</li>
-            <li>No spam or self-promotion</li>
-            <li>Stay on topic</li>
-            <li>No price talk or FOMO posts</li>
-            <li>Report violations when you see them</li>
-          </ul>
         </div>
       </div>
     </div>

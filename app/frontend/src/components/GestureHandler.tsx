@@ -64,6 +64,19 @@ export default function GestureHandler({
       touchTimeout.current = null;
     }
     setTouchMoved(true);
+    
+    // Cancel long press if moved more than threshold
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - startX);
+    const deltaY = Math.abs(touch.clientY - startY);
+    
+    // If moved more than 10px, cancel long press
+    if (deltaX > 10 || deltaY > 10) {
+      if (touchTimeout.current) {
+        clearTimeout(touchTimeout.current);
+        touchTimeout.current = null;
+      }
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {

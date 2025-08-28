@@ -7,6 +7,7 @@ import DeFiChartEmbed from '@/components/DeFiChartEmbed';
 import WalletSnapshotEmbed from '@/components/WalletSnapshotEmbed';
 import DAOGovernanceEmbed from '@/components/DAOGovernanceEmbed';
 import GestureHandler from '@/components/GestureHandler';
+import QuickActionsMenu from '@/components/QuickActionsMenu';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -15,6 +16,7 @@ interface Reaction {
   totalStaked: number;
   userStaked: number;
   contributors: string[];
+  rewardsEarned: number; // Add rewards earned field
 }
 
 interface Web3SocialPostCardProps {
@@ -39,12 +41,14 @@ export default function Web3SocialPostCard({
   const [expanded, setExpanded] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
   const [showTipInput, setShowTipInput] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([
-    { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 120, userStaked: 0, contributors: [] },
-    { type: 'diamond', emoji: '💎', label: 'Diamond Hands', totalStaked: 85, userStaked: 0, contributors: [] },
-    { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 210, userStaked: 0, contributors: [] },
-    { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 95, userStaked: 0, contributors: [] },
-    { type: 'art', emoji: '🎨', label: 'Art Appreciation', totalStaked: 42, userStaked: 0, contributors: [] }
+    { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 120, userStaked: 0, contributors: [], rewardsEarned: 24.5 },
+    { type: 'diamond', emoji: '💎', label: 'Diamond Hands', totalStaked: 85, userStaked: 0, contributors: [], rewardsEarned: 17.2 },
+    { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 210, userStaked: 0, contributors: [], rewardsEarned: 42.8 },
+    { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 95, userStaked: 0, contributors: [], rewardsEarned: 19.0 },
+    { type: 'art', emoji: '🎨', label: 'Art Appreciation', totalStaked: 42, userStaked: 0, contributors: [], rewardsEarned: 8.4 }
   ]);
 
   // Format the timestamp
@@ -86,10 +90,13 @@ export default function Web3SocialPostCard({
       // Update local state
       setReactions(prev => prev.map(reaction => {
         if (reaction.type === reactionType) {
+          // Calculate rewards (10% of staked amount goes to author as reward)
+          const reward = amount * 0.1;
           return {
             ...reaction,
             totalStaked: reaction.totalStaked + amount,
             userStaked: reaction.userStaked + amount,
+            rewardsEarned: reaction.rewardsEarned + reward,
             contributors: [...reaction.contributors, address!.substring(0, 6) + '...' + address!.substring(38)]
           };
         }
@@ -110,8 +117,38 @@ export default function Web3SocialPostCard({
 
   // Handle long press for quick actions
   const handleLongPress = () => {
-    // In a real implementation, this would open a quick actions menu
-    addToast('Long press detected - quick actions would appear here', 'info');
+    setShowQuickActions(true);
+  };
+
+  // Handle quick action
+  const handleQuickAction = async (action: string) => {
+    switch (action) {
+      case 'hot':
+      case 'diamond':
+      case 'bullish':
+      case 'governance':
+      case 'art':
+        await handleReaction(action, 1);
+        break;
+      case 'tip':
+        if (!isConnected) {
+          addToast('Please connect your wallet to tip', 'error');
+          return;
+        }
+        // In a real implementation, this would open a tip modal
+        addToast('Quick tip functionality would be implemented here', 'info');
+        break;
+      case 'share':
+        // In a real implementation, this would share the post
+        addToast('Share functionality would be implemented here', 'info');
+        break;
+      case 'save':
+        // In a real implementation, this would save the post
+        addToast('Save functionality would be implemented here', 'info');
+        break;
+      default:
+        addToast(`Action ${action} not implemented`, 'info');
+    }
   };
 
   // Handle tipping
@@ -149,20 +186,69 @@ export default function Web3SocialPostCard({
     setExpanded(!expanded);
   };
 
+  // Toggle analytics view
+  const toggleAnalytics = () => {
+    setShowAnalytics(!showAnalytics);
+  };
+
   // Get category gradient based on post tags
   const getCategoryGradient = () => {
     if (post.tags && post.tags.length > 0) {
       if (post.tags.includes('defi') || post.tags.includes('yield') || post.tags.includes('trade')) {
-        return 'from-green-400/20 to-emerald-600/20';
+        return 'from-green-400/30 via-emerald-500/20 to-teal-600/30';
       } else if (post.tags.includes('nft') || post.tags.includes('art') || post.tags.includes('collection')) {
-        return 'from-purple-400/20 to-pink-600/20';
+        return 'from-purple-400/30 via-fuchsia-500/20 to-pink-600/30';
       } else if (post.tags.includes('governance') || post.tags.includes('proposal') || post.tags.includes('dao')) {
-        return 'from-blue-400/20 to-indigo-600/20';
+        return 'from-blue-400/30 via-indigo-500/20 to-violet-600/30';
       } else if (post.tags.includes('social') || post.tags.includes('community') || post.tags.includes('discussion')) {
-        return 'from-orange-400/20 to-amber-600/20';
+        return 'from-orange-400/30 via-amber-500/20 to-yellow-600/30';
+      } else if (post.tags.includes('wallet') || post.tags.includes('transaction') || post.tags.includes('bridge')) {
+        return 'from-cyan-400/30 via-sky-500/20 to-blue-600/30';
+      } else if (post.tags.includes('security') || post.tags.includes('audit') || post.tags.includes('exploit')) {
+        return 'from-red-400/30 via-rose-500/20 to-pink-600/30';
       }
     }
     return 'from-gray-400/20 to-slate-600/20';
+  };
+
+  // Get category color for post type indicator
+  const getCategoryColor = () => {
+    if (post.tags && post.tags.length > 0) {
+      if (post.tags.includes('defi') || post.tags.includes('yield') || post.tags.includes('trade')) {
+        return 'bg-gradient-to-r from-green-500 to-emerald-600';
+      } else if (post.tags.includes('nft') || post.tags.includes('art') || post.tags.includes('collection')) {
+        return 'bg-gradient-to-r from-purple-500 to-fuchsia-600';
+      } else if (post.tags.includes('governance') || post.tags.includes('proposal') || post.tags.includes('dao')) {
+        return 'bg-gradient-to-r from-blue-500 to-indigo-600';
+      } else if (post.tags.includes('social') || post.tags.includes('community') || post.tags.includes('discussion')) {
+        return 'bg-gradient-to-r from-orange-500 to-amber-600';
+      } else if (post.tags.includes('wallet') || post.tags.includes('transaction') || post.tags.includes('bridge')) {
+        return 'bg-gradient-to-r from-cyan-500 to-sky-600';
+      } else if (post.tags.includes('security') || post.tags.includes('audit') || post.tags.includes('exploit')) {
+        return 'bg-gradient-to-r from-red-500 to-rose-600';
+      }
+    }
+    return 'bg-gradient-to-r from-gray-500 to-slate-600';
+  };
+
+  // Get category icon based on post type
+  const getCategoryIcon = () => {
+    if (post.tags && post.tags.length > 0) {
+      if (post.tags.includes('defi') || post.tags.includes('yield') || post.tags.includes('trade')) {
+        return '💰';
+      } else if (post.tags.includes('nft') || post.tags.includes('art') || post.tags.includes('collection')) {
+        return '🖼️';
+      } else if (post.tags.includes('governance') || post.tags.includes('proposal') || post.tags.includes('dao')) {
+        return '🏛️';
+      } else if (post.tags.includes('social') || post.tags.includes('community') || post.tags.includes('discussion')) {
+        return '👥';
+      } else if (post.tags.includes('wallet') || post.tags.includes('transaction') || post.tags.includes('bridge')) {
+        return '💳';
+      } else if (post.tags.includes('security') || post.tags.includes('audit') || post.tags.includes('exploit')) {
+        return '🔒';
+      }
+    }
+    return '📝';
   };
 
   // Determine if post has embeds
@@ -208,178 +294,291 @@ export default function Web3SocialPostCard({
     return null;
   };
 
+  // Truncate content for preview
+  const truncateContent = (content: string, maxLength: number = 200) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+
+  // Function to determine if a contributor is high-value
+  const isHighValueContributor = (stakedAmount: number) => {
+    return stakedAmount > 10; // High-value if staked more than 10 tokens
+  };
+
   return (
-    <GestureHandler 
-      onDoubleTap={handleDoubleTap}
-      onLongPress={handleLongPress}
-      className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden transition-all duration-300 hover:shadow-xl ${className}`}
-    >
-      {/* Card header with user info and DAO tag */}
-      <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10 md:w-12 md:h-12" />
-              {profile.reputationTier && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 border-2 border-white dark:border-gray-800 flex items-center justify-center">
-                  <span className="text-xs">🏆</span>
+    <>
+      <GestureHandler 
+        onDoubleTap={handleDoubleTap}
+        onLongPress={handleLongPress}
+        className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:hover:shadow-primary-400/10 transform hover:-translate-y-1 ${className}`}
+      >
+        {/* Card header with user info and DAO tag */}
+        <div className="p-5 border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 rounded-xl w-12 h-12 flex items-center justify-center shadow-md transition-all duration-300 hover:shadow-lg hover:scale-105">
+                  <span className="text-white font-bold text-base">{profile.handle.charAt(0).toUpperCase()}</span>
+                </div>
+                {profile.reputationTier && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm animate-pulse">
+                    <span className="text-xs">🏆</span>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Link href={`/profile/${post.author}`} className="font-bold text-gray-900 dark:text-white hover:underline text-base transition-colors duration-200">
+                    {profile.handle}
+                  </Link>
+                  {profile.verified && (
+                    <span className="text-blue-500 animate-pulse" title="Verified Contributor">
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>{timestamp}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <Link href={`/dao/${post.dao}`} className="font-medium hover:underline transition-colors duration-200">
+                    /dao/{post.dao}
+                  </Link>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30 dark:text-blue-200 animate-pulse">
+                {post.reputationScore} REP
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Post content */}
+        <div className="p-5">
+          <div className="mb-5">
+            <div className="flex items-center mb-3">
+              <div className={`w-3 h-3 rounded-full mr-3 ${getCategoryColor()} animate-pulse`}></div>
+              <div className="flex items-center">
+                <span className="text-lg mr-2">{getCategoryIcon()}</span>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight transition-colors duration-200 hover:text-primary-600 dark:hover:text-primary-400">
+                  {post.title}
+                </h2>
+              </div>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed mb-4 transition-colors duration-200 hover:text-gray-900 dark:hover:text-gray-200">
+              {expanded ? post.contentCid : truncateContent(post.contentCid)}
+            </p>
+            {!expanded && post.contentCid.length > 200 && (
+              <button 
+                onClick={toggleExpand}
+                className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-semibold mt-1 transition-all duration-200 hover:text-primary-800 dark:hover:text-primary-300 transform hover:scale-105"
+              >
+                Read more
+              </button>
+            )}
+          </div>
+          
+          {/* Media or embeds */}
+          {post.mediaCids && post.mediaCids.length > 0 && (
+            <div className="mb-5 rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
+              <img 
+                src={post.mediaCids[0]} 
+                alt="Post media" 
+                className="w-full h-72 object-cover transition-transform duration-500 hover:scale-105"
+              />
+            </div>
+          )}
+          
+          {/* Rich embeds for expanded view */}
+          {expanded && renderEmbed()}
+          
+          {/* Tags */}
+          {post.tags && post.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-5">
+              {post.tags.map((tag: string, index: number) => (
+                <span 
+                  key={index} 
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${getCategoryGradient()} text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md`}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {/* Analytics Section - Progressive Disclosure */}
+          {expanded && (
+            <div className="mb-5 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50 transition-all duration-300 hover:shadow-md">
+              <button 
+                onClick={toggleAnalytics}
+                className="flex items-center justify-between w-full text-left transition-colors duration-200 hover:text-primary-600 dark:hover:text-primary-400"
+              >
+                <span className="font-semibold text-gray-900 dark:text-white">Post Analytics</span>
+                <svg 
+                  className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-300 ${showAnalytics ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showAnalytics && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 animate-fadeIn">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105">
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">{post.stakedValue || 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Tokens Staked</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105">
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">{post.commentCount || 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Comments</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105">
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">12</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Shares</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-700 p-3 rounded-lg text-center shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105">
+                      <p className="text-xl font-bold text-gray-900 dark:text-white">8</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Saves</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Top Contributors</h4>
+                    <div className="space-y-3">
+                      {reactions.filter(r => r.userStaked > 0).slice(0, 3).map((reaction, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-all duration-200 hover:scale-[1.02]">
+                          <div className="flex items-center">
+                            <span className="text-lg mr-3 animate-bounce">{reaction.emoji}</span>
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white">{reaction.label}</div>
+                              {isHighValueContributor(reaction.userStaked) && (
+                                <span className="text-xs bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-full px-2 py-0.5 mt-1 inline-block animate-pulse" title="High-value contributor">
+                                  VIP
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                              {reaction.userStaked} $LNK
+                            </div>
+                            <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                              {reaction.rewardsEarned.toFixed(1)}★ earned
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <Link href={`/profile/${post.author}`} className="font-semibold text-gray-900 dark:text-white hover:underline text-sm md:text-base">
-                  {profile.handle}
-                </Link>
-                {profile.verified && (
-                  <span className="text-blue-500" title="Verified Contributor">
-                    ✓
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                <span>{timestamp}</span>
-                <span className="hidden sm:inline">•</span>
-                <Link href={`/dao/${post.dao}`} className="font-medium hover:underline">
-                  /dao/{post.dao}
-                </Link>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30 dark:text-blue-200">
-              {post.reputationScore} REP
-            </span>
-          </div>
-        </div>
-      </div>
-      
-      {/* Post content */}
-      <div className="p-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 md:text-xl">
-            {post.title}
-          </h3>
-          <p className="text-gray-700 dark:text-gray-300 text-sm md:text-base">
-            {post.contentCid}
-          </p>
-        </div>
-        
-        {/* Media or embeds */}
-        {post.mediaCids && post.mediaCids.length > 0 && (
-          <div className="mb-4 rounded-xl overflow-hidden">
-            <img 
-              src={post.mediaCids[0]} 
-              alt="Post media" 
-              className="w-full h-64 object-cover"
-            />
-          </div>
-        )}
-        
-        {/* Rich embeds for expanded view */}
-        {expanded && renderEmbed()}
-        
-        {/* Tags */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {post.tags.map((tag: string, index: number) => (
-              <span 
-                key={index} 
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r ${getCategoryGradient()} text-gray-800 dark:text-gray-200`}
+          )}
+          
+          {/* Reactions */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            {reactions.map((reaction) => (
+              <button
+                key={reaction.type}
+                onClick={() => handleReaction(reaction.type, 1)}
+                className={`flex items-center space-x-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 md:px-5 md:py-2.5 touch-target transform hover:scale-105 ${
+                  reaction.userStaked > 0 
+                    ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md shadow-primary-500/30 animate-pulse' 
+                    : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 shadow-sm'
+                }`}
               >
-                #{tag}
-              </span>
+                <span className="text-lg">{reaction.emoji}</span>
+                <span>{reaction.totalStaked}</span>
+                {reaction.userStaked > 0 && (
+                  <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">+{reaction.userStaked}</span>
+                )}
+                {/* Show rewards earned */}
+                <span className="text-xs bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 rounded-full px-2 py-0.5 animate-pulse">
+                  {reaction.rewardsEarned.toFixed(1)}★
+                </span>
+              </button>
             ))}
           </div>
-        )}
-        
-        {/* Reactions */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {reactions.map((reaction) => (
-            <button
-              key={reaction.type}
-              onClick={() => handleReaction(reaction.type, 1)}
-              className={`flex items-center space-x-1 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 md:px-4 md:py-2 ${
-                reaction.userStaked > 0 
-                  ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md' 
-                  : 'bg-gray-100/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-gray-600/50'
-              }`}
-            >
-              <span className="text-base md:text-lg">{reaction.emoji}</span>
-              <span>{reaction.totalStaked}</span>
-              {reaction.userStaked > 0 && (
-                <span className="text-xs">(+{reaction.userStaked})</span>
-              )}
-            </button>
-          ))}
-        </div>
-        
-        {/* Action footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-200/50 dark:border-gray-700/50 flex-wrap gap-2">
-          <div className="flex items-center space-x-3 md:space-x-4">
-            <button 
-              onClick={toggleExpand}
-              className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium py-1"
-            >
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
-              <span className="sm:hidden">{post.commentCount || 0}</span>
-            </button>
-            
-            <button className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium py-1">
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              <span className="hidden sm:inline">Share</span>
-            </button>
-            
-            <button 
-              onClick={() => setShowTipInput(!showTipInput)}
-              className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium py-1"
-            >
-              <svg className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="hidden sm:inline">Tip</span>
-            </button>
+          
+          {/* Action footer */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex-wrap gap-3">
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={toggleExpand}
+                className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105"
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
+                <span className="sm:hidden">{post.commentCount || 0}</span>
+              </button>
+              
+              <button className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105">
+                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <span className="hidden sm:inline">Share</span>
+              </button>
+              
+              <button 
+                onClick={() => setShowTipInput(!showTipInput)}
+                className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105"
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden sm:inline">Tip</span>
+              </button>
+            </div>
+          
+            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium animate-pulse">
+              {post.stakedValue ? `${post.stakedValue} $LNK staked` : '0 $LNK staked'}
+            </div>
           </div>
           
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {post.stakedValue ? `${post.stakedValue} $LNK staked` : '0 $LNK staked'}
-          </div>
+          {/* Tip input */}
+          {showTipInput && (
+            <form onSubmit={handleTip} className="mt-4 flex items-center animate-fadeIn">
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={tipAmount || ''}
+                onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                placeholder="Amount"
+                className="w-28 px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:shadow-md"
+              />
+              <span className="px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-700 border-y border-gray-300 dark:border-gray-600 font-semibold">USDC</span>
+              <button 
+                type="submit"
+                className="px-5 py-2.5 text-sm bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white rounded-r-xl transition-all duration-200 shadow-md font-semibold transform hover:scale-105"
+              >
+                Send
+              </button>
+              <button 
+                type="button"
+                onClick={() => setShowTipInput(false)}
+                className="ml-3 px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-xl transition-all duration-200 font-semibold transform hover:scale-105"
+              >
+                Cancel
+              </button>
+            </form>
+          )}
         </div>
-        
-        {/* Tip input */}
-        {showTipInput && (
-          <form onSubmit={handleTip} className="mt-3 flex items-center">
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={tipAmount || ''}
-              onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-              placeholder="Amount"
-              className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-l dark:bg-gray-700 dark:text-white"
-            />
-            <span className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 border-y border-gray-300 dark:border-gray-600">USDC</span>
-            <button 
-              type="submit"
-              className="px-3 py-1 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-r"
-            >
-              Send
-            </button>
-            <button 
-              type="button"
-              onClick={() => setShowTipInput(false)}
-              className="ml-2 px-2 py-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              Cancel
-            </button>
-          </form>
-        )}
-      </div>
-    </GestureHandler>
+      </GestureHandler>
+      
+      {/* Quick Actions Menu */}
+      <QuickActionsMenu 
+        isOpen={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        onAction={handleQuickAction}
+        postId={post.id}
+      />
+    </>
   );
 }
