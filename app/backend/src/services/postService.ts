@@ -129,8 +129,66 @@ export class PostService {
   }
 
   async getFeed(forUser?: string): Promise<Post[]> {
-    // In a full implementation, this would return a personalized feed from the database
-    // For now, we'll return an empty array
-    return [];
+    // If no user specified, return empty feed
+    if (!forUser) {
+      return [];
+    }
+
+    try {
+      // Get user ID from address
+      const user = await userProfileService.getProfileByAddress(forUser);
+      if (!user) {
+        return [];
+      }
+
+      // Get the list of users that this user follows
+      const following = await databaseService.getFollowing(user.id);
+      const followingIds = following.map(f => f.followingId);
+
+      // Include the user's own posts
+      followingIds.push(user.id);
+
+      // For now, we'll return posts from followed users
+      // In a full implementation, this would also include:
+      // - Posts from DAOs the user is a member of
+      // - Marketplace updates from followed users or DAOs
+      // - AI suggested posts based on user interests
+      // - Staking/boosted posts that should be prioritized
+      
+      // Get posts from followed users (including self)
+      const postsPromises = followingIds.map(userId => databaseService.getPostsByAuthor(userId));
+      const postsArrays = await Promise.all(postsPromises);
+      
+      // Flatten the arrays and convert to Post model
+      const allPosts = postsArrays.flat();
+      
+      const posts: Post[] = await Promise.all(allPosts.map(async (dbPost: any) => {
+        // Get the author's address
+        const author = await databaseService.getUserById(dbPost.authorId);
+        const authorAddress = author ? author.address : 'unknown';
+        
+        // Handle potential null dates by providing default values
+        const createdAt = dbPost.createdAt || new Date();
+        
+        return {
+          id: dbPost.id.toString(),
+          author: authorAddress,
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          contentCid: dbPost.contentCid,
+          mediaCids: [], // Would need to store media CIDs in database
+          tags: [], // Would need to store tags in database
+          createdAt,
+          onchainRef: '' // Would need to store onchainRef in database
+        };
+      }));
+      
+      // Sort by creation date (newest first)
+      posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      
+      return posts;
+    } catch (error) {
+      console.error("Error getting personalized feed:", error);
+      throw error;
+    }
   }
 }

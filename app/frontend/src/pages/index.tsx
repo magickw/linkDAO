@@ -1,8 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
+import { useWeb3 } from '@/context/Web3Context';
+import { useRouter } from 'next/router';
 
 export default function Home() {
+  const { isConnected } = useWeb3();
+  const router = useRouter();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/dashboard');
+    }
+  }, [isConnected, router]);
+
+  if (isConnected) {
+    return null; // Don't render anything while redirecting
+  }
+
   return (
     <Layout title="LinkDAO - Web3 Social Platform">
       <div className="px-4 py-6 sm:px-0">
