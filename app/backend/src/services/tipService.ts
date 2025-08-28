@@ -1,0 +1,183 @@
+import { ethers } from 'ethers';
+import { db } from '../db';
+import { tips, creatorRewards, rewardEpochs } from '../db/schema';
+import { eq, and, gte, lte } from 'drizzle-orm';
+
+export class TipService {
+  /**
+   * Record a new tip in the database
+   */
+  async recordTip(
+    postId: number,
+    fromUserId: string,
+    toUserId: string,
+    amount: string,
+    token: string = 'LDAO',
+    message?: string,
+    txHash?: string
+  ) {
+    try {
+      const result = await db.insert(tips).values({
+        postId,
+        fromUserId,
+        toUserId,
+        amount,
+        token,
+        message,
+        txHash
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error recording tip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tips for a specific post
+   */
+  async getTipsForPost(postId: number) {
+    try {
+      return await db.select().from(tips).where(eq(tips.postId, postId));
+    } catch (error) {
+      console.error('Error getting tips for post:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total tips received by a user
+   */
+  async getTotalTipsReceived(userId: string) {
+    try {
+      const result = await db.select({ total: tips.amount })
+        .from(tips)
+        .where(eq(tips.toUserId, userId));
+      
+      // Sum up all the tips
+      return result.reduce((sum, tip) => {
+        return sum + parseFloat(tip.total);
+      }, 0);
+    } catch (error) {
+      console.error('Error getting total tips received:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total tips sent by a user
+   */
+  async getTotalTipsSent(userId: string) {
+    try {
+      const result = await db.select({ total: tips.amount })
+        .from(tips)
+        .where(eq(tips.fromUserId, userId));
+      
+      // Sum up all the tips
+      return result.reduce((sum, tip) => {
+        return sum + parseFloat(tip.total);
+      }, 0);
+    } catch (error) {
+      console.error('Error getting total tips sent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's claimable rewards
+   */
+  async getClaimableRewards(userId: string) {
+    try {
+      const result = await db.select()
+        .from(creatorRewards)
+        .where(and(
+          eq(creatorRewards.userId, userId),
+          eq(creatorRewards.earned, '0')
+        ));
+      
+      // Sum up all unclaimed rewards
+      return result.reduce((sum, reward) => {
+        return sum + parseFloat(reward.earned);
+      }, 0);
+    } catch (error) {
+      console.error('Error getting claimable rewards:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Claim user rewards
+   */
+  async claimRewards(userId: string) {
+    try {
+      // Mark rewards as claimed by setting claimedAt timestamp
+      const result = await db.update(creatorRewards)
+        .set({ claimedAt: new Date() })
+        .where(and(
+          eq(creatorRewards.userId, userId),
+          eq(creatorRewards.earned, '0')
+        ))
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error('Error claiming rewards:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get tips within a date range for reward calculation
+   */
+  async getTipsInDateRange(startDate: Date, endDate: Date) {
+    try {
+      return await db.select()
+        .from(tips)
+        .where(and(
+          gte(tips.createdAt, startDate),
+          lte(tips.createdAt, endDate)
+        ));
+    } catch (error) {
+      console.error('Error getting tips in date range:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new reward epoch
+   */
+  async createRewardEpoch(epoch: number, fundedAmount: string, startAt: Date, endAt: Date) {
+    try {
+      const result = await db.insert(rewardEpochs).values({
+        epoch,
+        fundedAmount,
+        startAt,
+        endAt
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error creating reward epoch:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Credit rewards to a creator
+   */
+  async creditCreatorRewards(epoch: number, userId: string, earned: string) {
+    try {
+      const result = await db.insert(creatorRewards).values({
+        epoch,
+        userId,
+        earned
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error crediting creator rewards:', error);
+      throw error;
+    }
+  }
+}

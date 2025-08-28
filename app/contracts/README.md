@@ -1,57 +1,49 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# LinkDAO Smart Contracts
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+This directory contains the smart contracts for the LinkDAO platform.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## Contracts
 
-## Project Overview
+### Core Contracts
+- [ProfileRegistry.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/ProfileRegistry.sol) - User profile management
+- [FollowModule.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/FollowModule.sol) - Follow functionality
+- [PaymentRouter.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/PaymentRouter.sol) - Payment processing
+- [Governance.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/Governance.sol) - DAO governance
+- [Marketplace.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/Marketplace.sol) - NFT and item marketplace
+- [EnhancedEscrow.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/EnhancedEscrow.sol) - Enhanced escrow functionality
 
-This example project includes:
+### LDAO Token Contracts
+- [LDAOToken.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/LDAOToken.sol) - LDAO ERC-20 token with Permit extension
+- [TipRouter.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/TipRouter.sol) - Tip routing with fee distribution
+- [RewardPool.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/RewardPool.sol) - Creator reward distribution
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+### Legacy Contracts
+- [LinkDAOToken.sol](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/contracts/LinkDAOToken.sol) - Original LDAO token (not used in current implementation)
 
-## Usage
+## Deployment Scripts
+- [deploy.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/scripts/deploy.ts) - Main deployment script
+- [deploy-enhanced-escrow.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/scripts/deploy-enhanced-escrow.ts) - Enhanced escrow deployment
+- [deploy-ldao-token.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/scripts/deploy-ldao-token.ts) - LDAO token deployment
 
-### Running Tests
+## Tests
+- [LDAOToken.test.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/contracts/test/LDAOToken.test.ts) - Tests for LDAO token contracts
 
-To run all the tests in the project, execute the following command:
+## Deployment
 
-```shell
+To deploy the contracts to Base network:
+
+```bash
+# Deploy LDAO token contracts
+npx hardhat run scripts/deploy-ldao-token.ts --network base
+
+# Deploy all contracts
+npx hardhat run scripts/deploy.ts --network base
+```
+
+## Testing
+
+To run contract tests:
+
+```bash
 npx hardhat test
-```
-
-You can also selectively run the Solidity or `node:test` tests:
-
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
-
-### Make a deployment to Sepolia
-
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
-
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 ```

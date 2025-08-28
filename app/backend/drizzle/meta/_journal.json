@@ -29,6 +29,13 @@
       "when": 1756373344221,
       "tag": "0003_perpetual_roulette",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756373344222,
+      "tag": "0004_ldao_token",
+      "breakpoints": true
     }
   ]
 }

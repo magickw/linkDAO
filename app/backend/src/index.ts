@@ -11,6 +11,7 @@ import aiRoutes from './routes/aiRoutes';
 import authRoutes from './routes/authRoutes';
 import marketplaceRoutes from './routes/marketplaceRoutes';
 import governanceRoutes from './routes/governanceRoutes';
+import tipRoutes from './routes/tipRoutes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { IndexerService } from './services/indexerService';
 
@@ -113,6 +114,7 @@ app.use('/api/follow', followRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/governance', governanceRoutes);
+app.use('/api/tips', tipRoutes);
 
 // WebSocket endpoint info
 app.get('/ws', (req, res) => {
