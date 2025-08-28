@@ -1,0 +1,191 @@
+import { Post, CreatePostInput, UpdatePostInput } from '../../backend/src/models/Post';
+
+// Get the backend API base URL from environment variables
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+
+/**
+ * Post API Service
+ * Provides functions to interact with the backend post API endpoints
+ */
+export class PostService {
+  /**
+   * Create a new post
+   * @param data - Post data to create
+   * @returns The created post
+   */
+  static async createPost(data: CreatePostInput): Promise<Post> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create post');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get a post by its ID
+   * @param id - Post ID
+   * @returns The post or null if not found
+   */
+  static async getPostById(id: string): Promise<Post | null> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch post');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get posts by author
+   * @param author - Author address
+   * @returns Array of posts by the author
+   */
+  static async getPostsByAuthor(author: string): Promise<Post[]> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/author/${author}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch posts');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get posts by tag
+   * @param tag - Tag to filter by
+   * @returns Array of posts with the tag
+   */
+  static async getPostsByTag(tag: string): Promise<Post[]> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/tag/${tag}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch posts');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Update an existing post
+   * @param id - Post ID
+   * @param data - Updated post data
+   * @returns The updated post
+   */
+  static async updatePost(id: string, data: UpdatePostInput): Promise<Post> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update post');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete a post
+   * @param id - Post ID
+   * @returns True if deleted, false if not found
+   */
+  static async deletePost(id: string): Promise<boolean> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return false;
+      }
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete post');
+    }
+
+    return true;
+  }
+
+  /**
+   * Get all posts
+   * @returns Array of all posts
+   */
+  static async getAllPosts(): Promise<Post[]> {
+    const response = await fetch(`${BACKEND_API_BASE_URL}/api/posts`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch posts');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Get user feed
+   * @param forUser - User address to get feed for (optional)
+   * @returns Array of posts in the user's feed
+   */
+  static async getFeed(forUser?: string): Promise<Post[]> {
+    let url = `${BACKEND_API_BASE_URL}/api/posts/feed`;
+    if (forUser) {
+      url += `?forUser=${encodeURIComponent(forUser)}`;
+    }
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch feed');
+    }
+
+    return response.json();
+  }
+}
