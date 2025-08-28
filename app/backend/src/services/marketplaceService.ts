@@ -48,11 +48,11 @@ export class MarketplaceService {
       quantity: dbListing.quantity,
       itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-      status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
+      status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
       startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime?.toISOString(),
       metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed,
+      isEscrowed: dbListing.isEscrowed || false,
       createdAt: dbListing.createdAt?.toISOString() || now,
       updatedAt: dbListing.updatedAt?.toISOString() || now
     };
@@ -65,23 +65,25 @@ export class MarketplaceService {
     if (!dbListing) return null;
     
     // Get seller address
-    const seller = await userProfileService.getProfileById(dbListing.sellerId);
+    const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
+    if (!seller) return null;
     
+    const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id.toString(),
-      sellerAddress: seller?.address || '',
+      sellerAddress: seller.address,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
       quantity: dbListing.quantity,
       itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-      status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
-      startTime: dbListing.startTime?.toISOString() || new Date().toISOString(),
+      status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+      startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime?.toISOString(),
       metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed,
-      createdAt: dbListing.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: dbListing.updatedAt?.toISOString() || new Date().toISOString()
+      isEscrowed: dbListing.isEscrowed || false,
+      createdAt: dbListing.createdAt?.toISOString() || now,
+      updatedAt: dbListing.updatedAt?.toISOString() || now
     };
     
     return listing;
@@ -93,6 +95,7 @@ export class MarketplaceService {
     
     const dbListings = await databaseService.getListingsBySeller(sellerUser.id);
     
+    const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
     for (const dbListing of dbListings) {
       const listing: MarketplaceListing = {
@@ -103,13 +106,13 @@ export class MarketplaceService {
         quantity: dbListing.quantity,
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-        status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || new Date().toISOString(),
+        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+        startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime?.toISOString(),
         metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed,
-        createdAt: dbListing.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: dbListing.updatedAt?.toISOString() || new Date().toISOString()
+        isEscrowed: dbListing.isEscrowed || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        updatedAt: dbListing.updatedAt?.toISOString() || now
       };
       listings.push(listing);
     }
@@ -120,26 +123,28 @@ export class MarketplaceService {
   async getAllListings(): Promise<MarketplaceListing[]> {
     const dbListings = await databaseService.getAllListings();
     
+    const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
     for (const dbListing of dbListings) {
       // Get seller address
-      const seller = await userProfileService.getProfileById(dbListing.sellerId);
+      const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
+      if (!seller) continue;
       
       const listing: MarketplaceListing = {
         id: dbListing.id.toString(),
-        sellerAddress: seller?.address || '',
+        sellerAddress: seller.address,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: dbListing.quantity,
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-        status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || new Date().toISOString(),
+        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+        startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime?.toISOString(),
         metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed,
-        createdAt: dbListing.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: dbListing.updatedAt?.toISOString() || new Date().toISOString()
+        isEscrowed: dbListing.isEscrowed || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        updatedAt: dbListing.updatedAt?.toISOString() || now
       };
       listings.push(listing);
     }
@@ -150,26 +155,28 @@ export class MarketplaceService {
   async getActiveListings(): Promise<MarketplaceListing[]> {
     const dbListings = await databaseService.getActiveListings();
     
+    const now = new Date().toISOString();
     const listings: MarketplaceListing[] = [];
     for (const dbListing of dbListings) {
       // Get seller address
-      const seller = await userProfileService.getProfileById(dbListing.sellerId);
+      const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
+      if (!seller) continue;
       
       const listing: MarketplaceListing = {
         id: dbListing.id.toString(),
-        sellerAddress: seller?.address || '',
+        sellerAddress: seller.address,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: dbListing.quantity,
         itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
         listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-        status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
-        startTime: dbListing.startTime?.toISOString() || new Date().toISOString(),
+        status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+        startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime?.toISOString(),
         metadataURI: dbListing.metadataURI,
-        isEscrowed: dbListing.isEscrowed,
-        createdAt: dbListing.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: dbListing.updatedAt?.toISOString() || new Date().toISOString()
+        isEscrowed: dbListing.isEscrowed || false,
+        createdAt: dbListing.createdAt?.toISOString() || now,
+        updatedAt: dbListing.updatedAt?.toISOString() || now
       };
       listings.push(listing);
     }
@@ -186,23 +193,25 @@ export class MarketplaceService {
     if (!dbListing) return null;
     
     // Get seller address
-    const seller = await userProfileService.getProfileById(dbListing.sellerId);
+    const seller = await userProfileService.getProfileById(dbListing.sellerId || '');
+    if (!seller) return null;
     
+    const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id.toString(),
-      sellerAddress: seller?.address || '',
+      sellerAddress: seller.address,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
       quantity: dbListing.quantity,
       itemType: dbListing.itemType as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
       listingType: dbListing.listingType as 'FIXED_PRICE' | 'AUCTION',
-      status: dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED' || 'ACTIVE',
-      startTime: dbListing.startTime?.toISOString() || new Date().toISOString(),
+      status: (dbListing.status?.toUpperCase() as 'ACTIVE' | 'SOLD' | 'CANCELLED' | 'EXPIRED') || 'ACTIVE',
+      startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime?.toISOString(),
       metadataURI: dbListing.metadataURI,
-      isEscrowed: dbListing.isEscrowed,
-      createdAt: dbListing.createdAt?.toISOString() || new Date().toISOString(),
-      updatedAt: dbListing.updatedAt?.toISOString() || new Date().toISOString()
+      isEscrowed: dbListing.isEscrowed || false,
+      createdAt: dbListing.createdAt?.toISOString() || now,
+      updatedAt: dbListing.updatedAt?.toISOString() || now
     };
     
     return listing;
@@ -252,12 +261,13 @@ export class MarketplaceService {
     const bids: MarketplaceBid[] = [];
     for (const dbBid of dbBids) {
       // Get bidder address
-      const bidder = await userProfileService.getProfileById(dbBid.bidderId);
+      const bidder = await userProfileService.getProfileById(dbBid.bidderId || '');
+      if (!bidder) continue;
       
       const bid: MarketplaceBid = {
         id: dbBid.id.toString(),
         listingId: listingId,
-        bidderAddress: bidder?.address || '',
+        bidderAddress: bidder.address,
         amount: dbBid.amount,
         timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
       };
@@ -325,9 +335,9 @@ export class MarketplaceService {
       buyerAddress: buyerAddress,
       sellerAddress: listing.sellerAddress,
       amount: dbEscrow.amount,
-      buyerApproved: dbEscrow.buyerApproved,
-      sellerApproved: dbEscrow.sellerApproved,
-      disputeOpened: dbEscrow.disputeOpened,
+      buyerApproved: dbEscrow.buyerApproved || false,
+      sellerApproved: dbEscrow.sellerApproved || false,
+      disputeOpened: dbEscrow.disputeOpened || false,
       resolverAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
       resolvedAt: dbEscrow.resolvedAt?.toISOString()
@@ -385,18 +395,19 @@ export class MarketplaceService {
     if (!dbEscrow) return null;
     
     // Get buyer and seller addresses
-    const buyer = await userProfileService.getProfileById(dbEscrow.buyerId);
-    const seller = await userProfileService.getProfileById(dbEscrow.sellerId);
+    const buyer = await userProfileService.getProfileById(dbEscrow.buyerId || '');
+    const seller = await userProfileService.getProfileById(dbEscrow.sellerId || '');
+    if (!buyer || !seller) return null;
     
     const escrow: MarketplaceEscrow = {
       id: dbEscrow.id.toString(),
       listingId: dbEscrow.listingId?.toString() || '',
-      buyerAddress: buyer?.address || '',
-      sellerAddress: seller?.address || '',
+      buyerAddress: buyer.address,
+      sellerAddress: seller.address,
       amount: dbEscrow.amount,
-      buyerApproved: dbEscrow.buyerApproved,
-      sellerApproved: dbEscrow.sellerApproved,
-      disputeOpened: dbEscrow.disputeOpened,
+      buyerApproved: dbEscrow.buyerApproved || false,
+      sellerApproved: dbEscrow.sellerApproved || false,
+      disputeOpened: dbEscrow.disputeOpened || false,
       resolverAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
       resolvedAt: dbEscrow.resolvedAt?.toISOString()
@@ -414,18 +425,19 @@ export class MarketplaceService {
     const escrows: MarketplaceEscrow[] = [];
     for (const dbEscrow of dbEscrows) {
       // Get buyer and seller addresses
-      const buyer = await userProfileService.getProfileById(dbEscrow.buyerId);
-      const seller = await userProfileService.getProfileById(dbEscrow.sellerId);
+      const buyer = await userProfileService.getProfileById(dbEscrow.buyerId || '');
+      const seller = await userProfileService.getProfileById(dbEscrow.sellerId || '');
+      if (!buyer || !seller) continue;
       
       const escrow: MarketplaceEscrow = {
         id: dbEscrow.id.toString(),
         listingId: dbEscrow.listingId?.toString() || '',
-        buyerAddress: buyer?.address || '',
-        sellerAddress: seller?.address || '',
+        buyerAddress: buyer.address,
+        sellerAddress: seller.address,
         amount: dbEscrow.amount,
-        buyerApproved: dbEscrow.buyerApproved,
-        sellerApproved: dbEscrow.sellerApproved,
-        disputeOpened: dbEscrow.disputeOpened,
+        buyerApproved: dbEscrow.buyerApproved || false,
+        sellerApproved: dbEscrow.sellerApproved || false,
+        disputeOpened: dbEscrow.disputeOpened || false,
         resolverAddress: dbEscrow.resolverAddress || undefined,
         createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
         resolvedAt: dbEscrow.resolvedAt?.toISOString()
@@ -444,7 +456,7 @@ export class MarketplaceService {
     const reputation: UserReputation = {
       address: dbReputation.address,
       score: dbReputation.score,
-      daoApproved: dbReputation.daoApproved
+      daoApproved: dbReputation.daoApproved || false
     };
     
     return reputation;
@@ -468,7 +480,7 @@ export class MarketplaceService {
     const reputation: UserReputation = {
       address: dbReputation.address,
       score: dbReputation.score,
-      daoApproved: dbReputation.daoApproved
+      daoApproved: dbReputation.daoApproved || false
     };
     
     return reputation;
@@ -480,7 +492,7 @@ export class MarketplaceService {
     const reputations: UserReputation[] = dbReputations.map(dbReputation => ({
       address: dbReputation.address,
       score: dbReputation.score,
-      daoApproved: dbReputation.daoApproved
+      daoApproved: dbReputation.daoApproved || false
     }));
     
     return reputations;

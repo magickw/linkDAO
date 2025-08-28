@@ -15,14 +15,9 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
+  
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://your-backend-url.com/api"
+    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api"
   },
   "build": {
     "env": {

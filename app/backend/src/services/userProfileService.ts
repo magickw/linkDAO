@@ -18,6 +18,11 @@ export class UserProfileService {
       input.bioCid // Storing bioCid in profileCid field
     );
 
+    // Handle potential null dates by providing default values
+    const now = new Date();
+    const createdAt = dbUser.createdAt || now;
+    const updatedAt = dbUser.createdAt || now; // Using createdAt for updatedAt in this case
+
     const profile: UserProfile = {
       id: dbUser.id,
       address: dbUser.address,
@@ -25,8 +30,8 @@ export class UserProfileService {
       ens: input.ens || '',
       avatarCid: input.avatarCid || '',
       bioCid: input.bioCid || '',
-      createdAt: dbUser.createdAt,
-      updatedAt: dbUser.createdAt
+      createdAt, // Using the non-null value
+      updatedAt  // Using the non-null value
     };
 
     return profile;
@@ -38,6 +43,11 @@ export class UserProfileService {
       return undefined;
     }
 
+    // Handle potential null dates by providing default values
+    const now = new Date();
+    const createdAt = dbUser.createdAt || now;
+    const updatedAt = dbUser.createdAt || now; // Using createdAt for updatedAt in this case
+
     const profile: UserProfile = {
       id: dbUser.id,
       address: dbUser.address,
@@ -45,8 +55,8 @@ export class UserProfileService {
       ens: '', // Would need to be stored in database in full implementation
       avatarCid: '', // Would need to be stored in database in full implementation
       bioCid: dbUser.profileCid || '',
-      createdAt: dbUser.createdAt,
-      updatedAt: dbUser.createdAt
+      createdAt, // Using the non-null value
+      updatedAt  // Using the non-null value
     };
 
     return profile;
@@ -58,6 +68,11 @@ export class UserProfileService {
       return undefined;
     }
 
+    // Handle potential null dates by providing default values
+    const now = new Date();
+    const createdAt = dbUser.createdAt || now;
+    const updatedAt = dbUser.createdAt || now; // Using createdAt for updatedAt in this case
+
     const profile: UserProfile = {
       id: dbUser.id,
       address: dbUser.address,
@@ -65,8 +80,8 @@ export class UserProfileService {
       ens: '', // Would need to be stored in database in full implementation
       avatarCid: '', // Would need to be stored in database in full implementation
       bioCid: dbUser.profileCid || '',
-      createdAt: dbUser.createdAt,
-      updatedAt: dbUser.createdAt
+      createdAt, // Using the non-null value
+      updatedAt  // Using the non-null value
     };
 
     return profile;

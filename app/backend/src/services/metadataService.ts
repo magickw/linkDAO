@@ -24,12 +24,14 @@ export class MetadataService {
 
   private async initializeIpfsClient(): Promise<IPFSHTTPClient | null> {
     try {
-      const { create } = await import('ipfs-http-client');
-      return create({
+      // Use dynamic import with the correct path to avoid export configuration issues
+      const ipfsModule = await import('ipfs-http-client/src/index.js');
+      const client = ipfsModule.create({
         host: IPFS_CONFIG.host,
         port: IPFS_CONFIG.port,
         protocol: IPFS_CONFIG.protocol,
       });
+      return client;
     } catch (error) {
       console.warn('Failed to initialize IPFS client:', error);
       return null;

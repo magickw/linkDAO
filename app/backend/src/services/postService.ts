@@ -42,6 +42,9 @@ export class PostService {
     // Create post in database
     const dbPost = await databaseService.createPost(user.id, contentCid, input.parentId ? parseInt(input.parentId) : undefined);
     
+    // Handle potential null dates by providing default values
+    const createdAt = dbPost.createdAt || new Date();
+    
     const post: Post = {
       id: dbPost.id.toString(),
       author: input.author,
@@ -49,7 +52,7 @@ export class PostService {
       contentCid,
       mediaCids,
       tags: input.tags || [],
-      createdAt: dbPost.createdAt,
+      createdAt,
       onchainRef: input.onchainRef || '',
     };
 
@@ -82,16 +85,21 @@ export class PostService {
     const dbPosts = await databaseService.getPostsByAuthor(user.id);
     
     // Convert to Post model
-    const posts: Post[] = dbPosts.map((dbPost: any) => ({
-      id: dbPost.id.toString(),
-      author,
-      parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
-      contentCid: dbPost.contentCid,
-      mediaCids: [], // Would need to store media CIDs in database
-      tags: [], // Would need to store tags in database
-      createdAt: dbPost.createdAt,
-      onchainRef: '' // Would need to store onchainRef in database
-    }));
+    const posts: Post[] = dbPosts.map((dbPost: any) => {
+      // Handle potential null dates by providing default values
+      const createdAt = dbPost.createdAt || new Date();
+      
+      return {
+        id: dbPost.id.toString(),
+        author,
+        parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+        contentCid: dbPost.contentCid,
+        mediaCids: [], // Would need to store media CIDs in database
+        tags: [], // Would need to store tags in database
+        createdAt,
+        onchainRef: '' // Would need to store onchainRef in database
+      };
+    });
     
     return posts;
   }
