@@ -255,7 +255,6 @@ export default function CommunityPage() {
                       key={post.id} 
                       post={post} 
                       profile={authorProfile} 
-                      onVote={handleVote}
                       onTip={handleTip}
                     />
                   );

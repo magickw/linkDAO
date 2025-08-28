@@ -246,7 +246,6 @@ export default function SocialFeed() {
                           key={post.id} 
                           post={post} 
                           profile={authorProfile} 
-                          onVote={handleVote}
                           onTip={handleTip}
                         />
                       );

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 
-interface RedditPostCardProps {
+interface Web3SocialPostCardLegacyProps {
   post: any; // In a real implementation, this would be typed as Post
   profile: any; // In a real implementation, this would be typed as UserProfile
   className?: string;
@@ -11,7 +11,7 @@ interface RedditPostCardProps {
   onTip?: (postId: string, amount: number, token: string) => Promise<void>;
 }
 
-export default function RedditPostCard({ post, profile, className = '', onVote, onTip }: RedditPostCardProps) {
+export default function Web3SocialPostCardLegacy({ post, profile, className = '', onVote, onTip }: Web3SocialPostCardLegacyProps) {
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
   const [votes, setVotes] = useState(post.voteCount || 24); // Mock vote count

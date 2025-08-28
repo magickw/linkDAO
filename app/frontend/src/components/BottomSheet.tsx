@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
+import { useConnect, useDisconnect } from 'wagmi';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -131,7 +132,9 @@ interface WalletActionsProps {
 }
 
 export function WalletActions({ onAction }: WalletActionsProps) {
-  const { isConnected, address, balance, connectWallet, disconnectWallet } = useWeb3();
+  const { isConnected, address, balance } = useWeb3();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
   
   const actions = [
     { id: 'send', icon: '📤', label: 'Send', description: 'Send tokens to another wallet' },
@@ -152,7 +155,7 @@ export function WalletActions({ onAction }: WalletActionsProps) {
             Connect your wallet to access all features
           </p>
           <button
-            onClick={() => connectWallet()}
+            onClick={() => connect({ connector: connectors[0] })}
             className="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-4 rounded-lg font-medium transition-colors"
           >
             Connect Wallet
@@ -227,7 +230,7 @@ export function WalletActions({ onAction }: WalletActionsProps) {
           {/* Disconnect Button */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
-              onClick={() => disconnectWallet()}
+              onClick={() => disconnect()}
               className="w-full flex items-center justify-center p-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
               <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
