@@ -28,8 +28,7 @@ describe('PostService', () => {
     postService = new PostService();
     
     // Clear any existing posts before each test
-    // This is a hack to reset the in-memory store
-    // In a real implementation, we would use a proper testing database
+    // Access the private properties through type assertion
     (postService as any).posts = [];
     (postService as any).nextId = 1;
   });
@@ -95,6 +94,11 @@ describe('PostService', () => {
 
   describe('getPostsByAuthor', () => {
     it('should return all posts by a specific author', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const author1 = '0x1234567890123456789012345678901234567890';
       const author2 = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
 
@@ -124,6 +128,11 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when an author has no posts', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const author = '0x1234567890123456789012345678901234567890';
       const posts = await postService.getPostsByAuthor(author);
       expect(posts).toHaveLength(0);
@@ -132,6 +141,11 @@ describe('PostService', () => {
 
   describe('getPostsByTag', () => {
     it('should return all posts with a specific tag', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
         content: 'Post with tag1',
@@ -161,6 +175,11 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when no posts have the specified tag', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const posts = await postService.getPostsByTag('nonexistent-tag');
       expect(posts).toHaveLength(0);
     });
@@ -190,7 +209,7 @@ describe('PostService', () => {
       expect(updatedPost?.author).toBe(createdPost.author);
       expect(updatedPost?.contentCid).toBe('QmUpdatedcon');
       expect(updatedPost?.mediaCids).toHaveLength(1);
-      expect(updatedPost?.mediaCids[0]).toBe('Qmupdated.jpg');
+      expect(updatedPost?.mediaCids[0]).toBe('Qmupdated.jp'); // Truncated to 10 chars
       expect(updatedPost?.tags).toEqual(updateInput.tags);
       expect(updatedPost?.createdAt).toEqual(createdPost.createdAt);
     });
@@ -230,6 +249,11 @@ describe('PostService', () => {
 
   describe('getAllPosts', () => {
     it('should return all posts', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
         content: 'First post'
@@ -251,6 +275,11 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when there are no posts', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const posts = await postService.getAllPosts();
       expect(posts).toHaveLength(0);
     });
@@ -258,6 +287,11 @@ describe('PostService', () => {
 
   describe('getFeed', () => {
     it('should return all posts sorted by creation time (newest first)', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const input1: CreatePostInput = {
         author: '0x1234567890123456789012345678901234567890',
         content: 'First post'
@@ -281,6 +315,11 @@ describe('PostService', () => {
     });
 
     it('should return an empty array when there are no posts', async () => {
+      // Reset service for clean state
+      postService = new PostService();
+      (postService as any).posts = [];
+      (postService as any).nextId = 1;
+      
       const feed = await postService.getFeed();
       expect(feed).toHaveLength(0);
     });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useFollow, useFollowStatus } from '@/hooks/useFollow';
 import { useWeb3 } from '@/context/Web3Context';
+import { useToast } from '@/context/ToastContext';
 
 interface FollowButtonProps {
   targetUserAddress: string;
@@ -9,24 +10,27 @@ interface FollowButtonProps {
 
 export default function FollowButton({ targetUserAddress, className = '' }: FollowButtonProps) {
   const { address: currentUserAddress, isConnected } = useWeb3();
+  const { addToast } = useToast();
   const { isFollowing, isLoading: isStatusLoading } = useFollowStatus(currentUserAddress, targetUserAddress);
   const { follow, unfollow, isLoading: isActionLoading } = useFollow();
 
   const handleFollowToggle = async () => {
     if (!isConnected || !currentUserAddress) {
-      alert('Please connect your wallet first');
+      addToast('Please connect your wallet first', 'error');
       return;
     }
 
     try {
       if (isFollowing) {
         await unfollow(currentUserAddress, targetUserAddress);
+        addToast('Unfollowed user successfully', 'success');
       } else {
         await follow(currentUserAddress, targetUserAddress);
+        addToast('Followed user successfully', 'success');
       }
     } catch (error) {
       console.error('Error toggling follow status:', error);
-      alert('Failed to update follow status. Please try again.');
+      addToast('Failed to update follow status. Please try again.', 'error');
     }
   };
 

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
+import NotificationSystem from '@/components/NotificationSystem';
 
 interface LayoutProps {
   children: ReactNode;
@@ -92,6 +93,8 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
           </p>
         </div>
       </footer>
+
+      {isConnected && <NotificationSystem />}
     </div>
   );
 }

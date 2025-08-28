@@ -1,0 +1,87 @@
+import React from 'react';
+import ProfileCard from '@/components/ProfileCard';
+import { useWeb3 } from '@/context/Web3Context';
+import { useFollowers } from '@/hooks/useFollow';
+
+interface FollowerListProps {
+  userAddress: string;
+  className?: string;
+}
+
+export default function FollowerList({ userAddress, className = '' }: FollowerListProps) {
+  const { address: currentUserAddress } = useWeb3();
+  const { followers, isLoading, error } = useFollowers(userAddress);
+
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
+        <div className="bg-white shadow rounded-lg p-6">
+          <p>Loading followers...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={className}>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>Error loading followers: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (followers.length === 0) {
+    return (
+      <div className={className}>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Followers</h2>
+        <div className="bg-white shadow rounded-lg p-6 text-center">
+          <p className="text-gray-500">No followers yet</p>
+        </div>
+      </div>
+    );
+  }
+
+  // In a real implementation, we would fetch profile data for each follower
+  // For now, we'll use mock data
+  const mockProfiles: Record<string, any> = {
+    '0x1234567890123456789012345678901234567890': {
+      handle: 'alexj',
+      ens: 'alex.eth',
+      avatarCid: 'https://via.placeholder.com/48',
+    },
+    '0x2345678901234567890123456789012345678901': {
+      handle: 'samc',
+      ens: 'sam.eth',
+      avatarCid: 'https://via.placeholder.com/48',
+    },
+    '0x3456789012345678901234567890123456789012': {
+      handle: 'taylorr',
+      ens: 'taylor.eth',
+      avatarCid: 'https://via.placeholder.com/48',
+    },
+  };
+
+  const followerProfiles = followers.map(address => ({
+    address,
+    ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://via.placeholder.com/48' })
+  }));
+
+  return (
+    <div className={className}>
+      <h2 className="text-lg font-medium text-gray-900 mb-4">Followers ({followers.length})</h2>
+      <div className="space-y-4">
+        {followerProfiles.map((profile) => (
+          <ProfileCard 
+            key={profile.address} 
+            profile={profile} 
+            currentUserAddress={currentUserAddress}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
