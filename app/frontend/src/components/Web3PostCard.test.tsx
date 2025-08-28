@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import PostCard from './PostCard';
+import Web3PostCard from './Web3PostCard';
 
 // Mock the ProfileCard component
 jest.mock('./ProfileCard', () => {
@@ -10,7 +10,7 @@ jest.mock('./ProfileCard', () => {
   };
 });
 
-describe('PostCard', () => {
+describe('Web3PostCard', () => {
   const mockPost = {
     id: '1',
     author: '0x1234567890123456789012345678901234567890',
@@ -32,7 +32,7 @@ describe('PostCard', () => {
   };
 
   it('renders post content correctly', () => {
-    render(<PostCard post={mockPost} authorProfile={mockAuthorProfile} />);
+    render(<Web3PostCard post={mockPost} authorProfile={mockAuthorProfile} />);
     
     expect(screen.getByText('This is a test post content')).toBeInTheDocument();
     expect(screen.getByText('testuser')).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe('PostCard', () => {
   });
 
   it('formats the timestamp correctly', () => {
-    render(<PostCard post={mockPost} authorProfile={mockAuthorProfile} />);
+    render(<Web3PostCard post={mockPost} authorProfile={mockAuthorProfile} />);
     
     // Check that a timestamp is displayed (exact format may vary)
     const timeElement = screen.getByText(/ago/i);
@@ -54,14 +54,14 @@ describe('PostCard', () => {
       tags: [],
     };
     
-    render(<PostCard post={postWithoutTags} authorProfile={mockAuthorProfile} />);
+    render(<Web3PostCard post={postWithoutTags} authorProfile={mockAuthorProfile} />);
     
     expect(screen.queryByText('#test')).not.toBeInTheDocument();
     expect(screen.queryByText('#post')).not.toBeInTheDocument();
   });
 
   it('handles missing author profile gracefully', () => {
-    render(<PostCard post={mockPost} authorProfile={null} />);
+    render(<Web3PostCard post={mockPost} authorProfile={null} />);
     
     // Should still render the post content
     expect(screen.getByText('This is a test post content')).toBeInTheDocument();

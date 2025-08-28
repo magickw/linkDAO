@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
+import { Analytics } from "@vercel/analytics/next"
 import NotificationSystem from '@/components/NotificationSystem';
 
 interface LayoutProps {
@@ -55,11 +56,18 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
   const navItems = [
     { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Feed', href: '/social', icon: '📰' },
-    { name: 'Profile', href: '/profile', icon: '👤' },
-    { name: 'Wallet', href: '/wallet', icon: '💰' },
+    { name: 'Communities', href: '/dao/ethereum-builders', icon: '👥' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
   ];
+
+  // User-specific navigation items (only for authenticated users)
+  const userNavItems = isConnected ? [
+    { name: 'Settings', href: '/settings', icon: '⚙️' },
+  ] : [];
+
+  // Combine all navigation items
+  const allNavItems = [...navItems, ...userNavItems];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -79,7 +87,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
           <div className="hidden md:flex items-center space-x-4">
             <nav>
               <ul className="flex space-x-1">
-                {navItems.map((item) => (
+                {allNavItems.map((item) => (
                   <li key={item.name}>
                     <Link 
                       href={item.href}
@@ -175,7 +183,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
           <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             <nav className="px-2 pt-2 pb-4 space-y-1">
               <ul className="space-y-1">
-                {navItems.map((item) => (
+                {allNavItems.map((item) => (
                   <li key={item.name}>
                     <Link 
                       href={item.href}
@@ -225,6 +233,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
             © {new Date().getFullYear()} LinkDAO. All rights reserved.
           </p>
         </div>
+        <Analytics/>
       </footer>
 
       {isConnected && <NotificationSystem />}

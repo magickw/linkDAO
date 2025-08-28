@@ -1,13 +1,13 @@
 import React from 'react';
 import Link from 'next/link';
 
-interface PostCardProps {
+interface Web3PostCardProps {
   post: any; // In a real implementation, this would be typed as Post
   profile: any; // In a real implementation, this would be typed as UserProfile
   className?: string;
 }
 
-export default function PostCard({ post, profile, className = '' }: PostCardProps) {
+export default function Web3PostCard({ post, profile, className = '' }: Web3PostCardProps) {
   // Format the timestamp
   const formatTimestamp = (date: Date) => {
     const now = new Date();
