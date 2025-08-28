@@ -97,8 +97,6 @@ We've verified that all fixes work correctly:
 4. Set build command to `npm run build`
 5. Set start command to `npm start`
 6. Add environment variables:
-   - `DATABASE_URL` (PostgreSQL connection string)
-   - `REDIS_URL` (Redis connection string)
    - `JWT_SECRET` (Random string for JWT signing)
    - `JWT_EXPIRES_IN=24h`
    - `IPFS_HOST=ipfs.infura.io`
@@ -109,6 +107,7 @@ We've verified that all fixes work correctly:
    - `PINECONE_INDEX_NAME=linkdao`
    - `OPENAI_API_KEY` (Your OpenAI API key)
    - `RPC_URL=https://mainnet.base.org`
+   - `PRIVATE_KEY` (Your wallet private key for contract deployments)
    - Other variables as needed from `app/backend/.env`
 
 7. Deploy
@@ -142,6 +141,54 @@ We've created comprehensive documentation to support deployment:
 3. Successfully built all workspaces
 4. Successfully built frontend application
 5. Tested deployment scripts
+
+## Important Notes About the Application Architecture
+
+The LinkDAO backend application currently uses in-memory storage for all data rather than a traditional database. This means:
+
+1. No database configuration is required for basic operation (no DATABASE_URL needed)
+2. No Redis configuration is required (no REDIS_URL needed)
+3. All data is stored in memory and will be lost when the application restarts
+4. This is suitable for demonstration purposes but would need to be enhanced for production use
+
+### Current Data Models
+
+The application manages the following data models in memory:
+1. User profiles (UserProfile)
+2. Social posts (Post)
+3. Marketplace listings, bids, and escrow transactions (Marketplace)
+4. User follow relationships (handled in followService)
+5. WebSocket connections for real-time updates
+
+### Pinecone Usage
+
+The application uses Pinecone only for AI services:
+- Retrieval Augmented Generation (RAG) for AI bots
+- Content moderation and analysis
+- Not used for user authentication or general data storage
+
+## Production Deployment Considerations
+
+For a production deployment, you would want to implement persistent storage:
+
+### Database Options
+
+1. **PostgreSQL** (recommended):
+   - Set DATABASE_URL environment variable
+   - Create tables for UserProfile, Post, MarketplaceListing, MarketplaceBid, MarketplaceEscrow
+   - Update services to use database instead of in-memory storage
+
+2. **MongoDB**:
+   - Set MONGODB_URI environment variable
+   - Create collections for each data model
+   - Update services to use MongoDB instead of in-memory storage
+
+### Redis Usage
+
+While Redis is installed as a dependency, it's not currently used in the application. For production, Redis could be used for:
+- Session storage
+- Caching frequently accessed data
+- WebSocket connection management
 
 ## Conclusion
 

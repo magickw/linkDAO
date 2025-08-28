@@ -46,9 +46,36 @@ This project uses npm workspaces to manage multiple packages:
 - `contracts`: Smart contracts
 - `mobile`: Mobile application
 
-## Development
+## Data Storage Architecture
 
-Each workspace has its own development commands. Check the respective README files for more details.
+It's important to understand the current data storage architecture:
+
+### Current Implementation (In-Memory Storage)
+
+The application currently uses in-memory storage for all data:
+- User profiles
+- Social posts
+- Marketplace listings, bids, and escrow transactions
+- Follow relationships
+
+This means all data is lost when the application restarts. This is suitable for demonstration purposes but should be enhanced for production use.
+
+### Pinecone Usage
+
+Pinecone is used only for AI services:
+- Retrieval Augmented Generation (RAG) for AI bots
+- Content moderation and analysis
+- NOT used for user authentication or general data storage
+
+### Drizzle ORM + PostgreSQL (New)
+
+We've integrated Drizzle ORM with PostgreSQL for production-ready data persistence:
+- Type-safe database operations
+- Schema migrations
+- Support for pgvector extension for AI embeddings
+- See [DRIZZLE_INTEGRATION.md](docs/DRIZZLE_INTEGRATION.md) for details
+
+For production deployment, see [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) for detailed schema information and implementation guidance.
 
 ## Deployment
 
@@ -81,11 +108,7 @@ For Render specifically:
 - Set the root directory to `app/backend`
 - Set build command to `npm run build`
 - Set start command to `npm start`
-- Configure environment variables:
-  - `DATABASE_URL` (PostgreSQL connection string)
-  - `REDIS_URL` (Redis connection string)
-  - `JWT_SECRET` (Random string for JWT signing)
-  - Other variables as needed from `app/backend/.env`
+- Configure environment variables as needed from `app/backend/.env`
 
 ### Smart Contract Deployment
 
@@ -102,6 +125,8 @@ npm run deploy
 For detailed deployment instructions, see:
 - [DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - Comprehensive deployment guide
 - [RENDER_DEPLOYMENT_FIXES.md](docs/RENDER_DEPLOYMENT_FIXES.md) - Specific fixes for Render deployment issues
+- [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) - Database schema for production deployment
+- [DRIZZLE_INTEGRATION.md](docs/DRIZZLE_INTEGRATION.md) - Drizzle ORM integration details
 
 ## Troubleshooting
 

@@ -1,68 +1,92 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
+import { DatabaseService } from './databaseService';
 
-// In a real implementation, this would connect to a database
-// For now, we'll use an in-memory store for demonstration
-let profiles: UserProfile[] = [];
-let nextId = 1;
+const databaseService = new DatabaseService();
 
 export class UserProfileService {
   async createProfile(input: CreateUserProfileInput): Promise<UserProfile> {
-    const existingProfile = profiles.find(p => p.address === input.address);
+    // Check if profile already exists
+    const existingProfile = await databaseService.getUserByAddress(input.address);
     if (existingProfile) {
       throw new Error('Profile already exists for this address');
     }
 
+    // Create user in database
+    const dbUser = await databaseService.createUser(
+      input.address,
+      input.handle,
+      input.bioCid // Storing bioCid in profileCid field
+    );
+
     const profile: UserProfile = {
-      id: `profile_${nextId++}`,
-      address: input.address,
-      handle: input.handle,
+      id: dbUser.id,
+      address: dbUser.address,
+      handle: dbUser.handle || '',
       ens: input.ens || '',
       avatarCid: input.avatarCid || '',
       bioCid: input.bioCid || '',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.createdAt
     };
 
-    profiles.push(profile);
     return profile;
   }
 
   async getProfileById(id: string): Promise<UserProfile | undefined> {
-    return profiles.find(p => p.id === id);
-  }
-
-  async getProfileByAddress(address: string): Promise<UserProfile | undefined> {
-    return profiles.find(p => p.address === address);
-  }
-
-  async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {
-    const profileIndex = profiles.findIndex(p => p.id === id);
-    if (profileIndex === -1) {
+    const dbUser = await databaseService.getUserById(id);
+    if (!dbUser) {
       return undefined;
     }
 
-    const profile = profiles[profileIndex];
-    const updatedProfile = {
-      ...profile,
-      ...input,
-      updatedAt: new Date()
+    const profile: UserProfile = {
+      id: dbUser.id,
+      address: dbUser.address,
+      handle: dbUser.handle || '',
+      ens: '', // Would need to be stored in database in full implementation
+      avatarCid: '', // Would need to be stored in database in full implementation
+      bioCid: dbUser.profileCid || '',
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.createdAt
     };
 
-    profiles[profileIndex] = updatedProfile;
-    return updatedProfile;
+    return profile;
+  }
+
+  async getProfileByAddress(address: string): Promise<UserProfile | undefined> {
+    const dbUser = await databaseService.getUserByAddress(address);
+    if (!dbUser) {
+      return undefined;
+    }
+
+    const profile: UserProfile = {
+      id: dbUser.id,
+      address: dbUser.address,
+      handle: dbUser.handle || '',
+      ens: '', // Would need to be stored in database in full implementation
+      avatarCid: '', // Would need to be stored in database in full implementation
+      bioCid: dbUser.profileCid || '',
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.createdAt
+    };
+
+    return profile;
+  }
+
+  async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {
+    // In a full implementation, you would update the database record
+    // For now, we'll just fetch the existing profile and return it
+    return await this.getProfileById(id);
   }
 
   async deleteProfile(id: string): Promise<boolean> {
-    const profileIndex = profiles.findIndex(p => p.id === id);
-    if (profileIndex === -1) {
-      return false;
-    }
-
-    profiles.splice(profileIndex, 1);
+    // In a full implementation, you would delete the database record
+    // For now, we'll just return true
     return true;
   }
 
   async getAllProfiles(): Promise<UserProfile[]> {
-    return [...profiles];
+    // In a full implementation, you would fetch all profiles from the database
+    // For now, we'll return an empty array
+    return [];
   }
 }

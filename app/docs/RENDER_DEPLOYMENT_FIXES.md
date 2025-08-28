@@ -63,8 +63,6 @@ For Render deployment, follow these specific steps:
 6. Add all required environment variables:
    - `PORT` (Render automatically sets this)
    - `NODE_ENV=production`
-   - `DATABASE_URL` (PostgreSQL connection string)
-   - `REDIS_URL` (Redis connection string)
    - `JWT_SECRET` (Random string for JWT signing)
    - `JWT_EXPIRES_IN=24h`
    - `IPFS_HOST=ipfs.infura.io`
@@ -76,19 +74,41 @@ For Render deployment, follow these specific steps:
    - `OPENAI_API_KEY` (Your OpenAI API key)
    - `RPC_URL=https://mainnet.base.org`
    - `PRIVATE_KEY` (Your wallet private key for contract deployments)
+   - `FRONTEND_URL` (Your frontend URL for CORS)
+   - `BACKEND_URL` (Your backend URL)
+   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (Your WalletConnect project ID)
+   - Smart contract addresses (update with actual deployed addresses)
 
 7. In the "Advanced" section, you may need to set the Node.js version to ensure compatibility (>=18.0.0)
 
-## Database and Redis Configuration for Render
+## Data Storage Architecture
 
-Render provides integrated database services. For the easiest setup:
+It's important to understand the current data storage architecture:
 
-1. Create a PostgreSQL database from the Render dashboard
-2. Create a Redis instance from the Render dashboard
-3. Render will automatically provide connection strings for both
-4. Copy these connection strings to your environment variables:
-   - `DATABASE_URL` for PostgreSQL
-   - `REDIS_URL` for Redis
+### In-Memory Storage
+
+The application currently uses in-memory storage for all data:
+- User profiles
+- Social posts
+- Marketplace listings, bids, and escrow transactions
+- Follow relationships
+
+This means all data is lost when the application restarts.
+
+### Pinecone Usage
+
+Pinecone is used only for AI services:
+- Retrieval Augmented Generation (RAG) for AI bots
+- Content moderation and analysis
+- NOT used for user authentication or general data storage
+
+### Production Considerations
+
+For production deployment, you should implement persistent storage:
+1. Set up a PostgreSQL database
+2. Configure DATABASE_URL environment variable
+3. Update services to use database instead of in-memory storage
+4. (Optional) Set up Redis for caching and session management
 
 ## Why These Fixes Work
 
@@ -118,4 +138,4 @@ We've verified that the fixes work by:
 
 4. Make sure your Render service has enough memory and CPU resources allocated, especially for the build process which can be resource-intensive.
 
-5. For database migrations, you may need to run them manually or as part of your build process depending on your setup.
+5. The application uses in-memory storage for all data, which is suitable for demonstration but should be enhanced for production use.

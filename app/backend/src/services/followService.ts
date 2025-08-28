@@ -1,58 +1,132 @@
-// In a real implementation, this would connect to a database
-// For now, we'll use an in-memory store for demonstration
-let follows: any[] = [];
+import { DatabaseService } from './databaseService';
+import { UserProfileService } from './userProfileService';
+import { eq, and } from "drizzle-orm";
+import { follows } from '../db/schema';
+import { db } from '../db';
+
+const databaseService = new DatabaseService();
+const userProfileService = new UserProfileService();
 
 export class FollowService {
-  async follow(follower: string, following: string): Promise<boolean> {
-    // Check if already following
-    const existingFollow = follows.find(
-      f => f.follower === follower && f.following === following
-    );
-    
-    if (existingFollow) {
-      return false; // Already following
+  async follow(followerAddress: string, followingAddress: string): Promise<boolean> {
+    // Get user IDs from addresses
+    let followerUser = await userProfileService.getProfileByAddress(followerAddress);
+    if (!followerUser) {
+      // Create user if they don't exist
+      followerUser = await userProfileService.createProfile({
+        address: followerAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
     }
     
-    // Add follow relationship
-    follows.push({
-      follower,
-      following,
-      createdAt: new Date(),
-    });
+    let followingUser = await userProfileService.getProfileByAddress(followingAddress);
+    if (!followingUser) {
+      // Create user if they don't exist
+      followingUser = await userProfileService.createProfile({
+        address: followingAddress,
+        handle: '',
+        ens: '',
+        avatarCid: '',
+        bioCid: ''
+      });
+    }
+    
+    // Check if already following
+    const isAlreadyFollowing = await this.isFollowing(followerAddress, followingAddress);
+    if (isAlreadyFollowing) {
+      return true; // Already following
+    }
+    
+    // Add follow relationship to database
+    await databaseService.followUser(followerUser.id, followingUser.id);
     
     return true;
   }
 
-  async unfollow(follower: string, following: string): Promise<boolean> {
-    const followIndex = follows.findIndex(
-      f => f.follower === follower && f.following === following
-    );
+  async unfollow(followerAddress: string, followingAddress: string): Promise<boolean> {
+    // Get user IDs from addresses
+    const followerUser = await userProfileService.getProfileByAddress(followerAddress);
+    const followingUser = await userProfileService.getProfileByAddress(followingAddress);
     
-    if (followIndex === -1) {
-      return false; // Not following
+    if (!followerUser || !followingUser) {
+      return false; // One or both users don't exist
     }
     
-    follows.splice(followIndex, 1);
+    // Remove follow relationship from database
+    await databaseService.unfollowUser(followerUser.id, followingUser.id);
+    
     return true;
   }
 
   async getFollowers(address: string): Promise<any[]> {
-    return follows.filter(f => f.following === address);
+    // Get user ID from address
+    const user = await userProfileService.getProfileByAddress(address);
+    if (!user) {
+      return [];
+    }
+    
+    // Get followers from database
+    const dbFollowers = await databaseService.getFollowers(user.id);
+    
+    // Convert to expected format
+    return dbFollowers.map((f: any) => ({
+      follower: f.followerId,
+      following: f.followingId,
+      createdAt: f.createdAt
+    }));
   }
 
   async getFollowing(address: string): Promise<any[]> {
-    return follows.filter(f => f.follower === address);
+    // Get user ID from address
+    const user = await userProfileService.getProfileByAddress(address);
+    if (!user) {
+      return [];
+    }
+    
+    // Get following from database
+    const dbFollowing = await databaseService.getFollowing(user.id);
+    
+    // Convert to expected format
+    return dbFollowing.map((f: any) => ({
+      follower: f.followerId,
+      following: f.followingId,
+      createdAt: f.createdAt
+    }));
   }
 
-  async isFollowing(follower: string, following: string): Promise<boolean> {
-    return follows.some(
-      f => f.follower === follower && f.following === following
+  async isFollowing(followerAddress: string, followingAddress: string): Promise<boolean> {
+    // Get user IDs from addresses
+    const followerUser = await userProfileService.getProfileByAddress(followerAddress);
+    const followingUser = await userProfileService.getProfileByAddress(followingAddress);
+    
+    if (!followerUser || !followingUser) {
+      return false;
+    }
+    
+    // Check the database for the follow relationship
+    const result = await db.select().from(follows).where(
+      and(
+        eq(follows.followerId, followerUser.id),
+        eq(follows.followingId, followingUser.id)
+      )
     );
+    
+    return result.length > 0;
   }
 
   async getFollowCount(address: string): Promise<{ followers: number; following: number }> {
-    const followers = follows.filter(f => f.following === address).length;
-    const following = follows.filter(f => f.follower === address).length;
+    // Get user ID from address
+    const user = await userProfileService.getProfileByAddress(address);
+    if (!user) {
+      return { followers: 0, following: 0 };
+    }
+    
+    // Get counts from database
+    const followers = (await databaseService.getFollowers(user.id)).length;
+    const following = (await databaseService.getFollowing(user.id)).length;
     
     return { followers, following };
   }

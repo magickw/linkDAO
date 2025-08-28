@@ -41,16 +41,6 @@ The backend .env file contains many configuration options. Here are the key ones
 PORT=3002
 NODE_ENV=production
 
-# Database Configuration
-# For PostgreSQL, use a connection string like:
-# DATABASE_URL=postgresql://username:password@host:port/database
-# For deployment, you can use services like Supabase, Render PostgreSQL, or Heroku Postgres
-DATABASE_URL=your_database_url
-
-# Redis Configuration
-# For deployment, you can use services like Upstash, Render Redis, or Heroku Redis
-REDIS_URL=your_redis_url
-
 # JWT Configuration
 JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=24h
@@ -60,21 +50,74 @@ IPFS_HOST=ipfs.infura.io
 IPFS_PORT=5001
 IPFS_PROTOCOL=https
 
-# Pinecone Configuration
+# Pinecone Configuration (for AI services)
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_ENVIRONMENT=your_pinecone_environment
-PINECONE_INDEX_NAME=your_pinecone_index_name
+PINECONE_INDEX_NAME=linkdao
 
-# OpenAI Configuration
+# OpenAI Configuration (for AI services)
 OPENAI_API_KEY=your_openai_api_key
 
 # Blockchain Configuration
 RPC_URL=https://mainnet.base.org
 # For contract deployments, you'll also need:
 # PRIVATE_KEY=your_private_key
+
+# Frontend URL for CORS
+FRONTEND_URL=https://your-frontend-url.com
+BACKEND_URL=https://your-backend-url.com
+
+# WalletConnect Configuration
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+
+# Smart Contract Addresses (update with actual deployed addresses)
+PROFILE_REGISTRY_ADDRESS=0x1234567890123456789012345678901234567890
+FOLLOW_MODULE_ADDRESS=0x2345678901245678901234567890123456789012
+PAYMENT_ROUTER_ADDRESS=0x3456789012345678901234567890123456789012
+GOVERNANCE_ADDRESS=0x4567890123456789012345678901234567890123
+TOKEN_ADDRESS=0x5678901234567890123456789012345678901234
 ```
 
 For a complete list of environment variables, refer to the `app/backend/.env` file.
+
+## Data Storage Architecture
+
+It's important to understand the current data storage architecture before deploying:
+
+### Current Implementation (In-Memory Storage)
+
+The application currently uses in-memory storage for all data:
+- User profiles
+- Social posts
+- Marketplace listings, bids, and escrow transactions
+- Follow relationships
+
+This means all data is lost when the application restarts. This is suitable for demonstration purposes but should be enhanced for production use.
+
+### Pinecone Usage
+
+Pinecone is used only for AI services:
+- Retrieval Augmented Generation (RAG) for AI bots
+- Content moderation and analysis
+- NOT used for user authentication or general data storage
+
+### Production Deployment Options
+
+For production deployment, you should implement persistent storage:
+
+#### Option 1: PostgreSQL (Recommended)
+
+1. Set up a PostgreSQL database (e.g., using Render PostgreSQL, Supabase, or Heroku Postgres)
+2. Configure DATABASE_URL environment variable
+3. Update services to use database instead of in-memory storage
+4. Create necessary tables based on the data models in `app/backend/src/models/`
+
+#### Option 2: MongoDB
+
+1. Set up a MongoDB database
+2. Configure MONGODB_URI environment variable
+3. Update services to use MongoDB instead of in-memory storage
+4. Create necessary collections based on the data models
 
 ## Deployment Steps
 
