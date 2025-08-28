@@ -23,5 +23,10 @@
   ],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://your-backend-url.com/api"
+  },
+  "build": {
+    "env": {
+      "NPM_FLAGS": "--legacy-peer-deps"
+    }
   }
 }
