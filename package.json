@@ -1,0 +1,40 @@
+{
+  "name": "web3-marketplace",
+  "version": "1.0.0",
+  "description": "Decentralized Web3 marketplace platform",
+  "private": true,
+  "scripts": {
+    "setup": "node setup-dev.js",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd app/frontend && npm run dev",
+    "dev:backend": "cd app/backend && npm run dev",
+    "build": "npm run build:contracts && npm run build:backend && npm run build:frontend",
+    "build:contracts": "cd app/contracts && npm run build",
+    "build:backend": "cd app/backend && npm run build",
+    "build:frontend": "cd app/frontend && npm run build",
+    "test": "npm run test:contracts && npm run test:backend && npm run test:frontend",
+    "test:contracts": "cd app/contracts && npm run test",
+    "test:backend": "cd app/backend && npm run test",
+    "test:frontend": "cd app/frontend && npm run test",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "deploy:contracts": "cd app/contracts && npm run deploy:local",
+    "deploy:contracts:testnet": "cd app/contracts && npm run deploy:testnet",
+    "db:studio": "cd app/backend && npm run db:studio",
+    "db:push": "cd app/backend && npm run db:push",
+    "db:migrate": "cd app/backend && npm run db:migrate",
+    "start:services": "npm run docker:up && npm run dev",
+    "clean": "npm run docker:down && docker system prune -f",
+    "reset": "npm run clean && npm run setup"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
