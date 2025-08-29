@@ -9,6 +9,10 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import UnifiedPostCreation from './UnifiedPostCreation';
 import CommunityPostCard from './CommunityPostCard';
+import { CommunityHeaderSkeleton, CommunityFeedSkeleton } from '@/components/LoadingSkeletons';
+import { CommunityErrorBoundary } from '@/components/ErrorBoundaries';
+import { EmptyState, RetryState } from '@/components/FallbackStates';
+import { CommunitySettingsModal, ModeratorTools } from '@/components/CommunityManagement';
 
 interface CommunityViewProps {
   communityId: string;
@@ -34,6 +38,8 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   const [timeframe, setTimeframe] = useState<TimeframeOption>('day');
   const [showPostCreation, setShowPostCreation] = useState(false);
   const [joinLoading, setJoinLoading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showModeratorTools, setShowModeratorTools] = useState(false);
 
   // Load community data
   const loadCommunity = useCallback(async () => {
@@ -272,68 +278,35 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
     }
   };
 
+  // Check if user is moderator
+  const isModerator = isConnected && address && community?.moderators.includes(address);
+
   if (loading) {
     return (
-      <div className={`animate-pulse ${className}`}>
-        {/* Community Header Skeleton */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-t-xl"></div>
-          <div className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                <div>
-                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                </div>
-              </div>
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-            </div>
-            <div className="mt-4 h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-            <div className="mt-2 h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-          </div>
-        </div>
-
-        {/* Posts Skeleton */}
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="flex space-x-4">
-                <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className={className}>
+        <CommunityHeaderSkeleton />
+        <CommunityFeedSkeleton postCount={3} />
       </div>
     );
   }
 
   if (error || !community) {
     return (
-      <div className={`text-center py-12 ${className}`}>
-        <div className="text-gray-500 dark:text-gray-400 mb-4">
-          <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 18.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          {error || 'Community not found'}
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          The community you're looking for doesn't exist or has been removed.
-        </p>
-      </div>
+      <CommunityErrorBoundary communityId={communityId}>
+        <RetryState
+          title={error || 'Community not found'}
+          message="The community you're looking for doesn't exist or has been removed."
+          onRetry={loadCommunity}
+          className={className}
+        />
+      </CommunityErrorBoundary>
     );
   }
 
   return (
-    <div className={className}>
-      {/* Community Header */}
+    <CommunityErrorBoundary communityId={communityId} onRetry={loadCommunity}>
+      <div className={className}>
+        {/* Community Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 md:mb-6 overflow-hidden mobile-card">
         {/* Banner */}
         {community.banner && (
@@ -388,8 +361,36 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               </div>
             </div>
             
-            {/* Join/Leave Button */}
+            {/* Action Buttons */}
             <div className="flex items-center space-x-3">
+              {/* Moderator Tools */}
+              {isModerator && (
+                <button
+                  onClick={() => setShowModeratorTools(true)}
+                  className="px-3 py-2 border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-200"
+                  title="Moderator Tools"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Settings Button */}
+              {isModerator && (
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-400 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors duration-200"
+                  title="Community Settings"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+              )}
+
+              {/* Join/Leave Button */}
               {isConnected ? (
                 membership ? (
                   <button
@@ -499,59 +500,61 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
       </div>
 
       {/* Posts List */}
-      <div className="space-y-4">
-        {postsLoading ? (
-          // Loading skeleton for posts
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
-                <div className="flex space-x-4">
-                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : posts.length > 0 ? (
-          posts.map((post) => (
-            <CommunityPostCard
-              key={post.id}
-              post={post}
-              community={community}
-              userMembership={membership}
-              onVote={handleVotePost}
-              onReaction={handleReaction}
-              onTip={handleTip}
+      <CommunityErrorBoundary communityId={communityId} onRetry={loadPosts}>
+        <div className="space-y-4">
+          {postsLoading ? (
+            <CommunityFeedSkeleton postCount={3} />
+          ) : posts.length > 0 ? (
+            posts.map((post) => (
+              <CommunityPostCard
+                key={post.id}
+                post={post}
+                community={community}
+                userMembership={membership}
+                onVote={handleVotePost}
+                onReaction={handleReaction}
+                onTip={handleTip}
+              />
+            ))
+          ) : (
+            <EmptyState
+              title="No posts yet"
+              description="Be the first to start a discussion in this community!"
+              icon={
+                <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              }
+              action={membership ? {
+                label: 'Create First Post',
+                onClick: () => setShowPostCreation(true)
+              } : undefined}
             />
-          ))
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-500 dark:text-gray-400 mb-4">
-              <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No posts yet
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Be the first to start a discussion in this community!
-            </p>
-            {membership && (
-              <button
-                onClick={() => setShowPostCreation(true)}
-                className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors duration-200"
-              >
-                Create First Post
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+      </CommunityErrorBoundary>
+
+      {/* Community Settings Modal */}
+      {community && (
+        <CommunitySettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          community={community}
+          onUpdate={(updatedCommunity) => {
+            setCommunity(updatedCommunity);
+          }}
+        />
+      )}
+
+      {/* Moderator Tools Modal */}
+      {community && (
+        <ModeratorTools
+          isOpen={showModeratorTools}
+          onClose={() => setShowModeratorTools(false)}
+          community={community}
+        />
+      )}
       </div>
-    </div>
+    </CommunityErrorBoundary>
   );
 }
