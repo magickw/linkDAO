@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { useNavigation } from '@/context/NavigationContext';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useNotifications';
 import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
 
 // Mock community data - will be replaced with real data in future tasks
@@ -64,7 +65,8 @@ interface NavigationSidebarProps {
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
   const { balance } = useWeb3();
-  const { profile, isLoading: profileLoading } = useProfile(address);
+  const { profile } = useProfile(address);
+  const { getCommunityUnreadCount } = useNotifications();
   const { 
     navigationState, 
     navigateToFeed,
@@ -76,6 +78,14 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
+
+  // Update community unread counts from notifications
+  useEffect(() => {
+    setCommunities(prev => prev.map(community => ({
+      ...community,
+      unreadCount: getCommunityUnreadCount(community.id)
+    })));
+  }, [getCommunityUnreadCount]);
 
   // Handle community join/leave
   const handleCommunityToggle = (communityId: string) => {

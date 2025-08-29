@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
 import Layout from '@/components/Layout';
+import NotificationPreferences from '@/components/NotificationPreferences';
 import Link from 'next/link';
 
 export default function Settings() {
   const { address, isConnected } = useAccount();
   const [activeTab, setActiveTab] = useState('profile');
+  const [showNotificationPreferences, setShowNotificationPreferences] = useState(false);
 
   const tabs = [
     { id: 'profile', name: 'Profile', icon: '👤' },
@@ -245,17 +247,15 @@ export default function Settings() {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <label className="text-sm font-medium text-gray-900 dark:text-white">Email Notifications</label>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Receive updates via email</p>
+                            <label className="text-sm font-medium text-gray-900 dark:text-white">Notification Preferences</label>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your notification settings</p>
                           </div>
-                          <input type="checkbox" className="rounded" />
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <label className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</label>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Browser push notifications</p>
-                          </div>
-                          <input type="checkbox" className="rounded" />
+                          <button
+                            onClick={() => setShowNotificationPreferences(true)}
+                            className="px-4 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/50 dark:hover:bg-primary-900/70 rounded-lg transition-colors"
+                          >
+                            Configure
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -352,6 +352,21 @@ export default function Settings() {
           </div>
         </div>
       </div>
+
+      {/* Notification Preferences Modal */}
+      {showNotificationPreferences && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowNotificationPreferences(false)}></div>
+            
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <NotificationPreferences onClose={() => setShowNotificationPreferences(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
