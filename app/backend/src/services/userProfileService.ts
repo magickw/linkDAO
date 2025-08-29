@@ -6,14 +6,14 @@ const databaseService = new DatabaseService();
 export class UserProfileService {
   async createProfile(input: CreateUserProfileInput): Promise<UserProfile> {
     // Check if profile already exists
-    const existingProfile = await databaseService.getUserByAddress(input.address);
+    const existingProfile = await databaseService.getUserByAddress(input.walletAddress);
     if (existingProfile) {
       throw new Error('Profile already exists for this address');
     }
 
     // Create user in database
     const dbUser = await databaseService.createUser(
-      input.address,
+      input.walletAddress,
       input.handle,
       input.bioCid // Storing bioCid in profileCid field
     );
@@ -25,7 +25,7 @@ export class UserProfileService {
 
     const profile: UserProfile = {
       id: dbUser.id,
-      address: dbUser.address,
+      walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
       ens: input.ens || '',
       avatarCid: input.avatarCid || '',
@@ -50,7 +50,7 @@ export class UserProfileService {
 
     const profile: UserProfile = {
       id: dbUser.id,
-      address: dbUser.address,
+      walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
       ens: '', // Would need to be stored in database in full implementation
       avatarCid: '', // Would need to be stored in database in full implementation
@@ -75,7 +75,7 @@ export class UserProfileService {
 
     const profile: UserProfile = {
       id: dbUser.id,
-      address: dbUser.address,
+      walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
       ens: '', // Would need to be stored in database in full implementation
       avatarCid: '', // Would need to be stored in database in full implementation
