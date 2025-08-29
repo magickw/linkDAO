@@ -36,6 +36,13 @@
       "when": 1756373344222,
       "tag": "0004_ldao_token",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1756511252866,
+      "tag": "0005_bizarre_beast",
+      "breakpoints": true
     }
   ]
 }
