@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import DAOTreasuryHeader from '@/components/DAOTreasuryHeader';
 import Web3SocialNav from '@/components/Web3SocialNav';
@@ -92,6 +93,8 @@ const mockDAOData = {
 };
 
 export default function CommunityPage() {
+  const router = useRouter();
+  const { community } = router.query;
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const { createPost, isLoading: isCreatingPost, error: createPostError, success: createPostSuccess } = useCreatePost();
@@ -99,6 +102,13 @@ export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Redirect to new dashboard structure if user is connected
+  useEffect(() => {
+    if (isConnected && typeof community === 'string') {
+      router.push(`/dashboard/community/${community}`);
+    }
+  }, [isConnected, community, router]);
 
   const handleJoinToggle = () => {
     setUserJoined(!userJoined);

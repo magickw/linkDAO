@@ -168,7 +168,7 @@ export default function CommunitiesPage() {
             {filteredCommunities.map((community) => (
               <Link 
                 key={community.id} 
-                href={`/dao/${community.id}`}
+                href={isConnected ? `/dashboard/community/${community.id}` : `/dao/${community.id}`}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
               >
                 <div className={`h-20 bg-gradient-to-r ${community.bannerColor}`}></div>

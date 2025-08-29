@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
@@ -31,6 +32,7 @@ const mockProfiles: Record<string, any> = {
 };
 
 export default function SocialFeed() {
+  const router = useRouter();
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const { feed, isLoading: isFeedLoading, error: feedError } = useFeed(address);
@@ -43,6 +45,13 @@ export default function SocialFeed() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+
+  // Redirect to dashboard if user is connected
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/dashboard');
+    }
+  }, [isConnected, router]);
 
   // Show success toast when post is created
   useEffect(() => {
