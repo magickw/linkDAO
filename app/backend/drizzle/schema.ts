@@ -28,10 +28,10 @@ export const posts = pgTable("posts", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-			columns: [table.authorId],
-			foreignColumns: [users.id],
-			name: "posts_author_id_users_id_fk"
-		}),
+		columns: [table.authorId],
+		foreignColumns: [users.id],
+		name: "posts_author_id_users_id_fk"
+	}),
 ]);
 
 export const proposals = pgTable("proposals", {
@@ -55,31 +55,39 @@ export const payments = pgTable("payments", {
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-			columns: [table.from],
-			foreignColumns: [users.id],
-			name: "payments_from_users_id_fk"
-		}),
+		columns: [table.from],
+		foreignColumns: [users.id],
+		name: "payments_from_users_id_fk"
+	}),
 	foreignKey({
-			columns: [table.to],
-			foreignColumns: [users.id],
-			name: "payments_to_users_id_fk"
-		}),
+		columns: [table.to],
+		foreignColumns: [users.id],
+		name: "payments_to_users_id_fk"
+	}),
 ]);
 
 export const reputations = pgTable("reputations", {
-	address: varchar({ length: 66 }).primaryKey().notNull(),
+	walletAddress: varchar("wallet_address", { length: 66 }).primaryKey().notNull(),
 	score: integer().notNull(),
 	daoApproved: boolean("dao_approved").default(false),
 });
 
 export const users = pgTable("users", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
-	address: varchar({ length: 66 }).notNull(),
+	walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
 	handle: varchar({ length: 64 }),
 	profileCid: text("profile_cid"),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	// Physical address fields for marketplace logistics
+	physicalStreet: varchar("physical_street", { length: 200 }),
+	physicalCity: varchar("physical_city", { length: 100 }),
+	physicalState: varchar("physical_state", { length: 100 }),
+	physicalPostalCode: varchar("physical_postal_code", { length: 20 }),
+	physicalCountry: varchar("physical_country", { length: 100 }),
+	physicalAddressType: varchar("physical_address_type", { length: 20 }), // 'shipping' or 'billing'
+	physicalIsDefault: boolean("physical_is_default").default(false),
 }, (table) => [
-	unique("users_address_unique").on(table.address),
+	unique("users_wallet_address_unique").on(table.walletAddress),
 	unique("users_handle_unique").on(table.handle),
 ]);
 
@@ -106,20 +114,20 @@ export const escrows = pgTable("escrows", {
 	deliveryConfirmed: boolean("delivery_confirmed").default(false),
 }, (table) => [
 	foreignKey({
-			columns: [table.listingId],
-			foreignColumns: [listings.id],
-			name: "escrows_listing_id_listings_id_fk"
-		}),
+		columns: [table.listingId],
+		foreignColumns: [listings.id],
+		name: "escrows_listing_id_listings_id_fk"
+	}),
 	foreignKey({
-			columns: [table.buyerId],
-			foreignColumns: [users.id],
-			name: "escrows_buyer_id_users_id_fk"
-		}),
+		columns: [table.buyerId],
+		foreignColumns: [users.id],
+		name: "escrows_buyer_id_users_id_fk"
+	}),
 	foreignKey({
-			columns: [table.sellerId],
-			foreignColumns: [users.id],
-			name: "escrows_seller_id_users_id_fk"
-		}),
+		columns: [table.sellerId],
+		foreignColumns: [users.id],
+		name: "escrows_seller_id_users_id_fk"
+	}),
 ]);
 
 export const offers = pgTable("offers", {
@@ -153,6 +161,14 @@ export const orders = pgTable("orders", {
 	paymentToken: varchar("payment_token", { length: 66 }),
 	status: varchar({ length: 32 }).default('pending'),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	// Shipping address for physical items
+	shippingStreet: varchar("shipping_street", { length: 200 }),
+	shippingCity: varchar("shipping_city", { length: 100 }),
+	shippingState: varchar("shipping_state", { length: 100 }),
+	shippingPostalCode: varchar("shipping_postal_code", { length: 20 }),
+	shippingCountry: varchar("shipping_country", { length: 100 }),
+	shippingName: varchar("shipping_name", { length: 100 }),
+	shippingPhone: varchar("shipping_phone", { length: 20 }),
 });
 
 export const reactions = pgTable("reactions", {
@@ -211,10 +227,10 @@ export const listings = pgTable("listings", {
 	reserveMet: boolean("reserve_met").default(false),
 }, (table) => [
 	foreignKey({
-			columns: [table.sellerId],
-			foreignColumns: [users.id],
-			name: "listings_seller_id_users_id_fk"
-		}),
+		columns: [table.sellerId],
+		foreignColumns: [users.id],
+		name: "listings_seller_id_users_id_fk"
+	}),
 ]);
 
 export const bids = pgTable("bids", {
@@ -225,15 +241,15 @@ export const bids = pgTable("bids", {
 	timestamp: timestamp({ mode: 'string' }).defaultNow(),
 }, (table) => [
 	foreignKey({
-			columns: [table.listingId],
-			foreignColumns: [listings.id],
-			name: "bids_listing_id_listings_id_fk"
-		}),
+		columns: [table.listingId],
+		foreignColumns: [listings.id],
+		name: "bids_listing_id_listings_id_fk"
+	}),
 	foreignKey({
-			columns: [table.bidderId],
-			foreignColumns: [users.id],
-			name: "bids_bidder_id_users_id_fk"
-		}),
+		columns: [table.bidderId],
+		foreignColumns: [users.id],
+		name: "bids_bidder_id_users_id_fk"
+	}),
 ]);
 
 export const follows = pgTable("follows", {
@@ -243,14 +259,14 @@ export const follows = pgTable("follows", {
 }, (table) => [
 	index("follow_idx").using("btree", table.followerId.asc().nullsLast().op("uuid_ops"), table.followingId.asc().nullsLast().op("uuid_ops")),
 	foreignKey({
-			columns: [table.followerId],
-			foreignColumns: [users.id],
-			name: "follows_follower_id_users_id_fk"
-		}),
+		columns: [table.followerId],
+		foreignColumns: [users.id],
+		name: "follows_follower_id_users_id_fk"
+	}),
 	foreignKey({
-			columns: [table.followingId],
-			foreignColumns: [users.id],
-			name: "follows_following_id_users_id_fk"
-		}),
-	primaryKey({ columns: [table.followerId, table.followingId], name: "follows_follower_id_following_id_pk"}),
+		columns: [table.followingId],
+		foreignColumns: [users.id],
+		name: "follows_following_id_users_id_fk"
+	}),
+	primaryKey({ columns: [table.followerId, table.followingId], name: "follows_follower_id_following_id_pk" }),
 ]);

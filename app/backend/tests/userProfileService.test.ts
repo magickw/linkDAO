@@ -16,7 +16,7 @@ describe('UserProfileService', () => {
   describe('createProfile', () => {
     it('should create a new profile successfully', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser',
         ens: 'testuser.eth',
         avatarCid: 'QmAvatar123',
@@ -27,7 +27,7 @@ describe('UserProfileService', () => {
 
       expect(profile).toBeDefined();
       expect(profile.id).toBeDefined();
-      expect(profile.address).toBe(input.address);
+      expect(profile.walletAddress).toBe(input.walletAddress);
       expect(profile.handle).toBe(input.handle);
       expect(profile.ens).toBe(input.ens);
       expect(profile.avatarCid).toBe(input.avatarCid);
@@ -38,7 +38,7 @@ describe('UserProfileService', () => {
 
     it('should throw an error when creating a profile with an existing address', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser'
       };
 
@@ -53,7 +53,7 @@ describe('UserProfileService', () => {
   describe('getProfileById', () => {
     it('should return a profile when given a valid ID', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser'
       };
 
@@ -73,12 +73,12 @@ describe('UserProfileService', () => {
   describe('getProfileByAddress', () => {
     it('should return a profile when given a valid address', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser'
       };
 
       const createdProfile = await userProfileService.createProfile(input);
-      const retrievedProfile = await userProfileService.getProfileByAddress(input.address);
+      const retrievedProfile = await userProfileService.getProfileByAddress(input.walletAddress);
 
       expect(retrievedProfile).toBeDefined();
       expect(retrievedProfile).toEqual(createdProfile);
@@ -93,7 +93,7 @@ describe('UserProfileService', () => {
   describe('updateProfile', () => {
     it('should update a profile successfully', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser'
       };
 
@@ -110,7 +110,7 @@ describe('UserProfileService', () => {
 
       expect(updatedProfile).toBeDefined();
       expect(updatedProfile?.id).toBe(createdProfile.id);
-      expect(updatedProfile?.address).toBe(createdProfile.address);
+      expect(updatedProfile?.walletAddress).toBe(createdProfile.walletAddress);
       expect(updatedProfile?.handle).toBe(updateInput.handle);
       expect(updatedProfile?.ens).toBe(updateInput.ens);
       expect(updatedProfile?.avatarCid).toBe(updateInput.avatarCid);
@@ -133,7 +133,7 @@ describe('UserProfileService', () => {
   describe('deleteProfile', () => {
     it('should delete a profile successfully', async () => {
       const input: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser'
       };
 
@@ -161,12 +161,12 @@ describe('UserProfileService', () => {
       userProfileService = new UserProfileService();
       
       const input1: CreateUserProfileInput = {
-        address: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
         handle: 'testuser1'
       };
 
       const input2: CreateUserProfileInput = {
-        address: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+        walletAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
         handle: 'testuser2'
       };
 

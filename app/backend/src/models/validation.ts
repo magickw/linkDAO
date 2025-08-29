@@ -114,6 +114,17 @@ export const makeOfferSchema = z.object({
   amount: priceSchema
 });
 
+// Shipping address validation schema
+export const shippingAddressSchema = z.object({
+  name: z.string().min(1, 'Recipient name is required').max(100, 'Name too long'),
+  street: z.string().min(1, 'Street address is required').max(200, 'Street address too long'),
+  city: z.string().min(1, 'City is required').max(100, 'City name too long'),
+  state: z.string().min(1, 'State is required').max(100, 'State name too long'),
+  postalCode: z.string().min(1, 'Postal code is required').max(20, 'Postal code too long'),
+  country: z.string().min(1, 'Country is required').max(100, 'Country name too long'),
+  phone: z.string().max(20, 'Phone number too long').optional()
+});
+
 // Order validation schema
 export const createOrderSchema = z.object({
   listingId: z.string()
@@ -127,7 +138,8 @@ export const createOrderSchema = z.object({
     .regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid payment token address format'),
   escrowId: z.string()
     .regex(/^\d+$/, 'Escrow ID must be a valid number')
-    .optional()
+    .optional(),
+  shippingAddress: shippingAddressSchema.optional()
 });
 
 // Escrow validation schema
