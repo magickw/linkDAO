@@ -1,21 +1,14 @@
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import * as schema from "../db/schema";
 import { eq, and, or } from "drizzle-orm";
+import { dbPool } from "../db/connectionPool";
+import { ValidationHelper, ValidationError } from "../models/validation";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// Create a postgres client with connection pooling
-const client = postgres(process.env.DATABASE_URL || "", { 
-  prepare: false,
-  max: 10,
-  idle_timeout: 20,
-  connect_timeout: 10
-});
-
-// Create Drizzle ORM instance
-const db = drizzle(client, { schema });
+// Create Drizzle ORM instance with connection pool
+const db = drizzle(dbPool.getConnection(), { schema });
 
 export class DatabaseService {
   // User operations

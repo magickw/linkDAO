@@ -1,6 +1,6 @@
 // Marketplace models
 export interface CreateListingInput {
-  sellerAddress: string;
+  sellerWalletAddress: string;
   tokenAddress: string;
   price: string; // Stored as string to handle big numbers
   quantity: number;
@@ -22,18 +22,18 @@ export interface UpdateListingInput {
 }
 
 export interface PlaceBidInput {
-  bidderAddress: string;
+  bidderWalletAddress: string;
   amount: string; // Stored as string to handle big numbers
 }
 
 export interface MakeOfferInput {
-  buyerAddress: string;
+  buyerWalletAddress: string;
   amount: string; // Stored as string to handle big numbers
 }
 
 export interface MarketplaceListing {
   id: string;
-  sellerAddress: string;
+  sellerWalletAddress: string;
   tokenAddress: string;
   price: string;
   quantity: number;
@@ -43,7 +43,7 @@ export interface MarketplaceListing {
   startTime: string;
   endTime?: string;
   highestBid?: string;
-  highestBidder?: string;
+  highestBidderWalletAddress?: string;
   metadataURI: string;
   isEscrowed: boolean;
   // NFT specific fields
@@ -60,7 +60,7 @@ export interface MarketplaceListing {
 export interface MarketplaceBid {
   id: string;
   listingId: string;
-  bidderAddress: string;
+  bidderWalletAddress: string;
   amount: string;
   timestamp: string;
 }
@@ -68,7 +68,7 @@ export interface MarketplaceBid {
 export interface MarketplaceOffer {
   id: string;
   listingId: string;
-  buyerAddress: string;
+  buyerWalletAddress: string;
   amount: string;
   createdAt: string;
   accepted: boolean;
@@ -77,13 +77,13 @@ export interface MarketplaceOffer {
 export interface MarketplaceEscrow {
   id: string;
   listingId: string;
-  buyerAddress: string;
-  sellerAddress: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
   amount: string;
   buyerApproved: boolean;
   sellerApproved: boolean;
   disputeOpened: boolean;
-  resolverAddress?: string;
+  resolverWalletAddress?: string;
   createdAt: string;
   resolvedAt?: string;
   // Delivery tracking
@@ -94,8 +94,8 @@ export interface MarketplaceEscrow {
 export interface MarketplaceOrder {
   id: string;
   listingId: string;
-  buyerAddress: string;
-  sellerAddress: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
   escrowId?: string;
   amount: string;
   paymentToken: string;
@@ -106,7 +106,7 @@ export interface MarketplaceOrder {
 export interface MarketplaceDispute {
   id: string;
   escrowId: string;
-  reporterAddress: string;
+  reporterWalletAddress: string;
   reason: string;
   status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED';
   createdAt: string;
@@ -117,7 +117,7 @@ export interface MarketplaceDispute {
 }
 
 export interface UserReputation {
-  address: string;
+  walletAddress: string;
   score: number;
   daoApproved: boolean;
 }
