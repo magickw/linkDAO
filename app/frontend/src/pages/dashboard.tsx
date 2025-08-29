@@ -312,11 +312,16 @@ export default function Dashboard() {
   const walletBalance = getWalletBalance();
   const userReputation = getUserReputation();
 
+  const handleCreatePost = () => {
+    openModal('postCreation');
+  };
+
   return (
     <DashboardLayout
       title="Dashboard - LinkDAO"
       activeView={navigationState.activeView}
       rightSidebar={<DashboardRightSidebar />}
+      onCreatePost={handleCreatePost}
     >
       <div className="space-y-6">
         {/* Top Section (User Snapshot) */}

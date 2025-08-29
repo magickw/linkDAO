@@ -155,13 +155,13 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
       {/* Feed Header with Filters */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
           Social Feed
         </h1>
         
         {/* Feed Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto">
           {[
             { id: 'all', label: 'All Posts', icon: '🌐' },
             { id: 'following', label: 'Following', icon: '👥' },
@@ -170,20 +170,21 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
             <button
               key={filter.id}
               onClick={() => setActiveFilter(filter.id as FeedFilter)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+              className={`flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap min-w-0 ${
                 activeFilter === filter.id
                   ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
-              <span>{filter.icon}</span>
-              <span>{filter.label}</span>
+              <span className="text-base md:text-sm">{filter.icon}</span>
+              <span className="hidden sm:inline">{filter.label}</span>
+              <span className="sm:hidden text-xs">{filter.label.split(' ')[0]}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Unified Post Creation Interface */}
+      {/* Unified Post Creation Interface - Hidden on mobile (use FAB instead) */}
       {isConnected && (
         <UnifiedPostCreation
           context="feed"
@@ -191,12 +192,12 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
           isLoading={isCreatingPost}
           expanded={postCreationExpanded}
           onExpandedChange={setPostCreationExpanded}
-          className="mb-6"
+          className="mb-4 md:mb-6 hidden md:block"
         />
       )}
 
       {/* Posts Feed */}
-      <div className="space-y-6">
+      <div className="space-y-3 md:space-y-6">
         {isFeedLoading && page === 1 ? (
           /* Loading State */
           <div className="space-y-6">

@@ -395,20 +395,20 @@ export default function UnifiedPostCreation({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Post Type
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             {getAvailablePostTypes().map((type) => (
               <button
                 key={type.id}
                 type="button"
                 onClick={() => setPostType(type.id)}
-                className={`flex flex-col items-center justify-center p-2 rounded-md border transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center p-3 md:p-2 rounded-md border transition-all duration-200 touch-target ${
                   postType === type.id
                     ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                     : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
                 disabled={isLoading}
               >
-                <span className="text-lg">{type.icon}</span>
+                <span className="text-xl md:text-lg">{type.icon}</span>
                 <span className="text-xs mt-1">{type.label}</span>
               </button>
             ))}
@@ -460,18 +460,18 @@ export default function UnifiedPostCreation({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={getPlaceholder()}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none overflow-hidden transition-colors duration-200"
+            className="w-full px-3 py-3 md:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none overflow-hidden transition-colors duration-200 text-base md:text-sm"
             rows={3}
             required
             disabled={isLoading}
-            style={{ minHeight: '80px' }}
+            style={{ minHeight: '100px' }}
           />
           <div className="flex justify-between items-center mt-1">
             <div className="text-xs text-gray-500 dark:text-gray-400">
               Supports markdown formatting
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {280 - content.length} characters remaining
+            <div className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
+              {280 - content.length} remaining
             </div>
           </div>
         </div>

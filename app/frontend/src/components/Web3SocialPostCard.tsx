@@ -8,6 +8,7 @@ import WalletSnapshotEmbed from '@/components/WalletSnapshotEmbed';
 import DAOGovernanceEmbed from '@/components/DAOGovernanceEmbed';
 import GestureHandler from '@/components/GestureHandler';
 import QuickActionsMenu from '@/components/QuickActionsMenu';
+import PostInteractionBar from '@/components/PostInteractionBar';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -28,11 +29,11 @@ interface Web3SocialPostCardProps {
   onExpand?: () => void;
 }
 
-export default function Web3SocialPostCard({ 
-  post, 
-  profile, 
-  className = '', 
-  onReaction, 
+export default function Web3SocialPostCard({
+  post,
+  profile,
+  className = '',
+  onReaction,
   onTip,
   onExpand
 }: Web3SocialPostCardProps) {
@@ -55,7 +56,7 @@ export default function Web3SocialPostCard({
   const formatTimestamp = (date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) {
       return `${diffInSeconds} seconds ago`;
     } else if (diffInSeconds < 3600) {
@@ -70,8 +71,8 @@ export default function Web3SocialPostCard({
     }
   };
 
-  const timestamp = post.createdAt instanceof Date ? 
-    formatTimestamp(post.createdAt) : 
+  const timestamp = post.createdAt instanceof Date ?
+    formatTimestamp(post.createdAt) :
     'Unknown time';
 
   // Handle reaction (staking tokens)
@@ -80,13 +81,13 @@ export default function Web3SocialPostCard({
       addToast('Please connect your wallet to react', 'error');
       return;
     }
-    
+
     try {
       // In a real implementation, this would call the backend API
       if (onReaction) {
         await onReaction(post.id, reactionType, amount);
       }
-      
+
       // Update local state
       setReactions(prev => prev.map(reaction => {
         if (reaction.type === reactionType) {
@@ -102,7 +103,7 @@ export default function Web3SocialPostCard({
         }
         return reaction;
       }));
-      
+
       addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
@@ -158,12 +159,12 @@ export default function Web3SocialPostCard({
       addToast('Please connect your wallet to tip', 'error');
       return;
     }
-    
+
     if (tipAmount <= 0) {
       addToast('Please enter a valid tip amount', 'error');
       return;
     }
-    
+
     try {
       // In a real implementation, this would call the backend API
       if (onTip) {
@@ -253,7 +254,7 @@ export default function Web3SocialPostCard({
 
   // Determine if post has embeds
   const hasEmbeds = () => {
-    return post.tags?.some((tag: string) => 
+    return post.tags?.some((tag: string) =>
       ['nft', 'defi', 'wallet', 'governance', 'dao'].includes(tag)
     ) || post.onchainRef;
   };
@@ -261,7 +262,7 @@ export default function Web3SocialPostCard({
   // Render appropriate embed based on post type
   const renderEmbed = () => {
     if (!expanded) return null;
-    
+
     if (post.tags?.includes('nft')) {
       // Mock NFT data - in a real app this would come from post metadata
       const mockNFTs = [
@@ -276,21 +277,21 @@ export default function Web3SocialPostCard({
       ];
       return <NFTPreview nfts={mockNFTs} className="mt-4" />;
     }
-    
+
     if (post.tags?.includes('defi')) {
       // Mock DeFi data - in a real app this would come from post metadata
       return <DeFiChartEmbed tokenSymbol="ETH" tokenName="Ethereum" className="mt-4" />;
     }
-    
+
     if (post.tags?.includes('wallet') && post.onchainRef) {
       return <WalletSnapshotEmbed walletAddress={post.onchainRef} className="mt-4" />;
     }
-    
+
     if (post.tags?.includes('governance') || post.tags?.includes('dao')) {
       // Mock DAO data - in a real app this would come from post metadata
       return <DAOGovernanceEmbed daoName="Ethereum Builders" daoToken="ETHB" className="mt-4" />;
     }
-    
+
     return null;
   };
 
@@ -307,7 +308,7 @@ export default function Web3SocialPostCard({
 
   return (
     <>
-      <GestureHandler 
+      <GestureHandler
         onDoubleTap={handleDoubleTap}
         onLongPress={handleLongPress}
         className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/10 dark:hover:shadow-primary-400/10 transform hover:-translate-y-1 ${className}`}
@@ -353,7 +354,7 @@ export default function Web3SocialPostCard({
             </div>
           </div>
         </div>
-        
+
         {/* Post content */}
         <div className="p-5">
           <div className="mb-5">
@@ -370,7 +371,7 @@ export default function Web3SocialPostCard({
               {expanded ? post.contentCid : truncateContent(post.contentCid)}
             </p>
             {!expanded && post.contentCid.length > 200 && (
-              <button 
+              <button
                 onClick={toggleExpand}
                 className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-semibold mt-1 transition-all duration-200 hover:text-primary-800 dark:hover:text-primary-300 transform hover:scale-105"
               >
@@ -378,27 +379,27 @@ export default function Web3SocialPostCard({
               </button>
             )}
           </div>
-          
+
           {/* Media or embeds */}
           {post.mediaCids && post.mediaCids.length > 0 && (
             <div className="mb-5 rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
-              <img 
-                src={post.mediaCids[0]} 
-                alt="Post media" 
+              <img
+                src={post.mediaCids[0]}
+                alt="Post media"
                 className="w-full h-72 object-cover transition-transform duration-500 hover:scale-105"
               />
             </div>
           )}
-          
+
           {/* Rich embeds for expanded view */}
           {expanded && renderEmbed()}
-          
+
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-5">
               {post.tags.map((tag: string, index: number) => (
-                <span 
-                  key={index} 
+                <span
+                  key={index}
                   className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${getCategoryGradient()} text-white shadow-sm transition-all duration-200 hover:scale-105 hover:shadow-md`}
                 >
                   #{tag}
@@ -406,25 +407,25 @@ export default function Web3SocialPostCard({
               ))}
             </div>
           )}
-          
+
           {/* Analytics Section - Progressive Disclosure */}
           {expanded && (
             <div className="mb-5 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50 transition-all duration-300 hover:shadow-md">
-              <button 
+              <button
                 onClick={toggleAnalytics}
                 className="flex items-center justify-between w-full text-left transition-colors duration-200 hover:text-primary-600 dark:hover:text-primary-400"
               >
                 <span className="font-semibold text-gray-900 dark:text-white">Post Analytics</span>
-                <svg 
+                <svg
                   className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform duration-300 ${showAnalytics ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              
+
               {showAnalytics && (
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 animate-fadeIn">
                   <div className="grid grid-cols-2 gap-4">
@@ -445,7 +446,7 @@ export default function Web3SocialPostCard({
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Saves</p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Top Contributors</h4>
                     <div className="space-y-3">
@@ -478,102 +479,33 @@ export default function Web3SocialPostCard({
               )}
             </div>
           )}
-          
-          {/* Reactions */}
-          <div className="flex flex-wrap gap-3 mb-5">
-            {reactions.map((reaction) => (
-              <button
-                key={reaction.type}
-                onClick={() => handleReaction(reaction.type, 1)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 md:px-5 md:py-2.5 touch-target transform hover:scale-105 ${
-                  reaction.userStaked > 0 
-                    ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md shadow-primary-500/30 animate-pulse' 
-                    : 'bg-white/80 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-gray-200/80 dark:hover:bg-gray-600/80 shadow-sm'
-                }`}
-              >
-                <span className="text-lg">{reaction.emoji}</span>
-                <span>{reaction.totalStaked}</span>
-                {reaction.userStaked > 0 && (
-                  <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">+{reaction.userStaked}</span>
-                )}
-                {/* Show rewards earned */}
-                <span className="text-xs bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 rounded-full px-2 py-0.5 animate-pulse">
-                  {reaction.rewardsEarned.toFixed(1)}★
-                </span>
-              </button>
-            ))}
-          </div>
-          
-          {/* Action footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50 flex-wrap gap-3">
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={toggleExpand}
-                className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
-                <span className="sm:hidden">{post.commentCount || 0}</span>
-              </button>
-              
-              <button className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105">
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                <span className="hidden sm:inline">Share</span>
-              </button>
-              
-              <button 
-                onClick={() => setShowTipInput(!showTipInput)}
-                className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-semibold py-1 touch-target transition-all duration-200 hover:scale-105"
-              >
-                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="hidden sm:inline">Tip</span>
-              </button>
-            </div>
-          
-            <div className="text-sm text-gray-500 dark:text-gray-400 font-medium animate-pulse">
-              {post.stakedValue ? `${post.stakedValue} $LNK staked` : '0 $LNK staked'}
-            </div>
-          </div>
-          
-          {/* Tip input */}
-          {showTipInput && (
-            <form onSubmit={handleTip} className="mt-4 flex items-center animate-fadeIn">
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={tipAmount || ''}
-                onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-                placeholder="Amount"
-                className="w-28 px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 hover:shadow-md"
-              />
-              <span className="px-4 py-2.5 text-sm bg-gray-100 dark:bg-gray-700 border-y border-gray-300 dark:border-gray-600 font-semibold">USDC</span>
-              <button 
-                type="submit"
-                className="px-5 py-2.5 text-sm bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white rounded-r-xl transition-all duration-200 shadow-md font-semibold transform hover:scale-105"
-              >
-                Send
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowTipInput(false)}
-                className="ml-3 px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 rounded-xl transition-all duration-200 font-semibold transform hover:scale-105"
-              >
-                Cancel
-              </button>
-            </form>
-          )}
+
+          {/* Enhanced Post Interactions */}
+          <PostInteractionBar
+            post={{
+              id: post.id,
+              title: post.title,
+              contentCid: post.contentCid,
+              author: post.author,
+              dao: post.dao,
+              commentCount: post.commentCount,
+              stakedValue: post.stakedValue
+            }}
+            postType="feed"
+            onComment={toggleExpand}
+            onReaction={onReaction}
+            onTip={onTip}
+            onShare={async (postId, shareType, message) => {
+              // Handle sharing
+              console.log('Sharing post:', postId, shareType, message);
+              addToast(`Post shared via ${shareType}!`, 'success');
+            }}
+          />
         </div>
       </GestureHandler>
-      
+
       {/* Quick Actions Menu */}
-      <QuickActionsMenu 
+      <QuickActionsMenu
         isOpen={showQuickActions}
         onClose={() => setShowQuickActions(false)}
         onAction={handleQuickAction}

@@ -334,7 +334,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   return (
     <div className={className}>
       {/* Community Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg md:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 md:mb-6 overflow-hidden mobile-card">
         {/* Banner */}
         {community.banner && (
           <div className="h-32 bg-gradient-to-r from-primary-500 to-secondary-500 relative">
@@ -347,7 +347,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
         )}
         
         {/* Community Info */}
-        <div className="p-6">
+        <div className="p-4 md:p-6 mobile-spacing">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center space-x-4">
               {/* Community Avatar */}
@@ -395,7 +395,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                   <button
                     onClick={handleLeaveCommunity}
                     disabled={joinLoading}
-                    className="px-4 py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 transition-colors duration-200"
+                    className="px-4 py-3 md:py-2 border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 transition-colors duration-200 mobile-button"
                   >
                     {joinLoading ? 'Leaving...' : 'Leave'}
                   </button>
@@ -403,7 +403,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
                   <button
                     onClick={handleJoinCommunity}
                     disabled={joinLoading}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 transition-colors duration-200"
+                    className="px-4 py-3 md:py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 transition-colors duration-200 mobile-button"
                   >
                     {joinLoading ? 'Joining...' : 'Join'}
                   </button>
@@ -411,7 +411,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               ) : (
                 <button
                   onClick={() => addToast('Please connect your wallet to join', 'info')}
-                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md cursor-not-allowed"
+                  className="px-4 py-3 md:py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md cursor-not-allowed mobile-button"
                 >
                   Connect to Join
                 </button>

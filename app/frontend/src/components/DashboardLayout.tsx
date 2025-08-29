@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
@@ -6,6 +6,8 @@ import { useNavigation } from '@/context/NavigationContext';
 import { Analytics } from "@vercel/analytics/next";
 import NotificationSystem from '@/components/NotificationSystem';
 import NavigationSidebar from '@/components/NavigationSidebar';
+import MobileNavigation from '@/components/MobileNavigation';
+import FloatingActionDock from '@/components/FloatingActionDock';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,6 +15,7 @@ interface DashboardLayoutProps {
   activeView: 'feed' | 'community';
   communityId?: string;
   rightSidebar?: ReactNode;
+  onCreatePost?: () => void;
 }
 
 export default function DashboardLayout({ 
@@ -20,7 +23,8 @@ export default function DashboardLayout({
   title = 'Dashboard - LinkDAO',
   activeView,
   communityId,
-  rightSidebar 
+  rightSidebar,
+  onCreatePost 
 }: DashboardLayoutProps) {
   const { isConnected } = useAccount();
   const router = useRouter();
@@ -31,6 +35,7 @@ export default function DashboardLayout({
     toggleSidebar,
     setSidebarCollapsed 
   } = useNavigation();
+  const [isMobile, setIsMobile] = useState(false);
 
   // Sync props with navigation state
   useEffect(() => {
@@ -49,20 +54,34 @@ export default function DashboardLayout({
     }
   }, [isConnected, router]);
 
+  // Handle mobile detection and responsive behavior
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Auto-collapse sidebar on mobile
+      if (mobile && !navigationState.sidebarCollapsed) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [navigationState.sidebarCollapsed, setSidebarCollapsed]);
+
   // Handle escape key to close sidebar on mobile
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !navigationState.sidebarCollapsed) {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-          setSidebarCollapsed(true);
-        }
+      if (e.key === 'Escape' && !navigationState.sidebarCollapsed && isMobile) {
+        setSidebarCollapsed(true);
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [navigationState.sidebarCollapsed, setSidebarCollapsed]);
+  }, [navigationState.sidebarCollapsed, setSidebarCollapsed, isMobile]);
 
   if (!isConnected) {
     return (
@@ -88,7 +107,7 @@ export default function DashboardLayout({
       </Head>
 
       {/* Mobile sidebar overlay */}
-      {!navigationState.sidebarCollapsed && (
+      {!navigationState.sidebarCollapsed && isMobile && (
         <div 
           className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
           onClick={() => setSidebarCollapsed(true)}
@@ -100,6 +119,7 @@ export default function DashboardLayout({
         <div className={`
           fixed md:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out
           ${navigationState.sidebarCollapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0'}
+          ${isMobile ? 'shadow-2xl' : ''}
         `}>
           <div className="flex flex-col h-full">
             {/* Sidebar Header */}
@@ -180,14 +200,14 @@ export default function DashboardLayout({
           {/* Main content with right sidebar */}
           <div className="flex-1 flex overflow-hidden">
             {/* Main content */}
-            <main className={`flex-1 overflow-y-auto p-6 ${
-              navigationState.rightSidebarVisible ? 'mr-80' : ''
-            }`}>
+            <main className={`flex-1 overflow-y-auto p-3 md:p-6 ${
+              navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''
+            } ${isMobile ? 'pb-20' : ''}`}>
               {children}
             </main>
 
-            {/* Right Sidebar */}
-            {navigationState.rightSidebarVisible && (
+            {/* Right Sidebar - Hidden on mobile */}
+            {navigationState.rightSidebarVisible && !isMobile && (
               <aside className="fixed right-0 top-16 bottom-0 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
                 <div className="p-6">
                   {rightSidebar || (
@@ -211,7 +231,10 @@ export default function DashboardLayout({
                           Quick Actions
                         </h3>
                         <div className="space-y-2">
-                          <button className="w-full p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                          <button 
+                            onClick={onCreatePost}
+                            className="w-full p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                          >
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                               Create Post
                             </p>
@@ -226,6 +249,12 @@ export default function DashboardLayout({
           </div>
         </div>
       </div>
+
+      {/* Mobile Navigation */}
+      <MobileNavigation />
+
+      {/* Floating Action Dock for Mobile */}
+      <FloatingActionDock onCreatePost={onCreatePost} />
 
       {/* Notification System */}
       {isConnected && <NotificationSystem />}
