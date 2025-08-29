@@ -69,7 +69,7 @@ export class PostService {
     // Fetch the post from database
     try {
       const dbPosts = await databaseService.getAllPosts();
-      const dbPost = dbPosts.find(p => p.id === postId);
+      const dbPost = dbPosts.find((p: any) => p.id === postId);
       
       if (!dbPost) {
         return undefined;
@@ -196,7 +196,7 @@ export class PostService {
 
       // Get the list of users that this user follows
       const following = await databaseService.getFollowing(user.id);
-      const followingIds = following.map(f => f.followingId);
+      const followingIds = following.map((f: any) => f.followingId);
 
       // Include the user's own posts
       followingIds.push(user.id);
@@ -209,7 +209,7 @@ export class PostService {
       // - Staking/boosted posts that should be prioritized
       
       // Get posts from followed users (including self)
-      const postsPromises = followingIds.map(userId => databaseService.getPostsByAuthor(userId));
+      const postsPromises = followingIds.map((userId: any) => databaseService.getPostsByAuthor(userId));
       const postsArrays = await Promise.all(postsPromises);
       
       // Flatten the arrays and convert to Post model

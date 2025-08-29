@@ -877,7 +877,7 @@ export class MarketplaceService {
   async getDAOApprovedVendors(): Promise<UserReputation[]> {
     const dbReputations = await databaseService.getDAOApprovedVendors();
     
-    const reputations: UserReputation[] = dbReputations.map(dbReputation => ({
+    const reputations: UserReputation[] = dbReputations.map((dbReputation: any) => ({
       walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
@@ -949,7 +949,7 @@ export class MarketplaceService {
   async getPendingAIModeration(): Promise<AIModeration[]> {
     const dbAIModerations = await databaseService.getPendingAIModeration();
     
-    const aiModerations: AIModeration[] = dbAIModerations.map(dbAIModeration => ({
+    const aiModerations: AIModeration[] = dbAIModerations.map((dbAIModeration: any) => ({
       id: dbAIModeration.id.toString(),
       objectType: dbAIModeration.objectType,
       objectId: dbAIModeration.objectId.toString(),
