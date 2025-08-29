@@ -20,7 +20,7 @@ describe('MarketplaceService', () => {
     it('should create a fixed-price listing', async () => {
       const mockUser = {
         id: 'user1',
-        address: '0x123',
+        walletAddress: '0x123',
         handle: 'testuser',
         ens: '',
         avatarCid: '',
@@ -58,7 +58,7 @@ describe('MarketplaceService', () => {
       jest.spyOn(databaseService, 'createListing').mockResolvedValue(mockListing);
       
       const input = {
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
@@ -70,7 +70,7 @@ describe('MarketplaceService', () => {
       const result = await marketplaceService.createListing(input);
       
       expect(result).toHaveProperty('id', '1');
-      expect(result).toHaveProperty('sellerAddress', '0x123');
+      expect(result).toHaveProperty('sellerWalletAddress', '0x123');
       expect(result).toHaveProperty('price', '1000000000000000000');
       expect(result).toHaveProperty('itemType', 'DIGITAL');
       expect(result).toHaveProperty('listingType', 'FIXED_PRICE');
@@ -92,7 +92,7 @@ describe('MarketplaceService', () => {
     it('should create an auction listing with reserve price', async () => {
       const mockUser = {
         id: 'user1',
-        address: '0x123',
+        walletAddress: '0x123',
         handle: 'testuser',
         ens: '',
         avatarCid: '',
@@ -130,7 +130,7 @@ describe('MarketplaceService', () => {
       jest.spyOn(databaseService, 'createListing').mockResolvedValue(mockListing);
       
       const input = {
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
@@ -147,7 +147,7 @@ describe('MarketplaceService', () => {
       const result = await marketplaceService.createListing(input);
       
       expect(result).toHaveProperty('id', '1');
-      expect(result).toHaveProperty('sellerAddress', '0x123');
+      expect(result).toHaveProperty('sellerWalletAddress', '0x123');
       expect(result).toHaveProperty('listingType', 'AUCTION');
       expect(result).toHaveProperty('reservePrice', '2000000000000000000');
       expect(result).toHaveProperty('minIncrement', '100000000000000000');
@@ -171,7 +171,7 @@ describe('MarketplaceService', () => {
     it('should place a bid on an auction listing', async () => {
       const mockUser = {
         id: 'user1',
-        address: '0x123',
+        walletAddress: '0x123',
         handle: 'bidder',
         ens: '',
         avatarCid: '',
@@ -193,7 +193,7 @@ describe('MarketplaceService', () => {
       jest.spyOn(databaseService, 'placeBid').mockResolvedValue(mockBid);
       
       const input = {
-        bidderAddress: '0x123',
+        bidderWalletAddress: '0x123',
         amount: '1500000000000000000'
       };
       
@@ -201,7 +201,7 @@ describe('MarketplaceService', () => {
       
       expect(result).toHaveProperty('id', '1');
       expect(result).toHaveProperty('listingId', '1');
-      expect(result).toHaveProperty('bidderAddress', '0x123');
+      expect(result).toHaveProperty('bidderWalletAddress', '0x123');
       expect(result).toHaveProperty('amount', '1500000000000000000');
       expect(databaseService.placeBid).toHaveBeenCalledWith(1, 'user1', '1500000000000000000');
     });
@@ -211,7 +211,7 @@ describe('MarketplaceService', () => {
     it('should make an offer on a listing', async () => {
       const mockUser = {
         id: 'user1',
-        address: '0x123',
+        walletAddress: '0x123',
         handle: 'buyer',
         ens: '',
         avatarCid: '',
@@ -234,7 +234,7 @@ describe('MarketplaceService', () => {
       jest.spyOn(databaseService, 'makeOffer').mockResolvedValue(mockOffer);
       
       const input = {
-        buyerAddress: '0x123',
+        buyerWalletAddress: '0x123',
         amount: '900000000000000000'
       };
       
@@ -242,7 +242,7 @@ describe('MarketplaceService', () => {
       
       expect(result).toHaveProperty('id', '1');
       expect(result).toHaveProperty('listingId', '1');
-      expect(result).toHaveProperty('buyerAddress', '0x123');
+      expect(result).toHaveProperty('buyerWalletAddress', '0x123');
       expect(result).toHaveProperty('amount', '900000000000000000');
       expect(databaseService.makeOffer).toHaveBeenCalledWith(1, 'user1', '900000000000000000');
     });
@@ -252,7 +252,7 @@ describe('MarketplaceService', () => {
     it('should create a dispute with evidence', async () => {
       const mockUser = {
         id: 'user1',
-        address: '0x123',
+        walletAddress: '0x123',
         handle: 'disputer',
         ens: '',
         avatarCid: '',
@@ -282,7 +282,7 @@ describe('MarketplaceService', () => {
       
       expect(result).toHaveProperty('id', '1');
       expect(result).toHaveProperty('escrowId', '1');
-      expect(result).toHaveProperty('reporterAddress', '0x123');
+      expect(result).toHaveProperty('reporterWalletAddress', '0x123');
       expect(result).toHaveProperty('reason', 'Item not received');
       expect(result).toHaveProperty('evidence', evidence);
       expect(databaseService.createDispute).toHaveBeenCalledWith(
