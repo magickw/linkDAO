@@ -6,7 +6,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        address: string;
+        walletAddress: string;
       };
     }
   }
@@ -25,7 +25,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     const decoded = jwt.verify(token, secret) as { address: string };
     
     req.user = {
-      address: decoded.address
+      walletAddress: decoded.address
     };
     
     next();

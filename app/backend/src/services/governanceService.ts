@@ -38,7 +38,7 @@ export interface Vote {
 }
 
 export interface VotingPower {
-  address: string;
+  walletAddress: string;
   baseTokens: string; // Token balance
   reputationScore: number;
   weightedVotes: string; // Weighted voting power
@@ -94,7 +94,7 @@ export class GovernanceService {
       }
 
       return {
-        address: userAddress,
+        walletAddress: userAddress,
         baseTokens: tokenBalance,
         reputationScore,
         weightedVotes: ethers.formatUnits(finalWeightedVotes, 18),

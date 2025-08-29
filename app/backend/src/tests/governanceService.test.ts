@@ -21,7 +21,7 @@ describe('GovernanceService', () => {
         '1000000'
       );
 
-      expect(votingPower.address).toBe('0x1234567890123456789012345678901234567890');
+      expect(votingPower.walletAddress).toBe('0x1234567890123456789012345678901234567890');
       expect(votingPower.baseTokens).toBe('1000');
     });
   });

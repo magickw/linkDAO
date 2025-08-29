@@ -11,7 +11,7 @@ export class TipController {
   async createTip(req: Request, res: Response): Promise<Response> {
     try {
       const { postId, creatorAddress, amount, message } = req.body;
-      const { address: fromAddress } = req.user as { address: string };
+      const { walletAddress: fromAddress } = req.user as { walletAddress: string };
 
       // Validate input
       if (!postId || !creatorAddress || !amount) {
@@ -122,7 +122,7 @@ export class TipController {
    */
   async claimRewards(req: Request, res: Response): Promise<Response> {
     try {
-      const { address: userAddress } = req.user as { address: string };
+      const { walletAddress: userAddress } = req.user as { walletAddress: string };
       
       // In a real implementation, this would:
       // 1. Validate the user has claimable rewards

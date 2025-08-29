@@ -223,7 +223,7 @@ export class AIService {
       }
 
       // Get user reputation
-      const reputation = await marketplaceService.getUserReputation(listing.sellerAddress);
+      const reputation = await marketplaceService.getUserReputation(listing.sellerWalletAddress);
       
       // Create prompt for AI analysis
       const prompt = `
@@ -321,8 +321,8 @@ export class AIService {
       }
 
       // Get user reputations
-      const buyerReputation = await marketplaceService.getUserReputation(escrow.buyerAddress);
-      const sellerReputation = await marketplaceService.getUserReputation(escrow.sellerAddress);
+      const buyerReputation = await marketplaceService.getUserReputation(escrow.buyerWalletAddress);
+      const sellerReputation = await marketplaceService.getUserReputation(escrow.sellerWalletAddress);
       
       // Get evidence if available
       const evidenceText = dispute.evidence ? dispute.evidence.join('\n') : 'No evidence provided';
@@ -337,8 +337,8 @@ export class AIService {
         
         Transaction Details:
         - Amount: ${escrow.amount}
-        - Buyer: ${escrow.buyerAddress}
-        - Seller: ${escrow.sellerAddress}
+        - Buyer: ${escrow.buyerWalletAddress}
+        - Seller: ${escrow.sellerWalletAddress}
         
         User Reputations:
         - Buyer Score: ${buyerReputation?.score || 0}
