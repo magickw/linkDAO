@@ -42,7 +42,7 @@ describe('AIService', () => {
       // Mock marketplace service methods
       const mockListing = {
         id: '1',
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x456',
         price: '1000000000000000000',
         quantity: 1,
@@ -52,7 +52,7 @@ describe('AIService', () => {
         startTime: new Date().toISOString(),
         endTime: undefined,
         highestBid: undefined,
-        highestBidder: undefined,
+        highestBidderWalletAddress: undefined,
         metadataURI: 'Test item',
         isEscrowed: false,
         nftStandard: undefined,
@@ -65,7 +65,7 @@ describe('AIService', () => {
       };
       
       const mockReputation = {
-        address: '0x123',
+        walletAddress: '0x123',
         score: 80,
         daoApproved: true
       };
@@ -106,7 +106,7 @@ describe('AIService', () => {
       const mockDispute = {
         id: '1',
         escrowId: '1',
-        reporterAddress: '0x123',
+        reporterWalletAddress: '0x123',
         reason: 'Item not received',
         status: 'OPEN' as const,
         createdAt: new Date().toISOString(),
@@ -118,13 +118,13 @@ describe('AIService', () => {
       const mockEscrow = {
         id: '1',
         listingId: '1',
-        buyerAddress: '0x123',
-        sellerAddress: '0x456',
+        buyerWalletAddress: '0x123',
+        sellerWalletAddress: '0x456',
         amount: '1000000000000000000',
         buyerApproved: false,
         sellerApproved: false,
         disputeOpened: true,
-        resolverAddress: undefined,
+        resolverWalletAddress: undefined,
         createdAt: new Date().toISOString(),
         resolvedAt: undefined,
         deliveryInfo: 'Shipped via UPS',
@@ -132,13 +132,13 @@ describe('AIService', () => {
       };
       
       const mockBuyerReputation = {
-        address: '0x123',
+        walletAddress: '0x123',
         score: 90,
         daoApproved: true
       };
       
       const mockSellerReputation = {
-        address: '0x456',
+        walletAddress: '0x456',
         score: 70,
         daoApproved: false
       };
@@ -178,7 +178,7 @@ describe('AIService', () => {
     it('should detect fraud risk for a user and return results', async () => {
       // Mock marketplace service methods
       const mockReputation = {
-        address: '0x123',
+        walletAddress: '0x123',
         score: 50,
         daoApproved: false
       };
@@ -187,8 +187,8 @@ describe('AIService', () => {
         {
           id: '1',
           listingId: '1',
-          buyerAddress: '0x123',
-          sellerAddress: '0x456',
+          buyerWalletAddress: '0x123',
+          sellerWalletAddress: '0x456',
           escrowId: undefined,
           amount: '1000000000000000000',
           paymentToken: '0x0000000000000000000000000000000000000000',
@@ -201,7 +201,7 @@ describe('AIService', () => {
         {
           id: '1',
           escrowId: '1',
-          reporterAddress: '0x123',
+          reporterWalletAddress: '0x123',
           reason: 'Item not received',
           status: 'RESOLVED' as const,
           createdAt: new Date().toISOString(),
@@ -258,7 +258,7 @@ describe('AIService', () => {
       
       const mockListing = {
         id: '1',
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x456',
         price: '1000000000000000000',
         quantity: 1,
@@ -268,7 +268,7 @@ describe('AIService', () => {
         startTime: new Date().toISOString(),
         endTime: undefined,
         highestBid: undefined,
-        highestBidder: undefined,
+        highestBidderWalletAddress: undefined,
         metadataURI: 'Test item',
         isEscrowed: false,
         nftStandard: undefined,
@@ -283,7 +283,7 @@ describe('AIService', () => {
       const mockDispute = {
         id: '1',
         escrowId: '1',
-        reporterAddress: '0x123',
+        reporterWalletAddress: '0x123',
         reason: 'Item not received',
         status: 'OPEN' as const,
         createdAt: new Date().toISOString(),
