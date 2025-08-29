@@ -14,7 +14,7 @@ export class FollowService {
     if (!followerUser) {
       // Create user if they don't exist
       followerUser = await userProfileService.createProfile({
-        address: followerAddress,
+        walletAddress: followerAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -26,7 +26,7 @@ export class FollowService {
     if (!followingUser) {
       // Create user if they don't exist
       followingUser = await userProfileService.createProfile({
-        address: followingAddress,
+        walletAddress: followingAddress,
         handle: '',
         ens: '',
         avatarCid: '',

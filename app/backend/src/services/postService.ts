@@ -31,7 +31,7 @@ export class PostService {
     if (!user) {
       // Create user if they don't exist
       user = await userProfileService.createProfile({
-        address: input.author,
+        walletAddress: input.author,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -83,7 +83,7 @@ export class PostService {
       
       return {
         id: dbPost.id.toString(),
-        author: author.address,
+        author: author.walletAddress,
         parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
         contentCid: dbPost.contentCid,
         mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
@@ -154,7 +154,7 @@ export class PostService {
       const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
         // Get the author's profile
         const author = await userProfileService.getProfileById(dbPost.authorId);
-        const authorAddress = author ? author.address : 'unknown';
+        const authorAddress = author ? author.walletAddress : 'unknown';
         
         // Handle potential null dates by providing default values
         const createdAt = dbPost.createdAt || new Date();
@@ -218,7 +218,7 @@ export class PostService {
       const posts: Post[] = await Promise.all(allPosts.map(async (dbPost: any) => {
         // Get the author's address
         const author = await databaseService.getUserById(dbPost.authorId);
-        const authorAddress = author ? author.address : 'unknown';
+        const authorAddress = author ? author.walletAddress : 'unknown';
         
         // Handle potential null dates by providing default values
         const createdAt = dbPost.createdAt || new Date();
