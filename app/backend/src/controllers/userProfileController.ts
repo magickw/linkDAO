@@ -10,7 +10,7 @@ export class UserProfileController {
     // Use the authenticated user's address
     const input: CreateUserProfileInput = {
       ...req.body,
-      address: req.user?.address || req.body.address
+      walletAddress: req.user?.walletAddress || req.body.walletAddress
     };
     
     const profile = await userProfileService.createProfile(input);
@@ -45,7 +45,7 @@ export class UserProfileController {
       throw new NotFoundError('Profile not found');
     }
     
-    if (req.user?.address !== existingProfile.address) {
+    if (req.user?.walletAddress !== existingProfile.walletAddress) {
       throw new APIError(403, 'You can only update your own profile');
     }
     
@@ -65,7 +65,7 @@ export class UserProfileController {
       throw new NotFoundError('Profile not found');
     }
     
-    if (req.user?.address !== existingProfile.address) {
+    if (req.user?.walletAddress !== existingProfile.walletAddress) {
       throw new APIError(403, 'You can only delete your own profile');
     }
     

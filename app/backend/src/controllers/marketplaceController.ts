@@ -23,7 +23,7 @@ export class MarketplaceController {
       const input: CreateListingInput = req.body;
       
       // Validate required fields
-      if (!input.sellerAddress || !input.price || !input.quantity || !input.metadataURI) {
+      if (!input.sellerWalletAddress || !input.price || !input.quantity || !input.metadataURI) {
         throw new ValidationError('Missing required fields');
       }
       
@@ -163,7 +163,7 @@ export class MarketplaceController {
       const input: PlaceBidInput = req.body;
       
       // Validate required fields
-      if (!input.bidderAddress || !input.amount) {
+      if (!input.bidderWalletAddress || !input.amount) {
         throw new ValidationError('Missing required fields');
       }
       
@@ -209,7 +209,7 @@ export class MarketplaceController {
       const input: MakeOfferInput = req.body;
       
       // Validate required fields
-      if (!input.buyerAddress || !input.amount) {
+      if (!input.buyerWalletAddress || !input.amount) {
         throw new ValidationError('Missing required fields');
       }
       

@@ -22,10 +22,10 @@ export class MarketplaceService {
   // Listings
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     // Ensure seller exists
-    let sellerUser = await userProfileService.getProfileByAddress(input.sellerAddress);
+    let sellerUser = await userProfileService.getProfileByAddress(input.sellerWalletAddress);
     if (!sellerUser) {
       sellerUser = await userProfileService.createProfile({
-        address: input.sellerAddress,
+        walletAddress: input.sellerWalletAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -51,7 +51,7 @@ export class MarketplaceService {
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id.toString(),
-      sellerAddress: input.sellerAddress,
+      sellerWalletAddress: input.sellerWalletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
       quantity: dbListing.quantity,
@@ -61,7 +61,7 @@ export class MarketplaceService {
       startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
       highestBid: dbListing.highestBid?.toString(),
-      highestBidder: dbListing.highestBidder || undefined,
+      highestBidderWalletAddress: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
       nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -87,7 +87,7 @@ export class MarketplaceService {
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id.toString(),
-      sellerAddress: seller.address,
+      sellerWalletAddress: seller.walletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
       quantity: dbListing.quantity,
@@ -97,7 +97,7 @@ export class MarketplaceService {
       startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
       highestBid: dbListing.highestBid?.toString(),
-      highestBidder: dbListing.highestBidder || undefined,
+      highestBidderWalletAddress: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
       nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -123,7 +123,7 @@ export class MarketplaceService {
     for (const dbListing of dbListings) {
       const listing: MarketplaceListing = {
         id: dbListing.id.toString(),
-        sellerAddress: sellerAddress,
+        sellerWalletAddress: sellerAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: dbListing.quantity,
@@ -133,7 +133,7 @@ export class MarketplaceService {
         startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
         highestBid: dbListing.highestBid?.toString(),
-        highestBidder: dbListing.highestBidder || undefined,
+        highestBidderWalletAddress: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
         nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -162,7 +162,7 @@ export class MarketplaceService {
       
       const listing: MarketplaceListing = {
         id: dbListing.id.toString(),
-        sellerAddress: seller.address,
+        sellerWalletAddress: seller.walletAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: dbListing.quantity,
@@ -172,7 +172,7 @@ export class MarketplaceService {
         startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
         highestBid: dbListing.highestBid?.toString(),
-        highestBidder: dbListing.highestBidder || undefined,
+        highestBidderWalletAddress: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
         nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -201,7 +201,7 @@ export class MarketplaceService {
       
       const listing: MarketplaceListing = {
         id: dbListing.id.toString(),
-        sellerAddress: seller.address,
+        sellerWalletAddress: seller.walletAddress,
         tokenAddress: dbListing.tokenAddress,
         price: dbListing.price,
         quantity: dbListing.quantity,
@@ -211,7 +211,7 @@ export class MarketplaceService {
         startTime: dbListing.startTime?.toISOString() || now,
         endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
         highestBid: dbListing.highestBid?.toString(),
-        highestBidder: dbListing.highestBidder || undefined,
+        highestBidderWalletAddress: dbListing.highestBidder || undefined,
         metadataURI: dbListing.metadataURI,
         isEscrowed: dbListing.isEscrowed || false,
         nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -243,7 +243,7 @@ export class MarketplaceService {
     const now = new Date().toISOString();
     const listing: MarketplaceListing = {
       id: dbListing.id.toString(),
-      sellerAddress: seller.address,
+      sellerWalletAddress: seller.walletAddress,
       tokenAddress: dbListing.tokenAddress,
       price: dbListing.price,
       quantity: dbListing.quantity,
@@ -253,7 +253,7 @@ export class MarketplaceService {
       startTime: dbListing.startTime?.toISOString() || now,
       endTime: dbListing.endTime ? dbListing.endTime.toISOString() : undefined,
       highestBid: dbListing.highestBid?.toString(),
-      highestBidder: dbListing.highestBidder || undefined,
+      highestBidderWalletAddress: dbListing.highestBidder || undefined,
       metadataURI: dbListing.metadataURI,
       isEscrowed: dbListing.isEscrowed || false,
       nftStandard: dbListing.nftStandard as 'ERC721' | 'ERC1155' | undefined,
@@ -276,10 +276,10 @@ export class MarketplaceService {
   // Bids
   async placeBid(listingId: string, input: PlaceBidInput): Promise<MarketplaceBid | null> {
     // Ensure bidder exists
-    let bidderUser = await userProfileService.getProfileByAddress(input.bidderAddress);
+    let bidderUser = await userProfileService.getProfileByAddress(input.bidderWalletAddress);
     if (!bidderUser) {
       bidderUser = await userProfileService.createProfile({
-        address: input.bidderAddress,
+        walletAddress: input.bidderWalletAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -298,7 +298,7 @@ export class MarketplaceService {
     const bid: MarketplaceBid = {
       id: dbBid.id.toString(),
       listingId: listingId,
-      bidderAddress: input.bidderAddress,
+      bidderWalletAddress: input.bidderWalletAddress,
       amount: dbBid.amount,
       timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
     };
@@ -318,7 +318,7 @@ export class MarketplaceService {
       const bid: MarketplaceBid = {
         id: dbBid.id.toString(),
         listingId: listingId,
-        bidderAddress: bidder.address,
+        bidderWalletAddress: bidder.walletAddress,
         amount: dbBid.amount,
         timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
       };
@@ -339,7 +339,7 @@ export class MarketplaceService {
       const bid: MarketplaceBid = {
         id: dbBid.id.toString(),
         listingId: dbBid.listingId?.toString() || '',
-        bidderAddress: bidderAddress,
+        bidderWalletAddress: bidderAddress,
         amount: dbBid.amount,
         timestamp: dbBid.timestamp?.toISOString() || new Date().toISOString()
       };
@@ -352,10 +352,10 @@ export class MarketplaceService {
   // Offers
   async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer | null> {
     // Ensure buyer exists
-    let buyerUser = await userProfileService.getProfileByAddress(input.buyerAddress);
+    let buyerUser = await userProfileService.getProfileByAddress(input.buyerWalletAddress);
     if (!buyerUser) {
       buyerUser = await userProfileService.createProfile({
-        address: input.buyerAddress,
+        walletAddress: input.buyerWalletAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -374,7 +374,7 @@ export class MarketplaceService {
     const offer: MarketplaceOffer = {
       id: dbOffer.id.toString(),
       listingId: listingId,
-      buyerAddress: input.buyerAddress,
+      buyerWalletAddress: input.buyerWalletAddress,
       amount: dbOffer.amount,
       createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
       accepted: dbOffer.accepted || false
@@ -395,7 +395,7 @@ export class MarketplaceService {
       const offer: MarketplaceOffer = {
         id: dbOffer.id.toString(),
         listingId: listingId,
-        buyerAddress: buyer.address,
+        buyerWalletAddress: buyer.walletAddress,
         amount: dbOffer.amount,
         createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
         accepted: dbOffer.accepted || false
@@ -417,7 +417,7 @@ export class MarketplaceService {
       const offer: MarketplaceOffer = {
         id: dbOffer.id.toString(),
         listingId: dbOffer.listingId?.toString() || '',
-        buyerAddress: buyerAddress,
+        buyerWalletAddress: buyerAddress,
         amount: dbOffer.amount,
         createdAt: dbOffer.createdAt?.toISOString() || new Date().toISOString(),
         accepted: dbOffer.accepted || false
@@ -443,7 +443,7 @@ export class MarketplaceService {
     let buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
     if (!buyerUser) {
       buyerUser = await userProfileService.createProfile({
-        address: buyerAddress,
+        walletAddress: buyerAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -452,7 +452,7 @@ export class MarketplaceService {
     }
     
     // Get seller user
-    const sellerUser = await userProfileService.getProfileByAddress(listing.sellerAddress);
+    const sellerUser = await userProfileService.getProfileByAddress(listing.sellerWalletAddress);
     if (!sellerUser) return null;
     
     const dbEscrow = await databaseService.createEscrow(
@@ -468,13 +468,13 @@ export class MarketplaceService {
     const escrow: MarketplaceEscrow = {
       id: dbEscrow.id.toString(),
       listingId: listingId,
-      buyerAddress: buyerAddress,
-      sellerAddress: listing.sellerAddress,
+      buyerWalletAddress: buyerAddress,
+      sellerWalletAddress: listing.sellerWalletAddress,
       amount: dbEscrow.amount,
       buyerApproved: dbEscrow.buyerApproved || false,
       sellerApproved: dbEscrow.sellerApproved || false,
       disputeOpened: dbEscrow.disputeOpened || false,
-      resolverAddress: dbEscrow.resolverAddress || undefined,
+      resolverWalletAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
       resolvedAt: dbEscrow.resolvedAt?.toISOString(),
       deliveryInfo: dbEscrow.deliveryInfo || undefined,
@@ -545,13 +545,13 @@ export class MarketplaceService {
     const escrow: MarketplaceEscrow = {
       id: dbEscrow.id.toString(),
       listingId: dbEscrow.listingId?.toString() || '',
-      buyerAddress: buyer.address,
-      sellerAddress: seller.address,
+      buyerWalletAddress: buyer.walletAddress,
+      sellerWalletAddress: seller.walletAddress,
       amount: dbEscrow.amount,
       buyerApproved: dbEscrow.buyerApproved || false,
       sellerApproved: dbEscrow.sellerApproved || false,
       disputeOpened: dbEscrow.disputeOpened || false,
-      resolverAddress: dbEscrow.resolverAddress || undefined,
+      resolverWalletAddress: dbEscrow.resolverAddress || undefined,
       createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
       resolvedAt: dbEscrow.resolvedAt?.toISOString(),
       deliveryInfo: dbEscrow.deliveryInfo || undefined,
@@ -577,13 +577,13 @@ export class MarketplaceService {
       const escrow: MarketplaceEscrow = {
         id: dbEscrow.id.toString(),
         listingId: dbEscrow.listingId?.toString() || '',
-        buyerAddress: buyer.address,
-        sellerAddress: seller.address,
+        buyerWalletAddress: buyer.walletAddress,
+        sellerWalletAddress: seller.walletAddress,
         amount: dbEscrow.amount,
         buyerApproved: dbEscrow.buyerApproved || false,
         sellerApproved: dbEscrow.sellerApproved || false,
         disputeOpened: dbEscrow.disputeOpened || false,
-        resolverAddress: dbEscrow.resolverAddress || undefined,
+        resolverWalletAddress: dbEscrow.resolverAddress || undefined,
         createdAt: dbEscrow.createdAt?.toISOString() || new Date().toISOString(),
         resolvedAt: dbEscrow.resolvedAt?.toISOString(),
         deliveryInfo: dbEscrow.deliveryInfo || undefined,
@@ -602,7 +602,7 @@ export class MarketplaceService {
     let buyerUser = await userProfileService.getProfileByAddress(buyerAddress);
     if (!buyerUser) {
       buyerUser = await userProfileService.createProfile({
-        address: buyerAddress,
+        walletAddress: buyerAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -614,7 +614,7 @@ export class MarketplaceService {
     let sellerUser = await userProfileService.getProfileByAddress(sellerAddress);
     if (!sellerUser) {
       sellerUser = await userProfileService.createProfile({
-        address: sellerAddress,
+        walletAddress: sellerAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -636,8 +636,8 @@ export class MarketplaceService {
     const order: MarketplaceOrder = {
       id: dbOrder.id.toString(),
       listingId: listingId,
-      buyerAddress: buyerAddress,
-      sellerAddress: sellerAddress,
+      buyerWalletAddress: buyerAddress,
+      sellerWalletAddress: sellerAddress,
       escrowId: escrowId,
       amount: dbOrder.amount,
       paymentToken: dbOrder.paymentToken || '',
@@ -660,8 +660,8 @@ export class MarketplaceService {
     const order: MarketplaceOrder = {
       id: dbOrder.id.toString(),
       listingId: dbOrder.listingId?.toString() || '',
-      buyerAddress: buyer.address,
-      sellerAddress: seller.address,
+      buyerWalletAddress: buyer.walletAddress,
+      sellerWalletAddress: seller.walletAddress,
       escrowId: dbOrder.escrowId?.toString(),
       amount: dbOrder.amount,
       paymentToken: dbOrder.paymentToken || '',

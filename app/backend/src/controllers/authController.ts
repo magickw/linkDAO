@@ -32,7 +32,7 @@ export class AuthController {
         token,
         user: {
           id: profile.id,
-          address: profile.address,
+          address: profile.walletAddress,
           handle: profile.handle,
           ens: profile.ens
         }
@@ -65,7 +65,7 @@ export class AuthController {
       
       // Create user profile
       const profile = await userProfileService.createProfile({
-        address,
+        walletAddress: address,
         handle,
         ens: ens || ''
       });
@@ -78,7 +78,7 @@ export class AuthController {
         token,
         user: {
           id: profile.id,
-          address: profile.address,
+          address: profile.walletAddress,
           handle: profile.handle,
           ens: profile.ens
         }
@@ -100,7 +100,7 @@ export class AuthController {
         throw new UnauthorizedError('Unauthorized');
       }
       
-      const profile = await userProfileService.getProfileByAddress(req.user.address);
+      const profile = await userProfileService.getProfileByAddress(req.user.walletAddress);
       
       if (!profile) {
         throw new NotFoundError('User profile not found');
@@ -110,7 +110,7 @@ export class AuthController {
         success: true,
         user: {
           id: profile.id,
-          address: profile.address,
+          address: profile.walletAddress,
           handle: profile.handle,
           ens: profile.ens,
           avatarCid: profile.avatarCid,
