@@ -1,5 +1,4 @@
 import { pgTable, uuid, varchar, text, timestamp, serial, integer, foreignKey, boolean, unique, numeric, index, primaryKey } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
 
 
 
@@ -77,15 +76,8 @@ export const users = pgTable("users", {
 	walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
 	handle: varchar({ length: 64 }),
 	profileCid: text("profile_cid"),
+	physicalAddress: text("physical_address"), // JSON object for shipping/billing address
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	// Physical address fields for marketplace logistics
-	physicalStreet: varchar("physical_street", { length: 200 }),
-	physicalCity: varchar("physical_city", { length: 100 }),
-	physicalState: varchar("physical_state", { length: 100 }),
-	physicalPostalCode: varchar("physical_postal_code", { length: 20 }),
-	physicalCountry: varchar("physical_country", { length: 100 }),
-	physicalAddressType: varchar("physical_address_type", { length: 20 }), // 'shipping' or 'billing'
-	physicalIsDefault: boolean("physical_is_default").default(false),
 }, (table) => [
 	unique("users_wallet_address_unique").on(table.walletAddress),
 	unique("users_handle_unique").on(table.handle),

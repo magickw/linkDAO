@@ -2,14 +2,16 @@
   "version": 2,
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/.next",
-  "installCommand": "npm install --legacy-peer-deps && cd frontend && npm install --legacy-peer-deps",
+  "installCommand": "cd frontend && npm install --legacy-peer-deps",
   "build": {
     "env": {
       "NPM_FLAGS": "--legacy-peer-deps"
     }
   },
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api"
+    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api",
+    "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
+    "NEXT_PUBLIC_BASE_GOERLI_RPC_URL": "https://goerli.base.org"
   },
   "github": {
     "silent": true

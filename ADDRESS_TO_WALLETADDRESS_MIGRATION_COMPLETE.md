@@ -9,27 +9,13 @@ Successfully completed the migration from the single `address` field to separate
 
 #### Users Table
 - **Renamed**: `address` → `walletAddress` (with proper column name `wallet_address`)
-- **Added Physical Address Fields**:
-  - `physicalStreet` (`physical_street`)
-  - `physicalCity` (`physical_city`) 
-  - `physicalState` (`physical_state`)
-  - `physicalPostalCode` (`physical_postal_code`)
-  - `physicalCountry` (`physical_country`)
-  - `physicalAddressType` (`physical_address_type`) - 'shipping' or 'billing'
-  - `physicalIsDefault` (`physical_is_default`) - boolean flag
+- **Added**: `physicalAddress` (`physical_address`) - JSON field for shipping/billing addresses
 
 #### Reputations Table
 - **Renamed**: `address` → `walletAddress` (with proper column name `wallet_address`)
 
 #### Orders Table
-- **Added Shipping Address Fields**:
-  - `shippingStreet` (`shipping_street`)
-  - `shippingCity` (`shipping_city`)
-  - `shippingState` (`shipping_state`)
-  - `shippingPostalCode` (`shipping_postal_code`)
-  - `shippingCountry` (`shipping_country`)
-  - `shippingName` (`shipping_name`)
-  - `shippingPhone` (`shipping_phone`)
+- **Note**: Orders inherit shipping addresses from user profiles or can specify custom shipping addresses in the application layer
 
 ### 2. Model Updates
 
@@ -50,7 +36,8 @@ Successfully completed the migration from the single `address` field to separate
 - **Fixed**: All test assertions now check `walletAddress` field
 
 ### 4. Database Migration Scripts
-- **Created**: `address_to_wallet_address_migration.sql` - Forward migration
+- **Created**: `ensure_current_schema.sql` - Safe migration that ensures database matches current schema
+- **Created**: `address_to_wallet_address_migration.sql` - Detailed migration (if needed)
 - **Created**: `rollback_address_migration.sql` - Rollback migration
 
 ## Database Services Status
@@ -78,7 +65,10 @@ Successfully completed the migration from the single `address` field to separate
 
 ### 1. Run Database Migration
 ```bash
-# Apply the migration
+# Recommended: Use the safe migration script
+psql -d your_database -f app/backend/drizzle/migrations/ensure_current_schema.sql
+
+# Alternative: Use the detailed migration if needed
 psql -d your_database -f app/backend/drizzle/migrations/address_to_wallet_address_migration.sql
 
 # If rollback needed
