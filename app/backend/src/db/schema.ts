@@ -3,9 +3,10 @@ import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, i
 // Users / Profiles
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  address: varchar("address", { length: 66 }).notNull().unique(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
   handle: varchar("handle", { length: 64 }).unique(),
   profileCid: text("profile_cid"), // IPFS metadata
+  physicalAddress: text("physical_address"), // JSON object for shipping/billing address
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -214,7 +215,7 @@ export const escrows = pgTable("escrows", {
 });
 
 export const reputations = pgTable("reputations", {
-  address: varchar("address", { length: 66 }).primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).primaryKey(),
   score: integer("score").notNull(),
   daoApproved: boolean("dao_approved").default(false),
 });
