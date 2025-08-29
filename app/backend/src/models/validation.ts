@@ -37,8 +37,8 @@ export const updateUserProfileSchema = userProfileSchema.partial().omit({ wallet
 // Product/Listing validation schemas
 export const priceSchema = z.string()
   .regex(/^\d+(\.\d+)?$/, 'Price must be a valid decimal number')
-  .refine((val) => parseFloat(val) > 0, 'Price must be greater than 0')
-  .refine((val) => parseFloat(val) <= 1e18, 'Price too large');
+  .refine((val: string) => parseFloat(val) > 0, 'Price must be greater than 0')
+  .refine((val: string) => parseFloat(val) <= 1e18, 'Price too large');
 
 export const createListingSchema = z.object({
   sellerWalletAddress: z.string()
@@ -71,7 +71,7 @@ export const createListingSchema = z.object({
     .optional(),
   reservePrice: priceSchema.optional(),
   minIncrement: priceSchema.optional()
-}).refine((data) => {
+}).refine((data: any) => {
   // NFT items must have nftStandard and tokenId
   if (data.itemType === 'NFT') {
     return data.nftStandard && data.tokenId;
@@ -80,7 +80,7 @@ export const createListingSchema = z.object({
 }, {
   message: 'NFT items must include nftStandard and tokenId',
   path: ['nftStandard']
-}).refine((data) => {
+}).refine((data: any) => {
   // Auction items must have reservePrice and minIncrement
   if (data.listingType === 'AUCTION') {
     return data.reservePrice && data.minIncrement;
@@ -251,7 +251,7 @@ export function validateSchema<T>(schema: z.ZodSchema<T>) {
   return (data: unknown): T => {
     try {
       return schema.parse(data);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const firstError = error.errors[0];
         throw new ValidationError(
