@@ -18,7 +18,7 @@ describe('DatabaseService', () => {
       );
       
       expect(user).toBeDefined();
-      expect(user.address).toBe(testUserAddress);
+      expect(user.walletAddress).toBe(testUserAddress);
       expect(user.handle).toBe('testuser');
       expect(user.profileCid).toBe('QmTestProfileCid');
     });
@@ -27,7 +27,7 @@ describe('DatabaseService', () => {
       const user = await databaseService.getUserByAddress(testUserAddress);
       
       expect(user).toBeDefined();
-      expect(user?.address).toBe(testUserAddress);
+      expect(user?.walletAddress).toBe(testUserAddress);
     });
 
     it('should get a user by ID', async () => {
@@ -223,7 +223,7 @@ describe('DatabaseService', () => {
       );
       
       expect(reputation).toBeDefined();
-      expect(reputation.address).toBe(userAddress);
+      expect(reputation.walletAddress).toBe(userAddress);
       expect(reputation.score).toBe(100);
       expect(reputation.daoApproved).toBe(true);
     });
@@ -232,7 +232,7 @@ describe('DatabaseService', () => {
       const reputation = await databaseService.getUserReputation(userAddress);
       
       expect(reputation).toBeDefined();
-      expect(reputation?.address).toBe(userAddress);
+      expect(reputation?.walletAddress).toBe(userAddress);
       expect(reputation?.score).toBe(100);
       expect(reputation?.daoApproved).toBe(true);
     });

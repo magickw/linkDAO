@@ -454,7 +454,7 @@ describe('Database Models Tests', () => {
       
       const result = await db.update(schema.reputations)
         .set({ score: newScore, daoApproved: true })
-        .where(eq(schema.reputations.address, testAddress))
+        .where(eq(schema.reputations.walletAddress, testWalletAddress))
         .returning();
 
       expect(result[0].score).toBe(newScore);
@@ -464,15 +464,15 @@ describe('Database Models Tests', () => {
     it('should retrieve reputation by address', async () => {
       const result = await db.select()
         .from(schema.reputations)
-        .where(eq(schema.reputations.address, testAddress));
+        .where(eq(schema.reputations.walletAddress, testWalletAddress));
 
       expect(result).toHaveLength(1);
-      expect(result[0].address).toBe(testAddress);
+      expect(result[0].walletAddress).toBe(testWalletAddress);
     });
 
     afterAll(async () => {
       // Cleanup
-      await db.delete(schema.reputations).where(eq(schema.reputations.address, testAddress));
+      await db.delete(schema.reputations).where(eq(schema.reputations.walletAddress, testWalletAddress));
     });
   });
 
@@ -486,11 +486,11 @@ describe('Database Models Tests', () => {
 
       // Valid address should work
       const result = await db.insert(schema.users).values({
-        address: validAddress,
+        walletAddress: validAddress,
         handle: 'validuser'
       }).returning();
 
-      expect(result[0].address).toBe(validAddress);
+      expect(result[0].walletAddress).toBe(validAddress);
 
       // Cleanup
       await db.delete(schema.users).where(eq(schema.users.id, result[0].id));

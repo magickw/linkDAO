@@ -51,7 +51,7 @@ describe('MarketplaceController', () => {
     it('should create a listing and return 201 status', async () => {
       const mockListing = {
         id: '1',
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
@@ -66,7 +66,7 @@ describe('MarketplaceController', () => {
       };
       
       mockRequest.body = {
-        sellerAddress: '0x123',
+        sellerWalletAddress: '0x123',
         tokenAddress: '0x0000000000000000000000000000000000000000',
         price: '1000000000000000000',
         quantity: 1,
@@ -109,7 +109,7 @@ describe('MarketplaceController', () => {
       const mockDispute = {
         id: '1',
         escrowId: '1',
-        reporterAddress: '0x123',
+        reporterWalletAddress: '0x123',
         reason: 'Item not received',
         status: 'OPEN' as const,
         createdAt: new Date().toISOString(),
@@ -118,7 +118,7 @@ describe('MarketplaceController', () => {
       
       mockRequest.body = {
         escrowId: '1',
-        reporterAddress: '0x123',
+        reporterWalletAddress: '0x123',
         reason: 'Item not received',
         evidence: ['ipfs://evidence1', 'ipfs://evidence2']
       };
