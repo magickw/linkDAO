@@ -20,33 +20,42 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Extract tags from input (comma separated)
-    const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    
-    // Add post type as a tag
-    if (postType !== 'standard') {
-      tagArray.push(postType);
+    if (!content.trim()) {
+      return;
     }
     
-    const postData: CreatePostInput = {
-      author: '', // This will be filled by the parent component
-      content,
-      tags: tagArray,
-    };
-    
-    if (media) {
-      // In a real implementation, we would upload the media to IPFS and store the CID
-      // For now, we'll just add a placeholder
-      postData.media = ['https://placehold.co/300'];
+    try {
+      // Extract tags from input (comma separated)
+      const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      
+      // Add post type as a tag
+      if (postType !== 'standard') {
+        tagArray.push(postType);
+      }
+      
+      const postData: CreatePostInput = {
+        author: '', // This will be filled by the parent component
+        content,
+        tags: tagArray,
+      };
+      
+      if (media) {
+        // In a real implementation, we would upload the media to IPFS and store the CID
+        // For now, we'll just add a placeholder
+        postData.media = ['https://placehold.co/300'];
+      }
+      
+      // Add NFT information if it's an NFT post
+      if (postType === 'nft' && nftAddress && nftTokenId) {
+        postData.onchainRef = `${nftAddress}:${nftTokenId}`;
+      }
+      
+      console.log('Submitting post data:', postData);
+      await onSubmit(postData);
+      handleClose();
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
     }
-    
-    // Add NFT information if it's an NFT post
-    if (postType === 'nft' && nftAddress && nftTokenId) {
-      postData.onchainRef = `${nftAddress}:${nftTokenId}`;
-    }
-    
-    await onSubmit(postData);
-    handleClose();
   };
 
   const handleClose = () => {
