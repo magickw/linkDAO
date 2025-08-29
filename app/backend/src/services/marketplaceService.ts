@@ -688,8 +688,8 @@ export class MarketplaceService {
       const order: MarketplaceOrder = {
         id: dbOrder.id.toString(),
         listingId: dbOrder.listingId?.toString() || '',
-        buyerAddress: buyer.address,
-        sellerAddress: seller.address,
+        buyerWalletAddress: buyer.walletAddress,
+        sellerWalletAddress: seller.walletAddress,
         escrowId: dbOrder.escrowId?.toString(),
         amount: dbOrder.amount,
         paymentToken: dbOrder.paymentToken || '',
@@ -716,7 +716,7 @@ export class MarketplaceService {
     let reporterUser = await userProfileService.getProfileByAddress(reporterAddress);
     if (!reporterUser) {
       reporterUser = await userProfileService.createProfile({
-        address: reporterAddress,
+        walletAddress: reporterAddress,
         handle: '',
         ens: '',
         avatarCid: '',
@@ -738,7 +738,7 @@ export class MarketplaceService {
     const dispute: MarketplaceDispute = {
       id: dbDispute.id.toString(),
       escrowId: escrowId,
-      reporterAddress: reporterAddress,
+      reporterWalletAddress: reporterAddress,
       reason: dbDispute.reason || '',
       status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
       createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
@@ -770,7 +770,7 @@ export class MarketplaceService {
     const dispute: MarketplaceDispute = {
       id: dbDispute.id.toString(),
       escrowId: dbDispute.escrowId?.toString() || '',
-      reporterAddress: reporter.address,
+      reporterWalletAddress: reporter.walletAddress,
       reason: dbDispute.reason || '',
       status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
       createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
@@ -806,7 +806,7 @@ export class MarketplaceService {
       const dispute: MarketplaceDispute = {
         id: dbDispute.id.toString(),
         escrowId: dbDispute.escrowId?.toString() || '',
-        reporterAddress: reporter.address,
+        reporterWalletAddress: reporter.walletAddress,
         reason: dbDispute.reason || '',
         status: (dbDispute.status?.toUpperCase() as 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED') || 'OPEN',
         createdAt: dbDispute.createdAt?.toISOString() || new Date().toISOString(),
@@ -842,7 +842,7 @@ export class MarketplaceService {
     if (!dbReputation) return null;
     
     const reputation: UserReputation = {
-      address: dbReputation.address,
+      walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     };
@@ -866,7 +866,7 @@ export class MarketplaceService {
     }
     
     const reputation: UserReputation = {
-      address: dbReputation.address,
+      walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     };
@@ -878,7 +878,7 @@ export class MarketplaceService {
     const dbReputations = await databaseService.getDAOApprovedVendors();
     
     const reputations: UserReputation[] = dbReputations.map(dbReputation => ({
-      address: dbReputation.address,
+      walletAddress: dbReputation.walletAddress,
       score: dbReputation.score,
       daoApproved: dbReputation.daoApproved || false
     }));
