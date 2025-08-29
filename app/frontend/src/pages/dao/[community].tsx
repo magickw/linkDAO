@@ -166,7 +166,7 @@ export default function CommunityPage() {
   };
 
   // Handle tipping
-  const handleTip = async (postId: string, amount: number, token: string) => {
+  const handleTip = async (postId: string, amount: string, token: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;

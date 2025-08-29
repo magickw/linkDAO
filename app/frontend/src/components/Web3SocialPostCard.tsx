@@ -24,8 +24,8 @@ interface Web3SocialPostCardProps {
   post: any;
   profile: any;
   className?: string;
-  onReaction?: (postId: string, reactionType: string, amount: number) => Promise<void>;
-  onTip?: (postId: string, amount: number, token: string) => Promise<void>;
+  onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
+  onTip?: (postId: string, amount: string, token: string) => Promise<void>;
   onExpand?: () => void;
 }
 
@@ -168,7 +168,7 @@ export default function Web3SocialPostCard({
     try {
       // In a real implementation, this would call the backend API
       if (onTip) {
-        await onTip(post.id, tipAmount, 'USDC');
+        await onTip(post.id, tipAmount.toString(), 'USDC');
       }
       addToast(`Successfully tipped ${tipAmount} USDC!`, 'success');
       setTipAmount(0);

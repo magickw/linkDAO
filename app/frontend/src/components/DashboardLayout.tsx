@@ -8,6 +8,8 @@ import NotificationSystem from '@/components/NotificationSystem';
 import NavigationSidebar from '@/components/NavigationSidebar';
 import MobileNavigation from '@/components/MobileNavigation';
 import FloatingActionDock from '@/components/FloatingActionDock';
+import { Web3ErrorBoundary } from '@/components/ErrorBoundaries';
+import { LoadingState } from '@/components/FallbackStates';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -86,14 +88,10 @@ export default function DashboardLayout({
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Please connect your wallet
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            You need to connect your wallet to access the dashboard.
-          </p>
-        </div>
+        <LoadingState 
+          message="Please connect your wallet to access the dashboard"
+          size="lg"
+        />
       </div>
     );
   }
@@ -203,7 +201,9 @@ export default function DashboardLayout({
             <main className={`flex-1 overflow-y-auto p-3 md:p-6 ${
               navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''
             } ${isMobile ? 'pb-20' : ''}`}>
-              {children}
+              <Web3ErrorBoundary>
+                {children}
+              </Web3ErrorBoundary>
             </main>
 
             {/* Right Sidebar - Hidden on mobile */}
