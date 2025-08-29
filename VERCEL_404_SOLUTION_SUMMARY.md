@@ -151,5 +151,14 @@ If issues persist:
 3. Test local build process
 4. Consider deploying frontend as separate project
 
+## 🆕 Latest Update (Current Session)
+
+**Root Cause Confirmed**: The 404 error was caused by Vercel trying to build from the root directory while the Next.js app is in `app/frontend/`. 
+
+**Fix Applied**: Updated root `vercel.json` with correct monorepo configuration:
+- Build command now runs from `app/frontend` directory
+- Output directory points to `app/frontend/.next`
+- Install command runs in the correct subdirectory
+
 ## Status: ✅ READY FOR DEPLOYMENT
 Configuration updated and ready for successful Vercel deployment!
