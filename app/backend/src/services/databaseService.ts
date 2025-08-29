@@ -50,6 +50,11 @@ export class DatabaseService {
     this.checkConnection();
     return await operation();
   }
+
+  public getDatabase() {
+    this.checkConnection();
+    return this.db;
+  }
   // User operations
   async createUser(address: string, handle?: string, profileCid?: string) {
     this.checkConnection();
@@ -658,6 +663,193 @@ export class DatabaseService {
       return await this.db.select().from(schema.aiModeration).where(eq(schema.aiModeration.status, 'pending'));
     } catch (error) {
       console.error("Error getting pending AI moderation records:", error);
+      throw error;
+    }
+  }
+
+  // Product Category operations
+  async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: number) {
+    try {
+      const result = await this.db.insert(schema.categories).values({
+        name,
+        slug,
+        description: description || null,
+        parentId: parentId || null,
+        path: path || JSON.stringify([name]),
+        imageUrl: imageUrl || null,
+        sortOrder: sortOrder || 0
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating category:", error);
+      throw error;
+    }
+  }
+
+  async getCategoryById(id: string) {
+    try {
+      const result = await this.db.select().from(schema.categories).where(eq(schema.categories.id, id));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting category by ID:", error);
+      throw error;
+    }
+  }
+
+  async getCategoryBySlug(slug: string) {
+    try {
+      const result = await this.db.select().from(schema.categories).where(eq(schema.categories.slug, slug));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting category by slug:", error);
+      throw error;
+    }
+  }
+
+  async getAllCategories() {
+    try {
+      return await this.db.select().from(schema.categories).where(eq(schema.categories.isActive, true));
+    } catch (error) {
+      console.error("Error getting all categories:", error);
+      throw error;
+    }
+  }
+
+  async updateCategory(id: string, updates: Partial<typeof schema.categories.$inferInsert>) {
+    try {
+      const result = await this.db.update(schema.categories).set(updates).where(eq(schema.categories.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating category:", error);
+      throw error;
+    }
+  }
+
+  async deleteCategory(id: string) {
+    try {
+      const result = await this.db.delete(schema.categories).where(eq(schema.categories.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      throw error;
+    }
+  }
+
+  // Product operations
+  async createProduct(sellerId: string, title: string, description: string, priceAmount: string, priceCurrency: string, 
+                     categoryId: string, images: string, metadata: string, inventory: number, tags?: string, 
+                     shipping?: string, nft?: string) {
+    try {
+      const result = await this.db.insert(schema.products).values({
+        sellerId,
+        title,
+        description,
+        priceAmount,
+        priceCurrency,
+        categoryId,
+        images,
+        metadata,
+        inventory,
+        tags: tags || null,
+        shipping: shipping || null,
+        nft: nft || null
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating product:", error);
+      throw error;
+    }
+  }
+
+  async getProductById(id: string) {
+    try {
+      const result = await this.db.select().from(schema.products).where(eq(schema.products.id, id));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting product by ID:", error);
+      throw error;
+    }
+  }
+
+  async getProductsBySeller(sellerId: string) {
+    try {
+      return await this.db.select().from(schema.products).where(eq(schema.products.sellerId, sellerId));
+    } catch (error) {
+      console.error("Error getting products by seller:", error);
+      throw error;
+    }
+  }
+
+  async getAllProducts() {
+    try {
+      return await this.db.select().from(schema.products);
+    } catch (error) {
+      console.error("Error getting all products:", error);
+      throw error;
+    }
+  }
+
+  async getActiveProducts() {
+    try {
+      return await this.db.select().from(schema.products).where(eq(schema.products.status, 'active'));
+    } catch (error) {
+      console.error("Error getting active products:", error);
+      throw error;
+    }
+  }
+
+  async updateProduct(id: string, updates: Partial<typeof schema.products.$inferInsert>) {
+    try {
+      const result = await this.db.update(schema.products).set(updates).where(eq(schema.products.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating product:", error);
+      throw error;
+    }
+  }
+
+  async deleteProduct(id: string) {
+    try {
+      const result = await this.db.delete(schema.products).where(eq(schema.products.id, id)).returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      throw error;
+    }
+  }
+
+  // Product Tags operations
+  async createProductTag(productId: string, tag: string) {
+    try {
+      const result = await this.db.insert(schema.productTags).values({
+        productId,
+        tag: tag.toLowerCase().trim()
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating product tag:", error);
+      throw error;
+    }
+  }
+
+  async getProductTags(productId: string) {
+    try {
+      return await this.db.select().from(schema.productTags).where(eq(schema.productTags.productId, productId));
+    } catch (error) {
+      console.error("Error getting product tags:", error);
+      throw error;
+    }
+  }
+
+  async deleteProductTags(productId: string) {
+    try {
+      const result = await this.db.delete(schema.productTags).where(eq(schema.productTags.productId, productId)).returning();
+      return result.length;
+    } catch (error) {
+      console.error("Error deleting product tags:", error);
       throw error;
     }
   }
