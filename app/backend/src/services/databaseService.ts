@@ -15,7 +15,7 @@ export class DatabaseService {
   async createUser(address: string, handle?: string, profileCid?: string) {
     try {
       const result = await db.insert(schema.users).values({
-        address,
+        walletAddress: address,
         handle: handle || null,
         profileCid: profileCid || null
       }).returning();
@@ -29,7 +29,7 @@ export class DatabaseService {
 
   async getUserByAddress(address: string) {
     try {
-      const result = await db.select().from(schema.users).where(eq(schema.users.address, address));
+      const result = await db.select().from(schema.users).where(eq(schema.users.walletAddress, address));
       return result[0] || null;
     } catch (error) {
       console.error("Error getting user by address:", error);
@@ -530,7 +530,7 @@ export class DatabaseService {
   async createUserReputation(address: string, score: number, daoApproved: boolean) {
     try {
       const result = await db.insert(schema.reputations).values({
-        address,
+        walletAddress: address,
         score,
         daoApproved
       }).returning();
@@ -544,7 +544,7 @@ export class DatabaseService {
 
   async getUserReputation(address: string) {
     try {
-      const result = await db.select().from(schema.reputations).where(eq(schema.reputations.address, address));
+      const result = await db.select().from(schema.reputations).where(eq(schema.reputations.walletAddress, address));
       return result[0] || null;
     } catch (error) {
       console.error("Error getting user reputation:", error);
@@ -554,7 +554,7 @@ export class DatabaseService {
 
   async updateUserReputation(address: string, updates: Partial<typeof schema.reputations.$inferInsert>) {
     try {
-      const result = await db.update(schema.reputations).set(updates).where(eq(schema.reputations.address, address)).returning();
+      const result = await db.update(schema.reputations).set(updates).where(eq(schema.reputations.walletAddress, address)).returning();
       return result[0] || null;
     } catch (error) {
       console.error("Error updating user reputation:", error);
