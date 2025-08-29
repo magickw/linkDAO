@@ -28,7 +28,7 @@ export interface ReputationFactors {
 }
 
 export interface ReputationScore {
-  address: string;
+  walletAddress: string;
   totalScore: number;
   tier: string;
   factors: ReputationFactors;
@@ -99,7 +99,7 @@ export class ReputationService {
       const totalScore = this.calculateReputationScore(factors);
 
       return {
-        address: dbReputation.address,
+        walletAddress: dbReputation.walletAddress,
         totalScore,
         tier: this.getReputationTier(totalScore),
         factors,
@@ -136,7 +136,7 @@ export class ReputationService {
       }
 
       return {
-        address: dbReputation.address,
+        walletAddress: dbReputation.walletAddress,
         totalScore,
         tier,
         factors,

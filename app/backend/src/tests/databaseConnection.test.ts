@@ -15,7 +15,7 @@ describe('Database Connection', () => {
     );
     
     expect(user).toBeDefined();
-    expect(user.address).toBe('0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
+    expect(user.walletAddress).toBe('0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
     expect(user.handle).toBe('testuser');
   });
 
@@ -23,6 +23,6 @@ describe('Database Connection', () => {
     const user = await databaseService.getUserByAddress('0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
     
     expect(user).toBeDefined();
-    expect(user?.address).toBe('0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
+    expect(user?.walletAddress).toBe('0x742d35Cc6634C0532925a3b8D4C9db96590b5c8e');
   });
 });
