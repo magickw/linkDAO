@@ -260,7 +260,7 @@ export default function ModeratorTools({ community, isOpen, onClose }: Moderator
                                   </span>
                                 </div>
                                 <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                                  {post.content}
+                                  {post.contentCid}
                                 </p>
                               </div>
                               
@@ -316,7 +316,7 @@ export default function ModeratorTools({ community, isOpen, onClose }: Moderator
                                 </span>
                               </div>
                               <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                                {post.content}
+                                {post.contentCid}
                               </p>
                             </div>
                             
