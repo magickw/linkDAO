@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Comment, CreateCommentInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
+import EnhancedReactionSystem from './EnhancedReactionSystem';
 
 interface CommentThreadProps {
   comment: Comment;
@@ -207,29 +208,75 @@ export default function CommentThread({
                 </div>
               )}
 
+              {/* Enhanced Reactions for Comments */}
+              {!comment.isDeleted && (
+                <div className="mb-2">
+                  <EnhancedReactionSystem
+                    postId={comment.id}
+                    postType="community"
+                    onReaction={async (commentId, reactionType, amount) => {
+                      // Handle comment reactions
+                      console.log('Comment reaction:', commentId, reactionType, amount);
+                      addToast(`Reacted to comment with ${reactionType}!`, 'success');
+                    }}
+                    className="scale-75 origin-left"
+                  />
+                </div>
+              )}
+
               {/* Comment Actions */}
               <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
                 {userMembership && depth < maxDepth && !comment.isDeleted && (
                   <button
                     onClick={() => setShowReplyForm(!showReplyForm)}
-                    className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                    className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
                   >
-                    Reply
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    <span>Reply</span>
                   </button>
                 )}
                 
-                <button className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200">
-                  Share
+                <button 
+                  onClick={() => {
+                    const commentUrl = `${window.location.href}#comment-${comment.id}`;
+                    navigator.clipboard.writeText(commentUrl);
+                    addToast('Comment link copied to clipboard!', 'success');
+                  }}
+                  className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span>Share</span>
                 </button>
                 
-                <button className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200">
-                  Save
+                <button 
+                  onClick={() => {
+                    // TODO: Implement save comment functionality
+                    addToast('Comment saved!', 'success');
+                  }}
+                  className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span>Save</span>
                 </button>
 
                 {/* Report/More options */}
-                <button className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200">
-                  •••
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => {
+                      // TODO: Implement more options menu
+                      addToast('More options coming soon!', 'info');
+                    }}
+                    className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                  >
+                    •••
+                  </button>
+                </div>
               </div>
 
               {/* Reply Form */}

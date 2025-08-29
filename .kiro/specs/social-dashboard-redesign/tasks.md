@@ -55,14 +55,14 @@
   - Add browser back/forward support for navigation
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [-] 9. Integrate web3 features into community system
+- [x] 9. Integrate web3 features into community system
   - Add token staking for community upvotes/downvotes
   - Implement community governance features
   - Integrate tipping system for community posts
   - Add NFT and DeFi embeds to community posts
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 10. Add post interaction enhancements
+- [-] 10. Add post interaction enhancements
   - Enhance existing reaction system for both feed and community posts
   - Implement comment threading for community discussions
   - Add share functionality for posts

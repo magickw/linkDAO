@@ -6,10 +6,13 @@ import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
 import CommentThread from './CommentThread';
-import NFTPreview from './NFTPreview';
-import DeFiChartEmbed from './DeFiChartEmbed';
+import StakingVoteButton from './StakingVoteButton';
+import CommunityTipButton from './CommunityTipButton';
+import CommunityNFTEmbed from './CommunityNFTEmbed';
+import CommunityDeFiEmbed from './CommunityDeFiEmbed';
 import WalletSnapshotEmbed from './WalletSnapshotEmbed';
-import DAOGovernanceEmbed from './DAOGovernanceEmbed';
+import CommunityGovernance from './CommunityGovernance';
+import PostInteractionBar from './PostInteractionBar';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -25,9 +28,9 @@ interface CommunityPostCardProps {
   post: CommunityPost;
   community: Community;
   userMembership: CommunityMembership | null;
-  onVote: (postId: string, voteType: 'upvote' | 'downvote') => void;
-  onReaction?: (postId: string, reactionType: string, amount: number) => Promise<void>;
-  onTip?: (postId: string, amount: number, token: string) => Promise<void>;
+  onVote: (postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => void;
+  onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
+  onTip?: (postId: string, amount: string, token: string) => Promise<void>;
   className?: string;
 }
 
@@ -50,8 +53,7 @@ export default function CommunityPostCard({
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [userVote, setUserVote] = useState<'upvote' | 'downvote' | null>(null);
-  const [showTipInput, setShowTipInput] = useState(false);
-  const [tipAmount, setTipAmount] = useState(0);
+
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [reactions, setReactions] = useState<Reaction[]>([
     { type: 'hot', emoji: '🔥', label: 'Hot Take', totalStaked: 12, userStaked: 0, contributors: [], rewardsEarned: 2.4 },
@@ -78,8 +80,8 @@ export default function CommunityPostCard({
     return new Date(date).toLocaleDateString();
   };
 
-  // Handle voting
-  const handleVote = useCallback((voteType: 'upvote' | 'downvote') => {
+  // Handle voting with staking
+  const handleVote = useCallback((postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;
@@ -96,9 +98,13 @@ export default function CommunityPostCard({
     // Optimistically update UI
     setUserVote(finalVoteType === 'remove' ? null : voteType);
     
-    // Call parent handler
-    onVote(post.id, finalVoteType as 'upvote' | 'downvote');
-  }, [isConnected, address, userMembership, userVote, onVote, post.id, addToast]);
+    // Call parent handler with stake amount
+    onVote(postId, finalVoteType as 'upvote' | 'downvote', stakeAmount);
+    
+    if (stakeAmount) {
+      addToast(`Voted with ${stakeAmount} tokens staked!`, 'success');
+    }
+  }, [isConnected, address, userMembership, userVote, onVote, addToast]);
 
   // Load comments
   const loadComments = useCallback(async () => {
@@ -206,36 +212,7 @@ export default function CommunityPostCard({
     }
   };
 
-  // Handle tipping
-  const handleTip = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to tip', 'error');
-      return;
-    }
-    
-    if (!userMembership) {
-      addToast('You must join the community to tip', 'error');
-      return;
-    }
-    
-    if (tipAmount <= 0) {
-      addToast('Please enter a valid tip amount', 'error');
-      return;
-    }
-    
-    try {
-      if (onTip) {
-        await onTip(post.id, tipAmount, 'USDC');
-      }
-      addToast(`Successfully tipped ${tipAmount} USDC!`, 'success');
-      setTipAmount(0);
-      setShowTipInput(false);
-    } catch (error) {
-      console.error('Error tipping:', error);
-      addToast('Failed to send tip. Please try again.', 'error');
-    }
-  };
+
 
   // Handle comment vote
   const handleCommentVote = async (commentId: string, voteType: 'upvote' | 'downvote') => {
@@ -269,23 +246,25 @@ export default function CommunityPostCard({
     return 'from-gray-400/20 to-slate-600/20';
   };
 
-  // Render web3 embeds based on post type
+  // Render enhanced web3 embeds based on post type
   const renderWeb3Embed = () => {
     if (post.tags?.includes('nft') && post.onchainRef) {
       const [contractAddress, tokenId] = post.onchainRef.split(':');
-      const mockNFTs = [{
-        id: tokenId || '1',
-        name: `NFT #${tokenId || '1'}`,
-        image: 'https://placehold.co/300',
-        collection: 'Community Collection',
-        tokenId: tokenId || '1',
-        contractAddress: contractAddress || '0x1234567890123456789012345678901234567890'
-      }];
-      return <NFTPreview nfts={mockNFTs} className="mt-3" />;
+      return (
+        <CommunityNFTEmbed
+          contractAddress={contractAddress || '0x1234567890123456789012345678901234567890'}
+          tokenId={tokenId || '1'}
+          className="mt-3"
+        />
+      );
     }
     
     if (post.tags?.includes('defi')) {
-      return <DeFiChartEmbed tokenSymbol="ETH" tokenName="Ethereum" className="mt-3" />;
+      // Extract protocol name from tags or content
+      const protocolName = post.tags.find(tag => 
+        ['aave', 'compound', 'uniswap', 'curve', 'yearn'].includes(tag.toLowerCase())
+      ) || 'Aave';
+      return <CommunityDeFiEmbed protocolName={protocolName} className="mt-3" />;
     }
     
     if (post.tags?.includes('wallet') && post.onchainRef) {
@@ -293,7 +272,7 @@ export default function CommunityPostCard({
     }
     
     if (post.tags?.includes('governance') || post.tags?.includes('dao')) {
-      return <DAOGovernanceEmbed daoName={community.displayName} daoToken="COMM" className="mt-3" />;
+      return <CommunityGovernance community={community} className="mt-3" />;
     }
     
     return null;
@@ -302,22 +281,18 @@ export default function CommunityPostCard({
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200 ${className}`}>
       <div className="flex">
-        {/* Vote Section */}
+        {/* Vote Section with Staking */}
         <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-600">
-          {/* Upvote Button */}
-          <button
-            onClick={() => handleVote('upvote')}
+          {/* Upvote Button with Staking */}
+          <StakingVoteButton
+            postId={post.id}
+            communityId={community.id}
+            voteType="upvote"
+            currentVote={userVote}
+            onVote={handleVote}
             disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${
-              userVote === 'upvote'
-                ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
-                : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-            } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+            className="mb-2"
+          />
 
           {/* Vote Score */}
           <span className={`text-sm font-bold py-1 ${
@@ -330,20 +305,16 @@ export default function CommunityPostCard({
             {voteScore > 0 ? '+' : ''}{voteScore}
           </span>
 
-          {/* Downvote Button */}
-          <button
-            onClick={() => handleVote('downvote')}
+          {/* Downvote Button with Staking */}
+          <StakingVoteButton
+            postId={post.id}
+            communityId={community.id}
+            voteType="downvote"
+            currentVote={userVote}
+            onVote={handleVote}
             disabled={!userMembership}
-            className={`p-1 rounded transition-colors duration-200 ${
-              userVote === 'downvote'
-                ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
-                : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-            } ${!userMembership ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+            className="mt-2"
+          />
         </div>
 
         {/* Post Content */}
@@ -434,26 +405,29 @@ export default function CommunityPostCard({
               </div>
             )}
 
-            {/* Web3 Reactions */}
+            {/* Enhanced Post Interactions */}
             {userMembership && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {reactions.map((reaction) => (
-                  <button
-                    key={reaction.type}
-                    onClick={() => handleReaction(reaction.type, 1)}
-                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 transform hover:scale-105 ${
-                      reaction.userStaked > 0 
-                        ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md animate-pulse' 
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    <span>{reaction.emoji}</span>
-                    <span>{reaction.totalStaked}</span>
-                    {reaction.userStaked > 0 && (
-                      <span className="text-xs bg-white/20 rounded-full px-1">+{reaction.userStaked}</span>
-                    )}
-                  </button>
-                ))}
+              <div className="mt-4">
+                <PostInteractionBar
+                  post={{
+                    id: post.id,
+                    contentCid: post.contentCid,
+                    author: post.author,
+                    communityId: community.id,
+                    commentCount: comments.length,
+                    stakedValue: reactions.reduce((sum, r) => sum + r.totalStaked, 0)
+                  }}
+                  postType="community"
+                  userMembership={userMembership}
+                  onComment={toggleComments}
+                  onReaction={onReaction}
+                  onTip={onTip}
+                  onShare={async (postId, shareType, message) => {
+                    // Handle sharing
+                    console.log('Sharing community post:', postId, shareType, message);
+                    addToast(`Post shared via ${shareType}!`, 'success');
+                  }}
+                />
               </div>
             )}
 
@@ -493,82 +467,38 @@ export default function CommunityPostCard({
             )}
           </div>
 
-          {/* Post Actions */}
-          <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={toggleComments}
-                className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                <span>{comments.length} comments</span>
-              </button>
-
-              <button className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                </svg>
-                <span>Share</span>
-              </button>
-
-              {userMembership && (
-                <button 
-                  onClick={() => setShowTipInput(!showTipInput)}
+          {/* Analytics Toggle for Non-Members */}
+          {!userMembership && (
+            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleComments}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <span>Tip</span>
+                  <span>{comments.length} comments</span>
                 </button>
-              )}
 
-              <button 
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span>Analytics</span>
-              </button>
+                <button 
+                  onClick={() => setShowAnalytics(!showAnalytics)}
+                  className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <span>Analytics</span>
+                </button>
+              </div>
+
+              <div className="text-xs font-medium">
+                {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LNK staked
+              </div>
             </div>
-
-            <div className="text-xs font-medium">
-              {reactions.reduce((sum, r) => sum + r.totalStaked, 0)} $LNK staked
-            </div>
-          </div>
-
-          {/* Tip Input */}
-          {showTipInput && userMembership && (
-            <form onSubmit={handleTip} className="mt-4 flex items-center space-x-2">
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={tipAmount || ''}
-                onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
-                placeholder="Amount"
-                className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-              <span className="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 border-y border-gray-300 dark:border-gray-600 font-medium">USDC</span>
-              <button 
-                type="submit"
-                className="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-r-md transition-colors duration-200 font-medium"
-              >
-                Send
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowTipInput(false)}
-                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-            </form>
           )}
+
+
 
           {/* Comments Section */}
           {showComments && (

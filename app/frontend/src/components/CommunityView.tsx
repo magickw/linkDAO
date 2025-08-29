@@ -194,8 +194,8 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
     }
   };
 
-  // Handle post vote
-  const handleVotePost = async (postId: string, voteType: 'upvote' | 'downvote') => {
+  // Handle post vote with staking
+  const handleVotePost = async (postId: string, voteType: 'upvote' | 'downvote', stakeAmount?: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;
@@ -219,6 +219,9 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           post.id === postId ? updatedPost : post
         )
       );
+
+      const stakeMessage = stakeAmount ? ` with ${stakeAmount} tokens staked` : '';
+      addToast(`${voteType === 'upvote' ? 'Upvoted' : 'Downvoted'} successfully${stakeMessage}!`, 'success');
     } catch (err) {
       console.error('Error voting on post:', err);
       addToast(err instanceof Error ? err.message : 'Failed to vote', 'error');
@@ -226,7 +229,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   };
 
   // Handle web3 reactions
-  const handleReaction = async (postId: string, reactionType: string, amount: number) => {
+  const handleReaction = async (postId: string, reactionType: string, amount?: number) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to react', 'error');
       return;
@@ -240,7 +243,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
     try {
       // In a real implementation, this would call the backend API
       // For now, just show success message
-      addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
+      addToast(`Successfully staked ${amount || 1} $LNK on ${reactionType} reaction!`, 'success');
     } catch (err) {
       console.error('Error reacting to post:', err);
       addToast(err instanceof Error ? err.message : 'Failed to react', 'error');
@@ -248,7 +251,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   };
 
   // Handle tipping
-  const handleTip = async (postId: string, amount: number, token: string) => {
+  const handleTip = async (postId: string, amount: string, token: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
