@@ -90,7 +90,7 @@
   - Create community discovery and search functionality
   - _Requirements: 5.1, 5.2, 5.5_
 
-- [ ] 14. Implement notification system integration
+- [x] 14. Implement notification system integration
   - Integrate with existing notification system
   - Add community-specific notifications (new posts, mentions, moderation)
   - Create notification preferences for communities
