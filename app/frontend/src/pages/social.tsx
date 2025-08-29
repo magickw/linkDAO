@@ -10,7 +10,7 @@ import Web3SocialPostCard from '@/components/Web3SocialPostCard';
 import Web3SocialSidebar from '@/components/Web3SocialSidebar';
 import Web3SocialNav from '@/components/Web3SocialNav';
 import PostCreationModal from '@/components/PostCreationModal';
-import BottomSheet, { WalletActions, PostActions } from '@/components/BottomSheet';
+import BottomSheet from '@/components/BottomSheet';
 
 // Mock profile data
 const mockProfiles: Record<string, any> = {
@@ -147,7 +147,7 @@ export default function SocialFeed() {
   };
 
   // Handle tipping
-  const handleTip = async (postId: string, amount: number, token: string) => {
+  const handleTip = async (postId: string, amount: string, token: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
@@ -298,7 +298,14 @@ export default function SocialFeed() {
         onClose={() => setIsWalletSheetOpen(false)}
         title="Wallet Actions"
       >
-        <WalletActions onAction={handleWalletAction} />
+        <div className="p-4">
+          <button 
+            onClick={() => handleWalletAction('connect')}
+            className="w-full p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Connect Wallet
+          </button>
+        </div>
       </BottomSheet>
       
       {/* Post Creation Bottom Sheet */}
@@ -307,7 +314,14 @@ export default function SocialFeed() {
         onClose={() => setIsPostSheetOpen(false)}
         title="Create Post"
       >
-        <PostActions onAction={handlePostAction} />
+        <div className="p-4">
+          <button 
+            onClick={() => handlePostAction('standard')}
+            className="w-full p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Create Post
+          </button>
+        </div>
       </BottomSheet>
     </Layout>
   );

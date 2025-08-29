@@ -7,7 +7,7 @@ import { CreatePostInput } from '@/models/Post';
 import Web3SocialPostCard from '@/components/Web3SocialPostCard';
 import Web3SocialSidebar from '@/components/Web3SocialSidebar';
 import FloatingActionDock from '@/components/FloatingActionDock';
-import BottomSheet, { PostActions } from '@/components/BottomSheet';
+import BottomSheet from '@/components/BottomSheet';
 import { useRouter } from 'next/router';
 
 // Mock profile data
@@ -151,7 +151,7 @@ export default function Web3SocialFeed() {
   };
 
   // Handle token staking for reactions
-  const handleReaction = async (postId: string, reactionType: string, amount: number) => {
+  const handleReaction = async (postId: string, reactionType: string, amount?: number) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to react', 'error');
       return;
@@ -160,12 +160,13 @@ export default function Web3SocialFeed() {
     try {
       // In a real implementation, this would call the backend API to process the reaction
       // and handle the staking of tokens
-      console.log(`Staking ${amount} $LNK on ${reactionType} reaction for post ${postId}`);
+      const stakeAmount = amount || 1;
+      console.log(`Staking ${stakeAmount} $LNK on ${reactionType} reaction for post ${postId}`);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      addToast(`Successfully staked ${amount} $LNK on ${reactionType} reaction!`, 'success');
+      addToast(`Successfully staked ${stakeAmount} $LNK on ${reactionType} reaction!`, 'success');
     } catch (error) {
       console.error('Error reacting:', error);
       addToast('Failed to react. Please try again.', 'error');
@@ -173,7 +174,7 @@ export default function Web3SocialFeed() {
   };
 
   // Handle tipping
-  const handleTip = async (postId: string, amount: number, token: string) => {
+  const handleTip = async (postId: string, amount: string, token: string) => {
     if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
@@ -515,7 +516,14 @@ export default function Web3SocialFeed() {
         onClose={() => setIsPostSheetOpen(false)}
         title="Create Post"
       >
-        <PostActions onAction={handlePostAction} />
+        <div className="p-4">
+          <button 
+            onClick={() => handlePostAction('standard')}
+            className="w-full p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Create Post
+          </button>
+        </div>
       </BottomSheet>
     </Layout>
   );
