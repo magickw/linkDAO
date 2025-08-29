@@ -1,20 +1,32 @@
 export interface UserProfile {
   id: string;
-  address: string;
+  walletAddress: string;
   handle: string;
   ens: string;
   avatarCid: string;
   bioCid: string;
+  physicalAddress?: PhysicalAddress;
   createdAt: Date;
   updatedAt: Date;
 }
 
+export interface PhysicalAddress {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault?: boolean;
+  type?: 'shipping' | 'billing';
+}
+
 export interface CreateUserProfileInput {
-  address: string;
+  walletAddress: string;
   handle: string;
   ens?: string;
   avatarCid?: string;
   bioCid?: string;
+  physicalAddress?: PhysicalAddress;
 }
 
 export interface UpdateUserProfileInput {
@@ -22,4 +34,5 @@ export interface UpdateUserProfileInput {
   ens?: string;
   avatarCid?: string;
   bioCid?: string;
+  physicalAddress?: PhysicalAddress;
 }
