@@ -10,33 +10,9 @@ BEGIN
         ALTER TABLE users ADD COLUMN wallet_address VARCHAR(66);
     END IF;
     
-    -- Add physical address columns if they don't exist
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_street') THEN
-        ALTER TABLE users ADD COLUMN physical_street VARCHAR(200);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_city') THEN
-        ALTER TABLE users ADD COLUMN physical_city VARCHAR(100);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_state') THEN
-        ALTER TABLE users ADD COLUMN physical_state VARCHAR(100);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_postal_code') THEN
-        ALTER TABLE users ADD COLUMN physical_postal_code VARCHAR(20);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_country') THEN
-        ALTER TABLE users ADD COLUMN physical_country VARCHAR(100);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_address_type') THEN
-        ALTER TABLE users ADD COLUMN physical_address_type VARCHAR(20);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_is_default') THEN
-        ALTER TABLE users ADD COLUMN physical_is_default BOOLEAN DEFAULT false;
+    -- Add physical address column as JSON (matching the actual schema)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='physical_address') THEN
+        ALTER TABLE users ADD COLUMN physical_address TEXT;
     END IF;
 END $$;
 
@@ -98,15 +74,51 @@ BEGIN
 END $$;
 
 -- Step 8: Add shipping address fields to orders table
-ALTER TABLE orders ADD COLUMN shipping_street VARCHAR(200);
-ALTER TABLE orders ADD COLUMN shipping_city VARCHAR(100);
-ALTER TABLE orders ADD COLUMN shipping_state VARCHAR(100);
-ALTER TABLE orders ADD COLUMN shipping_postal_code VARCHAR(20);
-ALTER TABLE orders ADD COLUMN shipping_country VARCHAR(100);
-ALTER TABLE orders ADD COLUMN shipping_name VARCHAR(100);
-ALTER TABLE orders ADD COLUMN shipping_phone VARCHAR(20);
+DO $$ 
+BEGIN
+    -- Add shipping address columns if they don't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_street') THEN
+        ALTER TABLE orders ADD COLUMN shipping_street VARCHAR(200);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_city') THEN
+        ALTER TABLE orders ADD COLUMN shipping_city VARCHAR(100);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_state') THEN
+        ALTER TABLE orders ADD COLUMN shipping_state VARCHAR(100);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_postal_code') THEN
+        ALTER TABLE orders ADD COLUMN shipping_postal_code VARCHAR(20);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_country') THEN
+        ALTER TABLE orders ADD COLUMN shipping_country VARCHAR(100);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_name') THEN
+        ALTER TABLE orders ADD COLUMN shipping_name VARCHAR(100);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='shipping_phone') THEN
+        ALTER TABLE orders ADD COLUMN shipping_phone VARCHAR(20);
+    END IF;
+END $$;
 
--- Step 9: Create indexes for better performance
-CREATE INDEX idx_users_wallet_address ON users(wallet_address);
-CREATE INDEX idx_reputations_wallet_address ON reputations(wallet_address);
-CREATE INDEX idx_orders_shipping_country ON orders(shipping_country);
+-- Step 9: Create indexes for better performance (only if they don't exist)
+DO $$ 
+BEGIN
+    -- Create indexes only if they don't exist
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_wallet_address') THEN
+        CREATE INDEX idx_users_wallet_address ON users(wallet_address);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_reputations_wallet_address') THEN
+        CREATE INDEX idx_reputations_wallet_address ON reputations(wallet_address);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_orders_shipping_country') THEN
+        CREATE INDEX idx_orders_shipping_country ON orders(shipping_country);
+    END IF;
+END $$;
