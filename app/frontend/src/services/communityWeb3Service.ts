@@ -1,5 +1,6 @@
-import { ethers } from 'ethers';
-import { useWeb3 } from '@/context/Web3Context';
+// Community Web3 Service - Mock implementation for development
+// This service provides Web3 functionality for community features
+// Updated to ensure fresh build
 
 export interface StakeVoteInput {
   postId: string;
@@ -47,25 +48,15 @@ export interface StakingReward {
 }
 
 export class CommunityWeb3Service {
-  private provider: ethers.BrowserProvider | null = null;
-  private signer: ethers.Signer | null = null;
-
   constructor() {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      this.provider = new ethers.BrowserProvider(window.ethereum);
-    }
+    // Mock service - no actual web3 provider needed for development
   }
 
-  async getSigner(): Promise<ethers.Signer> {
-    if (!this.provider) {
-      throw new Error('No web3 provider available');
-    }
-    
-    if (!this.signer) {
-      this.signer = await this.provider.getSigner();
-    }
-    
-    return this.signer;
+  private async mockTransaction(): Promise<string> {
+    // Simulate transaction delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Return mock transaction hash
+    return `0x${Math.random().toString(16).substring(2, 66)}`;
   }
 
   /**
@@ -73,23 +64,8 @@ export class CommunityWeb3Service {
    */
   async stakeOnVote(input: StakeVoteInput): Promise<string> {
     try {
-      const signer = await this.getSigner();
-      
-      // In a real implementation, this would:
-      // 1. Check user's token balance
-      // 2. Approve token spending if needed
-      // 3. Call the community staking contract
-      // 4. Return transaction hash
-      
-      // Mock implementation
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      console.log(`Staked ${input.stakeAmount} tokens on ${input.voteType} for post ${input.postId}`);
-      
-      return mockTxHash;
+      console.log(`Staking ${input.stakeAmount} tokens on ${input.voteType} for post ${input.postId}`);
+      return await this.mockTransaction();
     } catch (error) {
       console.error('Error staking on vote:', error);
       throw error;
@@ -106,18 +82,10 @@ export class CommunityWeb3Service {
     actions: ProposalAction[]
   ): Promise<string> {
     try {
-      const signer = await this.getSigner();
-      
-      // In a real implementation, this would:
-      // 1. Check user has enough governance tokens
-      // 2. Call the governance contract to create proposal
-      // 3. Return proposal ID
-      
-      // Mock implementation
-      const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      console.log(`Created governance proposal ${proposalId} for community ${communityId}`);
-      
+      const proposalId = `prop_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      console.log(`Created governance proposal ${proposalId} for community ${communityId}: ${title}`);
+      console.log(`Description: ${description}`);
+      console.log(`Actions: ${actions.length} actions`);
       return proposalId;
     } catch (error) {
       console.error('Error creating governance proposal:', error);
@@ -134,19 +102,8 @@ export class CommunityWeb3Service {
     votingPower?: string
   ): Promise<string> {
     try {
-      const signer = await this.getSigner();
-      
-      // In a real implementation, this would:
-      // 1. Check user's voting power
-      // 2. Call the governance contract to cast vote
-      // 3. Return transaction hash
-      
-      // Mock implementation
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      
       console.log(`Voted ${support ? 'for' : 'against'} proposal ${proposalId} with power ${votingPower || 'auto'}`);
-      
-      return mockTxHash;
+      return await this.mockTransaction();
     } catch (error) {
       console.error('Error voting on proposal:', error);
       throw error;
@@ -158,23 +115,11 @@ export class CommunityWeb3Service {
    */
   async tipCommunityPost(input: CommunityTipInput): Promise<string> {
     try {
-      const signer = await this.getSigner();
-      
-      // In a real implementation, this would:
-      // 1. Check user's token balance
-      // 2. Approve token spending if needed
-      // 3. Call the tip router contract
-      // 4. Return transaction hash
-      
-      // Mock implementation
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      
-      // Simulate transaction delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       console.log(`Tipped ${input.amount} ${input.token} to post ${input.postId}`);
-      
-      return mockTxHash;
+      if (input.message) {
+        console.log(`Tip message: ${input.message}`);
+      }
+      return await this.mockTransaction();
     } catch (error) {
       console.error('Error tipping community post:', error);
       throw error;
@@ -186,19 +131,8 @@ export class CommunityWeb3Service {
    */
   async claimStakingRewards(communityId: string): Promise<string> {
     try {
-      const signer = await this.getSigner();
-      
-      // In a real implementation, this would:
-      // 1. Check user's claimable rewards
-      // 2. Call the reward distribution contract
-      // 3. Return transaction hash
-      
-      // Mock implementation
-      const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      
       console.log(`Claimed staking rewards for community ${communityId}`);
-      
-      return mockTxHash;
+      return await this.mockTransaction();
     } catch (error) {
       console.error('Error claiming staking rewards:', error);
       throw error;
@@ -266,12 +200,8 @@ export class CommunityWeb3Service {
     action: 'post' | 'comment' | 'vote'
   ): Promise<{ canPerform: boolean; requiredStake?: string; currentStake?: string }> {
     try {
-      // In a real implementation, this would:
-      // 1. Query community staking requirements
-      // 2. Check user's current stake
-      // 3. Return whether user meets requirements
+      console.log(`Checking staking requirement for ${action} in community ${communityId} for user ${userAddress}`);
       
-      // Mock implementation
       const mockResult = {
         canPerform: Math.random() > 0.2, // 80% chance user can perform action
         requiredStake: '10.0',
