@@ -101,6 +101,16 @@ export interface MarketplaceOrder {
   paymentToken: string;
   status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED';
   createdAt: string;
+  // Shipping information for physical items
+  shippingAddress?: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    phone?: string;
+  };
 }
 
 export interface MarketplaceDispute {
