@@ -97,21 +97,23 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   // Handle responsive behavior - collapse sidebar on mobile by default
   useEffect(() => {
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 768; // md breakpoint
-      setNavigationState(prev => ({
-        ...prev,
-        sidebarCollapsed: isMobile,
-        rightSidebarVisible: !isMobile,
-      }));
-    };
+    if (typeof window !== 'undefined') {
+      const handleResize = () => {
+        const isMobile = window.innerWidth < 768; // md breakpoint
+        setNavigationState(prev => ({
+          ...prev,
+          sidebarCollapsed: isMobile,
+          rightSidebarVisible: !isMobile,
+        }));
+      };
 
-    // Set initial state
-    handleResize();
+      // Set initial state
+      handleResize();
 
-    // Listen for resize events
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+      // Listen for resize events
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   const setActiveView = (view: 'feed' | 'community') => {
