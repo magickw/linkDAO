@@ -1,21 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "includeFiles": [
-          "next.config.js",
-          "package.json",
-          "yarn.lock",
-          "pnpm-lock.yaml",
-          "npm-shrinkwrap.json"
-        ]
-      }
-    }
-  ],
-  
   "env": {
     "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api"
   },
