@@ -1,19 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useRouter } from 'next/router';
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
   const { isConnected } = useWeb3();
   const router = useRouter();
 
+  // Ensure component is mounted before accessing client-side features
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (isConnected) {
+    if (mounted && isConnected) {
       router.push('/dashboard');
     }
-  }, [isConnected, router]);
+  }, [mounted, isConnected, router]);
+
+  if (!mounted) {
+    return null; // Don't render anything during SSR
+  }
 
   if (isConnected) {
     return null; // Don't render anything while redirecting
