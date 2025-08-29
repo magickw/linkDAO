@@ -2,189 +2,129 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import http from 'http';
-import { Server } from 'socket.io';
+import { databaseService } from './services/databaseService';
+import { redisService } from './services/redisService';
+import { validateEnv } from './utils/envValidation';
+
+// Import routes
 import userProfileRoutes from './routes/userProfileRoutes';
-import postRoutes from './routes/postRoutes';
-import followRoutes from './routes/followRoutes';
-import aiRoutes from './routes/aiRoutes';
 import authRoutes from './routes/authRoutes';
 import marketplaceRoutes from './routes/marketplaceRoutes';
 import governanceRoutes from './routes/governanceRoutes';
 import tipRoutes from './routes/tipRoutes';
-import { errorHandler, notFound } from './middleware/errorHandler';
-import { IndexerService } from './services/indexerService';
+import followRoutes from './routes/followRoutes';
+import postRoutes from './routes/postRoutes';
+import aiRoutes from './routes/aiRoutes';
 
 // Load environment variables
 dotenv.config();
 
-// Validate required environment variables
-const requiredEnvVars = ['JWT_SECRET'];
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+// Validate environment configuration
+const envConfig = validateEnv();
 
-if (missingEnvVars.length > 0) {
-  console.warn(`Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`);
-}
-
-// Create Express app
 const app = express();
-const server = http.createServer(app);
-const PORT = process.env.PORT || 3002;
 
-// Configure CORS to allow multiple origins
-const frontendUrls = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
-const allowedOrigins = [
-  ...frontendUrls,
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "https://linkdao.vercel.app"
-];
+// CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://linkdao.vercel.app'] 
+    : ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true
+}));
 
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // For development, allow all origins
-    if (process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed origins
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      // Log the blocked origin for debugging
-      console.log(`CORS blocked origin: ${origin}`);
-      callback(null, true); // Temporarily allow all origins in production for debugging
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-// Create Socket.IO server
-const io = new Server(server, {
-  cors: {
-    origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      
-      // For development, allow all origins
-      if (process.env.NODE_ENV === 'development') {
-        return callback(null, true);
-      }
-      
-      // Check if origin is in allowed origins
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        // Log the blocked origin for debugging
-        console.log(`WebSocket CORS blocked origin: ${origin}`);
-        callback(null, true); // Temporarily allow all origins in production for debugging
-      }
-    },
-    methods: ["GET", "POST"],
-    credentials: true,
-    optionsSuccessStatus: 200
-  }
-});
-
-// Store connected users
-const connectedUsers = new Map<string, string>(); // socketId -> userAddress
-
-// WebSocket connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  // Register user with their address
-  socket.on('register', (address: string) => {
-    connectedUsers.set(socket.id, address);
-    console.log(`User ${address} registered with socket ${socket.id}`);
-  });
-  
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    connectedUsers.delete(socket.id);
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Middleware
 app.use(helmet());
-app.use(cors(corsOptions));
 app.use(express.json());
 
-// Routes
+// Initialize services
+async function initializeServices() {
+  // Database connection test
+  try {
+    await databaseService.testConnection();
+    console.log('✅ Database connection successful');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    console.log('⚠️  Starting server without database connection...');
+    // Don't exit in production, allow server to start
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
+  }
+
+  // Redis connection test (optional)
+  try {
+    if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
+      await redisService.testConnection();
+      console.log('✅ Redis connection successful');
+    } else {
+      console.log('⚠️  Redis not configured, skipping...');
+    }
+  } catch (error) {
+    console.error('❌ Redis connection failed:', error);
+    console.log('⚠️  Continuing without Redis...');
+  }
+}
+
+// Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'LinkDAO Backend API' });
+  res.json({ 
+    message: 'LinkDAO Backend API', 
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
 });
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+// Simple ping endpoint
+app.get('/ping', (req, res) => {
+  res.json({ pong: true, timestamp: new Date().toISOString() });
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  const health = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    database: 'unknown'
+  };
+
+  try {
+    await databaseService.testConnection();
+    health.database = 'connected';
+  } catch (error) {
+    health.database = 'disconnected';
+    health.status = 'degraded';
+  }
+
+  const statusCode = health.database === 'connected' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', userProfileRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/follow', followRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/governance', governanceRoutes);
 app.use('/api/tips', tipRoutes);
-
-// WebSocket endpoint info
-app.get('/ws', (req, res) => {
-  res.json({ 
-    message: 'WebSocket server is running', 
-    endpoint: `ws://localhost:${PORT}` 
-  });
-});
-
-// 404 handler
-app.use(notFound);
-
-// Global error handler
-app.use(errorHandler);
-
-// Start indexer service
-const indexer = new IndexerService(
-  process.env.RPC_URL || 'http://localhost:8545',
-  process.env.PROFILE_REGISTRY_ADDRESS || '0x1234567890123456789012345678901234567890',
-  process.env.FOLLOW_MODULE_ADDRESS || '0x2345678901245678901234567890123456789012',
-  process.env.PAYMENT_ROUTER_ADDRESS || '0x3456789012345678901234567890123456789012',
-  process.env.GOVERNANCE_ADDRESS || '0x4567890123456789012345678901234567890123'
-);
-
-indexer.start().catch(console.error);
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await indexer.stop();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await indexer.stop();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
+app.use('/api/follow', followRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Start server
-server.listen(PORT, () => {
-  console.log(`LinkDAO backend server running on port ${PORT}`);
-  console.log(`WebSocket server running on ws://localhost:${PORT}`);
+async function startServer() {
+  await initializeServices();
+  
+  app.listen(envConfig.PORT, () => {
+    console.log(`🚀 Server running on port ${envConfig.PORT}`);
+    console.log(`📊 Environment: ${envConfig.NODE_ENV}`);
+    console.log(`🌐 Health check: http://localhost:${envConfig.PORT}/health`);
+    console.log(`📡 API ready: http://localhost:${envConfig.PORT}/`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
-// Export io for use in other modules
-export { io, connectedUsers };
 export default app;

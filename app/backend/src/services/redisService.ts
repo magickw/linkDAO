@@ -1,4 +1,4 @@
-import Redis from 'redis';
+import * as Redis from 'redis';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -8,7 +8,14 @@ export class RedisService {
   private isConnected: boolean = false;
 
   constructor() {
-    const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    let redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+    
+    // Handle placeholder values
+    if (redisUrl === 'your_redis_url' || redisUrl === 'redis://your_redis_url') {
+      redisUrl = 'redis://localhost:6379';
+    }
+    
+    console.log('🔗 Attempting Redis connection to:', redisUrl.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
     this.client = Redis.createClient({
       url: redisUrl,
@@ -190,6 +197,16 @@ export class RedisService {
   async ping(): Promise<string> {
     await this.ensureConnected();
     return await this.client.ping();
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      await this.ping();
+      return true;
+    } catch (error) {
+      console.error("Redis connection test failed:", error);
+      throw error;
+    }
   }
 
   getClient(): Redis.RedisClientType {

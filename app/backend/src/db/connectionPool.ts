@@ -14,34 +14,60 @@ interface ConnectionPoolConfig {
 export class DatabaseConnectionPool {
   private static instance: DatabaseConnectionPool;
   private sql: postgres.Sql;
-  private config: ConnectionPoolConfig;
+  private config: ConnectionPoolConfig = {};
 
   private constructor() {
-    const connectionString = process.env.DATABASE_URL || 
-      "postgresql://username:password@localhost:5432/linkdao";
+    const connectionString = process.env.DATABASE_URL;
+
+    // If no database URL is provided, create a mock connection
+    if (!connectionString) {
+      console.warn('No DATABASE_URL provided. Database operations will be disabled.');
+      this.sql = this.createMockConnection();
+      return;
+    }
 
     this.config = {
       max: parseInt(process.env.DB_POOL_MAX || '20'), // Maximum connections
       idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '30'), // Seconds
-      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '30'), // Seconds
+      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // Reduced timeout
       prepare: false, // Disable prepared statements for better compatibility
       debug: process.env.NODE_ENV === 'development'
     };
 
-    this.sql = postgres(connectionString, {
-      ...this.config,
-      onnotice: this.config.debug ? console.log : undefined,
-      transform: {
-        undefined: null
-      }
-    });
+    try {
+      this.sql = postgres(connectionString, {
+        ...this.config,
+        onnotice: this.config.debug ? console.log : undefined,
+        transform: {
+          undefined: null
+        }
+      });
 
-    // Handle connection events
-    this.sql.listen('*', (row) => {
-      if (this.config.debug) {
-        console.log('Database notification:', row);
-      }
-    });
+      // Handle connection events
+      this.sql.listen('*', (row) => {
+        if (this.config.debug) {
+          console.log('Database notification:', row);
+        }
+      }).catch((error) => {
+        console.warn('Database listen failed:', error.message);
+      });
+    } catch (error) {
+      console.error('Failed to initialize database connection:', error);
+      this.sql = this.createMockConnection();
+    }
+  }
+
+  private createMockConnection(): postgres.Sql {
+    const mockSql = (() => {
+      throw new Error('Database not available. Please configure DATABASE_URL environment variable.');
+    }) as any;
+    
+    // Add common methods that might be called
+    mockSql.begin = () => Promise.reject(new Error('Database not available'));
+    mockSql.end = () => Promise.resolve();
+    mockSql.listen = () => Promise.reject(new Error('Database not available'));
+    
+    return mockSql;
   }
 
   public static getInstance(): DatabaseConnectionPool {

@@ -620,4 +620,18 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  async testConnection() {
+    try {
+      // Simple query to test database connection
+      await db.select().from(schema.users).limit(1);
+      return true;
+    } catch (error) {
+      console.error("Database connection test failed:", error);
+      throw error;
+    }
+  }
 }
+
+// Singleton instance
+export const databaseService = new DatabaseService();
