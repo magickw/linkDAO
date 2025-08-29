@@ -31,23 +31,27 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
 
   // Initialize dark mode based on system preference or saved preference
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode');
-    if (savedDarkMode !== null) {
-      setDarkMode(savedDarkMode === 'true');
-    } else {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setDarkMode(systemPrefersDark);
+    if (typeof window !== 'undefined') {
+      const savedDarkMode = localStorage.getItem('darkMode');
+      if (savedDarkMode !== null) {
+        setDarkMode(savedDarkMode === 'true');
+      } else {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setDarkMode(systemPrefersDark);
+      }
     }
   }, []);
 
   // Apply dark mode class to document
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    if (typeof window !== 'undefined') {
+      if (darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('darkMode', darkMode.toString());
     }
-    localStorage.setItem('darkMode', darkMode.toString());
   }, [darkMode]);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -236,7 +240,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
         <Analytics/>
       </footer>
 
-      {isConnected && <NotificationSystem />}
+      {/* {isConnected && <NotificationSystem />} */}
     </div>
   );
 }
