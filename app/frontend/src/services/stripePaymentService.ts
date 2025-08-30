@@ -80,7 +80,8 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Stripe payment processing failed:', error);
-      throw new Error(`Payment processing failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Payment processing failed: ${errorMessage}`);
     }
   }
 
@@ -130,7 +131,8 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Payment confirmation failed:', error);
-      throw new Error(`Payment confirmation failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Payment confirmation failed: ${errorMessage}`);
     }
   }
 
@@ -154,7 +156,8 @@ export class StripePaymentService {
       };
     } catch (error) {
       console.error('Payment method setup failed:', error);
-      throw new Error(`Payment method setup failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Payment method setup failed: ${errorMessage}`);
     }
   }
 
@@ -171,7 +174,8 @@ export class StripePaymentService {
       return response.data.map((pm: StripePaymentMethod) => this.mapStripePaymentMethod(pm));
     } catch (error) {
       console.error('Failed to fetch payment methods:', error);
-      throw new Error(`Failed to fetch payment methods: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to fetch payment methods: ${errorMessage}`);
     }
   }
 
@@ -218,7 +222,8 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Refund failed:', error);
-      throw new Error(`Refund failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Refund failed: ${errorMessage}`);
     }
   }
 
