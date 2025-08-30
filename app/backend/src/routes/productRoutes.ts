@@ -17,6 +17,10 @@ router.delete('/categories/:id', asyncHandler(productController.deleteCategory.b
 // Product routes
 router.post('/products', asyncHandler(productController.createProduct.bind(productController)));
 router.get('/products/search', asyncHandler(productController.searchProducts.bind(productController)));
+router.get('/products/search/advanced', asyncHandler(productController.advancedSearch.bind(productController)));
+router.get('/products/recommendations', asyncHandler(productController.getRecommendations.bind(productController)));
+router.get('/products/compare', asyncHandler(productController.compareProducts.bind(productController)));
+router.get('/products/suggestions', asyncHandler(productController.getSearchSuggestions.bind(productController)));
 router.get('/products/seller/:sellerId', asyncHandler(productController.getProductsBySeller.bind(productController)));
 router.get('/products/:id', asyncHandler(productController.getProductById.bind(productController)));
 router.put('/products/:id', asyncHandler(productController.updateProduct.bind(productController)));
@@ -37,5 +41,7 @@ router.post('/products/csv/upload',
 
 // Analytics
 router.get('/products/:id/analytics', asyncHandler(productController.getProductAnalytics.bind(productController)));
+router.get('/search/analytics', asyncHandler(productController.getSearchAnalytics.bind(productController)));
+router.post('/search/optimize', asyncHandler(productController.optimizeSearchPerformance.bind(productController)));
 
 export default router;

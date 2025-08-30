@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { ProductService } from '../services/productService';
+import { SearchService, AdvancedSearchFilters } from '../services/searchService';
 import { 
   CreateProductInput, 
   UpdateProductInput,
@@ -20,6 +21,7 @@ const multer = require('multer');
 const csv = require('csv-parser');
 
 const productService = new ProductService();
+const searchService = new SearchService();
 
 // Configure multer for file uploads
 const upload = multer({
@@ -230,6 +232,184 @@ export class ProductController {
       const result = await productService.searchProducts(filters, sort, pagination);
       return res.json(result);
     } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async advancedSearch(req: Request, res: Response): Promise<Response> {
+    try {
+      const filters: AdvancedSearchFilters = {
+        query: req.query.query as string,
+        categoryId: req.query.categoryId as string,
+        sellerId: req.query.sellerId as string,
+        priceMin: req.query.priceMin as string,
+        priceMax: req.query.priceMax as string,
+        currency: req.query.currency as string,
+        condition: req.query.condition as any,
+        tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
+        status: req.query.status ? (req.query.status as string).split(',') as any : undefined,
+        inStock: req.query.inStock === 'true',
+        freeShipping: req.query.freeShipping === 'true',
+        minRating: req.query.minRating ? parseFloat(req.query.minRating as string) : undefined,
+        maxRating: req.query.maxRating ? parseFloat(req.query.maxRating as string) : undefined,
+        sellerReputation: req.query.sellerReputation as any,
+        hasReviews: req.query.hasReviews === 'true',
+        recentlyAdded: req.query.recentlyAdded === 'true',
+        trending: req.query.trending === 'true',
+        onSale: req.query.onSale === 'true',
+        fastShipping: req.query.fastShipping === 'true',
+        location: req.query.country || req.query.state || req.query.city ? {
+          country: req.query.country as string,
+          state: req.query.state as string,
+          city: req.query.city as string,
+          radius: req.query.radius ? parseInt(req.query.radius as string) : undefined,
+          coordinates: req.query.lat && req.query.lng ? {
+            lat: parseFloat(req.query.lat as string),
+            lng: parseFloat(req.query.lng as string),
+          } : undefined,
+        } : undefined,
+      };
+
+      const sort: ProductSortOptions = {
+        field: (req.query.sortField as any) || 'relevance',
+        direction: (req.query.sortDirection as any) || 'desc',
+      };
+
+      const pagination: PaginationOptions = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 20,
+      };
+
+      const result = await searchService.advancedSearch(filters, sort, pagination);
+      return res.json(result);
+    } catch (error: any) {
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getRecommendations(req: Request, res: Response): Promise<Response> {
+    try {
+      const userId = req.query.userId as string;
+      const productId = req.query.productId as string;
+      const categoryId = req.query.categoryId as string;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      if (limit > 50) {
+        throw new ValidationError('Limit cannot exceed 50');
+      }
+
+      const recommendations = await searchService.getRecommendations(
+        userId,
+        productId,
+        categoryId,
+        limit
+      );
+
+      return res.json({
+        recommendations,
+        count: recommendations.length,
+      });
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async compareProducts(req: Request, res: Response): Promise<Response> {
+    try {
+      const productIds = req.query.productIds as string;
+      
+      if (!productIds) {
+        throw new ValidationError('Product IDs are required');
+      }
+
+      const ids = productIds.split(',').map(id => id.trim());
+      
+      if (ids.length < 2 || ids.length > 5) {
+        throw new ValidationError('Can compare between 2 and 5 products');
+      }
+
+      const comparison = await searchService.compareProducts(ids);
+      return res.json(comparison);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getSearchSuggestions(req: Request, res: Response): Promise<Response> {
+    try {
+      const query = req.query.query as string;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      if (!query || query.trim().length < 2) {
+        throw new ValidationError('Query must be at least 2 characters long');
+      }
+
+      if (limit > 20) {
+        throw new ValidationError('Limit cannot exceed 20');
+      }
+
+      const suggestions = await searchService.getSearchSuggestions(query.trim(), limit);
+      return res.json({
+        suggestions,
+        count: suggestions.length,
+      });
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async getSearchAnalytics(req: Request, res: Response): Promise<Response> {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        throw new ValidationError('Start date and end date are required');
+      }
+      
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        throw new ValidationError('Invalid date format');
+      }
+
+      if (end <= start) {
+        throw new ValidationError('End date must be after start date');
+      }
+
+      const filters = req.query.filters ? JSON.parse(req.query.filters as string) : undefined;
+      
+      const analytics = await searchService.getSearchAnalytics(start, end, filters);
+      return res.json(analytics);
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, error.message);
+    }
+  }
+
+  async optimizeSearchPerformance(req: Request, res: Response): Promise<Response> {
+    try {
+      const result = await searchService.optimizeSearchPerformance();
+      return res.json({
+        success: true,
+        message: 'Search performance optimization completed',
+        results: result,
+      });
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
       throw new APIError(500, error.message);
     }
   }
