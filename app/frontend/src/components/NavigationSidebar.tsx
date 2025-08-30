@@ -115,7 +115,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     : joinedCommunities.slice(0, 5);
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`} data-tour="navigation">
       {/* User Profile Section */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         {!navigationState.sidebarCollapsed ? (

@@ -11,6 +11,8 @@ import Web3SocialSidebar from '@/components/Web3SocialSidebar';
 import Web3SocialNav from '@/components/Web3SocialNav';
 import PostCreationModal from '@/components/PostCreationModal';
 import BottomSheet from '@/components/BottomSheet';
+import MigrationNotice from '@/components/MigrationNotice';
+import MigrationGuide from '@/components/MigrationGuide';
 
 // Mock profile data
 const mockProfiles: Record<string, any> = {
@@ -45,13 +47,60 @@ export default function SocialFeed() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
+  const [showMigrationGuide, setShowMigrationGuide] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Redirect to dashboard if user is connected
+  // Handle migration to new dashboard
   useEffect(() => {
+    const handleMigration = async () => {
+      // Save current scroll position for restoration
+      sessionStorage.setItem('legacy-scroll-position', JSON.stringify({
+        x: window.scrollX,
+        y: window.scrollY
+      }));
+
+      // Preserve any existing feed state
+      const currentFeedState = {
+        activeTab,
+        timeFilter,
+        scrollPosition: window.scrollY
+      };
+      sessionStorage.setItem('legacy-feed-state', JSON.stringify(currentFeedState));
+
+      if (isConnected) {
+        // Show migration notice first
+        setShowMigrationNotice(true);
+        
+        // Auto-redirect after a short delay if user doesn't interact
+        const redirectTimer = setTimeout(() => {
+          setIsRedirecting(true);
+          // Redirect to dashboard with feed view
+          router.push('/dashboard?view=feed');
+        }, 3000); // Reduced from 5000 to 3000 for better UX
+
+        return () => clearTimeout(redirectTimer);
+      } else {
+        // For non-connected users, show the migration notice
+        const hasSeenSocialMigration = localStorage.getItem('social-migration-seen');
+        if (!hasSeenSocialMigration) {
+          setShowMigrationNotice(true);
+        }
+      }
+    };
+
+    handleMigration();
+  }, [isConnected, router, activeTab, timeFilter]);
+
+  const handleMigrationDismiss = () => {
+    setShowMigrationNotice(false);
+    localStorage.setItem('social-migration-seen', 'true');
+    
     if (isConnected) {
+      setIsRedirecting(true);
       router.push('/dashboard');
     }
-  }, [isConnected, router]);
+  };
 
   // Show success toast when post is created
   useEffect(() => {
@@ -184,6 +233,86 @@ export default function SocialFeed() {
       addToast(`Post action: ${action}`, 'info');
     }
   };
+
+  // Show migration notice
+  if (showMigrationNotice) {
+    return (
+      <>
+        <Layout title="Social Feed - LinkDAO">
+          <div className="px-4 py-6 sm:px-0">
+            <div className="max-w-7xl mx-auto">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Web3 Social Feed</h1>
+              
+              {/* Migration Banner */}
+              <div className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-lg p-6 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold mb-2">🎉 Social Feed Has Moved!</h2>
+                    <p className="text-primary-100 mb-3">
+                      Your social feed is now part of our integrated dashboard experience with enhanced features:
+                    </p>
+                    <ul className="text-primary-100 text-sm space-y-1 mb-3">
+                      <li>• Unified feed with community posts</li>
+                      <li>• Better mobile experience</li>
+                      <li>• Enhanced Web3 features</li>
+                      <li>• Seamless navigation</li>
+                    </ul>
+                    <p className="text-primary-100 text-sm">
+                      {isConnected ? 'Redirecting you to the new dashboard in 3 seconds...' : 'Connect your wallet to access the new dashboard.'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    {isConnected && (
+                      <button
+                        onClick={() => {
+                          setIsRedirecting(true);
+                          router.push('/dashboard?view=feed');
+                        }}
+                        className="bg-white text-primary-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                      >
+                        Go Now
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (isConnected) {
+                          handleMigrationDismiss();
+                        } else {
+                          setShowMigrationGuide(true);
+                        }
+                      }}
+                      className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors font-medium text-sm"
+                    >
+                      {isConnected ? 'Stay Here' : 'Learn More'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {isRedirecting && (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 dark:text-gray-400">Redirecting to your new dashboard...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </Layout>
+        
+        <MigrationNotice
+          type="social"
+          onDismiss={handleMigrationDismiss}
+        />
+        
+        {showMigrationGuide && (
+          <MigrationGuide
+            fromPage="social"
+            onClose={() => setShowMigrationGuide(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <Layout title="Social Feed - LinkDAO">

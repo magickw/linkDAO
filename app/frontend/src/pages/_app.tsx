@@ -8,6 +8,7 @@ import { Web3Provider } from '@/context/Web3Context';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
+import { ThemeProvider } from '@/components/ui/EnhancedTheme';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import '../styles/globals.css';
@@ -135,11 +136,13 @@ export default function App({ Component, pageProps, router }: AppProps) {
             <AuthProvider>
               <ToastProvider>
                 <NavigationProvider>
-                  <AppContent
-                    Component={Component}
-                    pageProps={pageProps}
-                    router={router}
-                  />
+                  <ThemeProvider defaultTheme="system">
+                    <AppContent
+                      Component={Component}
+                      pageProps={pageProps}
+                      router={router}
+                    />
+                  </ThemeProvider>
                 </NavigationProvider>
               </ToastProvider>
             </AuthProvider>

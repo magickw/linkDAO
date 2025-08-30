@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "build:analyze": "ANALYZE=true npm run build",
     "start": "next start",
     "lint": "next lint",
+    "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -14,7 +16,13 @@
     "test:integration": "jest --testPathPattern=Integration",
     "test:e2e": "jest --testPathPattern=e2e",
     "test:accessibility": "jest --testPathPattern=Accessibility",
-    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:accessibility"
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:accessibility",
+    "integration-test": "node scripts/integration-test.js",
+    "deploy": "node scripts/deploy.js",
+    "deploy:staging": "DEPLOY_ENV=staging npm run deploy",
+    "deploy:production": "DEPLOY_ENV=production npm run deploy",
+    "predeploy": "npm run integration-test",
+    "postbuild": "npm run type-check"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.8",
@@ -28,7 +36,8 @@
     "recharts": "^3.1.2",
     "socket.io-client": "^4.8.1",
     "viem": "^2.21.47",
-    "wagmi": "^2.14.1"
+    "wagmi": "^2.14.1",
+    "web-vitals": "^3.5.0"
   },
   "devDependencies": {
     "@axe-core/react": "^4.8.4",
@@ -49,7 +58,8 @@
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
     "ts-jest": "^29.4.1",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "webpack-bundle-analyzer": "^4.10.1"
   },
   "engines": {
     "node": ">=18.0.0",
