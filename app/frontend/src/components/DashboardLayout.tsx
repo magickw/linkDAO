@@ -12,6 +12,9 @@ import FloatingActionDock from '@/components/FloatingActionDock';
 import { Web3ErrorBoundary } from '@/components/ErrorBoundaries';
 import { LoadingState } from '@/components/FallbackStates';
 import { performanceMonitor } from '@/utils/performanceMonitor';
+import { PageTransition, ViewTransition } from '@/components/animations/TransitionComponents';
+import { ThemeToggle } from '@/components/ui/EnhancedTheme';
+import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -118,24 +121,24 @@ export default function DashboardLayout({
       <div className="flex h-screen overflow-hidden">
         {/* Left Sidebar */}
         <div className={`
-          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out
+          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 transform transition-all duration-300 ease-bounce-in
           ${navigationState.sidebarCollapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0'}
-          ${isMobile ? 'shadow-2xl' : ''}
+          ${isMobile ? 'shadow-2xl animate-slideInLeft' : ''}
         `}>
           <div className="flex flex-col h-full">
             {/* Sidebar Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200/50 dark:border-gray-700/50">
               {!navigationState.sidebarCollapsed && (
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent animate-fadeInLeft">
                   LinkDAO
                 </h1>
               )}
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 hover:scale-110 active:scale-95"
                 aria-label={navigationState.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-5 h-5 transition-transform duration-300 ${navigationState.sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {navigationState.sidebarCollapsed ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   ) : (
@@ -153,12 +156,12 @@ export default function DashboardLayout({
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Top Header Bar */}
-          <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+          <header className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 px-4 py-3 flex items-center justify-between animate-fadeInDown">
             <div className="flex items-center space-x-4">
               {/* Mobile menu button */}
               <button
                 onClick={toggleSidebar}
-                className="md:hidden p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="md:hidden p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 hover:scale-110 active:scale-95"
                 aria-label="Toggle sidebar"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,12 +170,12 @@ export default function DashboardLayout({
               </button>
 
               {/* Breadcrumb */}
-              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>Dashboard</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 animate-slideInLeft">
+                <span className="font-medium">Dashboard</span>
+                <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="text-gray-900 dark:text-white capitalize">
+                <span className="text-gray-900 dark:text-white capitalize font-medium">
                   {navigationState.activeView}
                   {navigationState.activeCommunity && ` - ${navigationState.activeCommunity}`}
                 </span>
@@ -180,20 +183,23 @@ export default function DashboardLayout({
             </div>
 
             {/* Right side actions */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 animate-slideInRight">
               {/* Search button */}
-              <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200 hover:scale-110 active:scale-95 group">
+                <svg className="w-5 h-5 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
 
+              {/* Theme toggle */}
+              <ThemeToggle size="md" />
+
               {/* Notifications button */}
-              <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 relative">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 relative transition-all duration-200 hover:scale-110 active:scale-95 group">
+                <svg className="w-5 h-5 group-hover:animate-wiggle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               </button>
             </div>
           </header>
@@ -205,23 +211,25 @@ export default function DashboardLayout({
               navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''
             } ${isMobile ? 'pb-20' : ''}`}>
               <Web3ErrorBoundary>
-                {children}
+                <PageTransition animation="fade" duration={300}>
+                  {children}
+                </PageTransition>
               </Web3ErrorBoundary>
             </main>
 
             {/* Right Sidebar - Hidden on mobile */}
             {navigationState.rightSidebarVisible && !isMobile && (
-              <aside className="fixed right-0 top-16 bottom-0 w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+              <aside className="fixed right-0 top-16 bottom-0 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-l border-gray-200/50 dark:border-gray-700/50 overflow-y-auto animate-slideInRight">
                 <div className="p-6">
                   {rightSidebar || (
                     /* Default sidebar content */
                     <div className="space-y-6">
-                      <div>
+                      <div className="animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                           Trending
                         </h3>
                         <div className="space-y-2">
-                          <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="p-3 bg-gray-50/80 dark:bg-gray-700/80 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-600/80 transition-all duration-200 hover:scale-105">
                             <p className="text-sm text-gray-600 dark:text-gray-300">
                               Trending content will appear here
                             </p>
@@ -229,16 +237,16 @@ export default function DashboardLayout({
                         </div>
                       </div>
 
-                      <div>
+                      <div className="animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                           Quick Actions
                         </h3>
                         <div className="space-y-2">
                           <button 
                             onClick={onCreatePost}
-                            className="w-full p-3 text-left bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                            className="w-full p-3 text-left bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-lg hover:from-primary-100 hover:to-secondary-100 dark:hover:from-primary-900/30 dark:hover:to-secondary-900/30 transition-all duration-200 hover:scale-105 group"
                           >
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                               Create Post
                             </p>
                           </button>

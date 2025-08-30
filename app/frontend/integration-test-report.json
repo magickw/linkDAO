@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-30T05:12:58.954Z",
+  "duration": "135.79s",
+  "results": {
+    "passed": 37,
+    "failed": 3,
+    "skipped": 2,
+    "tests": []
+  },
+  "successRate": "88.1%",
+  "status": "FAILED"
+}
