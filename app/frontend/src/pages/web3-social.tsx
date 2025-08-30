@@ -109,6 +109,25 @@ export default function Web3SocialFeed() {
   const [timeFilter, setTimeFilter] = useState<'24h' | '7d' | '30d' | 'all'>('24h');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
+
+  // Handle migration to new dashboard
+  useEffect(() => {
+    const handleMigration = () => {
+      if (isConnected) {
+        // Automatically redirect connected users to the new dashboard
+        router.replace('/dashboard?view=feed');
+      } else {
+        // Show migration notice for non-connected users
+        const hasSeenWeb3SocialMigration = localStorage.getItem('web3-social-migration-seen');
+        if (!hasSeenWeb3SocialMigration) {
+          setShowMigrationNotice(true);
+        }
+      }
+    };
+
+    handleMigration();
+  }, [isConnected, router]);
 
   // Show success toast when post is created
   useEffect(() => {
@@ -204,6 +223,64 @@ export default function Web3SocialFeed() {
       addToast(`Post action: ${action}`, 'info');
     }
   };
+
+  // Handle migration notice dismissal
+  const handleMigrationDismiss = () => {
+    setShowMigrationNotice(false);
+    localStorage.setItem('web3-social-migration-seen', 'true');
+  };
+
+  // Show migration notice for non-connected users
+  if (showMigrationNotice) {
+    return (
+      <Layout title="Web3 Social Feed - LinkDAO">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-xl p-8 text-center">
+              <h1 className="text-3xl font-bold mb-4">🚀 Web3 Social Has Evolved!</h1>
+              <p className="text-xl mb-6 text-primary-100">
+                The Web3 Social Feed is now integrated into our unified dashboard experience.
+              </p>
+              <div className="grid md:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white/10 rounded-lg p-4">
+                  <h3 className="font-semibold mb-2">Enhanced Features</h3>
+                  <ul className="text-sm space-y-1 text-primary-100">
+                    <li>• Unified social and community feeds</li>
+                    <li>• Better Web3 integration</li>
+                    <li>• Improved mobile experience</li>
+                    <li>• Advanced post creation tools</li>
+                  </ul>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4">
+                  <h3 className="font-semibold mb-2">What's New</h3>
+                  <ul className="text-sm space-y-1 text-primary-100">
+                    <li>• Community discussions</li>
+                    <li>• Enhanced reactions & tipping</li>
+                    <li>• Better content discovery</li>
+                    <li>• Seamless navigation</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="bg-white text-primary-600 px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors font-semibold"
+                >
+                  Go to New Dashboard
+                </button>
+                <button
+                  onClick={handleMigrationDismiss}
+                  className="bg-white/20 text-white px-6 py-3 rounded-lg hover:bg-white/30 transition-colors font-semibold"
+                >
+                  Continue Here
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Web3 Social Feed - LinkDAO">
