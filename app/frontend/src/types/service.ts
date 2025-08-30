@@ -181,3 +181,275 @@ export interface CreateBookingRequest {
     dueDate?: Date;
   }[];
 }
+
+// Enhanced service booking with additional project management data
+export interface EnhancedServiceBooking extends ServiceBooking {
+  timeTracking?: TimeTracking[];
+  deliverables?: ProjectDeliverable[];
+  milestonePayments?: MilestonePayment[];
+  threads?: ProjectThread[];
+  files?: ProjectFile[];
+  approvals?: ProjectApproval[];
+}
+
+// Time tracking interfaces
+export interface TimeTracking {
+  id: string;
+  bookingId: string;
+  providerId: string;
+  startTime: Date;
+  endTime?: Date;
+  durationMinutes?: number;
+  description?: string;
+  isBillable: boolean;
+  hourlyRate?: string;
+  totalAmount?: string;
+  status: 'active' | 'paused' | 'completed';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface StartTimeTrackingRequest {
+  bookingId: string;
+  description?: string;
+  hourlyRate?: string;
+  milestoneId?: string;
+}
+
+export interface StopTimeTrackingRequest {
+  timeTrackingId: string;
+  description?: string;
+}
+
+// Project deliverables
+export interface ProjectDeliverable {
+  id: string;
+  bookingId: string;
+  milestoneId?: string;
+  title: string;
+  description?: string;
+  fileHash?: string;
+  fileName?: string;
+  fileSize?: number;
+  status: 'draft' | 'submitted' | 'approved' | 'rejected' | 'revision_requested';
+  submittedAt?: Date;
+  approvedAt?: Date;
+  rejectedAt?: Date;
+  clientFeedback?: string;
+  providerNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateDeliverableRequest {
+  bookingId: string;
+  milestoneId?: string;
+  title: string;
+  description?: string;
+  fileHash?: string;
+  fileName?: string;
+  fileSize?: number;
+}
+
+export interface UpdateDeliverableRequest {
+  title?: string;
+  description?: string;
+  fileHash?: string;
+  fileName?: string;
+  fileSize?: number;
+  status?: 'draft' | 'submitted' | 'approved' | 'rejected' | 'revision_requested';
+  clientFeedback?: string;
+  providerNotes?: string;
+}
+
+// Milestone payments
+export interface MilestonePayment {
+  id: string;
+  bookingId: string;
+  milestoneId: string;
+  amount: string;
+  currency: string;
+  status: 'pending' | 'escrowed' | 'released' | 'disputed' | 'refunded';
+  transactionHash?: string;
+  escrowContract?: string;
+  dueDate?: Date;
+  paidAt?: Date;
+  releasedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  milestone?: ServiceMilestone;
+}
+
+export interface CreateMilestonePaymentRequest {
+  bookingId: string;
+  milestoneId: string;
+  amount: string;
+  currency?: string;
+  dueDate?: Date;
+}
+
+// Project communication
+export interface ProjectThread {
+  id: string;
+  bookingId: string;
+  title: string;
+  description?: string;
+  status: 'active' | 'resolved' | 'archived';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  createdBy: string;
+  assignedTo?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messages?: ProjectMessage[];
+  messageCount: number;
+  unreadCount: number;
+}
+
+export interface ProjectMessage {
+  id: string;
+  threadId: string;
+  senderId: string;
+  content: string;
+  attachments?: ProjectFile[];
+  isRead: boolean;
+  readAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  sender?: {
+    id: string;
+    handle?: string;
+    profileCid?: string;
+  };
+}
+
+export interface CreateProjectThreadRequest {
+  bookingId: string;
+  title: string;
+  description?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  assignedTo?: string;
+}
+
+export interface SendProjectMessageRequest {
+  threadId: string;
+  content: string;
+  attachments?: string[];
+}
+
+// Project approvals
+export interface ProjectApproval {
+  id: string;
+  bookingId: string;
+  requesterId: string;
+  approverId: string;
+  type: 'deliverable' | 'milestone' | 'payment' | 'change_request';
+  entityId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestMessage?: string;
+  responseMessage?: string;
+  requestedAt: Date;
+  respondedAt?: Date;
+  expiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateApprovalRequest {
+  bookingId: string;
+  approverId: string;
+  type: 'deliverable' | 'milestone' | 'payment' | 'change_request';
+  entityId: string;
+  requestMessage?: string;
+  expiresAt?: Date;
+}
+
+export interface ProcessApprovalRequest {
+  approvalId: string;
+  status: 'approved' | 'rejected';
+  feedback?: string;
+}
+
+// Project files
+export interface ProjectFile {
+  id: string;
+  bookingId: string;
+  milestoneId?: string;
+  deliverableId?: string;
+  uploadedBy: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  fileHash: string;
+  description?: string;
+  isPublic: boolean;
+  downloadCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  uploader?: {
+    id: string;
+    handle?: string;
+    profileCid?: string;
+  };
+}
+
+export interface UploadProjectFileRequest {
+  bookingId: string;
+  milestoneId?: string;
+  deliverableId?: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  fileHash: string;
+  description?: string;
+  isPublic?: boolean;
+}
+
+// Project activity
+export interface ProjectActivity {
+  id: string;
+  bookingId: string;
+  userId: string;
+  type: 'time_start' | 'time_stop' | 'deliverable_upload' | 'message_sent' | 'payment_made' | 'milestone_completed';
+  description: string;
+  entityId?: string;
+  metadata?: any;
+  createdAt: Date;
+  user?: {
+    id: string;
+    handle?: string;
+    profileCid?: string;
+  };
+}
+
+// Dashboard data structures
+export interface ProjectDashboardData {
+  booking: EnhancedServiceBooking;
+  timeTrackingSummary: {
+    totalHours: number;
+    thisWeekHours: number;
+    totalAmount: string;
+    activeSession?: TimeTracking;
+  };
+  deliverablesSummary: {
+    total: number;
+    approved: number;
+    pending: number;
+    rejected: number;
+  };
+  communicationSummary: {
+    totalMessages: number;
+    unreadMessages: number;
+    activeThreads: number;
+  };
+  milestones: ServiceMilestone[];
+  recentActivities: ProjectActivity[];
+  upcomingDeadlines: Array<{
+    milestoneId: string;
+    title: string;
+    dueDate: Date;
+    status: string;
+  }>;
+}
+
+// Alias for backwards compatibility
+export type ProjectDashboard = ProjectDashboardData;

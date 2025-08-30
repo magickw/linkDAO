@@ -1227,6 +1227,199 @@ export class DatabaseService {
     });
   }
 
+  // Moderation Cases operations
+  async createModerationCase(data: {
+    contentId: string;
+    contentType: string;
+    userId: string;
+    status: string;
+    riskScore: number;
+    confidence: number;
+    vendorScores: Record<string, any>;
+    evidenceCid: string | null;
+  }) {
+    try {
+      const result = await this.db.insert(schema.moderationCases).values({
+        contentId: data.contentId,
+        contentType: data.contentType,
+        userId: data.userId,
+        status: data.status,
+        riskScore: data.riskScore.toString(),
+        confidence: data.confidence.toString(),
+        vendorScores: data.vendorScores,
+        evidenceCid: data.evidenceCid,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating moderation case:", error);
+      throw error;
+    }
+  }
+
+  async getModerationCaseByContentId(contentId: string) {
+    try {
+      const result = await this.db.select().from(schema.moderationCases)
+        .where(eq(schema.moderationCases.contentId, contentId));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting moderation case by content ID:", error);
+      throw error;
+    }
+  }
+
+  async updateModerationCase(id: number, updates: Partial<{
+    status: string;
+    decision: string;
+    reasonCode: string;
+    confidence: number;
+    riskScore: number;
+    vendorScores: Record<string, any>;
+    evidenceCid: string;
+    updatedAt: Date;
+  }>) {
+    try {
+      const updateData: any = { ...updates };
+      
+      // Convert numbers to strings for database
+      if (updates.confidence !== undefined) {
+        updateData.confidence = updates.confidence.toString();
+      }
+      if (updates.riskScore !== undefined) {
+        updateData.riskScore = updates.riskScore.toString();
+      }
+      
+      const result = await this.db.update(schema.moderationCases)
+        .set(updateData)
+        .where(eq(schema.moderationCases.id, id))
+        .returning();
+      
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating moderation case:", error);
+      throw error;
+    }
+  }
+
+  async getUserModerationCases(userId: string, options: {
+    page: number;
+    limit: number;
+    status?: string;
+  }) {
+    try {
+      let query = this.db.select().from(schema.moderationCases)
+        .where(eq(schema.moderationCases.userId, userId));
+      
+      if (options.status) {
+        query = query.where(
+          and(
+            eq(schema.moderationCases.userId, userId),
+            eq(schema.moderationCases.status, options.status)
+          )
+        );
+      }
+      
+      const result = await query
+        .orderBy(desc(schema.moderationCases.createdAt))
+        .limit(options.limit)
+        .offset((options.page - 1) * options.limit);
+      
+      return result;
+    } catch (error) {
+      console.error("Error getting user moderation cases:", error);
+      throw error;
+    }
+  }
+
+  async getModerationCasesByStatus(status: string, limit: number = 50) {
+    try {
+      return await this.db.select().from(schema.moderationCases)
+        .where(eq(schema.moderationCases.status, status))
+        .orderBy(desc(schema.moderationCases.createdAt))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting moderation cases by status:", error);
+      throw error;
+    }
+  }
+
+  // Content Reports operations
+  async createContentReport(data: {
+    contentId: string;
+    reporterId: string;
+    reason: string;
+    details?: string;
+    weight: number;
+  }) {
+    try {
+      const result = await this.db.insert(schema.contentReports).values({
+        contentId: data.contentId,
+        reporterId: data.reporterId,
+        reason: data.reason,
+        details: data.details || null,
+        weight: data.weight.toString(),
+        status: 'open',
+        createdAt: new Date()
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating content report:", error);
+      throw error;
+    }
+  }
+
+  async getContentReports(contentId: string) {
+    try {
+      return await this.db.select().from(schema.contentReports)
+        .where(eq(schema.contentReports.contentId, contentId))
+        .orderBy(desc(schema.contentReports.createdAt));
+    } catch (error) {
+      console.error("Error getting content reports:", error);
+      throw error;
+    }
+  }
+
+  // Moderation Actions operations
+  async createModerationAction(data: {
+    userId: string;
+    contentId: string;
+    action: string;
+    durationSec?: number;
+    appliedBy?: string;
+    rationale?: string;
+  }) {
+    try {
+      const result = await this.db.insert(schema.moderationActions).values({
+        userId: data.userId,
+        contentId: data.contentId,
+        action: data.action,
+        durationSec: data.durationSec || 0,
+        appliedBy: data.appliedBy || null,
+        rationale: data.rationale || null,
+        createdAt: new Date()
+      }).returning();
+      
+      return result[0];
+    } catch (error) {
+      console.error("Error creating moderation action:", error);
+      throw error;
+    }
+  }
+
+  async getUserModerationActions(userId: string, limit: number = 50) {
+    try {
+      return await this.db.select().from(schema.moderationActions)
+        .where(eq(schema.moderationActions.userId, userId))
+        .orderBy(desc(schema.moderationActions.createdAt))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error getting user moderation actions:", error);
+      throw error;
+    }
+  }
 }
 
 // Singleton instance
