@@ -177,7 +177,7 @@ export interface ProductSearchFilters {
 }
 
 export interface ProductSortOptions {
-  field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites';
+  field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites' | 'relevance';
   direction: 'asc' | 'desc';
 }
 
