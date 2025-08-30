@@ -3,6 +3,7 @@ import { OrderController } from '../controllers/orderController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validateRequest } from '../middleware/validateRequest';
 import { rateLimit } from 'express-rate-limit';
+import { body, param } from 'express-validator';
 
 const router = Router();
 const orderController = new OrderController();
@@ -21,104 +22,51 @@ const createOrderRateLimit = rateLimit({
 });
 
 // Validation schemas
-const createOrderSchema = {
-  body: {
-    type: 'object',
-    required: ['listingId', 'buyerAddress', 'sellerAddress', 'amount', 'paymentToken'],
-    properties: {
-      listingId: { type: 'string' },
-      buyerAddress: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-      sellerAddress: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-      amount: { type: 'string' },
-      paymentToken: { type: 'string' },
-      quantity: { type: 'number', minimum: 1 },
-      shippingAddress: {
-        type: 'object',
-        properties: {
-          name: { type: 'string' },
-          street: { type: 'string' },
-          city: { type: 'string' },
-          state: { type: 'string' },
-          postalCode: { type: 'string' },
-          country: { type: 'string' },
-          phone: { type: 'string' }
-        }
-      },
-      notes: { type: 'string' }
-    }
-  }
-};
+const createOrderValidation = [
+  body('listingId').isString().notEmpty(),
+  body('buyerAddress').matches(/^0x[a-fA-F0-9]{40}$/),
+  body('sellerAddress').matches(/^0x[a-fA-F0-9]{40}$/),
+  body('amount').isString().notEmpty(),
+  body('paymentToken').isString().notEmpty(),
+  body('quantity').optional().isInt({ min: 1 }),
+  body('shippingAddress.name').optional().isString(),
+  body('shippingAddress.street').optional().isString(),
+  body('shippingAddress.city').optional().isString(),
+  body('shippingAddress.state').optional().isString(),
+  body('shippingAddress.postalCode').optional().isString(),
+  body('shippingAddress.country').optional().isString(),
+  body('shippingAddress.phone').optional().isString(),
+  body('notes').optional().isString()
+];
 
-const updateOrderStatusSchema = {
-  body: {
-    type: 'object',
-    required: ['status'],
-    properties: {
-      status: { 
-        type: 'string',
-        enum: ['CREATED', 'PAYMENT_PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'DISPUTED', 'CANCELLED', 'REFUNDED']
-      },
-      metadata: { type: 'object' }
-    }
-  }
-};
+const updateOrderStatusValidation = [
+  body('status').isIn(['CREATED', 'PAYMENT_PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'DISPUTED', 'CANCELLED', 'REFUNDED']),
+  body('metadata').optional().isObject()
+];
 
-const processShippingSchema = {
-  body: {
-    type: 'object',
-    required: ['carrier', 'service', 'fromAddress', 'packageInfo'],
-    properties: {
-      carrier: { type: 'string', enum: ['FEDEX', 'UPS', 'DHL', 'USPS'] },
-      service: { type: 'string' },
-      fromAddress: {
-        type: 'object',
-        required: ['name', 'street', 'city', 'state', 'postalCode', 'country'],
-        properties: {
-          name: { type: 'string' },
-          street: { type: 'string' },
-          city: { type: 'string' },
-          state: { type: 'string' },
-          postalCode: { type: 'string' },
-          country: { type: 'string' },
-          phone: { type: 'string' }
-        }
-      },
-      packageInfo: {
-        type: 'object',
-        required: ['weight', 'dimensions', 'value', 'description'],
-        properties: {
-          weight: { type: 'number', minimum: 0.1 },
-          dimensions: {
-            type: 'object',
-            required: ['length', 'width', 'height'],
-            properties: {
-              length: { type: 'number', minimum: 1 },
-              width: { type: 'number', minimum: 1 },
-              height: { type: 'number', minimum: 1 }
-            }
-          },
-          value: { type: 'string' },
-          description: { type: 'string' }
-        }
-      }
-    }
-  }
-};
+const processShippingValidation = [
+  body('carrier').isIn(['FEDEX', 'UPS', 'DHL', 'USPS']),
+  body('service').isString().notEmpty(),
+  body('fromAddress.name').isString().notEmpty(),
+  body('fromAddress.street').isString().notEmpty(),
+  body('fromAddress.city').isString().notEmpty(),
+  body('fromAddress.state').isString().notEmpty(),
+  body('fromAddress.postalCode').isString().notEmpty(),
+  body('fromAddress.country').isString().notEmpty(),
+  body('fromAddress.phone').optional().isString(),
+  body('packageInfo.weight').isFloat({ min: 0.1 }),
+  body('packageInfo.dimensions.length').isFloat({ min: 1 }),
+  body('packageInfo.dimensions.width').isFloat({ min: 1 }),
+  body('packageInfo.dimensions.height').isFloat({ min: 1 }),
+  body('packageInfo.value').isString().notEmpty(),
+  body('packageInfo.description').isString().notEmpty()
+];
 
-const initiateDisputeSchema = {
-  body: {
-    type: 'object',
-    required: ['initiatorAddress', 'reason'],
-    properties: {
-      initiatorAddress: { type: 'string', pattern: '^0x[a-fA-F0-9]{40}$' },
-      reason: { type: 'string', minLength: 10 },
-      evidence: {
-        type: 'array',
-        items: { type: 'string' }
-      }
-    }
-  }
-};
+const initiateDisputeValidation = [
+  body('initiatorAddress').matches(/^0x[a-fA-F0-9]{40}$/),
+  body('reason').isString().isLength({ min: 10 }),
+  body('evidence').optional().isArray()
+];
 
 // Order Management Routes
 
@@ -131,7 +79,8 @@ router.post(
   '/',
   createOrderRateLimit,
   authMiddleware,
-  validateRequest(createOrderSchema),
+  createOrderValidation,
+  validateRequest,
   orderController.createOrder.bind(orderController)
 );
 
@@ -168,7 +117,8 @@ router.put(
   '/:orderId/status',
   orderRateLimit,
   authMiddleware,
-  validateRequest(updateOrderStatusSchema),
+  updateOrderStatusValidation,
+  validateRequest,
   orderController.updateOrderStatus.bind(orderController)
 );
 
@@ -181,7 +131,8 @@ router.post(
   '/:orderId/shipping',
   orderRateLimit,
   authMiddleware,
-  validateRequest(processShippingSchema),
+  processShippingValidation,
+  validateRequest,
   orderController.processShipping.bind(orderController)
 );
 
@@ -230,7 +181,8 @@ router.post(
   '/:orderId/dispute',
   orderRateLimit,
   authMiddleware,
-  validateRequest(initiateDisputeSchema),
+  initiateDisputeValidation,
+  validateRequest,
   orderController.initiateDispute.bind(orderController)
 );
 

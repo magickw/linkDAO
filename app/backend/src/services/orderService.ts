@@ -371,7 +371,7 @@ export class OrderService {
       escrowId,
       amount: dbOrder.amount,
       paymentToken: dbOrder.paymentToken || '',
-      status: (dbOrder.status?.toUpperCase() as OrderStatus) || OrderStatus.PENDING,
+      status: (dbOrder.status?.toUpperCase() as OrderStatus) || OrderStatus.CREATED,
       createdAt: dbOrder.createdAt?.toISOString() || new Date().toISOString(),
       shippingAddress: this.formatShippingAddress(dbOrder)
     };
@@ -392,15 +392,16 @@ export class OrderService {
   }
 
   private async updateOrderShipping(orderId: string, shippingAddress: any): Promise<void> {
-    await databaseService.updateOrder(parseInt(orderId), {
-      shippingStreet: shippingAddress.street,
-      shippingCity: shippingAddress.city,
-      shippingState: shippingAddress.state,
-      shippingPostalCode: shippingAddress.postalCode,
-      shippingCountry: shippingAddress.country,
-      shippingName: shippingAddress.name,
-      shippingPhone: shippingAddress.phone
-    });
+    // TODO: Add shipping fields to orders table or create separate shipping table
+    // await databaseService.updateOrder(parseInt(orderId), {
+    //   shippingStreet: shippingAddress.street,
+    //   shippingCity: shippingAddress.city,
+    //   shippingState: shippingAddress.state,
+    //   shippingPostalCode: shippingAddress.postalCode,
+    //   shippingCountry: shippingAddress.country,
+    //   shippingName: shippingAddress.name,
+    //   shippingPhone: shippingAddress.phone
+    // });
   }
 
   private async createOrderEvent(orderId: string, eventType: string, description: string, metadata?: any): Promise<void> {

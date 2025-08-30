@@ -334,3 +334,76 @@ export const aiModeration = pgTable("ai_moderation", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Order Events
+export const orderEvents = pgTable("order_events", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id),
+  eventType: varchar("event_type", { length: 64 }).notNull(),
+  description: text("description"),
+  metadata: text("metadata"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Tracking Records
+export const trackingRecords = pgTable("tracking_records", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id),
+  trackingNumber: varchar("tracking_number", { length: 128 }).notNull(),
+  carrier: varchar("carrier", { length: 32 }).notNull(),
+  status: varchar("status", { length: 64 }),
+  events: text("events"),
+  createdAt: timestamp("created_at").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  orderId: varchar("order_id", { length: 64 }),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  message: text("message").notNull(),
+  metadata: text("metadata"),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Notification Preferences
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull().unique(),
+  preferences: text("preferences").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Push Tokens
+export const pushTokens = pgTable("push_tokens", {
+  id: serial("id").primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  token: varchar("token", { length: 255 }).notNull(),
+  platform: varchar("platform", { length: 32 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Blockchain Events
+export const blockchainEvents = pgTable("blockchain_events", {
+  id: serial("id").primaryKey(),
+  orderId: varchar("order_id", { length: 64 }),
+  escrowId: varchar("escrow_id", { length: 64 }),
+  eventType: varchar("event_type", { length: 64 }).notNull(),
+  transactionHash: varchar("transaction_hash", { length: 66 }).notNull(),
+  blockNumber: integer("block_number").notNull(),
+  timestamp: timestamp("timestamp").notNull(),
+  data: text("data"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Sync Status
+export const syncStatus = pgTable("sync_status", {
+  id: serial("id").primaryKey(),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

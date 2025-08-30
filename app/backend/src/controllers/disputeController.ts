@@ -14,7 +14,7 @@ export class DisputeController {
   createDispute = async (req: Request, res: Response): Promise<void> => {
     try {
       const { escrowId, reason, disputeType, evidence } = req.body;
-      const reporterId = req.user?.id; // Assuming user is attached to request
+      const reporterId = req.user?.userId || req.user?.walletAddress; // Assuming user is attached to request
 
       if (!reporterId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -57,7 +57,7 @@ export class DisputeController {
     try {
       const { disputeId } = req.params;
       const { evidenceType, ipfsHash, description } = req.body;
-      const submitterId = req.user?.id;
+      const submitterId = req.user?.userId || req.user?.walletAddress;
 
       if (!submitterId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -121,7 +121,7 @@ export class DisputeController {
     try {
       const { disputeId } = req.params;
       const { verdict, votingPower, reasoning } = req.body;
-      const voterId = req.user?.id;
+      const voterId = req.user?.userId || req.user?.walletAddress;
 
       if (!voterId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -163,7 +163,7 @@ export class DisputeController {
     try {
       const { disputeId } = req.params;
       const { verdict, refundAmount, reasoning } = req.body;
-      const arbitratorId = req.user?.id;
+      const arbitratorId = req.user?.userId || req.user?.walletAddress;
 
       if (!arbitratorId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -245,7 +245,7 @@ export class DisputeController {
    */
   getUserDisputeHistory = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId || req.user?.walletAddress;
 
       if (!userId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -300,7 +300,7 @@ export class DisputeController {
   applyForArbitrator = async (req: Request, res: Response): Promise<void> => {
     try {
       const { qualifications, experience } = req.body;
-      const applicantId = req.user?.id;
+      const applicantId = req.user?.userId || req.user?.walletAddress;
 
       if (!applicantId) {
         res.status(401).json({ error: 'Authentication required' });
@@ -332,7 +332,7 @@ export class DisputeController {
    */
   getArbitratorDashboard = async (req: Request, res: Response): Promise<void> => {
     try {
-      const arbitratorId = req.user?.id;
+      const arbitratorId = req.user?.userId || req.user?.walletAddress;
 
       if (!arbitratorId) {
         res.status(401).json({ error: 'Authentication required' });
