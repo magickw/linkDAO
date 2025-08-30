@@ -23,6 +23,8 @@ import disputeRoutes from './routes/disputeRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 import contentIngestionRoutes from './routes/contentIngestionRoutes';
 import reportRoutes from './routes/reportRoutes';
+import moderationRoutes from './routes/moderationRoutes';
+import appealsRoutes from './routes/appealsRoutes';
 // import serviceRoutes from './routes/serviceRoutes';
 // import projectManagementRoutes from './routes/projectManagementRoutes';
 
@@ -168,6 +170,8 @@ app.use('/api', disputeRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/content', contentIngestionRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/moderation', moderationRoutes);
+app.use('/api/appeals', appealsRoutes);
 // app.use('/api/services', serviceRoutes);
 // app.use('/api/project-management', projectManagementRoutes);
 
