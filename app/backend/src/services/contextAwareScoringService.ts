@@ -88,7 +88,9 @@ export class ContextAwareScoringService {
       }
 
       const user = userInfo[0];
-      const accountAge = Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+      const accountAge = user.createdAt 
+        ? Math.floor((Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
 
       // Get user activity stats
       const [postStats, reactionStats, tipStats] = await Promise.all([
@@ -296,7 +298,7 @@ export class ContextAwareScoringService {
         .limit(50); // Last 50 violations
 
       return violations.map(v => ({
-        date: v.createdAt,
+        date: v.createdAt || new Date(),
         category: v.reasonCode || 'unknown',
         action: v.action,
         severity: this.mapActionToSeverity(v.action)
@@ -319,7 +321,7 @@ export class ContextAwareScoringService {
         .orderBy(desc(reputationImpacts.createdAt))
         .limit(1);
 
-      return result.length > 0 ? parseFloat(result[0].newReputation) : 50; // Default neutral reputation
+      return result.length > 0 ? parseFloat(result[0].newReputation || '50') : 50; // Default neutral reputation
     } catch (error) {
       console.error('Failed to get current reputation:', error);
       return 50;
