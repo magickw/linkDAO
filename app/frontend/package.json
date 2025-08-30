@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest --testPathPattern=__tests__ --testNamePattern=\"(?!.*Integration|.*E2E|.*Accessibility)\"",
+    "test:integration": "jest --testPathPattern=Integration",
+    "test:e2e": "jest --testPathPattern=e2e",
+    "test:accessibility": "jest --testPathPattern=Accessibility",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:accessibility"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.8",
@@ -23,6 +29,7 @@
     "wagmi": "^2.14.1"
   },
   "devDependencies": {
+    "@axe-core/react": "^4.8.4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^14.3.1",
     "@testing-library/user-event": "^14.6.1",
@@ -35,6 +42,7 @@
     "eslint": "^8.46.0",
     "eslint-config-next": "^13.4.12",
     "jest": "^29.7.0",
+    "jest-axe": "^8.0.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
