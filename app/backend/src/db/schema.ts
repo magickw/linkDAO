@@ -1356,4 +1356,162 @@ export const reputationImpacts = pgTable("reputation_impacts", {
   userIdIdx: index("idx_reputation_impacts_user_id").on(t.userId),
   caseIdIdx: index("idx_reputation_impacts_case_id").on(t.caseId),
   createdAtIdx: index("idx_reputation_impacts_created_at").on(t.createdAt),
+}));// AI Co
+ntent Moderation System Tables
+
+// Core moderation cases
+export const moderationCases = pgTable("moderation_cases", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 24 }).default("pending"),
+  riskScore: numeric("risk_score").default("0"),
+  decision: varchar("decision", { length: 24 }),
+  reasonCode: varchar("reason_code", { length: 48 }),
+  confidence: numeric("confidence").default("0"),
+  vendorScores: text("vendor_scores"), // JSON
+  evidenceCid: text("evidence_cid"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  contentIdx: index("moderation_cases_content_idx").on(t.contentId),
+  userIdx: index("moderation_cases_user_idx").on(t.userId),
+  statusIdx: index("moderation_cases_status_idx").on(t.status),
 }));
+
+// Moderation actions/enforcement
+export const moderationActions = pgTable("moderation_actions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  action: varchar("action", { length: 24 }).notNull(),
+  durationSec: integer("duration_sec").default(0),
+  appliedBy: varchar("applied_by", { length: 64 }),
+  rationale: text("rationale"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Community reports
+export const contentReports = pgTable("content_reports", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reason: varchar("reason", { length: 48 }).notNull(),
+  details: text("details"),
+  weight: numeric("weight").default("1"),
+  status: varchar("status", { length: 24 }).default("open"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  contentIdx: index("content_reports_content_idx").on(t.contentId),
+  reporterIdx: index("content_reports_reporter_idx").on(t.reporterId),
+}));
+
+// Appeals system
+export const moderationAppeals = pgTable("moderation_appeals", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id").references(() => moderationCases.id).notNull(),
+  appellantId: uuid("appellant_id").references(() => users.id).notNull(),
+  status: varchar("status", { length: 24 }).default("open"),
+  stakeAmount: numeric("stake_amount").default("0"),
+  juryDecision: varchar("jury_decision", { length: 24 }),
+  decisionCid: text("decision_cid"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  caseIdx: index("moderation_appeals_case_idx").on(t.caseId),
+  appellantIdx: index("moderation_appeals_appellant_idx").on(t.appellantId),
+  statusIdx: index("moderation_appeals_status_idx").on(t.status),
+}));
+
+// DAO Jury system - Juror assignments for appeals
+export const appealJurors = pgTable("appeal_jurors", {
+  id: serial("id").primaryKey(),
+  appealId: integer("appeal_id").references(() => moderationAppeals.id).notNull(),
+  jurorId: uuid("juror_id").references(() => users.id).notNull(),
+  selectionRound: integer("selection_round").notNull(),
+  status: varchar("status", { length: 24 }).default("selected"),
+  stakeAmount: numeric("stake_amount").default("0"),
+  voteCommitment: text("vote_commitment"), // Hash of vote + nonce
+  voteReveal: varchar("vote_reveal", { length: 24 }), // 'uphold' | 'overturn' | 'partial'
+  voteTimestamp: timestamp("vote_timestamp"),
+  rewardAmount: numeric("reward_amount").default("0"),
+  slashedAmount: numeric("slashed_amount").default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  appealIdx: index("appeal_jurors_appeal_idx").on(t.appealId),
+  jurorIdx: index("appeal_jurors_juror_idx").on(t.jurorId),
+  statusIdx: index("appeal_jurors_status_idx").on(t.status),
+}));
+
+// Jury voting sessions
+export const juryVotingSessions = pgTable("jury_voting_sessions", {
+  id: serial("id").primaryKey(),
+  appealId: integer("appeal_id").references(() => moderationAppeals.id).notNull(),
+  sessionRound: integer("session_round").notNull(),
+  commitPhaseStart: timestamp("commit_phase_start").notNull(),
+  commitPhaseEnd: timestamp("commit_phase_end").notNull(),
+  revealPhaseStart: timestamp("reveal_phase_start").notNull(),
+  revealPhaseEnd: timestamp("reveal_phase_end").notNull(),
+  requiredJurors: integer("required_jurors").default(5),
+  selectedJurors: integer("selected_jurors").default(0),
+  committedVotes: integer("committed_votes").default(0),
+  revealedVotes: integer("revealed_votes").default(0),
+  status: varchar("status", { length: 24 }).default("setup"),
+  finalDecision: varchar("final_decision", { length: 24 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  appealIdx: index("jury_voting_sessions_appeal_idx").on(t.appealId),
+  statusIdx: index("jury_voting_sessions_status_idx").on(t.status),
+}));
+
+// Juror eligibility and reputation tracking
+export const jurorEligibility = pgTable("juror_eligibility", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull().unique(),
+  reputationScore: numeric("reputation_score").default("1.0"),
+  totalStake: numeric("total_stake").default("0"),
+  activeCases: integer("active_cases").default(0),
+  completedCases: integer("completed_cases").default(0),
+  correctDecisions: integer("correct_decisions").default(0),
+  incorrectDecisions: integer("incorrect_decisions").default(0),
+  lastActivity: timestamp("last_activity"),
+  isEligible: boolean("is_eligible").default(true),
+  suspensionUntil: timestamp("suspension_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("juror_eligibility_user_idx").on(t.userId),
+  eligibleIdx: index("juror_eligibility_eligible_idx").on(t.isEligible),
+}));
+
+// Audit logging for moderation decisions
+export const moderationAuditLog = pgTable("moderation_audit_log", {
+  id: serial("id").primaryKey(),
+  actionType: varchar("action_type", { length: 64 }).notNull(),
+  actorId: varchar("actor_id", { length: 64 }).notNull(),
+  actorType: varchar("actor_type", { length: 24 }).notNull(),
+  targetId: varchar("target_id", { length: 64 }),
+  targetType: varchar("target_type", { length: 24 }),
+  oldState: text("old_state"), // JSON
+  newState: text("new_state"), // JSON
+  reasoning: text("reasoning"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Reputation history tracking (updated to match existing pattern)
+export const reputationHistory = pgTable("reputation_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  impactType: varchar("impact_type", { length: 50 }).notNull(),
+  impactValue: numeric("impact_value").notNull(),
+  previousScore: numeric("previous_score").notNull(),
+  newScore: numeric("new_score").notNull(),
+  reason: text("reason"),
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+  relatedEntityId: varchar("related_entity_id", { length: 128 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
