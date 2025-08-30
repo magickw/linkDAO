@@ -182,7 +182,7 @@ export const reputationSchema = z.object({
 export const reviewSchema = z.object({
   reviewerId: z.string().uuid('Invalid reviewer ID'),
   revieweeId: z.string().uuid('Invalid reviewee ID'),
-  orderId: z.string().uuid('Invalid order ID'),
+  orderId: z.number().int('Order ID must be an integer').positive('Order ID must be positive'),
   rating: z.number()
     .int('Rating must be an integer')
     .min(1, 'Rating must be at least 1')

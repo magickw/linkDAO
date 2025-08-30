@@ -1,0 +1,530 @@
+import { db } from '../db/connection';
+import { 
+  digitalAssetAnalytics, 
+  digitalAssetAccessLogs, 
+  digitalAssetPurchases,
+  cdnAccessLogs,
+  digitalAssets
+} from '../db/schema';
+import { eq, and, gte, lte, desc, sql, count, sum, avg } from 'drizzle-orm';
+import { AccessType } from '../types/digitalAsset';
+
+export interface AnalyticsMetrics {
+  totalDownloads: number;
+  totalStreams: number;
+  totalPreviews: number;
+  uniqueUsers: number;
+  totalRevenue: string;
+  bandwidthUsed: number;
+  averageFileSize: number;
+  popularAssets: Array<{
+    assetId: string;
+    title: string;
+    downloads: number;
+    revenue: string;
+  }>;
+  userEngagement: {
+    dailyActiveUsers: number;
+    averageSessionDuration: number;
+    returnUserRate: number;
+  };
+  performanceMetrics: {
+    averageResponseTime: number;
+    cacheHitRate: number;
+    errorRate: number;
+  };
+}
+
+export interface TimeSeriesData {
+  date: string;
+  downloads: number;
+  streams: number;
+  previews: number;
+  revenue: string;
+  uniqueUsers: number;
+}
+
+export class AnalyticsService {
+  
+  /**
+   * Get comprehensive analytics for a date range
+   */
+  async getAnalytics(
+    startDate: string,
+    endDate: string,
+    assetId?: string,
+    creatorId?: string
+  ): Promise<AnalyticsMetrics> {
+    try {
+      const whereConditions = [
+        gte(digitalAssetAnalytics.date, startDate),
+        lte(digitalAssetAnalytics.date, endDate)
+      ];
+      
+      if (assetId) {
+        whereConditions.push(eq(digitalAssetAnalytics.assetId, assetId));
+      }
+      
+      // Get basic metrics
+      const [metrics] = await db.select({
+        totalDownloads: sum(digitalAssetAnalytics.totalDownloads),
+        totalStreams: sum(digitalAssetAnalytics.totalStreams),
+        totalPreviews: sum(digitalAssetAnalytics.totalPreviews),
+        uniqueUsers: sum(digitalAssetAnalytics.uniqueUsers),
+        totalRevenue: sum(digitalAssetAnalytics.totalRevenue),
+        bandwidthUsed: sum(digitalAssetAnalytics.bandwidthUsed)
+      })
+      .from(digitalAssetAnalytics)
+      .where(and(...whereConditions));
+      
+      // Get popular assets
+      const popularAssets = await this.getPopularAssets(startDate, endDate, creatorId);
+      
+      // Get user engagement metrics
+      const userEngagement = await this.getUserEngagementMetrics(startDate, endDate, assetId);
+      
+      // Get performance metrics
+      const performanceMetrics = await this.getPerformanceMetrics(startDate, endDate, assetId);
+      
+      // Calculate average file size
+      const averageFileSize = await this.getAverageFileSize(assetId, creatorId);
+      
+      return {
+        totalDownloads: Number(metrics.totalDownloads) || 0,
+        totalStreams: Number(metrics.totalStreams) || 0,
+        totalPreviews: Number(metrics.totalPreviews) || 0,
+        uniqueUsers: Number(metrics.uniqueUsers) || 0,
+        totalRevenue: metrics.totalRevenue?.toString() || '0',
+        bandwidthUsed: Number(metrics.bandwidthUsed) || 0,
+        averageFileSize,
+        popularAssets,
+        userEngagement,
+        performanceMetrics
+      };
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      throw new Error('Failed to get analytics');
+    }
+  }
+  
+  /**
+   * Get time series data for charts
+   */
+  async getTimeSeriesData(
+    startDate: string,
+    endDate: string,
+    assetId?: string,
+    groupBy: 'day' | 'week' | 'month' = 'day'
+  ): Promise<TimeSeriesData[]> {
+    try {
+      const whereConditions = [
+        gte(digitalAssetAnalytics.date, startDate),
+        lte(digitalAssetAnalytics.date, endDate)
+      ];
+      
+      if (assetId) {
+        whereConditions.push(eq(digitalAssetAnalytics.assetId, assetId));
+      }
+      
+      let dateGrouping: any;
+      switch (groupBy) {
+        case 'week':
+          dateGrouping = sql`DATE_TRUNC('week', ${digitalAssetAnalytics.date})`;
+          break;
+        case 'month':
+          dateGrouping = sql`DATE_TRUNC('month', ${digitalAssetAnalytics.date})`;
+          break;
+        default:
+          dateGrouping = digitalAssetAnalytics.date;
+      }
+      
+      const results = await db.select({
+        date: dateGrouping,
+        downloads: sum(digitalAssetAnalytics.totalDownloads),
+        streams: sum(digitalAssetAnalytics.totalStreams),
+        previews: sum(digitalAssetAnalytics.totalPreviews),
+        revenue: sum(digitalAssetAnalytics.totalRevenue),
+        uniqueUsers: sum(digitalAssetAnalytics.uniqueUsers)
+      })
+      .from(digitalAssetAnalytics)
+      .where(and(...whereConditions))
+      .groupBy(dateGrouping)
+      .orderBy(dateGrouping);
+      
+      return results.map(row => ({
+        date: row.date.toString(),
+        downloads: Number(row.downloads) || 0,
+        streams: Number(row.streams) || 0,
+        previews: Number(row.previews) || 0,
+        revenue: row.revenue?.toString() || '0',
+        uniqueUsers: Number(row.uniqueUsers) || 0
+      }));
+    } catch (error) {
+      console.error('Error getting time series data:', error);
+      throw new Error('Failed to get time series data');
+    }
+  }
+  
+  /**
+   * Get real-time access statistics
+   */
+  async getRealTimeStats(assetId?: string): Promise<{
+    activeUsers: number;
+    currentDownloads: number;
+    currentStreams: number;
+    recentActivity: Array<{
+      userId: string;
+      accessType: AccessType;
+      timestamp: string;
+      success: boolean;
+    }>;
+  }> {
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
+      const whereConditions = [
+        gte(digitalAssetAccessLogs.accessedAt, oneHourAgo)
+      ];
+      
+      if (assetId) {
+        whereConditions.push(eq(digitalAssetAccessLogs.assetId, assetId));
+      }
+      
+      // Get active users in the last hour
+      const [activeUsersResult] = await db.select({
+        count: sql`COUNT(DISTINCT ${digitalAssetAccessLogs.userId})`
+      })
+      .from(digitalAssetAccessLogs)
+      .where(and(...whereConditions));
+      
+      // Get current downloads and streams
+      const [activityResult] = await db.select({
+        downloads: sql`COUNT(CASE WHEN ${digitalAssetAccessLogs.accessType} = 'download' THEN 1 END)`,
+        streams: sql`COUNT(CASE WHEN ${digitalAssetAccessLogs.accessType} = 'stream' THEN 1 END)`
+      })
+      .from(digitalAssetAccessLogs)
+      .where(and(...whereConditions));
+      
+      // Get recent activity
+      const recentActivity = await db.select({
+        userId: digitalAssetAccessLogs.userId,
+        accessType: digitalAssetAccessLogs.accessType,
+        timestamp: digitalAssetAccessLogs.accessedAt,
+        success: digitalAssetAccessLogs.success
+      })
+      .from(digitalAssetAccessLogs)
+      .where(and(...whereConditions))
+      .orderBy(desc(digitalAssetAccessLogs.accessedAt))
+      .limit(50);
+      
+      return {
+        activeUsers: Number(activeUsersResult.count) || 0,
+        currentDownloads: Number(activityResult.downloads) || 0,
+        currentStreams: Number(activityResult.streams) || 0,
+        recentActivity: recentActivity.map(activity => ({
+          userId: activity.userId,
+          accessType: activity.accessType as AccessType,
+          timestamp: activity.timestamp,
+          success: activity.success
+        }))
+      };
+    } catch (error) {
+      console.error('Error getting real-time stats:', error);
+      throw new Error('Failed to get real-time stats');
+    }
+  }
+  
+  /**
+   * Get geographic distribution of users
+   */
+  async getGeographicDistribution(
+    startDate: string,
+    endDate: string,
+    assetId?: string
+  ): Promise<Array<{ country: string; users: number; downloads: number }>> {
+    try {
+      const whereConditions = [
+        gte(cdnAccessLogs.createdAt, startDate),
+        lte(cdnAccessLogs.createdAt, endDate)
+      ];
+      
+      if (assetId) {
+        whereConditions.push(eq(cdnAccessLogs.assetId, assetId));
+      }
+      
+      const results = await db.select({
+        country: cdnAccessLogs.countryCode,
+        users: sql`COUNT(DISTINCT ${cdnAccessLogs.userId})`,
+        downloads: sql`COUNT(CASE WHEN ${cdnAccessLogs.requestType} = 'download' THEN 1 END)`
+      })
+      .from(cdnAccessLogs)
+      .where(and(...whereConditions))
+      .groupBy(cdnAccessLogs.countryCode)
+      .orderBy(desc(sql`COUNT(DISTINCT ${cdnAccessLogs.userId})`));
+      
+      return results.map(row => ({
+        country: row.country || 'Unknown',
+        users: Number(row.users) || 0,
+        downloads: Number(row.downloads) || 0
+      }));
+    } catch (error) {
+      console.error('Error getting geographic distribution:', error);
+      throw new Error('Failed to get geographic distribution');
+    }
+  }
+  
+  /**
+   * Get revenue analytics
+   */
+  async getRevenueAnalytics(
+    startDate: string,
+    endDate: string,
+    creatorId?: string
+  ): Promise<{
+    totalRevenue: string;
+    averageOrderValue: string;
+    revenueByAsset: Array<{
+      assetId: string;
+      title: string;
+      revenue: string;
+      sales: number;
+    }>;
+    revenueByLicenseType: Array<{
+      licenseType: string;
+      revenue: string;
+      sales: number;
+    }>;
+  }> {
+    try {
+      const whereConditions = [
+        gte(digitalAssetPurchases.purchasedAt, startDate),
+        lte(digitalAssetPurchases.purchasedAt, endDate)
+      ];
+      
+      if (creatorId) {
+        whereConditions.push(eq(digitalAssetPurchases.sellerId, creatorId));
+      }
+      
+      // Get total revenue and average order value
+      const [revenueMetrics] = await db.select({
+        totalRevenue: sum(digitalAssetPurchases.pricePaid),
+        totalSales: count(digitalAssetPurchases.id),
+        averageOrderValue: avg(digitalAssetPurchases.pricePaid)
+      })
+      .from(digitalAssetPurchases)
+      .where(and(...whereConditions));
+      
+      // Get revenue by asset
+      const revenueByAsset = await db.select({
+        assetId: digitalAssetPurchases.assetId,
+        title: digitalAssets.title,
+        revenue: sum(digitalAssetPurchases.pricePaid),
+        sales: count(digitalAssetPurchases.id)
+      })
+      .from(digitalAssetPurchases)
+      .innerJoin(digitalAssets, eq(digitalAssetPurchases.assetId, digitalAssets.id))
+      .where(and(...whereConditions))
+      .groupBy(digitalAssetPurchases.assetId, digitalAssets.title)
+      .orderBy(desc(sum(digitalAssetPurchases.pricePaid)));
+      
+      return {
+        totalRevenue: revenueMetrics.totalRevenue?.toString() || '0',
+        averageOrderValue: revenueMetrics.averageOrderValue?.toString() || '0',
+        revenueByAsset: revenueByAsset.map(row => ({
+          assetId: row.assetId,
+          title: row.title,
+          revenue: row.revenue?.toString() || '0',
+          sales: Number(row.sales) || 0
+        })),
+        revenueByLicenseType: [] // Would need to join with license data
+      };
+    } catch (error) {
+      console.error('Error getting revenue analytics:', error);
+      throw new Error('Failed to get revenue analytics');
+    }
+  }
+  
+  /**
+   * Update daily analytics (called by cron job)
+   */
+  async updateDailyAnalytics(date: string): Promise<void> {
+    try {
+      // Get all assets that had activity on this date
+      const assetsWithActivity = await db.selectDistinct({
+        assetId: digitalAssetAccessLogs.assetId
+      })
+      .from(digitalAssetAccessLogs)
+      .where(sql`DATE(${digitalAssetAccessLogs.accessedAt}) = ${date}`);
+      
+      // Update analytics for each asset
+      for (const { assetId } of assetsWithActivity) {
+        await this.updateAssetAnalytics(assetId, date);
+      }
+    } catch (error) {
+      console.error('Error updating daily analytics:', error);
+      throw new Error('Failed to update daily analytics');
+    }
+  }
+  
+  private async updateAssetAnalytics(assetId: string, date: string): Promise<void> {
+    // Get access logs for the day
+    const logs = await db.select()
+      .from(digitalAssetAccessLogs)
+      .where(
+        and(
+          eq(digitalAssetAccessLogs.assetId, assetId),
+          sql`DATE(${digitalAssetAccessLogs.accessedAt}) = ${date}`
+        )
+      );
+    
+    // Calculate metrics
+    const totalDownloads = logs.filter(log => log.accessType === AccessType.DOWNLOAD).length;
+    const totalStreams = logs.filter(log => log.accessType === AccessType.STREAM).length;
+    const totalPreviews = logs.filter(log => log.accessType === AccessType.PREVIEW).length;
+    const uniqueUsers = new Set(logs.map(log => log.userId)).size;
+    const bandwidthUsed = logs.reduce((sum, log) => sum + (log.fileSizeAccessed || 0), 0);
+    
+    // Get revenue for the day
+    const purchases = await db.select()
+      .from(digitalAssetPurchases)
+      .where(
+        and(
+          eq(digitalAssetPurchases.assetId, assetId),
+          sql`DATE(${digitalAssetPurchases.purchasedAt}) = ${date}`
+        )
+      );
+    
+    const totalRevenue = purchases.reduce((sum, purchase) => {
+      return sum + BigInt(purchase.pricePaid);
+    }, BigInt(0));
+    
+    // Upsert analytics record
+    await db.insert(digitalAssetAnalytics).values({
+      assetId,
+      date,
+      totalDownloads,
+      totalStreams,
+      totalPreviews,
+      uniqueUsers,
+      totalRevenue: totalRevenue.toString(),
+      bandwidthUsed
+    }).onConflictDoUpdate({
+      target: [digitalAssetAnalytics.assetId, digitalAssetAnalytics.date],
+      set: {
+        totalDownloads,
+        totalStreams,
+        totalPreviews,
+        uniqueUsers,
+        totalRevenue: totalRevenue.toString(),
+        bandwidthUsed
+      }
+    });
+  }
+  
+  private async getPopularAssets(
+    startDate: string,
+    endDate: string,
+    creatorId?: string
+  ): Promise<Array<{ assetId: string; title: string; downloads: number; revenue: string }>> {
+    const whereConditions = [
+      gte(digitalAssetAnalytics.date, startDate),
+      lte(digitalAssetAnalytics.date, endDate)
+    ];
+    
+    const results = await db.select({
+      assetId: digitalAssetAnalytics.assetId,
+      title: digitalAssets.title,
+      downloads: sum(digitalAssetAnalytics.totalDownloads),
+      revenue: sum(digitalAssetAnalytics.totalRevenue)
+    })
+    .from(digitalAssetAnalytics)
+    .innerJoin(digitalAssets, eq(digitalAssetAnalytics.assetId, digitalAssets.id))
+    .where(and(...whereConditions, creatorId ? eq(digitalAssets.creatorId, creatorId) : undefined))
+    .groupBy(digitalAssetAnalytics.assetId, digitalAssets.title)
+    .orderBy(desc(sum(digitalAssetAnalytics.totalDownloads)))
+    .limit(10);
+    
+    return results.map(row => ({
+      assetId: row.assetId,
+      title: row.title,
+      downloads: Number(row.downloads) || 0,
+      revenue: row.revenue?.toString() || '0'
+    }));
+  }
+  
+  private async getUserEngagementMetrics(
+    startDate: string,
+    endDate: string,
+    assetId?: string
+  ): Promise<{
+    dailyActiveUsers: number;
+    averageSessionDuration: number;
+    returnUserRate: number;
+  }> {
+    // Placeholder implementation - would calculate based on access logs
+    return {
+      dailyActiveUsers: 0,
+      averageSessionDuration: 0,
+      returnUserRate: 0
+    };
+  }
+  
+  private async getPerformanceMetrics(
+    startDate: string,
+    endDate: string,
+    assetId?: string
+  ): Promise<{
+    averageResponseTime: number;
+    cacheHitRate: number;
+    errorRate: number;
+  }> {
+    const whereConditions = [
+      gte(cdnAccessLogs.createdAt, startDate),
+      lte(cdnAccessLogs.createdAt, endDate)
+    ];
+    
+    if (assetId) {
+      whereConditions.push(eq(cdnAccessLogs.assetId, assetId));
+    }
+    
+    const [metrics] = await db.select({
+      averageResponseTime: avg(cdnAccessLogs.responseTimeMs),
+      totalRequests: count(cdnAccessLogs.id),
+      cacheHits: sql`COUNT(CASE WHEN ${cdnAccessLogs.cacheHit} = true THEN 1 END)`
+    })
+    .from(cdnAccessLogs)
+    .where(and(...whereConditions));
+    
+    const cacheHitRate = metrics.totalRequests > 0 
+      ? (Number(metrics.cacheHits) / Number(metrics.totalRequests)) * 100 
+      : 0;
+    
+    return {
+      averageResponseTime: Number(metrics.averageResponseTime) || 0,
+      cacheHitRate,
+      errorRate: 0 // Would calculate from error logs
+    };
+  }
+  
+  private async getAverageFileSize(assetId?: string, creatorId?: string): Promise<number> {
+    const whereConditions = [];
+    
+    if (assetId) {
+      whereConditions.push(eq(digitalAssets.id, assetId));
+    }
+    
+    if (creatorId) {
+      whereConditions.push(eq(digitalAssets.creatorId, creatorId));
+    }
+    
+    const [result] = await db.select({
+      averageSize: avg(digitalAssets.fileSize)
+    })
+    .from(digitalAssets)
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+    
+    return Number(result.averageSize) || 0;
+  }
+}
+
+export const analyticsService = new AnalyticsService();

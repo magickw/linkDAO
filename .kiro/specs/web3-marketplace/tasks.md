@@ -154,7 +154,7 @@
   - Write tests for dispute workflows and resolution outcomes
   - _Requirements: 5.4, 9.3, 6.4_
 
-- [ ] 9. Review and Reputation System
+- [x] 9. Review and Reputation System
   - Implement verified purchase requirement for review submissions
   - Build review display with blockchain verification status
   - Create reputation calculation engine with weighted scoring
@@ -164,7 +164,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
 - [ ] 10. NFT and Digital Asset Integration
-  - [ ] 10.1 NFT Marketplace Functionality
+  - [x] 10.1 NFT Marketplace Functionality
     - Implement NFT minting interface for digital creators
     - Build NFT listing and trading functionality
     - Create metadata storage system using IPFS
@@ -173,7 +173,7 @@
     - Write tests for NFT minting, trading, and metadata handling
     - _Requirements: 8.1, 8.2, 8.3, 8.5_
 
-  - [ ] 10.2 Digital Asset Management
+  - [x] 10.2 Digital Asset Management
     - Build digital asset delivery system for purchased items
     - Implement DRM protection for digital content
     - Create digital asset preview and licensing system

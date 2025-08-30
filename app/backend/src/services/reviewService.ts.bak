@@ -1,0 +1,633 @@
+import { DatabaseService } from './databaseService';
+import { ReputationService } from './reputationService';
+import { eq, and, desc, asc, sql, count, avg } from 'drizzle-orm';
+import { reviews, reviewHelpfulness, reviewReports, reputationHistory, orders, users, listings } from '../db/schema';
+
+export interface ReviewData {
+  id?: number;
+  reviewerId: string;
+  revieweeId: string;
+  orderId: number;
+  listingId?: number;
+  rating: number;
+  title?: string;
+  comment?: string;
+  ipfsHash?: string;
+  blockchainTxHash?: string;
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+  helpfulVotes: number;
+  reportCount: number;
+  moderationStatus: 'active' | 'flagged' | 'removed';
+  moderationReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ReviewWithDetails extends ReviewData {
+  reviewer: {
+    id: string;
+    walletAddress: string;
+    handle?: string;
+  };
+  reviewee: {
+    id: string;
+    walletAddress: string;
+    handle?: string;
+  };
+  order?: {
+    id: number;
+    status: string;
+  };
+  listing?: {
+    id: number;
+    title: string;
+  };
+  isHelpfulToUser?: boolean;
+}
+
+export interface ReviewStats {
+  totalReviews: number;
+  averageRating: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  verifiedReviewsCount: number;
+  recentReviewsCount: number; // Last 30 days
+}
+
+export interface ReviewFilters {
+  rating?: number;
+  verifiedOnly?: boolean;
+  sortBy?: 'newest' | 'oldest' | 'rating_high' | 'rating_low' | 'helpful';
+  limit?: number;
+  offset?: number;
+}
+
+export class ReviewService {
+  private databaseService: DatabaseService;
+  private reputationService: ReputationService;
+
+  constructor() {
+    this.databaseService = new DatabaseService();
+    this.reputationService = new ReputationService();
+  }
+
+  /**
+   * Submit a new review (requires verified purchase)
+   */
+  async submitReview(reviewData: {
+    reviewerId: string;
+    revieweeId: string;
+    orderId: number;
+    rating: number;
+    title?: string;
+    comment?: string;
+  }): Promise<ReviewData> {
+    try {
+      // Verify that the reviewer actually purchased from this seller
+      const isVerifiedPurchase = await this.verifyPurchase(reviewData.reviewerId, reviewData.orderId, reviewData.revieweeId);
+      if (!isVerifiedPurchase) {
+        throw new Error('Review can only be submitted for verified purchases');
+      }
+
+      // Check if review already exists for this order
+      const existingReview = await this.databaseService.db
+        .select()
+        .from(reviews)
+        .where(and(
+          eq(reviews.reviewerId, reviewData.reviewerId),
+          eq(reviews.orderId, reviewData.orderId)
+        ))
+        .limit(1);
+
+      if (existingReview.length > 0) {
+        throw new Error('Review already exists for this order');
+      }
+
+      // Validate rating
+      if (reviewData.rating < 1 || reviewData.rating > 5) {
+        throw new Error('Rating must be between 1 and 5');
+      }
+
+      // Get listing ID from order
+      const orderData = await this.databaseService.db
+        .select({ listingId: orders.listingId })
+        .from(orders)
+        .where(eq(orders.id, reviewData.orderId))
+        .limit(1);
+
+      const listingId = orderData[0]?.listingId;
+
+      // Create review record
+      const newReview = await this.databaseService.db
+        .insert(reviews)
+        .values({
+          reviewerId: reviewData.reviewerId,
+          revieweeId: reviewData.revieweeId,
+          orderId: reviewData.orderId,
+          listingId: listingId,
+          rating: reviewData.rating,
+          title: reviewData.title,
+          comment: reviewData.comment,
+          verificationStatus: 'verified', // Auto-verify since purchase is verified
+          helpfulVotes: 0,
+          reportCount: 0,
+          moderationStatus: 'active',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .returning();
+
+      // Update reputation scores
+      await this.updateReputationFromReview(reviewData.revieweeId, reviewData.rating, 'review_received');
+      await this.updateReputationFromReview(reviewData.reviewerId, reviewData.rating, 'review_given');
+
+      return this.mapToReviewData(newReview[0]);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get reviews for a specific user (seller)
+   */
+  async getReviewsForUser(userId: string, filters: ReviewFilters = {}): Promise<{
+    reviews: ReviewWithDetails[];
+    stats: ReviewStats;
+    pagination: { total: number; limit: number; offset: number; };
+  }> {
+    try {
+      const limit = filters.limit || 20;
+      const offset = filters.offset || 0;
+
+      // Build query conditions
+      let whereConditions = eq(reviews.revieweeId, userId);
+      
+      if (filters.rating) {
+        const ratingCondition = and(whereConditions, eq(reviews.rating, filters.rating));
+        if (ratingCondition) whereConditions = ratingCondition;
+      }
+      
+      if (filters.verifiedOnly) {
+        const verifiedCondition = and(whereConditions, eq(reviews.verificationStatus, 'verified'));
+        if (verifiedCondition) whereConditions = verifiedCondition;
+      }
+
+      // Build order by clause
+      let orderBy;
+      switch (filters.sortBy) {
+        case 'oldest':
+          orderBy = asc(reviews.createdAt);
+          break;
+        case 'rating_high':
+          orderBy = desc(reviews.rating);
+          break;
+        case 'rating_low':
+          orderBy = asc(reviews.rating);
+          break;
+        case 'helpful':
+          orderBy = desc(reviews.helpfulVotes);
+          break;
+        default:
+          orderBy = desc(reviews.createdAt);
+      }
+
+      // Get reviews with user details
+      const reviewsData = await this.databaseService.db
+        .select({
+          review: reviews,
+          reviewer: {
+            id: users.id,
+            walletAddress: users.walletAddress,
+            handle: users.handle
+          },
+          reviewee: {
+            id: users.id,
+            walletAddress: users.walletAddress,
+            handle: users.handle
+          }
+        })
+        .from(reviews)
+        .leftJoin(users, eq(reviews.reviewerId, users.id))
+        .where(whereConditions)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count
+      const totalCount = await this.databaseService.db
+        .select({ count: count() })
+        .from(reviews)
+        .where(whereConditions);
+
+      // Get stats
+      const stats = await this.getReviewStats(userId);
+
+      // Map to ReviewWithDetails
+      const reviewsWithDetails: ReviewWithDetails[] = reviewsData.map((row: any) => ({
+        ...this.mapToReviewData(row.review),
+        reviewer: row.reviewer,
+        reviewee: row.reviewee
+      }));
+
+      return {
+        reviews: reviewsWithDetails,
+        stats,
+        pagination: {
+          total: totalCount[0].count,
+          limit,
+          offset
+        }
+      };
+    } catch (error) {
+      console.error('Error getting reviews for user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get review statistics for a user
+   */
+  async getReviewStats(userId: string): Promise<ReviewStats> {
+    try {
+      // Get basic stats
+      const basicStats = await this.databaseService.db
+        .select({
+          totalReviews: count(),
+          averageRating: avg(reviews.rating)
+        })
+        .from(reviews)
+        .where(and(
+          eq(reviews.revieweeId, userId),
+          eq(reviews.moderationStatus, 'active')
+        ));
+
+      // Get rating distribution
+      const ratingDistribution = await this.databaseService.db
+        .select({
+          rating: reviews.rating,
+          count: count()
+        })
+        .from(reviews)
+        .where(and(
+          eq(reviews.revieweeId, userId),
+          eq(reviews.moderationStatus, 'active')
+        ))
+        .groupBy(reviews.rating);
+
+      // Get verified reviews count
+      const verifiedCount = await this.databaseService.db
+        .select({ count: count() })
+        .from(reviews)
+        .where(and(
+          eq(reviews.revieweeId, userId),
+          eq(reviews.verificationStatus, 'verified'),
+          eq(reviews.moderationStatus, 'active')
+        ));
+
+      // Get recent reviews count (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentCount = await this.databaseService.db
+        .select({ count: count() })
+        .from(reviews)
+        .where(and(
+          eq(reviews.revieweeId, userId),
+          eq(reviews.moderationStatus, 'active'),
+          sql`${reviews.createdAt} >= ${thirtyDaysAgo.toISOString()}`
+        ));
+
+      // Build rating distribution object
+      const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      ratingDistribution.forEach((item: any) => {
+        distribution[item.rating as keyof typeof distribution] = item.count;
+      });
+
+      return {
+        totalReviews: basicStats[0]?.totalReviews || 0,
+        averageRating: Number(basicStats[0]?.averageRating) || 0,
+        ratingDistribution: distribution,
+        verifiedReviewsCount: verifiedCount[0]?.count || 0,
+        recentReviewsCount: recentCount[0]?.count || 0
+      };
+    } catch (error) {
+      console.error('Error getting review stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark review as helpful/unhelpful
+   */
+  async markReviewHelpful(reviewId: number, userId: string, isHelpful: boolean): Promise<void> {
+    try {
+      // Check if user already voted
+      const existingVote = await this.databaseService.db
+        .select()
+        .from(reviewHelpfulness)
+        .where(and(
+          eq(reviewHelpfulness.reviewId, reviewId),
+          eq(reviewHelpfulness.userId, userId)
+        ))
+        .limit(1);
+
+      if (existingVote.length > 0) {
+        // Update existing vote
+        await this.databaseService.db
+          .update(reviewHelpfulness)
+          .set({ isHelpful })
+          .where(and(
+            eq(reviewHelpfulness.reviewId, reviewId),
+            eq(reviewHelpfulness.userId, userId)
+          ));
+      } else {
+        // Create new vote
+        await this.databaseService.db
+          .insert(reviewHelpfulness)
+          .values({
+            reviewId,
+            userId,
+            isHelpful
+          });
+      }
+
+      // Update helpful votes count on review
+      await this.updateHelpfulVotesCount(reviewId);
+    } catch (error) {
+      console.error('Error marking review helpful:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Report a review for moderation
+   */
+  async reportReview(reviewId: number, reporterId: string, reason: string, description?: string): Promise<void> {
+    try {
+      // Check if user already reported this review
+      const existingReport = await this.databaseService.db
+        .select()
+        .from(reviewReports)
+        .where(and(
+          eq(reviewReports.reviewId, reviewId),
+          eq(reviewReports.reporterId, reporterId)
+        ))
+        .limit(1);
+
+      if (existingReport.length > 0) {
+        throw new Error('You have already reported this review');
+      }
+
+      // Create report
+      await this.databaseService.db
+        .insert(reviewReports)
+        .values({
+          reviewId,
+          reporterId,
+          reason,
+          description,
+          status: 'pending'
+        });
+
+      // Update report count on review
+      await this.databaseService.db
+        .update(reviews)
+        .set({
+          reportCount: sql`${reviews.reportCount} + 1`
+        })
+        .where(eq(reviews.id, reviewId));
+
+      // Auto-flag review if it has too many reports
+      const REPORT_THRESHOLD = 5;
+      const reviewData = await this.databaseService.db
+        .select({ reportCount: reviews.reportCount })
+        .from(reviews)
+        .where(eq(reviews.id, reviewId))
+        .limit(1);
+
+      if (reviewData[0]?.reportCount >= REPORT_THRESHOLD) {
+        await this.flagReview(reviewId, 'Automatically flagged due to multiple reports');
+      }
+    } catch (error) {
+      console.error('Error reporting review:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Flag a review for moderation
+   */
+  async flagReview(reviewId: number, reason: string): Promise<void> {
+    try {
+      await this.databaseService.db
+        .update(reviews)
+        .set({
+          moderationStatus: 'flagged',
+          moderationReason: reason,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(reviews.id, reviewId));
+    } catch (error) {
+      console.error('Error flagging review:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify that a user made a purchase from a seller
+   */
+  private async verifyPurchase(buyerId: string, orderId: number, sellerId: string): Promise<boolean> {
+    try {
+      const order = await this.databaseService.db
+        .select()
+        .from(orders)
+        .where(and(
+          eq(orders.id, orderId),
+          eq(orders.buyerId, buyerId),
+          eq(orders.sellerId, sellerId),
+          sql`${orders.status} IN ('completed', 'delivered')`
+        ))
+        .limit(1);
+
+      return order.length > 0;
+    } catch (error) {
+      console.error('Error verifying purchase:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update reputation based on review
+   */
+  private async updateReputationFromReview(userId: string, rating: number, changeReason: string): Promise<void> {
+    try {
+      // Get current reputation
+      const currentReputation = await this.reputationService.getUserReputation(userId);
+      const previousScore = currentReputation?.totalScore || 0;
+
+      // Calculate new reputation (simplified - in real implementation would be more complex)
+      let scoreChange = 0;
+      if (changeReason === 'review_received') {
+        // Receiving reviews affects reputation based on rating
+        scoreChange = (rating - 3) * 2; // -4 to +4 points
+      } else if (changeReason === 'review_given') {
+        // Giving reviews gives small positive reputation
+        scoreChange = 1;
+      }
+
+      const newScore = Math.max(0, Math.min(1000, previousScore + scoreChange));
+
+      // Update reputation
+      await this.reputationService.updateUserReputation(userId, {
+        daoProposalSuccessRate: 75, // Would be calculated from actual data
+        votingParticipation: 80,
+        investmentAdviceAccuracy: 70,
+        communityContribution: 65,
+        onchainActivity: 85
+      });
+
+      // Record reputation history
+      await this.databaseService.db
+        .insert(reputationHistory)
+        .values({
+          userId,
+          previousScore,
+          newScore,
+          changeReason,
+          relatedEntityType: 'review',
+          calculationDetails: JSON.stringify({
+            rating,
+            scoreChange,
+            reason: changeReason
+          })
+        });
+    } catch (error) {
+      console.error('Error updating reputation from review:', error);
+    }
+  }
+
+  /**
+   * Update helpful votes count for a review
+   */
+  private async updateHelpfulVotesCount(reviewId: number): Promise<void> {
+    try {
+      const helpfulCount = await this.databaseService.db
+        .select({ count: count() })
+        .from(reviewHelpfulness)
+        .where(and(
+          eq(reviewHelpfulness.reviewId, reviewId),
+          eq(reviewHelpfulness.isHelpful, true)
+        ));
+
+      await this.databaseService.db
+        .update(reviews)
+        .set({
+          helpfulVotes: helpfulCount[0]?.count || 0,
+          updatedAt: new Date().toISOString()
+        })
+        .where(eq(reviews.id, reviewId));
+    } catch (error) {
+      console.error('Error updating helpful votes count:', error);
+    }
+  }
+
+  /**
+   * Map database row to ReviewData
+   */
+  private mapToReviewData(row: any): ReviewData {
+    return {
+      id: row.id,
+      reviewerId: row.reviewerId,
+      revieweeId: row.revieweeId,
+      orderId: row.orderId,
+      listingId: row.listingId,
+      rating: row.rating,
+      title: row.title,
+      comment: row.comment,
+      ipfsHash: row.ipfsHash,
+      blockchainTxHash: row.blockchainTxHash,
+      verificationStatus: row.verificationStatus,
+      helpfulVotes: row.helpfulVotes,
+      reportCount: row.reportCount,
+      moderationStatus: row.moderationStatus,
+      moderationReason: row.moderationReason,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt)
+    };
+  }
+
+  /**
+   * Detect fake reviews using various heuristics
+   */
+  async detectFakeReviews(userId: string): Promise<{
+    suspiciousReviews: number[];
+    riskScore: number;
+    reasons: string[];
+  }> {
+    try {
+      const suspiciousReviews: number[] = [];
+      const reasons: string[] = [];
+      let riskScore = 0;
+
+      // Get all reviews for the user
+      const userReviews = await this.databaseService.db
+        .select()
+        .from(reviews)
+        .where(eq(reviews.revieweeId, userId));
+
+      // Check for suspicious patterns
+      
+      // 1. Too many 5-star reviews in short time period
+      const recentFiveStars = userReviews.filter((review: any) => {
+        const reviewDate = new Date(review.createdAt);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return review.rating === 5 && reviewDate > weekAgo;
+      });
+
+      if (recentFiveStars.length > 10) {
+        riskScore += 30;
+        reasons.push('Unusually high number of 5-star reviews in recent period');
+        suspiciousReviews.push(...recentFiveStars.map((r: any) => r.id));
+      }
+
+      // 2. Reviews with very similar text patterns
+      const reviewTexts = userReviews.map((r: any) => r.comment).filter(Boolean);
+      const similarityThreshold = 0.8;
+      // Simplified similarity check - in real implementation would use more sophisticated NLP
+      
+      // 3. Reviews from new accounts with no other activity
+      // This would require checking reviewer account age and activity
+      
+      // 4. Unusual rating distribution (too many extremes)
+      const ratingCounts = userReviews.reduce((acc: any, review: any) => {
+        acc[review.rating] = (acc[review.rating] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+
+      const totalReviews = userReviews.length;
+      const extremeRatings = (ratingCounts[1] || 0) + (ratingCounts[5] || 0);
+      const extremeRatio = extremeRatings / totalReviews;
+
+      if (extremeRatio > 0.8 && totalReviews > 20) {
+        riskScore += 20;
+        reasons.push('Unusual rating distribution with too many extreme ratings');
+      }
+
+      return {
+        suspiciousReviews,
+        riskScore: Math.min(100, riskScore),
+        reasons
+      };
+    } catch (error) {
+      console.error('Error detecting fake reviews:', error);
+      return { suspiciousReviews: [], riskScore: 0, reasons: [] };
+    }
+  }
+}

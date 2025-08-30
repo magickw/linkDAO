@@ -1,0 +1,558 @@
+import { db } from '../db/connection';
+import { 
+  digitalAssets, 
+  digitalAssetLicenses, 
+  digitalAssetPurchases, 
+  digitalAssetAccessLogs,
+  digitalAssetAnalytics,
+  dmcaTakedownRequests,
+  digitalAssetReports,
+  drmKeys,
+  watermarkTemplates,
+  contentVerification
+} from '../db/schema';
+import { eq, and, gte, lte, desc, asc, sql, count } from 'drizzle-orm';
+import { 
+  DigitalAsset, 
+  DigitalAssetLicense, 
+  DigitalAssetPurchase,
+  CreateDigitalAssetRequest,
+  CreateLicenseRequest,
+  PurchaseLicenseRequest,
+  AssetAccessRequest,
+  SubmitDMCARequest,
+  AssetAnalyticsQuery,
+  AccessType,
+  DMCAStatus,
+  ReportStatus,
+  VerificationStatus
+} from '../types/digitalAsset';
+import ipfsService from './ipfsService';
+import { encryptionService } from './encryptionService';
+import { watermarkService } from './watermarkService';
+import { analyticsService } from './analyticsService';
+import crypto from 'crypto';
+
+export class DigitalAssetService {
+  
+  /**
+   * Create a new digital asset with DRM protection
+   */
+  async createDigitalAsset(
+    creatorId: string, 
+    request: CreateDigitalAssetRequest
+  ): Promise<DigitalAsset> {
+    try {
+      // Generate content hash for integrity verification
+      const contentHash = crypto.createHash('sha256').update(request.file).digest('hex');
+      
+      // Encrypt the file content if DRM is enabled
+      const { encryptedContent, encryptionKey } = await encryptionService.encryptContent(request.file);
+      const encryptedContentHash = crypto.createHash('sha256').update(encryptedContent).digest('hex');
+      const encryptionKeyHash = crypto.createHash('sha256').update(encryptionKey).digest('hex');
+      
+      // Upload encrypted content to IPFS
+      const encryptedIpfsHash = await ipfsService.uploadBuffer(encryptedContent);
+      
+      // Generate preview if applicable
+      let previewHash: string | undefined;
+      if (this.shouldGeneratePreview(request.assetType)) {
+        const preview = await this.generatePreview(request.file, request.assetType);
+        if (preview) {
+          previewHash = await ipfsService.uploadBuffer(preview);
+        }
+      }
+      
+      // Create metadata
+      const metadata = {
+        title: request.title,
+        description: request.description,
+        assetType: request.assetType,
+        fileFormat: request.fileFormat,
+        fileSize: request.file.length,
+        contentHash,
+        createdAt: new Date().toISOString(),
+        creator: creatorId,
+        licenseType: request.licenseType,
+        copyrightNotice: request.copyrightNotice
+      };
+      
+      const metadataHash = await ipfsService.uploadJSON(metadata);
+      
+      // Store in database
+      const [asset] = await db.insert(digitalAssets).values({
+        creatorId,
+        nftId: request.nftId,
+        title: request.title,
+        description: request.description,
+        assetType: request.assetType,
+        fileSize: request.file.length,
+        fileFormat: request.fileFormat,
+        contentHash,
+        encryptedContentHash,
+        encryptionKeyHash,
+        previewHash,
+        metadataHash,
+        drmEnabled: true,
+        licenseType: request.licenseType,
+        licenseTerms: request.licenseTerms,
+        copyrightNotice: request.copyrightNotice,
+        usageRestrictions: JSON.stringify(request.usageRestrictions || {}),
+        downloadLimit: request.downloadLimit || -1,
+        streamingEnabled: request.streamingEnabled || false,
+        watermarkEnabled: request.watermarkEnabled !== false
+      }).returning();
+      
+      // Store encryption key securely
+      await this.storeEncryptionKey(asset.id, encryptionKey);
+      
+      // Perform content verification
+      await this.verifyContent(asset.id, contentHash);
+      
+      return asset as DigitalAsset;
+    } catch (error) {
+      console.error('Error creating digital asset:', error);
+      throw new Error('Failed to create digital asset');
+    }
+  }
+  
+  /**
+   * Create a license for a digital asset
+   */
+  async createLicense(request: CreateLicenseRequest): Promise<DigitalAssetLicense> {
+    try {
+      const [license] = await db.insert(digitalAssetLicenses).values({
+        assetId: request.assetId,
+        licenseName: request.licenseName,
+        licenseType: request.licenseType,
+        price: request.price,
+        currency: request.currency,
+        usageRights: JSON.stringify(request.usageRights),
+        restrictions: JSON.stringify(request.restrictions || {}),
+        durationDays: request.durationDays,
+        maxDownloads: request.maxDownloads || -1,
+        maxUsers: request.maxUsers || 1
+      }).returning();
+      
+      return license as DigitalAssetLicense;
+    } catch (error) {
+      console.error('Error creating license:', error);
+      throw new Error('Failed to create license');
+    }
+  }
+  
+  /**
+   * Purchase a license for a digital asset
+   */
+  async purchaseLicense(
+    buyerId: string, 
+    request: PurchaseLicenseRequest
+  ): Promise<DigitalAssetPurchase> {
+    try {
+      // Verify the asset and license exist
+      const asset = await this.getAssetById(request.assetId);
+      const license = await this.getLicenseById(request.licenseId);
+      
+      if (!asset || !license) {
+        throw new Error('Asset or license not found');
+      }
+      
+      // Generate unique license key
+      const licenseKey = crypto.randomBytes(32).toString('hex');
+      
+      // Calculate expiration date if license has duration
+      let expiresAt: string | undefined;
+      if (license.durationDays && license.durationDays > 0) {
+        const expiration = new Date();
+        expiration.setDate(expiration.getDate() + license.durationDays);
+        expiresAt = expiration.toISOString();
+      }
+      
+      const [purchase] = await db.insert(digitalAssetPurchases).values({
+        assetId: request.assetId,
+        licenseId: request.licenseId,
+        buyerId,
+        sellerId: asset.creatorId,
+        transactionHash: request.transactionHash,
+        pricePaid: request.pricePaid,
+        currency: request.currency,
+        licenseKey,
+        expiresAt,
+        downloadsRemaining: license.maxDownloads
+      }).returning();
+      
+      // Generate DRM keys for the purchase
+      await this.generateDRMKeys(purchase.id, request.assetId);
+      
+      return purchase as DigitalAssetPurchase;
+    } catch (error) {
+      console.error('Error purchasing license:', error);
+      throw new Error('Failed to purchase license');
+    }
+  }
+  
+  /**
+   * Access digital asset content with DRM protection
+   */
+  async accessAsset(
+    userId: string, 
+    request: AssetAccessRequest,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{ content?: Buffer; streamUrl?: string; error?: string }> {
+    try {
+      // Verify license key and get purchase details
+      const purchase = await this.verifyLicenseKey(request.licenseKey, userId);
+      if (!purchase) {
+        await this.logAccess(userId, request, false, 'Invalid license key', ipAddress, userAgent);
+        return { error: 'Invalid or expired license' };
+      }
+      
+      // Check if license is still valid
+      if (purchase.expiresAt && new Date(purchase.expiresAt) < new Date()) {
+        await this.logAccess(userId, request, false, 'License expired', ipAddress, userAgent);
+        return { error: 'License has expired' };
+      }
+      
+      // Check download limits
+      if (request.accessType === AccessType.DOWNLOAD && 
+          purchase.downloadsRemaining !== -1 && 
+          purchase.downloadsRemaining <= 0) {
+        await this.logAccess(userId, request, false, 'Download limit exceeded', ipAddress, userAgent);
+        return { error: 'Download limit exceeded' };
+      }
+      
+      const asset = await this.getAssetById(purchase.assetId);
+      if (!asset) {
+        await this.logAccess(userId, request, false, 'Asset not found', ipAddress, userAgent);
+        return { error: 'Asset not found' };
+      }
+      
+      // Handle different access types
+      if (request.accessType === AccessType.PREVIEW && asset.previewHash) {
+        const previewContent = await ipfsService.getBuffer(asset.previewHash);
+        await this.logAccess(userId, request, true, undefined, ipAddress, userAgent, previewContent.length);
+        return { content: previewContent };
+      }
+      
+      if (request.accessType === AccessType.STREAM && asset.streamingEnabled) {
+        const streamUrl = await this.generateSecureStreamUrl(purchase.id, asset.id);
+        await this.logAccess(userId, request, true, undefined, ipAddress, userAgent);
+        return { streamUrl };
+      }
+      
+      if (request.accessType === AccessType.DOWNLOAD) {
+        // Decrypt content
+        const encryptedContent = await ipfsService.getBuffer(asset.encryptedContentHash);
+        const encryptionKey = await this.getEncryptionKey(asset.id);
+        const decryptedContent = await encryptionService.decryptContent(encryptedContent, encryptionKey);
+        
+        // Apply watermark if enabled
+        let finalContent = decryptedContent;
+        if (asset.watermarkEnabled) {
+          finalContent = await watermarkService.applyWatermark(
+            decryptedContent, 
+            asset.assetType, 
+            userId, 
+            purchase.licenseKey
+          );
+        }
+        
+        // Update download count
+        if (purchase.downloadsRemaining > 0) {
+          await db.update(digitalAssetPurchases)
+            .set({ downloadsRemaining: purchase.downloadsRemaining - 1 })
+            .where(eq(digitalAssetPurchases.id, purchase.id));
+        }
+        
+        await this.logAccess(userId, request, true, undefined, ipAddress, userAgent, finalContent.length);
+        return { content: finalContent };
+      }
+      
+      await this.logAccess(userId, request, false, 'Unsupported access type', ipAddress, userAgent);
+      return { error: 'Unsupported access type' };
+      
+    } catch (error) {
+      console.error('Error accessing asset:', error);
+      await this.logAccess(userId, request, false, error.message, ipAddress, userAgent);
+      return { error: 'Failed to access asset' };
+    }
+  }
+  
+  /**
+   * Submit DMCA takedown request
+   */
+  async submitDMCARequest(
+    reporterId: string | undefined,
+    request: SubmitDMCARequest
+  ): Promise<string> {
+    try {
+      const [dmcaRequest] = await db.insert(dmcaTakedownRequests).values({
+        assetId: request.assetId,
+        reporterId,
+        reporterName: request.reporterName,
+        reporterEmail: request.reporterEmail,
+        reporterOrganization: request.reporterOrganization,
+        copyrightHolderName: request.copyrightHolderName,
+        originalWorkDescription: request.originalWorkDescription,
+        infringementDescription: request.infringementDescription,
+        evidenceUrls: request.evidenceUrls,
+        swornStatement: request.swornStatement,
+        contactInformation: request.contactInformation,
+        status: DMCAStatus.PENDING
+      }).returning();
+      
+      // Notify administrators
+      await this.notifyAdministrators('dmca_request', dmcaRequest.id);
+      
+      return dmcaRequest.id;
+    } catch (error) {
+      console.error('Error submitting DMCA request:', error);
+      throw new Error('Failed to submit DMCA request');
+    }
+  }
+  
+  /**
+   * Get analytics for digital assets
+   */
+  async getAnalytics(query: AssetAnalyticsQuery): Promise<any[]> {
+    try {
+      let whereConditions = [];
+      
+      if (query.assetId) {
+        whereConditions.push(eq(digitalAssetAnalytics.assetId, query.assetId));
+      }
+      
+      if (query.startDate) {
+        whereConditions.push(gte(digitalAssetAnalytics.date, query.startDate));
+      }
+      
+      if (query.endDate) {
+        whereConditions.push(lte(digitalAssetAnalytics.date, query.endDate));
+      }
+      
+      const results = await db.select()
+        .from(digitalAssetAnalytics)
+        .where(and(...whereConditions))
+        .orderBy(desc(digitalAssetAnalytics.date));
+      
+      return results;
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      throw new Error('Failed to get analytics');
+    }
+  }
+  
+  /**
+   * Update daily analytics for an asset
+   */
+  async updateAnalytics(assetId: string, date: string): Promise<void> {
+    try {
+      // Get access logs for the day
+      const logs = await db.select()
+        .from(digitalAssetAccessLogs)
+        .where(
+          and(
+            eq(digitalAssetAccessLogs.assetId, assetId),
+            sql`DATE(${digitalAssetAccessLogs.accessedAt}) = ${date}`
+          )
+        );
+      
+      // Calculate metrics
+      const totalDownloads = logs.filter(log => log.accessType === AccessType.DOWNLOAD).length;
+      const totalStreams = logs.filter(log => log.accessType === AccessType.STREAM).length;
+      const totalPreviews = logs.filter(log => log.accessType === AccessType.PREVIEW).length;
+      const uniqueUsers = new Set(logs.map(log => log.userId)).size;
+      const bandwidthUsed = logs.reduce((sum, log) => sum + (log.fileSizeAccessed || 0), 0);
+      
+      // Get revenue for the day
+      const purchases = await db.select()
+        .from(digitalAssetPurchases)
+        .where(
+          and(
+            eq(digitalAssetPurchases.assetId, assetId),
+            sql`DATE(${digitalAssetPurchases.purchasedAt}) = ${date}`
+          )
+        );
+      
+      const totalRevenue = purchases.reduce((sum, purchase) => {
+        return sum + BigInt(purchase.pricePaid);
+      }, BigInt(0));
+      
+      // Upsert analytics record
+      await db.insert(digitalAssetAnalytics).values({
+        assetId,
+        date,
+        totalDownloads,
+        totalStreams,
+        totalPreviews,
+        uniqueUsers,
+        totalRevenue: totalRevenue.toString(),
+        bandwidthUsed
+      }).onConflictDoUpdate({
+        target: [digitalAssetAnalytics.assetId, digitalAssetAnalytics.date],
+        set: {
+          totalDownloads,
+          totalStreams,
+          totalPreviews,
+          uniqueUsers,
+          totalRevenue: totalRevenue.toString(),
+          bandwidthUsed
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error updating analytics:', error);
+      throw new Error('Failed to update analytics');
+    }
+  }
+  
+  // Private helper methods
+  
+  private async getAssetById(id: string): Promise<DigitalAsset | null> {
+    const [asset] = await db.select()
+      .from(digitalAssets)
+      .where(eq(digitalAssets.id, id))
+      .limit(1);
+    
+    return asset as DigitalAsset || null;
+  }
+  
+  private async getLicenseById(id: string): Promise<DigitalAssetLicense | null> {
+    const [license] = await db.select()
+      .from(digitalAssetLicenses)
+      .where(eq(digitalAssetLicenses.id, id))
+      .limit(1);
+    
+    return license as DigitalAssetLicense || null;
+  }
+  
+  private async verifyLicenseKey(licenseKey: string, userId: string): Promise<DigitalAssetPurchase | null> {
+    const [purchase] = await db.select()
+      .from(digitalAssetPurchases)
+      .where(
+        and(
+          eq(digitalAssetPurchases.licenseKey, licenseKey),
+          eq(digitalAssetPurchases.buyerId, userId),
+          eq(digitalAssetPurchases.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    return purchase as DigitalAssetPurchase || null;
+  }
+  
+  private async logAccess(
+    userId: string,
+    request: AssetAccessRequest,
+    success: boolean,
+    errorMessage?: string,
+    ipAddress?: string,
+    userAgent?: string,
+    fileSizeAccessed?: number
+  ): Promise<void> {
+    try {
+      // Get purchase ID from license key
+      const purchase = await db.select()
+        .from(digitalAssetPurchases)
+        .where(eq(digitalAssetPurchases.licenseKey, request.licenseKey))
+        .limit(1);
+      
+      if (purchase.length > 0) {
+        await db.insert(digitalAssetAccessLogs).values({
+          purchaseId: purchase[0].id,
+          assetId: purchase[0].assetId,
+          userId,
+          accessType: request.accessType,
+          ipAddress,
+          userAgent,
+          fileSizeAccessed,
+          success,
+          errorMessage
+        });
+      }
+    } catch (error) {
+      console.error('Error logging access:', error);
+    }
+  }
+  
+  private shouldGeneratePreview(assetType: string): boolean {
+    return ['image', 'video', 'audio', 'document'].includes(assetType);
+  }
+  
+  private async generatePreview(content: Buffer | Uint8Array, assetType: string): Promise<Buffer | null> {
+    // Implementation would depend on asset type
+    // For now, return null - this would be implemented with appropriate libraries
+    return null;
+  }
+  
+  private async storeEncryptionKey(assetId: string, encryptionKey: string): Promise<void> {
+    // Store encryption key in secure key management system
+    // This is a placeholder - in production, use AWS KMS, HashiCorp Vault, etc.
+    await encryptionService.storeKey(assetId, encryptionKey);
+  }
+  
+  private async getEncryptionKey(assetId: string): Promise<string> {
+    return await encryptionService.getKey(assetId);
+  }
+  
+  private async generateDRMKeys(purchaseId: string, assetId: string): Promise<void> {
+    // Generate various DRM keys for the purchase
+    const encryptionKey = crypto.randomBytes(32).toString('hex');
+    const watermarkKey = crypto.randomBytes(16).toString('hex');
+    const accessKey = crypto.randomBytes(24).toString('hex');
+    
+    await db.insert(drmKeys).values([
+      {
+        assetId,
+        purchaseId,
+        keyType: 'encryption',
+        keyData: await encryptionService.encryptKey(encryptionKey)
+      },
+      {
+        assetId,
+        purchaseId,
+        keyType: 'watermark',
+        keyData: await encryptionService.encryptKey(watermarkKey)
+      },
+      {
+        assetId,
+        purchaseId,
+        keyType: 'access',
+        keyData: await encryptionService.encryptKey(accessKey)
+      }
+    ]);
+  }
+  
+  private async generateSecureStreamUrl(purchaseId: string, assetId: string): Promise<string> {
+    // Generate time-limited, signed URL for streaming
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiration = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+    
+    // Store temporary streaming token
+    await this.storeStreamingToken(token, purchaseId, assetId, expiration);
+    
+    return `${process.env.CDN_BASE_URL}/stream/${token}`;
+  }
+  
+  private async storeStreamingToken(token: string, purchaseId: string, assetId: string, expiration: number): Promise<void> {
+    // Store in Redis or similar cache with expiration
+    // This is a placeholder implementation
+  }
+  
+  private async verifyContent(assetId: string, contentHash: string): Promise<void> {
+    await db.insert(contentVerification).values({
+      assetId,
+      verificationType: 'hash_check',
+      verificationData: JSON.stringify({ contentHash }),
+      status: VerificationStatus.VERIFIED
+    });
+  }
+  
+  private async notifyAdministrators(type: string, entityId: string): Promise<void> {
+    // Send notifications to administrators
+    // This would integrate with the notification service
+  }
+}
+
+export const digitalAssetService = new DigitalAssetService();
