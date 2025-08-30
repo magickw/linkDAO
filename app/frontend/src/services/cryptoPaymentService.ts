@@ -39,7 +39,7 @@ export class CryptoPaymentService {
       await this.validatePaymentRequest(request);
 
       // Create transaction record
-      const transaction = this.createTransactionRecord(request);
+      const transaction = await this.createTransactionRecord(request);
       this.activeTransactions.set(transaction.id, transaction);
 
       // Check token balance
@@ -77,14 +77,21 @@ export class CryptoPaymentService {
 
     if (token.isNative) {
       // Native token transfer (ETH, MATIC, etc.)
-      return await this.walletClient.sendTransaction({
+      const txParams: any = {
         to: recipient as `0x${string}`,
         value: amount,
         gas: gasEstimate.gasLimit,
-        maxFeePerGas: gasEstimate.maxFeePerGas,
-        maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas,
-        gasPrice: gasEstimate.maxFeePerGas ? undefined : gasEstimate.gasPrice
-      });
+      };
+
+      // Add gas pricing based on network support
+      if (gasEstimate.maxFeePerGas) {
+        txParams.maxFeePerGas = gasEstimate.maxFeePerGas;
+        txParams.maxPriorityFeePerGas = gasEstimate.maxPriorityFeePerGas;
+      } else if (gasEstimate.gasPrice) {
+        txParams.gasPrice = gasEstimate.gasPrice;
+      }
+
+      return await this.walletClient.sendTransaction(txParams);
     } else {
       // ERC-20 token transfer
       const contract = getContract({
@@ -93,15 +100,22 @@ export class CryptoPaymentService {
         client: this.walletClient
       });
 
+      const contractParams: any = {
+        gas: gasEstimate.gasLimit,
+      };
+
+      // Add gas pricing based on network support
+      if (gasEstimate.maxFeePerGas) {
+        contractParams.maxFeePerGas = gasEstimate.maxFeePerGas;
+        contractParams.maxPriorityFeePerGas = gasEstimate.maxPriorityFeePerGas;
+      } else if (gasEstimate.gasPrice) {
+        contractParams.gasPrice = gasEstimate.gasPrice;
+      }
+
       return await contract.write.transfer([
         recipient as `0x${string}`,
         amount
-      ], {
-        gas: gasEstimate.gasLimit,
-        maxFeePerGas: gasEstimate.maxFeePerGas,
-        maxPriorityFeePerGas: gasEstimate.maxPriorityFeePerGas,
-        gasPrice: gasEstimate.maxFeePerGas ? undefined : gasEstimate.gasPrice
-      });
+      ], contractParams);
     }
   }
 
@@ -111,7 +125,7 @@ export class CryptoPaymentService {
   private async monitorTransaction(transaction: PaymentTransaction): Promise<void> {
     if (!transaction.hash) return;
 
-    const requiredConfirmations = PAYMENT_CONFIG.CONFIRMATION_BLOCKS[transaction.chainId] || 12;
+    const requiredConfirmations = (PAYMENT_CONFIG.CONFIRMATION_BLOCKS as Record<number, number>)[transaction.chainId] || 12;
     let attempts = 0;
     const maxAttempts = PAYMENT_CONFIG.TRANSACTION_TIMEOUT / 5000; // Check every 5 seconds
 
@@ -331,8 +345,8 @@ export class CryptoPaymentService {
   /**
    * Create transaction record
    */
-  private createTransactionRecord(request: PaymentRequest): PaymentTransaction {
-    const accounts = this.walletClient.getAddresses();
+  private async createTransactionRecord(request: PaymentRequest): Promise<PaymentTransaction> {
+    const accounts = await this.walletClient.getAddresses();
     
     return {
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
