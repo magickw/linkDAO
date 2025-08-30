@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import NFTPreview from '@/components/NFTPreview';
-import DeFiChartEmbed from '@/components/DeFiChartEmbed';
-import WalletSnapshotEmbed from '@/components/WalletSnapshotEmbed';
-import DAOGovernanceEmbed from '@/components/DAOGovernanceEmbed';
+import NFTPreview from '@/components/Marketplace/NFT/NFTPreview';
+// import DeFiChartEmbed from '@/components/DeFiChartEmbed';
+// import WalletSnapshotEmbed from '@/components/WalletSnapshotEmbed';
+// import DAOGovernanceEmbed from '@/components/DAOGovernanceEmbed';
 import GestureHandler from '@/components/GestureHandler';
-import QuickActionsMenu from '@/components/QuickActionsMenu';
+// import QuickActionsMenu from '@/components/QuickActionsMenu';
 import PostInteractionBar from '@/components/PostInteractionBar';
 import OptimizedImage from '@/components/OptimizedImage';
 
@@ -281,16 +281,16 @@ export default function Web3SocialPostCard({
 
     if (post.tags?.includes('defi')) {
       // Mock DeFi data - in a real app this would come from post metadata
-      return <DeFiChartEmbed tokenSymbol="ETH" tokenName="Ethereum" className="mt-4" />;
+      return <div className="mt-4 p-4 bg-blue-500/20 rounded-lg text-center text-white">DeFi Chart Embed (Coming Soon)</div>;
     }
 
     if (post.tags?.includes('wallet') && post.onchainRef) {
-      return <WalletSnapshotEmbed walletAddress={post.onchainRef} className="mt-4" />;
+      return <div className="mt-4 p-4 bg-green-500/20 rounded-lg text-center text-white">Wallet Snapshot (Coming Soon)</div>;
     }
 
     if (post.tags?.includes('governance') || post.tags?.includes('dao')) {
       // Mock DAO data - in a real app this would come from post metadata
-      return <DAOGovernanceEmbed daoName="Ethereum Builders" daoToken="ETHB" className="mt-4" />;
+      return <div className="mt-4 p-4 bg-purple-500/20 rounded-lg text-center text-white">DAO Governance Embed (Coming Soon)</div>;
     }
 
     return null;
@@ -509,13 +509,14 @@ export default function Web3SocialPostCard({
         </div>
       </GestureHandler>
 
-      {/* Quick Actions Menu */}
-      <QuickActionsMenu
-        isOpen={showQuickActions}
-        onClose={() => setShowQuickActions(false)}
-        onAction={handleQuickAction}
-        postId={post.id}
-      />
+      {/* Quick Actions Menu - Coming Soon */}
+      {showQuickActions && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowQuickActions(false)}>
+          <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 text-white">
+            Quick Actions Menu (Coming Soon)
+          </div>
+        </div>
+      )}
     </>
   );
 }

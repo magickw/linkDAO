@@ -12,7 +12,7 @@ import {
   HeroSection,
   CategoryGrid,
   FeaturedProductCarousel 
-} from '@/components/Homepage';
+} from '@/components/Marketplace/Homepage';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
@@ -781,7 +781,8 @@ const CreateListingTab: React.FC<{
           </div>
         </div>
       </form>
-    </div>
+      </div>
+    </GlassPanel>
   );
 };
 

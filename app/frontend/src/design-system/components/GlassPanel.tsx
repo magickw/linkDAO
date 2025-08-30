@@ -63,7 +63,7 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
         : '0 12px 48px 0 rgba(31, 38, 135, 0.5)',
       transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
     },
-  } : {};
+  } : undefined;
 
   return (
     <motion.div

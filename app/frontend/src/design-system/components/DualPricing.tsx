@@ -82,9 +82,9 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   const config = sizeConfig[size];
 
   const containerStyle = {
-    display: 'flex',
-    alignItems: layout === 'horizontal' ? 'center' : 'flex-start',
-    flexDirection: layout === 'vertical' ? 'column' : 'row' as const,
+    display: 'flex' as const,
+    alignItems: layout === 'horizontal' ? 'center' as const : 'flex-start' as const,
+    flexDirection: layout === 'vertical' ? 'column' as const : 'row' as const,
     gap: config.spacing,
   };
 
