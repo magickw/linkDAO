@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
-import Layout from '@/components/Layout';
 import { 
   MarketplaceService, 
   type MarketplaceListing, 
   type MarketplaceBid,
   type UserReputation 
 } from '@/services/marketplaceService';
+import { 
+  GlassmorphicNavbar,
+  HeroSection,
+  CategoryGrid,
+  FeaturedProductCarousel 
+} from '@/components/Marketplace/Homepage';
+import { designTokens } from '@/design-system/tokens';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
 
 const MarketplacePage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -113,184 +121,216 @@ const MarketplacePage: React.FC = () => {
   });
 
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Marketplace</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
-            Buy and sell digital and physical goods using cryptocurrency
-          </p>
-        </div>
+    <div className="min-h-screen">
+      {/* Background */}
+      <div 
+        className="fixed inset-0 z-0"
+        style={{
+          background: designTokens.gradients.heroMain,
+        }}
+      />
 
-        {isConnected && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Wallet</h2>
-                <p className="text-gray-600 dark:text-gray-300 mt-1">
-                  Connected: {formatAddress(address || '')}
-                </p>
-                {balance && (
-                  <p className="text-gray-600 dark:text-gray-300 mt-1">
-                    Balance: {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
-                  </p>
-                )}
-              </div>
-              {reputation && (
-                <div className="mt-4 sm:mt-0">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                    Reputation: {reputation.score}
-                    {reputation.daoApproved && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                        DAO Approved
-                      </span>
+      {/* Content */}
+      <div className="relative z-10">
+        {/* Glassmorphic Navigation */}
+        <GlassmorphicNavbar />
+
+        {/* Hero Section */}
+        <HeroSection
+          onStartSelling={() => setActiveTab('create')}
+          onBrowseMarketplace={() => setActiveTab('browse')}
+        />
+
+        {/* Category Grid */}
+        <CategoryGrid />
+
+        {/* Main Marketplace Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <GlassPanel variant="primary" className="mb-8">
+            <div className="p-8">
+              <h1 className="text-3xl font-bold text-white mb-4">Web3 Marketplace</h1>
+              <p className="text-white/80 text-lg">
+                Buy and sell digital and physical goods using cryptocurrency with blockchain security
+              </p>
+            </div>
+          </GlassPanel>
+
+          {isConnected && (
+            <GlassPanel variant="secondary" className="mb-8">
+              <div className="p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                  <div>
+                    <h2 className="text-xl font-semibold text-white mb-2">Your Wallet</h2>
+                    <p className="text-white/80 mb-1">
+                      Connected: {formatAddress(address || '')}
+                    </p>
+                    {balance && (
+                      <p className="text-white/80">
+                        Balance: {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
+                      </p>
                     )}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="border-b border-gray-200 dark:border-gray-700 mb-8">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('browse')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'browse'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              Browse Items
-            </button>
-            <button
-              onClick={() => setActiveTab('my-listings')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'my-listings'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              My Listings
-            </button>
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'create'
-                  ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              Create Listing
-            </button>
-          </nav>
-        </div>
-
-        {activeTab === 'browse' && (
-          <div className="mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  </div>
+                  {reputation && (
+                    <div className="mt-4 sm:mt-0">
+                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                        Reputation: {reputation.score}
+                        {reputation.daoApproved && (
+                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
+                            DAO Approved
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="all">All Categories</option>
-                <option value="digital">Digital Goods</option>
-                <option value="physical">Physical Goods</option>
-                <option value="nft">NFTs</option>
-                <option value="service">Services</option>
-              </select>
-            </div>
-          </div>
-        )}
+            </GlassPanel>
+          )}
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-          </div>
-        ) : (
+          <GlassPanel variant="secondary" className="mb-8">
+            <div className="p-2">
+              <nav className="flex space-x-1">
+                <button
+                  onClick={() => setActiveTab('browse')}
+                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
+                    activeTab === 'browse'
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  🛒 Browse Items
+                </button>
+                <button
+                  onClick={() => setActiveTab('my-listings')}
+                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
+                    activeTab === 'my-listings'
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  📋 My Listings
+                </button>
+                <button
+                  onClick={() => setActiveTab('create')}
+                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
+                    activeTab === 'create'
+                      ? 'bg-white/20 text-white shadow-lg'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  ➕ Create Listing
+                </button>
+              </nav>
+            </div>
+          </GlassPanel>
+
+          {activeTab === 'browse' && (
+            <GlassPanel variant="secondary" className="mb-6">
+              <div className="p-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search items..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                      <svg className="h-5 w-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="digital">Digital Goods</option>
+                    <option value="physical">Physical Goods</option>
+                    <option value="nft">NFTs</option>
+                    <option value="service">Services</option>
+                  </select>
+                </div>
+              </div>
+            </GlassPanel>
+          )}
+
+          {loading ? (
+            <GlassPanel variant="primary" className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
+            </GlassPanel>
+          ) : (
           <>
             {activeTab === 'browse' && (
               <div>
                 {filteredListings.length === 0 ? (
-                  <div className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <GlassPanel variant="primary" className="text-center py-12">
+                    <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
-                    <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No items found</h3>
-                    <p className="mt-1 text-gray-500 dark:text-gray-400">
+                    <h3 className="mt-2 text-lg font-medium text-white">No items found</h3>
+                    <p className="mt-1 text-white/70">
                       {searchTerm || selectedCategory !== 'all' 
                         ? 'No items match your search criteria.' 
                         : 'No listings available at the moment.'}
                     </p>
-                  </div>
+                  </GlassPanel>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredListings.map((listing) => (
-                      <div key={listing.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow">
+                      <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
                         <div className="p-6">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                              <h3 className="text-lg font-medium text-white">
                                 {listing.metadataURI || 'Unnamed Item'}
                               </h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                              <p className="text-sm text-white/70">
                                 Seller: {formatAddress(listing.sellerAddress)}
                               </p>
                             </div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
                               {formatItemType(listing.itemType)}
                             </span>
                           </div>
                           
                           <div className="mt-4">
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                            <p className="text-2xl font-bold text-white">
                               {listing.price} ETH
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p className="text-sm text-white/70">
                               Quantity: {listing.quantity}
                             </p>
                           </div>
                           
                           <div className="mt-4 flex items-center justify-between">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                               {listing.listingType.replace('_', ' ')}
                             </span>
                             {listing.listingType === 'AUCTION' && listing.endTime && (
-                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                              <span className="text-sm text-white/70">
                                 Ends: {new Date(listing.endTime).toLocaleDateString()}
                               </span>
                             )}
                           </div>
                           
                           <div className="mt-6">
-                            <button
-                              className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                            <Button
+                              variant="primary"
+                              className="w-full"
                               onClick={() => {
                                 // TODO: Implement buy/bid functionality
                                 addToast('Feature coming soon!', 'info');
                               }}
                             >
                               {listing.listingType === 'AUCTION' ? 'Place Bid' : 'Buy Now'}
-                            </button>
+                            </Button>
                           </div>
                         </div>
-                      </div>
+                      </GlassPanel>
                     ))}
                   </div>
                 )}
@@ -302,9 +342,9 @@ const MarketplacePage: React.FC = () => {
                 {isConnected ? (
                   <MyListingsTab address={address} />
                 ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">Please connect your wallet to view your listings.</p>
-                  </div>
+                  <GlassPanel variant="primary" className="text-center py-12">
+                    <p className="text-white/70">Please connect your wallet to view your listings.</p>
+                  </GlassPanel>
                 )}
               </div>
             )}
@@ -314,16 +354,34 @@ const MarketplacePage: React.FC = () => {
                 {isConnected ? (
                   <CreateListingTab address={address} onListingCreated={fetchListings} />
                 ) : (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500 dark:text-gray-400">Please connect your wallet to create a listing.</p>
-                  </div>
+                  <GlassPanel variant="primary" className="text-center py-12">
+                    <p className="text-white/70">Please connect your wallet to create a listing.</p>
+                  </GlassPanel>
                 )}
               </div>
             )}
           </>
-        )}
+          )}
+        </div>
+
+        {/* Footer */}
+        <footer className="py-12 border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <p className="text-white/60 mb-4">
+                © 2024 Web3 Marketplace. Powered by blockchain technology.
+              </p>
+              <div className="flex justify-center space-x-6 text-sm text-white/40">
+                <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
+                <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
+                <a href="/docs" className="hover:text-white/60 transition-colors">Docs</a>
+                <a href="/support" className="hover:text-white/60 transition-colors">Support</a>
+              </div>
+            </div>
+          </div>
+        </footer>
       </div>
-    </Layout>
+    </div>
   );
 };
 
@@ -378,81 +436,83 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
   return (
     <div>
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
-        </div>
+        <GlassPanel variant="primary" className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
+        </GlassPanel>
       ) : (
         <>
           {listings.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <GlassPanel variant="primary" className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
               </svg>
-              <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No listings yet</h3>
-              <p className="mt-1 text-gray-500 dark:text-gray-400">Get started by creating a new listing.</p>
+              <h3 className="mt-2 text-lg font-medium text-white">No listings yet</h3>
+              <p className="mt-1 text-white/70">Get started by creating a new listing.</p>
               <div className="mt-6">
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => {
                     // This would typically navigate to the create listing tab
                     // For now, we'll just show a toast
                     addToast('Navigate to Create Listing tab to get started', 'info');
                   }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 >
                   Create Listing
-                </button>
+                </Button>
               </div>
-            </div>
+            </GlassPanel>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {listings.map((listing) => (
-                <div key={listing.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
                   <div className="p-6">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                        <h3 className="text-lg font-medium text-white">
                           {listing.metadataURI || 'Unnamed Item'}
                         </h3>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
                         listing.status === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          ? 'bg-green-500/20 text-green-300 border-green-400/30' 
+                          : 'bg-gray-500/20 text-gray-300 border-gray-400/30'
                       }`}>
                         {listing.status}
                       </span>
                     </div>
                     
                     <div className="mt-4">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                      <p className="text-2xl font-bold text-white">
                         {listing.price} ETH
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-white/70">
                         Quantity: {listing.quantity}
                       </p>
                     </div>
                     
                     <div className="mt-4 flex items-center justify-between">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
                         {formatItemType(listing.itemType)}
                       </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                         {listing.listingType.replace('_', ' ')}
                       </span>
                     </div>
                     
                     <div className="mt-6 flex space-x-3">
-                      <button
-                        className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                      <Button
+                        variant="primary"
+                        className="flex-1"
                         onClick={() => {
                           // TODO: Implement edit functionality
                           addToast('Edit feature coming soon!', 'info');
                         }}
                       >
                         Edit
-                      </button>
-                      <button
-                        className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 border-red-400/30 text-red-300 hover:bg-red-500/20"
                         onClick={async () => {
                           try {
                             await marketplaceService.cancelListing(listing.id);
@@ -465,10 +525,10 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
                         }}
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                </div>
+                </GlassPanel>
               ))}
             </div>
           )}
@@ -567,13 +627,14 @@ const CreateListingTab: React.FC<{
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 max-w-2xl mx-auto">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Create New Listing</h2>
+    <GlassPanel variant="primary" className="max-w-2xl mx-auto">
+      <div className="p-8">
+        <h2 className="text-xl font-semibold text-white mb-6">Create New Listing</h2>
       
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           <div>
-            <label htmlFor="itemType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="itemType" className="block text-sm font-medium text-white/90 mb-2">
               Item Type
             </label>
             <select
@@ -581,7 +642,7 @@ const CreateListingTab: React.FC<{
               name="itemType"
               value={formData.itemType}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
             >
               <option value="PHYSICAL">Physical Goods</option>
               <option value="DIGITAL">Digital Goods</option>
@@ -591,7 +652,7 @@ const CreateListingTab: React.FC<{
           </div>
           
           <div>
-            <label htmlFor="listingType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="listingType" className="block text-sm font-medium text-white/90 mb-2">
               Listing Type
             </label>
             <select
@@ -599,7 +660,7 @@ const CreateListingTab: React.FC<{
               name="listingType"
               value={formData.listingType}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
             >
               <option value="FIXED_PRICE">Fixed Price</option>
               <option value="AUCTION">Auction</option>
@@ -607,7 +668,7 @@ const CreateListingTab: React.FC<{
           </div>
           
           <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="price" className="block text-sm font-medium text-white/90 mb-2">
               Price (ETH)
             </label>
             <input
@@ -618,13 +679,13 @@ const CreateListingTab: React.FC<{
               onChange={handleChange}
               step="0.0001"
               min="0"
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
               placeholder="0.01"
             />
           </div>
           
           <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="quantity" className="block text-sm font-medium text-white/90 mb-2">
               Quantity
             </label>
             <input
@@ -634,13 +695,13 @@ const CreateListingTab: React.FC<{
               value={formData.quantity}
               onChange={handleChange}
               min="1"
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
             />
           </div>
           
           {formData.listingType === 'AUCTION' && (
             <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="duration" className="block text-sm font-medium text-white/90 mb-2">
                 Auction Duration (seconds)
               </label>
               <input
@@ -650,17 +711,17 @@ const CreateListingTab: React.FC<{
                 value={formData.duration}
                 onChange={handleChange}
                 min="60"
-                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
                 placeholder="86400 (24 hours)"
               />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-white/70">
                 Current duration: {Math.floor(formData.duration / 3600)} hours
               </p>
             </div>
           )}
           
           <div>
-            <label htmlFor="metadataURI" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="metadataURI" className="block text-sm font-medium text-white/90 mb-2">
               Item Description
             </label>
             <textarea
@@ -669,13 +730,13 @@ const CreateListingTab: React.FC<{
               value={formData.metadataURI}
               onChange={handleChange}
               rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
               placeholder="Describe your item..."
             />
           </div>
           
           <div>
-            <label htmlFor="tokenAddress" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="tokenAddress" className="block text-sm font-medium text-white/90 mb-2">
               Token Address (optional)
             </label>
             <input
@@ -684,26 +745,44 @@ const CreateListingTab: React.FC<{
               name="tokenAddress"
               value={formData.tokenAddress}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
               placeholder="0x... (leave empty for ETH)"
             />
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Leave empty to use ETH as payment token
-            </p>
+            <p className="mt-1 text-sm text-white/70">Leave empty to use ETH as payment currency</p>
+          </div>
+          
+          <div className="flex space-x-4">
+            <Button
+              type="submit"
+              variant="primary"
+              loading={loading}
+              className="flex-1"
+            >
+              {loading ? 'Creating...' : 'Create Listing'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setFormData({
+                  tokenAddress: '',
+                  price: '',
+                  quantity: 1,
+                  itemType: 'DIGITAL',
+                  listingType: 'FIXED_PRICE',
+                  duration: 86400,
+                  metadataURI: ''
+                });
+              }}
+              className="border-white/30 text-white/80 hover:bg-white/10"
+            >
+              Reset
+            </Button>
           </div>
         </div>
-        
-        <div className="mt-8">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 dark:focus:ring-offset-gray-800"
-          >
-            {loading ? 'Creating...' : 'Create Listing'}
-          </button>
-        </div>
       </form>
-    </div>
+      </div>
+    </GlassPanel>
   );
 };
 

@@ -40,128 +40,128 @@ export const pageTransitions: Variants = {
 
 // Fade animations
 export const fadeAnimations: Variants = {
-  fadeIn: {
-    initial: { opacity: 0 },
-    animate: { 
-      opacity: 1,
-      transition: { duration: 0.3, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { duration: 0.3, ease: easings.easeOut },
   },
-  fadeInUp: {
-    initial: { opacity: 0, y: 20 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      y: -10,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
-  fadeInDown: {
-    initial: { opacity: 0, y: -20 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      y: 10,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+};
+
+export const fadeInUpAnimations: Variants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    y: -10,
+    transition: { duration: 0.2, ease: easings.easeIn },
+  },
+};
+
+export const fadeInDownAnimations: Variants = {
+  initial: { opacity: 0, y: -20 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    y: 10,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
 };
 
 // Scale animations
 export const scaleAnimations: Variants = {
-  scaleIn: {
-    initial: { opacity: 0, scale: 0.8 },
-    animate: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.3, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  initial: { opacity: 0, scale: 0.8 },
+  animate: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { duration: 0.3, ease: easings.easeOut },
   },
-  scaleInBounce: {
-    initial: { opacity: 0, scale: 0.3 },
-    animate: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.5, ease: easings.bounce },
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.8,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0, 
+    scale: 0.9,
+    transition: { duration: 0.2, ease: easings.easeIn },
+  },
+};
+
+export const scaleInBounceAnimations: Variants = {
+  initial: { opacity: 0, scale: 0.3 },
+  animate: { 
+    opacity: 1, 
+    scale: 1,
+    transition: { duration: 0.5, ease: easings.bounce },
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.8,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
 };
 
 // Slide animations
-export const slideAnimations: Variants = {
-  slideInLeft: {
-    initial: { opacity: 0, x: -50 },
-    animate: { 
-      opacity: 1, 
-      x: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      x: -30,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+export const slideInLeftAnimations: Variants = {
+  initial: { opacity: 0, x: -50 },
+  animate: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
   },
-  slideInRight: {
-    initial: { opacity: 0, x: 50 },
-    animate: { 
-      opacity: 1, 
-      x: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      x: 30,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0, 
+    x: -30,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
-  slideInUp: {
-    initial: { opacity: 0, y: 50 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      y: 30,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+};
+
+export const slideInRightAnimations: Variants = {
+  initial: { opacity: 0, x: 50 },
+  animate: { 
+    opacity: 1, 
+    x: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
   },
-  slideInDown: {
-    initial: { opacity: 0, y: -50 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      y: -30,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0, 
+    x: 30,
+    transition: { duration: 0.2, ease: easings.easeIn },
+  },
+};
+
+export const slideInUpAnimations: Variants = {
+  initial: { opacity: 0, y: 50 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    y: 30,
+    transition: { duration: 0.2, ease: easings.easeIn },
+  },
+};
+
+export const slideInDownAnimations: Variants = {
+  initial: { opacity: 0, y: -50 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    y: -30,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
 };
 
@@ -198,47 +198,40 @@ export const tapAnimations = {
 };
 
 // Loading animations
-export const loadingAnimations: Variants = {
-  spin: {
-    animate: {
-      rotate: 360,
-      transition: {
-        duration: 1,
-        repeat: Infinity,
-        ease: 'linear',
-      },
-    },
+export const spinAnimation = {
+  rotate: 360,
+  transition: {
+    duration: 1,
+    repeat: Infinity,
+    ease: 'linear',
   },
-  pulse: {
-    animate: {
-      scale: [1, 1.1, 1],
-      opacity: [1, 0.7, 1],
-      transition: {
-        duration: 1.5,
-        repeat: Infinity,
-        ease: easings.easeInOut,
-      },
-    },
+};
+
+export const pulseAnimation = {
+  scale: [1, 1.1, 1],
+  opacity: [1, 0.7, 1],
+  transition: {
+    duration: 1.5,
+    repeat: Infinity,
+    ease: easings.easeInOut,
   },
-  bounce: {
-    animate: {
-      y: [0, -10, 0],
-      transition: {
-        duration: 0.6,
-        repeat: Infinity,
-        ease: easings.easeInOut,
-      },
-    },
+};
+
+export const bounceAnimation = {
+  y: [0, -10, 0],
+  transition: {
+    duration: 0.6,
+    repeat: Infinity,
+    ease: easings.easeInOut,
   },
-  wave: {
-    animate: {
-      scaleY: [1, 1.5, 1],
-      transition: {
-        duration: 0.8,
-        repeat: Infinity,
-        ease: easings.easeInOut,
-      },
-    },
+};
+
+export const waveAnimation = {
+  scaleY: [1, 1.5, 1],
+  transition: {
+    duration: 0.8,
+    repeat: Infinity,
+    ease: easings.easeInOut,
   },
 };
 
@@ -262,64 +255,62 @@ export const staggerAnimations = {
 };
 
 // Modal animations
-export const modalAnimations: Variants = {
-  backdrop: {
-    initial: { opacity: 0 },
-    animate: { 
-      opacity: 1,
-      transition: { duration: 0.2 },
-    },
-    exit: { 
-      opacity: 0,
-      transition: { duration: 0.2 },
-    },
+export const modalBackdropAnimations: Variants = {
+  initial: { opacity: 0 },
+  animate: { 
+    opacity: 1,
+    transition: { duration: 0.2 },
   },
-  modal: {
-    initial: { opacity: 0, scale: 0.8, y: 50 },
-    animate: { 
-      opacity: 1, 
-      scale: 1, 
-      y: 0,
-      transition: { duration: 0.3, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9, 
-      y: 30,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0,
+    transition: { duration: 0.2 },
+  },
+};
+
+export const modalContentAnimations: Variants = {
+  initial: { opacity: 0, scale: 0.8, y: 50 },
+  animate: { 
+    opacity: 1, 
+    scale: 1, 
+    y: 0,
+    transition: { duration: 0.3, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.9, 
+    y: 30,
+    transition: { duration: 0.2, ease: easings.easeIn },
   },
 };
 
 // Notification animations
-export const notificationAnimations: Variants = {
-  toast: {
-    initial: { opacity: 0, x: 300, scale: 0.8 },
-    animate: { 
-      opacity: 1, 
-      x: 0, 
-      scale: 1,
-      transition: { duration: 0.3, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      x: 300, 
-      scale: 0.8,
-      transition: { duration: 0.2, ease: easings.easeIn },
-    },
+export const toastAnimations: Variants = {
+  initial: { opacity: 0, x: 300, scale: 0.8 },
+  animate: { 
+    opacity: 1, 
+    x: 0, 
+    scale: 1,
+    transition: { duration: 0.3, ease: easings.easeOut },
   },
-  banner: {
-    initial: { opacity: 0, y: -100 },
-    animate: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: easings.easeOut },
-    },
-    exit: { 
-      opacity: 0, 
-      y: -100,
-      transition: { duration: 0.3, ease: easings.easeIn },
-    },
+  exit: { 
+    opacity: 0, 
+    x: 300, 
+    scale: 0.8,
+    transition: { duration: 0.2, ease: easings.easeIn },
+  },
+};
+
+export const bannerAnimations: Variants = {
+  initial: { opacity: 0, y: -100 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.4, ease: easings.easeOut },
+  },
+  exit: { 
+    opacity: 0, 
+    y: -100,
+    transition: { duration: 0.3, ease: easings.easeIn },
   },
 };
 
@@ -334,25 +325,24 @@ export const rippleAnimation = {
 };
 
 // Glassmorphism specific animations
-export const glassAnimations: Variants = {
-  glassHover: {
-    initial: {},
-    hover: {
-      backdropFilter: 'blur(16px)',
-      background: 'rgba(255, 255, 255, 0.15)',
-      boxShadow: '0 12px 48px 0 rgba(31, 38, 135, 0.5)',
-      transition: { duration: 0.3, ease: easings.easeOut },
-    },
+export const glassHoverAnimations: Variants = {
+  initial: {},
+  hover: {
+    backdropFilter: 'blur(16px)',
+    background: 'rgba(255, 255, 255, 0.15)',
+    boxShadow: '0 12px 48px 0 rgba(31, 38, 135, 0.5)',
+    transition: { duration: 0.3, ease: easings.easeOut },
   },
-  glassFocus: {
-    initial: {},
-    focus: {
-      backdropFilter: 'blur(20px)',
-      background: 'rgba(255, 255, 255, 0.2)',
-      borderColor: 'rgba(102, 126, 234, 0.5)',
-      boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.3)',
-      transition: { duration: 0.2, ease: easings.easeOut },
-    },
+};
+
+export const glassFocusAnimations: Variants = {
+  initial: {},
+  focus: {
+    backdropFilter: 'blur(20px)',
+    background: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(102, 126, 234, 0.5)',
+    boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.3)',
+    transition: { duration: 0.2, ease: easings.easeOut },
   },
 };
 
@@ -399,7 +389,7 @@ export const animationPresets = {
   
   // Modal animations
   modalContent: {
-    variants: modalAnimations.modal,
+    variants: modalContentAnimations,
     initial: 'initial',
     animate: 'animate',
     exit: 'exit',

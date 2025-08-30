@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, Square, Clock, DollarSign, Calendar } from 'lucide-react';
-import { TimeTracking } from '../../types/service';
-import { projectManagementService } from '../../services/projectManagementService';
+import { TimeTracking } from '../../../types/service';
+import { projectManagementService } from '../../../services/projectManagementService';
 
 interface TimeTrackerProps {
   bookingId: string;

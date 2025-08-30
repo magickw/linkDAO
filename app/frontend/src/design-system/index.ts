@@ -5,6 +5,15 @@
 
 // Design Tokens
 export { designTokens } from './tokens';
+import { designTokens } from './tokens';
+import type { 
+  GlassmorphismVariant, 
+  GradientVariant, 
+  NFTShadowVariant,
+  BreakpointVariant,
+  SpacingVariant,
+  ColorVariant
+} from './tokens';
 export type {
   GlassmorphismVariant,
   GradientVariant,
@@ -81,16 +90,28 @@ export {
   easings,
   pageTransitions,
   fadeAnimations,
+  fadeInUpAnimations,
+  fadeInDownAnimations,
   scaleAnimations,
-  slideAnimations,
+  scaleInBounceAnimations,
+  slideInLeftAnimations,
+  slideInRightAnimations,
+  slideInUpAnimations,
+  slideInDownAnimations,
   hoverAnimations,
   tapAnimations,
-  loadingAnimations,
+  spinAnimation,
+  pulseAnimation,
+  bounceAnimation,
+  waveAnimation,
   staggerAnimations,
-  modalAnimations,
-  notificationAnimations,
+  modalBackdropAnimations,
+  modalContentAnimations,
+  toastAnimations,
+  bannerAnimations,
   rippleAnimation,
-  glassAnimations,
+  glassHoverAnimations,
+  glassFocusAnimations,
   createAnimation,
   animationPresets,
 } from './animations';

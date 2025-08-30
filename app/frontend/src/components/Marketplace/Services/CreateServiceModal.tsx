@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Service, ServiceCategory, CreateServiceRequest } from '../types/service';
-import { serviceApiService } from '../services/serviceApiService';
+import { Service, ServiceCategory, CreateServiceRequest } from '../../../types/service';
+import { serviceApiService } from '../../../services/serviceApiService';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface CreateServiceModalProps {

@@ -9,8 +9,8 @@ import {
   Shield,
   Calendar
 } from 'lucide-react';
-import { ServiceMilestone, MilestonePayment, CreateMilestonePaymentRequest } from '../../types/service';
-import { projectManagementService } from '../../services/projectManagementService';
+import { ServiceMilestone, MilestonePayment, CreateMilestonePaymentRequest } from '../../../types/service';
+import { projectManagementService } from '../../../services/projectManagementService';
 
 interface MilestonePaymentsProps {
   bookingId: string;

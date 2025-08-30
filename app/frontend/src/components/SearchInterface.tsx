@@ -46,7 +46,7 @@ export default function SearchInterface({
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced search function
   const performSearch = useCallback(async (searchQuery: string, searchFilters: SearchFilters, pageNum: number = 0) => {

@@ -10,7 +10,7 @@ import {
   User,
   Activity
 } from 'lucide-react';
-import { ProjectActivity, ServiceMilestone } from '../../types/service';
+import { ProjectActivity, ServiceMilestone } from '../../../types/service';
 
 interface ProjectTimelineProps {
   bookingId: string;

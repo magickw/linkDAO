@@ -15,8 +15,8 @@ import {
   Pause,
   Square
 } from 'lucide-react';
-import { ProjectDashboardData as ProjectDashboardType, EnhancedServiceBooking } from '../../types/service';
-import { projectManagementService } from '../../services/projectManagementService';
+import { ProjectDashboardData as ProjectDashboardType, EnhancedServiceBooking } from '../../../types/service';
+import { projectManagementService } from '../../../services/projectManagementService';
 import TimeTracker from './TimeTracker';
 // TODO: Create these components
 // import DeliverablesList from './DeliverablesList';

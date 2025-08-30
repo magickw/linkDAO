@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount, useChainId, useSwitchChain } from 'wagmi';
-import { useCryptoPayment } from '../hooks/useCryptoPayment';
+import { useCryptoPayment } from '../../../hooks/useCryptoPayment';
 import { 
   PaymentRequest, 
   PaymentToken, 
   PaymentStatus,
   GasFeeEstimate 
-} from '../types/payment';
-import { getTokensForChain, getChainConfig } from '../config/payment';
+} from '../../../types/payment';
+import { getTokensForChain, getChainConfig } from '../../../config/payment';
 
 interface CryptoPaymentModalProps {
   isOpen: boolean;
