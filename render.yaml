@@ -3,6 +3,7 @@ services:
     name: linkdao-backend
     env: node
     plan: free
+    rootDir: app/backend
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
