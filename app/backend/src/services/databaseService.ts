@@ -1,9 +1,38 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
-import { eq, and, or, ilike, desc } from "drizzle-orm";
+import { eq, and, or, ilike, desc, lt, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
+import { string } from "zod";
+import { id } from "ethers";
+import { string } from "zod";
+import { number } from "zod";
+import { any } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { any } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { number } from "zod";
+import { number } from "zod";
+import { string } from "zod";
+import { any } from "zod";
+import { any } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { number } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { string } from "zod";
+import { number } from "zod";
+import { id } from "ethers";
 
 dotenv.config();
 
@@ -897,4 +926,302 @@ export class DatabaseService {
 }
 
 // Singleton instance
-export const databaseService = new DatabaseService();
+export const databaseService = new DatabaseService(); 
+ // Order Management Methods
+
+  async createOrderEvent(orderId: number, eventType: string, description: string, metadata?: string) {
+    return this.executeQuery(async () => {
+      const [event] = await this.db.insert(schema.orderEvents).values({
+        orderId,
+        eventType,
+        description,
+        metadata,
+        timestamp: new Date()
+      }).returning();
+      return event;
+    });
+  }
+
+  async getOrderEvents(orderId: number) {
+    return this.executeQuery(async () => {
+      return await this.db.select()
+        .from(schema.orderEvents)
+        .where(eq(schema.orderEvents.orderId, orderId))
+        .orderBy(desc(schema.orderEvents.timestamp));
+    });
+  }
+
+  async getOrderAnalytics(userId: string, timeframe: 'week' | 'month' | 'year') {
+    return this.executeQuery(async () => {
+      // Calculate date range based on timeframe
+      const now = new Date();
+      const startDate = new Date();
+      
+      switch (timeframe) {
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+
+      // Get orders for the user within the timeframe
+      const orders = await this.db.select()
+        .from(schema.orders)
+        .where(
+          and(
+            or(
+              eq(schema.orders.buyerId, userId),
+              eq(schema.orders.sellerId, userId)
+            ),
+            // Add date filter when createdAt is available
+          )
+        );
+
+      // Calculate analytics
+      const totalOrders = orders.length;
+      const totalVolume = orders.reduce((sum, order) => sum + parseFloat(order.amount || '0'), 0);
+      const averageOrderValue = totalOrders > 0 ? totalVolume / totalOrders : 0;
+      const completedOrders = orders.filter(order => order.status === 'completed').length;
+      const disputedOrders = orders.filter(order => order.status === 'disputed').length;
+      const completionRate = totalOrders > 0 ? completedOrders / totalOrders : 0;
+      const disputeRate = totalOrders > 0 ? disputedOrders / totalOrders : 0;
+
+      return {
+        totalOrders,
+        totalVolume: totalVolume.toString(),
+        averageOrderValue: averageOrderValue.toString(),
+        completionRate,
+        disputeRate,
+        topCategories: [], // TODO: Implement category analytics
+        monthlyTrends: [] // TODO: Implement trend analytics
+      };
+    });
+  }
+
+  async createTrackingRecord(orderId: string, trackingNumber: string, carrier: string) {
+    return this.executeQuery(async () => {
+      const [record] = await this.db.insert(schema.trackingRecords).values({
+        orderId: parseInt(orderId),
+        trackingNumber,
+        carrier,
+        createdAt: new Date()
+      }).returning();
+      return record;
+    });
+  }
+
+  async updateTrackingInfo(orderId: string, trackingInfo: any) {
+    return this.executeQuery(async () => {
+      const [updated] = await this.db.update(schema.trackingRecords)
+        .set({
+          status: trackingInfo.status,
+          lastUpdated: new Date(),
+          events: JSON.stringify(trackingInfo.events)
+        })
+        .where(eq(schema.trackingRecords.orderId, parseInt(orderId)))
+        .returning();
+      return updated !== null;
+    });
+  }
+
+  async createNotification(notification: any) {
+    return this.executeQuery(async () => {
+      const [created] = await this.db.insert(schema.notifications).values({
+        orderId: notification.orderId,
+        userAddress: notification.userAddress,
+        type: notification.type,
+        message: notification.message,
+        metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
+        read: notification.read,
+        createdAt: new Date()
+      }).returning();
+      return created;
+    });
+  }
+
+  async getUserNotifications(userAddress: string, limit: number = 50, offset: number = 0) {
+    return this.executeQuery(async () => {
+      return await this.db.select()
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userAddress, userAddress))
+        .orderBy(desc(schema.notifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+    });
+  }
+
+  async markNotificationAsRead(notificationId: string) {
+    return this.executeQuery(async () => {
+      const [updated] = await this.db.update(schema.notifications)
+        .set({ read: true })
+        .where(eq(schema.notifications.id, parseInt(notificationId)))
+        .returning();
+      return updated !== null;
+    });
+  }
+
+  async markAllNotificationsAsRead(userAddress: string) {
+    return this.executeQuery(async () => {
+      const updated = await this.db.update(schema.notifications)
+        .set({ read: true })
+        .where(eq(schema.notifications.userAddress, userAddress))
+        .returning();
+      return updated.length > 0;
+    });
+  }
+
+  async getUnreadNotificationCount(userAddress: string) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select({ count: sql`count(*)` })
+        .from(schema.notifications)
+        .where(
+          and(
+            eq(schema.notifications.userAddress, userAddress),
+            eq(schema.notifications.read, false)
+          )
+        );
+      return parseInt(result[0]?.count || '0');
+    });
+  }
+
+  async updateNotificationPreferences(userAddress: string, preferences: any) {
+    return this.executeQuery(async () => {
+      const [updated] = await this.db.insert(schema.notificationPreferences)
+        .values({
+          userAddress,
+          preferences: JSON.stringify(preferences),
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: schema.notificationPreferences.userAddress,
+          set: {
+            preferences: JSON.stringify(preferences),
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+      return updated !== null;
+    });
+  }
+
+  async getNotificationPreferences(userAddress: string) {
+    return this.executeQuery(async () => {
+      const [result] = await this.db.select()
+        .from(schema.notificationPreferences)
+        .where(eq(schema.notificationPreferences.userAddress, userAddress));
+      
+      if (result?.preferences) {
+        return JSON.parse(result.preferences);
+      }
+      
+      // Return default preferences
+      return {
+        email: true,
+        push: true,
+        inApp: true,
+        types: ['ORDER_CREATED', 'ORDER_SHIPPED', 'ORDER_DELIVERED', 'PAYMENT_RECEIVED']
+      };
+    });
+  }
+
+  async getUserPushTokens(userAddress: string) {
+    return this.executeQuery(async () => {
+      const result = await this.db.select()
+        .from(schema.pushTokens)
+        .where(eq(schema.pushTokens.userAddress, userAddress));
+      return result.map(row => row.token);
+    });
+  }
+
+  async deleteOldNotifications(cutoffDate: Date) {
+    return this.executeQuery(async () => {
+      const deleted = await this.db.delete(schema.notifications)
+        .where(lt(schema.notifications.createdAt, cutoffDate))
+        .returning();
+      return deleted.length;
+    });
+  }
+
+  async getNotificationStats(userAddress: string) {
+    return this.executeQuery(async () => {
+      const notifications = await this.db.select()
+        .from(schema.notifications)
+        .where(eq(schema.notifications.userAddress, userAddress));
+
+      const total = notifications.length;
+      const unread = notifications.filter(n => !n.read).length;
+      const byType = notifications.reduce((acc, n) => {
+        acc[n.type] = (acc[n.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return { total, unread, byType };
+    });
+  }
+
+  async storeBlockchainEvent(event: any) {
+    return this.executeQuery(async () => {
+      const [stored] = await this.db.insert(schema.blockchainEvents).values({
+        orderId: event.orderId,
+        escrowId: event.escrowId,
+        eventType: event.eventType,
+        transactionHash: event.transactionHash,
+        blockNumber: event.blockNumber,
+        timestamp: new Date(event.timestamp),
+        data: JSON.stringify(event.data)
+      }).returning();
+      return stored;
+    });
+  }
+
+  async getLastSyncedBlock() {
+    return this.executeQuery(async () => {
+      const [result] = await this.db.select()
+        .from(schema.syncStatus)
+        .where(eq(schema.syncStatus.key, 'lastSyncedBlock'));
+      return parseInt(result?.value || '0');
+    });
+  }
+
+  async updateLastSyncedBlock(blockNumber: number) {
+    return this.executeQuery(async () => {
+      const [updated] = await this.db.insert(schema.syncStatus)
+        .values({
+          key: 'lastSyncedBlock',
+          value: blockNumber.toString(),
+          updatedAt: new Date()
+        })
+        .onConflictDoUpdate({
+          target: schema.syncStatus.key,
+          set: {
+            value: blockNumber.toString(),
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+      return updated !== null;
+    });
+  }
+
+  async getUserByAddress(address: string) {
+    return this.executeQuery(async () => {
+      const [user] = await this.db.select()
+        .from(schema.users)
+        .where(eq(schema.users.walletAddress, address));
+      return user;
+    });
+  }
+
+  async getUserById(id: string) {
+    return this.executeQuery(async () => {
+      const [user] = await this.db.select()
+        .from(schema.users)
+        .where(eq(schema.users.id, id));
+      return user;
+    });
+  }
