@@ -17,7 +17,7 @@ export class ProjectManagementController {
   // Time Tracking Endpoints
   async startTimeTracking(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -40,7 +40,7 @@ export class ProjectManagementController {
 
   async stopTimeTracking(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -81,7 +81,7 @@ export class ProjectManagementController {
 
   async getActiveTimeTracking(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -104,7 +104,7 @@ export class ProjectManagementController {
   // Deliverables Endpoints
   async createDeliverable(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -127,7 +127,7 @@ export class ProjectManagementController {
 
   async updateDeliverable(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -170,7 +170,7 @@ export class ProjectManagementController {
   // Milestone Payments Endpoints
   async createMilestonePayment(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -214,7 +214,7 @@ export class ProjectManagementController {
   // Communication Endpoints
   async createProjectThread(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -237,7 +237,7 @@ export class ProjectManagementController {
 
   async sendProjectMessage(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -303,7 +303,7 @@ export class ProjectManagementController {
   // Approval Endpoints
   async createApproval(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -326,7 +326,7 @@ export class ProjectManagementController {
 
   async processApproval(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -354,7 +354,7 @@ export class ProjectManagementController {
   // File Management Endpoints
   async uploadProjectFile(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
@@ -401,7 +401,7 @@ export class ProjectManagementController {
   // Dashboard Endpoint
   async getProjectDashboard(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
       if (!userId) {
         return res.status(401).json({ error: 'Authentication required' });
       }
