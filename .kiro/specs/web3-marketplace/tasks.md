@@ -211,7 +211,7 @@
     - Write Storybook documentation for all design system components
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [ ] 12.2 Homepage and Navigation Layout
+  - [x] 12.2 Homepage and Navigation Layout
     - Implement sticky glassmorphic navbar with logo, search, wallet connect, and currency toggle
     - Build hero section with bold tagline, call-to-action buttons, and gradient backgrounds
     - Create icon-based category grid with DAO-approved vendor highlighting
