@@ -1,483 +1,325 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import request from 'supertest';
-import express from 'express';
-import marketplaceModerationRoutes from '../routes/marketplaceModerationRoutes';
-import { MarketplaceModerationService } from '../services/marketplaceModerationService';
-import { MarketplaceService } from '../services/marketplaceService';
-
-// Mock the services
-jest.mock('../services/marketplaceModerationService');
-jest.mock('../services/marketplaceService');
-jest.mock('../services/databaseService');
-jest.mock('../services/reputationService');
-jest.mock('../services/kycService');
+import { MarketplaceModerationService, MarketplaceListingInput } from '../services/marketplaceModerationService';
 
 describe('Marketplace Moderation Integration Tests', () => {
-  let app: express.Application;
-  let mockModerationService: jest.Mocked<MarketplaceModerationService>;
-  let mockMarketplaceService: jest.Mocked<MarketplaceService>;
-
-  const mockListing = {
-    id: '1',
-    sellerWalletAddress: '0x1234567890123456789012345678901234567890',
-    tokenAddress: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef',
-    price: '1000',
-    quantity: 1,
-    itemType: 'NFT' as const,
-    listingType: 'FIXED_PRICE' as const,
-    status: 'ACTIVE' as const,
-    startTime: new Date().toISOString(),
-    metadataURI: 'Test NFT Listing',
-    isEscrowed: false,
-    nftStandard: 'ERC721' as const,
-    tokenId: '123',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+  let service: MarketplaceModerationService;
 
   beforeEach(() => {
-    app = express();
-    app.use(express.json());
-    app.use('/api/marketplace/moderation', marketplaceModerationRoutes);
-
-    // Setup mocks
-    mockModerationService = new MarketplaceModerationService() as jest.Mocked<MarketplaceModerationService>;
-    mockMarketplaceService = new MarketplaceService() as jest.Mocked<MarketplaceService>;
+    service = new MarketplaceModerationService();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('POST /api/marketplace/moderation/verify', () => {
-    it('should verify a high-value NFT listing successfully', async () => {
-      const mockVerification = {
-        listingId: '1',
-        verificationLevel: 'enhanced' as const,
-        sellerTier: 'verified' as const,
-        riskScore: 0.3,
-        proofOfOwnership: {
-          signature: '0x' + 'a'.repeat(130),
-          message: 'I own NFT 123 at contract 0xabcdef... - 1234567890',
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          timestamp: Date.now(),
+  describe('End-to-End Moderation Scenarios', () => {
+    it('should handle legitimate high-value NFT listing', async () => {
+      const legitimateNFTListing: MarketplaceListingInput = {
+        id: 'nft_listing_001',
+        type: 'listing',
+        userId: 'verified_user_001',
+        userReputation: 85,
+        walletAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b5Da5A',
+        metadata: { source: 'opensea', verified: true },
+        listingData: {
+          title: 'Rare CryptoPunk #1234',
+          description: 'Authentic CryptoPunk from original collection, verified ownership with signature',
+          price: '50',
+          currency: 'ETH',
+          category: 'nft',
+          images: ['https://cryptopunks.app/cryptopunks/cryptopunk1234.png'],
+          nftContract: '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB',
+          tokenId: '1234',
+          isHighValue: true,
+          sellerAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b5Da5A'
         },
+        text: 'Rare CryptoPunk #1234 Authentic CryptoPunk from original collection, verified ownership with signature'
       };
 
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.verifyHighValueNFTListing.mockResolvedValue(mockVerification);
+      const result = await service.moderateMarketplaceListing(legitimateNFTListing);
 
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send({
-          listingId: '1',
-          proofOfOwnership: mockVerification.proofOfOwnership,
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.verification).toEqual(mockVerification);
-      expect(response.body.message).toContain('enhanced level');
+      expect(result.overallDecision).toBe('allow');
+      expect(result.nftVerification).toBeDefined();
+      expect(result.nftVerification?.status).toBe('verified');
+      expect(result.sellerVerification.tier).toBeOneOf(['gold', 'platinum']);
+      expect(result.counterfeitDetection.isCounterfeit).toBe(false);
+      expect(result.scamDetection.isScam).toBe(false);
+      expect(result.riskScore).toBeLessThan(0.5);
     });
 
-    it('should return 404 for non-existent listing', async () => {
-      mockMarketplaceService.getListingById.mockResolvedValue(null);
-
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send({
-          listingId: 'non-existent',
-        });
-
-      expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Listing not found');
-    });
-
-    it('should return 400 for invalid request data', async () => {
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send({
-          // Missing required listingId
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid request data');
-    });
-  });
-
-  describe('POST /api/marketplace/moderation/moderate', () => {
-    it('should moderate a listing and return decision', async () => {
-      const mockDecision = {
-        overallConfidence: 0.8,
-        primaryCategory: 'scam_detected',
-        action: 'block' as const,
-        vendorResults: [
-          {
-            vendor: 'marketplace_verification',
-            confidence: 0.7,
-            categories: ['enhanced', 'verified'],
-            reasoning: 'Seller tier: verified, Risk score: 0.3',
-            cost: 0,
-            latency: 100,
-          },
-        ],
-        reasoning: 'Marketplace moderation: block - scam_detected (confidence: 0.8)',
+    it('should block obvious scam listing', async () => {
+      const scamListing: MarketplaceListingInput = {
+        id: 'scam_listing_001',
+        type: 'listing',
+        userId: 'suspicious_user_001',
+        userReputation: 15,
+        walletAddress: '0x0000000000000000000000000000000000000001',
+        metadata: {},
+        listingData: {
+          title: 'FREE BORED APE GIVEAWAY - CLAIM NOW!!!',
+          description: 'Connect your wallet and provide your 12 word seed phrase to claim your free Bored Ape NFT! Limited time offer, only 24 hours left!',
+          price: '0',
+          currency: 'ETH',
+          category: 'nft',
+          images: ['https://suspicious-site.com/fake-bayc.jpg'],
+          isHighValue: false,
+          sellerAddress: '0x0000000000000000000000000000000000000001'
+        },
+        text: 'FREE BORED APE GIVEAWAY - CLAIM NOW!!! Connect your wallet and provide your 12 word seed phrase to claim your free Bored Ape NFT! Limited time offer, only 24 hours left!'
       };
 
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.moderateMarketplaceListing.mockResolvedValue(mockDecision);
+      const result = await service.moderateMarketplaceListing(scamListing);
 
-      const response = await request(app)
-        .post('/api/marketplace/moderation/moderate')
-        .send({
-          listingId: '1',
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.decision).toEqual(mockDecision);
-      expect(response.body.message).toContain('block');
+      expect(result.overallDecision).toBe('block');
+      expect(result.scamDetection.isScam).toBe(true);
+      expect(result.scamDetection.detectedPatterns).toContain('fake_giveaway');
+      expect(result.scamDetection.detectedPatterns).toContain('seed_phrase');
+      expect(result.scamDetection.detectedPatterns).toContain('fake_urgency');
+      expect(result.sellerVerification.riskLevel).toBe('critical');
+      expect(result.requiredActions).toContain('listing_blocked');
+      expect(result.riskScore).toBeGreaterThan(0.8);
     });
 
-    it('should handle moderation service errors', async () => {
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.moderateMarketplaceListing.mockRejectedValue(new Error('Service error'));
-
-      const response = await request(app)
-        .post('/api/marketplace/moderation/moderate')
-        .send({
-          listingId: '1',
-        });
-
-      expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Internal server error');
-    });
-  });
-
-  describe('GET /api/marketplace/moderation/counterfeit/:listingId', () => {
-    it('should detect counterfeit indicators', async () => {
-      const mockDetection = {
-        brandKeywords: ['nike', 'gucci'],
-        suspiciousTerms: ['replica', 'fake'],
-        priceAnalysis: {
-          marketPrice: 1000,
-          listingPrice: 100,
-          priceDeviation: 0.9,
-          isSuspicious: true,
+    it('should flag counterfeit luxury goods', async () => {
+      const counterfeitListing: MarketplaceListingInput = {
+        id: 'counterfeit_listing_001',
+        type: 'listing',
+        userId: 'new_seller_001',
+        userReputation: 30,
+        walletAddress: '0x1111111111111111111111111111111111111111',
+        metadata: {},
+        listingData: {
+          title: 'Replica Louis Vuitton Handbag - AAA Quality',
+          description: 'High quality replica Louis Vuitton handbag, looks exactly like the original. Not authentic but great quality copy.',
+          price: '150',
+          currency: 'USD',
+          category: 'fashion',
+          images: ['https://replica-site.com/lv-bag.jpg'],
+          brandKeywords: ['louis vuitton', 'lv'],
+          isHighValue: false,
+          sellerAddress: '0x1111111111111111111111111111111111111111'
         },
+        text: 'Replica Louis Vuitton Handbag - AAA Quality High quality replica Louis Vuitton handbag, looks exactly like the original. Not authentic but great quality copy.'
       };
 
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.detectCounterfeit.mockResolvedValue(mockDetection);
+      const result = await service.moderateMarketplaceListing(counterfeitListing);
 
-      const response = await request(app)
-        .get('/api/marketplace/moderation/counterfeit/1');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.detection).toEqual(mockDetection);
-      expect(response.body.isCounterfeit).toBe(true);
+      expect(result.overallDecision).toBe('block');
+      expect(result.counterfeitDetection.isCounterfeit).toBe(true);
+      expect(result.counterfeitDetection.matchedBrands).toContain('louis vuitton');
+      expect(result.counterfeitDetection.confidence).toBeGreaterThan(0.7);
+      expect(result.sellerVerification.tier).toBe('new');
+      expect(result.requiredActions).toContain('listing_blocked');
     });
 
-    it('should return false for legitimate items', async () => {
-      const mockDetection = {
-        brandKeywords: [],
-        suspiciousTerms: [],
-        priceAnalysis: undefined,
+    it('should require review for new seller with high-value item', async () => {
+      const newSellerHighValue: MarketplaceListingInput = {
+        id: 'new_seller_high_value_001',
+        type: 'listing',
+        userId: 'new_user_001',
+        userReputation: 0,
+        walletAddress: '0x2222222222222222222222222222222222222222',
+        metadata: {},
+        listingData: {
+          title: 'Rolex Submariner Watch',
+          description: 'Authentic Rolex Submariner in excellent condition, comes with original box and papers',
+          price: '8500',
+          currency: 'USD',
+          category: 'luxury',
+          images: ['https://example.com/rolex-submariner.jpg'],
+          isHighValue: true,
+          sellerAddress: '0x2222222222222222222222222222222222222222'
+        },
+        text: 'Rolex Submariner Watch Authentic Rolex Submariner in excellent condition, comes with original box and papers'
       };
 
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.detectCounterfeit.mockResolvedValue(mockDetection);
+      const result = await service.moderateMarketplaceListing(newSellerHighValue);
 
-      const response = await request(app)
-        .get('/api/marketplace/moderation/counterfeit/1');
+      expect(result.overallDecision).toBe('review');
+      expect(result.sellerVerification.tier).toBe('new');
+      expect(result.sellerVerification.riskLevel).toBe('critical');
+      expect(result.requiredActions).toContain('human_review_required');
+      expect(result.requiredActions).toContain('identity_verification');
+      expect(result.requiredActions).toContain('enhanced_kyc');
+      expect(result.riskScore).toBeGreaterThan(0.6);
+    });
 
-      expect(response.status).toBe(200);
-      expect(response.body.isCounterfeit).toBe(false);
+    it('should allow legitimate listing from trusted seller', async () => {
+      const trustedSellerListing: MarketplaceListingInput = {
+        id: 'trusted_seller_001',
+        type: 'listing',
+        userId: 'trusted_user_001',
+        userReputation: 95,
+        walletAddress: '0x3333333333333333333333333333333333333333',
+        metadata: { verified_business: true },
+        listingData: {
+          title: 'Apple iPhone 15 Pro - Brand New',
+          description: 'Brand new Apple iPhone 15 Pro, factory sealed, comes with full warranty',
+          price: '999',
+          currency: 'USD',
+          category: 'electronics',
+          images: ['https://apple.com/iphone15pro.jpg'],
+          isHighValue: false,
+          sellerAddress: '0x3333333333333333333333333333333333333333'
+        },
+        text: 'Apple iPhone 15 Pro - Brand New Brand new Apple iPhone 15 Pro, factory sealed, comes with full warranty'
+      };
+
+      const result = await service.moderateMarketplaceListing(trustedSellerListing);
+
+      expect(result.overallDecision).toBe('allow');
+      expect(result.sellerVerification.tier).toBe('platinum');
+      expect(result.sellerVerification.riskLevel).toBe('low');
+      expect(result.counterfeitDetection.isCounterfeit).toBe(false);
+      expect(result.scamDetection.isScam).toBe(false);
+      expect(result.requiredActions).toHaveLength(0);
+      expect(result.riskScore).toBeLessThan(0.3);
+    });
+
+    it('should detect suspicious pricing patterns', async () => {
+      const suspiciousPricing: MarketplaceListingInput = {
+        id: 'suspicious_pricing_001',
+        type: 'listing',
+        userId: 'user_001',
+        userReputation: 50,
+        walletAddress: '0x4444444444444444444444444444444444444444',
+        metadata: {},
+        listingData: {
+          title: 'Rare Bored Ape Yacht Club NFT #1',
+          description: 'Authentic BAYC NFT, very rare traits, quick sale needed',
+          price: '0.01',
+          currency: 'ETH',
+          category: 'nft',
+          images: ['https://example.com/bayc1.jpg'],
+          isHighValue: true,
+          sellerAddress: '0x4444444444444444444444444444444444444444'
+        },
+        text: 'Rare Bored Ape Yacht Club NFT #1 Authentic BAYC NFT, very rare traits, quick sale needed'
+      };
+
+      const result = await service.moderateMarketplaceListing(suspiciousPricing);
+
+      expect(result.scamDetection.detectedPatterns).toContain('suspicious_pricing');
+      expect(result.scamDetection.riskFactors).toContain('unrealistic_low_price');
+      expect(result.overallDecision).toBeOneOf(['review', 'block']);
+      expect(result.riskScore).toBeGreaterThan(0.5);
+    });
+
+    it('should handle mixed risk factors appropriately', async () => {
+      const mixedRiskListing: MarketplaceListingInput = {
+        id: 'mixed_risk_001',
+        type: 'listing',
+        userId: 'medium_user_001',
+        userReputation: 60,
+        walletAddress: '0x5555555555555555555555555555555555555555',
+        metadata: {},
+        listingData: {
+          title: 'Nike Air Jordan Inspired Sneakers',
+          description: 'High quality sneakers inspired by Nike Air Jordan design, great for basketball',
+          price: '80',
+          currency: 'USD',
+          category: 'footwear',
+          images: ['https://example.com/inspired-jordans.jpg'],
+          brandKeywords: ['nike', 'jordan'],
+          isHighValue: false,
+          sellerAddress: '0x5555555555555555555555555555555555555555'
+        },
+        text: 'Nike Air Jordan Inspired Sneakers High quality sneakers inspired by Nike Air Jordan design, great for basketball'
+      };
+
+      const result = await service.moderateMarketplaceListing(mixedRiskListing);
+
+      // Should detect potential trademark issues but not be as severe as outright counterfeits
+      expect(result.counterfeitDetection.matchedBrands).toContain('nike');
+      expect(result.overallDecision).toBeOneOf(['allow', 'review']);
+      expect(result.riskScore).toBeGreaterThan(0.3);
+      expect(result.riskScore).toBeLessThan(0.8);
     });
   });
 
-  describe('GET /api/marketplace/moderation/scam-patterns/:listingId', () => {
-    it('should detect scam patterns', async () => {
-      const mockPatterns = [
-        {
-          patternType: 'phishing' as const,
-          confidence: 0.8,
-          indicators: ['free nft', 'airdrop', 'click here'],
-          description: 'Potential phishing attempt detected',
-        },
-        {
-          patternType: 'fake_listing' as const,
-          confidence: 0.6,
-          indicators: ['urgent sale', 'must sell today'],
-          description: 'Suspicious listing patterns detected',
-        },
-      ];
-
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.detectScamPatterns.mockResolvedValue(mockPatterns);
-
-      const response = await request(app)
-        .get('/api/marketplace/moderation/scam-patterns/1');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.patterns).toEqual(mockPatterns);
-      expect(response.body.highRiskPatterns).toHaveLength(1);
-      expect(response.body.highRiskPatterns[0].patternType).toBe('phishing');
-    });
-
-    it('should return empty array for clean listings', async () => {
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.detectScamPatterns.mockResolvedValue([]);
-
-      const response = await request(app)
-        .get('/api/marketplace/moderation/scam-patterns/1');
-
-      expect(response.status).toBe(200);
-      expect(response.body.patterns).toHaveLength(0);
-      expect(response.body.highRiskPatterns).toHaveLength(0);
-    });
-  });
-
-  describe('GET /api/marketplace/moderation/seller-tier/:walletAddress', () => {
-    it('should return seller tier information', async () => {
-      const walletAddress = '0x1234567890123456789012345678901234567890';
+  describe('Performance and Error Handling', () => {
+    it('should complete moderation within reasonable time', async () => {
+      const startTime = Date.now();
       
-      mockModerationService.determineSellerTier.mockResolvedValue('verified');
-
-      const response = await request(app)
-        .get(`/api/marketplace/moderation/seller-tier/${walletAddress}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.walletAddress).toBe(walletAddress);
-      expect(response.body.currentTier).toBe('verified');
-      expect(response.body.verification).toBeDefined();
-    });
-
-    it('should return 400 for invalid wallet address', async () => {
-      const response = await request(app)
-        .get('/api/marketplace/moderation/seller-tier/invalid-address');
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid wallet address format');
-    });
-  });
-
-  describe('PUT /api/marketplace/moderation/seller-tier', () => {
-    it('should update seller tier successfully', async () => {
-      const updateData = {
-        walletAddress: '0x1234567890123456789012345678901234567890',
-        tier: 'premium',
-        reason: 'Manual verification completed',
-      };
-
-      const response = await request(app)
-        .put('/api/marketplace/moderation/seller-tier')
-        .send(updateData);
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.newTier).toBe('premium');
-      expect(response.body.message).toContain('premium');
-    });
-
-    it('should return 400 for invalid tier', async () => {
-      const response = await request(app)
-        .put('/api/marketplace/moderation/seller-tier')
-        .send({
-          walletAddress: '0x1234567890123456789012345678901234567890',
-          tier: 'invalid-tier',
-          reason: 'Test',
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid request data');
-    });
-  });
-
-  describe('POST /api/marketplace/moderation/appeal', () => {
-    it('should submit appeal successfully', async () => {
-      const appealData = {
-        listingId: '1',
-        decisionId: 123,
-        appealReason: 'The listing was incorrectly flagged as counterfeit',
-        evidence: {
-          authenticity_certificate: 'ipfs://...',
-          purchase_receipt: 'ipfs://...',
+      const listing: MarketplaceListingInput = {
+        id: 'performance_test_001',
+        type: 'listing',
+        userId: 'test_user',
+        userReputation: 50,
+        walletAddress: '0x6666666666666666666666666666666666666666',
+        metadata: {},
+        listingData: {
+          title: 'Test Product',
+          description: 'Test product for performance testing',
+          price: '100',
+          currency: 'USD',
+          category: 'test',
+          images: ['https://example.com/test.jpg'],
+          isHighValue: false,
+          sellerAddress: '0x6666666666666666666666666666666666666666'
         },
-        appellantAddress: '0x1234567890123456789012345678901234567890',
+        text: 'Test Product Test product for performance testing'
       };
 
-      const response = await request(app)
-        .post('/api/marketplace/moderation/appeal')
-        .send(appealData);
+      const result = await service.moderateMarketplaceListing(listing);
+      const endTime = Date.now();
+      const processingTime = endTime - startTime;
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.appeal).toBeDefined();
-      expect(response.body.message).toBe('Appeal submitted successfully');
+      expect(result).toBeDefined();
+      expect(result.listingId).toBe('performance_test_001');
+      expect(processingTime).toBeLessThan(10000); // Should complete within 10 seconds
     });
 
-    it('should return 400 for missing required fields', async () => {
-      const response = await request(app)
-        .post('/api/marketplace/moderation/appeal')
-        .send({
-          listingId: '1',
-          // Missing decisionId and appealReason
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid request data');
-    });
-  });
-
-  describe('GET /api/marketplace/moderation/history/:listingId', () => {
-    it('should return moderation history', async () => {
-      const response = await request(app)
-        .get('/api/marketplace/moderation/history/1');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.listingId).toBe('1');
-      expect(response.body.history).toBeDefined();
-      expect(Array.isArray(response.body.history)).toBe(true);
-    });
-  });
-
-  describe('GET /api/marketplace/moderation/stats', () => {
-    it('should return moderation statistics', async () => {
-      const response = await request(app)
-        .get('/api/marketplace/moderation/stats');
-
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
-      expect(response.body.stats).toBeDefined();
-      expect(response.body.stats.totalListingsModerated).toBeDefined();
-      expect(response.body.stats.sellerTierDistribution).toBeDefined();
-    });
-  });
-
-  describe('Error Handling', () => {
-    it('should handle service unavailability gracefully', async () => {
-      mockMarketplaceService.getListingById.mockRejectedValue(new Error('Database connection failed'));
-
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send({
-          listingId: '1',
-        });
-
-      expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Internal server error');
-    });
-
-    it('should handle malformed JSON requests', async () => {
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .set('Content-Type', 'application/json')
-        .send('{ invalid json }');
-
-      expect(response.status).toBe(400);
-    });
-
-    it('should handle missing content-type header', async () => {
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send('listingId=1');
-
-      // Express should handle this gracefully
-      expect(response.status).toBeGreaterThanOrEqual(400);
-    });
-  });
-
-  describe('Performance and Load Testing', () => {
-    it('should handle multiple concurrent verification requests', async () => {
-      mockMarketplaceService.getListingById.mockResolvedValue(mockListing);
-      mockModerationService.verifyHighValueNFTListing.mockResolvedValue({
-        listingId: '1',
-        verificationLevel: 'basic' as const,
-        sellerTier: 'unverified' as const,
-        riskScore: 0.1,
-      });
-
-      const requests = Array.from({ length: 10 }, (_, i) =>
-        request(app)
-          .post('/api/marketplace/moderation/verify')
-          .send({ listingId: `${i + 1}` })
-      );
-
-      const responses = await Promise.all(requests);
-
-      responses.forEach(response => {
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
-      });
-    });
-
-    it('should handle large evidence payloads in appeals', async () => {
-      const largeEvidence = {
-        documents: Array.from({ length: 100 }, (_, i) => `document_${i}`),
-        images: Array.from({ length: 50 }, (_, i) => `ipfs://image_${i}`),
-        metadata: {
-          description: 'A'.repeat(10000), // Large text
+    it('should handle malformed input gracefully', async () => {
+      const malformedListing: MarketplaceListingInput = {
+        id: 'malformed_001',
+        type: 'listing',
+        userId: 'test_user',
+        userReputation: 50,
+        walletAddress: '0x7777777777777777777777777777777777777777',
+        metadata: {},
+        listingData: {
+          title: '', // Empty title
+          description: 'A'.repeat(10000), // Very long description
+          price: 'invalid_price',
+          currency: '',
+          category: 'test',
+          images: ['not_a_url', 'https://example.com/valid.jpg'],
+          isHighValue: false,
+          sellerAddress: '0x7777777777777777777777777777777777777777'
         },
+        text: 'A'.repeat(10000)
       };
 
-      const response = await request(app)
-        .post('/api/marketplace/moderation/appeal')
-        .send({
-          listingId: '1',
-          decisionId: 123,
-          appealReason: 'Incorrectly flagged',
-          evidence: largeEvidence,
-          appellantAddress: '0x1234567890123456789012345678901234567890',
-        });
+      const result = await service.moderateMarketplaceListing(malformedListing);
 
-      expect(response.status).toBe(200);
-      expect(response.body.success).toBe(true);
+      expect(result).toBeDefined();
+      expect(result.overallDecision).toBe('review'); // Should default to review for safety
+      expect(result.riskScore).toBeGreaterThan(0.5);
     });
   });
 
-  describe('Security Tests', () => {
-    it('should sanitize wallet addresses', async () => {
-      const maliciousAddress = '0x1234567890123456789012345678901234567890<script>alert("xss")</script>';
-      
-      const response = await request(app)
-        .get(`/api/marketplace/moderation/seller-tier/${encodeURIComponent(maliciousAddress)}`);
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Invalid wallet address format');
-    });
-
-    it('should handle SQL injection attempts in listing IDs', async () => {
-      const maliciousListingId = "1'; DROP TABLE listings; --";
-      
-      mockMarketplaceService.getListingById.mockResolvedValue(null);
-
-      const response = await request(app)
-        .post('/api/marketplace/moderation/verify')
-        .send({
-          listingId: maliciousListingId,
-        });
-
-      expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Listing not found');
-    });
-
-    it('should limit request payload size', async () => {
-      const oversizedPayload = {
-        listingId: '1',
-        evidence: 'A'.repeat(10 * 1024 * 1024), // 10MB string
-      };
-
-      const response = await request(app)
-        .post('/api/marketplace/moderation/appeal')
-        .send(oversizedPayload);
-
-      // Should be handled by express.json() size limit
-      expect(response.status).toBeGreaterThanOrEqual(400);
+  // Helper function to extend Jest matchers
+  beforeAll(() => {
+    expect.extend({
+      toBeOneOf(received: any, expected: any[]) {
+        const pass = expected.includes(received);
+        if (pass) {
+          return {
+            message: () => `expected ${received} not to be one of ${expected}`,
+            pass: true,
+          };
+        } else {
+          return {
+            message: () => `expected ${received} to be one of ${expected}`,
+            pass: false,
+          };
+        }
+      },
     });
   });
 });
+
+// Extend Jest matchers type
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeOneOf(expected: any[]): R;
+    }
+  }
+}

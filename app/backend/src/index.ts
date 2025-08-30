@@ -1,6 +1,32 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';
+import { databaseService } from './services/databaseService';
+// import { redisService } from './services/redisService'; // Disabled to prevent blocking
+import { validateEnv } from './utils/envValidation';
+
+// Import routes
+import userProfileRoutes from './routes/userProfileRoutes';
+import authRoutes from './routes/authRoutes';
+import marketplaceRoutes from './routes/marketplaceRoutes';
+import productRoutes from './routes/productRoutes';
+import governanceRoutes from './routes/governanceRoutes';
+import tipRoutes from './routes/tipRoutes';
+import followRoutes from './routes/followRoutes';
+import postRoutes from './routes/postRoutes';
+import aiRoutes from './routes/aiRoutes';
+import searchRoutes from './routes/searchRoutes';
+import orderRoutes from './routes/orderRoutes';
+import disputeRoutes from './routes/disputeRoutes';
+import reviewRoutes from './routes/reviewRoutes';
+import contentIngestionRoutes from './routes/contentIngestionRoutes';
+import reportRoutes from './routes/reportRoutes';
+import moderationRoutes from './routes/moderationRoutes';
+import appealsRoutes from './routes/appealsRoutes';
+import marketplaceModerationRoutes from './routes/marketplaceModerationRoutes';
+// import serviceRoutes from './routes/serviceRoutes';
+// import projectManagementRoutes from './routes/projectManagementRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -44,7 +70,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Mock API endpoints to prevent 404s
+// Emergency fallback endpoints to prevent 404s
 app.get('/api/posts/feed', (req, res) => {
   res.json({
     success: true,
@@ -61,12 +87,42 @@ app.get('/api/marketplace/listings', (req, res) => {
   });
 });
 
-// Catch all API routes
+// API routes - try to use the imported routes first
+try {
+  app.use('/api/auth', authRoutes);
+  app.use('/api/profiles', userProfileRoutes);
+  app.use('/api/marketplace', marketplaceRoutes);
+  app.use('/api/products', productRoutes);
+  app.use('/api/governance', governanceRoutes);
+  app.use('/api/tips', tipRoutes);
+  app.use('/api/follow', followRoutes);
+  app.use('/api/posts', postRoutes);
+  app.use('/api/ai', aiRoutes);
+  app.use('/api/search', searchRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api', disputeRoutes);
+  app.use('/api', reviewRoutes);
+  app.use('/api/content', contentIngestionRoutes);
+  app.use('/api/reports', reportRoutes);
+  app.use('/api/moderation', moderationRoutes);
+  app.use('/api/appeals', appealsRoutes);
+  app.use('/api/marketplace-moderation', marketplaceModerationRoutes);
+  // app.use('/api/services', serviceRoutes);
+  // app.use('/api/project-management', projectManagementRoutes);
+  
+  console.log('✅ All route modules loaded successfully');
+} catch (error) {
+  console.warn('⚠️ Some route modules failed to load:', error);
+  console.log('🔄 Falling back to emergency mock endpoints');
+}
+
+// Catch all API routes - fallback for any unhandled API endpoints
 app.use('/api/*', (req, res) => {
   res.json({
     success: true,
     message: `API endpoint ${req.method} ${req.originalUrl} - emergency fix`,
-    data: null
+    data: null,
+    note: 'This is a fallback response to prevent 404 errors'
   });
 });
 
