@@ -1,6 +1,6 @@
 import express from 'express';
 import { PostController } from '../controllers/postController';
-import { feedLimiter } from '../middleware/rateLimiter';
+import { feedLimiter, createPostLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 const postController = new PostController();
@@ -12,7 +12,7 @@ router.get('/tag/:tag', postController.getPostsByTag);
 router.get('/:id', postController.getPostById);
 
 // General routes
-router.post('/', postController.createPost);
+router.post('/', createPostLimiter, postController.createPost);
 router.put('/:id', postController.updatePost);
 router.delete('/:id', postController.deletePost);
 router.get('/', postController.getAllPosts);

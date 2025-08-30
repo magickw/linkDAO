@@ -2,11 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import { generalLimiter, apiLimiter } from './middleware/rateLimiter';
+import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';
 import { databaseService } from './services/databaseService';
 // import { redisService } from './services/redisService'; // Disabled to prevent blocking
 import { validateEnv } from './utils/envValidation';
-import { generalLimiter, feedLimiter } from './middleware/rateLimiter';
 
 // Import routes
 import userProfileRoutes from './routes/userProfileRoutes';
@@ -94,20 +93,6 @@ app.use(express.json());
 app.use(generalLimiter);
 app.use('/api', apiLimiter);
 
-// Health check endpoint (before other routes)
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// Global rate limiting
-app.use(generalLimiter);
-
 // Initialize services
 async function initializeServices() {
   // Database connection test
@@ -149,6 +134,8 @@ app.get('/health', async (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    environment: process.env.NODE_ENV || 'development',
     database: 'unknown'
   };
 
