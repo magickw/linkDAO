@@ -1,4 +1,4 @@
-import { create, IPFSHTTPClient } from 'ipfs-http-client';
+import type { IPFSHTTPClient } from 'ipfs-http-client';
 import { Readable } from 'stream';
 
 export interface NFTMetadata {
@@ -28,18 +28,34 @@ export interface IPFSUploadResult {
 }
 
 class IPFSService {
-  private client: IPFSHTTPClient;
+  private client: IPFSHTTPClient | null = null;
   private gatewayUrl: string;
 
   constructor() {
-    // Initialize IPFS client
-    this.client = create({
-      host: process.env.IPFS_HOST || 'localhost',
-      port: parseInt(process.env.IPFS_PORT || '5001'),
-      protocol: process.env.IPFS_PROTOCOL || 'http',
-    });
-    
     this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs/';
+  }
+
+  private async initializeClient(): Promise<void> {
+    try {
+      const { create } = await import('ipfs-http-client');
+      this.client = create({
+        host: process.env.IPFS_HOST || 'localhost',
+        port: parseInt(process.env.IPFS_PORT || '5001'),
+        protocol: process.env.IPFS_PROTOCOL || 'http',
+      });
+    } catch (error) {
+      console.error('Failed to initialize IPFS client:', error);
+    }
+  }
+
+  private async ensureClient(): Promise<IPFSHTTPClient> {
+    if (!this.client) {
+      await this.initializeClient();
+    }
+    if (!this.client) {
+      throw new Error('IPFS client not available');
+    }
+    return this.client;
   }
 
   /**
@@ -47,7 +63,8 @@ class IPFSService {
    */
   async uploadFile(file: Buffer | Uint8Array, filename?: string): Promise<IPFSUploadResult> {
     try {
-      const result = await this.client.add({
+      const client = await this.ensureClient();
+      const result = await client.add({
         content: file,
         path: filename,
       });
@@ -71,7 +88,8 @@ class IPFSService {
       const metadataString = JSON.stringify(metadata, null, 2);
       const buffer = Buffer.from(metadataString);
 
-      const result = await this.client.add({
+      const client = await this.ensureClient();
+      const result = await client.add({
         content: buffer,
         path: 'metadata.json',
       });
@@ -111,7 +129,8 @@ class IPFSService {
    */
   async pinContent(hash: string): Promise<void> {
     try {
-      await this.client.pin.add(hash);
+      const client = await this.ensureClient();
+      await client.pin.add(hash);
     } catch (error) {
       console.error('Error pinning content to IPFS:', error);
       throw new Error('Failed to pin content to IPFS');
@@ -123,7 +142,8 @@ class IPFSService {
    */
   async unpinContent(hash: string): Promise<void> {
     try {
-      await this.client.pin.rm(hash);
+      const client = await this.ensureClient();
+      await client.pin.rm(hash);
     } catch (error) {
       console.error('Error unpinning content from IPFS:', error);
       throw new Error('Failed to unpin content from IPFS');
@@ -137,7 +157,8 @@ class IPFSService {
     try {
       const chunks: Uint8Array[] = [];
       
-      for await (const chunk of this.client.cat(hash)) {
+      const client = await this.ensureClient();
+      for await (const chunk of client.cat(hash)) {
         chunks.push(chunk);
       }
 
@@ -287,7 +308,8 @@ class IPFSService {
    */
   async isNodeAccessible(): Promise<boolean> {
     try {
-      await this.client.id();
+      const client = await this.ensureClient();
+      await client.id();
       return true;
     } catch (error) {
       return false;
