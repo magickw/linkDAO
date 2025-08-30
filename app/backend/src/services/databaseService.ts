@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, ilike, desc } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
@@ -658,6 +658,34 @@ export class DatabaseService {
       return await this.db.select().from(schema.aiModeration).where(eq(schema.aiModeration.status, 'pending'));
     } catch (error) {
       console.error("Error getting pending AI moderation records:", error);
+      throw error;
+    }
+  }
+
+  // Search operations
+  async searchUsers(query: string, limit: number = 20, offset: number = 0) {
+    try {
+      const result = await this.db.select().from(schema.users).where(
+        or(
+          ilike(schema.users.handle, `%${query}%`),
+          ilike(schema.users.walletAddress, `%${query}%`)
+        )
+      ).limit(limit).offset(offset);
+      return result;
+    } catch (error) {
+      console.error("Error searching users:", error);
+      throw error;
+    }
+  }
+
+  async getRecentUsers(limit: number = 10) {
+    try {
+      const result = await this.db.select().from(schema.users)
+        .orderBy(desc(schema.users.createdAt))
+        .limit(limit);
+      return result;
+    } catch (error) {
+      console.error("Error getting recent users:", error);
       throw error;
     }
   }
