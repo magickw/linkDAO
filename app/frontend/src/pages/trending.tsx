@@ -62,7 +62,6 @@ export default function TrendingPage() {
                   limit={5}
                   showPosts={false}
                   showTopics={false}
-                  showHeaders={false}
                   onItemClick={handleTrendingItemClick}
                 />
               </div>
@@ -76,7 +75,6 @@ export default function TrendingPage() {
                   limit={5}
                   showCommunities={false}
                   showTopics={false}
-                  showHeaders={false}
                   onItemClick={handleTrendingItemClick}
                 />
               </div>

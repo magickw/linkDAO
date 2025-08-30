@@ -49,11 +49,10 @@ export class SearchController {
         return res.json(cachedResults);
       }
 
-      const results = await SearchController.searchService.search(
-        query,
-        searchParams,
-        limitNum,
-        offsetNum
+      const results = await SearchController.searchService.advancedSearch(
+        { query, ...searchParams },
+        { field: 'createdAt', direction: 'desc' },
+        { page: Math.floor(offsetNum / limitNum) + 1, limit: limitNum }
       );
 
       // Cache results for 5 minutes
@@ -202,8 +201,8 @@ export class SearchController {
       }
 
       const results = await SearchController.searchService.getTrendingContent(
-        timeRange as string,
-        limitNum
+        limitNum,
+        timeRange as string
       );
 
       // Cache trending content for 10 minutes
@@ -229,8 +228,8 @@ export class SearchController {
       const limitNum = parseInt(limit as string, 10);
 
       const results = await SearchController.searchService.getTrendingHashtags(
-        timeRange as string,
-        limitNum
+        limitNum,
+        timeRange as string
       );
 
       return res.json(results);
@@ -263,7 +262,6 @@ export class SearchController {
 
       const results = await SearchController.searchService.getPostsByHashtag(
         hashtag,
-        searchParams,
         limitNum,
         offsetNum
       );
@@ -316,7 +314,6 @@ export class SearchController {
 
       const results = await SearchController.searchService.getSearchSuggestions(
         query,
-        type as string,
         limitNum
       );
 

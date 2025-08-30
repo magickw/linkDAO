@@ -41,6 +41,8 @@ export interface KYCData {
   expiresAt?: string;
   rejectionReason?: string;
   reviewNotes?: string;
+  requiredDocuments?: string[];
+  estimatedProcessingTime?: string;
 }
 
 export class KYCService {

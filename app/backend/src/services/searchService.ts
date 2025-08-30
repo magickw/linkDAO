@@ -786,4 +786,114 @@ export class SearchService {
     }
   }
 
-  private async getUserPreferredCategories(userId: string): Promise<string[]
+  private async getUserPreferredCategories(userId: string): Promise<string[]> {
+    try {
+      // Get user's preferred categories based on their activity
+      // TODO: Implement getPostsByUser method in DatabaseService
+      return [];
+    } catch (error) {
+      console.error('Error getting user preferred categories:', error);
+      return [];
+    }
+  }
+
+  // Stub methods for missing functionality
+  async searchPosts(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
+    return { posts: [], total: 0 };
+  }
+
+  async searchCommunities(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
+    return { communities: [], total: 0 };
+  }
+
+  async searchUsers(query: string, filters: any = {}, limit: number = 20, offset: number = 0): Promise<any> {
+    return { users: [], total: 0 };
+  }
+
+  async getTrendingContent(limit: number = 20, timeframe: string = '24h'): Promise<any> {
+    return { content: [], total: 0 };
+  }
+
+  async getTrendingHashtags(limit: number = 20, timeframe: string = '24h'): Promise<any> {
+    return { hashtags: [], total: 0 };
+  }
+
+  async getPostsByHashtag(hashtag: string, limit: number = 20, offset: number = 0): Promise<any> {
+    return { posts: [], total: 0 };
+  }
+
+  async getTopicContent(topic: string, limit: number = 20, offset: number = 0): Promise<any> {
+    return { content: [], total: 0 };
+  }
+
+  async getRecommendedCommunities(params: any): Promise<any> {
+    return { communities: [], total: 0 };
+  }
+
+  async getRecommendedUsers(params: any): Promise<any> {
+    return { users: [], total: 0 };
+  }
+
+
+
+  // Helper methods that are called but missing
+  private generateSearchCacheKey(filters: any, sort: any, pagination: any): string {
+    return `search:${JSON.stringify({ filters, sort, pagination })}`;
+  }
+
+  private mapProductFromDb(product: any, category: any): Product {
+    return {
+      ...product,
+      category: category?.name || 'Uncategorized'
+    } as Product;
+  }
+
+  private async trackSearchAnalytics(filters: any, result: any): Promise<void> {
+    // TODO: Implement search analytics tracking
+  }
+
+  private async getContentBasedRecommendations(productId: string, limit: number): Promise<ProductRecommendation[]> {
+    return [];
+  }
+
+  private async getCategoryRecommendations(categoryId: string, limit: number): Promise<ProductRecommendation[]> {
+    return [];
+  }
+
+  private async getTrendingRecommendations(limit: number): Promise<ProductRecommendation[]> {
+    return [];
+  }
+
+  private deduplicateRecommendations(recommendations: ProductRecommendation[]): ProductRecommendation[] {
+    const seen = new Set();
+    return recommendations.filter(rec => {
+      if (seen.has(rec.product.id)) return false;
+      seen.add(rec.product.id);
+      return true;
+    });
+  }
+
+  private buildComparisonMatrix(products: Product[]): any {
+    return {};
+  }
+
+  private generateComparisonSummary(products: Product[], matrix: any): any {
+    return {};
+  }
+
+  private async warmUpSearchCache(): Promise<void> {
+    // TODO: Implement cache warming
+  }
+
+  private async precomputeTrendingProducts(): Promise<void> {
+    // TODO: Implement trending products computation
+  }
+
+  private async optimizeSlowQueries(): Promise<number> {
+    return 0;
+  }
+
+  private async precomputeRecommendations(): Promise<void> {
+    // TODO: Implement recommendation precomputation
+  }
+}

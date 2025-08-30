@@ -113,6 +113,26 @@ export class RedisService {
     return result === 1;
   }
 
+  async ttl(key: string): Promise<number> {
+    await this.ensureConnected();
+    return await this.client.ttl(key);
+  }
+
+  async incr(key: string): Promise<number> {
+    await this.ensureConnected();
+    return await this.client.incr(key);
+  }
+
+  async keys(pattern: string): Promise<string[]> {
+    await this.ensureConnected();
+    return await this.client.keys(pattern);
+  }
+
+  async setex(key: string, ttl: number, value: string): Promise<void> {
+    await this.ensureConnected();
+    await this.client.setEx(key, ttl, value);
+  }
+
   // Cache patterns for marketplace data
   async cacheUserProfile(address: string, profile: any, ttl: number = 1800): Promise<void> {
     await this.set(`user:profile:${address}`, profile, ttl);

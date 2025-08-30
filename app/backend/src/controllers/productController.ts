@@ -15,8 +15,6 @@ import {
 import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 import { Readable } from 'stream';
 
-// Type declarations for multer and csv-parser
-declare const require: any;
 const multer = require('multer');
 const csv = require('csv-parser');
 
@@ -457,7 +455,7 @@ export class ProductController {
   async uploadProductImages(req: any, res: Response): Promise<Response> {
     try {
       if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-        throw new ValidationError('No images provided', 'files');
+        throw new ValidationError('No images provided');
       }
 
       const files = req.files.map((file: any) => ({
@@ -502,13 +500,13 @@ export class ProductController {
   async uploadProductsCSV(req: any, res: Response): Promise<Response> {
     try {
       if (!req.file) {
-        throw new ValidationError('CSV file is required', 'csvFile');
+        throw new ValidationError('CSV file is required');
       }
 
       const { defaultSellerId, categoryMappings } = req.body;
       
       if (!defaultSellerId) {
-        throw new ValidationError('Default seller ID is required', 'defaultSellerId');
+        throw new ValidationError('Default seller ID is required');
       }
 
       // Parse CSV
