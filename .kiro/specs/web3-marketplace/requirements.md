@@ -116,19 +116,79 @@ The platform will support both physical goods and digital services, implementing
 4. IF policy changes are approved THEN the system SHALL implement changes through smart contract upgrades
 5. WHEN earning rewards THEN the system SHALL provide staking mechanisms for long-term platform commitment
 
-### Requirement 10: Mobile and Cross-Platform Access
+### Requirement 10: Frontend Design and User Experience
 
-**User Story:** As a mobile user, I want full marketplace functionality on my mobile device with Web3 wallet integration, so that I can buy and sell on-the-go with the same capabilities as desktop users.
+**User Story:** As a user, I want a modern, intuitive interface with glassmorphism design and smooth animations that makes Web3 commerce feel familiar yet futuristic, so that I can easily navigate and trust the platform.
 
 #### Acceptance Criteria
 
-1. WHEN accessing via mobile THEN the system SHALL provide responsive design with touch-optimized interfaces
+1. WHEN viewing the interface THEN the system SHALL implement glassmorphism design with frosted-glass panels and blurred transparency for product cards, modals, and dashboards
+2. WHEN navigating the platform THEN the system SHALL display deep tech-inspired gradients (indigo → teal, purple → pink) as background elements
+3. WHEN interacting with elements THEN the system SHALL provide smooth hover effects, button presses with ripple animations, and page transitions using Framer Motion
+4. WHEN viewing trust indicators THEN the system SHALL display minimal but clear Web3 badges (✅ Verified, 🔒 Escrow Protected, ⛓️ On-Chain Certified)
+5. WHEN browsing products THEN the system SHALL show glassmorphic cards with NFT-style shadow borders and lazy-loaded images with skeleton placeholders
+
+### Requirement 11: Homepage and Navigation Layout
+
+**User Story:** As a visitor, I want an engaging homepage with clear navigation and featured content that immediately communicates the platform's Web3 advantages, so that I understand the value proposition and can easily start using the marketplace.
+
+#### Acceptance Criteria
+
+1. WHEN viewing the homepage THEN the system SHALL display a sticky glassmorphic navbar with logo, search bar, wallet connect button, and language/currency switcher
+2. WHEN seeing the hero section THEN the system SHALL show a bold tagline ("Buy. Sell. Bid. Own — Powered by Web3") with prominent call-to-action buttons
+3. WHEN browsing categories THEN the system SHALL display an icon-based category grid with DAO-approved vendors highlighted with special border glow
+4. WHEN viewing featured products THEN the system SHALL show 3-4 rotating carousel items showcasing both NFT and physical products
+5. WHEN switching between fiat and crypto THEN the system SHALL provide seamless currency toggle functionality
+
+### Requirement 12: Product Display and Discovery
+
+**User Story:** As a shopper, I want detailed product information with clear pricing in both crypto and fiat, along with trust indicators and authenticity verification, so that I can make informed purchasing decisions.
+
+#### Acceptance Criteria
+
+1. WHEN viewing product cards THEN the system SHALL display product image, seller badge, dual pricing (crypto + fiat), and trust indicators in glassmorphic card style
+2. WHEN viewing product details THEN the system SHALL show large media viewer supporting 3D models, videos, and NFT metadata
+3. WHEN checking authenticity THEN the system SHALL display blockchain-based certificates with clickable transaction proof links
+4. WHEN comparing prices THEN the system SHALL show real-time crypto to fiat conversion (e.g., 0.15 ETH ≈ $260)
+5. WHEN viewing seller info THEN the system SHALL display avatar, reputation score, DAO/community approval badges, and transaction history
+
+### Requirement 13: Mobile and Cross-Platform Access
+
+**User Story:** As a mobile user, I want full marketplace functionality on my mobile device with Web3 wallet integration and PWA capabilities, so that I can buy and sell on-the-go with the same capabilities as desktop users.
+
+#### Acceptance Criteria
+
+1. WHEN accessing via mobile THEN the system SHALL provide responsive design with touch-optimized interfaces and bottom navigation bar
 2. WHEN connecting wallets THEN the system SHALL support major mobile wallets including MetaMask Mobile, Trust Wallet, and WalletConnect
 3. WHEN making purchases THEN the system SHALL enable one-tap buying with biometric authentication
-4. WHEN managing stores THEN the system SHALL provide full seller functionality including inventory management and analytics
-5. WHEN receiving notifications THEN the system SHALL send push notifications for orders, messages, and important updates
+4. WHEN filtering products THEN the system SHALL provide collapsible filter drawers with swipe-friendly interactions
+5. WHEN installing the app THEN the system SHALL offer PWA functionality with "Install app" button and offline capabilities
 
-### Requirement 11: Compliance and Legal Framework
+### Requirement 14: Performance and User Experience Optimization
+
+**User Story:** As a user, I want fast loading times and smooth interactions with optimized performance, so that the Web3 marketplace feels as responsive as traditional e-commerce platforms.
+
+#### Acceptance Criteria
+
+1. WHEN loading product images THEN the system SHALL implement lazy loading with skeleton screens as placeholders
+2. WHEN searching products THEN the system SHALL provide cached search results and auto-suggest functionality for speed
+3. WHEN browsing globally THEN the system SHALL utilize CDN and edge nodes for optimal content delivery
+4. WHEN viewing blockchain data THEN the system SHALL show skeleton screens while fetching on-chain information
+5. WHEN experiencing high traffic THEN the system SHALL maintain sub-3 second page load times through performance optimization
+
+### Requirement 15: Trust and Transparency Features
+
+**User Story:** As a marketplace participant, I want clear visibility into Web3 advantages and trust mechanisms, so that I understand why this platform is superior to traditional marketplaces.
+
+#### Acceptance Criteria
+
+1. WHEN viewing platform benefits THEN the system SHALL display "Why Web3 Marketplace?" section highlighting 0%-2% fees vs 10%-30% Web2 platforms
+2. WHEN making transactions THEN the system SHALL show global accessibility messaging (no borders, no banks needed)
+3. WHEN processing payments THEN the system SHALL emphasize instant crypto settlements and blockchain trust
+4. WHEN viewing products THEN the system SHALL display authentic NFT verification badges for digital items
+5. WHEN comparing platforms THEN the system SHALL provide clear value proposition of decentralized commerce benefits
+
+### Requirement 16: Compliance and Legal Framework
 
 **User Story:** As a platform operator, I want comprehensive compliance with global regulations, so that the marketplace can operate legally across different jurisdictions while protecting user data and rights.
 
@@ -140,7 +200,7 @@ The platform will support both physical goods and digital services, implementing
 4. IF regulatory requirements change THEN the system SHALL adapt compliance procedures automatically
 5. WHEN users request data deletion THEN the system SHALL provide complete data removal while maintaining blockchain integrity
 
-### Requirement 12: Analytics and Business Intelligence
+### Requirement 17: Analytics and Business Intelligence
 
 **User Story:** As a platform stakeholder, I want comprehensive analytics and reporting capabilities, so that I can make data-driven decisions to improve platform performance and user experience.
 
