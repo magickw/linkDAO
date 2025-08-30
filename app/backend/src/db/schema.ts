@@ -657,3 +657,695 @@ export const reputationHistory = pgTable("reputation_history", {
   relatedEntityId: varchar("related_entity_id", { length: 128 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Services Marketplace Tables
+
+export const serviceCategories = pgTable("service_categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  parentId: uuid("parent_id"),
+  icon: varchar("icon", { length: 50 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  parentFk: foreignKey({
+    columns: [table.parentId],
+    foreignColumns: [table.id],
+    name: "service_categories_parent_id_service_categories_id_fk"
+  }),
+}));
+
+export const services = pgTable("services", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  providerId: uuid("provider_id").notNull(),
+  categoryId: uuid("category_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  shortDescription: varchar("short_description", { length: 500 }),
+  pricingModel: varchar("pricing_model", { length: 20 }).notNull(),
+  basePrice: numeric("base_price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("USD"),
+  durationMinutes: integer("duration_minutes"),
+  isRemote: boolean("is_remote").default(true),
+  locationRequired: boolean("location_required").default(false),
+  serviceLocation: text("service_location"),
+  tags: text("tags").array(),
+  requirements: text("requirements"),
+  deliverables: text("deliverables"),
+  portfolioItems: text("portfolio_items").array(),
+  status: varchar("status", { length: 20 }).default("active"),
+  featured: boolean("featured").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  providerFk: foreignKey({
+    columns: [table.providerId],
+    foreignColumns: [users.id],
+    name: "services_provider_id_users_id_fk"
+  }),
+  categoryFk: foreignKey({
+    columns: [table.categoryId],
+    foreignColumns: [serviceCategories.id],
+    name: "services_category_id_service_categories_id_fk"
+  }),
+  providerIdx: index("services_provider_id_idx").on(table.providerId),
+  categoryIdx: index("services_category_id_idx").on(table.categoryId),
+  statusIdx: index("services_status_idx").on(table.status),
+}));
+
+export const serviceAvailability = pgTable("service_availability", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  serviceId: uuid("service_id").notNull(),
+  dayOfWeek: integer("day_of_week").notNull(),
+  startTime: varchar("start_time", { length: 8 }).notNull(), // HH:MM:SS format
+  endTime: varchar("end_time", { length: 8 }).notNull(),
+  timezone: varchar("timezone", { length: 50 }).notNull().default("UTC"),
+  isAvailable: boolean("is_available").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  serviceFk: foreignKey({
+    columns: [table.serviceId],
+    foreignColumns: [services.id],
+    name: "service_availability_service_id_services_id_fk"
+  }),
+  serviceIdx: index("service_availability_service_id_idx").on(table.serviceId),
+}));
+
+export const serviceBookings = pgTable("service_bookings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  serviceId: uuid("service_id").notNull(),
+  clientId: uuid("client_id").notNull(),
+  providerId: uuid("provider_id").notNull(),
+  bookingType: varchar("booking_type", { length: 20 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending"),
+  scheduledStart: timestamp("scheduled_start"),
+  scheduledEnd: timestamp("scheduled_end"),
+  actualStart: timestamp("actual_start"),
+  actualEnd: timestamp("actual_end"),
+  totalAmount: numeric("total_amount", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  paymentStatus: varchar("payment_status", { length: 20 }).default("pending"),
+  escrowContract: varchar("escrow_contract", { length: 66 }),
+  clientRequirements: text("client_requirements"),
+  providerNotes: text("provider_notes"),
+  meetingLink: varchar("meeting_link", { length: 500 }),
+  locationDetails: text("location_details"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  serviceFk: foreignKey({
+    columns: [table.serviceId],
+    foreignColumns: [services.id],
+    name: "service_bookings_service_id_services_id_fk"
+  }),
+  clientFk: foreignKey({
+    columns: [table.clientId],
+    foreignColumns: [users.id],
+    name: "service_bookings_client_id_users_id_fk"
+  }),
+  providerFk: foreignKey({
+    columns: [table.providerId],
+    foreignColumns: [users.id],
+    name: "service_bookings_provider_id_users_id_fk"
+  }),
+  clientIdx: index("service_bookings_client_id_idx").on(table.clientId),
+  providerIdx: index("service_bookings_provider_id_idx").on(table.providerId),
+  statusIdx: index("service_bookings_status_idx").on(table.status),
+}));
+
+export const serviceMilestones = pgTable("service_milestones", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneNumber: integer("milestone_number").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  dueDate: timestamp("due_date"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  deliverables: text("deliverables").array(),
+  clientFeedback: text("client_feedback"),
+  completedAt: timestamp("completed_at"),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "service_milestones_booking_id_service_bookings_id_fk"
+  }),
+  bookingIdx: index("service_milestones_booking_id_idx").on(table.bookingId),
+}));
+
+export const serviceReviews = pgTable("service_reviews", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  reviewerId: uuid("reviewer_id").notNull(),
+  revieweeId: uuid("reviewee_id").notNull(),
+  serviceId: uuid("service_id").notNull(),
+  rating: integer("rating").notNull(),
+  communicationRating: integer("communication_rating"),
+  qualityRating: integer("quality_rating"),
+  timelinessRating: integer("timeliness_rating"),
+  title: varchar("title", { length: 200 }),
+  comment: text("comment"),
+  wouldRecommend: boolean("would_recommend"),
+  ipfsHash: varchar("ipfs_hash", { length: 128 }),
+  blockchainTxHash: varchar("blockchain_tx_hash", { length: 66 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "service_reviews_booking_id_service_bookings_id_fk"
+  }),
+  reviewerFk: foreignKey({
+    columns: [table.reviewerId],
+    foreignColumns: [users.id],
+    name: "service_reviews_reviewer_id_users_id_fk"
+  }),
+  revieweeFk: foreignKey({
+    columns: [table.revieweeId],
+    foreignColumns: [users.id],
+    name: "service_reviews_reviewee_id_users_id_fk"
+  }),
+  serviceFk: foreignKey({
+    columns: [table.serviceId],
+    foreignColumns: [services.id],
+    name: "service_reviews_service_id_services_id_fk"
+  }),
+  serviceIdx: index("service_reviews_service_id_idx").on(table.serviceId),
+}));
+
+export const serviceProviderProfiles = pgTable("service_provider_profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull(),
+  businessName: varchar("business_name", { length: 255 }),
+  tagline: varchar("tagline", { length: 500 }),
+  bio: text("bio"),
+  skills: text("skills").array(),
+  certifications: text("certifications").array(),
+  languages: text("languages").array(),
+  responseTimeHours: integer("response_time_hours").default(24),
+  availabilityTimezone: varchar("availability_timezone", { length: 50 }).default("UTC"),
+  portfolioDescription: text("portfolio_description"),
+  yearsExperience: integer("years_experience"),
+  education: text("education"),
+  websiteUrl: varchar("website_url", { length: 500 }),
+  linkedinUrl: varchar("linkedin_url", { length: 500 }),
+  githubUrl: varchar("github_url", { length: 500 }),
+  isVerified: boolean("is_verified").default(false),
+  verificationDocuments: text("verification_documents").array(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userFk: foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "service_provider_profiles_user_id_users_id_fk"
+  }),
+  userUnique: index("service_provider_profiles_user_id_unique").on(table.userId),
+}));
+
+export const serviceMessages = pgTable("service_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  senderId: uuid("sender_id").notNull(),
+  recipientId: uuid("recipient_id").notNull(),
+  messageType: varchar("message_type", { length: 20 }).default("text"),
+  content: text("content"),
+  fileAttachments: text("file_attachments").array(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "service_messages_booking_id_service_bookings_id_fk"
+  }),
+  senderFk: foreignKey({
+    columns: [table.senderId],
+    foreignColumns: [users.id],
+    name: "service_messages_sender_id_users_id_fk"
+  }),
+  recipientFk: foreignKey({
+    columns: [table.recipientId],
+    foreignColumns: [users.id],
+    name: "service_messages_recipient_id_users_id_fk"
+  }),
+  bookingIdx: index("service_messages_booking_id_idx").on(table.bookingId),
+}));
+
+// Project Management Tools Tables
+
+export const timeTracking = pgTable("time_tracking", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  providerId: uuid("provider_id").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  durationMinutes: integer("duration_minutes"),
+  description: text("description"),
+  isBillable: boolean("is_billable").default(true),
+  hourlyRate: numeric("hourly_rate", { precision: 20, scale: 8 }),
+  totalAmount: numeric("total_amount", { precision: 20, scale: 8 }),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "time_tracking_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "time_tracking_milestone_id_service_milestones_id_fk"
+  }),
+  providerFk: foreignKey({
+    columns: [table.providerId],
+    foreignColumns: [users.id],
+    name: "time_tracking_provider_id_users_id_fk"
+  }),
+  bookingIdx: index("time_tracking_booking_id_idx").on(table.bookingId),
+  providerIdx: index("time_tracking_provider_id_idx").on(table.providerId),
+  startTimeIdx: index("time_tracking_start_time_idx").on(table.startTime),
+}));
+
+export const projectDeliverables = pgTable("project_deliverables", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  deliverableType: varchar("deliverable_type", { length: 50 }).notNull(),
+  fileHash: varchar("file_hash", { length: 128 }),
+  fileName: varchar("file_name", { length: 255 }),
+  fileSize: integer("file_size"),
+  fileType: varchar("file_type", { length: 100 }),
+  content: text("content"),
+  url: varchar("url", { length: 500 }),
+  status: varchar("status", { length: 20 }).default("pending"),
+  submittedAt: timestamp("submitted_at"),
+  reviewedAt: timestamp("reviewed_at"),
+  clientFeedback: text("client_feedback"),
+  revisionNotes: text("revision_notes"),
+  versionNumber: integer("version_number").default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_deliverables_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "project_deliverables_milestone_id_service_milestones_id_fk"
+  }),
+  bookingIdx: index("project_deliverables_booking_id_idx").on(table.bookingId),
+  milestoneIdx: index("project_deliverables_milestone_id_idx").on(table.milestoneId),
+  statusIdx: index("project_deliverables_status_idx").on(table.status),
+}));
+
+export const milestonePayments = pgTable("milestone_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  milestoneId: uuid("milestone_id").notNull(),
+  bookingId: uuid("booking_id").notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  escrowContract: varchar("escrow_contract", { length: 66 }),
+  paymentProcessorId: varchar("payment_processor_id", { length: 100 }),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  status: varchar("status", { length: 20 }).default("pending"),
+  heldUntil: timestamp("held_until"),
+  releaseConditions: text("release_conditions"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "milestone_payments_milestone_id_service_milestones_id_fk"
+  }),
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "milestone_payments_booking_id_service_bookings_id_fk"
+  }),
+  milestoneIdx: index("milestone_payments_milestone_id_idx").on(table.milestoneId),
+  statusIdx: index("milestone_payments_status_idx").on(table.status),
+}));
+
+export const projectThreads = pgTable("project_threads", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  threadType: varchar("thread_type", { length: 30 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  isPrivate: boolean("is_private").default(false),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_threads_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "project_threads_milestone_id_service_milestones_id_fk"
+  }),
+  createdByFk: foreignKey({
+    columns: [table.createdBy],
+    foreignColumns: [users.id],
+    name: "project_threads_created_by_users_id_fk"
+  }),
+  bookingIdx: index("project_threads_booking_id_idx").on(table.bookingId),
+}));
+
+export const projectMessages = pgTable("project_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  threadId: uuid("thread_id").notNull(),
+  bookingId: uuid("booking_id").notNull(),
+  senderId: uuid("sender_id").notNull(),
+  messageType: varchar("message_type", { length: 20 }).default("text"),
+  content: text("content"),
+  fileAttachments: text("file_attachments"), // JSON string
+  codeLanguage: varchar("code_language", { length: 50 }),
+  isRead: boolean("is_read").default(false),
+  isPinned: boolean("is_pinned").default(false),
+  replyTo: uuid("reply_to"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  threadFk: foreignKey({
+    columns: [table.threadId],
+    foreignColumns: [projectThreads.id],
+    name: "project_messages_thread_id_project_threads_id_fk"
+  }),
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_messages_booking_id_service_bookings_id_fk"
+  }),
+  senderFk: foreignKey({
+    columns: [table.senderId],
+    foreignColumns: [users.id],
+    name: "project_messages_sender_id_users_id_fk"
+  }),
+  threadIdx: index("project_messages_thread_id_idx").on(table.threadId),
+  bookingIdx: index("project_messages_booking_id_idx").on(table.bookingId),
+}));
+
+export const projectApprovals = pgTable("project_approvals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  deliverableId: uuid("deliverable_id"),
+  approverId: uuid("approver_id").notNull(),
+  approvalType: varchar("approval_type", { length: 30 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending"),
+  feedback: text("feedback"),
+  approvedAt: timestamp("approved_at"),
+  autoApproveAt: timestamp("auto_approve_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_approvals_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "project_approvals_milestone_id_service_milestones_id_fk"
+  }),
+  deliverableFk: foreignKey({
+    columns: [table.deliverableId],
+    foreignColumns: [projectDeliverables.id],
+    name: "project_approvals_deliverable_id_project_deliverables_id_fk"
+  }),
+  approverFk: foreignKey({
+    columns: [table.approverId],
+    foreignColumns: [users.id],
+    name: "project_approvals_approver_id_users_id_fk"
+  }),
+  bookingIdx: index("project_approvals_booking_id_idx").on(table.bookingId),
+  statusIdx: index("project_approvals_status_idx").on(table.status),
+}));
+
+export const projectActivities = pgTable("project_activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  userId: uuid("user_id").notNull(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  description: text("description").notNull(),
+  metadata: text("metadata"), // JSON string
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_activities_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "project_activities_milestone_id_service_milestones_id_fk"
+  }),
+  userFk: foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "project_activities_user_id_users_id_fk"
+  }),
+  bookingIdx: index("project_activities_booking_id_idx").on(table.bookingId),
+  createdAtIdx: index("project_activities_created_at_idx").on(table.createdAt),
+}));
+
+export const projectFiles = pgTable("project_files", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  bookingId: uuid("booking_id").notNull(),
+  milestoneId: uuid("milestone_id"),
+  deliverableId: uuid("deliverable_id"),
+  uploaderId: uuid("uploader_id").notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileHash: varchar("file_hash", { length: 128 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  fileType: varchar("file_type", { length: 100 }).notNull(),
+  versionNumber: integer("version_number").default(1),
+  isCurrentVersion: boolean("is_current_version").default(true),
+  accessLevel: varchar("access_level", { length: 20 }).default("project"),
+  downloadCount: integer("download_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  bookingFk: foreignKey({
+    columns: [table.bookingId],
+    foreignColumns: [serviceBookings.id],
+    name: "project_files_booking_id_service_bookings_id_fk"
+  }),
+  milestoneFk: foreignKey({
+    columns: [table.milestoneId],
+    foreignColumns: [serviceMilestones.id],
+    name: "project_files_milestone_id_service_milestones_id_fk"
+  }),
+  deliverableFk: foreignKey({
+    columns: [table.deliverableId],
+    foreignColumns: [projectDeliverables.id],
+    name: "project_files_deliverable_id_project_deliverables_id_fk"
+  }),
+  uploaderFk: foreignKey({
+    columns: [table.uploaderId],
+    foreignColumns: [users.id],
+    name: "project_files_uploader_id_users_id_fk"
+  }),
+  bookingIdx: index("project_files_booking_id_idx").on(table.bookingId),
+  fileHashIdx: index("project_files_file_hash_idx").on(table.fileHash),
+}));
+
+// AI Content Moderation System Tables
+
+export const moderationCases = pgTable("moderation_cases", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  status: varchar("status", { length: 24 }).default("pending"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default("0"),
+  decision: varchar("decision", { length: 24 }),
+  reasonCode: varchar("reason_code", { length: 48 }),
+  confidence: numeric("confidence", { precision: 5, scale: 4 }).default("0"),
+  vendorScores: text("vendor_scores"), // JSON
+  evidenceCid: text("evidence_cid"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  contentIdIdx: index("idx_moderation_cases_content_id").on(t.contentId),
+  userIdIdx: index("idx_moderation_cases_user_id").on(t.userId),
+  statusIdx: index("idx_moderation_cases_status").on(t.status),
+  createdAtIdx: index("idx_moderation_cases_created_at").on(t.createdAt),
+  riskScoreIdx: index("idx_moderation_cases_risk_score").on(t.riskScore),
+  userStatusIdx: index("idx_moderation_cases_user_status").on(t.userId, t.status),
+}));
+
+export const moderationActions = pgTable("moderation_actions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  action: varchar("action", { length: 24 }).notNull(),
+  durationSec: integer("duration_sec").default(0),
+  appliedBy: varchar("applied_by", { length: 64 }),
+  rationale: text("rationale"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_moderation_actions_user_id").on(t.userId),
+  contentIdIdx: index("idx_moderation_actions_content_id").on(t.contentId),
+  createdAtIdx: index("idx_moderation_actions_created_at").on(t.createdAt),
+  userCreatedIdx: index("idx_moderation_actions_user_created").on(t.userId, t.createdAt),
+}));
+
+export const contentReports = pgTable("content_reports", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  reporterId: uuid("reporter_id").notNull().references(() => users.id),
+  reason: varchar("reason", { length: 48 }).notNull(),
+  details: text("details"),
+  weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
+  status: varchar("status", { length: 24 }).default("open"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  contentIdIdx: index("idx_content_reports_content_id").on(t.contentId),
+  reporterIdIdx: index("idx_content_reports_reporter_id").on(t.reporterId),
+  statusIdx: index("idx_content_reports_status").on(t.status),
+  createdAtIdx: index("idx_content_reports_created_at").on(t.createdAt),
+  contentStatusIdx: index("idx_content_reports_content_status").on(t.contentId, t.status),
+}));
+
+export const moderationAppeals = pgTable("moderation_appeals", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id").notNull().references(() => moderationCases.id),
+  appellantId: uuid("appellant_id").notNull().references(() => users.id),
+  status: varchar("status", { length: 24 }).default("open"),
+  stakeAmount: numeric("stake_amount", { precision: 20, scale: 8 }).default("0"),
+  juryDecision: varchar("jury_decision", { length: 24 }),
+  decisionCid: text("decision_cid"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  caseIdIdx: index("idx_moderation_appeals_case_id").on(t.caseId),
+  appellantIdIdx: index("idx_moderation_appeals_appellant_id").on(t.appellantId),
+  statusIdx: index("idx_moderation_appeals_status").on(t.status),
+}));
+
+export const appealJurors = pgTable("appeal_jurors", {
+  id: serial("id").primaryKey(),
+  appealId: integer("appeal_id").notNull().references(() => moderationAppeals.id),
+  jurorId: uuid("juror_id").notNull().references(() => users.id),
+  selectionWeight: numeric("selection_weight", { precision: 10, scale: 4 }).notNull(),
+  voteCommitment: varchar("vote_commitment", { length: 64 }),
+  voteReveal: varchar("vote_reveal", { length: 24 }),
+  voteReasoning: text("vote_reasoning"),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).default("0"),
+  slashedAmount: numeric("slashed_amount", { precision: 20, scale: 8 }).default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  votedAt: timestamp("voted_at"),
+}, (t) => ({
+  appealIdIdx: index("idx_appeal_jurors_appeal_id").on(t.appealId),
+  jurorIdIdx: index("idx_appeal_jurors_juror_id").on(t.jurorId),
+}));
+
+export const moderationPolicies = pgTable("moderation_policies", {
+  id: serial("id").primaryKey(),
+  category: varchar("category", { length: 48 }).notNull(),
+  severity: varchar("severity", { length: 24 }).notNull(),
+  confidenceThreshold: numeric("confidence_threshold", { precision: 5, scale: 4 }).notNull(),
+  action: varchar("action", { length: 24 }).notNull(),
+  reputationModifier: numeric("reputation_modifier", { precision: 5, scale: 4 }).default("0"),
+  description: text("description").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const moderationVendors = pgTable("moderation_vendors", {
+  id: serial("id").primaryKey(),
+  vendorName: varchar("vendor_name", { length: 32 }).notNull().unique(),
+  vendorType: varchar("vendor_type", { length: 24 }).notNull(),
+  apiEndpoint: varchar("api_endpoint", { length: 255 }),
+  isEnabled: boolean("is_enabled").default(true),
+  weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
+  costPerRequest: numeric("cost_per_request", { precision: 10, scale: 6 }).default("0"),
+  avgLatencyMs: integer("avg_latency_ms").default(0),
+  successRate: numeric("success_rate", { precision: 5, scale: 4 }).default("1"),
+  lastHealthCheck: timestamp("last_health_check"),
+  configuration: text("configuration"), // JSON
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const moderationAuditLog = pgTable("moderation_audit_log", {
+  id: serial("id").primaryKey(),
+  caseId: integer("case_id").references(() => moderationCases.id),
+  actionType: varchar("action_type", { length: 32 }).notNull(),
+  actorId: varchar("actor_id", { length: 64 }),
+  actorType: varchar("actor_type", { length: 24 }).default("user"),
+  oldState: text("old_state"), // JSON
+  newState: text("new_state"), // JSON
+  reasoning: text("reasoning"),
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 compatible
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  caseIdIdx: index("idx_moderation_audit_log_case_id").on(t.caseId),
+  createdAtIdx: index("idx_moderation_audit_log_created_at").on(t.createdAt),
+  actorIdIdx: index("idx_moderation_audit_log_actor_id").on(t.actorId),
+}));
+
+export const moderationMetrics = pgTable("moderation_metrics", {
+  id: serial("id").primaryKey(),
+  metricType: varchar("metric_type", { length: 32 }).notNull(),
+  metricName: varchar("metric_name", { length: 64 }).notNull(),
+  metricValue: numeric("metric_value", { precision: 15, scale: 6 }).notNull(),
+  dimensions: text("dimensions"), // JSON
+  recordedAt: timestamp("recorded_at").defaultNow(),
+}, (t) => ({
+  metricTypeIdx: index("idx_moderation_metrics_metric_type").on(t.metricType),
+  recordedAtIdx: index("idx_moderation_metrics_recorded_at").on(t.recordedAt),
+}));
+
+export const contentHashes = pgTable("content_hashes", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
+  hashType: varchar("hash_type", { length: 24 }).notNull(),
+  hashValue: varchar("hash_value", { length: 128 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  contentIdIdx: index("idx_content_hashes_content_id").on(t.contentId),
+  hashValueIdx: index("idx_content_hashes_hash_value").on(t.hashValue),
+  hashTypeIdx: index("idx_content_hashes_hash_type").on(t.hashType),
+}));
+
+export const reputationImpacts = pgTable("reputation_impacts", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  caseId: integer("case_id").references(() => moderationCases.id),
+  impactType: varchar("impact_type", { length: 32 }).notNull(),
+  impactValue: numeric("impact_value", { precision: 10, scale: 4 }).notNull(),
+  previousReputation: numeric("previous_reputation", { precision: 10, scale: 4 }),
+  newReputation: numeric("new_reputation", { precision: 10, scale: 4 }),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_reputation_impacts_user_id").on(t.userId),
+  caseIdIdx: index("idx_reputation_impacts_case_id").on(t.caseId),
+  createdAtIdx: index("idx_reputation_impacts_created_at").on(t.createdAt),
+}));

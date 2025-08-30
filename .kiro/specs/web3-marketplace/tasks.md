@@ -183,7 +183,7 @@
     - _Requirements: 8.4, 8.5_
 
 - [ ] 11. Services Marketplace Implementation
-  - [ ] 11.1 Service Listing and Management
+  - [x] 11.1 Service Listing and Management
     - Implement service category system (digital, consulting, local services)
     - Build service provider profile and portfolio management
     - Create service booking and scheduling system with calendar integration
@@ -192,7 +192,7 @@
     - Write tests for service management and booking workflows
     - _Requirements: 7.1, 7.4, 7.5_
 
-  - [ ] 11.2 Project Management Tools
+  - [x] 11.2 Project Management Tools
     - Build milestone-based payment system for service projects
     - Implement client-provider communication tools with file sharing
     - Create project timeline and deliverable tracking system

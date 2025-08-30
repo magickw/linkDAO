@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.watermarkTemplates = exports.drmKeys = exports.cdnAccessLogs = exports.digitalAssetAnalytics = exports.digitalAssetReports = exports.dmcaTakedownRequests = exports.digitalAssetAccessLogs = exports.digitalAssetPurchases = exports.digitalAssetLicenses = exports.digitalAssets = exports.nftTransfers = exports.nftOffers = exports.nftBids = exports.nftAuctions = exports.nftListings = exports.nfts = exports.nftCollections = exports.reputationHistory = exports.reviewReports = exports.reviewHelpfulness = exports.reviews = exports.syncStatus = exports.blockchainEvents = exports.pushTokens = exports.notificationPreferences = exports.notifications = exports.trackingRecords = exports.orderEvents = exports.follows = exports.bids = exports.listings = exports.aiModeration = exports.tips = exports.reactions = exports.orders = exports.disputeEvents = exports.arbitratorApplications = exports.disputeVotes = exports.disputeEvidence = exports.disputes = exports.offers = exports.escrows = exports.postTags = exports.users = exports.reputations = exports.payments = exports.proposals = exports.posts = exports.embeddings = exports.bots = void 0;
-exports.contentVerification = void 0;
+exports.projectFiles = exports.projectActivities = exports.projectApprovals = exports.projectMessages = exports.projectThreads = exports.milestonePayments = exports.projectDeliverables = exports.timeTracking = exports.serviceMessages = exports.serviceProviderProfiles = exports.serviceReviews = exports.serviceMilestones = exports.serviceBookings = exports.serviceAvailability = exports.services = exports.serviceCategories = exports.contentVerification = void 0;
 const pg_core_1 = require("drizzle-orm/pg-core");
 exports.bots = (0, pg_core_1.pgTable)("bots", {
     id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
@@ -1024,5 +1024,504 @@ exports.contentVerification = (0, pg_core_1.pgTable)("content_verification", {
         foreignColumns: [exports.users.id],
         name: "content_verification_verified_by_users_id_fk"
     }),
+]);
+exports.serviceCategories = (0, pg_core_1.pgTable)("service_categories", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    name: (0, pg_core_1.varchar)({ length: 100 }).notNull(),
+    description: (0, pg_core_1.text)(),
+    parentId: (0, pg_core_1.uuid)("parent_id"),
+    icon: (0, pg_core_1.varchar)({ length: 50 }),
+    isActive: (0, pg_core_1.boolean)("is_active").default(true),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.parentId],
+        foreignColumns: [table.id],
+        name: "service_categories_parent_id_service_categories_id_fk"
+    }),
+]);
+exports.services = (0, pg_core_1.pgTable)("services", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    providerId: (0, pg_core_1.uuid)("provider_id").notNull(),
+    categoryId: (0, pg_core_1.uuid)("category_id").notNull(),
+    title: (0, pg_core_1.varchar)({ length: 255 }).notNull(),
+    description: (0, pg_core_1.text)().notNull(),
+    shortDescription: (0, pg_core_1.varchar)("short_description", { length: 500 }),
+    pricingModel: (0, pg_core_1.varchar)("pricing_model", { length: 20 }).notNull(),
+    basePrice: (0, pg_core_1.numeric)("base_price", { precision: 20, scale: 8 }).notNull(),
+    currency: (0, pg_core_1.varchar)({ length: 10 }).notNull().default('USD'),
+    durationMinutes: (0, pg_core_1.integer)("duration_minutes"),
+    isRemote: (0, pg_core_1.boolean)("is_remote").default(true),
+    locationRequired: (0, pg_core_1.boolean)("location_required").default(false),
+    serviceLocation: (0, pg_core_1.text)("service_location"),
+    tags: (0, pg_core_1.text)().array(),
+    requirements: (0, pg_core_1.text)(),
+    deliverables: (0, pg_core_1.text)(),
+    portfolioItems: (0, pg_core_1.text)("portfolio_items").array(),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('active'),
+    featured: (0, pg_core_1.boolean)().default(false),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.providerId],
+        foreignColumns: [exports.users.id],
+        name: "services_provider_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.categoryId],
+        foreignColumns: [exports.serviceCategories.id],
+        name: "services_category_id_service_categories_id_fk"
+    }),
+    (0, pg_core_1.index)("services_provider_id_idx").on(table.providerId),
+    (0, pg_core_1.index)("services_category_id_idx").on(table.categoryId),
+    (0, pg_core_1.index)("services_status_idx").on(table.status),
+]);
+exports.serviceAvailability = (0, pg_core_1.pgTable)("service_availability", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    serviceId: (0, pg_core_1.uuid)("service_id").notNull(),
+    dayOfWeek: (0, pg_core_1.integer)("day_of_week").notNull(),
+    startTime: (0, pg_core_1.varchar)("start_time", { length: 8 }).notNull(),
+    endTime: (0, pg_core_1.varchar)("end_time", { length: 8 }).notNull(),
+    timezone: (0, pg_core_1.varchar)({ length: 50 }).notNull().default('UTC'),
+    isAvailable: (0, pg_core_1.boolean)("is_available").default(true),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.serviceId],
+        foreignColumns: [exports.services.id],
+        name: "service_availability_service_id_services_id_fk"
+    }),
+    (0, pg_core_1.index)("service_availability_service_id_idx").on(table.serviceId),
+]);
+exports.serviceBookings = (0, pg_core_1.pgTable)("service_bookings", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    serviceId: (0, pg_core_1.uuid)("service_id").notNull(),
+    clientId: (0, pg_core_1.uuid)("client_id").notNull(),
+    providerId: (0, pg_core_1.uuid)("provider_id").notNull(),
+    bookingType: (0, pg_core_1.varchar)("booking_type", { length: 20 }).notNull(),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('pending'),
+    scheduledStart: (0, pg_core_1.timestamp)("scheduled_start", { mode: 'string' }),
+    scheduledEnd: (0, pg_core_1.timestamp)("scheduled_end", { mode: 'string' }),
+    actualStart: (0, pg_core_1.timestamp)("actual_start", { mode: 'string' }),
+    actualEnd: (0, pg_core_1.timestamp)("actual_end", { mode: 'string' }),
+    totalAmount: (0, pg_core_1.numeric)("total_amount", { precision: 20, scale: 8 }).notNull(),
+    currency: (0, pg_core_1.varchar)({ length: 10 }).notNull(),
+    paymentStatus: (0, pg_core_1.varchar)("payment_status", { length: 20 }).default('pending'),
+    escrowContract: (0, pg_core_1.varchar)("escrow_contract", { length: 66 }),
+    clientRequirements: (0, pg_core_1.text)("client_requirements"),
+    providerNotes: (0, pg_core_1.text)("provider_notes"),
+    meetingLink: (0, pg_core_1.varchar)("meeting_link", { length: 500 }),
+    locationDetails: (0, pg_core_1.text)("location_details"),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.serviceId],
+        foreignColumns: [exports.services.id],
+        name: "service_bookings_service_id_services_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.clientId],
+        foreignColumns: [exports.users.id],
+        name: "service_bookings_client_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.providerId],
+        foreignColumns: [exports.users.id],
+        name: "service_bookings_provider_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("service_bookings_client_id_idx").on(table.clientId),
+    (0, pg_core_1.index)("service_bookings_provider_id_idx").on(table.providerId),
+    (0, pg_core_1.index)("service_bookings_status_idx").on(table.status),
+]);
+exports.serviceMilestones = (0, pg_core_1.pgTable)("service_milestones", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneNumber: (0, pg_core_1.integer)("milestone_number").notNull(),
+    title: (0, pg_core_1.varchar)({ length: 255 }).notNull(),
+    description: (0, pg_core_1.text)(),
+    amount: (0, pg_core_1.numeric)({ precision: 20, scale: 8 }).notNull(),
+    dueDate: (0, pg_core_1.timestamp)("due_date", { mode: 'string' }),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('pending'),
+    deliverables: (0, pg_core_1.text)().array(),
+    clientFeedback: (0, pg_core_1.text)("client_feedback"),
+    completedAt: (0, pg_core_1.timestamp)("completed_at", { mode: 'string' }),
+    approvedAt: (0, pg_core_1.timestamp)("approved_at", { mode: 'string' }),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "service_milestones_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.index)("service_milestones_booking_id_idx").on(table.bookingId),
+]);
+exports.serviceReviews = (0, pg_core_1.pgTable)("service_reviews", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    reviewerId: (0, pg_core_1.uuid)("reviewer_id").notNull(),
+    revieweeId: (0, pg_core_1.uuid)("reviewee_id").notNull(),
+    serviceId: (0, pg_core_1.uuid)("service_id").notNull(),
+    rating: (0, pg_core_1.integer)().notNull(),
+    communicationRating: (0, pg_core_1.integer)("communication_rating"),
+    qualityRating: (0, pg_core_1.integer)("quality_rating"),
+    timelinessRating: (0, pg_core_1.integer)("timeliness_rating"),
+    title: (0, pg_core_1.varchar)({ length: 200 }),
+    comment: (0, pg_core_1.text)(),
+    wouldRecommend: (0, pg_core_1.boolean)("would_recommend"),
+    ipfsHash: (0, pg_core_1.varchar)("ipfs_hash", { length: 128 }),
+    blockchainTxHash: (0, pg_core_1.varchar)("blockchain_tx_hash", { length: 66 }),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "service_reviews_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.reviewerId],
+        foreignColumns: [exports.users.id],
+        name: "service_reviews_reviewer_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.revieweeId],
+        foreignColumns: [exports.users.id],
+        name: "service_reviews_reviewee_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.serviceId],
+        foreignColumns: [exports.services.id],
+        name: "service_reviews_service_id_services_id_fk"
+    }),
+    (0, pg_core_1.index)("service_reviews_service_id_idx").on(table.serviceId),
+]);
+exports.serviceProviderProfiles = (0, pg_core_1.pgTable)("service_provider_profiles", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    userId: (0, pg_core_1.uuid)("user_id").notNull(),
+    businessName: (0, pg_core_1.varchar)("business_name", { length: 255 }),
+    tagline: (0, pg_core_1.varchar)({ length: 500 }),
+    bio: (0, pg_core_1.text)(),
+    skills: (0, pg_core_1.text)().array(),
+    certifications: (0, pg_core_1.text)().array(),
+    languages: (0, pg_core_1.text)().array(),
+    responseTimeHours: (0, pg_core_1.integer)("response_time_hours").default(24),
+    availabilityTimezone: (0, pg_core_1.varchar)("availability_timezone", { length: 50 }).default('UTC'),
+    portfolioDescription: (0, pg_core_1.text)("portfolio_description"),
+    yearsExperience: (0, pg_core_1.integer)("years_experience"),
+    education: (0, pg_core_1.text)(),
+    websiteUrl: (0, pg_core_1.varchar)("website_url", { length: 500 }),
+    linkedinUrl: (0, pg_core_1.varchar)("linkedin_url", { length: 500 }),
+    githubUrl: (0, pg_core_1.varchar)("github_url", { length: 500 }),
+    isVerified: (0, pg_core_1.boolean)("is_verified").default(false),
+    verificationDocuments: (0, pg_core_1.text)("verification_documents").array(),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.userId],
+        foreignColumns: [exports.users.id],
+        name: "service_provider_profiles_user_id_users_id_fk"
+    }),
+    (0, pg_core_1.unique)("service_provider_profiles_user_id_unique").on(table.userId),
+]);
+exports.serviceMessages = (0, pg_core_1.pgTable)("service_messages", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    senderId: (0, pg_core_1.uuid)("sender_id").notNull(),
+    recipientId: (0, pg_core_1.uuid)("recipient_id").notNull(),
+    messageType: (0, pg_core_1.varchar)("message_type", { length: 20 }).default('text'),
+    content: (0, pg_core_1.text)(),
+    fileAttachments: (0, pg_core_1.text)("file_attachments").array(),
+    isRead: (0, pg_core_1.boolean)("is_read").default(false),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "service_messages_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.senderId],
+        foreignColumns: [exports.users.id],
+        name: "service_messages_sender_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.recipientId],
+        foreignColumns: [exports.users.id],
+        name: "service_messages_recipient_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("service_messages_booking_id_idx").on(table.bookingId),
+]);
+exports.timeTracking = (0, pg_core_1.pgTable)("time_tracking", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    providerId: (0, pg_core_1.uuid)("provider_id").notNull(),
+    startTime: (0, pg_core_1.timestamp)("start_time", { mode: 'string' }).notNull(),
+    endTime: (0, pg_core_1.timestamp)("end_time", { mode: 'string' }),
+    durationMinutes: (0, pg_core_1.integer)("duration_minutes"),
+    description: (0, pg_core_1.text)(),
+    isBillable: (0, pg_core_1.boolean)("is_billable").default(true),
+    hourlyRate: (0, pg_core_1.numeric)("hourly_rate", { precision: 20, scale: 8 }),
+    totalAmount: (0, pg_core_1.numeric)("total_amount", { precision: 20, scale: 8 }),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('active'),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "time_tracking_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "time_tracking_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.providerId],
+        foreignColumns: [exports.users.id],
+        name: "time_tracking_provider_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("time_tracking_booking_id_idx").on(table.bookingId),
+    (0, pg_core_1.index)("time_tracking_provider_id_idx").on(table.providerId),
+    (0, pg_core_1.index)("time_tracking_start_time_idx").on(table.startTime),
+]);
+exports.projectDeliverables = (0, pg_core_1.pgTable)("project_deliverables", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    title: (0, pg_core_1.varchar)({ length: 255 }).notNull(),
+    description: (0, pg_core_1.text)(),
+    deliverableType: (0, pg_core_1.varchar)("deliverable_type", { length: 50 }).notNull(),
+    fileHash: (0, pg_core_1.varchar)("file_hash", { length: 128 }),
+    fileName: (0, pg_core_1.varchar)("file_name", { length: 255 }),
+    fileSize: (0, pg_core_1.bigint)("file_size", { mode: 'number' }),
+    fileType: (0, pg_core_1.varchar)("file_type", { length: 100 }),
+    content: (0, pg_core_1.text)(),
+    url: (0, pg_core_1.varchar)({ length: 500 }),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('pending'),
+    submittedAt: (0, pg_core_1.timestamp)("submitted_at", { mode: 'string' }),
+    reviewedAt: (0, pg_core_1.timestamp)("reviewed_at", { mode: 'string' }),
+    clientFeedback: (0, pg_core_1.text)("client_feedback"),
+    revisionNotes: (0, pg_core_1.text)("revision_notes"),
+    versionNumber: (0, pg_core_1.integer)("version_number").default(1),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_deliverables_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "project_deliverables_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.index)("project_deliverables_booking_id_idx").on(table.bookingId),
+    (0, pg_core_1.index)("project_deliverables_milestone_id_idx").on(table.milestoneId),
+    (0, pg_core_1.index)("project_deliverables_status_idx").on(table.status),
+]);
+exports.milestonePayments = (0, pg_core_1.pgTable)("milestone_payments", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id").notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    amount: (0, pg_core_1.numeric)({ precision: 20, scale: 8 }).notNull(),
+    currency: (0, pg_core_1.varchar)({ length: 10 }).notNull(),
+    paymentMethod: (0, pg_core_1.varchar)("payment_method", { length: 20 }).notNull(),
+    escrowContract: (0, pg_core_1.varchar)("escrow_contract", { length: 66 }),
+    paymentProcessorId: (0, pg_core_1.varchar)("payment_processor_id", { length: 100 }),
+    transactionHash: (0, pg_core_1.varchar)("transaction_hash", { length: 66 }),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('pending'),
+    heldUntil: (0, pg_core_1.timestamp)("held_until", { mode: 'string' }),
+    releaseConditions: (0, pg_core_1.text)("release_conditions"),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "milestone_payments_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "milestone_payments_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.index)("milestone_payments_milestone_id_idx").on(table.milestoneId),
+    (0, pg_core_1.index)("milestone_payments_status_idx").on(table.status),
+]);
+exports.projectThreads = (0, pg_core_1.pgTable)("project_threads", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    threadType: (0, pg_core_1.varchar)("thread_type", { length: 30 }).notNull(),
+    title: (0, pg_core_1.varchar)({ length: 255 }).notNull(),
+    isPrivate: (0, pg_core_1.boolean)("is_private").default(false),
+    createdBy: (0, pg_core_1.uuid)("created_by").notNull(),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_threads_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "project_threads_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.createdBy],
+        foreignColumns: [exports.users.id],
+        name: "project_threads_created_by_users_id_fk"
+    }),
+    (0, pg_core_1.index)("project_threads_booking_id_idx").on(table.bookingId),
+]);
+exports.projectMessages = (0, pg_core_1.pgTable)("project_messages", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    threadId: (0, pg_core_1.uuid)("thread_id").notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    senderId: (0, pg_core_1.uuid)("sender_id").notNull(),
+    messageType: (0, pg_core_1.varchar)("message_type", { length: 20 }).default('text'),
+    content: (0, pg_core_1.text)(),
+    fileAttachments: (0, pg_core_1.text)("file_attachments"),
+    codeLanguage: (0, pg_core_1.varchar)("code_language", { length: 50 }),
+    isRead: (0, pg_core_1.boolean)("is_read").default(false),
+    isPinned: (0, pg_core_1.boolean)("is_pinned").default(false),
+    replyTo: (0, pg_core_1.uuid)("reply_to"),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.threadId],
+        foreignColumns: [exports.projectThreads.id],
+        name: "project_messages_thread_id_project_threads_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_messages_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.senderId],
+        foreignColumns: [exports.users.id],
+        name: "project_messages_sender_id_users_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.replyTo],
+        foreignColumns: [exports.projectMessages.id],
+        name: "project_messages_reply_to_project_messages_id_fk"
+    }),
+    (0, pg_core_1.index)("project_messages_thread_id_idx").on(table.threadId),
+    (0, pg_core_1.index)("project_messages_booking_id_idx").on(table.bookingId),
+]);
+exports.projectApprovals = (0, pg_core_1.pgTable)("project_approvals", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    deliverableId: (0, pg_core_1.uuid)("deliverable_id"),
+    approverId: (0, pg_core_1.uuid)("approver_id").notNull(),
+    approvalType: (0, pg_core_1.varchar)("approval_type", { length: 30 }).notNull(),
+    status: (0, pg_core_1.varchar)({ length: 20 }).default('pending'),
+    feedback: (0, pg_core_1.text)(),
+    approvedAt: (0, pg_core_1.timestamp)("approved_at", { mode: 'string' }),
+    autoApproveAt: (0, pg_core_1.timestamp)("auto_approve_at", { mode: 'string' }),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+    updatedAt: (0, pg_core_1.timestamp)("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_approvals_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "project_approvals_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.deliverableId],
+        foreignColumns: [exports.projectDeliverables.id],
+        name: "project_approvals_deliverable_id_project_deliverables_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.approverId],
+        foreignColumns: [exports.users.id],
+        name: "project_approvals_approver_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("project_approvals_booking_id_idx").on(table.bookingId),
+    (0, pg_core_1.index)("project_approvals_status_idx").on(table.status),
+]);
+exports.projectActivities = (0, pg_core_1.pgTable)("project_activities", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    userId: (0, pg_core_1.uuid)("user_id").notNull(),
+    activityType: (0, pg_core_1.varchar)("activity_type", { length: 50 }).notNull(),
+    description: (0, pg_core_1.text)().notNull(),
+    metadata: (0, pg_core_1.text)(),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_activities_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "project_activities_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.userId],
+        foreignColumns: [exports.users.id],
+        name: "project_activities_user_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("project_activities_booking_id_idx").on(table.bookingId),
+    (0, pg_core_1.index)("project_activities_created_at_idx").on(table.createdAt),
+]);
+exports.projectFiles = (0, pg_core_1.pgTable)("project_files", {
+    id: (0, pg_core_1.uuid)().defaultRandom().primaryKey().notNull(),
+    bookingId: (0, pg_core_1.uuid)("booking_id").notNull(),
+    milestoneId: (0, pg_core_1.uuid)("milestone_id"),
+    deliverableId: (0, pg_core_1.uuid)("deliverable_id"),
+    uploaderId: (0, pg_core_1.uuid)("uploader_id").notNull(),
+    fileName: (0, pg_core_1.varchar)("file_name", { length: 255 }).notNull(),
+    fileHash: (0, pg_core_1.varchar)("file_hash", { length: 128 }).notNull(),
+    fileSize: (0, pg_core_1.bigint)("file_size", { mode: 'number' }).notNull(),
+    fileType: (0, pg_core_1.varchar)("file_type", { length: 100 }).notNull(),
+    versionNumber: (0, pg_core_1.integer)("version_number").default(1),
+    isCurrentVersion: (0, pg_core_1.boolean)("is_current_version").default(true),
+    accessLevel: (0, pg_core_1.varchar)("access_level", { length: 20 }).default('project'),
+    downloadCount: (0, pg_core_1.integer)("download_count").default(0),
+    createdAt: (0, pg_core_1.timestamp)("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+    (0, pg_core_1.foreignKey)({
+        columns: [table.bookingId],
+        foreignColumns: [exports.serviceBookings.id],
+        name: "project_files_booking_id_service_bookings_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.milestoneId],
+        foreignColumns: [exports.serviceMilestones.id],
+        name: "project_files_milestone_id_service_milestones_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.deliverableId],
+        foreignColumns: [exports.projectDeliverables.id],
+        name: "project_files_deliverable_id_project_deliverables_id_fk"
+    }),
+    (0, pg_core_1.foreignKey)({
+        columns: [table.uploaderId],
+        foreignColumns: [exports.users.id],
+        name: "project_files_uploader_id_users_id_fk"
+    }),
+    (0, pg_core_1.index)("project_files_booking_id_idx").on(table.bookingId),
+    (0, pg_core_1.index)("project_files_file_hash_idx").on(table.fileHash),
 ]);
 //# sourceMappingURL=schema.js.map

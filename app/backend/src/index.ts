@@ -3,8 +3,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { databaseService } from './services/databaseService';
-import { redisService } from './services/redisService';
+// import { redisService } from './services/redisService'; // Disabled to prevent blocking
 import { validateEnv } from './utils/envValidation';
+import { generalLimiter, feedLimiter } from './middleware/rateLimiter';
 
 // Import routes
 import userProfileRoutes from './routes/userProfileRoutes';
@@ -20,6 +21,8 @@ import searchRoutes from './routes/searchRoutes';
 import orderRoutes from './routes/orderRoutes';
 import disputeRoutes from './routes/disputeRoutes';
 import reviewRoutes from './routes/reviewRoutes';
+// import serviceRoutes from './routes/serviceRoutes';
+// import projectManagementRoutes from './routes/projectManagementRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -31,14 +34,32 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://linkdao.vercel.app'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
+  origin: (origin, callback) => {
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? ['https://linkdao.vercel.app'] 
+      : ['http://localhost:3000', 'http://localhost:3001'];
+    
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
 }));
 
 app.use(helmet());
 app.use(express.json());
+
+// Global rate limiting
+app.use(generalLimiter);
 
 // Initialize services
 async function initializeServices() {
@@ -56,17 +77,8 @@ async function initializeServices() {
   }
 
   // Redis connection test (optional)
-  try {
-    if (process.env.REDIS_URL && process.env.REDIS_URL !== 'redis://localhost:6379') {
-      await redisService.testConnection();
-      console.log('✅ Redis connection successful');
-    } else {
-      console.log('⚠️  Redis not configured, skipping...');
-    }
-  } catch (error) {
-    console.error('❌ Redis connection failed:', error);
-    console.log('⚠️  Continuing without Redis...');
-  }
+  // Skip Redis connection entirely to prevent blocking server startup
+  console.log('⚠️  Skipping Redis connection to prevent server blocking');
 }
 
 // Basic route
@@ -119,11 +131,42 @@ app.use('/api/search', searchRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', disputeRoutes);
 app.use('/api', reviewRoutes);
+// app.use('/api/services', serviceRoutes);
+// app.use('/api/project-management', projectManagementRoutes);
 
 // Additional search-related routes
 app.use('/api/trending', searchRoutes);
 app.use('/api/recommendations', searchRoutes);
 app.use('/api/hashtags', searchRoutes);
+
+// Global error handler (must be after routes)
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Global error handler:', error);
+  
+  // CORS error
+  if (error.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      error: 'CORS Policy Violation',
+      message: 'Origin not allowed by CORS policy'
+    });
+  }
+  
+  // Default error response
+  return res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'production' 
+      ? 'Something went wrong' 
+      : error.message
+  });
+});
+
+// 404 handler for unmatched routes
+app.use('*', (req: express.Request, res: express.Response) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.originalUrl} not found`
+  });
+});
 
 // Start server
 async function startServer() {
