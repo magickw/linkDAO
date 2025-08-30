@@ -419,8 +419,8 @@ export default function SearchInterface({
                     key={post.id}
                     post={post}
                     profile={{ handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/40' }}
-                    onTip={() => {}}
-                    onClick={() => handleResultClick('post', post.id)}
+                    onTip={async () => {}}
+                    onExpand={() => handleResultClick('post', post.id)}
                     className="cursor-pointer hover:shadow-md transition-shadow"
                   />
                 ))}
@@ -468,8 +468,8 @@ export default function SearchInterface({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {results.users.map((user) => (
                   <div
-                    key={user.walletAddress}
-                    onClick={() => handleResultClick('user', user.walletAddress)}
+                    key={user.address}
+                    onClick={() => handleResultClick('user', user.address)}
                     className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center space-x-3 mb-2">
@@ -480,11 +480,11 @@ export default function SearchInterface({
                       />
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-white">{user.handle || 'Anonymous'}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{user.ens || `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{user.ens || `${user.address.slice(0, 6)}...${user.address.slice(-4)}`}</p>
                       </div>
                     </div>
-                    {user.bio && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{user.bio}</p>
+                    {user.bioCid && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{user.bioCid}</p>
                     )}
                   </div>
                 ))}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
@@ -9,6 +9,10 @@ import UnifiedPostCreation from '@/components/UnifiedPostCreation';
 import { FeedSkeleton, ProgressiveLoader } from '@/components/LoadingSkeletons';
 import { FeedErrorBoundary, NetworkError } from '@/components/ErrorBoundaries';
 import { NoPostsState, LoadingState } from '@/components/FallbackStates';
+import VirtualScrolling from '@/components/VirtualScrolling';
+import { cacheManager } from '@/services/cacheService';
+import OptimizedImage from '@/components/OptimizedImage';
+import { performanceMonitor } from '@/utils/performanceMonitor';
 
 // Mock profile data - in a real app this would come from the backend
 const mockProfiles: Record<string, any> = {
@@ -47,6 +51,12 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
   const [hasMore, setHasMore] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FeedFilter>('all');
   const [postCreationExpanded, setPostCreationExpanded] = useState(false);
+  const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
+
+  // Enable virtual scrolling for large feeds
+  useEffect(() => {
+    setUseVirtualScrolling(feed.length > 50);
+  }, [feed.length]);
 
   // Show success toast when post is created
   useEffect(() => {
@@ -62,12 +72,30 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
     }
   }, [createPostError, addToast]);
 
-  // Load profiles for posts
+  // Load profiles for posts with caching
   useEffect(() => {
     const loadProfiles = async () => {
-      // In a real implementation, we would fetch profiles from the backend
-      // For now, we'll use mock data
-      setProfiles(mockProfiles);
+      const profilePromises = feed.map(async (post) => {
+        // Try to get from cache first
+        let profile = cacheManager.userCache.getUser(post.author);
+        
+        if (!profile) {
+          // In a real implementation, we would fetch from the backend
+          // For now, we'll use mock data and cache it
+          profile = mockProfiles[post.author] || {
+            handle: 'Unknown',
+            ens: '',
+            avatarCid: 'https://placehold.co/40'
+          };
+          cacheManager.userCache.setUser(post.author, profile);
+        }
+        
+        return { [post.author]: profile };
+      });
+
+      const profileResults = await Promise.all(profilePromises);
+      const profilesMap = profileResults.reduce((acc, profile) => ({ ...acc, ...profile }), {});
+      setProfiles(profilesMap);
     };
 
     if (feed.length > 0) {
@@ -135,25 +163,39 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
     }
   };
 
-  // Filter posts based on active filter
-  const filteredFeed = feed.filter(post => {
-    switch (activeFilter) {
-      case 'following':
-        // In a real app, this would check if the user follows the post author
-        return true; // For now, show all posts
-      case 'trending':
-        // In a real app, this would filter by trending algorithm
-        // For now, use a simple heuristic based on post age and tags
-        const postAge = Date.now() - new Date(post.createdAt).getTime();
-        const isRecent = postAge < 24 * 60 * 60 * 1000; // Less than 24 hours old
-        const hasTrendingTags = post.tags.some(tag => 
-          ['defi', 'nft', 'governance', 'trending'].includes(tag.toLowerCase())
-        );
-        return isRecent && hasTrendingTags;
-      default:
-        return true;
+  // Filter posts based on active filter with caching
+  const filteredFeed = useMemo(() => {
+    // Try to get filtered feed from cache
+    const cacheKey = `${address || 'anonymous'}:${activeFilter}`;
+    const cachedFeed = cacheManager.postCache.getFeed(cacheKey);
+    
+    if (cachedFeed && cachedFeed.length === feed.length) {
+      return cachedFeed;
     }
-  });
+
+    const filtered = feed.filter(post => {
+      switch (activeFilter) {
+        case 'following':
+          // In a real app, this would check if the user follows the post author
+          return true; // For now, show all posts
+        case 'trending':
+          // In a real app, this would filter by trending algorithm
+          // For now, use a simple heuristic based on post age and tags
+          const postAge = Date.now() - new Date(post.createdAt).getTime();
+          const isRecent = postAge < 24 * 60 * 60 * 1000; // Less than 24 hours old
+          const hasTrendingTags = post.tags.some(tag => 
+            ['defi', 'nft', 'governance', 'trending'].includes(tag.toLowerCase())
+          );
+          return isRecent && hasTrendingTags;
+        default:
+          return true;
+      }
+    });
+
+    // Cache the filtered result
+    cacheManager.postCache.setFeed(cacheKey, filtered);
+    return filtered;
+  }, [feed, activeFilter, address]);
 
   return (
     <div className={`max-w-2xl mx-auto ${className}`}>
@@ -221,30 +263,63 @@ export default function FeedView({ highlightedPostId, className = '' }: FeedView
           ) : (
             /* Posts List */
             <>
-              {filteredFeed.map((post) => {
-                const authorProfile = profiles[post.author] || { 
-                  handle: 'Unknown', 
-                  ens: '', 
-                  avatarCid: 'https://placehold.co/40' 
-                };
-                
-                return (
-                  <Web3SocialPostCard 
-                    key={post.id} 
-                    post={post} 
-                    profile={authorProfile} 
-                    onTip={handleTip}
-                    className="transition-all duration-300 hover:shadow-lg"
+              {useVirtualScrolling ? (
+                /* Virtual Scrolling for large feeds */
+                <VirtualScrolling
+                  items={filteredFeed}
+                  itemHeight={400} // Approximate height of a post card
+                  containerHeight={800} // Height of the scrollable container
+                  renderItem={(post: any, index: number) => {
+                    const authorProfile = profiles[post.author] || { 
+                      handle: 'Unknown', 
+                      ens: '', 
+                      avatarCid: 'https://placehold.co/40' 
+                    };
+                    
+                    return (
+                      <Web3SocialPostCard 
+                        key={post.id} 
+                        post={post} 
+                        profile={authorProfile} 
+                        onTip={handleTip}
+                        className="transition-all duration-300 hover:shadow-lg mb-4"
+                      />
+                    );
+                  }}
+                  onLoadMore={hasMore ? loadMore : undefined}
+                  hasNextPage={hasMore}
+                  isLoading={isFeedLoading && page > 1}
+                  className="space-y-4"
+                />
+              ) : (
+                /* Regular scrolling for smaller feeds */
+                <>
+                  {filteredFeed.map((post: any) => {
+                    const authorProfile = profiles[post.author] || { 
+                      handle: 'Unknown', 
+                      ens: '', 
+                      avatarCid: 'https://placehold.co/40' 
+                    };
+                    
+                    return (
+                      <Web3SocialPostCard 
+                        key={post.id} 
+                        post={post} 
+                        profile={authorProfile} 
+                        onTip={handleTip}
+                        className="transition-all duration-300 hover:shadow-lg"
+                      />
+                    );
+                  })}
+                  
+                  {/* Progressive Loading */}
+                  <ProgressiveLoader
+                    isLoading={isFeedLoading && page > 1}
+                    hasMore={hasMore}
+                    onLoadMore={loadMore}
                   />
-                );
-              })}
-              
-              {/* Progressive Loading */}
-              <ProgressiveLoader
-                isLoading={isFeedLoading && page > 1}
-                hasMore={hasMore}
-                onLoadMore={loadMore}
-              />
+                </>
+              )}
             </>
           )}
         </div>

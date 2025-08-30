@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PostService } from '../services/postService';
 import { Post, CreatePostInput } from '../models/Post';
+import { cacheManager } from '../services/cacheService';
+import { performanceMonitor } from '../utils/performanceMonitor';
 
 /**
- * Custom hook to fetch user feed
+ * Custom hook to fetch user feed with caching and performance monitoring
  * @param forUser - User address to get feed for (optional)
  * @returns Object containing feed data, loading state, and error
  */
@@ -11,25 +13,61 @@ export const useFeed = (forUser?: string) => {
   const [feed, setFeed] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  // Performance monitoring
+  const startTiming = (name: string) => {
+    performanceMonitor.mark(name);
+    return () => performanceMonitor.measure(name);
+  };
+  const markEvent = (name: string, value?: number) => {
+    performanceMonitor.recordMetric(name, value || 1, 'counter');
+  };
+
+  const fetchFeed = useCallback(async () => {
+    const endTiming = startTiming('feed.load');
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Try to get from cache first
+      const cacheKey = forUser || 'anonymous';
+      const cachedFeed = cacheManager.postCache.getFeed(cacheKey);
+      
+      if (cachedFeed) {
+        setFeed(cachedFeed);
+        markEvent('feed.cache_hit');
+        endTiming();
+        return;
+      }
+      
+      markEvent('feed.cache_miss');
+      const fetchedFeed = await PostService.getFeed(forUser);
+      
+      // Cache the result
+      cacheManager.postCache.setFeed(cacheKey, fetchedFeed);
+      
+      setFeed(fetchedFeed);
+      markEvent('feed.loaded', fetchedFeed.length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch feed');
+      markEvent('feed.error');
+    } finally {
+      setIsLoading(false);
+      endTiming();
+    }
+  }, [forUser, startTiming, markEvent]);
 
   useEffect(() => {
-    const fetchFeed = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedFeed = await PostService.getFeed(forUser);
-        setFeed(fetchedFeed);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch feed');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchFeed();
-  }, [forUser]);
+  }, [fetchFeed]);
 
-  return { feed, isLoading, error };
+  // Memoize the return value to prevent unnecessary re-renders
+  return useMemo(() => ({
+    feed,
+    isLoading,
+    error,
+    refetch: fetchFeed
+  }), [feed, isLoading, error, fetchFeed]);
 };
 
 /**

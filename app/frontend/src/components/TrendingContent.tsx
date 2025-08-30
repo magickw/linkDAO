@@ -265,13 +265,13 @@ export default function TrendingContent({
                   
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
-                      {post.content.substring(0, 100)}
-                      {post.content.length > 100 && '...'}
+                      {post.contentCid.substring(0, 100)}
+                      {post.contentCid.length > 100 && '...'}
                     </h4>
                     
                     <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                       <span>by {post.author.slice(0, 6)}...{post.author.slice(-4)}</span>
-                      <span>{post.reactions.length} reactions</span>
+                      <span>{post.tags.length} tags</span>
                       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                     </div>
                     
