@@ -1,463 +1,467 @@
 import { Request, Response } from 'express';
-import { MarketplaceModerationService } from '../services/marketplaceModerationService';
-import { MarketplaceService } from '../services/marketplaceService';
-import { DatabaseService } from '../services/databaseService';
+import { MarketplaceModerationService, MarketplaceListingInput } from '../services/marketplaceModerationService';
+import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 import { z } from 'zod';
 
 // Request validation schemas
-const VerifyListingSchema = z.object({
-  listingId: z.string(),
-  proofOfOwnership: z.object({
-    signature: z.string(),
-    message: z.string(),
-    walletAddress: z.string(),
-    timestamp: z.number(),
-  }).optional(),
-});
-
 const ModerateListingSchema = z.object({
-  listingId: z.string(),
+  listingId: z.string().min(1),
+  listingData: z.object({
+    title: z.string().min(1).max(500),
+    description: z.string().min(1).max(5000),
+    price: z.string().min(1),
+    currency: z.string().min(1).max(10),
+    category: z.string().min(1).max(100),
+    images: z.array(z.string().url()).min(1),
+    nftContract: z.string().optional(),
+    tokenId: z.string().optional(),
+    brandKeywords: z.array(z.string()).optional(),
+    isHighValue: z.boolean().default(false),
+    sellerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/)
+  }),
+  userId: z.string().uuid(),
+  userReputation: z.number().min(0).max(100).default(50),
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  metadata: z.record(z.any()).default({})
 });
 
-const AppealDecisionSchema = z.object({
-  listingId: z.string(),
-  decisionId: z.number(),
-  appealReason: z.string(),
-  evidence: z.record(z.any()).optional(),
+const VerifyNFTOwnershipSchema = z.object({
+  contractAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  tokenId: z.string().min(1),
+  sellerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  signature: z.string().optional()
 });
 
-const UpdateSellerTierSchema = z.object({
-  walletAddress: z.string(),
-  tier: z.enum(['unverified', 'basic', 'verified', 'premium']),
-  reason: z.string(),
+const CheckCounterfeitSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  images: z.array(z.string().url()).optional(),
+  brandKeywords: z.array(z.string()).optional()
+});
+
+const DetectScamSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  price: z.string().min(1),
+  currency: z.string().min(1),
+  sellerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/)
 });
 
 export class MarketplaceModerationController {
   private moderationService: MarketplaceModerationService;
-  private marketplaceService: MarketplaceService;
-  private databaseService: DatabaseService;
 
   constructor() {
     this.moderationService = new MarketplaceModerationService();
-    this.marketplaceService = new MarketplaceService();
-    this.databaseService = new DatabaseService();
   }
 
   /**
-   * Verify a marketplace listing with enhanced checks
-   * POST /api/marketplace/moderation/verify
+   * Moderate a complete marketplace listing
    */
-  async verifyListing(req: Request, res: Response): Promise<void> {
+  async moderateListing(req: Request, res: Response): Promise<Response> {
     try {
-      const { listingId, proofOfOwnership } = VerifyListingSchema.parse(req.body);
+      const validatedData = ModerateListingSchema.parse(req.body);
+      
+      const input: MarketplaceListingInput = {
+        id: validatedData.listingId,
+        type: 'listing',
+        userId: validatedData.userId,
+        userReputation: validatedData.userReputation,
+        walletAddress: validatedData.walletAddress,
+        metadata: validatedData.metadata,
+        listingData: validatedData.listingData,
+        text: `${validatedData.listingData.title} ${validatedData.listingData.description}`,
+        media: validatedData.listingData.images.map(url => ({
+          url,
+          type: 'image' as const,
+          mimeType: 'image/jpeg',
+          size: 0
+        }))
+      };
 
-      // Get the listing
-      const listing = await this.marketplaceService.getListingById(listingId);
-      if (!listing) {
-        res.status(404).json({ error: 'Listing not found' });
-        return;
-      }
-
-      // Perform verification
-      const verification = await this.moderationService.verifyHighValueNFTListing(
-        listing,
-        proofOfOwnership
-      );
-
-      // Store verification result
-      await this.storeVerificationResult(verification);
-
-      res.json({
+      const result = await this.moderationService.moderateMarketplaceListing(input);
+      
+      return res.status(200).json({
         success: true,
-        verification,
-        message: `Listing verified with ${verification.verificationLevel} level`
+        data: result
       });
 
-    } catch (error) {
-      console.error('Error verifying listing:', error);
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Invalid request data', details: error.errors });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
+        throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Moderation failed: ${error.message}`);
     }
   }
 
   /**
-   * Run comprehensive moderation on a marketplace listing
-   * POST /api/marketplace/moderation/moderate
+   * Verify NFT ownership for high-value listings
    */
-  async moderateListing(req: Request, res: Response): Promise<void> {
+  async verifyNFTOwnership(req: Request, res: Response): Promise<Response> {
     try {
-      const { listingId } = ModerateListingSchema.parse(req.body);
+      const validatedData = VerifyNFTOwnershipSchema.parse(req.body);
+      
+      // Create a minimal input for NFT verification
+      const input: MarketplaceListingInput = {
+        id: `nft_${validatedData.contractAddress}_${validatedData.tokenId}`,
+        type: 'listing',
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: validatedData.sellerAddress,
+        metadata: {},
+        listingData: {
+          title: 'NFT Verification',
+          description: 'NFT ownership verification',
+          price: '1000', // Mark as high value for verification
+          currency: 'ETH',
+          category: 'nft',
+          images: [],
+          nftContract: validatedData.contractAddress,
+          tokenId: validatedData.tokenId,
+          isHighValue: true,
+          sellerAddress: validatedData.sellerAddress
+        }
+      };
 
-      // Get the listing
-      const listing = await this.marketplaceService.getListingById(listingId);
-      if (!listing) {
-        res.status(404).json({ error: 'Listing not found' });
-        return;
-      }
-
-      // Run comprehensive moderation
-      const decision = await this.moderationService.moderateMarketplaceListing(listing);
-
-      // Store moderation decision
-      await this.storeModerationDecision(listingId, decision);
-
-      // Apply the decision (block, review, etc.)
-      await this.applyModerationDecision(listingId, decision);
-
-      res.json({
+      const result = await this.moderationService.moderateMarketplaceListing(input);
+      
+      return res.status(200).json({
         success: true,
-        decision,
-        message: `Listing moderation complete: ${decision.action}`
+        data: {
+          nftVerification: result.nftVerification,
+          verified: result.nftVerification?.status === 'verified',
+          riskFactors: result.nftVerification?.riskFactors || []
+        }
       });
 
-    } catch (error) {
-      console.error('Error moderating listing:', error);
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Invalid request data', details: error.errors });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
+        throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `NFT verification failed: ${error.message}`);
     }
   }
 
   /**
-   * Detect counterfeit indicators in a listing
-   * GET /api/marketplace/moderation/counterfeit/:listingId
+   * Check for counterfeit products
    */
-  async detectCounterfeit(req: Request, res: Response): Promise<void> {
+  async checkCounterfeit(req: Request, res: Response): Promise<Response> {
+    try {
+      const validatedData = CheckCounterfeitSchema.parse(req.body);
+      
+      const input: MarketplaceListingInput = {
+        id: `counterfeit_check_${Date.now()}`,
+        type: 'listing',
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: '0x0000000000000000000000000000000000000000',
+        metadata: {},
+        listingData: {
+          title: validatedData.title,
+          description: validatedData.description,
+          price: '100',
+          currency: 'USD',
+          category: 'general',
+          images: validatedData.images || [],
+          brandKeywords: validatedData.brandKeywords,
+          isHighValue: false,
+          sellerAddress: '0x0000000000000000000000000000000000000000'
+        },
+        text: `${validatedData.title} ${validatedData.description}`,
+        media: (validatedData.images || []).map(url => ({
+          url,
+          type: 'image' as const,
+          mimeType: 'image/jpeg',
+          size: 0
+        }))
+      };
+
+      const result = await this.moderationService.moderateMarketplaceListing(input);
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          counterfeitDetection: result.counterfeitDetection,
+          isCounterfeit: result.counterfeitDetection.isCounterfeit,
+          confidence: result.counterfeitDetection.confidence,
+          matchedBrands: result.counterfeitDetection.matchedBrands,
+          suspiciousKeywords: result.counterfeitDetection.suspiciousKeywords
+        }
+      });
+
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
+      }
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Counterfeit detection failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Detect scam patterns in listings
+   */
+  async detectScam(req: Request, res: Response): Promise<Response> {
+    try {
+      const validatedData = DetectScamSchema.parse(req.body);
+      
+      const input: MarketplaceListingInput = {
+        id: `scam_check_${Date.now()}`,
+        type: 'listing',
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: validatedData.sellerAddress,
+        metadata: {},
+        listingData: {
+          title: validatedData.title,
+          description: validatedData.description,
+          price: validatedData.price,
+          currency: validatedData.currency,
+          category: 'general',
+          images: [],
+          isHighValue: false,
+          sellerAddress: validatedData.sellerAddress
+        },
+        text: `${validatedData.title} ${validatedData.description}`
+      };
+
+      const result = await this.moderationService.moderateMarketplaceListing(input);
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          scamDetection: result.scamDetection,
+          isScam: result.scamDetection.isScam,
+          confidence: result.scamDetection.confidence,
+          detectedPatterns: result.scamDetection.detectedPatterns,
+          riskFactors: result.scamDetection.riskFactors,
+          reasoning: result.scamDetection.reasoning
+        }
+      });
+
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
+      }
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Scam detection failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get seller verification status and tier
+   */
+  async getSellerVerification(req: Request, res: Response): Promise<Response> {
+    try {
+      const { sellerAddress } = req.params;
+      
+      if (!sellerAddress || !/^0x[a-fA-F0-9]{40}$/.test(sellerAddress)) {
+        throw new ValidationError('Invalid seller address format');
+      }
+
+      // Create minimal input for seller verification
+      const input: MarketplaceListingInput = {
+        id: `seller_check_${sellerAddress}`,
+        type: 'listing',
+        userId: 'system',
+        userReputation: 50,
+        walletAddress: sellerAddress,
+        metadata: {},
+        listingData: {
+          title: 'Seller Verification',
+          description: 'Seller verification check',
+          price: '100',
+          currency: 'USD',
+          category: 'general',
+          images: [],
+          isHighValue: false,
+          sellerAddress
+        }
+      };
+
+      const result = await this.moderationService.moderateMarketplaceListing(input);
+      
+      return res.status(200).json({
+        success: true,
+        data: {
+          sellerVerification: result.sellerVerification,
+          tier: result.sellerVerification.tier,
+          riskLevel: result.sellerVerification.riskLevel,
+          reputationScore: result.sellerVerification.reputationScore,
+          verificationRequirements: result.sellerVerification.verificationRequirements
+        }
+      });
+
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Seller verification failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get moderation status for a listing
+   */
+  async getModerationStatus(req: Request, res: Response): Promise<Response> {
     try {
       const { listingId } = req.params;
-
-      // Get the listing
-      const listing = await this.marketplaceService.getListingById(listingId);
-      if (!listing) {
-        res.status(404).json({ error: 'Listing not found' });
-        return;
+      
+      if (!listingId) {
+        throw new ValidationError('Listing ID is required');
       }
 
-      // Run counterfeit detection
-      const detection = await this.moderationService.detectCounterfeit(listing);
-
-      // Store detection result
-      await this.storeCounterfeitDetection(listingId, detection);
-
-      res.json({
-        success: true,
-        detection,
-        isCounterfeit: detection.suspiciousTerms.length > 2 || 
-                      (detection.priceAnalysis?.isSuspicious ?? false)
-      });
-
-    } catch (error) {
-      console.error('Error detecting counterfeit:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  /**
-   * Detect scam patterns in a listing
-   * GET /api/marketplace/moderation/scam-patterns/:listingId
-   */
-  async detectScamPatterns(req: Request, res: Response): Promise<void> {
-    try {
-      const { listingId } = req.params;
-
-      // Get the listing
-      const listing = await this.marketplaceService.getListingById(listingId);
-      if (!listing) {
-        res.status(404).json({ error: 'Listing not found' });
-        return;
-      }
-
-      // Detect scam patterns
-      const patterns = await this.moderationService.detectScamPatterns(listing);
-
-      // Store pattern detection results
-      for (const pattern of patterns) {
-        await this.storeScamPattern(listingId, pattern);
-      }
-
-      res.json({
-        success: true,
-        patterns,
-        highRiskPatterns: patterns.filter(p => p.confidence > 0.7)
-      });
-
-    } catch (error) {
-      console.error('Error detecting scam patterns:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  /**
-   * Get seller verification tier
-   * GET /api/marketplace/moderation/seller-tier/:walletAddress
-   */
-  async getSellerTier(req: Request, res: Response): Promise<void> {
-    try {
-      const { walletAddress } = req.params;
-
-      // Validate wallet address format
-      if (!walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-        res.status(400).json({ error: 'Invalid wallet address format' });
-        return;
-      }
-
-      // Get seller tier
-      const tier = await this.moderationService.determineSellerTier(walletAddress);
-
-      // Get existing verification record
-      const verification = await this.getSellerVerification(walletAddress);
-
-      res.json({
-        success: true,
-        walletAddress,
-        currentTier: tier,
-        verification
-      });
-
-    } catch (error) {
-      console.error('Error getting seller tier:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  /**
-   * Update seller verification tier (admin only)
-   * PUT /api/marketplace/moderation/seller-tier
-   */
-  async updateSellerTier(req: Request, res: Response): Promise<void> {
-    try {
-      const { walletAddress, tier, reason } = UpdateSellerTierSchema.parse(req.body);
-
-      // TODO: Add admin authentication check
-      // if (!req.user?.isAdmin) {
-      //   res.status(403).json({ error: 'Admin access required' });
-      //   return;
-      // }
-
-      // Update seller tier
-      await this.updateSellerVerification(walletAddress, tier, reason);
-
-      res.json({
-        success: true,
-        message: `Seller tier updated to ${tier}`,
-        walletAddress,
-        newTier: tier
-      });
-
-    } catch (error) {
-      console.error('Error updating seller tier:', error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Invalid request data', details: error.errors });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    }
-  }
-
-  /**
-   * Submit an appeal for a moderation decision
-   * POST /api/marketplace/moderation/appeal
-   */
-  async submitAppeal(req: Request, res: Response): Promise<void> {
-    try {
-      const { listingId, decisionId, appealReason, evidence } = AppealDecisionSchema.parse(req.body);
-
-      // TODO: Get appellant address from authenticated user
-      const appellantAddress = req.body.appellantAddress || '0x0000000000000000000000000000000000000000';
-
-      // Validate that the decision exists
-      const decision = await this.getModerationDecision(decisionId);
-      if (!decision) {
-        res.status(404).json({ error: 'Moderation decision not found' });
-        return;
-      }
-
-      // Create appeal record
-      const appeal = await this.createAppeal(listingId, decisionId, appellantAddress, appealReason, evidence);
-
-      res.json({
-        success: true,
-        appeal,
-        message: 'Appeal submitted successfully'
-      });
-
-    } catch (error) {
-      console.error('Error submitting appeal:', error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Invalid request data', details: error.errors });
-      } else {
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    }
-  }
-
-  /**
-   * Get moderation history for a listing
-   * GET /api/marketplace/moderation/history/:listingId
-   */
-  async getModerationHistory(req: Request, res: Response): Promise<void> {
-    try {
-      const { listingId } = req.params;
-
-      const history = await this.getListingModerationHistory(listingId);
-
-      res.json({
-        success: true,
+      // In production, this would fetch from database
+      // For now, return a mock status
+      const status = {
         listingId,
-        history
+        status: 'pending',
+        lastChecked: new Date().toISOString(),
+        decision: null,
+        confidence: 0,
+        riskScore: 0,
+        requiredActions: []
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: status
       });
 
-    } catch (error) {
-      console.error('Error getting moderation history:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Failed to get moderation status: ${error.message}`);
+    }
+  }
+
+  /**
+   * Bulk moderate multiple listings
+   */
+  async bulkModerate(req: Request, res: Response): Promise<Response> {
+    try {
+      const { listings } = req.body;
+      
+      if (!Array.isArray(listings) || listings.length === 0) {
+        throw new ValidationError('Listings array is required and must not be empty');
+      }
+
+      if (listings.length > 50) {
+        throw new ValidationError('Maximum 50 listings can be processed at once');
+      }
+
+      const results = [];
+      
+      // Process listings in parallel with concurrency limit
+      const concurrency = 5;
+      for (let i = 0; i < listings.length; i += concurrency) {
+        const batch = listings.slice(i, i + concurrency);
+        
+        const batchPromises = batch.map(async (listingData: any) => {
+          try {
+            const validatedData = ModerateListingSchema.parse(listingData);
+            
+            const input: MarketplaceListingInput = {
+              id: validatedData.listingId,
+              type: 'listing',
+              userId: validatedData.userId,
+              userReputation: validatedData.userReputation,
+              walletAddress: validatedData.walletAddress,
+              metadata: validatedData.metadata,
+              listingData: validatedData.listingData,
+              text: `${validatedData.listingData.title} ${validatedData.listingData.description}`,
+              media: validatedData.listingData.images.map(url => ({
+                url,
+                type: 'image' as const,
+                mimeType: 'image/jpeg',
+                size: 0
+              }))
+            };
+
+            const result = await this.moderationService.moderateMarketplaceListing(input);
+            return { success: true, listingId: validatedData.listingId, data: result };
+            
+          } catch (error: any) {
+            return { 
+              success: false, 
+              listingId: listingData.listingId || 'unknown',
+              error: error.message 
+            };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.length - successCount;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          results,
+          summary: {
+            total: results.length,
+            successful: successCount,
+            failed: failureCount
+          }
+        }
+      });
+
+    } catch (error: any) {
+      if (error instanceof APIError) {
+        throw error;
+      }
+      throw new APIError(500, `Bulk moderation failed: ${error.message}`);
     }
   }
 
   /**
    * Get marketplace moderation statistics
-   * GET /api/marketplace/moderation/stats
    */
-  async getModerationStats(req: Request, res: Response): Promise<void> {
+  async getModerationStats(req: Request, res: Response): Promise<Response> {
     try {
-      const stats = await this.calculateModerationStats();
+      // In production, this would query the database for real statistics
+      const stats = {
+        totalListingsModerated: 1250,
+        blockedListings: 45,
+        reviewedListings: 180,
+        allowedListings: 1025,
+        nftVerifications: 320,
+        counterfeitDetections: 28,
+        scamDetections: 17,
+        averageProcessingTime: 2.3,
+        topRiskFactors: [
+          { factor: 'new_seller', count: 156 },
+          { factor: 'suspicious_pricing', count: 89 },
+          { factor: 'brand_keywords', count: 67 },
+          { factor: 'high_value_nft', count: 45 }
+        ],
+        dailyStats: {
+          today: { moderated: 45, blocked: 2, reviewed: 8 },
+          yesterday: { moderated: 52, blocked: 3, reviewed: 12 },
+          thisWeek: { moderated: 312, blocked: 15, reviewed: 67 }
+        }
+      };
 
-      res.json({
+      return res.status(200).json({
         success: true,
-        stats
+        data: stats
       });
 
-    } catch (error) {
-      console.error('Error getting moderation stats:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    } catch (error: any) {
+      throw new APIError(500, `Failed to get moderation statistics: ${error.message}`);
     }
-  }
-
-  // Helper methods for database operations
-
-  private async storeVerificationResult(verification: any): Promise<void> {
-    // In a real implementation, this would store to the marketplace_verifications table
-    console.log('Storing verification result:', verification);
-  }
-
-  private async storeModerationDecision(listingId: string, decision: any): Promise<void> {
-    // In a real implementation, this would store to the marketplace_moderation_decisions table
-    console.log('Storing moderation decision:', { listingId, decision });
-  }
-
-  private async storeCounterfeitDetection(listingId: string, detection: any): Promise<void> {
-    // In a real implementation, this would store to the counterfeit_detections table
-    console.log('Storing counterfeit detection:', { listingId, detection });
-  }
-
-  private async storeScamPattern(listingId: string, pattern: any): Promise<void> {
-    // In a real implementation, this would store to the scam_patterns table
-    console.log('Storing scam pattern:', { listingId, pattern });
-  }
-
-  private async applyModerationDecision(listingId: string, decision: any): Promise<void> {
-    // In a real implementation, this would update the listing status based on the decision
-    if (decision.action === 'block') {
-      // Block the listing
-      console.log(`Blocking listing ${listingId}`);
-    } else if (decision.action === 'review') {
-      // Flag for human review
-      console.log(`Flagging listing ${listingId} for review`);
-    }
-  }
-
-  private async getSellerVerification(walletAddress: string): Promise<any> {
-    // In a real implementation, this would query the seller_verifications table
-    return {
-      walletAddress,
-      currentTier: 'basic',
-      kycVerified: false,
-      reputationScore: 50,
-      totalVolume: 1000,
-      successfulTransactions: 10,
-      disputeRate: 0.05
-    };
-  }
-
-  private async updateSellerVerification(walletAddress: string, tier: string, reason: string): Promise<void> {
-    // In a real implementation, this would update the seller_verifications table
-    console.log('Updating seller verification:', { walletAddress, tier, reason });
-  }
-
-  private async getModerationDecision(decisionId: number): Promise<any> {
-    // In a real implementation, this would query the marketplace_moderation_decisions table
-    return {
-      id: decisionId,
-      listingId: '1',
-      decision: 'block',
-      confidence: 0.8,
-      primaryCategory: 'scam_detected'
-    };
-  }
-
-  private async createAppeal(
-    listingId: string,
-    decisionId: number,
-    appellantAddress: string,
-    appealReason: string,
-    evidence?: any
-  ): Promise<any> {
-    // In a real implementation, this would insert into the marketplace_appeals table
-    return {
-      id: Math.floor(Math.random() * 1000),
-      listingId,
-      decisionId,
-      appellantAddress,
-      appealReason,
-      evidence,
-      status: 'open',
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  private async getListingModerationHistory(listingId: string): Promise<any[]> {
-    // In a real implementation, this would query multiple moderation tables
-    return [
-      {
-        type: 'verification',
-        timestamp: new Date().toISOString(),
-        result: 'enhanced_verification_required'
-      },
-      {
-        type: 'counterfeit_check',
-        timestamp: new Date().toISOString(),
-        result: 'no_issues_detected'
-      },
-      {
-        type: 'scam_check',
-        timestamp: new Date().toISOString(),
-        result: 'low_risk'
-      }
-    ];
-  }
-
-  private async calculateModerationStats(): Promise<any> {
-    // In a real implementation, this would aggregate data from moderation tables
-    return {
-      totalListingsModerated: 1000,
-      blockedListings: 50,
-      reviewedListings: 200,
-      allowedListings: 750,
-      counterfeitDetections: 25,
-      scamDetections: 30,
-      appealsSubmitted: 10,
-      appealsApproved: 3,
-      averageProcessingTime: 2.5, // seconds
-      sellerTierDistribution: {
-        unverified: 400,
-        basic: 300,
-        verified: 200,
-        premium: 100
-      }
-    };
   }
 }

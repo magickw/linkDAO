@@ -1,490 +1,791 @@
-import { z } from 'zod';
 import { DatabaseService } from './databaseService';
 import { ReputationService } from './reputationService';
-import { KYCService } from './kycService';
-import { ContentInput, EnsembleDecision, AIModelResult } from '../models/ModerationModels';
-import { MarketplaceListing } from '../models/Marketplace';
+import { AIModerationOrchestrator, ContentInput } from './aiModerationOrchestrator';
+import EvidenceStorageService from './evidenceStorageService';
+import { UserProfileService } from './userProfileService';
+import { z } from 'zod';
 
 // Marketplace-specific moderation schemas
-export const MarketplaceVerificationSchema = z.object({
-  listingId: z.string(),
-  verificationLevel: z.enum(['basic', 'enhanced', 'premium']),
-  proofOfOwnership: z.object({
-    signature: z.string(),
-    message: z.string(),
-    walletAddress: z.string(),
-    timestamp: z.number(),
-  }).optional(),
-  brandVerification: z.object({
-    brandName: z.string(),
-    isAuthorized: z.boolean(),
-    verificationSource: z.string(),
-  }).optional(),
-  sellerTier: z.enum(['unverified', 'basic', 'verified', 'premium']),
-  riskScore: z.number().min(0).max(1),
-});
+export const MarketplaceVerificationLevel = z.enum([
+  'basic',
+  'enhanced',
+  'premium',
+  'institutional'
+]);
 
-export const ScamPatternSchema = z.object({
-  patternType: z.enum(['counterfeit', 'phishing', 'fake_listing', 'price_manipulation', 'stolen_nft']),
-  confidence: z.number().min(0).max(1),
-  indicators: z.array(z.string()),
-  description: z.string(),
-});
+export const NFTVerificationStatus = z.enum([
+  'unverified',
+  'pending',
+  'verified',
+  'flagged',
+  'counterfeit'
+]);
 
-export const CounterfeitDetectionSchema = z.object({
-  brandKeywords: z.array(z.string()),
-  suspiciousTerms: z.array(z.string()),
-  imageAnalysis: z.object({
-    logoDetected: z.boolean(),
-    brandMatch: z.boolean(),
-    confidence: z.number(),
-  }).optional(),
-  priceAnalysis: z.object({
-    marketPrice: z.number().optional(),
-    listingPrice: z.number(),
-    priceDeviation: z.number(),
-    isSuspicious: z.boolean(),
-  }).optional(),
-});
+export const SellerTier = z.enum([
+  'new',
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'verified_business'
+]);
 
-export type MarketplaceVerification = z.infer<typeof MarketplaceVerificationSchema>;
-export type ScamPattern = z.infer<typeof ScamPatternSchema>;
-export type CounterfeitDetection = z.infer<typeof CounterfeitDetectionSchema>;
+export const ScamPattern = z.enum([
+  'seed_phrase_request',
+  'fake_giveaway',
+  'impersonation',
+  'phishing_link',
+  'counterfeit_nft',
+  'price_manipulation',
+  'fake_urgency',
+  'suspicious_pricing'
+]);
+
+// Marketplace moderation interfaces
+export interface MarketplaceListingInput extends ContentInput {
+  type: 'listing';
+  listingData: {
+    title: string;
+    description: string;
+    price: string;
+    currency: string;
+    category: string;
+    images: string[];
+    nftContract?: string;
+    tokenId?: string;
+    brandKeywords?: string[];
+    isHighValue: boolean;
+    sellerAddress: string;
+  };
+}
+
+export interface NFTVerificationResult {
+  status: z.infer<typeof NFTVerificationStatus>;
+  ownershipVerified: boolean;
+  signatureValid: boolean;
+  contractVerified: boolean;
+  metadataConsistent: boolean;
+  riskFactors: string[];
+  confidence: number;
+}
+
+export interface SellerVerificationResult {
+  tier: z.infer<typeof SellerTier>;
+  kycStatus: 'none' | 'pending' | 'verified' | 'rejected';
+  reputationScore: number;
+  transactionHistory: number;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  verificationRequirements: string[];
+}
+
+export interface CounterfeitDetectionResult {
+  isCounterfeit: boolean;
+  confidence: number;
+  matchedBrands: string[];
+  suspiciousKeywords: string[];
+  imageAnalysis?: {
+    logoDetected: boolean;
+    brandMatches: string[];
+    qualityScore: number;
+  };
+}
+
+export interface ScamDetectionResult {
+  isScam: boolean;
+  confidence: number;
+  detectedPatterns: z.infer<typeof ScamPattern>[];
+  riskFactors: string[];
+  reasoning: string;
+}
+
+export interface MarketplaceModerationResult {
+  listingId: string;
+  overallDecision: 'allow' | 'review' | 'block';
+  confidence: number;
+  nftVerification?: NFTVerificationResult;
+  sellerVerification: SellerVerificationResult;
+  counterfeitDetection: CounterfeitDetectionResult;
+  scamDetection: ScamDetectionResult;
+  aiModeration: any; // From base AI moderation
+  evidenceCid?: string;
+  requiredActions: string[];
+  riskScore: number;
+}
 
 export class MarketplaceModerationService {
   private databaseService: DatabaseService;
   private reputationService: ReputationService;
-  private kycService: KYCService;
-
+  private aiOrchestrator: AIModerationOrchestrator;
+  private evidenceStorage: typeof EvidenceStorageService;
+  private userProfileService: UserProfileService;
+  
   // Brand keyword patterns for counterfeit detection
-  private readonly BRAND_KEYWORDS = [
-    'nike', 'adidas', 'gucci', 'louis vuitton', 'chanel', 'rolex', 'apple',
-    'supreme', 'off-white', 'balenciaga', 'versace', 'prada', 'hermès',
-    'cartier', 'tiffany', 'burberry', 'dior', 'fendi', 'givenchy'
-  ];
+  private brandKeywords: Record<string, string[]> = {
+    'luxury': ['gucci', 'louis vuitton', 'chanel', 'prada', 'hermès', 'rolex', 'cartier'],
+    'tech': ['apple', 'samsung', 'sony', 'microsoft', 'google', 'tesla'],
+    'gaming': ['nintendo', 'playstation', 'xbox', 'steam', 'epic games'],
+    'crypto': ['bitcoin', 'ethereum', 'binance', 'coinbase', 'metamask', 'opensea'],
+    'nft_collections': ['cryptopunks', 'bored ape', 'azuki', 'moonbirds', 'doodles']
+  };
 
-  // Suspicious terms that often indicate counterfeits
-  private readonly COUNTERFEIT_INDICATORS = [
-    'replica', 'fake', 'copy', 'inspired by', 'similar to', 'style of',
-    'unbranded', 'no box', 'no papers', 'aaa quality', 'mirror quality',
-    'factory direct', 'wholesale', 'bulk', 'liquidation'
-  ];
-
-  // Scam pattern indicators
-  private readonly SCAM_PATTERNS = {
-    phishing: [
-      'click here to claim', 'limited time offer', 'act now', 'exclusive deal',
-      'free nft', 'airdrop', 'whitelist', 'presale', 'mint now'
+  // Scam detection patterns
+  private scamPatterns: Record<string, RegExp[]> = {
+    seed_phrase: [
+      /seed\s+phrase/i,
+      /recovery\s+phrase/i,
+      /12\s+words?/i,
+      /24\s+words?/i,
+      /mnemonic/i
     ],
-    fake_listing: [
-      'too good to be true', 'urgent sale', 'must sell today', 'no returns',
-      'cash only', 'wire transfer', 'western union', 'gift cards'
+    fake_giveaway: [
+      /free\s+nft/i,
+      /airdrop/i,
+      /giveaway/i,
+      /claim\s+now/i,
+      /limited\s+time/i
+    ],
+    phishing: [
+      /connect\s+wallet/i,
+      /verify\s+wallet/i,
+      /claim\s+rewards?/i,
+      /urgent\s+action/i
     ],
     price_manipulation: [
-      'pump', 'dump', 'moon', 'diamond hands', 'to the moon', 'hodl',
-      'guaranteed profit', 'insider info', 'sure thing'
+      /floor\s+price/i,
+      /pump/i,
+      /moon/i,
+      /guaranteed\s+profit/i
     ]
   };
 
   constructor() {
     this.databaseService = new DatabaseService();
     this.reputationService = new ReputationService();
-    this.kycService = new KYCService();
+    this.aiOrchestrator = new AIModerationOrchestrator();
+    this.evidenceStorage = EvidenceStorageService;
+    this.userProfileService = new UserProfileService();
   }
 
-  /**
-   * Enhanced verification system for high-value NFT listings
-   * Requirement 9.1: High-value NFTs require proof-of-ownership signatures
-   */
-  async verifyHighValueNFTListing(
-    listing: MarketplaceListing,
-    proofOfOwnership?: {
-      signature: string;
-      message: string;
-      walletAddress: string;
-      timestamp: number;
-    }
-  ): Promise<MarketplaceVerification> {
-    const listingValue = parseFloat(listing.price);
-    const HIGH_VALUE_THRESHOLD = 1000; // $1000 USD equivalent
-
-    // Determine verification level based on listing value
-    let verificationLevel: 'basic' | 'enhanced' | 'premium' = 'basic';
-    if (listingValue > HIGH_VALUE_THRESHOLD * 10) {
-      verificationLevel = 'premium';
-    } else if (listingValue > HIGH_VALUE_THRESHOLD) {
-      verificationLevel = 'enhanced';
-    }
-
-    // Get seller reputation and tier
-    const sellerReputation = await this.reputationService.getUserReputation(listing.sellerWalletAddress);
-    const sellerTier = await this.determineSellerTier(listing.sellerWalletAddress);
-
-    let riskScore = 0.1; // Base risk score
-
-    // Verify proof of ownership for high-value listings
-    if (verificationLevel !== 'basic' && listing.itemType === 'NFT') {
-      if (!proofOfOwnership) {
-        riskScore += 0.5; // High risk if no proof provided
-      } else {
-        const isValidProof = await this.validateProofOfOwnership(
-          listing.tokenAddress,
-          listing.tokenId || '',
-          proofOfOwnership
-        );
-        if (!isValidProof) {
-          riskScore += 0.7; // Very high risk for invalid proof
-        }
-      }
-    }
-
-    // Adjust risk based on seller reputation
-    const reputationScore = sellerReputation?.overallScore || 0;
-    if (reputationScore < 50) {
-      riskScore += 0.3;
-    } else if (reputationScore > 80) {
-      riskScore -= 0.1;
-    }
-
-    // Adjust risk based on seller tier
-    switch (sellerTier) {
-      case 'unverified':
-        riskScore += 0.2;
-        break;
-      case 'premium':
-        riskScore -= 0.2;
-        break;
-    }
-
-    riskScore = Math.max(0, Math.min(1, riskScore));
-
-    return {
-      listingId: listing.id,
-      verificationLevel,
-      proofOfOwnership,
-      sellerTier,
-      riskScore,
-    };
-  }
-
-  /**
-   * Counterfeit detection using brand keyword models
-   * Requirement 9.2: Enhanced counterfeit detection for brand keywords
-   */
-  async detectCounterfeit(listing: MarketplaceListing): Promise<CounterfeitDetection> {
-    const title = listing.metadataURI.toLowerCase();
-    const description = listing.metadataURI.toLowerCase(); // Simplified for demo
-
-    // Detect brand keywords
-    const detectedBrands = this.BRAND_KEYWORDS.filter(brand => 
-      title.includes(brand) || description.includes(brand)
-    );
-
-    // Detect suspicious terms
-    const suspiciousTerms = this.COUNTERFEIT_INDICATORS.filter(term =>
-      title.includes(term) || description.includes(term)
-    );
-
-    // Price analysis for counterfeits (unusually low prices for luxury brands)
-    const listingPrice = parseFloat(listing.price);
-    let priceAnalysis;
+  async moderateMarketplaceListing(input: MarketplaceListingInput): Promise<MarketplaceModerationResult> {
+    const startTime = Date.now();
     
-    if (detectedBrands.length > 0) {
-      // Estimate market price based on brand (simplified logic)
-      const estimatedMarketPrice = this.estimateMarketPrice(detectedBrands[0], listing.itemType);
-      const priceDeviation = (estimatedMarketPrice - listingPrice) / estimatedMarketPrice;
+    try {
+      // Run all moderation checks in parallel
+      const [
+        aiModerationResult,
+        nftVerificationResult,
+        sellerVerificationResult,
+        counterfeitResult,
+        scamResult
+      ] = await Promise.all([
+        this.aiOrchestrator.scanContent(input),
+        this.verifyNFTOwnership(input),
+        this.verifySellerTier(input.listingData.sellerAddress),
+        this.detectCounterfeit(input),
+        this.detectScamPatterns(input)
+      ]);
+
+      // Calculate overall risk score
+      const riskScore = this.calculateOverallRiskScore({
+        aiModeration: aiModerationResult,
+        nftVerification: nftVerificationResult,
+        sellerVerification: sellerVerificationResult,
+        counterfeit: counterfeitResult,
+        scam: scamResult
+      });
+
+      // Determine final decision
+      const overallDecision = this.determineOverallDecision({
+        aiModeration: aiModerationResult,
+        nftVerification: nftVerificationResult,
+        sellerVerification: sellerVerificationResult,
+        counterfeit: counterfeitResult,
+        scam: scamResult,
+        riskScore
+      });
+
+      // Generate required actions
+      const requiredActions = this.generateRequiredActions({
+        decision: overallDecision,
+        nftVerification: nftVerificationResult,
+        sellerVerification: sellerVerificationResult,
+        counterfeit: counterfeitResult,
+        scam: scamResult
+      });
+
+      // Store evidence
+      const evidenceCid = await this.storeMarketplaceEvidence({
+        listingId: input.id,
+        aiModeration: aiModerationResult,
+        nftVerification: nftVerificationResult,
+        sellerVerification: sellerVerificationResult,
+        counterfeit: counterfeitResult,
+        scam: scamResult,
+        processingTime: Date.now() - startTime
+      });
+
+      const result: MarketplaceModerationResult = {
+        listingId: input.id,
+        overallDecision,
+        confidence: Math.min(
+          aiModerationResult.overallConfidence,
+          counterfeitResult.confidence,
+          scamResult.confidence
+        ),
+        nftVerification: nftVerificationResult,
+        sellerVerification: sellerVerificationResult,
+        counterfeitDetection: counterfeitResult,
+        scamDetection: scamResult,
+        aiModeration: aiModerationResult,
+        evidenceCid,
+        requiredActions,
+        riskScore
+      };
+
+      // Log moderation decision
+      await this.logModerationDecision(result);
+
+      return result;
+
+    } catch (error) {
+      console.error('Marketplace moderation error:', error);
       
-      priceAnalysis = {
-        marketPrice: estimatedMarketPrice,
-        listingPrice,
-        priceDeviation,
-        isSuspicious: priceDeviation > 0.7 && listingPrice < estimatedMarketPrice * 0.3
+      // Return safe fallback
+      return {
+        listingId: input.id,
+        overallDecision: 'review',
+        confidence: 0,
+        sellerVerification: await this.verifySellerTier(input.listingData.sellerAddress),
+        counterfeitDetection: { isCounterfeit: false, confidence: 0, matchedBrands: [], suspiciousKeywords: [] },
+        scamDetection: { isScam: false, confidence: 0, detectedPatterns: [], riskFactors: [], reasoning: 'Error during analysis' },
+        aiModeration: null,
+        requiredActions: ['manual_review_required'],
+        riskScore: 0.8
       };
     }
-
-    return {
-      brandKeywords: detectedBrands,
-      suspiciousTerms,
-      priceAnalysis,
-    };
   }
 
-  /**
-   * Proof-of-ownership signature verification
-   * Requirement 9.3: Signature verification for NFT ownership
-   */
-  async validateProofOfOwnership(
-    tokenAddress: string,
-    tokenId: string,
-    proof: {
-      signature: string;
-      message: string;
-      walletAddress: string;
-      timestamp: number;
+  private async verifyNFTOwnership(input: MarketplaceListingInput): Promise<NFTVerificationResult | undefined> {
+    if (!input.listingData.nftContract || !input.listingData.tokenId) {
+      return undefined;
     }
-  ): Promise<boolean> {
+
     try {
-      // Verify signature timestamp (must be recent)
-      const now = Date.now();
-      const maxAge = 5 * 60 * 1000; // 5 minutes
-      if (now - proof.timestamp > maxAge) {
-        return false;
-      }
-
-      // Verify message format
-      const expectedMessage = `I own NFT ${tokenId} at contract ${tokenAddress} - ${proof.timestamp}`;
-      if (proof.message !== expectedMessage) {
-        return false;
-      }
-
-      // In a real implementation, we would:
-      // 1. Verify the signature cryptographically
-      // 2. Check on-chain ownership of the NFT
-      // 3. Ensure the signing wallet currently holds the NFT
+      // Check if this is a high-value NFT that requires enhanced verification
+      const isHighValue = input.listingData.isHighValue || parseFloat(input.listingData.price) > 1000;
       
-      // For now, we'll simulate this verification
-      const isValidSignature = this.verifySignature(proof.message, proof.signature, proof.walletAddress);
-      const isCurrentOwner = await this.checkNFTOwnership(tokenAddress, tokenId, proof.walletAddress);
+      if (!isHighValue) {
+        return {
+          status: 'unverified',
+          ownershipVerified: false,
+          signatureValid: false,
+          contractVerified: false,
+          metadataConsistent: false,
+          riskFactors: [],
+          confidence: 0.5
+        };
+      }
 
-      return isValidSignature && isCurrentOwner;
+      // For high-value NFTs, perform comprehensive verification
+      const riskFactors: string[] = [];
+      let confidence = 1.0;
+
+      // Check contract verification (simplified - would integrate with blockchain)
+      const contractVerified = await this.verifyNFTContract(input.listingData.nftContract);
+      if (!contractVerified) {
+        riskFactors.push('unverified_contract');
+        confidence *= 0.7;
+      }
+
+      // Check ownership signature (simplified - would verify cryptographic signature)
+      const signatureValid = await this.verifyOwnershipSignature(
+        input.listingData.sellerAddress,
+        input.listingData.nftContract,
+        input.listingData.tokenId
+      );
+      if (!signatureValid) {
+        riskFactors.push('invalid_ownership_signature');
+        confidence *= 0.5;
+      }
+
+      // Check metadata consistency
+      const metadataConsistent = await this.verifyNFTMetadata(
+        input.listingData.nftContract,
+        input.listingData.tokenId,
+        input.listingData.images
+      );
+      if (!metadataConsistent) {
+        riskFactors.push('metadata_mismatch');
+        confidence *= 0.8;
+      }
+
+      // Determine status based on verification results
+      let status: z.infer<typeof NFTVerificationStatus>;
+      if (contractVerified && signatureValid && metadataConsistent) {
+        status = 'verified';
+      } else if (riskFactors.length > 2) {
+        status = 'flagged';
+      } else {
+        status = 'pending';
+      }
+
+      return {
+        status,
+        ownershipVerified: signatureValid,
+        signatureValid,
+        contractVerified,
+        metadataConsistent,
+        riskFactors,
+        confidence
+      };
+
     } catch (error) {
-      console.error('Error validating proof of ownership:', error);
-      return false;
+      console.error('NFT verification error:', error);
+      return {
+        status: 'flagged',
+        ownershipVerified: false,
+        signatureValid: false,
+        contractVerified: false,
+        metadataConsistent: false,
+        riskFactors: ['verification_error'],
+        confidence: 0
+      };
     }
   }
 
-  /**
-   * Seller verification tiering based on reputation and KYC
-   * Requirement 9.4: Seller verification tiers
-   */
-  async determineSellerTier(walletAddress: string): Promise<'unverified' | 'basic' | 'verified' | 'premium'> {
+  private async verifySellerTier(sellerAddress: string): Promise<SellerVerificationResult> {
     try {
-      const reputation = await this.reputationService.getUserReputation(walletAddress);
-      const kycStatus = await this.kycService.getKYCStatus(walletAddress);
+      // Get seller reputation and history
+      const reputation = await this.reputationService.getUserReputation(sellerAddress);
+      const userProfile = await this.userProfileService.getProfileByAddress(sellerAddress);
       
-      // Check transaction history and volume
-      const sellerHistory = await this.getSellerHistory(walletAddress);
+      // Calculate transaction history (simplified)
+      const transactionHistory = await this.getSellerTransactionCount(sellerAddress);
       
+      // Use overall score from reputation service
       const reputationScore = reputation?.overallScore || 0;
       
-      if (kycStatus?.status === 'approved' && reputationScore > 90 && sellerHistory.totalVolume > 50000) {
-        return 'premium';
-      } else if (kycStatus?.status === 'approved' && reputationScore > 70) {
-        return 'verified';
-      } else if (reputationScore > 50 || sellerHistory.successfulTransactions > 10) {
-        return 'basic';
+      // Determine seller tier based on reputation and history
+      let tier: z.infer<typeof SellerTier>;
+      if (reputationScore >= 90 && transactionHistory >= 100) {
+        tier = 'platinum';
+      } else if (reputationScore >= 80 && transactionHistory >= 50) {
+        tier = 'gold';
+      } else if (reputationScore >= 70 && transactionHistory >= 20) {
+        tier = 'silver';
+      } else if (reputationScore >= 60 && transactionHistory >= 5) {
+        tier = 'bronze';
       } else {
-        return 'unverified';
+        tier = 'new';
       }
+
+      // Determine risk level
+      let riskLevel: 'low' | 'medium' | 'high' | 'critical';
+      if (reputationScore >= 80 && transactionHistory >= 20) {
+        riskLevel = 'low';
+      } else if (reputationScore >= 60 && transactionHistory >= 5) {
+        riskLevel = 'medium';
+      } else if (reputationScore >= 40) {
+        riskLevel = 'high';
+      } else {
+        riskLevel = 'critical';
+      }
+
+      // Generate verification requirements
+      const verificationRequirements: string[] = [];
+      if (tier === 'new') {
+        verificationRequirements.push('identity_verification', 'initial_deposit');
+      }
+      if (riskLevel === 'high' || riskLevel === 'critical') {
+        verificationRequirements.push('enhanced_kyc', 'transaction_monitoring');
+      }
+
+      return {
+        tier,
+        kycStatus: (userProfile?.kycStatus as 'none' | 'pending' | 'verified' | 'rejected') || 'none',
+        reputationScore,
+        transactionHistory,
+        riskLevel,
+        verificationRequirements
+      };
+
     } catch (error) {
-      console.error('Error determining seller tier:', error);
-      return 'unverified';
+      console.error('Seller verification error:', error);
+      return {
+        tier: 'new',
+        kycStatus: 'none',
+        reputationScore: 0,
+        transactionHistory: 0,
+        riskLevel: 'critical',
+        verificationRequirements: ['manual_review_required']
+      };
     }
   }
 
-  /**
-   * Scam pattern detection for marketplace listings
-   * Requirement 9.5: Scam pattern detection
-   */
-  async detectScamPatterns(listing: MarketplaceListing): Promise<ScamPattern[]> {
-    const detectedPatterns: ScamPattern[] = [];
-    const title = listing.metadataURI.toLowerCase();
-    const description = listing.metadataURI.toLowerCase(); // Simplified
-
-    // Check for phishing patterns
-    const phishingIndicators = this.SCAM_PATTERNS.phishing.filter(pattern =>
-      title.includes(pattern) || description.includes(pattern)
-    );
-    
-    if (phishingIndicators.length > 0) {
-      detectedPatterns.push({
-        patternType: 'phishing',
-        confidence: Math.min(0.9, phishingIndicators.length * 0.3),
-        indicators: phishingIndicators,
-        description: 'Potential phishing attempt detected in listing content'
-      });
-    }
-
-    // Check for fake listing patterns
-    const fakeListingIndicators = this.SCAM_PATTERNS.fake_listing.filter(pattern =>
-      title.includes(pattern) || description.includes(pattern)
-    );
-    
-    if (fakeListingIndicators.length > 0) {
-      detectedPatterns.push({
-        patternType: 'fake_listing',
-        confidence: Math.min(0.8, fakeListingIndicators.length * 0.25),
-        indicators: fakeListingIndicators,
-        description: 'Suspicious listing patterns detected'
-      });
-    }
-
-    // Check for price manipulation patterns
-    const priceManipulationIndicators = this.SCAM_PATTERNS.price_manipulation.filter(pattern =>
-      title.includes(pattern) || description.includes(pattern)
-    );
-    
-    if (priceManipulationIndicators.length > 0) {
-      detectedPatterns.push({
-        patternType: 'price_manipulation',
-        confidence: Math.min(0.7, priceManipulationIndicators.length * 0.2),
-        indicators: priceManipulationIndicators,
-        description: 'Price manipulation language detected'
-      });
-    }
-
-    // Check for stolen NFT patterns (simplified)
-    if (listing.itemType === 'NFT') {
-      const stolenNFTRisk = await this.checkStolenNFTDatabase(listing.tokenAddress, listing.tokenId || '');
-      if (stolenNFTRisk > 0.5) {
-        detectedPatterns.push({
-          patternType: 'stolen_nft',
-          confidence: stolenNFTRisk,
-          indicators: ['nft_flagged_as_stolen'],
-          description: 'NFT may be flagged as stolen or disputed'
-        });
-      }
-    }
-
-    return detectedPatterns;
-  }
-
-  /**
-   * Comprehensive marketplace moderation check
-   */
-  async moderateMarketplaceListing(listing: MarketplaceListing): Promise<EnsembleDecision> {
+  private async detectCounterfeit(input: MarketplaceListingInput): Promise<CounterfeitDetectionResult> {
     try {
-      // Run all marketplace-specific checks
-      const verification = await this.verifyHighValueNFTListing(listing);
-      const counterfeitDetection = await this.detectCounterfeit(listing);
-      const scamPatterns = await this.detectScamPatterns(listing);
+      const { title, description, brandKeywords = [] } = input.listingData;
+      const content = `${title} ${description}`.toLowerCase();
+      
+      let isCounterfeit = false;
+      let confidence = 0;
+      const matchedBrands: string[] = [];
+      const suspiciousKeywords: string[] = [];
 
-      // Calculate overall confidence and risk
-      let overallConfidence = 0.5;
-      let primaryCategory = 'marketplace_review';
-      let action: 'allow' | 'limit' | 'block' | 'review' = 'allow';
-
-      // Adjust based on verification results
-      if (verification.riskScore > 0.7) {
-        overallConfidence = 0.8;
-        action = 'block';
-        primaryCategory = 'high_risk_listing';
-      } else if (verification.riskScore > 0.4) {
-        overallConfidence = 0.6;
-        action = 'review';
-        primaryCategory = 'suspicious_listing';
-      }
-
-      // Adjust based on counterfeit detection
-      if (counterfeitDetection.suspiciousTerms.length > 2 || 
-          (counterfeitDetection.priceAnalysis?.isSuspicious)) {
-        overallConfidence = Math.max(overallConfidence, 0.7);
-        action = action === 'allow' ? 'review' : action;
-        primaryCategory = 'potential_counterfeit';
-      }
-
-      // Adjust based on scam patterns
-      const highConfidenceScams = scamPatterns.filter(p => p.confidence > 0.6);
-      if (highConfidenceScams.length > 0) {
-        overallConfidence = 0.9;
-        action = 'block';
-        primaryCategory = 'scam_detected';
-      }
-
-      // Create vendor results for marketplace checks
-      const vendorResults: AIModelResult[] = [
-        {
-          vendor: 'marketplace_verification',
-          confidence: 1 - verification.riskScore,
-          categories: [verification.verificationLevel, verification.sellerTier],
-          reasoning: `Seller tier: ${verification.sellerTier}, Risk score: ${verification.riskScore}`,
-          cost: 0,
-          latency: 100,
-        },
-        {
-          vendor: 'counterfeit_detection',
-          confidence: counterfeitDetection.suspiciousTerms.length > 0 ? 0.8 : 0.2,
-          categories: counterfeitDetection.brandKeywords,
-          reasoning: `Detected brands: ${counterfeitDetection.brandKeywords.join(', ')}, Suspicious terms: ${counterfeitDetection.suspiciousTerms.length}`,
-          cost: 0,
-          latency: 50,
-        },
-        {
-          vendor: 'scam_detection',
-          confidence: scamPatterns.length > 0 ? Math.max(...scamPatterns.map(p => p.confidence)) : 0.1,
-          categories: scamPatterns.map(p => p.patternType),
-          reasoning: `Detected ${scamPatterns.length} potential scam patterns`,
-          cost: 0,
-          latency: 75,
+      // Check against known brand keywords
+      for (const [category, keywords] of Object.entries(this.brandKeywords)) {
+        for (const keyword of keywords) {
+          if (content.includes(keyword.toLowerCase())) {
+            matchedBrands.push(keyword);
+            
+            // Check for suspicious patterns around brand names
+            const brandPattern = new RegExp(`(replica|fake|copy|inspired|style|like)\\s+${keyword}|${keyword}\\s+(replica|fake|copy|inspired|style)`, 'i');
+            if (brandPattern.test(content)) {
+              isCounterfeit = true;
+              confidence = Math.max(confidence, 0.8);
+              suspiciousKeywords.push(`suspicious_${keyword}_usage`);
+            }
+          }
         }
-      ];
+      }
+
+      // Check user-provided brand keywords
+      for (const brand of brandKeywords) {
+        if (content.includes(brand.toLowerCase())) {
+          matchedBrands.push(brand);
+          
+          // Additional checks for user-provided brands
+          const suspiciousPatterns = [
+            /not\s+authentic/i,
+            /unauthorized/i,
+            /bootleg/i,
+            /knockoff/i
+          ];
+          
+          for (const pattern of suspiciousPatterns) {
+            if (pattern.test(content)) {
+              isCounterfeit = true;
+              confidence = Math.max(confidence, 0.9);
+              suspiciousKeywords.push('unauthorized_usage');
+            }
+          }
+        }
+      }
+
+      // Analyze images for brand logos (simplified)
+      let imageAnalysis;
+      if (input.listingData.images.length > 0) {
+        imageAnalysis = await this.analyzeImagesForBrands(input.listingData.images, matchedBrands);
+        if (imageAnalysis.logoDetected && imageAnalysis.qualityScore < 0.5) {
+          isCounterfeit = true;
+          confidence = Math.max(confidence, 0.7);
+        }
+      }
 
       return {
-        overallConfidence,
-        primaryCategory,
-        action,
-        vendorResults,
-        reasoning: `Marketplace moderation: ${action} - ${primaryCategory} (confidence: ${overallConfidence})`
+        isCounterfeit,
+        confidence,
+        matchedBrands,
+        suspiciousKeywords,
+        imageAnalysis
       };
 
     } catch (error) {
-      console.error('Error in marketplace moderation:', error);
-      
-      // Fallback to safe action on error
+      console.error('Counterfeit detection error:', error);
       return {
-        overallConfidence: 0.5,
-        primaryCategory: 'moderation_error',
-        action: 'review',
-        vendorResults: [],
-        reasoning: 'Error occurred during marketplace moderation, flagged for human review'
+        isCounterfeit: false,
+        confidence: 0,
+        matchedBrands: [],
+        suspiciousKeywords: ['detection_error']
       };
     }
   }
 
-  // Helper methods
+  private async detectScamPatterns(input: MarketplaceListingInput): Promise<ScamDetectionResult> {
+    try {
+      const { title, description, price, currency } = input.listingData;
+      const content = `${title} ${description}`.toLowerCase();
+      
+      const detectedPatterns: z.infer<typeof ScamPattern>[] = [];
+      const riskFactors: string[] = [];
+      let confidence = 0;
 
-  private verifySignature(message: string, signature: string, walletAddress: string): boolean {
-    // In a real implementation, this would use cryptographic signature verification
-    // For now, we'll simulate this
-    return signature.length > 100 && walletAddress.startsWith('0x');
+      // Check for scam patterns
+      for (const [patternType, regexes] of Object.entries(this.scamPatterns)) {
+        for (const regex of regexes) {
+          if (regex.test(content)) {
+            detectedPatterns.push(patternType as z.infer<typeof ScamPattern>);
+            confidence = Math.max(confidence, 0.8);
+            break;
+          }
+        }
+      }
+
+      // Check for suspicious pricing
+      const priceValue = parseFloat(price);
+      if (priceValue > 0) {
+        // Extremely low prices for high-value items
+        if (priceValue < 0.01 && (content.includes('nft') || content.includes('rare'))) {
+          detectedPatterns.push('suspicious_pricing');
+          riskFactors.push('unrealistic_low_price');
+          confidence = Math.max(confidence, 0.7);
+        }
+        
+        // Extremely high prices without justification
+        if (priceValue > 10000 && !content.includes('rare') && !content.includes('unique')) {
+          riskFactors.push('suspicious_high_price');
+          confidence = Math.max(confidence, 0.5);
+        }
+      }
+
+      // Check for urgency tactics
+      const urgencyPatterns = [
+        /limited\s+time/i,
+        /act\s+fast/i,
+        /only\s+\d+\s+left/i,
+        /expires\s+soon/i
+      ];
+      
+      for (const pattern of urgencyPatterns) {
+        if (pattern.test(content)) {
+          detectedPatterns.push('fake_urgency');
+          riskFactors.push('urgency_tactics');
+          confidence = Math.max(confidence, 0.6);
+          break;
+        }
+      }
+
+      // Check for impersonation attempts
+      const impersonationPatterns = [
+        /official/i,
+        /verified/i,
+        /authentic/i,
+        /original/i
+      ];
+      
+      let impersonationScore = 0;
+      for (const pattern of impersonationPatterns) {
+        if (pattern.test(content)) {
+          impersonationScore += 0.2;
+        }
+      }
+      
+      if (impersonationScore >= 0.4) {
+        detectedPatterns.push('impersonation');
+        riskFactors.push('false_authenticity_claims');
+        confidence = Math.max(confidence, 0.7);
+      }
+
+      const isScam = detectedPatterns.length > 0 && confidence >= 0.6;
+      
+      const reasoning = isScam 
+        ? `Detected ${detectedPatterns.length} scam patterns with ${Math.round(confidence * 100)}% confidence`
+        : 'No significant scam patterns detected';
+
+      return {
+        isScam,
+        confidence,
+        detectedPatterns,
+        riskFactors,
+        reasoning
+      };
+
+    } catch (error) {
+      console.error('Scam detection error:', error);
+      return {
+        isScam: false,
+        confidence: 0,
+        detectedPatterns: [],
+        riskFactors: ['detection_error'],
+        reasoning: 'Error during scam pattern analysis'
+      };
+    }
   }
 
-  private async checkNFTOwnership(tokenAddress: string, tokenId: string, walletAddress: string): Promise<boolean> {
-    // In a real implementation, this would query the blockchain
-    // For now, we'll simulate this check
-    return tokenAddress.startsWith('0x') && tokenId.length > 0;
+  private calculateOverallRiskScore(results: {
+    aiModeration: any;
+    nftVerification?: NFTVerificationResult;
+    sellerVerification: SellerVerificationResult;
+    counterfeit: CounterfeitDetectionResult;
+    scam: ScamDetectionResult;
+  }): number {
+    let riskScore = 0;
+    
+    // AI moderation risk (30% weight)
+    riskScore += results.aiModeration.riskScore * 0.3;
+    
+    // Seller verification risk (25% weight)
+    const sellerRisk = results.sellerVerification.riskLevel === 'critical' ? 1.0 :
+                      results.sellerVerification.riskLevel === 'high' ? 0.8 :
+                      results.sellerVerification.riskLevel === 'medium' ? 0.5 : 0.2;
+    riskScore += sellerRisk * 0.25;
+    
+    // Counterfeit risk (25% weight)
+    riskScore += (results.counterfeit.isCounterfeit ? results.counterfeit.confidence : 0) * 0.25;
+    
+    // Scam risk (20% weight)
+    riskScore += (results.scam.isScam ? results.scam.confidence : 0) * 0.2;
+    
+    // NFT verification risk (bonus/penalty)
+    if (results.nftVerification) {
+      if (results.nftVerification.status === 'flagged') {
+        riskScore += 0.3;
+      } else if (results.nftVerification.status === 'verified') {
+        riskScore *= 0.8; // Reduce risk for verified NFTs
+      }
+    }
+    
+    return Math.min(1.0, riskScore);
   }
 
-  private estimateMarketPrice(brand: string, itemType: string): number {
-    // Simplified market price estimation
-    const brandMultipliers: Record<string, number> = {
-      'rolex': 5000,
-      'gucci': 1500,
-      'nike': 200,
-      'supreme': 300,
-      'louis vuitton': 2000,
-    };
-
-    return brandMultipliers[brand] || 100;
+  private determineOverallDecision(params: {
+    aiModeration: any;
+    nftVerification?: NFTVerificationResult;
+    sellerVerification: SellerVerificationResult;
+    counterfeit: CounterfeitDetectionResult;
+    scam: ScamDetectionResult;
+    riskScore: number;
+  }): 'allow' | 'review' | 'block' {
+    const { aiModeration, nftVerification, sellerVerification, counterfeit, scam, riskScore } = params;
+    
+    // Immediate block conditions
+    if (scam.isScam && scam.confidence >= 0.8) return 'block';
+    if (counterfeit.isCounterfeit && counterfeit.confidence >= 0.8) return 'block';
+    if (aiModeration.action === 'block') return 'block';
+    if (nftVerification?.status === 'flagged') return 'block';
+    
+    // Review conditions
+    if (riskScore >= 0.7) return 'review';
+    if (sellerVerification.riskLevel === 'critical') return 'review';
+    if (sellerVerification.tier === 'new' && parseFloat('1000') > 100) return 'review'; // High-value from new seller
+    if (scam.isScam || counterfeit.isCounterfeit) return 'review';
+    if (aiModeration.action === 'review') return 'review';
+    
+    // Allow with conditions
+    return 'allow';
   }
 
-  private async getSellerHistory(walletAddress: string): Promise<{
-    totalVolume: number;
-    successfulTransactions: number;
-    disputeRate: number;
-  }> {
-    // In a real implementation, this would query the database
-    // For now, we'll return mock data
+  private generateRequiredActions(params: {
+    decision: 'allow' | 'review' | 'block';
+    nftVerification?: NFTVerificationResult;
+    sellerVerification: SellerVerificationResult;
+    counterfeit: CounterfeitDetectionResult;
+    scam: ScamDetectionResult;
+  }): string[] {
+    const actions: string[] = [];
+    const { decision, nftVerification, sellerVerification, counterfeit, scam } = params;
+    
+    if (decision === 'block') {
+      actions.push('listing_blocked');
+      if (scam.isScam) actions.push('scam_investigation');
+      if (counterfeit.isCounterfeit) actions.push('counterfeit_investigation');
+    }
+    
+    if (decision === 'review') {
+      actions.push('human_review_required');
+    }
+    
+    // Seller-specific actions
+    if (sellerVerification.verificationRequirements.length > 0) {
+      actions.push(...sellerVerification.verificationRequirements);
+    }
+    
+    // NFT-specific actions
+    if (nftVerification && !nftVerification.ownershipVerified) {
+      actions.push('ownership_verification_required');
+    }
+    
+    if (counterfeit.matchedBrands.length > 0) {
+      actions.push('brand_verification_required');
+    }
+    
+    return actions;
+  }
+
+  private async storeMarketplaceEvidence(evidence: any): Promise<string> {
+    try {
+      const bundle = await this.evidenceStorage.storeEvidenceBundle({
+        caseId: 0, // Will be updated when case is created
+        contentId: evidence.listingId,
+        contentType: 'listing',
+        contentHash: this.generateContentHash(evidence),
+        modelOutputs: evidence.aiModeration?.vendorResults || {},
+        decisionRationale: `Marketplace moderation decision: ${evidence.aiModeration?.action || 'unknown'}`,
+        policyVersion: '1.0',
+        originalContent: {
+          metadata: evidence
+        }
+      });
+      return bundle.ipfsHash;
+    } catch (error) {
+      console.error('Evidence storage error:', error);
+      return '';
+    }
+  }
+
+  private generateContentHash(content: any): string {
+    // Simple hash generation for content identification
+    return Buffer.from(JSON.stringify(content)).toString('base64').slice(0, 32);
+  }
+
+  private async logModerationDecision(result: MarketplaceModerationResult): Promise<void> {
+    try {
+      // Log moderation decision for analytics
+      console.log('Marketplace moderation decision:', {
+        listingId: result.listingId,
+        decision: result.overallDecision,
+        confidence: result.confidence,
+        riskScore: result.riskScore,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Moderation logging error:', error);
+    }
+  }
+
+  // Helper methods (simplified implementations)
+  private async verifyNFTContract(contractAddress: string): Promise<boolean> {
+    // In production, this would check against verified contract registries
+    // For now, return true for known contract patterns
+    return /^0x[a-fA-F0-9]{40}$/.test(contractAddress);
+  }
+
+  private async verifyOwnershipSignature(
+    sellerAddress: string,
+    contractAddress: string,
+    tokenId: string
+  ): Promise<boolean> {
+    // In production, this would verify cryptographic signatures
+    // For now, return true (would integrate with Web3 libraries)
+    return true;
+  }
+
+  private async verifyNFTMetadata(
+    contractAddress: string,
+    tokenId: string,
+    providedImages: string[]
+  ): Promise<boolean> {
+    // In production, this would fetch on-chain metadata and compare
+    // For now, return true if images are provided
+    return providedImages.length > 0;
+  }
+
+  private async getSellerTransactionCount(sellerAddress: string): Promise<number> {
+    // In production, this would query blockchain and database
+    // For now, return a mock value based on address
+    return Math.floor(Math.random() * 100);
+  }
+
+  private async analyzeImagesForBrands(
+    images: string[],
+    brands: string[]
+  ): Promise<{ logoDetected: boolean; brandMatches: string[]; qualityScore: number }> {
+    // In production, this would use computer vision APIs
+    // For now, return mock analysis
     return {
-      totalVolume: Math.random() * 100000,
-      successfulTransactions: Math.floor(Math.random() * 50),
-      disputeRate: Math.random() * 0.1,
+      logoDetected: brands.length > 0,
+      brandMatches: brands.slice(0, 2),
+      qualityScore: Math.random()
     };
-  }
-
-  private async checkStolenNFTDatabase(tokenAddress: string, tokenId: string): Promise<number> {
-    // In a real implementation, this would check against stolen NFT databases
-    // For now, we'll return a low random risk score
-    return Math.random() * 0.3;
   }
 }
