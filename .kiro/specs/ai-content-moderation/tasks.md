@@ -1,14 +1,14 @@
 
 # Implementation Plan
 
-- [-] 1. Set up core moderation database schema and infrastructure
+- [x] 1. Set up core moderation database schema and infrastructure
   - Create Drizzle migration files for moderation_cases, moderation_actions, content_reports, and moderation_appeals tables
   - Implement database models with proper TypeScript types and validation
   - Create database indices for performance optimization on contentId, userId, and status fields
   - Write unit tests for database operations and schema validation
   - _Requirements: 1.1, 2.1, 3.1, 10.1_
 
-- [ ] 2. Implement basic content ingestion pipeline
+- [x] 2. Implement basic content ingestion pipeline
   - Create content staging service for private storage of content under review
   - Implement queue system with fast lane (text) and slow lane (media) processing
   - Build content validation middleware for file types, sizes, and basic format checks

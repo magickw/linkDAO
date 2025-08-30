@@ -15,14 +15,15 @@ import {
   Pause,
   Square
 } from 'lucide-react';
-import { ProjectDashboard as ProjectDashboardType, EnhancedServiceBooking } from '../../types/service';
+import { ProjectDashboardData as ProjectDashboardType, EnhancedServiceBooking } from '../../types/service';
 import { projectManagementService } from '../../services/projectManagementService';
 import TimeTracker from './TimeTracker';
-import DeliverablesList from './DeliverablesList';
-import ProjectCommunication from './ProjectCommunication';
-import MilestonePayments from './MilestonePayments';
-import ProjectTimeline from './ProjectTimeline';
-import FileManager from './FileManager';
+// TODO: Create these components
+// import DeliverablesList from './DeliverablesList';
+// import ProjectCommunication from './ProjectCommunication';
+// import MilestonePayments from './MilestonePayments';
+// import ProjectTimeline from './ProjectTimeline';
+// import FileManager from './FileManager';
 
 interface ProjectDashboardProps {
   bookingId: string;
@@ -208,44 +209,38 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ bookingId, userRole
         )}
         
         {activeTab === 'deliverables' && (
-          <DeliverablesList 
-            bookingId={bookingId} 
-            userRole={userRole}
-            onUpdate={refreshDashboard}
-          />
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Deliverables</h3>
+            <p className="text-gray-500">Deliverables component coming soon...</p>
+          </div>
         )}
         
         {activeTab === 'communication' && (
-          <ProjectCommunication 
-            bookingId={bookingId} 
-            userRole={userRole}
-            onUpdate={refreshDashboard}
-          />
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Communication</h3>
+            <p className="text-gray-500">Communication component coming soon...</p>
+          </div>
         )}
         
         {activeTab === 'payments' && (
-          <MilestonePayments 
-            bookingId={bookingId} 
-            milestones={dashboard.milestones}
-            userRole={userRole}
-            onUpdate={refreshDashboard}
-          />
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Payments</h3>
+            <p className="text-gray-500">Payments component coming soon...</p>
+          </div>
         )}
         
         {activeTab === 'files' && (
-          <FileManager 
-            bookingId={bookingId} 
-            userRole={userRole}
-            onUpdate={refreshDashboard}
-          />
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Files</h3>
+            <p className="text-gray-500">File manager component coming soon...</p>
+          </div>
         )}
         
         {activeTab === 'timeline' && (
-          <ProjectTimeline 
-            bookingId={bookingId}
-            activities={dashboard.recentActivities}
-            milestones={dashboard.milestones}
-          />
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Timeline</h3>
+            <p className="text-gray-500">Timeline component coming soon...</p>
+          </div>
         )}
       </div>
     </div>
