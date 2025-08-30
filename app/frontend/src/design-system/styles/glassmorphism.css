@@ -1,0 +1,384 @@
+/**
+ * Glassmorphism Design System CSS
+ * Global styles and utilities for the Web3 Marketplace design system
+ */
+
+/* Import Inter font for consistent typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* CSS Custom Properties for Design Tokens */
+:root {
+  /* Glassmorphism Variables */
+  --glass-primary-bg: rgba(255, 255, 255, 0.1);
+  --glass-primary-backdrop: blur(10px);
+  --glass-primary-border: 1px solid rgba(255, 255, 255, 0.2);
+  --glass-primary-radius: 16px;
+  --glass-primary-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  
+  --glass-secondary-bg: rgba(255, 255, 255, 0.05);
+  --glass-secondary-backdrop: blur(8px);
+  --glass-secondary-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-secondary-radius: 12px;
+  --glass-secondary-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.2);
+  
+  /* Gradient Variables */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-tech-blue: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+  --gradient-tech-purple: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  --gradient-nft-gold: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  --gradient-nft-rainbow: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #96ceb4 75%, #ffeaa7 100%);
+  
+  /* Trust Colors */
+  --trust-verified: #10b981;
+  --trust-escrow: #3b82f6;
+  --trust-onchain: #8b5cf6;
+  --trust-dao: #f59e0b;
+  
+  /* Spacing Variables */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* Typography Variables */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1300;
+  --z-modal: 1400;
+  --z-toast: 1700;
+  --z-tooltip: 1800;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism Utility Classes */
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-primary {
+  background: var(--glass-primary-bg);
+  backdrop-filter: var(--glass-primary-backdrop);
+  -webkit-backdrop-filter: var(--glass-primary-backdrop);
+  border: var(--glass-primary-border);
+  border-radius: var(--glass-primary-radius);
+  box-shadow: var(--glass-primary-shadow);
+}
+
+.glass-secondary {
+  background: var(--glass-secondary-bg);
+  backdrop-filter: var(--glass-secondary-backdrop);
+  -webkit-backdrop-filter: var(--glass-secondary-backdrop);
+  border: var(--glass-secondary-border);
+  border-radius: var(--glass-secondary-radius);
+  box-shadow: var(--glass-secondary-shadow);
+}
+
+.glass-navbar {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 24px 0 rgba(31, 38, 135, 0.15);
+}
+
+.glass-modal {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.5);
+}
+
+/* NFT Shadow Effects */
+.nft-shadow-standard {
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3), 0 0 40px rgba(118, 75, 162, 0.2);
+  border: 2px solid transparent;
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+}
+
+.nft-shadow-premium {
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 179, 71, 0.3);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  background-image: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,179,71,0.05));
+}
+
+.nft-shadow-dao {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.4), 0 0 50px rgba(59, 130, 246, 0.3);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  background-image: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.05));
+}
+
+/* Gradient Utility Classes */
+.gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.gradient-secondary {
+  background: var(--gradient-secondary);
+}
+
+.gradient-tech-blue {
+  background: var(--gradient-tech-blue);
+}
+
+.gradient-tech-purple {
+  background: var(--gradient-tech-purple);
+}
+
+.gradient-nft-gold {
+  background: var(--gradient-nft-gold);
+}
+
+.gradient-nft-rainbow {
+  background: var(--gradient-nft-rainbow);
+}
+
+/* Button Styles */
+.glass-button {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.glass-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+}
+
+/* Ripple Effect */
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* Trust Indicator Styles */
+.trust-badge {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.trust-indicators {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.trust-indicators--inline {
+  flex-wrap: nowrap;
+}
+
+.trust-indicators--badges {
+  flex-wrap: wrap;
+}
+
+.trust-indicators--compact .trust-badge {
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+/* Loading Skeleton Styles */
+.loading-skeleton {
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.loading-skeleton--text-multiline {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dual Pricing Styles */
+.dual-pricing {
+  font-family: var(--font-sans);
+}
+
+.dual-pricing--horizontal {
+  flex-direction: row;
+  align-items: center;
+}
+
+.dual-pricing--vertical {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dual-pricing .primary-price {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.dual-pricing .secondary-price {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dual-pricing .price-toggle {
+  font-family: var(--font-sans);
+  transition: all 0.2s ease;
+}
+
+.dual-pricing .price-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dual-pricing .realtime-indicator {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Responsive Utilities */
+@media (max-width: 640px) {
+  .glass-panel {
+    border-radius: 12px;
+  }
+  
+  .trust-indicators {
+    gap: var(--spacing-xs);
+  }
+  
+  .dual-pricing--horizontal {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --glass-primary-radius: 12px;
+    --glass-secondary-radius: 8px;
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  .loading-skeleton {
+    animation: none;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .glass-button {
+    transition: none;
+  }
+  
+  .ripple-effect {
+    display: none;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .glass-panel {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+  }
+  
+  .trust-badge {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-primary-bg: rgba(255, 255, 255, 0.08);
+    --glass-secondary-bg: rgba(255, 255, 255, 0.04);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .glass-panel {
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  
+  .loading-skeleton {
+    display: none;
+  }
+}
+
+/* Focus Visible Support */
+.glass-button:focus-visible {
+  outline: 2px solid var(--trust-escrow);
+  outline-offset: 2px;
+}
+
+/* Selection Styles */
+::selection {
+  background: rgba(102, 126, 234, 0.3);
+  color: white;
+}
+
+::-moz-selection {
+  background: rgba(102, 126, 234, 0.3);
+  color: white;
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}

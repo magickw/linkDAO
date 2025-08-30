@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Design System Styles */
+@import '../design-system/styles/glassmorphism.css';
+
 /* Custom animations */
 @keyframes fadeIn {
   from {

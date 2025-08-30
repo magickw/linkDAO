@@ -22,7 +22,9 @@
     "deploy:staging": "DEPLOY_ENV=staging npm run deploy",
     "deploy:production": "DEPLOY_ENV=production npm run deploy",
     "predeploy": "npm run integration-test",
-    "postbuild": "npm run type-check"
+    "postbuild": "npm run type-check",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
@@ -32,6 +34,7 @@
     "@vercel/analytics": "^1.5.0",
     "critters": "^0.0.23",
     "ethers": "^6.15.0",
+    "framer-motion": "^11.0.0",
     "lucide-react": "^0.542.0",
     "next": "^13.4.12",
     "react": "^18.2.0",
@@ -46,6 +49,15 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.8.4",
+    "@storybook/addon-backgrounds": "^8.0.0",
+    "@storybook/addon-controls": "^8.0.0",
+    "@storybook/addon-docs": "^8.0.0",
+    "@storybook/addon-essentials": "^8.0.0",
+    "@storybook/addon-interactions": "^8.0.0",
+    "@storybook/addon-links": "^8.0.0",
+    "@storybook/addon-viewport": "^8.0.0",
+    "@storybook/nextjs": "^8.0.0",
+    "@storybook/react": "^8.0.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^14.3.1",
     "@testing-library/user-event": "^14.6.1",
@@ -61,6 +73,7 @@
     "jest-axe": "^8.0.0",
     "jest-environment-jsdom": "^29.7.0",
     "postcss": "^8.4.27",
+    "storybook": "^8.0.0",
     "tailwindcss": "^3.3.3",
     "ts-jest": "^29.4.1",
     "typescript": "^5.1.6",
