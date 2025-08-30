@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
+import MigrationNotice from '@/components/MigrationNotice';
 import { useWeb3 } from '@/context/Web3Context';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
@@ -45,13 +46,17 @@ export default function SocialFeed() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(true);
 
-  // Redirect to dashboard if user is connected
+  // Always redirect to dashboard with migration notice
   useEffect(() => {
-    if (isConnected) {
+    // Show migration notice for a few seconds before redirecting
+    const timer = setTimeout(() => {
       router.push('/dashboard');
-    }
-  }, [isConnected, router]);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [router]);
 
   // Show success toast when post is created
   useEffect(() => {
@@ -187,8 +192,42 @@ export default function SocialFeed() {
 
   return (
     <Layout title="Social Feed - LinkDAO">
+      {/* Migration Notice */}
+      {showMigrationNotice && (
+        <MigrationNotice 
+          type="social" 
+          autoRedirect={true}
+          redirectDelay={3}
+          onDismiss={() => setShowMigrationNotice(false)}
+        />
+      )}
+      
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-7xl mx-auto">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-8 w-8 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  Social Feed Has Moved!
+                </h2>
+                <p className="text-blue-700 dark:text-blue-200">
+                  The social feed is now integrated into your personalized dashboard. You'll be redirected automatically.
+                </p>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Go to Dashboard Now
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Web3 Social Feed</h1>
           
           <div className="flex flex-col lg:flex-row gap-6">
