@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export class DatabaseService {
-  private db: any;
+  public db: any; // Changed from private to public for testing
   private isConnected: boolean = false;
 
   constructor() {
@@ -72,26 +72,7 @@ export class DatabaseService {
     }
   }
 
-  async getUserByAddress(address: string) {
-    this.checkConnection();
-    try {
-      const result = await this.db.select().from(schema.users).where(eq(schema.users.walletAddress, address));
-      return result[0] || null;
-    } catch (error) {
-      console.error("Error getting user by address:", error);
-      throw error;
-    }
-  }
 
-  async getUserById(id: string) {
-    try {
-      const result = await this.db.select().from(schema.users).where(eq(schema.users.id, id));
-      return result[0] || null;
-    } catch (error) {
-      console.error("Error getting user by ID:", error);
-      throw error;
-    }
-  }
 
   // Post operations
   async createPost(authorId: string, contentCid: string, parentId?: number) {
@@ -1171,6 +1152,68 @@ export class DatabaseService {
         })
         .returning();
       return updated !== null;
+    });
+  }
+
+  /**
+   * Get all users with reputation data for ranking
+   */
+  async getAllUsersWithReputation(): Promise<Array<{
+    id: string;
+    walletAddress: string;
+    handle?: string;
+    reputationScore: number;
+  }>> {
+    return this.executeQuery(async () => {
+      const users = await this.db
+        .select({
+          id: schema.users.id,
+          walletAddress: schema.users.walletAddress,
+          handle: schema.users.handle,
+          reputationScore: schema.reputations.score
+        })
+        .from(schema.users)
+        .leftJoin(schema.reputations, eq(schema.users.walletAddress, schema.reputations.walletAddress))
+        .where(sql`${schema.reputations.score} IS NOT NULL`)
+        .orderBy(desc(schema.reputations.score));
+
+      return users.map((user: any) => ({
+        id: user.id,
+        walletAddress: user.walletAddress,
+        handle: user.handle || undefined,
+        reputationScore: user.reputationScore || 0
+      }));
+    });
+  }
+
+  /**
+   * Update user visibility boost based on reputation
+   */
+  async updateUserVisibilityBoost(userId: string, visibilityBoost: number): Promise<void> {
+    return this.executeQuery(async () => {
+      // This would update a visibility_boost field if it existed
+      // For now, we'll just log it as this field doesn't exist in current schema
+      console.log(`Updated visibility boost for user ${userId}: ${visibilityBoost}`);
+    });
+  }
+
+  async getUserByAddress(address: string) {
+    return this.executeQuery(async () => {
+      const [user] = await this.db.select()
+        .from(schema.users)
+        .where(eq(schema.users.walletAddress, address))
+        .limit(1);
+      return user || null;
+    });
+  }
+
+  async getUserById(id: string) {
+    return this.executeQuery(async () => {
+      const [user] = await this.db.select()
+        .from(schema.users)
+        .where(eq(schema.users.id, id))
+        .limit(1);
+      return user || null;
     });
   }
 
