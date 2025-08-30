@@ -132,8 +132,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         return !!formData.bookingType;
       case 2:
         if (service.pricingModel === 'milestone') {
-          return formData.milestones && formData.milestones.length > 0 &&
-                 formData.milestones.every(m => m.title && m.amount);
+          return !!(formData.milestones && formData.milestones.length > 0 &&
+                   formData.milestones.every(m => m.title && m.amount));
         }
         return true;
       case 3:
