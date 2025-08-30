@@ -63,22 +63,34 @@ export class PostService {
     // Convert string ID to number
     const postId = parseInt(id);
     if (isNaN(postId)) {
+      console.log(`Invalid post ID: ${id}`);
       return undefined;
     }
     
-    // Fetch the post from database
     try {
-      const dbPosts = await databaseService.getAllPosts();
-      const dbPost = dbPosts.find((p: any) => p.id === postId);
+      // Fetch the post from database using the new dedicated method
+      const dbPost = await databaseService.getPostById(postId);
       
       if (!dbPost) {
+        console.log(`Post not found with ID: ${postId}`);
         return undefined;
       }
       
       // Get user profile for author info
       const author = dbPost.authorId ? await userProfileService.getProfileById(dbPost.authorId) : null;
       if (!author) {
-        return undefined;
+        console.log(`Author not found for post ID: ${postId}, authorId: ${dbPost.authorId}`);
+        // Instead of returning undefined, create a minimal response with unknown author
+        return {
+          id: dbPost.id.toString(),
+          author: 'unknown',
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          contentCid: dbPost.contentCid,
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt: dbPost.createdAt || new Date(),
+          onchainRef: '',
+        };
       }
       
       return {

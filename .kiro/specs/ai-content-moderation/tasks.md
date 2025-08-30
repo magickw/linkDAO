@@ -1,6 +1,7 @@
+
 # Implementation Plan
 
-- [ ] 1. Set up core moderation database schema and infrastructure
+- [-] 1. Set up core moderation database schema and infrastructure
   - Create Drizzle migration files for moderation_cases, moderation_actions, content_reports, and moderation_appeals tables
   - Implement database models with proper TypeScript types and validation
   - Create database indices for performance optimization on contentId, userId, and status fields

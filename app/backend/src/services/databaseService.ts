@@ -108,6 +108,16 @@ export class DatabaseService {
     }
   }
 
+  async getPostById(id: number) {
+    try {
+      const result = await this.db.select().from(schema.posts).where(eq(schema.posts.id, id));
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error getting post by ID:", error);
+      throw error;
+    }
+  }
+
   // Follow operations
   async followUser(followerId: string, followingId: string) {
     try {
