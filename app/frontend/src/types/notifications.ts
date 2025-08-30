@@ -1,76 +1,107 @@
 export interface BaseNotification {
   id: string;
   userId: string;
+  type: NotificationType;
+  title: string;
   message: string;
   timestamp: Date;
   read: boolean;
   actionUrl?: string;
+  metadata?: Record<string, any>;
 }
 
-export interface SocialNotification extends BaseNotification {
-  type: 'follow' | 'like' | 'comment' | 'mention' | 'share';
-  postId?: string;
-  fromUserId: string;
-  fromUserName: string;
-  fromUserAvatar?: string;
-}
+export type NotificationType = 
+  // Personal notifications
+  | 'follow' 
+  | 'like' 
+  | 'comment' 
+  | 'mention'
+  | 'tip_received'
+  // Community notifications
+  | 'community_new_post'
+  | 'community_post_reply'
+  | 'community_mention'
+  | 'community_moderation'
+  | 'community_join_request'
+  | 'community_member_joined'
+  | 'community_rule_update'
+  // Governance notifications
+  | 'governance_proposal'
+  | 'governance_vote_reminder'
+  | 'governance_result';
 
 export interface CommunityNotification extends BaseNotification {
-  type: 'community_post' | 'community_comment' | 'community_mention' | 'community_moderation' | 'community_join' | 'community_leave';
+  type: 'community_new_post' | 'community_post_reply' | 'community_mention' | 'community_moderation' | 'community_join_request' | 'community_member_joined' | 'community_rule_update';
   communityId: string;
   communityName: string;
   postId?: string;
-  fromUserId?: string;
-  fromUserName?: string;
-  moderationAction?: 'approved' | 'rejected' | 'removed' | 'pinned' | 'locked';
+  authorId?: string;
+  authorName?: string;
 }
 
-export interface Web3Notification extends BaseNotification {
-  type: 'tip_received' | 'tip_sent' | 'governance_vote' | 'token_reward' | 'nft_received' | 'transaction_confirmed';
-  transactionHash?: string;
-  tokenAmount?: string;
-  tokenSymbol?: string;
-  nftContractAddress?: string;
-  nftTokenId?: string;
-  proposalId?: string;
+export interface PersonalNotification extends BaseNotification {
+  type: 'follow' | 'like' | 'comment' | 'mention' | 'tip_received';
+  fromUserId: string;
+  fromUserName: string;
+  postId?: string;
+  amount?: string; // For tip notifications
 }
 
-export type Notification = SocialNotification | CommunityNotification | Web3Notification;
+export interface GovernanceNotification extends BaseNotification {
+  type: 'governance_proposal' | 'governance_vote_reminder' | 'governance_result';
+  proposalId: string;
+  proposalTitle: string;
+  daoId?: string;
+  daoName?: string;
+}
+
+export type Notification = CommunityNotification | PersonalNotification | GovernanceNotification;
 
 export interface NotificationPreferences {
   userId: string;
-  email: {
-    enabled: boolean;
-    social: boolean;
-    community: boolean;
-    web3: boolean;
-  };
-  push: {
-    enabled: boolean;
-    social: boolean;
-    community: boolean;
-    web3: boolean;
-  };
-  inApp: {
-    enabled: boolean;
-    social: boolean;
-    community: boolean;
-    web3: boolean;
-  };
-  communitySpecific: {
-    [communityId: string]: {
-      newPosts: boolean;
-      comments: boolean;
-      mentions: boolean;
-      moderation: boolean;
-    };
-  };
+  email: boolean;
+  push: boolean;
+  inApp: boolean;
+  
+  // Personal notification preferences
+  follows: boolean;
+  likes: boolean;
+  comments: boolean;
+  mentions: boolean;
+  tips: boolean;
+  
+  // Community notification preferences
+  communityPosts: boolean;
+  communityReplies: boolean;
+  communityMentions: boolean;
+  communityModeration: boolean;
+  communityMembers: boolean;
+  
+  // Governance notification preferences
+  governanceProposals: boolean;
+  governanceVotes: boolean;
+  governanceResults: boolean;
+  
+  // Community-specific preferences
+  communityPreferences: Record<string, CommunityNotificationPreferences>;
 }
 
-export interface NotificationFilter {
-  type?: Notification['type'][];
-  read?: boolean;
-  communityId?: string;
-  limit?: number;
-  offset?: number;
+export interface CommunityNotificationPreferences {
+  communityId: string;
+  enabled: boolean;
+  newPosts: boolean;
+  replies: boolean;
+  mentions: boolean;
+  moderation: boolean;
+  memberActivity: boolean;
+}
+
+export interface NotificationSettings {
+  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
+  quietHours: {
+    enabled: boolean;
+    start: string; // HH:MM format
+    end: string;   // HH:MM format
+  };
+  maxPerDay: number;
 }

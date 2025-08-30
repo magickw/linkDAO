@@ -1,4 +1,4 @@
-import type { Notification, NotificationPreferences, NotificationFilter } from '@/types/notifications';
+import type { Notification, NotificationPreferences } from '@/types/notifications';
 
 class NotificationService {
   private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -11,64 +11,69 @@ class NotificationService {
       id: '1',
       type: 'follow',
       userId: 'user1',
+      title: 'New Follower',
       message: 'Alex Johnson followed you',
       timestamp: new Date(Date.now() - 1000 * 60 * 5),
       read: false,
       fromUserId: 'alex123',
-      fromUserName: 'Alex Johnson',
-      fromUserAvatar: '/avatars/alex.jpg'
+      fromUserName: 'Alex Johnson'
     },
     {
       id: '2',
-      type: 'community_post',
+      type: 'community_new_post',
       userId: 'user1',
+      title: 'New Community Post',
       message: 'New post in Web3 Developers community',
       timestamp: new Date(Date.now() - 1000 * 60 * 10),
       read: false,
       communityId: 'web3-devs',
       communityName: 'Web3 Developers',
       postId: 'post123',
-      fromUserId: 'dev456',
-      fromUserName: 'Sarah Chen',
+      authorId: 'dev456',
+      authorName: 'Sarah Chen',
       actionUrl: '/community/web3-devs/post/post123'
     },
     {
       id: '3',
       type: 'community_mention',
       userId: 'user1',
+      title: 'Community Mention',
       message: 'You were mentioned in DeFi Discussion',
       timestamp: new Date(Date.now() - 1000 * 60 * 15),
       read: false,
       communityId: 'defi-discussion',
       communityName: 'DeFi Discussion',
       postId: 'post456',
-      fromUserId: 'trader789',
-      fromUserName: 'Mike Trader',
+      authorId: 'trader789',
+      authorName: 'Mike Trader',
       actionUrl: '/community/defi-discussion/post/post456'
     },
     {
       id: '4',
       type: 'tip_received',
       userId: 'user1',
+      title: 'Tip Received',
       message: 'You received 10 USDC tip',
       timestamp: new Date(Date.now() - 1000 * 60 * 30),
       read: true,
-      transactionHash: '0x123...abc',
-      tokenAmount: '10',
-      tokenSymbol: 'USDC',
+      fromUserId: 'tipper123',
+      fromUserName: 'Anonymous Tipper',
+      amount: '10 USDC',
       actionUrl: '/wallet/transactions'
     },
     {
       id: '5',
       type: 'community_moderation',
       userId: 'user1',
+      title: 'Post Moderated',
       message: 'Your post was approved in Crypto News',
       timestamp: new Date(Date.now() - 1000 * 60 * 45),
       read: true,
       communityId: 'crypto-news',
       communityName: 'Crypto News',
       postId: 'post789',
-      moderationAction: 'approved',
+      authorId: 'moderator123',
+      authorName: 'Community Moderator',
       actionUrl: '/community/crypto-news/post/post789'
     }
   ];
@@ -97,31 +102,9 @@ class NotificationService {
     this.listeners.forEach(callback => callback([...this.notifications]));
   }
 
-  // Get notifications with optional filtering
-  async getNotifications(filter?: NotificationFilter): Promise<Notification[]> {
-    let filtered = [...this.notifications];
-
-    if (filter) {
-      if (filter.type) {
-        filtered = filtered.filter(n => filter.type!.includes(n.type));
-      }
-      if (filter.read !== undefined) {
-        filtered = filtered.filter(n => n.read === filter.read);
-      }
-      if (filter.communityId) {
-        filtered = filtered.filter(n => 
-          'communityId' in n && n.communityId === filter.communityId
-        );
-      }
-      if (filter.offset) {
-        filtered = filtered.slice(filter.offset);
-      }
-      if (filter.limit) {
-        filtered = filtered.slice(0, filter.limit);
-      }
-    }
-
-    return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  // Get notifications
+  async getNotifications(): Promise<Notification[]> {
+    return [...this.notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
   // Mark notification as read
@@ -249,36 +232,40 @@ class NotificationService {
     // Mock preferences - in real app, fetch from API
     return {
       userId,
-      email: {
-        enabled: true,
-        social: true,
-        community: true,
-        web3: true
-      },
-      push: {
-        enabled: true,
-        social: true,
-        community: true,
-        web3: false
-      },
-      inApp: {
-        enabled: true,
-        social: true,
-        community: true,
-        web3: true
-      },
-      communitySpecific: {
+      email: true,
+      push: true,
+      inApp: true,
+      follows: true,
+      likes: true,
+      comments: true,
+      mentions: true,
+      tips: true,
+      communityPosts: true,
+      communityReplies: true,
+      communityMentions: true,
+      communityModeration: true,
+      communityMembers: true,
+      governanceProposals: true,
+      governanceVotes: true,
+      governanceResults: true,
+      communityPreferences: {
         'web3-devs': {
+          communityId: 'web3-devs',
+          enabled: true,
           newPosts: true,
-          comments: true,
+          replies: true,
           mentions: true,
-          moderation: true
+          moderation: true,
+          memberActivity: true
         },
         'defi-discussion': {
+          communityId: 'defi-discussion',
+          enabled: true,
           newPosts: false,
-          comments: true,
+          replies: true,
           mentions: true,
-          moderation: true
+          moderation: true,
+          memberActivity: true
         }
       }
     };

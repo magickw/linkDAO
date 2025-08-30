@@ -1172,15 +1172,7 @@ export const projectFiles = pgTable("project_files", {
   fileHashIdx: index("project_files_file_hash_idx").on(table.fileHash),
 }));
 
-// AI Content Moderation System Tables (definitions moved to end of file)
-}, (t) => ({
-  contentIdIdx: index("idx_moderation_cases_content_id").on(t.contentId),
-  userIdIdx: index("idx_moderation_cases_user_id").on(t.userId),
-  statusIdx: index("idx_moderation_cases_status").on(t.status),
-  createdAtIdx: index("idx_moderation_cases_created_at").on(t.createdAt),
-  riskScoreIdx: index("idx_moderation_cases_risk_score").on(t.riskScore),
-  userStatusIdx: index("idx_moderation_cases_user_status").on(t.userId, t.status),
-}));
+// AI Content Moderation System Tables
 
 export const moderationActions = pgTable("moderation_actions", {
   id: serial("id").primaryKey(),

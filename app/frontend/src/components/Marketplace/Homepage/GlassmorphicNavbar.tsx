@@ -12,7 +12,7 @@ import { Button, GhostButton } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
 import { SearchBar } from './SearchBar';
 import { CurrencyToggle } from './CurrencyToggle';
-import { WalletConnectButton } from './WalletConnectButton';
+import { WalletConnectButton } from '@/components/Auth/WalletConnectButton';
 
 interface NavItem {
   name: string;
@@ -92,12 +92,32 @@ export const GlassmorphicNavbar: React.FC = () => {
             </select>
 
             {/* Wallet Connect Button */}
-            <WalletConnectButton />
+            <div className="marketplace-wallet-connect">
+              <WalletConnectButton 
+                className="marketplace-styled"
+                onSuccess={() => {
+                  console.log('Wallet connected successfully');
+                }}
+                onError={(error) => {
+                  console.error('Wallet connection error:', error);
+                }}
+              />
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center space-x-2">
-            <WalletConnectButton />
+            <div className="marketplace-wallet-connect">
+              <WalletConnectButton 
+                className="marketplace-styled"
+                onSuccess={() => {
+                  console.log('Wallet connected successfully');
+                }}
+                onError={(error) => {
+                  console.error('Wallet connection error:', error);
+                }}
+              />
+            </div>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
@@ -163,3 +183,145 @@ export const GlassmorphicNavbar: React.FC = () => {
     </GlassNavbar>
   );
 };
+
+// Add marketplace-specific styling for the Auth WalletConnectButton
+const marketplaceWalletStyles = `
+  .marketplace-wallet-connect {
+    /* Container for marketplace wallet connect button */
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled h3 {
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled button {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.2);
+    color: white;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.4);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .flex.items-center.space-x-4 {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    color: white;
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .space-y-3 {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 20px;
+    box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.5);
+    padding: 1.5rem;
+    color: white;
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-blue-50 {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: rgba(59, 130, 246, 0.9);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-blue-50 a {
+    color: rgba(59, 130, 246, 1);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .text-gray-600 {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .text-gray-900 {
+    color: white;
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .border-gray-200 {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:border-blue-500:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:bg-blue-50:hover {
+    background: rgba(59, 130, 246, 0.1);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-gray-100 {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .text-gray-400 {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  /* Connected state styling */
+  .marketplace-wallet-connect .marketplace-styled .bg-green-500 {
+    background: rgba(16, 185, 129, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-red-500 {
+    background: rgba(239, 68, 68, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-blue-500 {
+    background: rgba(59, 130, 246, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-gray-500 {
+    background: rgba(107, 114, 128, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .bg-yellow-500 {
+    background: rgba(245, 158, 11, 0.8);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:bg-green-600:hover {
+    background: rgba(5, 150, 105, 0.9);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:bg-red-600:hover {
+    background: rgba(220, 38, 38, 0.9);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:bg-blue-600:hover {
+    background: rgba(37, 99, 235, 0.9);
+  }
+  
+  .marketplace-wallet-connect .marketplace-styled .hover\\:bg-gray-600:hover {
+    background: rgba(75, 85, 99, 0.9);
+  }
+`;
+
+// Add the styles to the document head
+if (typeof document !== 'undefined') {
+  const styleId = 'marketplace-wallet-connect-styles';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = marketplaceWalletStyles;
+    document.head.appendChild(style);
+  }
+}
