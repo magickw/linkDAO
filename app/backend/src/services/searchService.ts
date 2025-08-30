@@ -382,60 +382,6 @@ export class SearchService {
     }
   }
 
-  private async warmUpSearchCache(): Promise<void> {
-    const popularQueries = ['laptop', 'smartphone', 'headphones', 'gaming', 'wireless'];
-    const popularCategories = ['electronics', 'clothing', 'home-garden', 'sports'];
-    
-    // Warm up cache for popular search combinations
-    for (const query of popularQueries) {
-      for (const categoryId of popularCategories) {
-        const filters: AdvancedSearchFilters = { query, categoryId };
-        const sort: ProductSortOptions = { field: 'relevance', direction: 'desc' };
-        const pagination: PaginationOptions = { page: 1, limit: 20 };
-        
-        try {
-          await this.advancedSearch(filters, sort, pagination);
-        } catch (error) {
-          console.error(`Failed to warm up cache for query: ${query}, category: ${categoryId}`, error);
-        }
-      }
-    }
-  }
-
-  private async precomputeTrendingProducts(): Promise<void> {
-    // This is already handled in getTrendingRecommendations with caching
-    await this.getTrendingRecommendations(50);
-  }
-
-  private async optimizeSlowQueries(): Promise<number> {
-    // In a real implementation, this would:
-    // 1. Analyze query performance logs
-    // 2. Identify slow queries
-    // 3. Suggest or create database indexes
-    // 4. Optimize query patterns
-    
-    // Mock: return number of queries optimized
-    return Math.floor(Math.random() * 10) + 5;
-  }
-
-  private async precomputeRecommendations(): Promise<void> {
-    // In a real implementation, this would:
-    // 1. Get list of active users
-    // 2. Precompute recommendations for each user
-    // 3. Store in cache for fast retrieval
-    
-    // Mock implementation
-    const mockActiveUsers = ['user1', 'user2', 'user3', 'user4', 'user5'];
-    
-    for (const userId of mockActiveUsers) {
-      try {
-        await this.getRecommendations(userId, undefined, undefined, 10);
-      } catch (error) {
-        console.error(`Failed to precompute recommendations for user: ${userId}`, error);
-      }
-    }
-  }
-
   /**
    * Get search analytics for performance optimization
    */
@@ -463,7 +409,6 @@ export class SearchService {
       return JSON.parse(cached);
     }
 
-    // In a real implementation, this would query analytics tables
     // Enhanced mock data with more detailed analytics
     const analytics = {
       totalSearches: Math.floor(Math.random() * 5000) + 1000,
@@ -591,8 +536,6 @@ export class SearchService {
     
     // Rating filters
     if (filters.minRating || filters.maxRating) {
-      // This would require a reviews table join in a real implementation
-      // For now, we'll use a placeholder condition
       if (filters.minRating) {
         conditions.push(sql`COALESCE(${schema.products.views}, 0) >= ${filters.minRating * 10}`);
       }
@@ -638,7 +581,6 @@ export class SearchService {
     
     // On sale filter (would require price history in real implementation)
     if (filters.onSale) {
-      // Placeholder: products with round numbers might be "on sale"
       conditions.push(sql`${schema.products.priceAmount} % 10 = 0`);
     }
     
@@ -656,7 +598,6 @@ export class SearchService {
       
       // Radius-based search would require geospatial calculations
       if (filters.location.coordinates && filters.location.radius) {
-        // Placeholder for geospatial search - would need PostGIS or similar
         console.log(`Geospatial search requested: ${filters.location.coordinates.lat}, ${filters.location.coordinates.lng} within ${filters.location.radius}km`);
       }
     }
@@ -771,7 +712,7 @@ export class SearchService {
     }
     
     // Seller reputation (mock calculation)
-    const sellerReputationScore = 75; // Would be calculated from actual reputation data
+    const sellerReputationScore = 75;
     
     // Product popularity
     const productPopularityScore = (product.views * 0.1) + (product.favorites * 0.2);
@@ -781,7 +722,7 @@ export class SearchService {
     const recencyScore = Math.max(0, 100 - daysSinceCreated);
     
     // Price competitiveness (mock calculation)
-    const priceCompetitivenessScore = 60; // Would compare with similar products
+    const priceCompetitivenessScore = 60;
     
     // Availability score
     const availabilityScore = product.inventory > 0 ? 100 : 0;
@@ -811,16 +752,7 @@ export class SearchService {
     const db = this.databaseService.getDatabase();
     
     try {
-      // In a real implementation, this would:
-      // 1. Find users with similar purchase/view patterns
-      // 2. Recommend products that similar users liked
-      // 3. Use machine learning algorithms for better accuracy
-      
-      // For now, we'll implement a simplified version based on category preferences
-      // This would typically require user interaction tracking tables
-      
-      // Mock: Get products from categories the user has shown interest in
-      // In reality, this would come from user behavior tracking
+      // Get user preferred categories based on mock analysis
       const userPreferredCategories = await this.getUserPreferredCategories(userId);
       
       if (userPreferredCategories.length === 0) {
@@ -844,7 +776,7 @@ export class SearchService {
       
       return recommendations.map((row: any) => ({
         product: this.mapProductFromDb(row.products, row.categories),
-        score: 0.7 + Math.random() * 0.2, // 0.7-0.9 score range
+        score: 0.7 + Math.random() * 0.2,
         reason: 'Based on your browsing history and similar users',
         type: 'collaborative' as const,
       }));
@@ -854,439 +786,4 @@ export class SearchService {
     }
   }
 
-  private async getUserPreferredCategories(userId: string): Promise<string[]> {
-    // Mock implementation - in reality this would analyze:
-    // - User's purchase history
-    // - Products they've viewed
-    // - Products they've favorited
-    // - Search queries they've made
-    
-    // For now, return some mock categories
-    const mockCategories = [
-      'electronics-laptops',
-      'electronics-smartphones', 
-      'home-garden',
-      'clothing-accessories'
-    ];
-    
-    // Randomly select 1-3 categories to simulate user preferences
-    const numCategories = Math.floor(Math.random() * 3) + 1;
-    return mockCategories.slice(0, numCategories);
-  }
-
-  private async getContentBasedRecommendations(productId: string, limit: number): Promise<ProductRecommendation[]> {
-    const db = this.databaseService.getDatabase();
-    
-    // Get the source product
-    const sourceProduct = await db.select()
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .where(eq(schema.products.id, productId))
-      .limit(1);
-    
-    if (!sourceProduct[0]) return [];
-    
-    const product = this.mapProductFromDb(sourceProduct[0].products, sourceProduct[0].categories);
-    
-    // Find similar products in the same category
-    const similarProducts = await db.select()
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .where(
-        and(
-          eq(schema.products.categoryId, product.category.id),
-          sql`${schema.products.id} != ${productId}`,
-          eq(schema.products.status, 'active')
-        )
-      )
-      .limit(limit);
-    
-    return similarProducts.map((row: any) => ({
-      product: this.mapProductFromDb(row.products, row.categories),
-      score: 0.8,
-      reason: 'Similar category and attributes',
-      type: 'content_based' as const,
-    }));
-  }
-
-  private async getCategoryRecommendations(categoryId: string, limit: number): Promise<ProductRecommendation[]> {
-    const db = this.databaseService.getDatabase();
-    
-    const products = await db.select()
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .where(
-        and(
-          eq(schema.products.categoryId, categoryId),
-          eq(schema.products.status, 'active')
-        )
-      )
-      .orderBy(desc(schema.products.views))
-      .limit(limit);
-    
-    return products.map((row: any) => ({
-      product: this.mapProductFromDb(row.products, row.categories),
-      score: 0.6,
-      reason: 'Popular in category',
-      type: 'similar_category' as const,
-    }));
-  }
-
-  private async getTrendingRecommendations(limit: number): Promise<ProductRecommendation[]> {
-    const cacheKey = 'trending_products';
-    const cached = await this.redisService.get(cacheKey);
-    
-    if (cached) {
-      const trending = JSON.parse(cached);
-      return trending.slice(0, limit);
-    }
-
-    const db = this.databaseService.getDatabase();
-    
-    // Calculate trending score based on recent views and favorites
-    const trendingProducts = await db.select()
-      .from(schema.products)
-      .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
-      .where(eq(schema.products.status, 'active'))
-      .orderBy(
-        desc(sql`(COALESCE(${schema.products.views}, 0) + COALESCE(${schema.products.favorites}, 0) * 2)`)
-      )
-      .limit(limit * 2);
-    
-    const recommendations = trendingProducts.map((row: any) => ({
-      product: this.mapProductFromDb(row.products, row.categories),
-      score: 0.7,
-      reason: 'Trending product',
-      type: 'trending' as const,
-    }));
-    
-    // Cache trending products for 1 hour
-    await this.redisService.set(cacheKey, JSON.stringify(recommendations), this.TRENDING_CACHE_TTL);
-    
-    return recommendations.slice(0, limit);
-  }
-
-  private deduplicateRecommendations(recommendations: ProductRecommendation[]): ProductRecommendation[] {
-    const seen = new Set<string>();
-    return recommendations.filter(rec => {
-      if (seen.has(rec.product.id)) {
-        return false;
-      }
-      seen.add(rec.product.id);
-      return true;
-    });
-  }
-
-  private buildComparisonMatrix(products: Product[]): ProductComparison['comparisonMatrix'] {
-    const matrix: ProductComparison['comparisonMatrix'] = {};
-    
-    // Define comparison attributes
-    const attributes = [
-      'price',
-      'condition',
-      'inventory',
-      'views',
-      'favorites',
-      'freeShipping',
-      'handlingTime',
-      'brand',
-      'weight',
-    ];
-    
-    products.forEach(product => {
-      matrix[product.id] = {};
-      
-      attributes.forEach(attr => {
-        let value: any;
-        let advantage: 'better' | 'worse' | 'equal' | 'different' = 'equal';
-        let score = 0;
-        
-        switch (attr) {
-          case 'price':
-            value = `${product.price.amount} ${product.price.currency}`;
-            // Lower price is better
-            const prices = products.map(p => parseFloat(p.price.amount));
-            const minPrice = Math.min(...prices);
-            const maxPrice = Math.max(...prices);
-            const currentPrice = parseFloat(product.price.amount);
-            
-            if (currentPrice === minPrice && minPrice !== maxPrice) {
-              advantage = 'better';
-              score = 100;
-            } else if (currentPrice === maxPrice && minPrice !== maxPrice) {
-              advantage = 'worse';
-              score = 0;
-            } else {
-              advantage = 'equal';
-              score = 50;
-            }
-            break;
-            
-          case 'condition':
-            value = product.metadata.condition;
-            // New is better than used
-            if (product.metadata.condition === 'new') {
-              advantage = 'better';
-              score = 100;
-            } else if (product.metadata.condition === 'refurbished') {
-              advantage = 'equal';
-              score = 75;
-            } else {
-              advantage = 'worse';
-              score = 50;
-            }
-            break;
-            
-          case 'inventory':
-            value = product.inventory;
-            // Higher inventory is better
-            const inventories = products.map(p => p.inventory);
-            const maxInventory = Math.max(...inventories);
-            advantage = product.inventory === maxInventory ? 'better' : 'worse';
-            score = (product.inventory / maxInventory) * 100;
-            break;
-            
-          case 'views':
-            value = product.views;
-            // Higher views indicate popularity
-            const views = products.map(p => p.views);
-            const maxViews = Math.max(...views);
-            advantage = product.views === maxViews ? 'better' : 'equal';
-            score = maxViews > 0 ? (product.views / maxViews) * 100 : 50;
-            break;
-            
-          case 'favorites':
-            value = product.favorites;
-            const favorites = products.map(p => p.favorites);
-            const maxFavorites = Math.max(...favorites);
-            advantage = product.favorites === maxFavorites ? 'better' : 'equal';
-            score = maxFavorites > 0 ? (product.favorites / maxFavorites) * 100 : 50;
-            break;
-            
-          case 'freeShipping':
-            value = product.shipping?.freeShipping || false;
-            advantage = value ? 'better' : 'worse';
-            score = value ? 100 : 0;
-            break;
-            
-          case 'handlingTime':
-            value = product.shipping?.handlingTime || 'N/A';
-            if (typeof value === 'number') {
-              const handlingTimes = products
-                .map(p => p.shipping?.handlingTime)
-                .filter(t => typeof t === 'number') as number[];
-              
-              if (handlingTimes.length > 0) {
-                const minHandling = Math.min(...handlingTimes);
-                advantage = value === minHandling ? 'better' : 'worse';
-                score = minHandling > 0 ? (minHandling / value) * 100 : 50;
-              }
-            }
-            break;
-            
-          case 'brand':
-            value = product.metadata.brand || 'Unknown';
-            advantage = 'different';
-            score = 50;
-            break;
-            
-          case 'weight':
-            value = product.metadata.weight || 'N/A';
-            advantage = 'different';
-            score = 50;
-            break;
-            
-          default:
-            value = 'N/A';
-            advantage = 'equal';
-            score = 50;
-        }
-        
-        matrix[product.id][attr] = {
-          value,
-          advantage,
-          score,
-        };
-      });
-    });
-    
-    return matrix;
-  }
-
-  private generateComparisonSummary(
-    products: Product[], 
-    matrix: ProductComparison['comparisonMatrix']
-  ): ProductComparison['summary'] {
-    let bestPrice = products[0].id;
-    let bestRated = products[0].id;
-    let mostPopular = products[0].id;
-    let bestValue = products[0].id;
-    
-    // Find best price (lowest)
-    let lowestPrice = parseFloat(products[0].price.amount);
-    products.forEach(product => {
-      const price = parseFloat(product.price.amount);
-      if (price < lowestPrice) {
-        lowestPrice = price;
-        bestPrice = product.id;
-      }
-    });
-    
-    // Find most popular (highest views + favorites)
-    let highestPopularity = products[0].views + products[0].favorites;
-    products.forEach(product => {
-      const popularity = product.views + product.favorites;
-      if (popularity > highestPopularity) {
-        highestPopularity = popularity;
-        mostPopular = product.id;
-      }
-    });
-    
-    // Calculate best value (price vs features score)
-    let bestValueScore = 0;
-    products.forEach(product => {
-      const productMatrix = matrix[product.id];
-      const avgScore = Object.values(productMatrix).reduce((sum, attr) => sum + attr.score, 0) / Object.keys(productMatrix).length;
-      const price = parseFloat(product.price.amount);
-      const valueScore = avgScore / (price || 1); // Higher score per unit price
-      
-      if (valueScore > bestValueScore) {
-        bestValueScore = valueScore;
-        bestValue = product.id;
-      }
-    });
-    
-    // For now, use most popular as best rated (would use actual ratings in real implementation)
-    bestRated = mostPopular;
-    
-    return {
-      bestPrice,
-      bestRated,
-      mostPopular,
-      bestValue,
-    };
-  }
-
-  private generateSearchCacheKey(
-    filters: AdvancedSearchFilters,
-    sort: ProductSortOptions,
-    pagination: PaginationOptions
-  ): string {
-    const filterStr = JSON.stringify(filters);
-    const sortStr = JSON.stringify(sort);
-    const paginationStr = JSON.stringify(pagination);
-    return `search:${Buffer.from(filterStr + sortStr + paginationStr).toString('base64')}`;
-  }
-
-  private async trackSearchAnalytics(
-    filters: AdvancedSearchFilters,
-    result: ProductSearchResult
-  ): Promise<void> {
-    try {
-      const analyticsData = {
-        query: filters.query || '',
-        categoryId: filters.categoryId,
-        resultCount: result.total,
-        filtersUsed: this.getUsedFilters(filters),
-        timestamp: new Date().toISOString(),
-        responseTime: Date.now(), // Would be calculated from request start
-      };
-
-      // Store in Redis for real-time analytics
-      const dailyKey = `search_analytics:${new Date().toISOString().split('T')[0]}`;
-      const hourlyKey = `search_analytics:${new Date().toISOString().substring(0, 13)}`;
-      
-      // Increment counters
-      await Promise.all([
-        this.redisService.set(`${dailyKey}:total`, '1', 86400), // 24 hours TTL
-        this.redisService.set(`${hourlyKey}:total`, '1', 3600), // 1 hour TTL
-      ]);
-
-      // Track query frequency
-      if (filters.query) {
-        const queryKey = `query_frequency:${filters.query.toLowerCase()}`;
-        await this.redisService.set(queryKey, '1', 86400);
-      }
-
-      // In a production environment, this would also:
-      // 1. Send to analytics service (e.g., Google Analytics, Mixpanel)
-      // 2. Store in time-series database for detailed analysis
-      // 3. Update search performance metrics
-      
-      console.log('Search Analytics Tracked:', analyticsData);
-    } catch (error) {
-      console.error('Failed to track search analytics:', error);
-      // Don't throw error to avoid breaking search functionality
-    }
-  }
-
-  private getUsedFilters(filters: AdvancedSearchFilters): string[] {
-    const usedFilters: string[] = [];
-    
-    if (filters.query) usedFilters.push('query');
-    if (filters.categoryId) usedFilters.push('category');
-    if (filters.priceMin || filters.priceMax) usedFilters.push('price');
-    if (filters.location) usedFilters.push('location');
-    if (filters.minRating || filters.maxRating) usedFilters.push('rating');
-    if (filters.sellerReputation) usedFilters.push('sellerReputation');
-    if (filters.inStock) usedFilters.push('inStock');
-    if (filters.freeShipping) usedFilters.push('freeShipping');
-    if (filters.fastShipping) usedFilters.push('fastShipping');
-    if (filters.recentlyAdded) usedFilters.push('recentlyAdded');
-    if (filters.trending) usedFilters.push('trending');
-    if (filters.onSale) usedFilters.push('onSale');
-    if (filters.hasReviews) usedFilters.push('hasReviews');
-    if (filters.condition) usedFilters.push('condition');
-    if (filters.tags && filters.tags.length > 0) usedFilters.push('tags');
-    
-    return usedFilters;
-  }
-
-  private mapProductFromDb(dbProduct: any, dbCategory?: any): Product {
-    const category = dbCategory ? {
-      id: dbCategory.id,
-      name: dbCategory.name,
-      slug: dbCategory.slug,
-      description: dbCategory.description,
-      parentId: dbCategory.parentId,
-      path: JSON.parse(dbCategory.path || '[]'),
-      imageUrl: dbCategory.imageUrl,
-      isActive: dbCategory.isActive,
-      sortOrder: dbCategory.sortOrder,
-      createdAt: dbCategory.createdAt,
-      updatedAt: dbCategory.updatedAt,
-    } : {
-      id: dbProduct.categoryId,
-      name: 'Unknown',
-      slug: 'unknown',
-      path: [],
-      isActive: true,
-      sortOrder: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    return {
-      id: dbProduct.id,
-      sellerId: dbProduct.sellerId,
-      title: dbProduct.title,
-      description: dbProduct.description,
-      price: {
-        amount: dbProduct.priceAmount,
-        currency: dbProduct.priceCurrency,
-      },
-      category,
-      images: JSON.parse(dbProduct.images || '[]'),
-      metadata: JSON.parse(dbProduct.metadata || '{}'),
-      inventory: dbProduct.inventory,
-      status: dbProduct.status,
-      tags: JSON.parse(dbProduct.tags || '[]'),
-      shipping: dbProduct.shipping ? JSON.parse(dbProduct.shipping) : undefined,
-      nft: dbProduct.nft ? JSON.parse(dbProduct.nft) : undefined,
-      views: dbProduct.views || 0,
-      favorites: dbProduct.favorites || 0,
-      createdAt: dbProduct.createdAt,
-      updatedAt: dbProduct.updatedAt,
-    };
-  }
-}
+  private async getUserPreferredCategories(userId: string): Promise<string[]

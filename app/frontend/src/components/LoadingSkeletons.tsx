@@ -359,6 +359,139 @@ export function ProgressiveLoader({
   return null;
 }
 
+// Search Results Skeleton
+export function SearchResultsSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`}>
+      <div className="animate-pulse">
+        <Skeleton className="h-4 w-48 mb-4" />
+      </div>
+      
+      {/* Posts Section */}
+      <div>
+        <div className="animate-pulse mb-4">
+          <Skeleton className="h-6 w-24" />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }, (_, i) => (
+            <PostCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+      
+      {/* Communities Section */}
+      <div>
+        <div className="animate-pulse mb-4">
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+              <div className="flex items-center space-x-3 mb-2">
+                <Skeleton className="w-10 h-10 rounded-full" />
+                <div className="flex-1">
+                  <Skeleton className="h-4 w-3/4 mb-1" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <Skeleton className="h-3 w-full mb-2" />
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Trending Content Skeleton
+export function TrendingContentSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between animate-pulse">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+      
+      {/* Trending Hashtags */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="animate-pulse mb-4">
+          <Skeleton className="h-5 w-40" />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 10 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between p-2 animate-pulse">
+              <div className="flex items-center space-x-3">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Recommendation Cards Skeleton
+export function RecommendationCardsSkeleton({ count = 6, className = '' }: { count?: number; className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`}>
+      <div className="flex items-center justify-between animate-pulse">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="animate-pulse mb-4">
+          <Skeleton className="h-5 w-48" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: count }, (_, i) => (
+            <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+              <Skeleton className="h-16 w-full" />
+              <div className="p-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Skeleton className="w-10 h-10 rounded-full -mt-8" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                  </div>
+                </div>
+                <div className="space-y-2 mb-3">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Post Feed Skeleton (for hashtag pages)
+export function PostFeedSkeleton({ count = 5, className = '' }: { count?: number; className?: string }) {
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {Array.from({ length: count }, (_, i) => (
+        <PostCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
 // Export all skeletons as a namespace for easier importing
 export const LoadingSkeletons = {
   PostCard: PostCardSkeleton,
@@ -370,5 +503,9 @@ export const LoadingSkeletons = {
   Sidebar: SidebarSkeleton,
   CommentThread: CommentThreadSkeleton,
   Spinner: LoadingSpinner,
-  ProgressiveLoader: ProgressiveLoader
+  ProgressiveLoader: ProgressiveLoader,
+  SearchResults: SearchResultsSkeleton,
+  TrendingContent: TrendingContentSkeleton,
+  RecommendationCards: RecommendationCardsSkeleton,
+  PostFeed: PostFeedSkeleton
 };

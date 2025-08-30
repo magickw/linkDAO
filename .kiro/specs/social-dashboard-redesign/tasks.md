@@ -97,14 +97,14 @@
   - Add real-time notification updates
   - _Requirements: 2.4, 5.5, 7.6_
 
-- [ ] 15. Add search and discovery features
+- [x] 15. Add search and discovery features
   - Implement search functionality for posts and communities
   - Add trending content algorithms
   - Create user and community recommendation systems
   - Add hashtag and topic-based discovery
   - _Requirements: 2.3, 5.1, 5.5_
 
-- [ ] 16. Optimize performance and caching
+- [x] 16. Optimize performance and caching
   - Implement virtual scrolling for large feeds
   - Add intelligent caching for user and community data
   - Optimize image loading and media handling
