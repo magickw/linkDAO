@@ -37,11 +37,16 @@ export interface ReputationScore {
 
 export class ReputationService {
   /**
-   * Calculate reputation score based on various factors
+   * Calculate reputation score based on various factors including reviews
    * @param factors The factors contributing to reputation
+   * @param reviewStats Optional review statistics to include in calculation
    * @returns The calculated reputation score (0-1000)
    */
-  calculateReputationScore(factors: ReputationFactors): number {
+  calculateReputationScore(factors: ReputationFactors, reviewStats?: {
+    averageRating: number;
+    totalReviews: number;
+    verifiedReviewsRatio: number;
+  }): number {
     // Validate factors are within range
     const validatedFactors = {
       daoProposalSuccessRate: Math.min(100, Math.max(0, factors.daoProposalSuccessRate)),
@@ -51,8 +56,8 @@ export class ReputationService {
       onchainActivity: Math.min(100, Math.max(0, factors.onchainActivity))
     };
 
-    // Calculate weighted score
-    const score = (
+    // Calculate base weighted score
+    let score = (
       validatedFactors.daoProposalSuccessRate * REPUTATION_FACTORS.DAO_PROPOSAL_SUCCESS_RATE +
       validatedFactors.votingParticipation * REPUTATION_FACTORS.VOTING_PARTICIPATION +
       validatedFactors.investmentAdviceAccuracy * REPUTATION_FACTORS.INVESTMENT_ADVICE_ACCURACY +
@@ -60,8 +65,39 @@ export class ReputationService {
       validatedFactors.onchainActivity * REPUTATION_FACTORS.ONCHAIN_ACTIVITY
     );
 
+    // Apply review-based adjustments if available
+    if (reviewStats) {
+      const reviewBonus = this.calculateReviewBonus(reviewStats);
+      score += reviewBonus;
+    }
+
     // Ensure score is within bounds and properly rounded
     return Math.min(1000, Math.max(0, Math.round(score * 10) / 10));
+  }
+
+  /**
+   * Calculate reputation bonus/penalty based on review statistics
+   */
+  private calculateReviewBonus(reviewStats: {
+    averageRating: number;
+    totalReviews: number;
+    verifiedReviewsRatio: number;
+  }): number {
+    let bonus = 0;
+
+    // Rating bonus: +/- points based on average rating vs 3.0 baseline
+    const ratingDiff = reviewStats.averageRating - 3.0;
+    bonus += ratingDiff * 20; // Max +/-40 points
+
+    // Volume bonus: More reviews = higher confidence in rating
+    const volumeMultiplier = Math.min(1.5, 1 + (reviewStats.totalReviews / 100));
+    bonus *= volumeMultiplier;
+
+    // Verification bonus: Higher ratio of verified reviews = more trustworthy
+    const verificationBonus = (reviewStats.verifiedReviewsRatio - 0.5) * 10; // +/-5 points
+    bonus += verificationBonus;
+
+    return Math.max(-50, Math.min(50, bonus)); // Cap bonus at +/-50 points
   }
 
   /**
@@ -198,6 +234,128 @@ export class ReputationService {
       console.log(`Tracked investment advice accuracy for ${advisorAddress}: ${accuracy}%`);
     } catch (error) {
       console.error("Error tracking investment advice accuracy:", error);
+    }
+  }
+
+  /**
+   * Get seller rankings based on reputation scores
+   * @param limit Number of top sellers to return
+   * @param category Optional category filter
+   * @returns Array of top-ranked sellers
+   */
+  async getSellerRankings(limit: number = 50, category?: string): Promise<Array<{
+    userId: string;
+    walletAddress: string;
+    handle?: string;
+    reputationScore: number;
+    tier: string;
+    reviewStats: {
+      averageRating: number;
+      totalReviews: number;
+      verifiedReviewsRatio: number;
+    };
+    rank: number;
+  }>> {
+    try {
+      // Get all users with reputation scores
+      const users = await databaseService.getAllUsersWithReputation();
+      
+      // Calculate enhanced reputation scores including review data
+      const sellersWithScores = await Promise.all(
+        users.map(async (user) => {
+          // Get review stats for this user
+          const reviewStats = await this.getReviewStatsForUser(user.walletAddress);
+          
+          // Calculate enhanced reputation score
+          const factors: ReputationFactors = {
+            daoProposalSuccessRate: 75, // Would be calculated from actual data
+            votingParticipation: 80,
+            investmentAdviceAccuracy: 70,
+            communityContribution: 65,
+            onchainActivity: 85
+          };
+
+          const enhancedScore = this.calculateReputationScore(factors, reviewStats);
+
+          return {
+            userId: user.id,
+            walletAddress: user.walletAddress,
+            handle: user.handle,
+            reputationScore: enhancedScore,
+            tier: this.getReputationTier(enhancedScore),
+            reviewStats,
+            rank: 0 // Will be set after sorting
+          };
+        })
+      );
+
+      // Sort by reputation score and assign ranks
+      sellersWithScores.sort((a, b) => b.reputationScore - a.reputationScore);
+      sellersWithScores.forEach((seller, index) => {
+        seller.rank = index + 1;
+      });
+
+      return sellersWithScores.slice(0, limit);
+    } catch (error) {
+      console.error("Error getting seller rankings:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get review statistics for reputation calculation
+   */
+  private async getReviewStatsForUser(walletAddress: string): Promise<{
+    averageRating: number;
+    totalReviews: number;
+    verifiedReviewsRatio: number;
+  }> {
+    try {
+      // This would integrate with the ReviewService
+      // For now, return mock data
+      return {
+        averageRating: 4.2,
+        totalReviews: 25,
+        verifiedReviewsRatio: 0.85
+      };
+    } catch (error) {
+      console.error("Error getting review stats for user:", error);
+      return {
+        averageRating: 0,
+        totalReviews: 0,
+        verifiedReviewsRatio: 0
+      };
+    }
+  }
+
+  /**
+   * Update seller visibility based on reputation changes
+   */
+  async updateSellerVisibility(userId: string): Promise<void> {
+    try {
+      const reputation = await this.getUserReputation(userId);
+      if (!reputation) return;
+
+      // Determine visibility boost based on reputation tier
+      let visibilityBoost = 1.0;
+      switch (reputation.tier) {
+        case 'Master':
+          visibilityBoost = 2.0;
+          break;
+        case 'Expert':
+          visibilityBoost = 1.5;
+          break;
+        case 'Apprentice':
+          visibilityBoost = 1.2;
+          break;
+        default:
+          visibilityBoost = 1.0;
+      }
+
+      // Update user's visibility boost in database
+      await databaseService.updateUserVisibilityBoost(userId, visibilityBoost);
+    } catch (error) {
+      console.error("Error updating seller visibility:", error);
     }
   }
 }
