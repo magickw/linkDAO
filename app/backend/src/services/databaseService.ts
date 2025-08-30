@@ -4,35 +4,6 @@ import { eq, and, or, ilike, desc, lt, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
-import { string } from "zod";
-import { id } from "ethers";
-import { string } from "zod";
-import { number } from "zod";
-import { any } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { any } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { number } from "zod";
-import { number } from "zod";
-import { string } from "zod";
-import { any } from "zod";
-import { any } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { number } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { string } from "zod";
-import { number } from "zod";
-import { id } from "ethers";
 
 dotenv.config();
 
@@ -923,12 +894,7 @@ export class DatabaseService {
       throw error;
     }
   }
-}
-
-// Singleton instance
-export const databaseService = new DatabaseService(); 
- // Order Management Methods
-
+  // Order Management Methods
   async createOrderEvent(orderId: number, eventType: string, description: string, metadata?: string) {
     return this.executeQuery(async () => {
       const [event] = await this.db.insert(schema.orderEvents).values({
@@ -984,10 +950,10 @@ export const databaseService = new DatabaseService();
 
       // Calculate analytics
       const totalOrders = orders.length;
-      const totalVolume = orders.reduce((sum, order) => sum + parseFloat(order.amount || '0'), 0);
+      const totalVolume = orders.reduce((sum: number, order: any) => sum + parseFloat(order.amount || '0'), 0);
       const averageOrderValue = totalOrders > 0 ? totalVolume / totalOrders : 0;
-      const completedOrders = orders.filter(order => order.status === 'completed').length;
-      const disputedOrders = orders.filter(order => order.status === 'disputed').length;
+      const completedOrders = orders.filter((order: any) => order.status === 'completed').length;
+      const disputedOrders = orders.filter((order: any) => order.status === 'disputed').length;
       const completionRate = totalOrders > 0 ? completedOrders / totalOrders : 0;
       const disputeRate = totalOrders > 0 ? disputedOrders / totalOrders : 0;
 
@@ -1134,7 +1100,7 @@ export const databaseService = new DatabaseService();
       const result = await this.db.select()
         .from(schema.pushTokens)
         .where(eq(schema.pushTokens.userAddress, userAddress));
-      return result.map(row => row.token);
+      return result.map((row: any) => row.token);
     });
   }
 
@@ -1154,8 +1120,8 @@ export const databaseService = new DatabaseService();
         .where(eq(schema.notifications.userAddress, userAddress));
 
       const total = notifications.length;
-      const unread = notifications.filter(n => !n.read).length;
-      const byType = notifications.reduce((acc, n) => {
+      const unread = notifications.filter((n: any) => !n.read).length;
+      const byType = notifications.reduce((acc: any, n: any) => {
         acc[n.type] = (acc[n.type] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -1208,20 +1174,7 @@ export const databaseService = new DatabaseService();
     });
   }
 
-  async getUserByAddress(address: string) {
-    return this.executeQuery(async () => {
-      const [user] = await this.db.select()
-        .from(schema.users)
-        .where(eq(schema.users.walletAddress, address));
-      return user;
-    });
-  }
+}
 
-  async getUserById(id: string) {
-    return this.executeQuery(async () => {
-      const [user] = await this.db.select()
-        .from(schema.users)
-        .where(eq(schema.users.id, id));
-      return user;
-    });
-  }
+// Singleton instance
+export const databaseService = new DatabaseService();

@@ -134,17 +134,20 @@ export class BlockchainEventService {
       );
 
       for (const event of escrowEvents) {
-        const block = await event.getBlock();
-        events.push({
-          id: `${event.transactionHash}_${event.logIndex}`,
-          orderId,
-          escrowId,
-          eventType: event.fragment.name,
-          transactionHash: event.transactionHash,
-          blockNumber: event.blockNumber,
-          timestamp: new Date(block.timestamp * 1000).toISOString(),
-          data: event.args
-        });
+        // Type guard to check if event is EventLog
+        if ('fragment' in event && 'args' in event && 'logIndex' in event) {
+          const block = await event.getBlock();
+          events.push({
+            id: `${event.transactionHash}_${event.logIndex}`,
+            orderId,
+            escrowId,
+            eventType: event.fragment.name,
+            transactionHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+            timestamp: new Date(block.timestamp * 1000).toISOString(),
+            data: event.args
+          });
+        }
       }
 
       return events.sort((a, b) => a.blockNumber - b.blockNumber);
@@ -170,7 +173,7 @@ export class BlockchainEventService {
 
       // Get all events since last sync
       const events = await this.escrowContract.queryFilter(
-        {},
+        '*', // Use '*' to get all events
         lastSyncedBlock + 1,
         currentBlock
       );

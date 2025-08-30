@@ -133,3 +133,6 @@ export const blacklistToken = async (token: string): Promise<void> => {
     console.error('Failed to blacklist token:', error);
   }
 };
+
+// Export as authMiddleware for backward compatibility
+export const authMiddleware = authenticateToken;

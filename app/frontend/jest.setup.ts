@@ -6,26 +6,24 @@ global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  root: Element | Document | null = null;
-  rootMargin: string = '0px';
-  thresholds: ReadonlyArray<number> = [0];
+class MockIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null = null;
+  readonly rootMargin: string = '0px';
+  readonly thresholds: ReadonlyArray<number> = [0];
 
   constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
-    this.root = options?.root || null;
-    this.rootMargin = options?.rootMargin || '0px';
-    this.thresholds = options?.threshold ? 
-      (Array.isArray(options.threshold) ? options.threshold : [options.threshold]) : 
-      [0];
+    // Mock implementation
   }
 
-  disconnect() {}
-  observe() {}
-  unobserve() {}
+  disconnect(): void {}
+  observe(target: Element): void {}
+  unobserve(target: Element): void {}
   takeRecords(): IntersectionObserverEntry[] {
     return [];
   }
-} as any;
+}
+
+global.IntersectionObserver = MockIntersectionObserver as any;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
