@@ -178,6 +178,57 @@ export default function DashboardRightSidebar() {
         </div>
       </div>
 
+      {/* Trending Hashtags Widget */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+            <span className="mr-2 text-lg">#️⃣</span>
+            Trending Now
+          </h3>
+        </div>
+        <div className="p-4">
+          <div className="space-y-3">
+            {[
+              { tag: 'defi', count: 1240, growth: 15 },
+              { tag: 'nft', count: 890, growth: 8 },
+              { tag: 'web3', count: 2100, growth: 22 },
+              { tag: 'dao', count: 567, growth: 12 },
+              { tag: 'ethereum', count: 3400, growth: 5 }
+            ].map((hashtag, index) => (
+              <Link
+                key={hashtag.tag}
+                href={`/hashtags/${hashtag.tag}`}
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+              >
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-4">
+                    {index + 1}
+                  </span>
+                  <span className="text-primary-600 dark:text-primary-400 font-medium group-hover:text-primary-700 dark:group-hover:text-primary-300">
+                    #{hashtag.tag}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span>{formatNumber(hashtag.count)}</span>
+                  <span className="text-green-600 dark:text-green-400 flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                    {hashtag.growth}%
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="/search?tab=trending"
+            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+          >
+            View All Trending →
+          </Link>
+        </div>
+      </div>
+
       {/* DeFi Market Widget - Always show */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">

@@ -97,7 +97,7 @@
   - Add real-time notification updates
   - _Requirements: 2.4, 5.5, 7.6_
 
-- [ ] 15. Add search and discovery features
+- [x] 15. Add search and discovery features
   - Implement search functionality for posts and communities
   - Add trending content algorithms
   - Create user and community recommendation systems
