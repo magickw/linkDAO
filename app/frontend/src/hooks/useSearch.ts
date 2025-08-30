@@ -49,7 +49,12 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<SearchFilters>(initialFilters);
   const [results, setResults] = useState<SearchResults | null>(null);
-  const [suggestions, setSuggestions] = useState({
+  const [suggestions, setSuggestions] = useState<{
+    posts: string[];
+    communities: string[];
+    users: string[];
+    hashtags: string[];
+  }>({
     posts: [],
     communities: [],
     users: [],

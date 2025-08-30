@@ -234,7 +234,7 @@ export default function HashtagDiscovery({
                           ens: '', 
                           avatarCid: 'https://placehold.co/40' 
                         }}
-                        onTip={() => {}}
+                        onTip={async () => {}}
                         className="transition-all duration-300 hover:shadow-lg"
                       />
                     ))}

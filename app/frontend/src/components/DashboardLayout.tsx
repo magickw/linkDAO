@@ -11,6 +11,7 @@ import MobileNavigation from '@/components/MobileNavigation';
 import FloatingActionDock from '@/components/FloatingActionDock';
 import { Web3ErrorBoundary } from '@/components/ErrorBoundaries';
 import { LoadingState } from '@/components/FallbackStates';
+import { performanceMonitor } from '@/utils/performanceMonitor';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -260,6 +261,13 @@ export default function DashboardLayout({
 
       {/* Notification System */}
       {isConnected && <NotificationSystem />}
+      
+      {/* Performance Monitoring (Development only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white text-xs p-2 rounded z-50">
+          Performance Monitor Active
+        </div>
+      )}
       
       {/* Analytics */}
       <Analytics />

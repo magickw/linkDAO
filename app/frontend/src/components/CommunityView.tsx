@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Community } from '@/models/Community';
 import { CommunityPost, CreateCommunityPostInput } from '@/models/CommunityPost';
 import { CommunityMembership } from '@/models/CommunityMembership';
@@ -13,6 +13,8 @@ import { CommunityHeaderSkeleton, CommunityFeedSkeleton } from '@/components/Loa
 import { CommunityErrorBoundary } from '@/components/ErrorBoundaries';
 import { EmptyState, RetryState } from '@/components/FallbackStates';
 import { CommunitySettingsModal, ModeratorTools } from '@/components/CommunityManagement';
+import VirtualScrolling from '@/components/VirtualScrolling';
+import { cacheManager } from '@/services/cacheService';
 
 interface CommunityViewProps {
   communityId: string;
@@ -40,14 +42,29 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   const [joinLoading, setJoinLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showModeratorTools, setShowModeratorTools] = useState(false);
+  const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
 
-  // Load community data
+  // Enable virtual scrolling for large post lists
+  useEffect(() => {
+    setUseVirtualScrolling(posts.length > 30);
+  }, [posts.length]);
+
+  // Load community data with caching
   const loadCommunity = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const communityData = await CommunityService.getCommunityById(communityId);
+      // Try to get from cache first
+      let communityData = cacheManager.communityCache.getCommunity(communityId);
+      
+      if (!communityData) {
+        communityData = await CommunityService.getCommunityById(communityId);
+        if (communityData) {
+          cacheManager.communityCache.setCommunity(communityId, communityData);
+        }
+      }
+      
       if (!communityData) {
         setError('Community not found');
         return;
@@ -505,17 +522,39 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
           {postsLoading ? (
             <CommunityFeedSkeleton postCount={3} />
           ) : posts.length > 0 ? (
-            posts.map((post) => (
-              <CommunityPostCard
-                key={post.id}
-                post={post}
-                community={community}
-                userMembership={membership}
-                onVote={handleVotePost}
-                onReaction={handleReaction}
-                onTip={handleTip}
+            useVirtualScrolling ? (
+              /* Virtual Scrolling for large communities */
+              <VirtualScrolling
+                items={posts}
+                itemHeight={350} // Approximate height of a community post card
+                containerHeight={700} // Height of the scrollable container
+                renderItem={(post: any, index: number) => (
+                  <CommunityPostCard
+                    key={post.id}
+                    post={post}
+                    community={community}
+                    userMembership={membership}
+                    onVote={handleVotePost}
+                    onReaction={handleReaction}
+                    onTip={handleTip}
+                  />
+                )}
+                className="space-y-4"
               />
-            ))
+            ) : (
+              /* Regular scrolling for smaller communities */
+              posts.map((post: any) => (
+                <CommunityPostCard
+                  key={post.id}
+                  post={post}
+                  community={community}
+                  userMembership={membership}
+                  onVote={handleVotePost}
+                  onReaction={handleReaction}
+                  onTip={handleTip}
+                />
+              ))
+            )
           ) : (
             <EmptyState
               title="No posts yet"

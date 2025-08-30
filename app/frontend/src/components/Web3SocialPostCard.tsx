@@ -9,6 +9,7 @@ import DAOGovernanceEmbed from '@/components/DAOGovernanceEmbed';
 import GestureHandler from '@/components/GestureHandler';
 import QuickActionsMenu from '@/components/QuickActionsMenu';
 import PostInteractionBar from '@/components/PostInteractionBar';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -383,10 +384,14 @@ export default function Web3SocialPostCard({
           {/* Media or embeds */}
           {post.mediaCids && post.mediaCids.length > 0 && (
             <div className="mb-5 rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
-              <img
+              <OptimizedImage
                 src={post.mediaCids[0]}
                 alt="Post media"
+                width={600}
+                height={288}
                 className="w-full h-72 object-cover transition-transform duration-500 hover:scale-105"
+                lazy={true}
+                quality={0.85}
               />
             </div>
           )}
