@@ -1,4 +1,12 @@
-import { DisputeFormData } from '../components/DisputeCreationModal';
+// import { DisputeFormData } from '../components/DisputeCreationModal';
+
+// Temporary type definition while DisputeCreationModal is disabled
+export interface DisputeFormData {
+  title: string;
+  description: string;
+  category: string;
+  evidence: File[];
+}
 
 export interface DisputeDetails {
   id: number;
