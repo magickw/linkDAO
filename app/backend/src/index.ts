@@ -1,32 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { generalLimiter, apiLimiter, feedLimiter } from './middleware/rateLimiter';
-import { databaseService } from './services/databaseService';
-// import { redisService } from './services/redisService'; // Disabled to prevent blocking
-import { validateEnv } from './utils/envValidation';
-
-// Import routes
-import userProfileRoutes from './routes/userProfileRoutes';
-import authRoutes from './routes/authRoutes';
-import marketplaceRoutes from './routes/marketplaceRoutes';
-import productRoutes from './routes/productRoutes';
-import governanceRoutes from './routes/governanceRoutes';
-import tipRoutes from './routes/tipRoutes';
-import followRoutes from './routes/followRoutes';
-import postRoutes from './routes/postRoutes';
-import aiRoutes from './routes/aiRoutes';
-import searchRoutes from './routes/searchRoutes';
-import orderRoutes from './routes/orderRoutes';
-import disputeRoutes from './routes/disputeRoutes';
-import reviewRoutes from './routes/reviewRoutes';
-import contentIngestionRoutes from './routes/contentIngestionRoutes';
-import reportRoutes from './routes/reportRoutes';
-import moderationRoutes from './routes/moderationRoutes';
-import appealsRoutes from './routes/appealsRoutes';
-import marketplaceModerationRoutes from './routes/marketplaceModerationRoutes';
-// import serviceRoutes from './routes/serviceRoutes';
-// import projectManagementRoutes from './routes/projectManagementRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -48,7 +22,7 @@ app.use(express.json());
 // Basic routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'LinkDAO Backend API - Emergency Fix', 
+    message: 'LinkDAO Backend API - Minimal Version', 
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
@@ -70,12 +44,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Emergency fallback endpoints to prevent 404s
+// Mock API endpoints to prevent 404s
 app.get('/api/posts/feed', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Feed endpoint working - emergency fix'
+    message: 'Feed endpoint working - minimal version'
   });
 });
 
@@ -83,46 +57,16 @@ app.get('/api/marketplace/listings', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Marketplace endpoint working - emergency fix'
+    message: 'Marketplace endpoint working - minimal version'
   });
 });
 
-// API routes - try to use the imported routes first
-try {
-  app.use('/api/auth', authRoutes);
-  app.use('/api/profiles', userProfileRoutes);
-  app.use('/api/marketplace', marketplaceRoutes);
-  app.use('/api/products', productRoutes);
-  app.use('/api/governance', governanceRoutes);
-  app.use('/api/tips', tipRoutes);
-  app.use('/api/follow', followRoutes);
-  app.use('/api/posts', postRoutes);
-  app.use('/api/ai', aiRoutes);
-  app.use('/api/search', searchRoutes);
-  app.use('/api/orders', orderRoutes);
-  app.use('/api', disputeRoutes);
-  app.use('/api', reviewRoutes);
-  app.use('/api/content', contentIngestionRoutes);
-  app.use('/api/reports', reportRoutes);
-  app.use('/api/moderation', moderationRoutes);
-  app.use('/api/appeals', appealsRoutes);
-  app.use('/api/marketplace-moderation', marketplaceModerationRoutes);
-  // app.use('/api/services', serviceRoutes);
-  // app.use('/api/project-management', projectManagementRoutes);
-  
-  console.log('✅ All route modules loaded successfully');
-} catch (error) {
-  console.warn('⚠️ Some route modules failed to load:', error);
-  console.log('🔄 Falling back to emergency mock endpoints');
-}
-
-// Catch all API routes - fallback for any unhandled API endpoints
+// Catch all API routes
 app.use('/api/*', (req, res) => {
   res.json({
     success: true,
-    message: `API endpoint ${req.method} ${req.originalUrl} - emergency fix`,
-    data: null,
-    note: 'This is a fallback response to prevent 404 errors'
+    message: `API endpoint ${req.method} ${req.originalUrl} - minimal version`,
+    data: null
   });
 });
 
@@ -147,7 +91,7 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Emergency LinkDAO Backend running on port ${PORT}`);
+  console.log(`🚀 Minimal LinkDAO Backend running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
