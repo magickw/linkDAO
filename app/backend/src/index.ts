@@ -10,6 +10,7 @@ import { validateEnv } from './utils/envValidation';
 import userProfileRoutes from './routes/userProfileRoutes';
 import authRoutes from './routes/authRoutes';
 import marketplaceRoutes from './routes/marketplaceRoutes';
+import productRoutes from './routes/productRoutes';
 import governanceRoutes from './routes/governanceRoutes';
 import tipRoutes from './routes/tipRoutes';
 import followRoutes from './routes/followRoutes';
@@ -105,6 +106,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', userProfileRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/governance', governanceRoutes);
 app.use('/api/tips', tipRoutes);
 app.use('/api/follow', followRoutes);
