@@ -1,4 +1,4 @@
-import * as IPFS from 'ipfs-http-client';
+import type { IPFSHTTPClient } from 'ipfs-http-client';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -26,20 +26,13 @@ export interface ContentValidationResult {
 }
 
 class ContentStagingService {
-  private ipfs: any;
+  private ipfs: IPFSHTTPClient | undefined;
   private stagingDir: string;
   private maxFileSize: number = 100 * 1024 * 1024; // 100MB
   private allowedMimeTypes: Set<string>;
   private stagingTTL: number = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor() {
-    // Initialize IPFS client
-    this.ipfs = IPFS.create({
-      host: process.env.IPFS_HOST || 'localhost',
-      port: parseInt(process.env.IPFS_PORT || '5001'),
-      protocol: process.env.IPFS_PROTOCOL || 'http'
-    });
-
     // Set up staging directory
     this.stagingDir = process.env.CONTENT_STAGING_DIR || '/tmp/content-staging';
     
@@ -74,6 +67,18 @@ class ContentStagingService {
     ]);
 
     this.initializeStagingDirectory();
+  }
+
+  private async getIpfsClient(): Promise<IPFSHTTPClient> {
+    if (!this.ipfs) {
+      const { create } = await import('ipfs-http-client');
+      this.ipfs = create({
+        host: process.env.IPFS_HOST || 'localhost',
+        port: parseInt(process.env.IPFS_PORT || '5001'),
+        protocol: process.env.IPFS_PROTOCOL || 'http'
+      });
+    }
+    return this.ipfs;
   }
 
   private async initializeStagingDirectory(): Promise<void> {
@@ -261,8 +266,9 @@ class ContentStagingService {
         throw new Error('Staged content not found');
       }
 
+      const ipfs = await this.getIpfsClient();
       // Add to IPFS
-      const result = await this.ipfs.add(content);
+      const result = await ipfs.add(content);
       const cid = result.cid.toString();
 
       // Clean up staged content
