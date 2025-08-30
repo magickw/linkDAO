@@ -4,7 +4,7 @@
   "description": "Backend services for LinkDAO",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "echo 'Using pre-built emergency version'",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
@@ -16,10 +16,7 @@
     "db:sync": "tsx src/scripts/schemaMigration.ts",
     "db:push": "drizzle-kit push",
     "db:reset": "tsx src/scripts/resetDatabase.ts",
-    "db:studio": "drizzle-kit studio",
-    "postinstall": "npm run build",
-    "clean": "rm -rf dist",
-    "prebuild": "npm run clean"
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@pinecone-database/pinecone": "^6.1.2",

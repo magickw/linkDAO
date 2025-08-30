@@ -22,7 +22,7 @@ app.use(express.json());
 // Basic routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'LinkDAO Backend API - Emergency Fix', 
+    message: 'LinkDAO Backend API - Minimal Version', 
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
@@ -49,7 +49,7 @@ app.get('/api/posts/feed', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Feed endpoint working - emergency fix'
+    message: 'Feed endpoint working - minimal version'
   });
 });
 
@@ -57,7 +57,7 @@ app.get('/api/marketplace/listings', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Marketplace endpoint working - emergency fix'
+    message: 'Marketplace endpoint working - minimal version'
   });
 });
 
@@ -65,7 +65,7 @@ app.get('/api/marketplace/listings', (req, res) => {
 app.use('/api/*', (req, res) => {
   res.json({
     success: true,
-    message: `API endpoint ${req.method} ${req.originalUrl} - emergency fix`,
+    message: `API endpoint ${req.method} ${req.originalUrl} - minimal version`,
     data: null
   });
 });
@@ -91,7 +91,7 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Emergency LinkDAO Backend running on port ${PORT}`);
+  console.log(`🚀 Minimal LinkDAO Backend running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);

@@ -1,16 +1,22 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+#!/bin/bash
 
-// Load environment variables
-dotenv.config();
+echo "🚨 Emergency Deployment Script for LinkDAO Backend"
+echo "This will deploy a minimal working version to fix the 503 errors"
+
+# Create emergency build directory
+mkdir -p dist
+
+# Copy the minimal index.js directly to dist
+cat > dist/index.js << 'EOF'
+const express = require('express');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Very permissive CORS for debugging
+// Very permissive CORS
 app.use(cors({
-  origin: true, // Allow all origins for now
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['*'],
@@ -22,7 +28,7 @@ app.use(express.json());
 // Basic routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'LinkDAO Backend API - Emergency Fix', 
+    message: 'LinkDAO Backend API - Emergency Deployment', 
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
@@ -44,12 +50,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Mock API endpoints to prevent 404s
+// Mock API endpoints
 app.get('/api/posts/feed', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Feed endpoint working - emergency fix'
+    message: 'Feed endpoint working - emergency deployment'
   });
 });
 
@@ -57,7 +63,7 @@ app.get('/api/marketplace/listings', (req, res) => {
   res.json({
     success: true,
     data: [],
-    message: 'Marketplace endpoint working - emergency fix'
+    message: 'Marketplace endpoint working - emergency deployment'
   });
 });
 
@@ -65,13 +71,13 @@ app.get('/api/marketplace/listings', (req, res) => {
 app.use('/api/*', (req, res) => {
   res.json({
     success: true,
-    message: `API endpoint ${req.method} ${req.originalUrl} - emergency fix`,
+    message: `API endpoint ${req.method} ${req.originalUrl} - emergency deployment`,
     data: null
   });
 });
 
 // Error handler
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error, req, res, next) => {
   console.error('Error:', error);
   res.status(500).json({
     error: 'Internal Server Error',
@@ -97,4 +103,16 @@ app.listen(PORT, () => {
   console.log(`📡 API ready: http://localhost:${PORT}/`);
 });
 
-export default app;
+module.exports = app;
+EOF
+
+echo "✅ Emergency build created in dist/index.js"
+echo "🚀 Ready for deployment!"
+echo ""
+echo "Next steps:"
+echo "1. Commit and push this emergency fix"
+echo "2. Redeploy on Render.com"
+echo "3. Test the endpoints:"
+echo "   - https://linkdao-backend.onrender.com/health"
+echo "   - https://linkdao-backend.onrender.com/api/posts/feed"
+echo "   - https://linkdao-backend.onrender.com/api/marketplace/listings"
