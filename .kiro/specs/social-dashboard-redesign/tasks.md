@@ -125,7 +125,12 @@
 
 
 
-- [ ] 18. Update existing pages to use new dashboard
+- [x] 18. Update existing pages to use new dashboard
+
+
+
+
+
 
 
   - Migrate existing dashboard page to use new layout

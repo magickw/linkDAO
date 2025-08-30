@@ -17,7 +17,11 @@ export default function Home() {
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (mounted && isConnected) {
-      router.push('/dashboard');
+      // Add a small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [mounted, isConnected, router]);
 

@@ -3,130 +3,20 @@ import DashboardLayout from '@/components/DashboardLayout';
 import DashboardRightSidebar from '@/components/DashboardRightSidebar';
 import FeedView from '@/components/FeedView';
 import CommunityView from '@/components/CommunityView';
+import MigrationNotice from '@/components/MigrationNotice';
+import DashboardTour from '@/components/DashboardTour';
+import LegacyFunctionalityPreserver from '@/components/LegacyFunctionalityPreserver';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { CreatePostInput } from '@/models/Post';
-import Web3SocialPostCard from '@/components/Web3SocialPostCard';
 import PostCreationModal from '@/components/PostCreationModal';
 import BottomSheet from '@/components/BottomSheet';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
-// Helper function to determine post type based on tags
-const getPostType = (post: any) => {
-  if (post.tags && post.tags.length > 0) {
-    if (post.tags.includes('defi')) return 'defi';
-    if (post.tags.includes('nft')) return 'nft';
-    if (post.tags.includes('governance')) return 'governance';
-    if (post.tags.includes('marketplace')) return 'marketplace';
-  }
-  return 'default';
-};
 
-// Mock profile data - only used as fallback
-const mockProfiles: Record<string, any> = {
-  '0x1234567890123456789012345678901234567890': {
-    handle: 'alexj',
-    ens: 'alex.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 750,
-    reputationTier: 'Expert',
-    verified: true
-  },
-  '0x2345678901234567890123456789012345678901': {
-    handle: 'samc',
-    ens: 'sam.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 420,
-    reputationTier: 'Apprentice',
-    verified: false
-  },
-  '0x3456789012345678901234567890123456789012': {
-    handle: 'taylorr',
-    ens: 'taylor.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 890,
-    reputationTier: 'Master',
-    verified: true
-  },
-};
-
-// Enhanced mock posts data with different content types - only used as fallback
-const mockPosts = [
-  {
-    id: '1',
-    author: '0x1234567890123456789012345678901234567890',
-    dao: 'ethereum-builders',
-    title: 'New Yield Farming Strategy on Arbitrum',
-    contentCid: 'Just deployed a new yield farming strategy on Arbitrum. Got 15% APY so far! What do you think about the risk profile? Check out the detailed analysis in the embedded chart.',
-    mediaCids: [],
-    tags: ['defi', 'yield', 'arbitrum'],
-    createdAt: new Date(Date.now() - 3600000),
-    onchainRef: '0x1234...5678',
-    reputationScore: 750,
-    commentCount: 24,
-    stakedValue: 120
-  },
-  {
-    id: '2',
-    author: '0x2345678901234567890123456789012345678901',
-    dao: 'nft-collectors',
-    title: 'My Latest NFT Collection Drop',
-    contentCid: 'Check out my latest NFT collection drop! Each piece represents a different DeFi protocol. Feedback welcome.',
-    mediaCids: ['https://placehold.co/300'],
-    tags: ['nft', 'art', 'defi'],
-    createdAt: new Date(Date.now() - 7200000),
-    onchainRef: '0x2345...6789',
-    reputationScore: 420,
-    commentCount: 18,
-    stakedValue: 85
-  },
-  {
-    id: '3',
-    author: '0x3456789012345678901234567890123456789012',
-    dao: 'dao-governance',
-    title: 'Proposal: Quadratic Voting for Smaller Proposals',
-    contentCid: 'Proposal for a new governance mechanism: Quadratic Voting for smaller proposals to increase participation. Thoughts?',
-    mediaCids: [],
-    tags: ['governance', 'proposal', 'dao'],
-    createdAt: new Date(Date.now() - 10800000),
-    onchainRef: '0x3456...7890',
-    reputationScore: 890,
-    commentCount: 56,
-    stakedValue: 210
-  },
-  {
-    id: '4',
-    author: '0x1234567890123456789012345678901234567890',
-    dao: 'defi-traders',
-    title: 'Market Analysis: BTC to $100K?',
-    contentCid: 'With the recent halving and institutional adoption, I believe BTC could reach $100K by end of year. Here\'s my technical analysis with on-chain data.',
-    mediaCids: [],
-    tags: ['defi', 'analysis', 'btc'],
-    createdAt: new Date(Date.now() - 14400000),
-    onchainRef: '0x4567...8901',
-    reputationScore: 750,
-    commentCount: 42,
-    stakedValue: 165
-  },
-  {
-    id: '5',
-    author: '0x3456789012345678901234567890123456789012',
-    dao: 'marketplace',
-    title: 'Rare CryptoPunk Auction Ending Soon',
-    contentCid: 'This Rare CryptoPunk is ending in 2 hours! Current bid is 45.2 ETH. Don\'t miss out on this opportunity!',
-    mediaCids: ['https://placehold.co/300'],
-    tags: ['marketplace', 'auction', 'nft'],
-    createdAt: new Date(Date.now() - 1800000),
-    onchainRef: '0x5678...9012',
-    reputationScore: 890,
-    commentCount: 12,
-    stakedValue: 95
-  }
-];
 
 
 
@@ -135,17 +25,24 @@ export default function Dashboard() {
   const { addToast } = useToast();
   const router = useRouter();
   const { navigationState, openModal, closeModal } = useNavigation();
-  const { feed, isLoading: isFeedLoading, error: feedError } = useFeed(address);
   const { createPost, isLoading: isCreatingPost, error: createPostError, success: createPostSuccess } = useCreatePost();
   const { profile: userProfile } = useProfile(address);
-  const [profiles, setProfiles] = useState<Record<string, any>>({});
-  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'daos' | 'marketplace'>('all');
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);
+  const [showMigrationNotice, setShowMigrationNotice] = useState(false);
   const [notifications] = useState([
     { id: '1', type: 'vote', message: '3 pending governance votes', time: '2 hours ago' },
     { id: '2', type: 'bid', message: 'Auction ending soon: Rare CryptoPunk', time: '5 hours ago' },
     { id: '3', type: 'mention', message: '@alexj mentioned you in a post', time: '1 day ago' },
   ]);
+
+  // Check if this is the first time visiting the updated dashboard
+  useEffect(() => {
+    const hasSeenMigration = localStorage.getItem('dashboard-migration-seen');
+    if (!hasSeenMigration) {
+      setShowMigrationNotice(true);
+      localStorage.setItem('dashboard-migration-seen', 'true');
+    }
+  }, []);
 
   // Show success toast when post is created
   useEffect(() => {
@@ -160,12 +57,6 @@ export default function Dashboard() {
       addToast(`Error creating post: ${createPostError}`, 'error');
     }
   }, [createPostError, addToast]);
-
-  // Load profiles for posts - in a real app, this would fetch from the backend
-  useEffect(() => {
-    // For now, we'll use mock profiles, but in a real app this would fetch from the backend
-    setProfiles(mockProfiles);
-  }, []);
 
   const handlePostSubmit = async (data: CreatePostInput) => {
     if (!isConnected || !address) {
@@ -188,50 +79,7 @@ export default function Dashboard() {
     }
   };
 
-  // Handle token staking for reactions
-  const handleReaction = async (postId: string, reactionType: string, amount?: number) => {
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to react', 'error');
-      return;
-    }
 
-    try {
-      // In a real implementation, this would call the backend API to process the reaction
-      // and handle the staking of tokens
-      const stakeAmount = amount || 1;
-      console.log(`Staking ${stakeAmount} $LNK on ${reactionType} reaction for post ${postId}`);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      addToast(`Successfully staked ${stakeAmount} $LNK on ${reactionType} reaction!`, 'success');
-    } catch (error) {
-      console.error('Error reacting:', error);
-      addToast('Failed to react. Please try again.', 'error');
-    }
-  };
-
-  // Handle tipping
-  const handleTip = async (postId: string, amount: string, token: string) => {
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to tip', 'error');
-      return;
-    }
-
-    try {
-      // In a real implementation, this would call the backend API to process the tip
-      // and handle the token transfer
-      console.log(`Tipping ${amount} ${token} on post ${postId}`);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      addToast(`Successfully tipped ${amount} ${token}!`, 'success');
-    } catch (error) {
-      console.error('Error tipping:', error);
-      addToast('Failed to send tip. Please try again.', 'error');
-    }
-  };
 
   // Handle post action
   const handlePostAction = (action: string) => {
@@ -318,12 +166,27 @@ export default function Dashboard() {
   };
 
   return (
-    <DashboardLayout
-      title="Dashboard - LinkDAO"
-      activeView={navigationState.activeView}
-      rightSidebar={<DashboardRightSidebar />}
-      onCreatePost={handleCreatePost}
-    >
+    <>
+      {/* Legacy Functionality Preserver */}
+      <LegacyFunctionalityPreserver />
+      
+      {/* Migration Notice */}
+      {showMigrationNotice && (
+        <MigrationNotice 
+          type="dashboard" 
+          onDismiss={() => setShowMigrationNotice(false)}
+        />
+      )}
+      
+      {/* Dashboard Tour */}
+      <DashboardTour />
+      
+      <DashboardLayout
+        title="Dashboard - LinkDAO"
+        activeView={navigationState.activeView}
+        rightSidebar={<DashboardRightSidebar />}
+        onCreatePost={handleCreatePost}
+      >
       <div className="space-y-6">
         {/* Top Section (User Snapshot) */}
         <div className="mb-8">
@@ -483,133 +346,8 @@ export default function Dashboard() {
           ) : navigationState.activeView === 'community' && navigationState.activeCommunity ? (
             <CommunityView communityId={navigationState.activeCommunity} />
           ) : (
-            /* Fallback to legacy dashboard content */
-            <div>
-              {/* Mobile Tabs */}
-              <div className="md:hidden mb-4">
-                <div className="flex bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow border border-white/30 dark:border-gray-700/50 p-1">
-                  <button
-                    onClick={() => setActiveTab('all')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-xl ${activeTab === 'all'
-                      ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-xl ${activeTab === 'users'
-                      ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    Users
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('daos')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-xl ${activeTab === 'daos'
-                      ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    DAOs
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('marketplace')}
-                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-xl ${activeTab === 'marketplace'
-                      ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}
-                  >
-                    Marketplace
-                  </button>
-                </div>
-              </div>
-
-              {/* Legacy Posts Feed */}
-              <div className="space-y-6">
-                {isFeedLoading ? (
-                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 p-6">
-                    <p className="text-gray-600 dark:text-gray-300">Loading feed...</p>
-                  </div>
-                ) : feedError ? (
-                  <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
-                    <p>Error loading feed: {feedError}</p>
-                    <p className="mt-2 text-sm">Displaying mock data as fallback:</p>
-                    <div className="mt-4 space-y-6">
-                      {mockPosts.map((post) => {
-                        const authorProfile = profiles[post.author] || {
-                          handle: 'Unknown',
-                          ens: '',
-                          avatarCid: 'https://placehold.co/40',
-                          reputationScore: 0,
-                          reputationTier: 'Novice',
-                          verified: false
-                        };
-
-                        return (
-                          <div key={post.id} className={`relative rounded-2xl overflow-hidden ${getPostType(post) === 'defi' ? 'border-l-4 border-l-green-500' :
-                            getPostType(post) === 'nft' ? 'border-l-4 border-l-purple-500' :
-                              getPostType(post) === 'governance' ? 'border-l-4 border-l-blue-500' :
-                                getPostType(post) === 'marketplace' ? 'border-l-4 border-l-orange-500' :
-                                  'border-l-4 border-l-gray-500'
-                            }`}>
-                            <Web3SocialPostCard
-                              post={post}
-                              profile={authorProfile}
-                              onReaction={handleReaction}
-                              onTip={handleTip}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : feed && feed.length > 0 ? (
-                  <>
-                    {feed.map((post) => {
-                      // In a real app, you would fetch the profile for each post author
-                      // For now, we'll use mock profiles
-                      const authorProfile = profiles[post.author] || {
-                        handle: 'Unknown',
-                        ens: '',
-                        avatarCid: 'https://placehold.co/40',
-                        reputationScore: 0,
-                        reputationTier: 'Novice',
-                        verified: false
-                      };
-
-                      return (
-                        <div key={post.id} className={`relative rounded-2xl overflow-hidden ${getPostType(post) === 'defi' ? 'border-l-4 border-l-green-500' :
-                          getPostType(post) === 'nft' ? 'border-l-4 border-l-purple-500' :
-                            getPostType(post) === 'governance' ? 'border-l-4 border-l-blue-500' :
-                              getPostType(post) === 'marketplace' ? 'border-l-4 border-l-orange-500' :
-                                'border-l-4 border-l-gray-500'
-                          }`}>
-                          <Web3SocialPostCard
-                            post={post}
-                            profile={authorProfile}
-                            onReaction={handleReaction}
-                            onTip={handleTip}
-                          />
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : (
-                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 p-6 text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No posts yet</h3>
-                    <p className="mt-1 text-gray-500 dark:text-gray-400">
-                      Be the first to post!
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            /* Default to feed view if no specific view is set */
+            <FeedView />
           )}
         </div>
 
