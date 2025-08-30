@@ -153,10 +153,82 @@ export const embeddings = pgTable("embeddings", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Marketplace tables
+// Product Categories
+export const categories = pgTable("categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  description: text("description"),
+  parentId: uuid("parent_id"),
+  path: text("path").notNull(), // JSON array of category names
+  imageUrl: text("image_url"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  parentFk: foreignKey({
+    columns: [t.parentId],
+    foreignColumns: [t.id]
+  })
+}));
+
+// Products
+export const products = pgTable("products", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  priceAmount: numeric("price_amount", { precision: 20, scale: 8 }).notNull(),
+  priceCurrency: varchar("price_currency", { length: 10 }).notNull(),
+  categoryId: uuid("category_id").references(() => categories.id).notNull(),
+  images: text("images").notNull(), // JSON array of IPFS hashes
+  metadata: text("metadata").notNull(), // JSON ProductMetadata
+  inventory: integer("inventory").notNull().default(0),
+  status: varchar("status", { length: 32 }).default("active"), // 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft'
+  tags: text("tags"), // JSON array of tags
+  shipping: text("shipping"), // JSON ShippingInfo
+  nft: text("nft"), // JSON NFTInfo
+  views: integer("views").default(0),
+  favorites: integer("favorites").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerId],
+    foreignColumns: [users.id]
+  }),
+  categoryFk: foreignKey({
+    columns: [t.categoryId],
+    foreignColumns: [categories.id]
+  }),
+  titleIdx: index("product_title_idx").on(t.title),
+  statusIdx: index("product_status_idx").on(t.status),
+  categoryIdx: index("product_category_idx").on(t.categoryId),
+  sellerIdx: index("product_seller_idx").on(t.sellerId),
+  priceIdx: index("product_price_idx").on(t.priceAmount),
+}));
+
+// Product Tags - for efficient querying
+export const productTags = pgTable("product_tags", {
+  id: serial("id").primaryKey(),
+  productId: uuid("product_id").references(() => products.id).notNull(),
+  tag: varchar("tag", { length: 100 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  productTagIdx: index("product_tag_idx").on(t.productId, t.tag),
+  tagIdx: index("tag_idx").on(t.tag),
+  productFk: foreignKey({
+    columns: [t.productId],
+    foreignColumns: [products.id]
+  })
+}));
+
+// Marketplace listings (keeping for backward compatibility)
 export const listings = pgTable("listings", {
   id: serial("id").primaryKey(),
   sellerId: uuid("seller_id").references(() => users.id),
+  productId: uuid("product_id").references(() => products.id), // Link to products table
   tokenAddress: varchar("token_address", { length: 66 }).notNull(),
   price: numeric("price").notNull(), // Using numeric for better precision
   quantity: integer("quantity").notNull(),
@@ -178,7 +250,12 @@ export const listings = pgTable("listings", {
   reserveMet: boolean("reserve_met").default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (t) => ({
+  productFk: foreignKey({
+    columns: [t.productId],
+    foreignColumns: [products.id]
+  })
+}));
 
 export const bids = pgTable("bids", {
   id: serial("id").primaryKey(),

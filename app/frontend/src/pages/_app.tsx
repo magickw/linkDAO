@@ -5,6 +5,7 @@ import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Web3Provider } from '@/context/Web3Context';
+import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
@@ -131,11 +132,17 @@ export default function App({ Component, pageProps, router }: AppProps) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <Web3Provider>
-            <ToastProvider>
-              <NavigationProvider>
-                <AppContent Component={Component} pageProps={pageProps} router={router} />
-              </NavigationProvider>
-            </ToastProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <NavigationProvider>
+                  <AppContent
+                    Component={Component}
+                    pageProps={pageProps}
+                    router={router}
+                  />
+                </NavigationProvider>
+              </ToastProvider>
+            </AuthProvider>
           </Web3Provider>
         </RainbowKitProvider>
       </QueryClientProvider>
