@@ -14,8 +14,8 @@ import {
   ProjectMessage, 
   CreateProjectThreadRequest,
   SendProjectMessageRequest 
-} from '../../types/service';
-import { projectManagementService } from '../../services/projectManagementService';
+} from '../../../types/service';
+import { projectManagementService } from '../../../services/projectManagementService';
 
 interface ProjectCommunicationProps {
   bookingId: string;

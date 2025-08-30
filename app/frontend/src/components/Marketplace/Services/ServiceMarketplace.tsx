@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Service, ServiceCategory, ServiceSearchFilters } from '../types/service';
-import { serviceApiService } from '../services/serviceApiService';
+import { Service, ServiceCategory, ServiceSearchFilters } from '../../../types/service';
+import { serviceApiService } from '../../../services/serviceApiService';
 import { ServiceCard } from './ServiceCard';
 import { ServiceFilters } from './ServiceFilters';
 import { CreateServiceModal } from './CreateServiceModal';

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useFiatPayment } from '../hooks/useFiatPayment';
+import { useFiatPayment } from '../../../hooks/useFiatPayment';
 import { 
   FiatPaymentRequest, 
   FiatPaymentStatus, 
   FiatPaymentMethod 
-} from '../types/fiatPayment';
+} from '../../../types/fiatPayment';
 
 interface FiatPaymentModalProps {
   isOpen: boolean;

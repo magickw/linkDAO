@@ -211,7 +211,7 @@
     - Write Storybook documentation for all design system components
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [ ] 12.2 Homepage and Navigation Layout
+  - [x] 12.2 Homepage and Navigation Layout
     - Implement sticky glassmorphic navbar with logo, search, wallet connect, and currency toggle
     - Build hero section with bold tagline, call-to-action buttons, and gradient backgrounds
     - Create icon-based category grid with DAO-approved vendor highlighting
@@ -220,7 +220,7 @@
     - Write tests for navigation components and responsive behavior
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [ ] 12.3 Product Display and Discovery Components
+  - [x] 12.3 Product Display and Discovery Components
     - Build glassmorphic product cards with lazy-loaded images and skeleton placeholders
     - Implement dual pricing display with real-time crypto-to-fiat conversion
     - Create trust indicator badges (✅ Verified, 🔒 Escrow Protected, ⛓️ On-Chain Certified)

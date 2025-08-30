@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Service, ServiceBooking, CreateBookingRequest, ServiceAvailability } from '../types/service';
-import { serviceApiService } from '../services/serviceApiService';
+import { Service, ServiceBooking, CreateBookingRequest, ServiceAvailability } from '../../../types/service';
+import { serviceApiService } from '../../../services/serviceApiService';
 import { XMarkIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface BookingModalProps {

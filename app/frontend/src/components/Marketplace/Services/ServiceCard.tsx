@@ -1,5 +1,5 @@
 import React from 'react';
-import { Service } from '../types/service';
+import { Service } from '../../../types/service';
 import { StarIcon, ClockIcon, MapPinIcon, TagIcon } from '@heroicons/react/24/solid';
 
 interface ServiceCardProps {

@@ -11,8 +11,8 @@ import {
   Edit,
   Trash2
 } from 'lucide-react';
-import { ProjectDeliverable, CreateDeliverableRequest } from '../../types/service';
-import { projectManagementService } from '../../services/projectManagementService';
+import { ProjectDeliverable, CreateDeliverableRequest } from '../../../types/service';
+import { projectManagementService } from '../../../services/projectManagementService';
 
 interface DeliverablesListProps {
   bookingId: string;

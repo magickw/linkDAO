@@ -8,7 +8,7 @@ import { useToast } from '@/context/ToastContext';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
-import NFTPreview from '@/components/NFTPreview';
+import NFTPreview from '@/components/Marketplace/NFT/NFTPreview';
 import TipBar from '@/components/TipBar';
 
 // Mock NFT data - in a real app this would come from an NFT API
@@ -51,7 +51,7 @@ export default function Profile() {
   const { addToast } = useToast();
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
   const { followCount, isLoading: isFollowCountLoading } = useFollowCount(address);
-  
+
   // Smart contract profile data
   const { data: contractProfileData, isLoading: isContractProfileLoading } = useReadProfileRegistryGetProfileByAddress({
     args: address ? [address] : undefined,
@@ -59,22 +59,22 @@ export default function Profile() {
       enabled: !!address,
     },
   });
-  
-  const { 
-    writeContract: createProfile, 
-    isPending: isCreatingProfile, 
-    isSuccess: isProfileCreated 
+
+  const {
+    writeContract: createProfile,
+    isPending: isCreatingProfile,
+    isSuccess: isProfileCreated
   } = useWriteProfileRegistryCreateProfile();
-  
-  const { 
-    writeContract: updateProfile, 
-    isPending: isUpdatingProfile, 
-    isSuccess: isProfileUpdated 
+
+  const {
+    writeContract: updateProfile,
+    isPending: isUpdatingProfile,
+    isSuccess: isProfileUpdated
   } = useWriteProfileRegistryUpdateProfile();
-  
+
   const { createProfile: createBackendProfile, isLoading: isCreatingBackendProfile, error: createBackendProfileError } = useCreateProfile();
   const { updateProfile: updateBackendProfile, isLoading: isUpdatingBackendProfile, error: updateBackendProfileError } = useUpdateProfile();
-  
+
   const [profile, setProfile] = useState({
     handle: '',
     ens: '',
@@ -109,7 +109,7 @@ export default function Profile() {
     if (isProfileCreated) {
       addToast('Profile created successfully on-chain!', 'success');
     }
-    
+
     if (isProfileUpdated) {
       addToast('Profile updated successfully on-chain!', 'success');
     }
@@ -132,17 +132,17 @@ export default function Profile() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!profile.handle) {
       addToast('Please enter a handle', 'error');
       return;
     }
-    
+
     if (!isConnected || !address) {
       addToast('Please connect your wallet first', 'error');
       return;
     }
-    
+
     try {
       // If profile exists in backend, update it
       if (backendProfile) {
@@ -152,17 +152,17 @@ export default function Profile() {
           avatarCid: profile.avatar,
           bioCid: profile.bio,
         };
-        
+
         await updateBackendProfile(backendProfile.id, updateData);
         addToast('Profile updated successfully!', 'success');
-        
+
         // Also update on-chain if needed
         if (contractProfileData && contractProfileData.handle) {
           updateProfile({
             args: [1n, profile.avatar, profile.bio],
           });
         }
-      } 
+      }
       // If profile exists on-chain but not in backend, create in backend
       else if (contractProfileData && contractProfileData.handle) {
         const createData: CreateUserProfileInput = {
@@ -172,22 +172,22 @@ export default function Profile() {
           avatarCid: profile.avatar,
           bioCid: profile.bio,
         };
-        
+
         await createBackendProfile(createData);
         addToast('Profile created successfully!', 'success');
-        
+
         // Update on-chain if needed
         updateProfile({
           args: [1n, profile.avatar, profile.bio],
         });
-      } 
+      }
       // If no profile exists anywhere, create both
       else {
         // Create on-chain first
         createProfile({
           args: [profile.handle, profile.ens, profile.avatar, profile.bio],
         });
-        
+
         // Create in backend
         const createData: CreateUserProfileInput = {
           address: address,
@@ -196,11 +196,11 @@ export default function Profile() {
           avatarCid: profile.avatar,
           bioCid: profile.bio,
         };
-        
+
         await createBackendProfile(createData);
         addToast('Profile created successfully!', 'success');
       }
-      
+
       setIsEditing(false);
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -256,7 +256,7 @@ export default function Profile() {
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Your Profile</h1>
-          
+
           {/* Loading Skeleton */}
           {isLoading && (
             <div className="space-y-6">
@@ -277,7 +277,7 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 animate-pulse">
                 <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
                 <div className="space-y-3">
@@ -288,7 +288,7 @@ export default function Profile() {
               </div>
             </div>
           )}
-          
+
           {/* Error State */}
           {hasError && !isLoading && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 mb-6">
@@ -319,7 +319,7 @@ export default function Profile() {
               </div>
             </div>
           )}
-          
+
           {/* Profile Header with Glassmorphism Effect */}
           {!isLoading && !hasError && (
             <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/30 dark:to-purple-900/30 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 dark:border-gray-700/50 p-6 mb-6">
@@ -328,10 +328,10 @@ export default function Profile() {
                   <div className="relative">
                     <div className="h-32 w-32 md:h-40 md:w-40 rounded-full border-4 border-white dark:border-gray-700 shadow-xl overflow-hidden">
                       {profile.avatar ? (
-                        <img 
-                          className="h-full w-full object-cover" 
-                          src={profile.avatar} 
-                          alt={profile.handle} 
+                        <img
+                          className="h-full w-full object-cover"
+                          src={profile.avatar}
+                          alt={profile.handle}
                         />
                       ) : (
                         <DefaultAvatar />
@@ -368,14 +368,14 @@ export default function Profile() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Wallet Address with Copy Button */}
                   <div className="mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                     <span className="text-base font-mono text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 px-4 py-2.5 rounded-xl flex items-center shadow-sm">
                       <span className="font-medium">{formatAddress(address || '')}</span>
                     </span>
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => copyToClipboard(address || '')}
                         className="p-2.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
                         title="Copy address"
@@ -384,7 +384,7 @@ export default function Profile() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                       </button>
-                      <button 
+                      <button
                         className="p-2.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shadow-sm"
                         title="Share profile"
                       >
@@ -394,7 +394,7 @@ export default function Profile() {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* User Stats */}
                   <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="flex flex-col items-center bg-white/50 dark:bg-black/20 rounded-xl p-4 transition-all hover:shadow-lg">
@@ -433,16 +433,16 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-              
+
               {profile.bio && !isEditing && (
                 <p className="mt-8 text-lg text-gray-700 dark:text-gray-300 text-center lg:text-left">{profile.bio}</p>
               )}
-              
+
               {/* Tip Creator Section */}
               <div className="mt-8">
                 <TipBar postId="user-profile" creatorAddress={address || ''} />
               </div>
-              
+
               {/* DAO Badges */}
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -453,8 +453,8 @@ export default function Profile() {
                 </h3>
                 <div className="flex flex-wrap gap-3">
                   {mockDAOs.map((dao) => (
-                    <span 
-                      key={dao.id} 
+                    <span
+                      key={dao.id}
                       className={`${dao.color} text-white px-4 py-2.5 rounded-xl text-base font-semibold flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 cursor-pointer`}
                     >
                       <span className="mr-2 text-lg">{dao.badge}</span>
@@ -465,18 +465,17 @@ export default function Profile() {
               </div>
             </div>
           )}
-          
+
           {/* Tab Navigation */}
           {!isLoading && !hasError && (
             <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
               <nav className="-mb-px flex space-x-6 overflow-x-auto pb-2">
                 <button
                   onClick={() => setActiveTab('posts')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'posts'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'posts'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -485,11 +484,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('activity')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'activity'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'activity'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8h.01M12 12h.01M12 16h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -498,11 +496,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('wallet')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'wallet'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'wallet'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -511,11 +508,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('reputation')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'reputation'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'reputation'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -524,11 +520,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('tips')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'tips'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'tips'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -537,11 +532,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('followers')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'followers'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'followers'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -550,11 +544,10 @@ export default function Profile() {
                 </button>
                 <button
                   onClick={() => setActiveTab('following')}
-                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${
-                    activeTab === 'following'
-                      ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'following'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
                   <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -564,7 +557,7 @@ export default function Profile() {
               </nav>
             </div>
           )}
-          
+
           {/* Tab Content */}
           {!isLoading && !hasError && (
             <div>
@@ -586,7 +579,7 @@ export default function Profile() {
                         disabled={!!(backendProfile || (contractProfileData && contractProfileData.handle))}
                       />
                     </div>
-                    
+
                     <div className="mb-6">
                       <label htmlFor="ens" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         ENS Name
@@ -601,7 +594,7 @@ export default function Profile() {
                         placeholder="yourname.eth"
                       />
                     </div>
-                    
+
                     <div className="mb-6">
                       <label htmlFor="bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Bio
@@ -616,7 +609,7 @@ export default function Profile() {
                         placeholder="Tell us about yourself..."
                       />
                     </div>
-                    
+
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Avatar
@@ -638,11 +631,11 @@ export default function Profile() {
                               className="relative cursor-pointer bg-white dark:bg-gray-700 rounded-md font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 dark:focus:ring-offset-gray-800"
                             >
                               <span>Upload a file</span>
-                              <input 
-                                id="avatar-upload" 
-                                name="avatar-upload" 
-                                type="file" 
-                                className="sr-only" 
+                              <input
+                                id="avatar-upload"
+                                name="avatar-upload"
+                                type="file"
+                                className="sr-only"
                                 onChange={handleFileChange}
                               />
                             </label>
@@ -654,7 +647,7 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-end">
                       <button
                         type="submit"
@@ -675,7 +668,7 @@ export default function Profile() {
                   </form>
                 </div>
               )}
-              
+
               {activeTab === 'posts' && !isEditing && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Recent Activity</h3>
@@ -700,7 +693,7 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              
+
               {activeTab === 'activity' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Activity History</h3>
@@ -720,7 +713,7 @@ export default function Profile() {
                         <p className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
@@ -736,7 +729,7 @@ export default function Profile() {
                         <p className="text-xs text-gray-500 dark:text-gray-400">1 day ago</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
@@ -755,7 +748,7 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              
+
               {activeTab === 'wallet' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Wallet Portfolio</h3>
@@ -772,7 +765,7 @@ export default function Profile() {
                         <span className="text-green-500">+2.3%</span>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/30 dark:to-teal-900/30 rounded-xl p-4">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 dark:text-gray-400">LDAO Tokens</span>
@@ -784,7 +777,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <h4 className="font-medium text-gray-900 dark:text-white mb-3">Token Balances</h4>
                     <div className="space-y-3">
@@ -803,7 +796,7 @@ export default function Profile() {
                           <p className="text-sm text-gray-500 dark:text-gray-400">$4,165.00</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="flex items-center">
                           <div className="h-8 w-8 rounded-full bg-blue-200 dark:bg-blue-900 flex items-center justify-center mr-3">
@@ -823,7 +816,7 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              
+
               {activeTab === 'reputation' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Reputation History</h3>
@@ -842,7 +835,7 @@ export default function Profile() {
                         <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '95%' }}></div>
                       </div>
                     </div>
-                    
+
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
                       <div className="flex justify-between items-center">
                         <h4 className="font-medium text-gray-900 dark:text-white">Marketplace Trust</h4>
@@ -857,7 +850,7 @@ export default function Profile() {
                         <div className="bg-blue-500 h-2 rounded-full" style={{ width: '88%' }}></div>
                       </div>
                     </div>
-                    
+
                     <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
                       <div className="flex justify-between items-center">
                         <h4 className="font-medium text-gray-900 dark:text-white">Community Engagement</h4>
@@ -875,7 +868,7 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              
+
               {activeTab === 'tips' && (
                 <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Tips & Rewards</h3>
@@ -895,7 +888,7 @@ export default function Profile() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl p-5">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
@@ -912,7 +905,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <h4 className="font-medium text-gray-900 dark:text-white mb-3">Top Supporters</h4>
                     <div className="space-y-3">
@@ -928,7 +921,7 @@ export default function Profile() {
                           Top Supporter
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <div className="flex items-center">
                           <img className="h-10 w-10 rounded-full" src="https://placehold.co/40" alt="Supporter" />
@@ -943,7 +936,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <button className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
                       Claim Rewards
@@ -951,11 +944,11 @@ export default function Profile() {
                   </div>
                 </div>
               )}
-              
+
               {activeTab === 'followers' && address && (
                 <FollowerList userAddress={address} />
               )}
-              
+
               {activeTab === 'following' && address && (
                 <FollowingList userAddress={address} />
               )}

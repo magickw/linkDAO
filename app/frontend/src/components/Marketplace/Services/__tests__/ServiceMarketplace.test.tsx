@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ServiceMarketplace } from '../ServiceMarketplace';
-import { serviceApiService } from '../../services/serviceApiService';
+import { serviceApiService } from '../../../../services/serviceApiService';
 
 // Mock the service API
-vi.mock('../../services/serviceApiService');
+vi.mock('../../../../services/serviceApiService');
 
 const mockCategories = [
   {

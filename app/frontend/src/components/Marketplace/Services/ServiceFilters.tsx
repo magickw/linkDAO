@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ServiceCategory, ServiceSearchFilters } from '../types/service';
+import { ServiceCategory, ServiceSearchFilters } from '../../../types/service';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 interface ServiceFiltersProps {
