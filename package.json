@@ -36,6 +36,7 @@
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@tanstack/react-query": "^5.85.5",
     "@vercel/analytics": "^1.5.0",
+    "framer-motion": "^12.23.12",
     "next": "^13.4.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
