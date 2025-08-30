@@ -394,8 +394,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     // NFT Marketplace contract ABI (simplified)
     const contractABI = [
@@ -444,8 +444,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function listNFT(uint256 tokenId, uint256 price, uint256 duration) external"
@@ -456,7 +456,7 @@ class NFTService {
     try {
       const tx = await contract.listNFT(
         tokenId,
-        ethers.utils.parseEther(price),
+        ethers.parseEther(price),
         duration
       );
 
@@ -480,8 +480,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function buyNFT(uint256 tokenId) external payable"
@@ -491,7 +491,7 @@ class NFTService {
 
     try {
       const tx = await contract.buyNFT(tokenId, {
-        value: ethers.utils.parseEther(price)
+        value: ethers.parseEther(price)
       });
 
       await tx.wait();
@@ -514,8 +514,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function placeBid(uint256 tokenId) external payable"
@@ -525,7 +525,7 @@ class NFTService {
 
     try {
       const tx = await contract.placeBid(tokenId, {
-        value: ethers.utils.parseEther(bidAmount)
+        value: ethers.parseEther(bidAmount)
       });
 
       await tx.wait();
@@ -550,8 +550,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function createAuction(uint256 tokenId, uint256 startingPrice, uint256 reservePrice, uint256 duration) external"
@@ -562,8 +562,8 @@ class NFTService {
     try {
       const tx = await contract.createAuction(
         tokenId,
-        ethers.utils.parseEther(startingPrice),
-        ethers.utils.parseEther(reservePrice),
+        ethers.parseEther(startingPrice),
+        ethers.parseEther(reservePrice),
         duration
       );
 
@@ -588,8 +588,8 @@ class NFTService {
       throw new Error('MetaMask not found');
     }
 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
 
     const contractABI = [
       "function makeOffer(uint256 tokenId, uint256 duration) external payable"
@@ -599,7 +599,7 @@ class NFTService {
 
     try {
       const tx = await contract.makeOffer(tokenId, duration, {
-        value: ethers.utils.parseEther(offerAmount)
+        value: ethers.parseEther(offerAmount)
       });
 
       await tx.wait();
