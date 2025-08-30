@@ -5,6 +5,14 @@ import { injected, metaMask, walletConnect } from 'wagmi/connectors'
 // WalletConnect project ID - in production, this should be from environment variables
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
 
+const getFrontendUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+  // Default URL for SSR or non-browser environments
+  return 'https://linkdao.io'
+}
+
 // Set up wagmi config with enhanced connectors
 export const config = createConfig({
   chains: [base, baseGoerli, mainnet, polygon, arbitrum],
@@ -12,7 +20,7 @@ export const config = createConfig({
     metaMask({
       dappMetadata: {
         name: 'LinkDAO Marketplace',
-        url: 'https://linkdao.io',
+        url: getFrontendUrl(),
         iconUrl: 'https://linkdao.io/icon.png',
       },
     }),
@@ -21,7 +29,7 @@ export const config = createConfig({
       metadata: {
         name: 'LinkDAO Marketplace',
         description: 'Decentralized Web3 Marketplace',
-        url: 'https://linkdao.io',
+        url: getFrontendUrl(),
         icons: ['https://linkdao.io/icon.png'],
       },
       showQrModal: true,
@@ -46,3 +54,23 @@ export const config = createConfig({
 })
 
 export { base, baseGoerli, mainnet, polygon, arbitrum }
+
+// Add a health check function
+export const checkWagmiConnection = async () => {
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
+    });
+    if (response.ok) {
+      console.log('Wagmi RPC connection is healthy');
+      return true;
+    }
+    console.error('Wagmi RPC connection is unhealthy');
+    return false;
+  } catch (error) {
+    console.error('Error checking Wagmi connection:', error);
+    return false;
+  }
+};

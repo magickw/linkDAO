@@ -5,11 +5,13 @@ import evidenceStorageService from './evidenceStorageService';
 import crypto from 'crypto';
 import { eq, and, gte, lte, desc, asc } from 'drizzle-orm';
 
+export type ActorType = 'user' | 'moderator' | 'system' | 'ai';
+
 export interface AuditLogEntry {
   caseId?: number;
   actionType: string;
   actorId?: string;
-  actorType: 'user' | 'moderator' | 'system' | 'ai';
+  actorType: ActorType;
   oldState?: any;
   newState?: any;
   reasoning?: string;
@@ -21,7 +23,7 @@ export interface AuditLogEntry {
 export interface AuditLogQuery {
   caseId?: number;
   actorId?: string;
-  actorType?: 'user' | 'moderator' | 'system' | 'ai';
+  actorType?: ActorType;
   actionType?: string;
   startDate?: Date;
   endDate?: Date;
@@ -57,13 +59,13 @@ class AuditLoggingService {
       const auditId = crypto.randomUUID();
       
       // Create audit log record
-      const auditLog: Omit<ModerationAuditLog, 'id' | 'createdAt'> = {
+      const auditLog = {
         caseId: entry.caseId,
         actionType: entry.actionType,
         actorId: entry.actorId,
         actorType: entry.actorType,
-        oldState: entry.oldState,
-        newState: entry.newState,
+        oldState: entry.oldState ? JSON.stringify(entry.oldState) : undefined,
+        newState: entry.newState ? JSON.stringify(entry.newState) : undefined,
         reasoning: entry.reasoning,
         ipAddress: entry.ipAddress,
         userAgent: entry.userAgent,
@@ -90,7 +92,7 @@ class AuditLoggingService {
 
       // Update database record with IPFS hash
       await db.update(moderationAuditLog)
-        .set({ 
+        .set({
           // Store IPFS hash in reasoning field for now (would need schema update for dedicated field)
           reasoning: `${auditLog.reasoning || ''}\n[IPFS:${ipfsHash}]`
         })
@@ -99,7 +101,7 @@ class AuditLoggingService {
       return {
         ...dbResult,
         reasoning: auditLog.reasoning, // Return original reasoning without IPFS hash
-      };
+      } as ModerationAuditLog;
     } catch (error) {
       console.error('Error creating audit log:', error);
       throw new Error(`Failed to create audit log: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -164,7 +166,7 @@ class AuditLoggingService {
       }));
 
       return {
-        logs: cleanedLogs,
+        logs: cleanedLogs as ModerationAuditLog[],
         total,
         hasMore: (query.offset || 0) + logs.length < total,
       };
@@ -189,7 +191,7 @@ class AuditLoggingService {
       }
 
       // Extract IPFS hash from reasoning field
-      const ipfsHashMatch = auditLog.reasoning?.match(/\[IPFS:([^\]]+)\]/);
+      const ipfsHashMatch = auditLog.reasoning?.match(/\u001b\[IPFS:([^\]]+)\]/);
       const ipfsHash = ipfsHashMatch?.[1];
 
       if (!ipfsHash) {
@@ -388,7 +390,9 @@ class AuditLoggingService {
 
       for (const log of logs) {
         logsByAction[log.actionType] = (logsByAction[log.actionType] || 0) + 1;
-        logsByActor[log.actorType] = (logsByActor[log.actorType] || 0) + 1;
+        if (log.actorType) {
+          logsByActor[log.actorType] = (logsByActor[log.actorType] || 0) + 1;
+        }
       }
 
       const daysDiff = params.startDate && params.endDate 
@@ -451,38 +455,4 @@ class AuditLoggingService {
         log.actionType,
         log.actorId || '',
         log.actorType,
-        `"${(log.reasoning || '').replace(/"/g, '""')}"`, // Escape quotes
-        log.createdAt?.toISOString() || '',
-      ];
-      csvRows.push(row.join(','));
-    }
-
-    return csvRows.join('\n');
-  }
-
-  /**
-   * Clean up old audit logs (for compliance)
-   */
-  async cleanupOldAuditLogs(retentionDays: number = this.MAX_RETENTION_DAYS): Promise<number> {
-    try {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-
-      // In a real implementation, you might archive rather than delete
-      // For now, we'll just log what would be cleaned up
-      const oldLogs = await db.select()
-        .from(moderationAuditLog)
-        .where(lte(moderationAuditLog.createdAt, cutoffDate));
-
-      console.log(`Would clean up ${oldLogs.length} audit logs older than ${retentionDays} days`);
-      
-      // Return count without actually deleting for safety
-      return oldLogs.length;
-    } catch (error) {
-      console.error('Error cleaning up old audit logs:', error);
-      throw new Error(`Failed to cleanup old audit logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-}
-
-export default new AuditLoggingService();
+        `"${(log.reasoning || '').replace(/

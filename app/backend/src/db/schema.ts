@@ -1216,18 +1216,26 @@ export const moderationActions = pgTable("moderation_actions", {
 export const contentReports = pgTable("content_reports", {
   id: serial("id").primaryKey(),
   contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
   reporterId: uuid("reporter_id").notNull().references(() => users.id),
   reason: varchar("reason", { length: 48 }).notNull(),
   details: text("details"),
+  category: varchar("category", { length: 24 }),
   weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
   status: varchar("status", { length: 24 }).default("open"),
+  moderatorId: uuid("moderator_id").references(() => users.id),
+  resolution: text("resolution"),
+  moderatorNotes: text("moderator_notes"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   contentIdIdx: index("idx_content_reports_content_id").on(t.contentId),
   reporterIdIdx: index("idx_content_reports_reporter_id").on(t.reporterId),
   statusIdx: index("idx_content_reports_status").on(t.status),
   createdAtIdx: index("idx_content_reports_created_at").on(t.createdAt),
   contentStatusIdx: index("idx_content_reports_content_status").on(t.contentId, t.status),
+  categoryIdx: index("idx_content_reports_category").on(t.category),
+  moderatorIdx: index("idx_content_reports_moderator").on(t.moderatorId),
 }));
 
 export const moderationAppeals = pgTable("moderation_appeals", {
