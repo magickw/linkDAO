@@ -1,4 +1,5 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
+import { requestManager } from './requestManager';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
@@ -281,9 +282,6 @@ export class PostService {
    * @returns Array of posts in the user's feed
    */
   static async getFeed(forUser?: string): Promise<Post[]> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
     try {
       let url = `${BACKEND_API_BASE_URL}/api/posts/feed`;
       if (forUser) {
@@ -291,30 +289,18 @@ export class PostService {
       }
       
       console.log(`Fetching feed from: ${url}`);
-      const response = await fetch(url, {
+      
+      return await requestManager.request<Post[]>(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        signal: controller.signal,
+      }, {
+        timeout: 15000, // Increased timeout for feed requests
+        retries: 1, // Reduced retries for feed to prevent spam
+        deduplicate: true
       });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const error = await response.json();
-        console.error(`Failed to fetch feed:`, error);
-        throw new Error(error.error || 'Failed to fetch feed');
-      }
-      
-      return response.json();
     } catch (error) {
-      clearTimeout(timeoutId);
-      
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timeout');
-      }
-      
       console.error(`Error fetching feed:`, error);
       throw error;
     }

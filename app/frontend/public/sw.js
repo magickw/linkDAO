@@ -3,9 +3,14 @@ const STATIC_CACHE = 'static-v1';
 const DYNAMIC_CACHE = 'dynamic-v1';
 const IMAGE_CACHE = 'images-v1';
 
-// Request deduplication to prevent repeated failed requests
+// Enhanced request deduplication and rate limiting
 const pendingRequests = new Map();
 const failedRequests = new Map();
+const requestCounts = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_MINUTE = 10; // Max 10 requests per endpoint per minute
+const BACKOFF_MULTIPLIER = 2;
+const MAX_BACKOFF_TIME = 300000; // 5 minutes max backoff
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -112,15 +117,29 @@ async function cacheFirst(request, cacheName) {
   }
 }
 
-// Network first strategy - for API calls with deduplication
+// Network first strategy - for API calls with enhanced deduplication and rate limiting
 async function networkFirst(request, cacheName) {
   const requestKey = `${request.method}:${request.url}`;
+  const now = Date.now();
   
-  // Check if request recently failed (within 30 seconds)
-  const failedAt = failedRequests.get(requestKey);
-  if (failedAt && Date.now() - failedAt < 30000) {
-    console.log('Skipping recently failed request:', requestKey);
+  // Rate limiting check
+  if (!checkRateLimit(requestKey, now)) {
+    console.log('Rate limit exceeded for:', requestKey);
     return await getCachedResponse(request, cacheName);
+  }
+  
+  // Check if request recently failed with exponential backoff
+  const failureInfo = failedRequests.get(requestKey);
+  if (failureInfo) {
+    const backoffTime = Math.min(
+      30000 * Math.pow(BACKOFF_MULTIPLIER, failureInfo.attempts - 1),
+      MAX_BACKOFF_TIME
+    );
+    
+    if (now - failureInfo.lastFailure < backoffTime) {
+      console.log(`Backing off request for ${backoffTime}ms:`, requestKey);
+      return await getCachedResponse(request, cacheName);
+    }
   }
   
   // Check if request is already pending
@@ -145,24 +164,42 @@ async function networkFirst(request, cacheName) {
 
 async function performNetworkRequest(request, cacheName, requestKey) {
   try {
-    const networkResponse = await fetch(request);
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    const networkResponse = await fetch(request, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     
     if (networkResponse.ok) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
       // Clear failed request record on success
       failedRequests.delete(requestKey);
+      // Reset rate limit counter on success
+      requestCounts.delete(requestKey);
     } else {
-      // Mark as failed for non-OK responses
-      failedRequests.set(requestKey, Date.now());
+      // Track failure with exponential backoff
+      const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+      failureInfo.attempts += 1;
+      failureInfo.lastFailure = Date.now();
+      failedRequests.set(requestKey, failureInfo);
+      
+      console.warn(`Request failed with status ${networkResponse.status}:`, requestKey);
     }
     
     return networkResponse;
   } catch (error) {
     console.log('Network failed, trying cache:', error);
     
-    // Mark request as failed to prevent immediate retries
-    failedRequests.set(requestKey, Date.now());
+    // Track failure with exponential backoff
+    const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
+    failureInfo.attempts += 1;
+    failureInfo.lastFailure = Date.now();
+    failedRequests.set(requestKey, failureInfo);
     
     return await getCachedResponse(request, cacheName);
   }
@@ -418,4 +455,50 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('Service Worker loaded');
+// Rate limiting helper function
+function checkRateLimit(requestKey, now) {
+  const endpoint = requestKey.split(':')[1].split('?')[0]; // Extract endpoint without query params
+  const countKey = `rate_limit:${endpoint}`;
+  
+  let requestInfo = requestCounts.get(countKey);
+  
+  if (!requestInfo) {
+    requestInfo = { count: 0, windowStart: now };
+    requestCounts.set(countKey, requestInfo);
+  }
+  
+  // Reset window if expired
+  if (now - requestInfo.windowStart > RATE_LIMIT_WINDOW) {
+    requestInfo.count = 0;
+    requestInfo.windowStart = now;
+  }
+  
+  // Check if under limit
+  if (requestInfo.count >= MAX_REQUESTS_PER_MINUTE) {
+    return false;
+  }
+  
+  requestInfo.count += 1;
+  return true;
+}
+
+// Cleanup old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  
+  // Clean up old failed requests (older than max backoff time)
+  for (const [key, failureInfo] of failedRequests.entries()) {
+    if (now - failureInfo.lastFailure > MAX_BACKOFF_TIME) {
+      failedRequests.delete(key);
+    }
+  }
+  
+  // Clean up old rate limit counters
+  for (const [key, requestInfo] of requestCounts.entries()) {
+    if (now - requestInfo.windowStart > RATE_LIMIT_WINDOW * 2) {
+      requestCounts.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
+
+console.log('Service Worker loaded with enhanced request management');

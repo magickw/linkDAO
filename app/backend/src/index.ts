@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { generalLimiter, apiLimiter } from './middleware/rateLimiter';
 import { databaseService } from './services/databaseService';
 // import { redisService } from './services/redisService'; // Disabled to prevent blocking
 import { validateEnv } from './utils/envValidation';
@@ -33,31 +34,76 @@ const envConfig = validateEnv();
 
 const app = express();
 
-// CORS configuration
+// Enhanced CORS configuration with better error handling
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? ['https://linkdao.vercel.app'] 
-      : ['http://localhost:3000', 'http://localhost:3001'];
+      ? [
+          'https://linkdao.vercel.app',
+          'https://linkdao-frontend.vercel.app', // Add any additional frontend domains
+          /^https:\/\/linkdao.*\.vercel\.app$/ // Allow preview deployments
+        ] 
+      : [
+          'http://localhost:3000', 
+          'http://localhost:3001',
+          'http://127.0.0.1:3000',
+          'http://127.0.0.1:3001'
+        ];
     
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // Check if origin matches any allowed origin (including regex patterns)
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (typeof allowedOrigin === 'string') {
+        return allowedOrigin === origin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      // Don't throw error, just deny the request
+      callback(null, false);
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Cache-Control',
+    'X-File-Name'
+  ],
+  exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  preflightContinue: false
 }));
 
 app.use(helmet());
 app.use(express.json());
+
+// Apply rate limiting
+app.use(generalLimiter);
+app.use('/api', apiLimiter);
+
+// Health check endpoint (before other routes)
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Global rate limiting
 app.use(generalLimiter);

@@ -1,64 +1,94 @@
-import { Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
+import { Request, Response } from 'express';
 
-interface RateLimitStore {
-  [key: string]: {
-    count: number;
-    resetTime: number;
-  };
-}
-
-export function createRateLimiter(windowMs: number = 15 * 60 * 1000, max: number = 100) {
-  const store: RateLimitStore = {};
-
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const key = req.ip || req.socket.remoteAddress || 'unknown';
-    const now = Date.now();
-
-    // Clean old entries
-    Object.keys(store).forEach(k => {
-      if (store[k].resetTime < now) {
-        delete store[k];
-      }
+// General rate limiter for all requests
+export const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 1000 requests per windowMs
+  message: {
+    error: 'Too many requests',
+    message: 'Too many requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req: Request, res: Response) => {
+    console.warn(`Rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+    res.status(429).json({
+      error: 'Too many requests',
+      message: 'Too many requests from this IP, please try again later.',
+      retryAfter: '15 minutes'
     });
+  }
+});
 
-    // Initialize or update counter
-    if (!store[key] || store[key].resetTime < now) {
-      store[key] = {
-        count: 1,
-        resetTime: now + windowMs
-      };
-    } else {
-      store[key].count++;
-    }
-
-    // Check if limit exceeded
-    if (store[key].count > max) {
-      const resetTime = Math.ceil((store[key].resetTime - now) / 1000);
-      res.set({
-        'X-RateLimit-Limit': max.toString(),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': resetTime.toString(),
-      });
-      res.status(429).json({
-        error: 'Too many requests',
-        message: 'Rate limit exceeded',
-        retryAfter: resetTime
-      });
-      return;
-    }
-
-    // Set rate limit headers
-    res.set({
-      'X-RateLimit-Limit': max.toString(),
-      'X-RateLimit-Remaining': (max - store[key].count).toString(),
-      'X-RateLimit-Reset': Math.ceil((store[key].resetTime - now) / 1000).toString(),
+// Stricter rate limiter for API endpoints
+export const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 API requests per windowMs
+  message: {
+    error: 'API rate limit exceeded',
+    message: 'Too many API requests from this IP, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req: Request) => {
+    // Skip rate limiting for health checks
+    return req.path === '/health' || req.path === '/api/health';
+  },
+  handler: (req: Request, res: Response) => {
+    console.warn(`API rate limit exceeded for IP: ${req.ip}, Path: ${req.path}`);
+    res.status(429).json({
+      error: 'API rate limit exceeded',
+      message: 'Too many API requests from this IP, please try again later.',
+      retryAfter: '15 minutes'
     });
+  }
+});
 
-    next();
-  };
-}
+// Very strict rate limiter for feed endpoints to prevent spam
+export const feedLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20, // Limit each IP to 20 feed requests per minute
+  message: {
+    error: 'Feed rate limit exceeded',
+    message: 'Too many feed requests, please try again in a minute.',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // Use IP + user agent for better identification
+    return `${req.ip}-${req.get('User-Agent') || 'unknown'}`;
+  },
+  handler: (req: Request, res: Response) => {
+    console.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}`);
+    res.status(429).json({
+      error: 'Feed rate limit exceeded',
+      message: 'Too many feed requests, please try again in a minute.',
+      retryAfter: '1 minute'
+    });
+  }
+});
 
-// Specific rate limiters for different endpoints
-export const generalLimiter = createRateLimiter(15 * 60 * 1000, 100); // 100 requests per 15 minutes
-export const feedLimiter = createRateLimiter(60 * 1000, 10); // 10 requests per minute for feed
-export const strictLimiter = createRateLimiter(60 * 1000, 5); // 5 requests per minute for sensitive endpoints
+// Rate limiter for post creation
+export const createPostLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 50 post creations per 15 minutes
+  message: {
+    error: 'Post creation rate limit exceeded',
+    message: 'Too many posts created, please try again later.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    console.warn(`Post creation rate limit exceeded for IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Post creation rate limit exceeded',
+      message: 'Too many posts created, please try again later.',
+      retryAfter: '15 minutes'
+    });
+  }
+});
