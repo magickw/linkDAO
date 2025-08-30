@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "../db/schema";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, ilike, desc } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
@@ -667,7 +667,32 @@ export class DatabaseService {
     }
   }
 
-  // Product Category operations
+  // Search operations
+  async searchUsers(query: string, limit: number = 20, offset: number = 0) {
+    try {
+      const result = await this.db.select().from(schema.users).where(
+        or(
+          ilike(schema.users.handle, `%${query}%`),
+          ilike(schema.users.walletAddress, `%${query}%`)
+        )
+      ).limit(limit).offset(offset);
+      return result;
+    } catch (error) {
+      console.error("Error searching users:", error);
+      throw error;
+    }
+  }
+
+  async getRecentUsers(limit: number = 10) {
+    try {
+      const result = await this.db.select().from(schema.users)
+        .orderBy(desc(schema.users.createdAt))
+        .limit(limit);
+      return result;
+    } catch (error) {
+      console.error("Error getting recent users:", error);
+      
+  // --- Product Category operations ---
   async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: number) {
     try {
       const result = await this.db.insert(schema.categories).values({
@@ -686,7 +711,6 @@ export class DatabaseService {
       throw error;
     }
   }
-
   async getCategoryById(id: string) {
     try {
       const result = await this.db.select().from(schema.categories).where(eq(schema.categories.id, id));

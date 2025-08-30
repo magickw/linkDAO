@@ -16,6 +16,7 @@ import tipRoutes from './routes/tipRoutes';
 import followRoutes from './routes/followRoutes';
 import postRoutes from './routes/postRoutes';
 import aiRoutes from './routes/aiRoutes';
+import searchRoutes from './routes/searchRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -111,6 +112,12 @@ app.use('/api/tips', tipRoutes);
 app.use('/api/follow', followRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/search', searchRoutes);
+
+// Additional search-related routes
+app.use('/api/trending', searchRoutes);
+app.use('/api/recommendations', searchRoutes);
+app.use('/api/hashtags', searchRoutes);
 
 // Start server
 async function startServer() {
