@@ -10,6 +10,7 @@ interface GestureHandlerProps {
   onDoubleTap?: () => void;
   onLongPress?: () => void;
   className?: string;
+  style?: React.CSSProperties;
   disabled?: boolean;
   swipeThreshold?: number;
   longPressDelay?: number;
@@ -32,6 +33,7 @@ export default function GestureHandler({
   onDoubleTap,
   onLongPress,
   className = '',
+  style,
   disabled = false,
   swipeThreshold = 50,
   longPressDelay = 500
@@ -206,12 +208,15 @@ export default function GestureHandler({
   return (
     <div
       className={className}
+      style={{ 
+        touchAction: 'manipulation', // Prevents default touch behaviors
+        ...style 
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
-      style={{ touchAction: 'manipulation' }} // Prevents default touch behaviors
     >
       {children}
     </div>

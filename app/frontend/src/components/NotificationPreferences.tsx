@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNotificationPreferences } from '@/hooks/useNotifications';
-import type { NotificationPreferences } from '@/types/notifications';
+import type { NotificationPreferences, CommunityNotificationPreferences } from '@/types/notifications';
 
 interface NotificationPreferencesProps {
   onClose?: () => void;
@@ -32,34 +32,30 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
   };
 
   const updatePreference = (
-    category: 'email' | 'push' | 'inApp',
-    type: 'enabled' | 'social' | 'community' | 'web3',
+    category: keyof NotificationPreferences,
     value: boolean
   ) => {
     if (!localPreferences) return;
     
     setLocalPreferences({
       ...localPreferences,
-      [category]: {
-        ...localPreferences[category],
-        [type]: value
-      }
+      [category]: value
     });
   };
 
   const updateCommunityPreference = (
     communityId: string,
-    type: 'newPosts' | 'comments' | 'mentions' | 'moderation',
+    type: keyof CommunityNotificationPreferences,
     value: boolean
   ) => {
     if (!localPreferences) return;
     
     setLocalPreferences({
       ...localPreferences,
-      communitySpecific: {
-        ...localPreferences.communitySpecific,
+      communityPreferences: {
+        ...localPreferences.communityPreferences,
         [communityId]: {
-          ...localPreferences.communitySpecific[communityId],
+          ...localPreferences.communityPreferences[communityId],
           [type]: value
         }
       }
@@ -116,13 +112,13 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
               </div>
               <input
                 type="checkbox"
-                checked={localPreferences.email.enabled}
-                onChange={(e) => updatePreference('email', 'enabled', e.target.checked)}
+                checked={localPreferences.email}
+                onChange={(e) => updatePreference('email', e.target.checked)}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
             </div>
             
-            {localPreferences.email.enabled && (
+            {localPreferences.email && (
               <>
                 <div className="flex items-center justify-between pl-4">
                   <label className="text-sm text-gray-700 dark:text-gray-300">
@@ -130,8 +126,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.email.social}
-                    onChange={(e) => updatePreference('email', 'social', e.target.checked)}
+                    checked={localPreferences.follows}
+                    onChange={(e) => updatePreference('follows', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -141,8 +137,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.email.community}
-                    onChange={(e) => updatePreference('email', 'community', e.target.checked)}
+                    checked={localPreferences.communityPosts}
+                    onChange={(e) => updatePreference('communityPosts', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -152,8 +148,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.email.web3}
-                    onChange={(e) => updatePreference('email', 'web3', e.target.checked)}
+                    checked={localPreferences.governanceProposals}
+                    onChange={(e) => updatePreference('governanceProposals', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -179,13 +175,13 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
               </div>
               <input
                 type="checkbox"
-                checked={localPreferences.push.enabled}
-                onChange={(e) => updatePreference('push', 'enabled', e.target.checked)}
+                checked={localPreferences.push}
+                onChange={(e) => updatePreference('push', e.target.checked)}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
             </div>
             
-            {localPreferences.push.enabled && (
+            {localPreferences.push && (
               <>
                 <div className="flex items-center justify-between pl-4">
                   <label className="text-sm text-gray-700 dark:text-gray-300">
@@ -193,8 +189,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.push.social}
-                    onChange={(e) => updatePreference('push', 'social', e.target.checked)}
+                    checked={localPreferences.likes}
+                    onChange={(e) => updatePreference('likes', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -204,8 +200,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.push.community}
-                    onChange={(e) => updatePreference('push', 'community', e.target.checked)}
+                    checked={localPreferences.communityReplies}
+                    onChange={(e) => updatePreference('communityReplies', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -215,8 +211,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.push.web3}
-                    onChange={(e) => updatePreference('push', 'web3', e.target.checked)}
+                    checked={localPreferences.governanceVotes}
+                    onChange={(e) => updatePreference('governanceVotes', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -242,13 +238,13 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
               </div>
               <input
                 type="checkbox"
-                checked={localPreferences.inApp.enabled}
-                onChange={(e) => updatePreference('inApp', 'enabled', e.target.checked)}
+                checked={localPreferences.inApp}
+                onChange={(e) => updatePreference('inApp', e.target.checked)}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
             </div>
             
-            {localPreferences.inApp.enabled && (
+            {localPreferences.inApp && (
               <>
                 <div className="flex items-center justify-between pl-4">
                   <label className="text-sm text-gray-700 dark:text-gray-300">
@@ -256,8 +252,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.inApp.social}
-                    onChange={(e) => updatePreference('inApp', 'social', e.target.checked)}
+                    checked={localPreferences.comments}
+                    onChange={(e) => updatePreference('comments', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -267,8 +263,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.inApp.community}
-                    onChange={(e) => updatePreference('inApp', 'community', e.target.checked)}
+                    checked={localPreferences.communityMentions}
+                    onChange={(e) => updatePreference('communityMentions', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -278,8 +274,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                   </label>
                   <input
                     type="checkbox"
-                    checked={localPreferences.inApp.web3}
-                    onChange={(e) => updatePreference('inApp', 'web3', e.target.checked)}
+                    checked={localPreferences.governanceResults}
+                    onChange={(e) => updatePreference('governanceResults', e.target.checked)}
                     className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </div>
@@ -289,13 +285,13 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
         </div>
 
         {/* Community-Specific Preferences */}
-        {Object.keys(localPreferences.communitySpecific).length > 0 && (
+        {Object.keys(localPreferences.communityPreferences).length > 0 && (
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Community-Specific Settings
             </h3>
             <div className="space-y-4">
-              {Object.entries(localPreferences.communitySpecific).map(([communityId, settings]) => (
+              {Object.entries(localPreferences.communityPreferences).map(([communityId, settings]) => (
                 <div key={communityId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 dark:text-white mb-3 capitalize">
                     {communityId.replace('-', ' ')}
@@ -318,8 +314,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                       </label>
                       <input
                         type="checkbox"
-                        checked={settings.comments}
-                        onChange={(e) => updateCommunityPreference(communityId, 'comments', e.target.checked)}
+                        checked={settings.replies}
+                        onChange={(e) => updateCommunityPreference(communityId, 'replies', e.target.checked)}
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </div>

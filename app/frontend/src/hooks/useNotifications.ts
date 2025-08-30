@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Notification, NotificationFilter, NotificationPreferences } from '@/types/notifications';
+import type { Notification, NotificationPreferences } from '@/types/notifications';
 import { notificationService } from '@/services/notificationService';
 import { useWeb3 } from '@/context/Web3Context';
 
-export function useNotifications(filter?: NotificationFilter) {
+export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function useNotifications(filter?: NotificationFilter) {
     const loadNotifications = async () => {
       try {
         setLoading(true);
-        const data = await notificationService.getNotifications(filter);
+        const data = await notificationService.getNotifications();
         setNotifications(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load notifications');
@@ -42,7 +42,7 @@ export function useNotifications(filter?: NotificationFilter) {
     };
 
     loadNotifications();
-  }, [address, filter]);
+  }, [address]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {

@@ -132,6 +132,6 @@ jest.mock('../CurrencyToggle', () => ({
   CurrencyToggle: () => <div data-testid="currency-toggle">Currency Toggle</div>,
 }));
 
-jest.mock('../WalletConnectButton', () => ({
+jest.mock('@/components/Auth/WalletConnectButton', () => ({
   WalletConnectButton: () => <div data-testid="wallet-connect-button">Wallet Connect</div>,
 }));

@@ -455,4 +455,12 @@ class AuditLoggingService {
         log.actionType,
         log.actorId || '',
         log.actorType,
-        `"${(log.reasoning || '').replace(/
+        `"${(log.reasoning || '').replace(/"/g, '""')}"`,
+        log.createdAt
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    return csvRows.join('\n');
+  }
+}
