@@ -345,9 +345,10 @@ export class ServiceService {
   }
 
   async updateProviderProfile(userId: string, updateData: Partial<ServiceProviderProfile>): Promise<ServiceProviderProfile> {
+    const { createdAt, updatedAt, ...rest } = updateData;
     const [updatedProfile] = await db.update(serviceProviderProfiles)
       .set({
-        ...updateData,
+        ...rest,
         updatedAt: new Date().toISOString()
       })
       .where(eq(serviceProviderProfiles.userId, userId))
