@@ -162,10 +162,10 @@ export const TrustIndicators: React.FC<TrustIndicatorsProps> = ({
   }
 
   const containerStyle = {
-    display: 'flex',
-    alignItems: 'center',
+    display: 'flex' as const,
+    alignItems: 'center' as const,
     gap: designTokens.spacing.sm,
-    flexWrap: layout === 'inline' ? 'nowrap' : 'wrap' as const,
+    flexWrap: layout === 'inline' ? 'nowrap' as const : 'wrap' as const,
   };
 
   const containerVariants = {
