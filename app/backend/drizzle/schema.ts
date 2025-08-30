@@ -262,3 +262,84 @@ export const follows = pgTable("follows", {
 	}),
 	primaryKey({ columns: [table.followerId, table.followingId], name: "follows_follower_id_following_id_pk" }),
 ]);
+export const orderEvents = pgTable("order_events", {
+	id: serial().primaryKey().notNull(),
+	orderId: integer("order_id"),
+	eventType: varchar("event_type", { length: 64 }).notNull(),
+	description: text(),
+	metadata: text(),
+	timestamp: timestamp({ mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.orderId],
+		foreignColumns: [orders.id],
+		name: "order_events_order_id_orders_id_fk"
+	}),
+]);
+
+export const trackingRecords = pgTable("tracking_records", {
+	id: serial().primaryKey().notNull(),
+	orderId: integer("order_id"),
+	trackingNumber: varchar("tracking_number", { length: 128 }).notNull(),
+	carrier: varchar({ length: 32 }).notNull(),
+	status: varchar({ length: 64 }),
+	events: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	lastUpdated: timestamp("last_updated", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.orderId],
+		foreignColumns: [orders.id],
+		name: "tracking_records_order_id_orders_id_fk"
+	}),
+]);
+
+export const notifications = pgTable("notifications", {
+	id: serial().primaryKey().notNull(),
+	orderId: varchar("order_id", { length: 64 }),
+	userAddress: varchar("user_address", { length: 66 }).notNull(),
+	type: varchar({ length: 64 }).notNull(),
+	message: text().notNull(),
+	metadata: text(),
+	read: boolean().default(false),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const notificationPreferences = pgTable("notification_preferences", {
+	id: serial().primaryKey().notNull(),
+	userAddress: varchar("user_address", { length: 66 }).notNull(),
+	preferences: text().notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	unique("notification_preferences_user_address_unique").on(table.userAddress),
+]);
+
+export const pushTokens = pgTable("push_tokens", {
+	id: serial().primaryKey().notNull(),
+	userAddress: varchar("user_address", { length: 66 }).notNull(),
+	token: varchar({ length: 255 }).notNull(),
+	platform: varchar({ length: 32 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const blockchainEvents = pgTable("blockchain_events", {
+	id: serial().primaryKey().notNull(),
+	orderId: varchar("order_id", { length: 64 }),
+	escrowId: varchar("escrow_id", { length: 64 }),
+	eventType: varchar("event_type", { length: 64 }).notNull(),
+	transactionHash: varchar("transaction_hash", { length: 66 }).notNull(),
+	blockNumber: integer("block_number").notNull(),
+	timestamp: timestamp({ mode: 'string' }).notNull(),
+	data: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const syncStatus = pgTable("sync_status", {
+	id: serial().primaryKey().notNull(),
+	key: varchar({ length: 64 }).notNull(),
+	value: text().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	unique("sync_status_key_unique").on(table.key),
+]);

@@ -17,6 +17,7 @@ import followRoutes from './routes/followRoutes';
 import postRoutes from './routes/postRoutes';
 import aiRoutes from './routes/aiRoutes';
 import searchRoutes from './routes/searchRoutes';
+import orderRoutes from './routes/orderRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -113,6 +114,7 @@ app.use('/api/follow', followRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Additional search-related routes
 app.use('/api/trending', searchRoutes);

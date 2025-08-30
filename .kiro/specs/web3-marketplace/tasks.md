@@ -117,8 +117,8 @@
     - Write tests for search functionality and recommendation accuracy
     - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 6. Payment Processing Integration
-  - [ ] 6.1 Cryptocurrency Payment System
+- [x] 6. Payment Processing Integration
+  - [x] 6.1 Cryptocurrency Payment System
     - Integrate multi-chain wallet support for Ethereum, Polygon, and Arbitrum
     - Implement payment processing for ETH, USDC, USDT, and other major tokens
     - Build real-time gas fee estimation and transaction cost calculation
@@ -127,7 +127,7 @@
     - Write comprehensive tests for payment flows and error handling
     - _Requirements: 2.1, 2.3, 2.4, 2.5_
 
-  - [ ] 6.2 Fiat Payment Integration
+  - [x] 6.2 Fiat Payment Integration
     - Integrate traditional payment processors (Stripe, PayPal) for fiat payments
     - Implement automatic crypto-to-fiat conversion with real-time exchange rates
     - Build payment method management for users
@@ -136,7 +136,7 @@
     - Write tests for fiat payment processing and conversion accuracy
     - _Requirements: 2.2, 2.3, 11.3_
 
-- [ ] 7. Order Management and Escrow Integration
+- [x] 7. Order Management and Escrow Integration
   - Implement order creation workflow with smart contract escrow deployment
   - Build order status tracking with real-time updates from blockchain events
   - Create shipping integration with major carriers (FedEx, UPS, DHL)
