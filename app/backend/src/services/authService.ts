@@ -21,7 +21,7 @@ export class AuthService {
     const key = `nonce:${address.toLowerCase()}`;
     
     // Store nonce with 10 minute expiration
-    await this.redisService.setex(key, 600, nonce);
+    await this.redisService.set(key, nonce, 600);
     
     return nonce;
   }
@@ -57,7 +57,7 @@ export class AuthService {
       }
     };
     
-    await this.redisService.setex(sessionKey, 86400 * 7, JSON.stringify(sessionData)); // 7 days
+    await this.redisService.set(sessionKey, JSON.stringify(sessionData), 86400 * 7); // 7 days
   }
 
   /**
@@ -72,7 +72,7 @@ export class AuthService {
       sessionData.lastLogin = new Date().toISOString();
       sessionData.loginCount = (sessionData.loginCount || 0) + 1;
       
-      await this.redisService.setex(sessionKey, 86400 * 7, JSON.stringify(sessionData));
+      await this.redisService.set(sessionKey, JSON.stringify(sessionData), 86400 * 7);
     } else {
       await this.initializeUserSession(address);
     }
@@ -196,7 +196,7 @@ export class AuthService {
       'password_reset': { max: 5, window: 3600 } // 5 password reset attempts per hour
     };
     
-    return limits[action] || { max: 100, window: 3600 };
+    return (limits as any)[action] || { max: 100, window: 3600 };
   }
 
   /**

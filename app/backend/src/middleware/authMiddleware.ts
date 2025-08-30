@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { ethers } from 'ethers';
 import { RedisService } from '../services/redisService';
 
@@ -100,14 +100,14 @@ export const requirePermission = (permission: string) => {
 
 export const generateToken = (address: string, additionalClaims?: Partial<JWTPayload>): string => {
   const secret = process.env.JWT_SECRET || 'linkdao_secret_key';
-  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
+  const expiresIn: string = process.env.JWT_EXPIRES_IN || '24h';
   
   const payload: JWTPayload = {
     address,
     ...additionalClaims
   };
   
-  return jwt.sign(payload, secret, { expiresIn });
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions);
 };
 
 export const verifySignature = async (address: string, signature: string, message: string): Promise<boolean> => {

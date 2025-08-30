@@ -691,6 +691,9 @@ export class DatabaseService {
       return result;
     } catch (error) {
       console.error("Error getting recent users:", error);
+      throw error;
+    }
+  }
       
   // --- Product Category operations ---
   async createCategory(name: string, slug: string, description?: string, parentId?: string, path?: string, imageUrl?: string, sortOrder?: number) {
