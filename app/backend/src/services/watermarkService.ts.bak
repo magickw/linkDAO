@@ -1,0 +1,374 @@
+import { AssetType, WatermarkType, WatermarkData } from '../types/digitalAsset';
+import { db } from '../db/connection';
+import { watermarkTemplates } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
+import crypto from 'crypto';
+
+export class WatermarkService {
+  
+  /**
+   * Apply watermark to content based on asset type
+   */
+  async applyWatermark(
+    content: Buffer,
+    assetType: AssetType,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      switch (assetType) {
+        case AssetType.IMAGE:
+          return await this.applyImageWatermark(content, userId, licenseKey);
+        case AssetType.VIDEO:
+          return await this.applyVideoWatermark(content, userId, licenseKey);
+        case AssetType.AUDIO:
+          return await this.applyAudioWatermark(content, userId, licenseKey);
+        case AssetType.DOCUMENT:
+          return await this.applyDocumentWatermark(content, userId, licenseKey);
+        default:
+          // For unsupported types, add metadata watermark
+          return await this.applyMetadataWatermark(content, userId, licenseKey);
+      }
+    } catch (error) {
+      console.error('Error applying watermark:', error);
+      // Return original content if watermarking fails
+      return content;
+    }
+  }
+  
+  /**
+   * Apply watermark to image content
+   */
+  private async applyImageWatermark(
+    content: Buffer,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      // This would use a library like Sharp or Canvas for image manipulation
+      // For now, we'll add a simple metadata watermark
+      
+      const watermarkText = this.generateWatermarkText(userId, licenseKey);
+      
+      // In a real implementation, this would:
+      // 1. Load the image using Sharp or similar
+      // 2. Add text or image overlay
+      // 3. Adjust opacity and position
+      // 4. Return the watermarked image buffer
+      
+      // Placeholder implementation - adds metadata
+      return this.addMetadataToImage(content, watermarkText);
+    } catch (error) {
+      console.error('Error applying image watermark:', error);
+      return content;
+    }
+  }
+  
+  /**
+   * Apply watermark to video content
+   */
+  private async applyVideoWatermark(
+    content: Buffer,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      // This would use FFmpeg or similar for video processing
+      const watermarkText = this.generateWatermarkText(userId, licenseKey);
+      
+      // In a real implementation, this would:
+      // 1. Use FFmpeg to add text or image overlay
+      // 2. Set position, duration, and opacity
+      // 3. Encode the watermarked video
+      // 4. Return the processed video buffer
+      
+      // Placeholder implementation
+      return this.addMetadataToVideo(content, watermarkText);
+    } catch (error) {
+      console.error('Error applying video watermark:', error);
+      return content;
+    }
+  }
+  
+  /**
+   * Apply watermark to audio content
+   */
+  private async applyAudioWatermark(
+    content: Buffer,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      // This would use audio processing libraries for steganographic watermarking
+      const watermarkData = this.generateAudioWatermarkData(userId, licenseKey);
+      
+      // In a real implementation, this would:
+      // 1. Use audio steganography techniques
+      // 2. Embed inaudible watermark data
+      // 3. Maintain audio quality
+      // 4. Return the watermarked audio buffer
+      
+      // Placeholder implementation
+      return this.addMetadataToAudio(content, watermarkData);
+    } catch (error) {
+      console.error('Error applying audio watermark:', error);
+      return content;
+    }
+  }
+  
+  /**
+   * Apply watermark to document content
+   */
+  private async applyDocumentWatermark(
+    content: Buffer,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      const watermarkText = this.generateWatermarkText(userId, licenseKey);
+      
+      // This would handle different document formats (PDF, DOCX, etc.)
+      // For PDFs, use libraries like pdf-lib or PDFtk
+      // For Office documents, use appropriate libraries
+      
+      // Placeholder implementation
+      return this.addMetadataToDocument(content, watermarkText);
+    } catch (error) {
+      console.error('Error applying document watermark:', error);
+      return content;
+    }
+  }
+  
+  /**
+   * Apply metadata watermark for unsupported file types
+   */
+  private async applyMetadataWatermark(
+    content: Buffer,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      const watermarkData = {
+        licensedTo: userId,
+        licenseKey: licenseKey.substring(0, 8) + '****', // Partial key for identification
+        timestamp: new Date().toISOString(),
+        watermarkId: crypto.randomBytes(8).toString('hex')
+      };
+      
+      // Add watermark data as metadata or append to file
+      const watermarkBuffer = Buffer.from(JSON.stringify(watermarkData));
+      
+      // For binary files, we can append metadata at the end
+      // This won't affect most file formats but provides traceability
+      return Buffer.concat([content, Buffer.from('\n<!-- WATERMARK: '), watermarkBuffer, Buffer.from(' -->')]);
+    } catch (error) {
+      console.error('Error applying metadata watermark:', error);
+      return content;
+    }
+  }
+  
+  /**
+   * Create watermark template
+   */
+  async createWatermarkTemplate(
+    creatorId: string,
+    name: string,
+    templateType: WatermarkType,
+    templateData: WatermarkData,
+    isDefault: boolean = false
+  ): Promise<string> {
+    try {
+      const [template] = await db.insert(watermarkTemplates).values({
+        creatorId,
+        name,
+        templateType,
+        templateData: JSON.stringify(templateData),
+        isDefault
+      }).returning();
+      
+      return template.id;
+    } catch (error) {
+      console.error('Error creating watermark template:', error);
+      throw new Error('Failed to create watermark template');
+    }
+  }
+  
+  /**
+   * Get watermark templates for a creator
+   */
+  async getWatermarkTemplates(creatorId: string): Promise<any[]> {
+    try {
+      const templates = await db.select()
+        .from(watermarkTemplates)
+        .where(eq(watermarkTemplates.creatorId, creatorId));
+      
+      return templates.map(template => ({
+        ...template,
+        templateData: JSON.parse(template.templateData)
+      }));
+    } catch (error) {
+      console.error('Error getting watermark templates:', error);
+      throw new Error('Failed to get watermark templates');
+    }
+  }
+  
+  /**
+   * Detect watermark in content
+   */
+  async detectWatermark(content: Buffer, assetType: AssetType): Promise<{
+    hasWatermark: boolean;
+    watermarkData?: any;
+    confidence?: number;
+  }> {
+    try {
+      // This would implement watermark detection algorithms
+      // For now, we'll check for metadata watermarks
+      
+      const contentString = content.toString('utf8');
+      const watermarkMatch = contentString.match(/<!-- WATERMARK: (.*?) -->/);
+      
+      if (watermarkMatch) {
+        try {
+          const watermarkData = JSON.parse(watermarkMatch[1]);
+          return {
+            hasWatermark: true,
+            watermarkData,
+            confidence: 1.0
+          };
+        } catch (parseError) {
+          return {
+            hasWatermark: true,
+            confidence: 0.5
+          };
+        }
+      }
+      
+      return { hasWatermark: false };
+    } catch (error) {
+      console.error('Error detecting watermark:', error);
+      return { hasWatermark: false };
+    }
+  }
+  
+  /**
+   * Remove watermark from content (for authorized users)
+   */
+  async removeWatermark(
+    content: Buffer,
+    assetType: AssetType,
+    userId: string,
+    licenseKey: string
+  ): Promise<Buffer> {
+    try {
+      // Verify user has rights to remove watermark
+      const hasRights = await this.verifyWatermarkRemovalRights(userId, licenseKey);
+      if (!hasRights) {
+        throw new Error('Unauthorized to remove watermark');
+      }
+      
+      // Remove watermark based on asset type
+      switch (assetType) {
+        case AssetType.IMAGE:
+          return await this.removeImageWatermark(content);
+        case AssetType.VIDEO:
+          return await this.removeVideoWatermark(content);
+        case AssetType.AUDIO:
+          return await this.removeAudioWatermark(content);
+        case AssetType.DOCUMENT:
+          return await this.removeDocumentWatermark(content);
+        default:
+          return await this.removeMetadataWatermark(content);
+      }
+    } catch (error) {
+      console.error('Error removing watermark:', error);
+      throw new Error('Failed to remove watermark');
+    }
+  }
+  
+  // Private helper methods
+  
+  private generateWatermarkText(userId: string, licenseKey: string): string {
+    const shortUserId = userId.substring(0, 8);
+    const shortLicenseKey = licenseKey.substring(0, 8);
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    return `Licensed to: ${shortUserId} | License: ${shortLicenseKey} | Date: ${timestamp}`;
+  }
+  
+  private generateAudioWatermarkData(userId: string, licenseKey: string): Buffer {
+    // Generate inaudible watermark data for audio steganography
+    const data = {
+      userId: userId.substring(0, 16),
+      licenseKey: licenseKey.substring(0, 16),
+      timestamp: Date.now()
+    };
+    
+    return Buffer.from(JSON.stringify(data));
+  }
+  
+  private addMetadataToImage(content: Buffer, watermarkText: string): Buffer {
+    // For images, we could add EXIF data or steganographic watermarks
+    // This is a placeholder that adds metadata at the end
+    const metadata = Buffer.from(`\n<!-- ${watermarkText} -->`);
+    return Buffer.concat([content, metadata]);
+  }
+  
+  private addMetadataToVideo(content: Buffer, watermarkText: string): Buffer {
+    // For videos, we could add metadata tracks or visual overlays
+    // This is a placeholder implementation
+    const metadata = Buffer.from(`\n<!-- ${watermarkText} -->`);
+    return Buffer.concat([content, metadata]);
+  }
+  
+  private addMetadataToAudio(content: Buffer, watermarkData: Buffer): Buffer {
+    // For audio, we could use steganographic techniques
+    // This is a placeholder implementation
+    return Buffer.concat([content, watermarkData]);
+  }
+  
+  private addMetadataToDocument(content: Buffer, watermarkText: string): Buffer {
+    // For documents, we could add hidden text or metadata
+    // This is a placeholder implementation
+    const metadata = Buffer.from(`\n<!-- ${watermarkText} -->`);
+    return Buffer.concat([content, metadata]);
+  }
+  
+  private async verifyWatermarkRemovalRights(userId: string, licenseKey: string): Promise<boolean> {
+    // Check if user has exclusive or extended license that allows watermark removal
+    // This would query the database to check license terms
+    return false; // Default to not allowing watermark removal
+  }
+  
+  private async removeImageWatermark(content: Buffer): Promise<Buffer> {
+    // Remove watermark from image
+    // This would use image processing libraries
+    return content;
+  }
+  
+  private async removeVideoWatermark(content: Buffer): Promise<Buffer> {
+    // Remove watermark from video
+    // This would use video processing libraries
+    return content;
+  }
+  
+  private async removeAudioWatermark(content: Buffer): Promise<Buffer> {
+    // Remove watermark from audio
+    // This would use audio processing libraries
+    return content;
+  }
+  
+  private async removeDocumentWatermark(content: Buffer): Promise<Buffer> {
+    // Remove watermark from document
+    // This would use document processing libraries
+    return content;
+  }
+  
+  private async removeMetadataWatermark(content: Buffer): Promise<Buffer> {
+    // Remove metadata watermark
+    const contentString = content.toString('utf8');
+    const cleanContent = contentString.replace(/\n<!-- WATERMARK: .*? -->/g, '');
+    return Buffer.from(cleanContent);
+  }
+}
+
+export const watermarkService = new WatermarkService();

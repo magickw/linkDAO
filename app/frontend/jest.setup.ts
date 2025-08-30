@@ -6,7 +6,7 @@ global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
 // Mock IntersectionObserver
-class MockIntersectionObserver implements IntersectionObserver {
+global.IntersectionObserver = class IntersectionObserver {
   readonly root: Element | Document | null = null;
   readonly rootMargin: string = '0px';
   readonly thresholds: ReadonlyArray<number> = [0];
@@ -21,9 +21,7 @@ class MockIntersectionObserver implements IntersectionObserver {
   takeRecords(): IntersectionObserverEntry[] {
     return [];
   }
-}
-
-global.IntersectionObserver = MockIntersectionObserver as any;
+} as any;
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {

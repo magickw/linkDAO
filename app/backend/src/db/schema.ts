@@ -407,3 +407,253 @@ export const syncStatus = pgTable("sync_status", {
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Digital Assets
+export const digitalAssets = pgTable("digital_assets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerId: uuid("owner_id").references(() => users.id).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  fileType: varchar("file_type", { length: 50 }).notNull(),
+  fileSize: integer("file_size").notNull(),
+  encryptedContentHash: text("encrypted_content_hash").notNull(),
+  previewHash: text("preview_hash"),
+  metadataHash: text("metadata_hash").notNull(),
+  price: numeric("price", { precision: 20, scale: 8 }),
+  currency: varchar("currency", { length: 10 }).default("USD"),
+  licenseType: varchar("license_type", { length: 50 }).notNull(),
+  isPublic: boolean("is_public").default(false),
+  downloadCount: integer("download_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const digitalAssetLicenses = pgTable("digital_asset_licenses", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  licenseeId: uuid("licensee_id").references(() => users.id).notNull(),
+  licenseType: varchar("license_type", { length: 50 }).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const digitalAssetPurchases = pgTable("digital_asset_purchases", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  buyerId: uuid("buyer_id").references(() => users.id).notNull(),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  status: varchar("status", { length: 20 }).default("completed"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const digitalAssetAccessLogs = pgTable("digital_asset_access_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  userId: uuid("user_id").references(() => users.id),
+  accessType: varchar("access_type", { length: 20 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const digitalAssetAnalytics = pgTable("digital_asset_analytics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  date: timestamp("date").notNull(),
+  views: integer("views").default(0),
+  downloads: integer("downloads").default(0),
+  revenue: numeric("revenue", { precision: 20, scale: 8 }).default("0"),
+  uniqueUsers: integer("unique_users").default(0),
+});
+
+export const dmcaTakedownRequests = pgTable("dmca_takedown_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  requesterId: uuid("requester_id").references(() => users.id).notNull(),
+  reason: text("reason").notNull(),
+  evidence: text("evidence"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  reviewedBy: uuid("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const digitalAssetReports = pgTable("digital_asset_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reason: varchar("reason", { length: 100 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const drmKeys = pgTable("drm_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  encryptedKey: text("encrypted_key").notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const watermarkTemplates = pgTable("watermark_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  templateType: varchar("template_type", { length: 20 }).notNull(),
+  templateData: text("template_data").notNull(),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const contentVerification = pgTable("content_verification", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  verificationHash: text("verification_hash").notNull(),
+  algorithm: varchar("algorithm", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cdnAccessLogs = pgTable("cdn_access_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),
+  userId: uuid("user_id").references(() => users.id),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  accessTime: timestamp("access_time").defaultNow(),
+  responseSize: integer("response_size"),
+  responseTime: integer("response_time"),
+});
+
+// NFT Tables
+export const nfts = pgTable("nfts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  tokenId: varchar("token_id", { length: 128 }).notNull(),
+  contractAddress: varchar("contract_address", { length: 66 }).notNull(),
+  ownerId: uuid("owner_id").references(() => users.id).notNull(),
+  creatorId: uuid("creator_id").references(() => users.id).notNull(),
+  collectionId: uuid("collection_id"),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url").notNull(),
+  metadataUri: text("metadata_uri").notNull(),
+  attributes: text("attributes"), // JSON
+  rarity: varchar("rarity", { length: 20 }),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nftCollections = pgTable("nft_collections", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  creatorId: uuid("creator_id").references(() => users.id).notNull(),
+  contractAddress: varchar("contract_address", { length: 66 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  symbol: varchar("symbol", { length: 10 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  bannerUrl: text("banner_url"),
+  maxSupply: integer("max_supply"),
+  currentSupply: integer("current_supply").default(0),
+  royaltyPercentage: numeric("royalty_percentage", { precision: 5, scale: 2 }).default("0"),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nftListings = pgTable("nft_listings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nftId: uuid("nft_id").references(() => nfts.id).notNull(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  listingType: varchar("listing_type", { length: 20 }).notNull(), // 'fixed' | 'auction'
+  startTime: timestamp("start_time").defaultNow(),
+  endTime: timestamp("end_time"),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nftOffers = pgTable("nft_offers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nftId: uuid("nft_id").references(() => nfts.id).notNull(),
+  buyerId: uuid("buyer_id").references(() => users.id).notNull(),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  status: varchar("status", { length: 20 }).default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const nftAuctions = pgTable("nft_auctions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  nftId: uuid("nft_id").references(() => nfts.id).notNull(),
+  sellerId: uuid("seller_id").references(() => users.id).notNull(),
+  startingPrice: numeric("starting_price", { precision: 20, scale: 8 }).notNull(),
+  reservePrice: numeric("reserve_price", { precision: 20, scale: 8 }),
+  currentBid: numeric("current_bid", { precision: 20, scale: 8 }),
+  highestBidderId: uuid("highest_bidder_id").references(() => users.id),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Review and Reputation Tables
+export const reviews = pgTable("reviews", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reviewerId: uuid("reviewer_id").references(() => users.id).notNull(),
+  revieweeId: uuid("reviewee_id").references(() => users.id).notNull(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  rating: integer("rating").notNull(),
+  title: varchar("title", { length: 255 }),
+  comment: text("comment"),
+  isVerified: boolean("is_verified").default(false),
+  helpfulCount: integer("helpful_count").default(0),
+  reportCount: integer("report_count").default(0),
+  status: varchar("status", { length: 20 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reviewHelpfulness = pgTable("review_helpfulness", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  isHelpful: boolean("is_helpful").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reviewReports = pgTable("review_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
+  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
+  reason: varchar("reason", { length: 100 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 20 }).default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const reputationHistory = pgTable("reputation_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  changeType: varchar("change_type", { length: 50 }).notNull(),
+  changeValue: integer("change_value").notNull(),
+  previousScore: integer("previous_score").notNull(),
+  newScore: integer("new_score").notNull(),
+  reason: text("reason"),
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+  relatedEntityId: varchar("related_entity_id", { length: 128 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
