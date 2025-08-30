@@ -136,12 +136,121 @@ export const disputes = pgTable("disputes", {
 	escrowId: integer("escrow_id"),
 	reporterId: uuid("reporter_id"),
 	reason: text(),
-	status: varchar({ length: 32 }).default('open'),
+	disputeType: varchar("dispute_type", { length: 64 }).default('other'),
+	status: varchar({ length: 32 }).default('created'),
+	resolutionMethod: varchar("resolution_method", { length: 32 }).default('community_arbitrator'),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	evidenceDeadline: timestamp("evidence_deadline", { mode: 'string' }),
+	votingDeadline: timestamp("voting_deadline", { mode: 'string' }),
 	resolvedAt: timestamp("resolved_at", { mode: 'string' }),
+	verdict: varchar({ length: 32 }),
+	refundAmount: numeric("refund_amount"),
+	resolverId: uuid("resolver_id"),
 	resolution: text(),
 	evidence: text(),
-});
+	escalatedToDAO: boolean("escalated_to_dao").default(false),
+}, (table) => [
+	foreignKey({
+		columns: [table.escrowId],
+		foreignColumns: [escrows.id],
+		name: "disputes_escrow_id_escrows_id_fk"
+	}),
+	foreignKey({
+		columns: [table.reporterId],
+		foreignColumns: [users.id],
+		name: "disputes_reporter_id_users_id_fk"
+	}),
+	foreignKey({
+		columns: [table.resolverId],
+		foreignColumns: [users.id],
+		name: "disputes_resolver_id_users_id_fk"
+	}),
+]);
+
+export const disputeEvidence = pgTable("dispute_evidence", {
+	id: serial().primaryKey().notNull(),
+	disputeId: integer("dispute_id"),
+	submitterId: uuid("submitter_id"),
+	evidenceType: varchar("evidence_type", { length: 32 }).notNull(),
+	ipfsHash: varchar("ipfs_hash", { length: 128 }).notNull(),
+	description: text(),
+	timestamp: timestamp({ mode: 'string' }).defaultNow(),
+	verified: boolean().default(false),
+}, (table) => [
+	foreignKey({
+		columns: [table.disputeId],
+		foreignColumns: [disputes.id],
+		name: "dispute_evidence_dispute_id_disputes_id_fk"
+	}),
+	foreignKey({
+		columns: [table.submitterId],
+		foreignColumns: [users.id],
+		name: "dispute_evidence_submitter_id_users_id_fk"
+	}),
+]);
+
+export const disputeVotes = pgTable("dispute_votes", {
+	id: serial().primaryKey().notNull(),
+	disputeId: integer("dispute_id"),
+	voterId: uuid("voter_id"),
+	verdict: varchar({ length: 32 }).notNull(),
+	votingPower: integer("voting_power").notNull(),
+	reasoning: text(),
+	timestamp: timestamp({ mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.disputeId],
+		foreignColumns: [disputes.id],
+		name: "dispute_votes_dispute_id_disputes_id_fk"
+	}),
+	foreignKey({
+		columns: [table.voterId],
+		foreignColumns: [users.id],
+		name: "dispute_votes_voter_id_users_id_fk"
+	}),
+	unique("dispute_votes_dispute_id_voter_id_unique").on(table.disputeId, table.voterId),
+]);
+
+export const arbitratorApplications = pgTable("arbitrator_applications", {
+	id: serial().primaryKey().notNull(),
+	applicantId: uuid("applicant_id"),
+	qualifications: text().notNull(),
+	experience: text(),
+	reputationScore: integer("reputation_score").notNull(),
+	casesHandled: integer("cases_handled").default(0),
+	successRate: numeric("success_rate").default('0'),
+	approved: boolean().default(false),
+	appliedAt: timestamp("applied_at", { mode: 'string' }).defaultNow(),
+	approvedAt: timestamp("approved_at", { mode: 'string' }),
+}, (table) => [
+	foreignKey({
+		columns: [table.applicantId],
+		foreignColumns: [users.id],
+		name: "arbitrator_applications_applicant_id_users_id_fk"
+	}),
+	unique("arbitrator_applications_applicant_id_unique").on(table.applicantId),
+]);
+
+export const disputeEvents = pgTable("dispute_events", {
+	id: serial().primaryKey().notNull(),
+	disputeId: integer("dispute_id"),
+	eventType: varchar("event_type", { length: 64 }).notNull(),
+	actorId: uuid("actor_id"),
+	description: text(),
+	metadata: text(),
+	timestamp: timestamp({ mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+		columns: [table.disputeId],
+		foreignColumns: [disputes.id],
+		name: "dispute_events_dispute_id_disputes_id_fk"
+	}),
+	foreignKey({
+		columns: [table.actorId],
+		foreignColumns: [users.id],
+		name: "dispute_events_actor_id_users_id_fk"
+	}),
+]);
 
 export const orders = pgTable("orders", {
 	id: serial().primaryKey().notNull(),
