@@ -359,3 +359,5 @@ export class ReputationService {
     }
   }
 }
+
+export const reputationService = new ReputationService();

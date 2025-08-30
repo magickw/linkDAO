@@ -48,7 +48,7 @@
   - Write tests for evidence storage, retrieval, and audit trail integrity
   - _Requirements: 4.3, 6.1, 6.4, 10.1_
 
-- [ ] 6. Build community reporting system
+- [x] 6. Build community reporting system
   - Create report submission API with validation and rate limiting
   - Implement reporter reputation weighting system
   - Build report aggregation logic with threshold-based escalation
