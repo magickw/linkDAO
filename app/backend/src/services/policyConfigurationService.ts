@@ -54,11 +54,11 @@ export class PolicyConfigurationService {
         id: policy.id,
         category: policy.category,
         severity: policy.severity as 'low' | 'medium' | 'high' | 'critical',
-        confidenceThreshold: parseFloat(policy.confidenceThreshold),
+        confidenceThreshold: parseFloat(policy.confidenceThreshold || '0'),
         action: policy.action as 'allow' | 'limit' | 'block' | 'review',
-        reputationModifier: parseFloat(policy.reputationModifier),
-        description: policy.description,
-        isActive: policy.isActive
+        reputationModifier: parseFloat(policy.reputationModifier || '1'),
+        description: policy.description || '',
+        isActive: policy.isActive ?? true
       }));
     } catch (error) {
       console.error('Failed to get policies:', error);
@@ -84,11 +84,11 @@ export class PolicyConfigurationService {
         id: policy.id,
         category: policy.category,
         severity: policy.severity as 'low' | 'medium' | 'high' | 'critical',
-        confidenceThreshold: parseFloat(policy.confidenceThreshold),
+        confidenceThreshold: parseFloat(policy.confidenceThreshold || '0'),
         action: policy.action as 'allow' | 'limit' | 'block' | 'review',
-        reputationModifier: parseFloat(policy.reputationModifier),
-        description: policy.description,
-        isActive: policy.isActive
+        reputationModifier: parseFloat(policy.reputationModifier || '1'),
+        description: policy.description || '',
+        isActive: policy.isActive ?? true
       }));
     } catch (error) {
       console.error('Failed to get policies by category:', error);
@@ -120,11 +120,11 @@ export class PolicyConfigurationService {
           id: created.id,
           category: created.category,
           severity: created.severity as 'low' | 'medium' | 'high' | 'critical',
-          confidenceThreshold: parseFloat(created.confidenceThreshold),
+          confidenceThreshold: parseFloat(created.confidenceThreshold || '0'),
           action: created.action as 'allow' | 'limit' | 'block' | 'review',
-          reputationModifier: parseFloat(created.reputationModifier),
-          description: created.description,
-          isActive: created.isActive
+          reputationModifier: parseFloat(created.reputationModifier || '1'),
+          description: created.description || '',
+          isActive: created.isActive ?? true
         };
       }
 
@@ -201,11 +201,11 @@ export class PolicyConfigurationService {
         vendorName: vendor.vendorName,
         vendorType: vendor.vendorType as 'text' | 'image' | 'video' | 'link' | 'custom',
         apiEndpoint: vendor.apiEndpoint || undefined,
-        isEnabled: vendor.isEnabled,
-        weight: parseFloat(vendor.weight),
-        costPerRequest: parseFloat(vendor.costPerRequest),
-        avgLatencyMs: vendor.avgLatencyMs,
-        successRate: parseFloat(vendor.successRate),
+        isEnabled: vendor.isEnabled ?? true,
+        weight: parseFloat(vendor.weight || '1'),
+        costPerRequest: parseFloat(vendor.costPerRequest || '0'),
+        avgLatencyMs: vendor.avgLatencyMs || 0,
+        successRate: parseFloat(vendor.successRate || '1'),
         lastHealthCheck: vendor.lastHealthCheck || undefined,
         configuration: typeof vendor.configuration === 'string' 
           ? JSON.parse(vendor.configuration) 
