@@ -1863,3 +1863,96 @@ export const linkMonitoringAlerts = pgTable("link_monitoring_alerts", {
   alertTypeIdx: index("idx_link_monitoring_alerts_type").on(t.alertType),
   resolvedIdx: index("idx_link_monitoring_alerts_resolved").on(t.isResolved),
 }));
+// Admin Configuration System Tables
+
+// Policy configuration table for managing moderation rules
+export const policy_configurations = pgTable("policy_configurations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  category: varchar("category", { length: 48 }).notNull(),
+  severity: varchar("severity", { length: 24 }).notNull(),
+  confidenceThreshold: numeric("confidence_threshold").default("0.7"),
+  action: varchar("action", { length: 24 }).notNull(),
+  reputationModifier: numeric("reputation_modifier").default("0"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Threshold configurations for different content types and user reputation levels
+export const threshold_configurations = pgTable("threshold_configurations", {
+  id: serial("id").primaryKey(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
+  reputationTier: varchar("reputation_tier", { length: 24 }).notNull(),
+  autoBlockThreshold: numeric("auto_block_threshold").default("0.95"),
+  quarantineThreshold: numeric("quarantine_threshold").default("0.7"),
+  publishThreshold: numeric("publish_threshold").default("0.3"),
+  escalationThreshold: numeric("escalation_threshold").default("0.5"),
+  isActive: boolean("is_active").default(true),
+  createdBy: varchar("created_by", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Vendor configuration for AI service management
+export const vendor_configurations = pgTable("vendor_configurations", {
+  id: serial("id").primaryKey(),
+  vendorName: varchar("vendor_name", { length: 48 }).notNull(),
+  serviceType: varchar("service_type", { length: 32 }).notNull(),
+  apiEndpoint: text("api_endpoint"),
+  apiKeyRef: varchar("api_key_ref", { length: 128 }),
+  isEnabled: boolean("is_enabled").default(true),
+  priority: integer("priority").default(1),
+  timeoutMs: integer("timeout_ms").default(30000),
+  retryAttempts: integer("retry_attempts").default(3),
+  rateLimitPerMinute: integer("rate_limit_per_minute").default(100),
+  costPerRequest: numeric("cost_per_request").default("0"),
+  fallbackVendorId: integer("fallback_vendor_id"),
+  healthCheckUrl: text("health_check_url"),
+  lastHealthCheck: timestamp("last_health_check"),
+  healthStatus: varchar("health_status", { length: 24 }).default("unknown"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// System metrics for real-time monitoring
+export const system_metrics = pgTable("system_metrics", {
+  id: serial("id").primaryKey(),
+  metricName: varchar("metric_name", { length: 64 }).notNull(),
+  metricValue: numeric("metric_value").notNull(),
+  metricType: varchar("metric_type", { length: 24 }).notNull(),
+  tags: text("tags"), // JSON string for tags
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Admin audit logs for configuration changes
+export const admin_audit_logs = pgTable("admin_audit_logs", {
+  id: serial("id").primaryKey(),
+  adminId: varchar("admin_id", { length: 64 }).notNull(),
+  action: varchar("action", { length: 48 }).notNull(),
+  resourceType: varchar("resource_type", { length: 32 }).notNull(),
+  resourceId: varchar("resource_id", { length: 64 }),
+  oldValues: text("old_values"), // JSON string
+  newValues: text("new_values"), // JSON string
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// System alerts configuration
+export const alert_configurations = pgTable("alert_configurations", {
+  id: serial("id").primaryKey(),
+  alertName: varchar("alert_name", { length: 64 }).notNull(),
+  metricName: varchar("metric_name", { length: 64 }).notNull(),
+  conditionType: varchar("condition_type", { length: 24 }).notNull(),
+  thresholdValue: numeric("threshold_value").notNull(),
+  severity: varchar("severity", { length: 24 }).notNull(),
+  notificationChannels: text("notification_channels"), // JSON string array
+  isActive: boolean("is_active").default(true),
+  cooldownMinutes: integer("cooldown_minutes").default(60),
+  createdBy: varchar("created_by", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

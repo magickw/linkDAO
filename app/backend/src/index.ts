@@ -119,19 +119,20 @@ app.get('/api/posts', (req, res) => {
 });
 
 // Import marketplace verification routes
-<<<<<<< HEAD
-import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes.js';
-// Import link safety routes
-import linkSafetyRoutes from './routes/linkSafetyRoutes.js';
-=======
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';
->>>>>>> ffcc96daa01782b0e127a0bba5eac41c74eb0e8d
+// Import link safety routes
+import linkSafetyRoutes from './routes/linkSafetyRoutes';
+// Import admin routes
+import adminRoutes from './routes/adminRoutes';
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
 
 // Link safety routes
 app.use('/api/link-safety', linkSafetyRoutes);
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {
