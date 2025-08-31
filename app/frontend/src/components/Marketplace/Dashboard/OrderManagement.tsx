@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { formatEther } from 'viem';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { format } from 'date-fns';
+import type { Order } from '@/hooks/useMarketplace';
+
+// Reuse the Order type from useMarketplace
+interface PaginatedOrders {
+  orders: Order[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
 
 interface OrderManagementProps {
   address: string;
@@ -14,17 +26,125 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ address }) => 
   const [activeTab, setActiveTab] = useState<OrderStatus>('all');
   const { getSellerOrders, updateOrderStatus } = useMarketplace();
 
-  const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ['sellerOrders', address],
-    queryFn: () => getSellerOrders(address),
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  
+  const { data: ordersResponse, isLoading, refetch } = useQuery<PaginatedOrders>({
+    queryKey: ['sellerOrders', address, currentPage, activeTab],
+    queryFn: async () => {
+      if (!address) {
+        return {
+          orders: [],
+          pagination: {
+            total: 0,
+            page: currentPage,
+            pageSize,
+            totalPages: 0
+          }
+        };
+      }
+      
+      try {
+        const response = await getSellerOrders(address, currentPage, pageSize);
+        if (!response) {
+          throw new Error('No response from getSellerOrders');
+        }
+        
+        // Ensure response has the expected structure
+        const orders = Array.isArray(response.orders) ? response.orders : [];
+        const pagination = response.pagination || {
+          total: 0,
+          page: currentPage,
+          pageSize,
+          totalPages: 0
+        };
+        
+        return {
+          orders,
+          pagination: {
+            total: Number(pagination.total) || 0,
+            page: Number(pagination.page) || currentPage,
+            pageSize: Number(pagination.pageSize) || pageSize,
+            totalPages: Number(pagination.totalPages) || 0
+          }
+        };
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        return {
+          orders: [],
+          pagination: {
+            total: 0,
+            page: currentPage,
+            pageSize,
+            totalPages: 0
+          }
+        };
+      }
+    },
     enabled: !!address,
-    refetchInterval: 30000 // 30 seconds
+    refetchInterval: 30000, // 30 seconds
+    placeholderData: () => ({
+      orders: [],
+      pagination: {
+        total: 0,
+        page: currentPage,
+        pageSize,
+        totalPages: 0
+      }
+    })
   });
 
-  const filteredOrders = orders.filter(order => {
-    if (activeTab === 'all') return true;
-    return order.status === activeTab;
-  });
+  // Get all orders from the response with proper type safety
+  const { orders: allOrders = [], pagination: paginationData } = ordersResponse || {
+    orders: [],
+    pagination: {
+      total: 0,
+      page: currentPage,
+      pageSize,
+      totalPages: 0
+    }
+  };
+
+  // Ensure allOrders is an array
+  const safeAllOrders = Array.isArray(allOrders) ? allOrders : [];
+  
+  // Filter orders based on active tab
+  const filteredOrders = useMemo(() => {
+    return activeTab === 'all' 
+      ? [...safeAllOrders] 
+      : safeAllOrders.filter((order) => order.status === activeTab);
+  }, [safeAllOrders, activeTab]);
+
+  // Get status counts for the status tabs
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      pending: 0,
+      paid: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0,
+      all: safeAllOrders.length
+    };
+    
+    safeAllOrders.forEach((order) => {
+      if (order.status in counts) {
+        counts[order.status] = (counts[order.status] || 0) + 1;
+      }
+    });
+    
+    return counts;
+  }, [safeAllOrders]);
+
+  // Get pagination data with defaults
+  const { total = 0, page = currentPage, totalPages = 0 } = paginationData || {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0
+  };
+  
+  // Use filtered orders for display
+  const orders = filteredOrders;
 
   const getStatusBadge = (status: OrderStatus) => {
     const statusMap: Record<OrderStatus, { bg: string; text: string }> = {
@@ -85,7 +205,7 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ address }) => 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-white">Order Management</h2>
         <div className="text-sm text-white/60">
-          {orders.length} total orders
+          {total} total orders
         </div>
       </div>
 
@@ -103,21 +223,25 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ address }) => 
             {status.charAt(0).toUpperCase() + status.slice(1)}
             {status !== 'all' && (
               <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-white/10">
-                {orders.filter(o => o.status === status).length}
+                {status === 'all' ? total : statusCounts[status] || 0}
               </span>
             )}
           </button>
         ))}
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-white/60">No {activeTab === 'all' ? '' : activeTab} orders found</p>
+          <p className="text-white/60">
+            {activeTab === 'all' 
+              ? 'No orders found' 
+              : `No ${activeTab} orders found`}
+          </p>
         </div>
       ) : (
         <div className="overflow-hidden">
           <div className="grid grid-cols-1 gap-4">
-            {filteredOrders.map((order) => {
+            {orders.map((order) => {
               const nextStatus = getNextStatus(order.status);
               
               return (
@@ -201,6 +325,31 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ address }) => 
               );
             })}
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6 px-4 py-3 bg-white/5 rounded-lg">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-white/70 hover:text-white"
+              >
+                Previous
+              </button>
+              
+              <div className="text-sm text-white/70">
+                Page {page} of {totalPages}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-white/70 hover:text-white"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
