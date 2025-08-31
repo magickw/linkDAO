@@ -221,7 +221,7 @@ export const Homepage: React.FC<HomepageProps> = ({
             </div>
           </section>
 
-          {/* Stats Section */}
+          {/* Stats Section - Total Volume Only */}
           <section className="py-16">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <motion.div
@@ -229,27 +229,19 @@ export const Homepage: React.FC<HomepageProps> = ({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
-                className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
+                className="flex justify-center"
               >
-                {[
-                  { label: 'Total Volume', value: '$2.4M', icon: '💰' },
-                  { label: 'Active Users', value: '15.2K', icon: '👥' },
-                  { label: 'Products Listed', value: '45.8K', icon: '📦' },
-                  { label: 'Transactions', value: '128K', icon: '⚡' },
-                ].map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10"
-                  >
-                    <div className="text-4xl mb-2">{stat.icon}</div>
-                    <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                    <div className="text-white/60">{stat.label}</div>
-                  </motion.div>
-                ))}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 w-full max-w-xs"
+                >
+                  <div className="text-4xl mb-2">💰</div>
+                  <div className="text-3xl font-bold text-white mb-1">$2.4M</div>
+                  <div className="text-white/60">Total Volume</div>
+                </motion.div>
               </motion.div>
             </div>
           </section>
