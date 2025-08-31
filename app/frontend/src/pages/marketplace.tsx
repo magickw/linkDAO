@@ -147,46 +147,6 @@ const MarketplacePage: React.FC = () => {
 
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <GlassPanel variant="primary" className="mb-8">
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white mb-4">Web3 Marketplace</h1>
-              <p className="text-white/80 text-lg">
-                Buy and sell digital and physical goods using cryptocurrency with blockchain security
-              </p>
-            </div>
-          </GlassPanel>
-
-          {isConnected && (
-            <GlassPanel variant="secondary" className="mb-8">
-              <div className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white mb-2">Your Wallet</h2>
-                    <p className="text-white/80 mb-1">
-                      Connected: {formatAddress(address || '')}
-                    </p>
-                    {balance && (
-                      <p className="text-white/80">
-                        Balance: {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
-                      </p>
-                    )}
-                  </div>
-                  {reputation && (
-                    <div className="mt-4 sm:mt-0">
-                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                        Reputation: {reputation.score}
-                        {reputation.daoApproved && (
-                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                            DAO Approved
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassPanel>
-          )}
 
           <GlassPanel variant="secondary" className="mb-8">
             <div className="p-2">

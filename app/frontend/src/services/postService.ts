@@ -310,28 +310,22 @@ export class PostService {
           {
             id: 'mock-1',
             author: '0x1234567890123456789012345678901234567890',
-            content: 'Welcome to LinkDAO! This is a mock post while the backend is starting up.',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            likes: 5,
-            comments: 2,
+            parentId: null,
+            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z4',
+            mediaCids: [],
             tags: ['welcome', 'mock'],
-            communityId: null,
-            isPublished: true,
-            isDeleted: false
+            createdAt: new Date(),
+            onchainRef: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
           },
           {
             id: 'mock-2',
             author: '0x0987654321098765432109876543210987654321',
-            content: 'The backend service is currently being initialized. Please check back in a few minutes.',
-            createdAt: new Date(Date.now() - 60000).toISOString(),
-            updatedAt: new Date(Date.now() - 60000).toISOString(),
-            likes: 3,
-            comments: 1,
+            parentId: null,
+            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z5',
+            mediaCids: [],
             tags: ['backend', 'status'],
-            communityId: null,
-            isPublished: true,
-            isDeleted: false
+            createdAt: new Date(Date.now() - 60000),
+            onchainRef: '0x0987654321abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
           }
         ];
       }
