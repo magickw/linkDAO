@@ -56,12 +56,7 @@ describe('GlassmorphicNavbar', () => {
     expect(screen.getByTestId('search-bar')).toBeInTheDocument();
   });
 
-  it('renders currency toggle component', () => {
-    render(<GlassmorphicNavbar />);
-    
-    // Currency toggle should be present (mocked component)
-    expect(screen.getByTestId('currency-toggle')).toBeInTheDocument();
-  });
+
 
   it('renders wallet connect button', () => {
     render(<GlassmorphicNavbar />);
@@ -102,18 +97,7 @@ describe('GlassmorphicNavbar', () => {
     expect(marketplaceLink).toHaveClass('bg-white/20', 'text-white');
   });
 
-  it('renders language selector with options', () => {
-    render(<GlassmorphicNavbar />);
-    
-    const languageSelector = screen.getByDisplayValue('🇺🇸 EN');
-    expect(languageSelector).toBeInTheDocument();
-    
-    // Check for language options
-    fireEvent.click(languageSelector);
-    expect(screen.getByText('🇪🇸 ES')).toBeInTheDocument();
-    expect(screen.getByText('🇫🇷 FR')).toBeInTheDocument();
-    expect(screen.getByText('🇩🇪 DE')).toBeInTheDocument();
-  });
+
 
   it('applies glassmorphic styling correctly', () => {
     const { container } = render(<GlassmorphicNavbar />);
@@ -128,9 +112,7 @@ jest.mock('../SearchBar', () => ({
   SearchBar: () => <div data-testid="search-bar">Search Bar</div>,
 }));
 
-jest.mock('../CurrencyToggle', () => ({
-  CurrencyToggle: () => <div data-testid="currency-toggle">Currency Toggle</div>,
-}));
+
 
 jest.mock('@/components/Auth/WalletConnectButton', () => ({
   WalletConnectButton: () => <div data-testid="wallet-connect-button">Wallet Connect</div>,

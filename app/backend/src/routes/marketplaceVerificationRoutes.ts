@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { marketplaceVerificationController } from '../controllers/marketplaceVerificationController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
-import { rateLimiter } from '../middleware/rateLimiter.js';
+import { marketplaceVerificationController } from '../controllers/marketplaceVerificationController';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -9,13 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Apply rate limiting for verification endpoints
-const verificationLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many verification requests, please try again later'
-});
-
-router.use(verificationLimiter);
+router.use(apiLimiter);
 
 /**
  * @route POST /api/marketplace/verification/high-value

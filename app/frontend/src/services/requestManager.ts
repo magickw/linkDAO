@@ -133,6 +133,15 @@ class RequestManager {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // Handle 503 Service Unavailable specifically
+        if (response.status === 503) {
+          const error = new Error('Backend service is temporarily unavailable. Please try again later.');
+          (error as any).status = response.status;
+          (error as any).response = response;
+          (error as any).isServiceUnavailable = true;
+          throw error;
+        }
+        
         const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
         (error as any).status = response.status;
         (error as any).response = response;

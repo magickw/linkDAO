@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
@@ -71,6 +73,45 @@ const nextConfig = {
   webpack: (config, { dev, isServer }) => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
     
+    // Add path aliases
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
+
+    // Add SVG support
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    });
+
+    // Add support for importing .graphql files
+    config.module.rules.push({
+      test: /\.(graphql|gql)$/,
+      exclude: /node_modules/,
+      loader: 'graphql-tag/loader',
+    });
+
+    // Add support for CSS modules
+    config.module.rules.push({
+      test: /\.module\.(sa|sc|c)ss$/,
+      use: [
+        'style-loader',
+        {
+          loader: 'css-loader',
+          options: {
+            modules: {
+              localIdentName: '[local]--[hash:base64:5]',
+            },
+            importLoaders: 1,
+            sourceMap: true,
+          },
+        },
+        'postcss-loader',
+        'sass-loader',
+      ],
+    });
+
     // Bundle analyzer in development
     if (dev && !isServer) {
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
