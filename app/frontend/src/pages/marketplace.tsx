@@ -148,43 +148,6 @@ const MarketplacePage: React.FC = () => {
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
-          <GlassPanel variant="secondary" className="mb-8">
-            <div className="p-2">
-              <nav className="flex space-x-1">
-                <button
-                  onClick={() => setActiveTab('browse')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'browse'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  🛒 Browse Items
-                </button>
-                <button
-                  onClick={() => setActiveTab('my-listings')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'my-listings'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  📋 My Listings
-                </button>
-                <button
-                  onClick={() => setActiveTab('create')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'create'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  ➕ Create Listing
-                </button>
-              </nav>
-            </div>
-          </GlassPanel>
-
           {activeTab === 'browse' && (
             <GlassPanel variant="secondary" className="mb-6">
               <div className="p-6">
