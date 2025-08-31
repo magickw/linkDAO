@@ -185,7 +185,7 @@ export class LinkSafetyController {
   addToBlacklist = async (req: Request, res: Response): Promise<void> => {
     try {
       const { entryType, entryValue, category, severity, description } = req.body;
-      const addedBy = req.user?.id; // Assuming auth middleware sets req.user
+      const addedBy = req.user?.walletAddress; // Using walletAddress as the user identifier
 
       if (!entryType || !entryValue || !category) {
         res.status(400).json({ 

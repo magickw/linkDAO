@@ -127,48 +127,53 @@ export class LinkMonitoringService {
     alertType?: string,
     limit = 100
   ): Promise<MonitoringAlert[]> {
-    let query = db
+    // Build the base query
+    let conditions = [eq(linkMonitoringAlerts.isResolved, false)];
+    
+    // Add severity condition if provided
+    if (severity) {
+      conditions.push(eq(linkMonitoringAlerts.severity, severity));
+    }
+    
+    // Add alert type condition if provided
+    if (alertType) {
+      conditions.push(eq(linkMonitoringAlerts.alertType, alertType));
+    }
+    
+    // Build the where clause with all conditions
+    const whereClause = and(...conditions);
+    
+    // Execute the query with all conditions
+    const results = await db
       .select({
-        alert: linkMonitoringAlerts,
+        id: linkMonitoringAlerts.id,
+        urlAnalysisId: linkMonitoringAlerts.urlAnalysisId,
+        alertType: linkMonitoringAlerts.alertType,
+        severity: linkMonitoringAlerts.severity,
+        description: linkMonitoringAlerts.description,
+        affectedContentCount: linkMonitoringAlerts.affectedContentCount,
+        isResolved: linkMonitoringAlerts.isResolved,
+        createdAt: linkMonitoringAlerts.createdAt,
+        resolvedAt: linkMonitoringAlerts.resolvedAt,
         url: urlAnalysisResults.url,
-        domain: urlAnalysisResults.domain,
+        domain: urlAnalysisResults.domain
       })
       .from(linkMonitoringAlerts)
       .leftJoin(urlAnalysisResults, eq(linkMonitoringAlerts.urlAnalysisId, urlAnalysisResults.id))
-      .where(eq(linkMonitoringAlerts.isResolved, false))
+      .where(whereClause)
       .orderBy(desc(linkMonitoringAlerts.createdAt))
       .limit(limit);
 
-    if (severity) {
-      query = query.where(
-        and(
-          eq(linkMonitoringAlerts.isResolved, false),
-          eq(linkMonitoringAlerts.severity, severity)
-        )
-      );
-    }
-
-    if (alertType) {
-      query = query.where(
-        and(
-          eq(linkMonitoringAlerts.isResolved, false),
-          eq(linkMonitoringAlerts.alertType, alertType)
-        )
-      );
-    }
-
-    const results = await query;
-
     return results.map(result => ({
-      id: result.alert.id,
-      urlAnalysisId: result.alert.urlAnalysisId || 0,
-      alertType: result.alert.alertType,
-      severity: result.alert.severity as any,
-      description: result.alert.description || '',
-      affectedContentCount: result.alert.affectedContentCount || 0,
-      isResolved: result.alert.isResolved || false,
-      createdAt: result.alert.createdAt || new Date(),
-      resolvedAt: result.alert.resolvedAt || undefined,
+      id: result.id,
+      urlAnalysisId: result.urlAnalysisId || 0,
+      alertType: result.alertType,
+      severity: result.severity as any,
+      description: result.description || '',
+      affectedContentCount: result.affectedContentCount || 0,
+      isResolved: result.isResolved || false,
+      createdAt: result.createdAt || new Date(),
+      resolvedAt: result.resolvedAt || undefined,
       url: result.url || undefined,
       domain: result.domain || undefined,
     }));
