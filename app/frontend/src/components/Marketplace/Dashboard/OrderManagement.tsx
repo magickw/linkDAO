@@ -95,24 +95,27 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ address }) => 
   });
 
   // Get all orders from the response with proper type safety
-  const { orders: allOrders = [], pagination: paginationData } = ordersResponse || {
-    orders: [],
-    pagination: {
-      total: 0,
-      page: currentPage,
-      pageSize,
-      totalPages: 0
-    }
-  };
+  const { orders: allOrders = [], pagination: paginationData = {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0
+  } } = ordersResponse || { orders: [], pagination: {
+    total: 0,
+    page: currentPage,
+    pageSize,
+    totalPages: 0
+  } };
 
-  // Ensure allOrders is an array
-  const safeAllOrders = Array.isArray(allOrders) ? allOrders : [];
+  // Ensure allOrders is an array and has the correct type
+  const safeAllOrders: Order[] = Array.isArray(allOrders) ? allOrders : [];
   
   // Filter orders based on active tab
-  const filteredOrders = useMemo(() => {
-    return activeTab === 'all' 
-      ? [...safeAllOrders] 
-      : safeAllOrders.filter((order) => order.status === activeTab);
+  const filteredOrders = useMemo<Order[]>(() => {
+    if (activeTab === 'all') {
+      return [...safeAllOrders];
+    }
+    return safeAllOrders.filter((order) => order.status === activeTab);
   }, [safeAllOrders, activeTab]);
 
   // Get status counts for the status tabs

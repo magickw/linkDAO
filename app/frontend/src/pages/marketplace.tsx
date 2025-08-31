@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
+import { ImageWithFallback } from '@/utils/imageUtils';
 import { 
   MarketplaceService, 
   type MarketplaceListing, 
@@ -111,6 +112,16 @@ const MarketplacePage: React.FC = () => {
     return type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ');
   };
 
+  const formatImageUrl = useCallback((url: string | undefined, width: number, height: number) => {
+    if (!url) return '';
+    // If it's already a full URL or data URL, return as is
+    if (url.startsWith('http') || url.startsWith('data:image')) return url;
+    // For local paths, ensure they're properly formatted
+    if (url.startsWith('/')) return url;
+    // For other cases, use our fallback
+    return '';
+  }, []);
+
   // Filter listings based on search term and category
   const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
     const matchesSearch = listing.metadataURI?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,6 +218,14 @@ const MarketplacePage: React.FC = () => {
                     {filteredListings.map((listing) => (
                       <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
                         <div className="p-6">
+                          <div className="mt-4 relative h-48 bg-gray-800/50 rounded-lg overflow-hidden">
+                            <ImageWithFallback
+                              src={formatImageUrl(listing.metadataURI, 400, 300)}
+                              alt={listing.metadataURI || 'Product image'}
+                              className="w-full h-full object-cover"
+                              fallbackType="product"
+                            />
+                          </div>
                           <div className="flex justify-between items-start">
                             <div>
                               <h3 className="text-lg font-medium text-white">
@@ -293,7 +312,7 @@ const MarketplacePage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-white/60 mb-4">
-                © 2024 Web3 Marketplace. Powered by blockchain technology.
+                © 2025 LinkDAO. Powered by blockchain technology.
               </p>
               <div className="flex justify-center space-x-6 text-sm text-white/40">
                 <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
