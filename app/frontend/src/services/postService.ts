@@ -300,8 +300,42 @@ export class PostService {
         retries: 1, // Reduced retries for feed to prevent spam
         deduplicate: true
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching feed:`, error);
+      
+      // If backend is unavailable, return mock data
+      if (error.isServiceUnavailable || error.status === 503) {
+        console.log('Backend unavailable, returning mock feed data');
+        return [
+          {
+            id: 'mock-1',
+            author: '0x1234567890123456789012345678901234567890',
+            content: 'Welcome to LinkDAO! This is a mock post while the backend is starting up.',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            likes: 5,
+            comments: 2,
+            tags: ['welcome', 'mock'],
+            communityId: null,
+            isPublished: true,
+            isDeleted: false
+          },
+          {
+            id: 'mock-2',
+            author: '0x0987654321098765432109876543210987654321',
+            content: 'The backend service is currently being initialized. Please check back in a few minutes.',
+            createdAt: new Date(Date.now() - 60000).toISOString(),
+            updatedAt: new Date(Date.now() - 60000).toISOString(),
+            likes: 3,
+            comments: 1,
+            tags: ['backend', 'status'],
+            communityId: null,
+            isPublished: true,
+            isDeleted: false
+          }
+        ];
+      }
+      
       throw error;
     }
   }
