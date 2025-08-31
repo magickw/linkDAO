@@ -1,0 +1,268 @@
+# AI Content Moderation System - Monitoring Configuration
+
+# Prometheus Configuration
+prometheus:
+  enabled: true
+  port: 9090
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  
+  # Metrics to collect
+  metrics:
+    - name: moderation_requests_total
+      type: counter
+      help: Total number of moderation requests
+      labels: [content_type, decision, vendor]
+    
+    - name: moderation_request_duration_seconds
+      type: histogram
+      help: Duration of moderation requests
+      labels: [content_type, vendor]
+      buckets: [0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0]
+    
+    - name: moderation_confidence_score
+      type: histogram
+      help: AI model confidence scores
+      labels: [vendor, content_type]
+      buckets: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    
+    - name: moderation_queue_size
+      type: gauge
+      help: Current size of moderation queues
+      labels: [queue_type, priority]
+    
+    - name: vendor_api_errors_total
+      type: counter
+      help: Total vendor API errors
+      labels: [vendor, error_type]
+    
+    - name: human_review_decisions_total
+      type: counter
+      help: Total human moderator decisions
+      labels: [decision, moderator_id]
+    
+    - name: appeals_submitted_total
+      type: counter
+      help: Total appeals submitted
+      labels: [original_decision]
+    
+    - name: appeals_overturned_total
+      type: counter
+      help: Total appeals overturned
+      labels: [original_decision, jury_decision]
+    
+    - name: reputation_changes_total
+      type: counter
+      help: Total reputation changes
+      labels: [change_type, reason]
+    
+    - name: content_reports_total
+      type: counter
+      help: Total community reports
+      labels: [content_type, reason, reporter_reputation_tier]
+
+# Alerting Rules
+alerting:
+  enabled: true
+  
+  rules:
+    # High Error Rate
+    - name: high_moderation_error_rate
+      condition: rate(vendor_api_errors_total[5m]) > 0.1
+      severity: critical
+      description: "High error rate in moderation API calls"
+      runbook: "https://docs.company.com/runbooks/moderation-errors"
+      
+    # Queue Backup
+    - name: moderation_queue_backup
+      condition: moderation_queue_size{queue_type="human_review"} > 1000
+      severity: warning
+      description: "Human review queue is backing up"
+      runbook: "https://docs.company.com/runbooks/queue-backup"
+      
+    # Low Confidence Scores
+    - name: low_confidence_scores
+      condition: rate(moderation_confidence_score_bucket{le="0.5"}[10m]) > 0.3
+      severity: warning
+      description: "High rate of low confidence moderation decisions"
+      runbook: "https://docs.company.com/runbooks/low-confidence"
+      
+    # Vendor API Latency
+    - name: high_vendor_latency
+      condition: histogram_quantile(0.95, moderation_request_duration_seconds_bucket{vendor!=""}) > 10
+      severity: warning
+      description: "High latency in vendor API calls"
+      runbook: "https://docs.company.com/runbooks/vendor-latency"
+      
+    # Appeal Overturn Rate
+    - name: high_appeal_overturn_rate
+      condition: rate(appeals_overturned_total[1h]) / rate(appeals_submitted_total[1h]) > 0.3
+      severity: warning
+      description: "High rate of overturned appeals indicates moderation quality issues"
+      runbook: "https://docs.company.com/runbooks/appeal-quality"
+      
+    # System Health
+    - name: moderation_system_down
+      condition: up{job="moderation-api"} == 0
+      severity: critical
+      description: "Moderation system is down"
+      runbook: "https://docs.company.com/runbooks/system-down"
+
+# Grafana Dashboard Configuration
+grafana:
+  enabled: true
+  dashboards:
+    - name: "AI Content Moderation Overview"
+      panels:
+        - title: "Moderation Requests per Second"
+          type: graph
+          query: rate(moderation_requests_total[5m])
+          
+        - title: "Average Response Time"
+          type: singlestat
+          query: avg(moderation_request_duration_seconds)
+          
+        - title: "Queue Sizes"
+          type: graph
+          query: moderation_queue_size
+          
+        - title: "Vendor API Health"
+          type: table
+          query: vendor_api_errors_total
+          
+        - title: "Confidence Score Distribution"
+          type: histogram
+          query: moderation_confidence_score
+          
+        - title: "Human Review Decisions"
+          type: pie
+          query: human_review_decisions_total
+          
+        - title: "Appeal Outcomes"
+          type: graph
+          query: appeals_overturned_total / appeals_submitted_total
+
+# Logging Configuration
+logging:
+  level: info
+  format: json
+  
+  # Structured logging fields
+  fields:
+    - timestamp
+    - level
+    - message
+    - service
+    - version
+    - environment
+    - request_id
+    - user_id
+    - content_id
+    - moderation_case_id
+    - vendor
+    - confidence_score
+    - decision
+    - latency_ms
+    
+  # Log aggregation
+  aggregation:
+    enabled: true
+    endpoint: "https://logs.company.com/api/v1/logs"
+    batch_size: 100
+    flush_interval: 5s
+
+# Tracing Configuration
+tracing:
+  enabled: true
+  service_name: "ai-content-moderation"
+  
+  jaeger:
+    endpoint: "http://jaeger:14268/api/traces"
+    sampler_type: "probabilistic"
+    sampler_param: 0.1
+    
+  # Trace important operations
+  operations:
+    - moderation_request
+    - vendor_api_call
+    - decision_engine
+    - human_review
+    - appeal_processing
+    - reputation_update
+
+# Health Checks
+health_checks:
+  enabled: true
+  interval: 30s
+  timeout: 10s
+  
+  checks:
+    - name: database
+      type: postgresql
+      connection: ${DATABASE_URL}
+      
+    - name: redis
+      type: redis
+      connection: ${REDIS_URL}
+      
+    - name: openai_api
+      type: http
+      url: "https://api.openai.com/v1/models"
+      headers:
+        Authorization: "Bearer ${OPENAI_API_KEY}"
+        
+    - name: google_vision_api
+      type: http
+      url: "https://vision.googleapis.com/v1/images:annotate"
+      
+    - name: ipfs_gateway
+      type: http
+      url: "${IPFS_GATEWAY_URL}/api/v0/version"
+
+# Performance Monitoring
+performance:
+  enabled: true
+  
+  # Resource usage monitoring
+  resources:
+    - cpu_usage_percent
+    - memory_usage_bytes
+    - disk_usage_bytes
+    - network_io_bytes
+    
+  # Application-specific metrics
+  application:
+    - active_connections
+    - request_queue_size
+    - cache_hit_ratio
+    - database_connection_pool_size
+    
+  # Thresholds for alerting
+  thresholds:
+    cpu_usage_percent: 80
+    memory_usage_bytes: 2147483648  # 2GB
+    disk_usage_bytes: 10737418240   # 10GB
+    response_time_p95_ms: 5000
+
+# Notification Channels
+notifications:
+  slack:
+    enabled: true
+    webhook_url: ${SLACK_WEBHOOK_URL}
+    channel: "#moderation-alerts"
+    
+  email:
+    enabled: true
+    smtp_server: ${SMTP_SERVER}
+    from: "alerts@company.com"
+    to: ["moderation-team@company.com", "platform-team@company.com"]
+    
+  pagerduty:
+    enabled: true
+    integration_key: ${PAGERDUTY_INTEGRATION_KEY}
+    
+  webhook:
+    enabled: true
+    url: ${ALERT_WEBHOOK_URL}
+    headers:
+      Authorization: "Bearer ${ALERT_WEBHOOK_TOKEN}"
