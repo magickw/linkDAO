@@ -38,10 +38,14 @@ export class MarketplaceVerificationController {
   async verifyHighValueListing(req: Request, res: Response) {
     try {
       const validation = VerifyListingSchema.safeParse(req.body);
-      if (!validation.success) {
+      if (!('data' in validation)) {
+        const errorDetails = validation.error.issues.map(issue => ({
+          message: issue.message,
+          path: issue.path.join('.')
+        }));
         return res.status(400).json({
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: errorDetails
         });
       }
 
@@ -73,10 +77,14 @@ export class MarketplaceVerificationController {
   async detectCounterfeit(req: Request, res: Response) {
     try {
       const validation = CounterfeitDetectionSchema.safeParse(req.body);
-      if (!validation.success) {
+      if (!('data' in validation)) {
+        const errorDetails = validation.error.issues.map(issue => ({
+          message: issue.message,
+          path: issue.path.join('.')
+        }));
         return res.status(400).json({
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: errorDetails
         });
       }
 
@@ -107,14 +115,25 @@ export class MarketplaceVerificationController {
   async verifyProofOfOwnership(req: Request, res: Response) {
     try {
       const validation = ProofOfOwnershipSchema.safeParse(req.body);
-      if (!validation.success) {
+      if (!('data' in validation)) {
+        const errorDetails = validation.error.issues.map(issue => ({
+          message: issue.message,
+          path: issue.path.join('.')
+        }));
         return res.status(400).json({
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: errorDetails
         });
       }
-
-      const proof: ProofOfOwnership = validation.data;
+      
+      const proof: ProofOfOwnership = {
+        signature: validation.data.signature,
+        message: validation.data.message,
+        walletAddress: validation.data.walletAddress,
+        tokenId: validation.data.tokenId,
+        contractAddress: validation.data.contractAddress,
+        timestamp: validation.data.timestamp
+      };
 
       const isValid = await marketplaceVerificationService.verifyProofOfOwnership(proof);
 
@@ -171,10 +190,14 @@ export class MarketplaceVerificationController {
   async detectScamPatterns(req: Request, res: Response) {
     try {
       const validation = ScamDetectionSchema.safeParse(req.body);
-      if (!validation.success) {
+      if (!('data' in validation)) {
+        const errorDetails = validation.error.issues.map(issue => ({
+          message: issue.message,
+          path: issue.path.join('.')
+        }));
         return res.status(400).json({
           error: 'Invalid request data',
-          details: validation.error.errors
+          details: errorDetails
         });
       }
 
