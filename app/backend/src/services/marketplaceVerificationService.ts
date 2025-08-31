@@ -1,6 +1,6 @@
 import { eq, and, gte, desc } from 'drizzle-orm';
 import { db } from '../db/index.js';
-import { nft_listings, user_profiles, reputation_scores } from '../db/schema.js';
+import { users, userReputationScores, sellerVerifications } from '../db/schema.js';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
 
@@ -322,13 +322,23 @@ export class MarketplaceVerificationService {
 
   private async getSellerReputation(walletAddress: string): Promise<number> {
     try {
+      // First get the user ID from wallet address
+      const user = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
+        .limit(1);
+      
+      if (!user[0]) return 0;
+      
+      // Then get the reputation score
       const reputation = await db
-        .select({ score: reputation_scores.totalScore })
-        .from(reputation_scores)
-        .where(eq(reputation_scores.walletAddress, walletAddress))
+        .select({ score: userReputationScores.overallScore })
+        .from(userReputationScores)
+        .where(eq(userReputationScores.userId, user[0].id))
         .limit(1);
 
-      return reputation[0]?.score || 0;
+      return Number(reputation[0]?.score) || 0;
     } catch (error) {
       console.error('Error fetching seller reputation:', error);
       return 0;
@@ -337,13 +347,14 @@ export class MarketplaceVerificationService {
 
   private async checkKYCStatus(walletAddress: string): Promise<boolean> {
     try {
-      const profile = await db
-        .select({ kycVerified: user_profiles.kycVerified })
-        .from(user_profiles)
-        .where(eq(user_profiles.walletAddress, walletAddress))
+      // Check KYC status from seller_verifications table
+      const verification = await db
+        .select({ kycVerified: sellerVerifications.kycVerified })
+        .from(sellerVerifications)
+        .where(eq(sellerVerifications.walletAddress, walletAddress))
         .limit(1);
 
-      return profile[0]?.kycVerified || false;
+      return verification[0]?.kycVerified || false;
     } catch (error) {
       console.error('Error checking KYC status:', error);
       return false;
