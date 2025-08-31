@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { PerceptualHashingService } from '../services/perceptualHashingService';
 import { TextHashingService } from '../services/textHashingService';
 import { VendorApiOptimizer } from '../services/vendorApiOptimizer';
@@ -59,7 +59,7 @@ describe('Performance Optimization Services', () => {
       ]);
 
       // Mock the generateImageHash method to return predictable results
-      vi.spyOn(hashingService, 'generateImageHash').mockResolvedValue({
+      jest.spyOn(hashingService, 'generateImageHash').mockResolvedValue({
         hash: 'abcd1235', // Similar to content1
         algorithm: 'dhash',
         confidence: 1.0
@@ -176,7 +176,7 @@ describe('Performance Optimization Services', () => {
       expect(results).toHaveLength(5);
       results.forEach(result => {
         expect(result).toHaveProperty('confidence');
-        expect(result.vendor).toBe('openai');
+        expect((result as any).vendor).toBe('openai');
       });
     });
 
@@ -311,10 +311,10 @@ describe('Performance Optimization Services', () => {
 
   describe('CircuitBreaker', () => {
     let circuitBreaker: CircuitBreaker;
-    let mockFunction: vi.Mock;
+    let mockFunction: jest.Mock;
 
     beforeEach(() => {
-      mockFunction = vi.fn();
+      mockFunction = jest.fn();
       circuitBreaker = new CircuitBreaker('test-service', {
         failureThreshold: 3,
         recoveryTimeout: 1000,
