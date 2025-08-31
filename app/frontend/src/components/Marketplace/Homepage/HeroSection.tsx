@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { Button, GradientButton } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
 import { FeaturedProductCarousel } from './FeaturedProductCarousel';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 interface HeroSectionProps {
   onStartSelling?: () => void;
@@ -157,35 +158,31 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Call-to-Action Buttons */}
           <motion.div
             variants={itemVariants}
-            className="flex flex-col sm:flex-row justify-center gap-6 mb-16"
+            className="flex flex-col items-center gap-6 mb-16"
           >
-            <GradientButton
-              size="large"
-              gradient="primary"
-              onClick={onStartSelling}
-              className="text-lg px-8 py-4 font-semibold shadow-2xl"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Start Selling
-            </GradientButton>
+            <div className="flex flex-col sm:flex-row gap-6">
+              <GradientButton
+                size="large"
+                gradient="primary"
+                onClick={onStartSelling}
+                className="text-lg px-8 py-4 font-semibold shadow-2xl"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="mr-2">➕</span> Create Listing
+              </GradientButton>
 
-            <Button
-              variant="outline"
-              size="large"
-              onClick={onBrowseMarketplace}
-              className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Browse Marketplace
-            </Button>
+              <Button
+                variant="outline"
+                size="large"
+                onClick={onBrowseMarketplace}
+                className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="mr-2">📋</span> My Listings
+              </Button>
+            </div>
           </motion.div>
 
           {/* Featured Products Carousel */}
