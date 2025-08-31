@@ -120,9 +120,14 @@ app.get('/api/posts', (req, res) => {
 
 // Import marketplace verification routes
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes.js';
+// Import link safety routes
+import linkSafetyRoutes from './routes/linkSafetyRoutes.js';
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
+
+// Link safety routes
+app.use('/api/link-safety', linkSafetyRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {

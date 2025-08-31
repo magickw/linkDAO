@@ -1174,169 +1174,6 @@ export const projectFiles = pgTable("project_files", {
 
 // AI Content Moderation System Tables
 
-export const moderationActions = pgTable("moderation_actions", {
-  id: serial("id").primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  contentId: varchar("content_id", { length: 64 }).notNull(),
-  action: varchar("action", { length: 24 }).notNull(),
-  durationSec: integer("duration_sec").default(0),
-  appliedBy: varchar("applied_by", { length: 64 }),
-  rationale: text("rationale"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  userIdIdx: index("idx_moderation_actions_user_id").on(t.userId),
-  contentIdIdx: index("idx_moderation_actions_content_id").on(t.contentId),
-  createdAtIdx: index("idx_moderation_actions_created_at").on(t.createdAt),
-  userCreatedIdx: index("idx_moderation_actions_user_created").on(t.userId, t.createdAt),
-}));
-
-export const contentReports = pgTable("content_reports", {
-  id: serial("id").primaryKey(),
-  contentId: varchar("content_id", { length: 64 }).notNull(),
-  contentType: varchar("content_type", { length: 24 }).notNull(),
-  reporterId: uuid("reporter_id").notNull().references(() => users.id),
-  reason: varchar("reason", { length: 48 }).notNull(),
-  details: text("details"),
-  category: varchar("category", { length: 24 }),
-  weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
-  status: varchar("status", { length: 24 }).default("open"),
-  moderatorId: uuid("moderator_id").references(() => users.id),
-  resolution: text("resolution"),
-  moderatorNotes: text("moderator_notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (t) => ({
-  contentIdIdx: index("idx_content_reports_content_id").on(t.contentId),
-  reporterIdIdx: index("idx_content_reports_reporter_id").on(t.reporterId),
-  statusIdx: index("idx_content_reports_status").on(t.status),
-  createdAtIdx: index("idx_content_reports_created_at").on(t.createdAt),
-  contentStatusIdx: index("idx_content_reports_content_status").on(t.contentId, t.status),
-  categoryIdx: index("idx_content_reports_category").on(t.category),
-  moderatorIdx: index("idx_content_reports_moderator").on(t.moderatorId),
-}));
-
-export const moderationAppeals = pgTable("moderation_appeals", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").notNull().references(() => moderationCases.id),
-  appellantId: uuid("appellant_id").notNull().references(() => users.id),
-  status: varchar("status", { length: 24 }).default("open"),
-  stakeAmount: numeric("stake_amount", { precision: 20, scale: 8 }).default("0"),
-  juryDecision: varchar("jury_decision", { length: 24 }),
-  decisionCid: text("decision_cid"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  caseIdIdx: index("idx_moderation_appeals_case_id").on(t.caseId),
-  appellantIdIdx: index("idx_moderation_appeals_appellant_id").on(t.appellantId),
-  statusIdx: index("idx_moderation_appeals_status").on(t.status),
-}));
-
-export const appealJurors = pgTable("appeal_jurors", {
-  id: serial("id").primaryKey(),
-  appealId: integer("appeal_id").notNull().references(() => moderationAppeals.id),
-  jurorId: uuid("juror_id").notNull().references(() => users.id),
-  selectionWeight: numeric("selection_weight", { precision: 10, scale: 4 }).notNull(),
-  voteCommitment: varchar("vote_commitment", { length: 64 }),
-  voteReveal: varchar("vote_reveal", { length: 24 }),
-  voteReasoning: text("vote_reasoning"),
-  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).default("0"),
-  slashedAmount: numeric("slashed_amount", { precision: 20, scale: 8 }).default("0"),
-  createdAt: timestamp("created_at").defaultNow(),
-  votedAt: timestamp("voted_at"),
-}, (t) => ({
-  appealIdIdx: index("idx_appeal_jurors_appeal_id").on(t.appealId),
-  jurorIdIdx: index("idx_appeal_jurors_juror_id").on(t.jurorId),
-}));
-
-export const moderationPolicies = pgTable("moderation_policies", {
-  id: serial("id").primaryKey(),
-  category: varchar("category", { length: 48 }).notNull(),
-  severity: varchar("severity", { length: 24 }).notNull(),
-  confidenceThreshold: numeric("confidence_threshold", { precision: 5, scale: 4 }).notNull(),
-  action: varchar("action", { length: 24 }).notNull(),
-  reputationModifier: numeric("reputation_modifier", { precision: 5, scale: 4 }).default("0"),
-  description: text("description").notNull(),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const moderationVendors = pgTable("moderation_vendors", {
-  id: serial("id").primaryKey(),
-  vendorName: varchar("vendor_name", { length: 32 }).notNull().unique(),
-  vendorType: varchar("vendor_type", { length: 24 }).notNull(),
-  apiEndpoint: varchar("api_endpoint", { length: 255 }),
-  isEnabled: boolean("is_enabled").default(true),
-  weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
-  costPerRequest: numeric("cost_per_request", { precision: 10, scale: 6 }).default("0"),
-  avgLatencyMs: integer("avg_latency_ms").default(0),
-  successRate: numeric("success_rate", { precision: 5, scale: 4 }).default("1"),
-  lastHealthCheck: timestamp("last_health_check"),
-  configuration: text("configuration"), // JSON
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-export const moderationAuditLog = pgTable("moderation_audit_log", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").references(() => moderationCases.id),
-  actionType: varchar("action_type", { length: 32 }).notNull(),
-  actorId: varchar("actor_id", { length: 64 }),
-  actorType: varchar("actor_type", { length: 24 }).default("user"),
-  oldState: text("old_state"), // JSON
-  newState: text("new_state"), // JSON
-  reasoning: text("reasoning"),
-  ipAddress: varchar("ip_address", { length: 45 }), // IPv6 compatible
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  caseIdIdx: index("idx_moderation_audit_log_case_id").on(t.caseId),
-  createdAtIdx: index("idx_moderation_audit_log_created_at").on(t.createdAt),
-  actorIdIdx: index("idx_moderation_audit_log_actor_id").on(t.actorId),
-}));
-
-export const moderationMetrics = pgTable("moderation_metrics", {
-  id: serial("id").primaryKey(),
-  metricType: varchar("metric_type", { length: 32 }).notNull(),
-  metricName: varchar("metric_name", { length: 64 }).notNull(),
-  metricValue: numeric("metric_value", { precision: 15, scale: 6 }).notNull(),
-  dimensions: text("dimensions"), // JSON
-  recordedAt: timestamp("recorded_at").defaultNow(),
-}, (t) => ({
-  metricTypeIdx: index("idx_moderation_metrics_metric_type").on(t.metricType),
-  recordedAtIdx: index("idx_moderation_metrics_recorded_at").on(t.recordedAt),
-}));
-
-export const contentHashes = pgTable("content_hashes", {
-  id: serial("id").primaryKey(),
-  contentId: varchar("content_id", { length: 64 }).notNull(),
-  contentType: varchar("content_type", { length: 24 }).notNull(),
-  hashType: varchar("hash_type", { length: 24 }).notNull(),
-  hashValue: varchar("hash_value", { length: 128 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  contentIdIdx: index("idx_content_hashes_content_id").on(t.contentId),
-  hashValueIdx: index("idx_content_hashes_hash_value").on(t.hashValue),
-  hashTypeIdx: index("idx_content_hashes_hash_type").on(t.hashType),
-}));
-
-export const reputationImpacts = pgTable("reputation_impacts", {
-  id: serial("id").primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  caseId: integer("case_id").references(() => moderationCases.id),
-  impactType: varchar("impact_type", { length: 32 }).notNull(),
-  impactValue: numeric("impact_value", { precision: 10, scale: 4 }).notNull(),
-  previousReputation: numeric("previous_reputation", { precision: 10, scale: 4 }),
-  newReputation: numeric("new_reputation", { precision: 10, scale: 4 }),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (t) => ({
-  userIdIdx: index("idx_reputation_impacts_user_id").on(t.userId),
-  caseIdIdx: index("idx_reputation_impacts_case_id").on(t.caseId),
-  createdAtIdx: index("idx_reputation_impacts_created_at").on(t.createdAt),
-}));
-
-// AI Content Moderation System Tables
-
 // Core moderation cases
 export const moderationCases = pgTable("moderation_cases", {
   id: serial("id").primaryKey(),
@@ -1788,3 +1625,241 @@ export const marketplaceAppeals = pgTable("marketplace_appeals", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),
 });
+// Privacy and Compliance Tables - Task 14
+
+// User consent management
+export const user_consents = pgTable("user_consents", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: uuid("user_id").notNull(),
+  consentType: varchar("consent_type", { length: 32 }).notNull(),
+  status: varchar("status", { length: 16 }).default("pending").notNull(),
+  purpose: text("purpose").notNull(),
+  legalBasis: varchar("legal_basis", { length: 32 }).notNull(),
+  grantedAt: timestamp("granted_at"),
+  withdrawnAt: timestamp("withdrawn_at"),
+  expiresAt: timestamp("expires_at"),
+  ipAddress: varchar("ip_address", { length: 45 }).notNull(),
+  userAgent: text("user_agent").notNull(),
+  consentVersion: varchar("consent_version", { length: 16 }).default("1.0").notNull(),
+  metadata: text("metadata"), // JSON
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Data retention policies
+export const data_retention_policies = pgTable("data_retention_policies", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  dataType: varchar("data_type", { length: 64 }).notNull(),
+  retentionPeriodDays: integer("retention_period_days").notNull(),
+  region: varchar("region", { length: 16 }),
+  autoDelete: boolean("auto_delete").default(false).notNull(),
+  archiveBeforeDelete: boolean("archive_before_delete").default(false).notNull(),
+  encryptArchive: boolean("encrypt_archive").default(false).notNull(),
+  notifyBeforeDelete: boolean("notify_before_delete").default(false).notNull(),
+  notificationDays: integer("notification_days").default(0).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Data retention audit logs
+export const data_retention_logs = pgTable("data_retention_logs", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  policyId: varchar("policy_id", { length: 64 }).notNull(),
+  action: varchar("action", { length: 16 }).notNull(),
+  recordCount: integer("record_count").default(0).notNull(),
+  dataType: varchar("data_type", { length: 64 }).notNull(),
+  executedAt: timestamp("executed_at").defaultNow(),
+  executedBy: varchar("executed_by", { length: 64 }).notNull(),
+  success: boolean("success").default(false).notNull(),
+  errorMessage: text("error_message"),
+  executionTimeMs: integer("execution_time_ms").default(0).notNull(),
+});
+
+// Privacy evidence storage
+export const privacy_evidence = pgTable("privacy_evidence", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  caseId: integer("case_id").notNull(),
+  contentHash: varchar("content_hash", { length: 64 }).notNull(),
+  evidenceType: varchar("evidence_type", { length: 32 }).default("moderation_decision").notNull(),
+  safeContent: text("safe_content").notNull(),
+  modelOutputs: text("model_outputs"), // JSON
+  decisionRationale: text("decision_rationale").notNull(),
+  policyVersion: varchar("policy_version", { length: 16 }).default("1.0").notNull(),
+  moderatorId: varchar("moderator_id", { length: 64 }),
+  region: varchar("region", { length: 16 }).notNull(),
+  encryptionKeyHash: varchar("encryption_key_hash", { length: 64 }),
+  piiRedactionApplied: boolean("pii_redaction_applied").default(false).notNull(),
+  retentionExpiresAt: timestamp("retention_expires_at").notNull(),
+  legalBasis: varchar("legal_basis", { length: 32 }).notNull(),
+  dataClassification: varchar("data_classification", { length: 16 }).default("internal").notNull(),
+  processingPurpose: varchar("processing_purpose", { length: 64 }).notNull(),
+  ipfsCid: text("ipfs_cid"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Evidence access logs
+export const evidence_access_logs = pgTable("evidence_access_logs", {
+  id: serial("id").primaryKey(),
+  evidenceId: varchar("evidence_id", { length: 64 }).notNull(),
+  accessedBy: varchar("accessed_by", { length: 64 }).notNull(),
+  accessedAt: timestamp("accessed_at").defaultNow(),
+  purpose: varchar("purpose", { length: 128 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }).notNull(),
+  userAgent: text("user_agent").notNull(),
+  accessGranted: boolean("access_granted").default(true).notNull(),
+});
+
+// Geofencing rules
+export const geofencing_rules = pgTable("geofencing_rules", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  regions: text("regions"), // JSON array
+  action: varchar("action", { length: 16 }).notNull(),
+  contentTypes: text("content_types"), // JSON array
+  reason: text("reason").notNull(),
+  priority: integer("priority").default(50).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// PII detection results (for audit and improvement)
+export const pii_detection_results = pgTable("pii_detection_results", {
+  id: serial("id").primaryKey(),
+  contentHash: varchar("content_hash", { length: 64 }).notNull(),
+  detectedTypes: text("detected_types"), // JSON array
+  confidence: numeric("confidence", { precision: 3, scale: 2 }).default("0").notNull(),
+  redactionApplied: boolean("redaction_applied").default(false).notNull(),
+  sensitivityLevel: varchar("sensitivity_level", { length: 16 }).default("medium").notNull(),
+  processingTimeMs: integer("processing_time_ms").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Regional compliance configurations
+export const regional_compliance = pgTable("regional_compliance", {
+  region: varchar("region", { length: 16 }).primaryKey(),
+  country: varchar("country", { length: 8 }).notNull(),
+  gdprApplicable: boolean("gdpr_applicable").default(false).notNull(),
+  ccpaApplicable: boolean("ccpa_applicable").default(false).notNull(),
+  dataLocalization: boolean("data_localization").default(false).notNull(),
+  contentRestrictions: text("content_restrictions"), // JSON array
+  retentionPeriodDays: integer("retention_period_days").default(730).notNull(),
+  consentRequired: boolean("consent_required").default(false).notNull(),
+  rightToErasure: boolean("right_to_erasure").default(false).notNull(),
+  dataPortability: boolean("data_portability").default(false).notNull(),
+  minorProtections: boolean("minor_protections").default(true).notNull(),
+  cryptoRegulations: text("crypto_regulations"), // JSON array
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Link Safety and URL Analysis System Tables - Task 15
+
+// URL Analysis Results Table
+export const urlAnalysisResults = pgTable("url_analysis_results", {
+  id: serial("id").primaryKey(),
+  url: text("url").notNull(),
+  urlHash: varchar("url_hash", { length: 64 }).notNull().unique(),
+  domain: varchar("domain", { length: 255 }).notNull(),
+  status: varchar("status", { length: 24 }).default("pending"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 2 }).default("0.00"),
+  analysisResults: text("analysis_results"), // JSON
+  unfurledContent: text("unfurled_content"), // JSON
+  lastAnalyzed: timestamp("last_analyzed").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  urlHashIdx: index("idx_url_analysis_url_hash").on(t.urlHash),
+  domainIdx: index("idx_url_analysis_domain").on(t.domain),
+  statusIdx: index("idx_url_analysis_status").on(t.status),
+  lastAnalyzedIdx: index("idx_url_analysis_last_analyzed").on(t.lastAnalyzed),
+}));
+
+// Domain Reputation Table
+export const domainReputation = pgTable("domain_reputation", {
+  id: serial("id").primaryKey(),
+  domain: varchar("domain", { length: 255 }).notNull().unique(),
+  reputationScore: numeric("reputation_score", { precision: 5, scale: 2 }).default("50.00"),
+  category: varchar("category", { length: 32 }),
+  isVerified: boolean("is_verified").default(false),
+  isBlacklisted: boolean("is_blacklisted").default(false),
+  blacklistReason: text("blacklist_reason"),
+  firstSeen: timestamp("first_seen").defaultNow(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  analysisCount: integer("analysis_count").default(0),
+  maliciousCount: integer("malicious_count").default(0),
+}, (t) => ({
+  domainIdx: index("idx_domain_reputation_domain").on(t.domain),
+  scoreIdx: index("idx_domain_reputation_score").on(t.reputationScore),
+  blacklistedIdx: index("idx_domain_reputation_blacklisted").on(t.isBlacklisted),
+}));
+
+// Custom Blacklist Table
+export const customBlacklist = pgTable("custom_blacklist", {
+  id: serial("id").primaryKey(),
+  entryType: varchar("entry_type", { length: 16 }).notNull(),
+  entryValue: text("entry_value").notNull(),
+  category: varchar("category", { length: 32 }).notNull(),
+  severity: varchar("severity", { length: 16 }).default("medium"),
+  description: text("description"),
+  source: varchar("source", { length: 64 }),
+  addedBy: uuid("added_by").references(() => users.id),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  typeValueIdx: index("idx_custom_blacklist_type_value").on(t.entryType, t.entryValue),
+  categoryIdx: index("idx_custom_blacklist_category").on(t.category),
+  activeIdx: index("idx_custom_blacklist_active").on(t.isActive),
+}));
+
+// Link Safety Vendor Results Table
+export const linkSafetyVendorResults = pgTable("link_safety_vendor_results", {
+  id: serial("id").primaryKey(),
+  urlAnalysisId: integer("url_analysis_id").references(() => urlAnalysisResults.id),
+  vendorName: varchar("vendor_name", { length: 32 }).notNull(),
+  vendorStatus: varchar("vendor_status", { length: 24 }),
+  threatTypes: text("threat_types"), // JSON array
+  confidence: numeric("confidence", { precision: 5, scale: 2 }).default("0.00"),
+  rawResponse: text("raw_response"), // JSON
+  analysisTimeMs: integer("analysis_time_ms"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  urlAnalysisIdx: index("idx_link_safety_vendor_url_analysis").on(t.urlAnalysisId),
+  vendorNameIdx: index("idx_link_safety_vendor_name").on(t.vendorName),
+}));
+
+// Content Link Associations Table
+export const contentLinks = pgTable("content_links", {
+  id: serial("id").primaryKey(),
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentType: varchar("content_type", { length: 24 }).notNull(),
+  urlAnalysisId: integer("url_analysis_id").references(() => urlAnalysisResults.id),
+  positionInContent: integer("position_in_content"),
+  linkText: text("link_text"),
+  isShortened: boolean("is_shortened").default(false),
+  originalUrl: text("original_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  contentIdx: index("idx_content_links_content").on(t.contentId, t.contentType),
+  urlAnalysisIdx: index("idx_content_links_url_analysis").on(t.urlAnalysisId),
+}));
+
+// Real-time Link Monitoring Table
+export const linkMonitoringAlerts = pgTable("link_monitoring_alerts", {
+  id: serial("id").primaryKey(),
+  urlAnalysisId: integer("url_analysis_id").references(() => urlAnalysisResults.id),
+  alertType: varchar("alert_type", { length: 32 }).notNull(),
+  severity: varchar("severity", { length: 16 }).default("medium"),
+  description: text("description"),
+  affectedContentCount: integer("affected_content_count").default(0),
+  isResolved: boolean("is_resolved").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+}, (t) => ({
+  alertTypeIdx: index("idx_link_monitoring_alerts_type").on(t.alertType),
+  resolvedIdx: index("idx_link_monitoring_alerts_resolved").on(t.isResolved),
+}));
