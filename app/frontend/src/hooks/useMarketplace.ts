@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAccount, useContractRead, useContractWrite, useWaitForTransactionReceipt } from 'wagmi';
 import { ethers } from 'ethers';
-import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
-import { Contract } from '@ethersproject/contracts';
+import { formatEther, parseEther } from 'ethers/lib/utils';
+
+// Import types from ethers
+type JsonRpcProvider = ethers.providers.JsonRpcProvider;
+type Web3Provider = ethers.providers.Web3Provider;
+const { Contract } = ethers;
 
 declare global {
   interface Window {
@@ -77,7 +81,7 @@ const parseProductFromChain = (productData: any): Product => ({
   id: productData.id.toString(),
   name: productData.metadata?.name || 'Unnamed Product',
   description: productData.metadata?.description || '',
-  price: ethers.formatEther(productData.price.toString()),
+  price: formatEther(productData.price.toString()),
   image: productData.metadata?.image || '/placeholder-product.png',
   stock: productData.quantity.toNumber(),
   status: productData.status === 0 ? 'draft' : 'active',
@@ -95,12 +99,12 @@ const parseOrderFromChain = (orderData: any): Order => {
     customerEmail: orderData.customerEmail || '',
     shippingAddress: orderData.shippingAddress || '',
     status: (orderData.status || 'pending') as Order['status'],
-    total: orderData.total ? ethers.formatEther(orderData.total) : '0',
+    total: orderData.total ? formatEther(orderData.total.toString()) : '0',
     items: Array.isArray(orderData.items) 
       ? orderData.items.map((item: any) => ({
           id: item.id?.toString() || '',
           name: item.name || 'Unknown Product',
-          price: item.price ? ethers.formatEther(item.price) : '0',
+          price: item.price ? formatEther(item.price.toString()) : '0',
           quantity: Number(item.quantity || 1),
           image: item.image || 'https://via.placeholder.com/50',
         }))
@@ -292,7 +296,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       args: [
         productData.name,
         productData.description,
-        ethers.parseEther(productData.price),
+        parseEther(productData.price),
         productData.stock,
         productData.category,
         {
@@ -330,6 +334,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
   const updateProduct = async (productId: string, updates: Partial<Product>) => {
     if (!isConnected || !address) throw new Error('Not connected');
     
+    const priceInWei = updates.price ? parseEther(updates.price) : 0;
+    
     const hash = await updateProductWrite({
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: marketplaceABI.abi,
@@ -338,7 +344,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         productId,
         updates.name || '',
         updates.description || '',
-        updates.price ? ethers.parseEther(updates.price) : 0,
+        priceInWei,
         updates.stock || 0,
         updates.category || '',
         {
@@ -511,9 +517,9 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         throw new Error('Ethereum provider not found');
       }
       
-      const provider = new Web3Provider(window.ethereum);
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
-      const contract = new Contract(
+      const contract = new ethers.Contract(
         MARKETPLACE_ADDRESS,
         [updateOrderStatusAbi],
         signer

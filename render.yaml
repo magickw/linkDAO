@@ -14,7 +14,7 @@ services:
         value: 10000
       - key: DATABASE_URL
         fromDatabase:
-          name: linkdao-db
+          name: linkdao
           property: connectionString
       - key: REDIS_URL
         fromService:
@@ -24,9 +24,9 @@ services:
     autoDeploy: true
     
 databases:
-  - name: linkdao-db
+  - name: linkdao
     databaseName: linkdao
-    user: linkdao_user
+    user: neondb_owner
     plan: free
 
 services:

@@ -645,18 +645,6 @@ export const reviewReports = pgTable("review_reports", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const reputationHistory = pgTable("reputation_history", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  changeType: varchar("change_type", { length: 50 }).notNull(),
-  changeValue: integer("change_value").notNull(),
-  previousScore: integer("previous_score").notNull(),
-  newScore: integer("new_score").notNull(),
-  reason: text("reason"),
-  relatedEntityType: varchar("related_entity_type", { length: 50 }),
-  relatedEntityId: varchar("related_entity_id", { length: 128 }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 // Services Marketplace Tables
 
@@ -1181,20 +1169,21 @@ export const moderationCases = pgTable("moderation_cases", {
   contentType: varchar("content_type", { length: 24 }).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
   status: varchar("status", { length: 24 }).default("pending"),
-  riskScore: numeric("risk_score").default("0"),
+  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default("0"),
   decision: varchar("decision", { length: 24 }),
   reasonCode: varchar("reason_code", { length: 48 }),
-  confidence: numeric("confidence").default("0"),
-  vendorScores: text("vendor_scores"), // JSON
+  confidence: numeric("confidence", { precision: 5, scale: 4 }).default("0"),
+  vendorScores: text("vendor_scores"), // JSON string
   evidenceCid: text("evidence_cid"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => ({
   contentIdx: index("moderation_cases_content_idx").on(t.contentId),
   userIdx: index("moderation_cases_user_idx").on(t.userId),
   statusIdx: index("moderation_cases_status_idx").on(t.status),
 }));
 
+// ... (rest of the code remains the same)
 // Moderation actions/enforcement
 export const moderationActions = pgTable("moderation_actions", {
   id: serial("id").primaryKey(),
@@ -1317,10 +1306,11 @@ export const moderationAuditLog = pgTable("moderation_audit_log", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Reputation history tracking (updated to match existing pattern)
+// Reputation history tracking
 export const reputationHistory = pgTable("reputation_history", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
+  changeType: varchar("change_type", { length: 50 }).notNull(),
   impactType: varchar("impact_type", { length: 50 }).notNull(),
   impactValue: numeric("impact_value").notNull(),
   previousScore: numeric("previous_score").notNull(),
@@ -1437,52 +1427,8 @@ export const reputationRewards = pgTable("reputation_rewards", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Core moderation cases table
-export const moderationCases = pgTable("moderation_cases", {
-  id: serial("id").primaryKey(),
-  contentId: varchar("content_id", { length: 64 }).notNull(),
-  contentType: varchar("content_type", { length: 24 }).notNull(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  status: varchar("status", { length: 24 }).default("pending"),
-  riskScore: numeric("risk_score", { precision: 5, scale: 4 }).default("0"),
-  decision: varchar("decision", { length: 24 }),
-  reasonCode: varchar("reason_code", { length: 48 }),
-  confidence: numeric("confidence", { precision: 5, scale: 4 }).default("0"),
-  vendorScores: text("vendor_scores"), // JSON string
-  evidenceCid: text("evidence_cid"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
 
-// Community reports table
-export const contentReports = pgTable("content_reports", {
-  id: serial("id").primaryKey(),
-  contentId: varchar("content_id", { length: 64 }).notNull(),
-  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
-  reason: varchar("reason", { length: 48 }).notNull(),
-  details: text("details"),
-  weight: numeric("weight", { precision: 5, scale: 4 }).default("1"),
-  status: varchar("status", { length: 24 }).default("open"),
-  contentType: varchar("content_type", { length: 24 }).notNull(),
-  category: varchar("category", { length: 24 }),
-  moderatorId: uuid("moderator_id").references(() => users.id),
-  resolution: text("resolution"),
-  moderatorNotes: text("moderator_notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
 
-// Appeals system table
-export const moderationAppeals = pgTable("moderation_appeals", {
-  id: serial("id").primaryKey(),
-  caseId: integer("case_id").references(() => moderationCases.id).notNull(),
-  appellantId: uuid("appellant_id").references(() => users.id).notNull(),
-  status: varchar("status", { length: 24 }).default("open"),
-  stakeAmount: numeric("stake_amount", { precision: 20, scale: 8 }).default("0"),
-  juryDecision: varchar("jury_decision", { length: 24 }),
-  decisionCid: text("decision_cid"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
 
 // Marketplace-specific moderation tables
 
