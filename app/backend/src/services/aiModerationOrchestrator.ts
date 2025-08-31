@@ -1,6 +1,8 @@
 import { OpenAIModerationService } from './vendors/openaiModerationService';
 import { PerspectiveAPIService } from './vendors/perspectiveApiService';
 import { GoogleVisionService } from './vendors/googleVisionService';
+import { gracefulDegradationService } from './gracefulDegradationService';
+import { systemHealthMonitoringService } from './systemHealthMonitoringService';
 
 export interface ContentInput {
   id: string;
@@ -89,28 +91,38 @@ export class AIModerationOrchestrator {
     const results: ModerationResult[] = [];
 
     try {
-      // Scan text content if present
-      if (content.text) {
-        const textResults = await this.scanTextContent(content.text);
-        results.push(...textResults);
-      }
+      // Use graceful degradation for the entire scanning process
+      return await gracefulDegradationService.executeWithDegradation(
+        'content-moderation',
+        async () => {
+          // Scan text content if present
+          if (content.text) {
+            const textResults = await this.scanTextContent(content.text);
+            results.push(...textResults);
+          }
 
-      // Scan media content if present
-      if (content.media && content.media.length > 0) {
-        const mediaResults = await this.scanMediaContent(content.media);
-        results.push(...mediaResults);
-      }
+          // Scan media content if present
+          if (content.media && content.media.length > 0) {
+            const mediaResults = await this.scanMediaContent(content.media);
+            results.push(...mediaResults);
+          }
 
-      // Aggregate results into final decision
-      const decision = this.aggregateResults(results, content);
-      
-      return {
-        ...decision,
-        evidenceHash: this.generateEvidenceHash(content, results)
-      };
+          // Aggregate results into final decision
+          const decision = this.aggregateResults(results, content);
+          
+          return {
+            ...decision,
+            evidenceHash: this.generateEvidenceHash(content, results)
+          };
+        },
+        { content, results }
+      );
 
     } catch (error) {
       console.error('Error in AI moderation orchestrator:', error);
+      
+      // Update service health
+      systemHealthMonitoringService.updateServiceHealth('ai-moderation-orchestrator', false);
       
       // Return safe fallback decision
       return {
@@ -127,33 +139,31 @@ export class AIModerationOrchestrator {
   private async scanTextContent(text: string): Promise<ModerationResult[]> {
     const results: ModerationResult[] = [];
     
-    // Run text vendors in parallel with timeout
+    // Run text vendors in parallel with graceful degradation
     const textPromises = this.textVendors.map(async (vendor) => {
-      try {
-        const startTime = Date.now();
-        const result = await Promise.race([
-          vendor.scanText(text),
-          this.timeoutPromise(5000) // 5 second timeout
-        ]);
-        
-        return {
-          ...result,
-          latency: Date.now() - startTime
-        };
-      } catch (error) {
-        console.error(`Text scanning failed for vendor ${vendor.name}:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-          vendor: vendor.name,
-          confidence: 0,
-          categories: [],
-          reasoning: `Vendor error: ${errorMessage}`,
-          cost: 0,
-          latency: 0,
-          success: false,
-          error: errorMessage
-        };
-      }
+      return await gracefulDegradationService.executeWithDegradation(
+        `text-moderation-${vendor.name}`,
+        async () => {
+          const startTime = Date.now();
+          const result = await gracefulDegradationService.executeWithRetry(
+            () => vendor.scanText(text),
+            `${vendor.name}-text-scan`
+          );
+          
+          // Update service health on success
+          systemHealthMonitoringService.updateServiceHealth(
+            vendor.name, 
+            true, 
+            Date.now() - startTime
+          );
+          
+          return {
+            ...result,
+            latency: Date.now() - startTime
+          };
+        },
+        { text, vendor: vendor.name }
+      );
     });
 
     const textResults = await Promise.allSettled(textPromises);
@@ -161,6 +171,15 @@ export class AIModerationOrchestrator {
     textResults.forEach((result) => {
       if (result.status === 'fulfilled') {
         results.push(result.value);
+      } else {
+        // Handle rejected promises (fallback results)
+        const vendorName = this.extractVendorNameFromError(result.reason);
+        systemHealthMonitoringService.updateServiceHealth(vendorName, false);
+        
+        // Add fallback result if available
+        if (result.reason?.fallback) {
+          results.push(result.reason);
+        }
       }
     });
 
@@ -189,35 +208,33 @@ export class AIModerationOrchestrator {
     const results: ModerationResult[] = [];
     
     const imagePromises = this.imageVendors.map(async (vendor) => {
-      try {
-        if (!vendor.scanImage) {
-          return null;
-        }
-        
-        const startTime = Date.now();
-        const result = await Promise.race([
-          vendor.scanImage(imageUrl),
-          this.timeoutPromise(30000) // 30 second timeout for images
-        ]);
-        
-        return {
-          ...result,
-          latency: Date.now() - startTime
-        };
-      } catch (error) {
-        console.error(`Image scanning failed for vendor ${vendor.name}:`, error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return {
-          vendor: vendor.name,
-          confidence: 0,
-          categories: [],
-          reasoning: `Image scan error: ${errorMessage}`,
-          cost: 0,
-          latency: 0,
-          success: false,
-          error: errorMessage
-        };
+      if (!vendor.scanImage) {
+        return null;
       }
+
+      return await gracefulDegradationService.executeWithDegradation(
+        `image-moderation-${vendor.name}`,
+        async () => {
+          const startTime = Date.now();
+          const result = await gracefulDegradationService.executeWithRetry(
+            () => vendor.scanImage!(imageUrl),
+            `${vendor.name}-image-scan`
+          );
+          
+          // Update service health on success
+          systemHealthMonitoringService.updateServiceHealth(
+            vendor.name, 
+            true, 
+            Date.now() - startTime
+          );
+          
+          return {
+            ...result,
+            latency: Date.now() - startTime
+          };
+        },
+        { imageUrl, vendor: vendor.name }
+      );
     });
 
     const imageResults = await Promise.allSettled(imagePromises);
@@ -225,6 +242,15 @@ export class AIModerationOrchestrator {
     imageResults.forEach((result) => {
       if (result.status === 'fulfilled' && result.value) {
         results.push(result.value);
+      } else if (result.status === 'rejected') {
+        // Handle rejected promises (fallback results)
+        const vendorName = this.extractVendorNameFromError(result.reason);
+        systemHealthMonitoringService.updateServiceHealth(vendorName, false);
+        
+        // Add fallback result if available
+        if (result.reason?.fallback) {
+          results.push(result.reason);
+        }
       }
     });
 
@@ -368,12 +394,31 @@ export class AIModerationOrchestrator {
     
     for (const vendor of allVendors) {
       try {
-        health[vendor.name] = await vendor.isHealthy();
+        const isHealthy = await gracefulDegradationService.executeWithRetry(
+          () => vendor.isHealthy(),
+          `${vendor.name}-health-check`,
+          1 // Only 1 retry for health checks
+        );
+        
+        health[vendor.name] = isHealthy;
+        systemHealthMonitoringService.updateServiceHealth(vendor.name, isHealthy);
       } catch (error) {
         health[vendor.name] = false;
+        systemHealthMonitoringService.updateServiceHealth(vendor.name, false);
       }
     }
     
     return health;
+  }
+
+  /**
+   * Extract vendor name from error for health monitoring
+   */
+  private extractVendorNameFromError(error: any): string {
+    if (error?.vendor) return error.vendor;
+    if (error?.message?.includes('openai')) return 'openai';
+    if (error?.message?.includes('perspective')) return 'perspective';
+    if (error?.message?.includes('google-vision')) return 'google-vision';
+    return 'unknown-vendor';
   }
 }
