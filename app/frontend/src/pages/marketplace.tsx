@@ -42,7 +42,8 @@ const MarketplacePage: React.FC = () => {
     try {
       setLoading(true);
       const activeListings = await marketplaceService.getActiveListings();
-      setListings(activeListings);
+      // Ensure we always have an array
+      setListings(Array.isArray(activeListings) ? activeListings : []);
     } catch (error) {
       console.error('Error fetching listings:', error);
       addToast('Failed to fetch listings. Displaying mock data as fallback.', 'warning');
@@ -111,14 +112,14 @@ const MarketplacePage: React.FC = () => {
   };
 
   // Filter listings based on search term and category
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.metadataURI.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.sellerAddress.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
+    const matchesSearch = listing.metadataURI?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      listing.sellerAddress?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || listing.itemType === selectedCategory.toUpperCase();
     
     return matchesSearch && matchesCategory;
-  });
+  }) : [];
 
   return (
     <div className="min-h-screen">
@@ -146,83 +147,6 @@ const MarketplacePage: React.FC = () => {
 
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <GlassPanel variant="primary" className="mb-8">
-            <div className="p-8">
-              <h1 className="text-3xl font-bold text-white mb-4">Web3 Marketplace</h1>
-              <p className="text-white/80 text-lg">
-                Buy and sell digital and physical goods using cryptocurrency with blockchain security
-              </p>
-            </div>
-          </GlassPanel>
-
-          {isConnected && (
-            <GlassPanel variant="secondary" className="mb-8">
-              <div className="p-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <div>
-                    <h2 className="text-xl font-semibold text-white mb-2">Your Wallet</h2>
-                    <p className="text-white/80 mb-1">
-                      Connected: {formatAddress(address || '')}
-                    </p>
-                    {balance && (
-                      <p className="text-white/80">
-                        Balance: {parseFloat(balance.formatted).toFixed(4)} {balance.symbol}
-                      </p>
-                    )}
-                  </div>
-                  {reputation && (
-                    <div className="mt-4 sm:mt-0">
-                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                        Reputation: {reputation.score}
-                        {reputation.daoApproved && (
-                          <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                            DAO Approved
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </GlassPanel>
-          )}
-
-          <GlassPanel variant="secondary" className="mb-8">
-            <div className="p-2">
-              <nav className="flex space-x-1">
-                <button
-                  onClick={() => setActiveTab('browse')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'browse'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  🛒 Browse Items
-                </button>
-                <button
-                  onClick={() => setActiveTab('my-listings')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'my-listings'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  📋 My Listings
-                </button>
-                <button
-                  onClick={() => setActiveTab('create')}
-                  className={`px-6 py-3 rounded-lg font-medium text-sm transition-all ${
-                    activeTab === 'create'
-                      ? 'bg-white/20 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  ➕ Create Listing
-                </button>
-              </nav>
-            </div>
-          </GlassPanel>
 
           {activeTab === 'browse' && (
             <GlassPanel variant="secondary" className="mb-6">
@@ -402,7 +326,8 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
     try {
       setLoading(true);
       const userListings = await marketplaceService.getListingsBySeller(address!);
-      setListings(userListings);
+      // Ensure we always have an array
+      setListings(Array.isArray(userListings) ? userListings : []);
     } catch (error) {
       console.error('Error fetching listings:', error);
       addToast('Failed to fetch your listings. Displaying mock data as fallback.', 'warning');
