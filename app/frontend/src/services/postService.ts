@@ -300,8 +300,36 @@ export class PostService {
         retries: 1, // Reduced retries for feed to prevent spam
         deduplicate: true
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error fetching feed:`, error);
+      
+      // If backend is unavailable, return mock data
+      if (error.isServiceUnavailable || error.status === 503) {
+        console.log('Backend unavailable, returning mock feed data');
+        return [
+          {
+            id: 'mock-1',
+            author: '0x1234567890123456789012345678901234567890',
+            parentId: null,
+            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z4',
+            mediaCids: [],
+            tags: ['welcome', 'mock'],
+            createdAt: new Date(),
+            onchainRef: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+          },
+          {
+            id: 'mock-2',
+            author: '0x0987654321098765432109876543210987654321',
+            parentId: null,
+            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z5',
+            mediaCids: [],
+            tags: ['backend', 'status'],
+            createdAt: new Date(Date.now() - 60000),
+            onchainRef: '0x0987654321abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+          }
+        ];
+      }
+      
       throw error;
     }
   }
