@@ -11,7 +11,7 @@ import { GlassNavbar } from '@/design-system/components/GlassPanel';
 import { Button, GhostButton } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
 import { SearchBar } from './SearchBar';
-import { CurrencyToggle } from './CurrencyToggle';
+
 import { WalletConnectButton } from '@/components/Auth/WalletConnectButton';
 
 interface NavItem {
@@ -25,6 +25,7 @@ export const GlassmorphicNavbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems: NavItem[] = [
+    { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
     { name: 'NFTs', href: '/nfts', icon: '🎨' },
     { name: 'Services', href: '/services', icon: '⚡' },
@@ -56,7 +57,7 @@ export const GlassmorphicNavbar: React.FC = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-4">
             {/* Navigation Links */}
             <nav className="flex items-center space-x-1">
               {navItems.map((item) => (
@@ -80,21 +81,10 @@ export const GlassmorphicNavbar: React.FC = () => {
             {/* Search Bar */}
             <SearchBar />
 
-            {/* Currency Toggle */}
-            <CurrencyToggle />
-
-            {/* Language Selector */}
-            <select className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-              <option value="en">🇺🇸 EN</option>
-              <option value="es">🇪🇸 ES</option>
-              <option value="fr">🇫🇷 FR</option>
-              <option value="de">🇩🇪 DE</option>
-            </select>
-
             {/* Wallet Connect Button */}
             <div className="marketplace-wallet-connect">
               <WalletConnectButton 
-                className="marketplace-styled"
+                className="marketplace-styled compact"
                 onSuccess={() => {
                   console.log('Wallet connected successfully');
                 }}
@@ -109,7 +99,7 @@ export const GlassmorphicNavbar: React.FC = () => {
           <div className="md:hidden flex items-center space-x-2">
             <div className="marketplace-wallet-connect">
               <WalletConnectButton 
-                className="marketplace-styled"
+                className="marketplace-styled compact"
                 onSuccess={() => {
                   console.log('Wallet connected successfully');
                 }}
@@ -166,16 +156,7 @@ export const GlassmorphicNavbar: React.FC = () => {
                 </Link>
               ))}
 
-              {/* Mobile Controls */}
-              <div className="px-4 pt-4 space-y-3 border-t border-white/10">
-                <CurrencyToggle />
-                <select className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                  <option value="en">🇺🇸 English</option>
-                  <option value="es">🇪🇸 Español</option>
-                  <option value="fr">🇫🇷 Français</option>
-                  <option value="de">🇩🇪 Deutsch</option>
-                </select>
-              </div>
+
             </div>
           </motion.div>
         )}

@@ -119,7 +119,7 @@ app.get('/api/posts', (req, res) => {
 });
 
 // Import marketplace verification routes
-import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes.js';
+import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);

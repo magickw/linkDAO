@@ -42,7 +42,8 @@ const MarketplacePage: React.FC = () => {
     try {
       setLoading(true);
       const activeListings = await marketplaceService.getActiveListings();
-      setListings(activeListings);
+      // Ensure we always have an array
+      setListings(Array.isArray(activeListings) ? activeListings : []);
     } catch (error) {
       console.error('Error fetching listings:', error);
       addToast('Failed to fetch listings. Displaying mock data as fallback.', 'warning');
@@ -111,14 +112,14 @@ const MarketplacePage: React.FC = () => {
   };
 
   // Filter listings based on search term and category
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.metadataURI.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.sellerAddress.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
+    const matchesSearch = listing.metadataURI?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      listing.sellerAddress?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || listing.itemType === selectedCategory.toUpperCase();
     
     return matchesSearch && matchesCategory;
-  });
+  }) : [];
 
   return (
     <div className="min-h-screen">
@@ -402,7 +403,8 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
     try {
       setLoading(true);
       const userListings = await marketplaceService.getListingsBySeller(address!);
-      setListings(userListings);
+      // Ensure we always have an array
+      setListings(Array.isArray(userListings) ? userListings : []);
     } catch (error) {
       console.error('Error fetching listings:', error);
       addToast('Failed to fetch your listings. Displaying mock data as fallback.', 'warning');
