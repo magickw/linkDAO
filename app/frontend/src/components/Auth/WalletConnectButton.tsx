@@ -94,24 +94,39 @@ export const WalletConnectButton: React.FC<WalletConnectButtonProps> = ({
   }
 
   if (isConnected && !isAuthenticated) {
+    // Mock reputation data - in real app, this would come from a hook or service
+    const userReputation = {
+      score: 850,
+      level: 'Trusted Seller',
+      daoApproved: true
+    };
+
     return (
-      <div className={`flex items-center space-x-2 ${className}`}>
+      <div className={`flex items-center space-x-3 ${className}`}>
         <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
           <span className="text-sm text-white">
             {address?.slice(0, 6)}...{address?.slice(-4)}
           </span>
         </div>
-        <button
-          onClick={handleAuthenticate}
-          disabled={isAuthenticating}
-          className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isAuthenticating ? 'Auth...' : 'Sign'}
-        </button>
+        
+        {/* User Reputation Score */}
+        <div className="flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-lg border border-purple-400/30">
+          <div className="flex items-center space-x-1">
+            <span className="text-yellow-400">⭐</span>
+            <span className="text-sm font-semibold text-white">{userReputation.score}</span>
+          </div>
+          {userReputation.daoApproved && (
+            <div className="flex items-center space-x-1">
+              <span className="text-green-400">✓</span>
+              <span className="text-xs text-green-300">DAO</span>
+            </div>
+          )}
+        </div>
+        
         <button
           onClick={handleDisconnect}
-          className="px-3 py-1.5 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          className="px-3 py-1.5 text-sm bg-gray-500/80 text-white rounded-lg hover:bg-gray-600 transition-colors"
         >
           Disconnect
         </button>
