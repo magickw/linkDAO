@@ -1,468 +1,373 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import BiometricAuth from '../BiometricAuth';
-import { useResponsive } from '@/design-system/hooks/useResponsive';
 
-// Mock dependencies
-jest.mock('@/design-system/hooks/useResponsive');
+// Mock framer-motion
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
-    h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>
   },
-  AnimatePresence: ({ children }: any) => children,
+  AnimatePresence: ({ children }: any) => <>{children}</>
 }));
 
-const mockResponsive = {
-  isMobile: true,
-  isTouch: true,
-  breakpoint: 'sm' as const,
-  width: 375,
-  height: 667,
-  isTablet: false,
-  isDesktop: false,
-  orientation: 'portrait' as const,
-};
-
-// Mock WebAuthn API
-const mockCredentials = {
-  create: jest.fn(),
-  get: jest.fn(),
-};
-
-Object.defineProperty(navigator, 'credentials', {
-  value: mockCredentials,
-  writable: true,
-});
-
-Object.defineProperty(navigator, 'vibrate', {
-  value: jest.fn(),
-  writable: true,
-});
+// Mock Heroicons
+jest.mock('@heroicons/react/24/outline', () => ({
+  FingerprintIcon: () => <div data-testid="fingerprint-icon" />,
+  FaceSmileIcon: () => <div data-testid="face-icon" />,
+  DevicePhoneMobileIcon: () => <div data-testid="device-icon" />,
+  ExclamationTriangleIcon: () => <div data-testid="warning-icon" />,
+  CheckCircleIcon: () => <div data-testid="check-icon" />,
+  XCircleIcon: () => <div data-testid="x-icon" />
+}));
 
 const defaultProps = {
   onSuccess: jest.fn(),
   onError: jest.fn(),
-  onCancel: jest.fn(),
+  onCancel: jest.fn()
+};
+
+// Mock WebAuthn API
+const mockCredential = {
+  id: 'test-credential-id',
+  type: 'public-key',
+  rawId: new ArrayBuffer(8),
+  response: {
+    clientDataJSON: new ArrayBuffer(8),
+    authenticatorData: new ArrayBuffer(8),
+    signature: new ArrayBuffer(8)
+  }
 };
 
 describe('BiometricAuth', () => {
   beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
     jest.clearAllMocks();
-  });
-
-  describe('Capability Detection', () => {
-    it('detects WebAuthn support', async () => {
-      mockCredentials.get.mockResolvedValue(null);
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Authenticate')).toBeInTheDocument();
-      });
+    
+    // Mock PublicKeyCredential
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      value: {
+        isUserVerifyingPlatformAuthenticatorAvailable: jest.fn().mockResolvedValue(true)
+      },
+      writable: true
     });
-
-    it('shows unsupported message when WebAuthn is not available', () => {
-      // Remove credentials API
-      Object.defineProperty(navigator, 'credentials', {
-        value: undefined,
-        writable: true,
-      });
-
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={false} />);
-      
-      expect(screen.getByText('Biometric Authentication Not Supported')).toBeInTheDocument();
+    
+    // Mock navigator.credentials
+    Object.defineProperty(navigator, 'credentials', {
+      value: {
+        get: jest.fn().mockResolvedValue(mockCredential)
+      },
+      writable: true
     });
-
-    it('shows capability info when biometric is supported but not set up', async () => {
-      mockCredentials.get.mockRejectedValue(new Error('Not available'));
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/not set up on this device/)).toBeInTheDocument();
-      });
+    
+    // Mock navigator.vibrate
+    Object.defineProperty(navigator, 'vibrate', {
+      value: jest.fn(),
+      writable: true
+    });
+    
+    // Mock user agent
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)',
+      writable: true
     });
   });
 
-  describe('Biometric Authentication', () => {
-    beforeEach(() => {
-      mockCredentials.get.mockResolvedValue({
-        id: 'credential-id',
-        type: 'public-key',
-      });
-    });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
 
-    it('initiates biometric authentication', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Authenticate with/)).toBeInTheDocument();
-      });
-      
-      const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-      await user.click(authButton);
-      
-      expect(mockCredentials.get).toHaveBeenCalled();
-    });
-
-    it('calls onSuccess when authentication succeeds', async () => {
-      const user = userEvent.setup();
-      const mockCredential = { id: 'test-credential' };
-      mockCredentials.get.mockResolvedValue(mockCredential);
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      await waitFor(() => {
-        expect(defaultProps.onSuccess).toHaveBeenCalledWith(mockCredential);
-      });
-    });
-
-    it('calls onError when authentication fails', async () => {
-      const user = userEvent.setup();
-      mockCredentials.get.mockRejectedValue(new Error('Authentication failed'));
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      await waitFor(() => {
-        expect(defaultProps.onError).toHaveBeenCalledWith('Authentication failed. Please try again.');
-      });
-    });
-
-    it('handles specific error types', async () => {
-      const user = userEvent.setup();
-      const notAllowedError = new Error('Not allowed');
-      notAllowedError.name = 'NotAllowedError';
-      mockCredentials.get.mockRejectedValue(notAllowedError);
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      await waitFor(() => {
-        expect(defaultProps.onError).toHaveBeenCalledWith('Authentication was cancelled');
-      });
-    });
-
-    it('provides haptic feedback on success', async () => {
-      const user = userEvent.setup();
-      const vibrateSpy = jest.spyOn(navigator, 'vibrate');
-      mockCredentials.get.mockResolvedValue({ id: 'test' });
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      await waitFor(() => {
-        expect(vibrateSpy).toHaveBeenCalledWith([100, 50, 100]);
-      });
-    });
-
-    it('shows loading state during authentication', async () => {
-      const user = userEvent.setup();
-      let resolveAuth: (value: any) => void;
-      const authPromise = new Promise(resolve => {
-        resolveAuth = resolve;
-      });
-      mockCredentials.get.mockReturnValue(authPromise);
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      expect(screen.getByText('Authenticating...')).toBeInTheDocument();
-      
-      resolveAuth!({ id: 'test' });
-      
-      await waitFor(() => {
-        expect(screen.queryByText('Authenticating...')).not.toBeInTheDocument();
-      });
+  it('renders biometric authentication interface', async () => {
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Biometric Authentication')).toBeInTheDocument();
+      expect(screen.getByText('Use your biometric to authenticate')).toBeInTheDocument();
     });
   });
 
-  describe('Password Fallback', () => {
-    it('shows password option when fallback is enabled', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText('Use password instead')).toBeInTheDocument();
-      });
+  it('shows custom title and subtitle', async () => {
+    render(
+      <BiometricAuth 
+        {...defaultProps} 
+        title="Secure Login"
+        subtitle="Authenticate with your fingerprint"
+      />
+    );
+    
+    await waitFor(() => {
+      expect(screen.getByText('Secure Login')).toBeInTheDocument();
+      expect(screen.getByText('Authenticate with your fingerprint')).toBeInTheDocument();
     });
+  });
 
-    it('switches to password mode', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
+  it('detects and shows appropriate biometric type', async () => {
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      // Should show Face ID for iPhone
+      expect(screen.getByText('Use Face ID')).toBeInTheDocument();
+    });
+  });
+
+  it('shows fingerprint for Android devices', async () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Linux; Android 10; SM-G975F)',
+      writable: true
+    });
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Use Touch ID')).toBeInTheDocument();
+    });
+  });
+
+  it('handles successful authentication', async () => {
+    const mockOnSuccess = jest.fn();
+    render(<BiometricAuth {...defaultProps} onSuccess={mockOnSuccess} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
+    });
+    
+    await waitFor(() => {
+      expect(mockOnSuccess).toHaveBeenCalledWith(mockCredential);
+    });
+  });
+
+  it('handles authentication failure', async () => {
+    const mockOnError = jest.fn();
+    const mockError = new Error('Authentication failed');
+    mockError.name = 'NotAllowedError';
+    
+    (navigator.credentials.get as jest.Mock).mockRejectedValue(mockError);
+    
+    render(<BiometricAuth {...defaultProps} onError={mockOnError} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
+    });
+    
+    await waitFor(() => {
+      expect(mockOnError).toHaveBeenCalledWith('Authentication was cancelled or not allowed');
+    });
+  });
+
+  it('shows unavailable state when biometrics not supported', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      value: undefined,
+      writable: true
+    });
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Biometric Authentication Unavailable')).toBeInTheDocument();
+      expect(screen.getByText('Your device does not support biometric authentication')).toBeInTheDocument();
+    });
+  });
+
+  it('shows fallback to password when biometrics unavailable', async () => {
+    Object.defineProperty(window, 'PublicKeyCredential', {
+      value: undefined,
+      writable: true
+    });
+    
+    render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Use Password Instead')).toBeInTheDocument();
+    });
+  });
+
+  it('switches to password fallback', async () => {
+    render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
+    
+    await waitFor(() => {
+      const fallbackButton = screen.getByText('Use Password');
+      fireEvent.click(fallbackButton);
+    });
+    
+    await waitFor(() => {
       expect(screen.getByText('Enter Password')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
     });
-
-    it('authenticates with password', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      // Switch to password mode
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
-      // Enter password
-      const passwordInput = screen.getByPlaceholderText('Enter your password');
-      await user.type(passwordInput, 'demo123');
-      
-      // Submit
-      const continueButton = screen.getByText('Continue');
-      await user.click(continueButton);
-      
-      await waitFor(() => {
-        expect(defaultProps.onSuccess).toHaveBeenCalledWith({ type: 'password' });
-      });
-    });
-
-    it('shows error for invalid password', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      // Switch to password mode
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
-      // Enter wrong password
-      const passwordInput = screen.getByPlaceholderText('Enter your password');
-      await user.type(passwordInput, 'wrongpassword');
-      
-      const continueButton = screen.getByText('Continue');
-      await user.click(continueButton);
-      
-      await waitFor(() => {
-        expect(defaultProps.onError).toHaveBeenCalledWith('Invalid password');
-      });
-    });
-
-    it('allows switching back to biometric', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      // Switch to password mode
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
-      // Switch back to biometric
-      const backLink = screen.getByText('← Back to biometric');
-      await user.click(backLink);
-      
-      expect(screen.getByText('Authenticate')).toBeInTheDocument();
-    });
-
-    it('handles Enter key in password field', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      // Switch to password mode
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
-      // Enter password and press Enter
-      const passwordInput = screen.getByPlaceholderText('Enter your password');
-      await user.type(passwordInput, 'demo123{enter}');
-      
-      await waitFor(() => {
-        expect(defaultProps.onSuccess).toHaveBeenCalled();
-      });
-    });
   });
 
-  describe('Responsive Design', () => {
-    it('shows appropriate icon for mobile', () => {
-      render(<BiometricAuth {...defaultProps} />);
-      
-      // Should show mobile-appropriate biometric icon
-      const icon = screen.getByRole('img', { hidden: true });
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('shows appropriate icon for desktop', () => {
-      (useResponsive as jest.Mock).mockReturnValue({
-        ...mockResponsive,
-        isMobile: false,
-        isDesktop: true,
-      });
-
-      render(<BiometricAuth {...defaultProps} />);
-      
-      // Should show desktop-appropriate security key icon
-      const icon = screen.getByRole('img', { hidden: true });
-      expect(icon).toBeInTheDocument();
-    });
-
-    it('adapts button text for device type', async () => {
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Authenticate with Biometric/)).toBeInTheDocument();
-      });
-    });
-
-    it('adapts button text for desktop', async () => {
-      (useResponsive as jest.Mock).mockReturnValue({
-        ...mockResponsive,
-        isMobile: false,
-        isDesktop: true,
-      });
-
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        expect(screen.getByText(/Authenticate with Security Key/)).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Customization', () => {
-    it('displays custom title and subtitle', () => {
-      render(
-        <BiometricAuth 
-          {...defaultProps} 
-          title="Custom Title"
-          subtitle="Custom subtitle text"
-        />
-      );
-      
-      expect(screen.getByText('Custom Title')).toBeInTheDocument();
-      expect(screen.getByText('Custom subtitle text')).toBeInTheDocument();
-    });
-
-    it('hides fallback when disabled', () => {
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={false} />);
-      
-      expect(screen.queryByText('Use password instead')).not.toBeInTheDocument();
-    });
-
-    it('shows cancel button when provided', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} />);
-      
+  it('handles cancel action', async () => {
+    const mockOnCancel = jest.fn();
+    render(<BiometricAuth {...defaultProps} onCancel={mockOnCancel} />);
+    
+    await waitFor(() => {
       const cancelButton = screen.getByText('Cancel');
-      await user.click(cancelButton);
-      
-      expect(defaultProps.onCancel).toHaveBeenCalled();
+      fireEvent.click(cancelButton);
+    });
+    
+    expect(mockOnCancel).toHaveBeenCalled();
+  });
+
+  it('shows authenticating state', async () => {
+    // Mock a delayed response
+    (navigator.credentials.get as jest.Mock).mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(mockCredential), 1000))
+    );
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
+    });
+    
+    expect(screen.getByText('Authenticating with Face ID...')).toBeInTheDocument();
+  });
+
+  it('shows success state', async () => {
+    const mockOnSuccess = jest.fn();
+    render(<BiometricAuth {...defaultProps} onSuccess={mockOnSuccess} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
+    });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Authentication successful!')).toBeInTheDocument();
     });
   });
 
-  describe('Accessibility', () => {
-    it('supports keyboard navigation', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} />);
-      
-      // Tab to authenticate button
-      await user.tab();
-      expect(screen.getByRole('button', { name: /Authenticate with/ })).toHaveFocus();
-      
-      // Enter should trigger authentication
-      await user.keyboard('{Enter}');
-      expect(mockCredentials.get).toHaveBeenCalled();
+  it('shows error state with retry option', async () => {
+    const mockError = new Error('Authentication failed');
+    (navigator.credentials.get as jest.Mock).mockRejectedValue(mockError);
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
     });
-
-    it('has proper ARIA labels', () => {
-      render(<BiometricAuth {...defaultProps} />);
-      
-      const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-      expect(authButton).toHaveAttribute('type', 'button');
-    });
-
-    it('manages focus properly in password mode', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
-      
-      // Switch to password mode
-      await waitFor(() => {
-        const passwordLink = screen.getByText('Use password instead');
-        return user.click(passwordLink);
-      });
-      
-      // Password input should be focused
-      const passwordInput = screen.getByPlaceholderText('Enter your password');
-      expect(passwordInput).toHaveFocus();
-    });
-
-    it('provides proper error announcements', async () => {
-      const user = userEvent.setup();
-      mockCredentials.get.mockRejectedValue(new Error('Test error'));
-      
-      render(<BiometricAuth {...defaultProps} />);
-      
-      await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
-      });
-      
-      // Error should be announced to screen readers
-      await waitFor(() => {
-        expect(defaultProps.onError).toHaveBeenCalled();
-      });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Try Again')).toBeInTheDocument();
     });
   });
 
-  describe('Security', () => {
-    it('uses proper WebAuthn parameters', async () => {
-      const user = userEvent.setup();
-      render(<BiometricAuth {...defaultProps} />);
+  it('handles different error types correctly', async () => {
+    const testCases = [
+      { name: 'NotAllowedError', expectedMessage: 'Authentication was cancelled or not allowed' },
+      { name: 'InvalidStateError', expectedMessage: 'Authenticator is already in use' },
+      { name: 'NotSupportedError', expectedMessage: 'Biometric authentication not supported' },
+      { name: 'SecurityError', expectedMessage: 'Security error occurred' }
+    ];
+    
+    for (const testCase of testCases) {
+      const mockOnError = jest.fn();
+      const mockError = new Error('Test error');
+      mockError.name = testCase.name;
+      
+      (navigator.credentials.get as jest.Mock).mockRejectedValue(mockError);
+      
+      const { unmount } = render(<BiometricAuth {...defaultProps} onError={mockOnError} />);
       
       await waitFor(() => {
-        const authButton = screen.getByRole('button', { name: /Authenticate with/ });
-        return user.click(authButton);
+        const authButton = screen.getByText('Use Face ID');
+        fireEvent.click(authButton);
       });
       
-      expect(mockCredentials.get).toHaveBeenCalledWith({
-        publicKey: expect.objectContaining({
-          timeout: 60000,
-          userVerification: 'required',
-          challenge: expect.any(Uint8Array),
-        }),
+      await waitFor(() => {
+        expect(mockOnError).toHaveBeenCalledWith(testCase.expectedMessage);
       });
-    });
+      
+      unmount();
+    }
+  });
 
-    it('does not store sensitive data', () => {
-      render(<BiometricAuth {...defaultProps} />);
+  it('provides haptic feedback on success', async () => {
+    const mockVibrate = jest.fn();
+    Object.defineProperty(navigator, 'vibrate', {
+      value: mockVibrate,
+      writable: true
+    });
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
+    });
+    
+    await waitFor(() => {
+      expect(mockVibrate).toHaveBeenCalledWith([100, 50, 100]);
+    });
+  });
+
+  it('applies custom className', async () => {
+    render(<BiometricAuth {...defaultProps} className="custom-auth" />);
+    
+    const container = document.querySelector('.custom-auth');
+    expect(container).toBeInTheDocument();
+  });
+
+  it('handles platform authenticator unavailable', async () => {
+    (window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable as jest.Mock)
+      .mockResolvedValue(false);
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Biometric Authentication Unavailable')).toBeInTheDocument();
+    });
+  });
+
+  it('shows correct icon for authentication state', async () => {
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('face-icon')).toBeInTheDocument();
+    });
+    
+    // Test success state
+    const authButton = screen.getByText('Use Face ID');
+    fireEvent.click(authButton);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('check-icon')).toBeInTheDocument();
+    });
+  });
+
+  it('handles back to biometric from password fallback', async () => {
+    render(<BiometricAuth {...defaultProps} fallbackToPassword={true} />);
+    
+    await waitFor(() => {
+      const fallbackButton = screen.getByText('Use Password');
+      fireEvent.click(fallbackButton);
+    });
+    
+    await waitFor(() => {
+      const backButton = screen.getByText('Back to Biometric');
+      fireEvent.click(backButton);
+    });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Use Face ID')).toBeInTheDocument();
+    });
+  });
+
+  it('disables authentication button during authentication', async () => {
+    // Mock a delayed response
+    (navigator.credentials.get as jest.Mock).mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(mockCredential), 1000))
+    );
+    
+    render(<BiometricAuth {...defaultProps} />);
+    
+    await waitFor(() => {
+      const authButton = screen.getByText('Use Face ID');
+      fireEvent.click(authButton);
       
-      // Component should not store any sensitive authentication data
-      expect(screen.queryByDisplayValue(/password|credential|key/i)).not.toBeInTheDocument();
+      expect(authButton).toBeDisabled();
     });
   });
 });

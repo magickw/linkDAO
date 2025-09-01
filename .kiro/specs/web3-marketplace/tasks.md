@@ -230,7 +230,7 @@
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
 - [ ] 13. Mobile-First Implementation and PWA Features
-  - [ ] 13.1 Mobile Navigation and Responsive Design
+  - [x] 13.1 Mobile Navigation and Responsive Design
     - Implement bottom navigation bar for mobile with touch-optimized interfaces
     - Create collapsible filter drawers with swipe-friendly interactions
     - Build swipeable product cards and gesture-based navigation
@@ -239,7 +239,7 @@
     - Write tests for mobile user experience and touch interactions
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5_
 
-  - [ ] 13.2 Progressive Web App and Performance Optimization
+  - [x] 13.2 Progressive Web App and Performance Optimization
     - Implement service worker for offline functionality and caching
     - Add PWA install prompt with "Install app" button and manifest configuration
     - Create lazy loading system for images, videos, and blockchain data

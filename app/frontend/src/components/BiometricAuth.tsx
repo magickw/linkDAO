@@ -1,9 +1,18 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useResponsive } from '@/design-system/hooks/useResponsive';
+import { 
+  FingerprintIcon, 
+  FaceSmileIcon, 
+  DevicePhoneMobileIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon,
+  XCircleIcon
+} from '@heroicons/react/24/outline';
 
 interface BiometricAuthProps {
-  onSuccess: (credential?: any) => void;
+  onSuccess: (credential: any) => void;
   onError: (error: string) => void;
   onCancel?: () => void;
   title?: string;
@@ -12,32 +21,29 @@ interface BiometricAuthProps {
   className?: string;
 }
 
-interface BiometricCapabilities {
-  isSupported: boolean;
-  isAvailable: boolean;
-  supportedMethods: string[];
-  hasCredentials: boolean;
+interface BiometricCapability {
+  available: boolean;
+  type: 'fingerprint' | 'face' | 'voice' | 'none';
+  error?: string;
 }
 
-export default function BiometricAuth({
+const BiometricAuth: React.FC<BiometricAuthProps> = ({
   onSuccess,
   onError,
   onCancel,
-  title = 'Authenticate',
-  subtitle = 'Use your biometric to continue',
+  title = 'Biometric Authentication',
+  subtitle = 'Use your biometric to authenticate',
   fallbackToPassword = true,
   className = ''
-}: BiometricAuthProps) {
-  const { isMobile, isTouch } = useResponsive();
+}) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [capabilities, setCapabilities] = useState<BiometricCapabilities>({
-    isSupported: false,
-    isAvailable: false,
-    supportedMethods: [],
-    hasCredentials: false
+  const [authStatus, setAuthStatus] = useState<'idle' | 'authenticating' | 'success' | 'error'>('idle');
+  const [capability, setCapability] = useState<BiometricCapability>({
+    available: false,
+    type: 'none'
   });
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [showFallback, setShowFallback] = useState(false);
-  const [password, setPassword] = useState('');
 
   // Check biometric capabilities
   useEffect(() => {
@@ -47,183 +53,186 @@ export default function BiometricAuth({
   const checkBiometricCapabilities = async () => {
     try {
       // Check if WebAuthn is supported
-      const isWebAuthnSupported = 'credentials' in navigator && 'create' in navigator.credentials;
-      
-      if (!isWebAuthnSupported) {
-        setCapabilities({
-          isSupported: false,
-          isAvailable: false,
-          supportedMethods: [],
-          hasCredentials: false
+      if (!window.PublicKeyCredential) {
+        setCapability({
+          available: false,
+          type: 'none',
+          error: 'WebAuthn not supported'
         });
         return;
       }
 
       // Check if biometric authentication is available
-      let isAvailable = false;
-      let supportedMethods: string[] = [];
-      let hasCredentials = false;
-
-      try {
-        // Check for platform authenticator (biometric)
-        const available = await (navigator.credentials as any).get({
-          publicKey: {
-            timeout: 1000,
-            allowCredentials: [],
-            userVerification: 'required'
-          }
-        }).catch(() => false);
-
-        isAvailable = true;
-        supportedMethods = ['platform'];
-
-        // Check if there are existing credentials
-        try {
-          const credentialRequestOptions = {
-            publicKey: {
-              timeout: 1000,
-              allowCredentials: [],
-              userVerification: 'preferred'
-            }
-          };
-          
-          await (navigator.credentials as any).get(credentialRequestOptions);
-          hasCredentials = true;
-        } catch (error) {
-          // No existing credentials or user cancelled
-          hasCredentials = false;
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      
+      if (available) {
+        // Try to determine the type of biometric available
+        const userAgent = navigator.userAgent.toLowerCase();
+        let type: BiometricCapability['type'] = 'fingerprint';
+        
+        if (userAgent.includes('iphone') || userAgent.includes('ipad')) {
+          // iOS devices - could be Face ID or Touch ID
+          type = userAgent.includes('iphone x') || userAgent.includes('iphone 1') ? 'face' : 'fingerprint';
+        } else if (userAgent.includes('android')) {
+          // Android devices - usually fingerprint
+          type = 'fingerprint';
         }
-      } catch (error) {
-        console.log('Biometric check failed:', error);
-      }
 
-      setCapabilities({
-        isSupported: isWebAuthnSupported,
-        isAvailable,
-        supportedMethods,
-        hasCredentials
-      });
+        setCapability({
+          available: true,
+          type
+        });
+      } else {
+        setCapability({
+          available: false,
+          type: 'none',
+          error: 'No biometric authenticator available'
+        });
+      }
     } catch (error) {
-      console.error('Error checking biometric capabilities:', error);
-      setCapabilities({
-        isSupported: false,
-        isAvailable: false,
-        supportedMethods: [],
-        hasCredentials: false
+      setCapability({
+        available: false,
+        type: 'none',
+        error: 'Failed to check biometric capabilities'
       });
     }
   };
 
   const authenticateWithBiometric = useCallback(async () => {
-    if (!capabilities.isSupported || !capabilities.isAvailable) {
-      onError('Biometric authentication is not available');
+    if (!capability.available) {
+      onError('Biometric authentication not available');
       return;
     }
 
     setIsAuthenticating(true);
+    setAuthStatus('authenticating');
+    setErrorMessage('');
 
     try {
       // Create credential request options
-      const credentialRequestOptions = {
+      const credentialRequestOptions: CredentialRequestOptions = {
         publicKey: {
-          timeout: 60000,
-          allowCredentials: [],
+          challenge: new Uint8Array(32), // In production, get this from your server
+          allowCredentials: [], // Empty for platform authenticator
           userVerification: 'required',
-          challenge: new Uint8Array(32) // In production, this should come from your server
+          timeout: 60000
         }
       };
 
       // Request biometric authentication
-      const credential = await (navigator.credentials as any).get(credentialRequestOptions);
-      
+      const credential = await navigator.credentials.get(credentialRequestOptions);
+
       if (credential) {
-        // Haptic feedback on success
+        setAuthStatus('success');
+        
+        // Add haptic feedback
         if ('vibrate' in navigator) {
           navigator.vibrate([100, 50, 100]);
         }
-        
-        onSuccess(credential);
+
+        setTimeout(() => {
+          onSuccess(credential);
+        }, 1000);
       } else {
-        onError('Authentication failed');
+        throw new Error('Authentication failed');
       }
     } catch (error: any) {
-      console.error('Biometric authentication error:', error);
+      setAuthStatus('error');
+      
+      let errorMsg = 'Authentication failed';
       
       if (error.name === 'NotAllowedError') {
-        onError('Authentication was cancelled');
+        errorMsg = 'Authentication was cancelled or not allowed';
       } else if (error.name === 'InvalidStateError') {
-        onError('Biometric authentication is not set up');
+        errorMsg = 'Authenticator is already in use';
       } else if (error.name === 'NotSupportedError') {
-        onError('Biometric authentication is not supported');
-      } else {
-        onError('Authentication failed. Please try again.');
+        errorMsg = 'Biometric authentication not supported';
+      } else if (error.name === 'SecurityError') {
+        errorMsg = 'Security error occurred';
       }
-    } finally {
-      setIsAuthenticating(false);
-    }
-  }, [capabilities, onSuccess, onError]);
-
-  const handlePasswordAuth = useCallback(async () => {
-    if (!password.trim()) {
-      onError('Please enter your password');
-      return;
-    }
-
-    setIsAuthenticating(true);
-    
-    try {
-      // Simulate password validation - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // In production, validate password with your backend
-      if (password === 'demo123') { // Demo password
-        onSuccess({ type: 'password' });
-      } else {
-        onError('Invalid password');
+      setErrorMessage(errorMsg);
+      onError(errorMsg);
+      
+      // Show fallback after error
+      if (fallbackToPassword) {
+        setTimeout(() => setShowFallback(true), 2000);
       }
-    } catch (error) {
-      onError('Password authentication failed');
     } finally {
       setIsAuthenticating(false);
     }
-  }, [password, onSuccess, onError]);
+  }, [capability.available, onSuccess, onError, fallbackToPassword]);
 
-  const renderBiometricIcon = () => {
-    if (isMobile) {
-      return (
-        <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      );
+  const getBiometricIcon = () => {
+    switch (capability.type) {
+      case 'face':
+        return FaceSmileIcon;
+      case 'fingerprint':
+        return FingerprintIcon;
+      default:
+        return DevicePhoneMobileIcon;
     }
-    
-    return (
-      <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    );
   };
 
-  if (!capabilities.isSupported && !fallbackToPassword) {
+  const getBiometricLabel = () => {
+    switch (capability.type) {
+      case 'face':
+        return 'Face ID';
+      case 'fingerprint':
+        return 'Touch ID';
+      default:
+        return 'Biometric';
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (authStatus) {
+      case 'success':
+        return CheckCircleIcon;
+      case 'error':
+        return XCircleIcon;
+      default:
+        return getBiometricIcon();
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (authStatus) {
+      case 'success':
+        return 'text-green-500';
+      case 'error':
+        return 'text-red-500';
+      case 'authenticating':
+        return 'text-indigo-500';
+      default:
+        return 'text-gray-700';
+    }
+  };
+
+  if (!capability.available && !showFallback) {
     return (
       <div className={`text-center p-6 ${className}`}>
-        <div className="text-red-500 mb-4">
-          <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Biometric Authentication Not Supported
+        <ExclamationTriangleIcon className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Biometric Authentication Unavailable
         </h3>
-        <p className="text-gray-600 dark:text-gray-400">
-          Your device or browser doesn't support biometric authentication.
+        <p className="text-gray-600 mb-4">
+          {capability.error || 'Your device does not support biometric authentication'}
         </p>
+        {fallbackToPassword && (
+          <button
+            onClick={() => setShowFallback(true)}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Use Password Instead
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={`max-w-sm mx-auto ${className}`}>
+    <div className={`text-center p-6 ${className}`}>
       <AnimatePresence mode="wait">
         {!showFallback ? (
           <motion.div
@@ -231,151 +240,149 @@ export default function BiometricAuth({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-6"
+            className="space-y-6"
           >
             {/* Biometric Icon */}
-            <div className="flex justify-center">
-              <motion.div
-                animate={isAuthenticating ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ repeat: isAuthenticating ? Infinity : 0, duration: 1 }}
-              >
-                {renderBiometricIcon()}
-              </motion.div>
-            </div>
+            <motion.div
+              className="relative mx-auto w-24 h-24 flex items-center justify-center"
+              animate={{
+                scale: isAuthenticating ? [1, 1.1, 1] : 1,
+                rotate: authStatus === 'success' ? 360 : 0
+              }}
+              transition={{
+                scale: {
+                  duration: 1.5,
+                  repeat: isAuthenticating ? Infinity : 0,
+                  ease: 'easeInOut'
+                },
+                rotate: {
+                  duration: 0.5,
+                  ease: 'easeInOut'
+                }
+              }}
+            >
+              {/* Pulse animation for authenticating state */}
+              {isAuthenticating && (
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-indigo-200"
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.5, 0, 0.5]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: 'easeInOut'
+                  }}
+                />
+              )}
+              
+              {/* Icon background */}
+              <div className={`
+                w-20 h-20 rounded-full flex items-center justify-center
+                ${authStatus === 'success' ? 'bg-green-100' : 
+                  authStatus === 'error' ? 'bg-red-100' : 
+                  'bg-indigo-100'}
+              `}>
+                {React.createElement(getStatusIcon(), {
+                  className: `w-10 h-10 ${getStatusColor()}`
+                })}
+              </div>
+            </motion.div>
 
             {/* Title and Subtitle */}
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                {title}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                {subtitle}
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
+              <p className="text-gray-600">
+                {authStatus === 'authenticating' ? `Authenticating with ${getBiometricLabel()}...` :
+                 authStatus === 'success' ? 'Authentication successful!' :
+                 authStatus === 'error' ? errorMessage :
+                 subtitle}
               </p>
             </div>
 
-            {/* Authentication Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={authenticateWithBiometric}
-              disabled={isAuthenticating || !capabilities.isAvailable}
-              className="w-full bg-blue-500 text-white py-4 rounded-xl font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isAuthenticating ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Authenticating...</span>
-                </div>
-              ) : (
-                `Authenticate with ${isMobile ? 'Biometric' : 'Security Key'}`
-              )}
-            </motion.button>
-
-            {/* Fallback Options */}
+            {/* Action Buttons */}
             <div className="space-y-3">
-              {fallbackToPassword && (
-                <button
-                  onClick={() => setShowFallback(true)}
-                  className="w-full text-gray-600 dark:text-gray-400 py-2 text-sm hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              {authStatus === 'idle' || authStatus === 'error' ? (
+                <motion.button
+                  onClick={authenticateWithBiometric}
+                  disabled={isAuthenticating}
+                  className={`
+                    w-full py-4 px-6 rounded-xl font-semibold text-lg
+                    ${authStatus === 'error' 
+                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    }
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    transition-colors
+                  `}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  Use password instead
-                </button>
-              )}
-              
-              {onCancel && (
-                <button
-                  onClick={onCancel}
-                  className="w-full text-gray-500 dark:text-gray-500 py-2 text-sm hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
+                  {authStatus === 'error' ? 'Try Again' : `Use ${getBiometricLabel()}`}
+                </motion.button>
+              ) : null}
 
-            {/* Capability Info */}
-            {!capabilities.isAvailable && capabilities.isSupported && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg">
-                Biometric authentication is supported but not set up on this device.
+              {/* Fallback and Cancel buttons */}
+              <div className="flex space-x-3">
+                {fallbackToPassword && (
+                  <button
+                    onClick={() => setShowFallback(true)}
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Use Password
+                  </button>
+                )}
+                
+                {onCancel && (
+                  <button
+                    onClick={onCancel}
+                    className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </motion.div>
         ) : (
           <motion.div
-            key="password"
+            key="fallback"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
-            {/* Password Icon */}
-            <div className="flex justify-center">
-              <svg className="w-16 h-16 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-
-            {/* Title */}
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Enter Password
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Please enter your password to continue
-              </p>
-            </div>
-
-            {/* Password Input */}
-            <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Enter Password</h2>
+            <p className="text-gray-600 mb-6">
+              Please enter your password to continue
+            </p>
+            
+            <div className="space-y-4">
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handlePasswordAuth()}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full py-4 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 autoFocus
               />
-            </div>
-
-            {/* Submit Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handlePasswordAuth}
-              disabled={isAuthenticating || !password.trim()}
-              className="w-full bg-blue-500 text-white py-3 rounded-xl font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isAuthenticating ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Authenticating...</span>
-                </div>
-              ) : (
-                'Continue'
-              )}
-            </motion.button>
-
-            {/* Back to Biometric */}
-            <div className="space-y-2">
-              {capabilities.isAvailable && (
-                <button
-                  onClick={() => setShowFallback(false)}
-                  className="w-full text-gray-600 dark:text-gray-400 py-2 text-sm hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                >
-                  ← Back to biometric
-                </button>
-              )}
               
-              {onCancel && (
-                <button
-                  onClick={onCancel}
-                  className="w-full text-gray-500 dark:text-gray-500 py-2 text-sm hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              )}
+              <button
+                className="w-full py-4 px-6 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+              >
+                Sign In
+              </button>
+              
+              <button
+                onClick={() => setShowFallback(false)}
+                className="w-full py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Back to Biometric
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
-}
+};
+
+export default BiometricAuth;

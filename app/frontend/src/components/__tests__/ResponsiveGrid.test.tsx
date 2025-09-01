@@ -1,543 +1,335 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import ResponsiveGrid, { ProductGrid, CategoryGrid, MasonryGrid, GridItem, useResponsiveGrid } from '../ResponsiveGrid';
-import { useResponsive, useResponsiveColumns, useResponsiveSpacing } from '@/design-system/hooks/useResponsive';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import ResponsiveGrid, { useResponsiveGrid } from '../ResponsiveGrid';
 
-// Mock dependencies
-jest.mock('@/design-system/hooks/useResponsive');
+// Mock framer-motion
 jest.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>
   },
+  AnimatePresence: ({ children }: any) => <>{children}</>
 }));
 
-const mockResponsive = {
-  breakpoint: 'md' as const,
-  width: 768,
-  height: 1024,
-  isMobile: false,
-  isTablet: true,
-  isDesktop: false,
-  isTouch: true,
-  orientation: 'portrait' as const,
-};
+// Mock ResizeObserver
+class MockResizeObserver {
+  callback: ResizeObserverCallback;
+  
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
+  
+  observe(target: Element) {
+    // Simulate initial observation
+    this.callback([{
+      target,
+      contentRect: { width: 1200, height: 800 } as DOMRectReadOnly,
+      borderBoxSize: [] as any,
+      contentBoxSize: [] as any,
+      devicePixelContentBoxSize: [] as any
+    }], this);
+  }
+  
+  unobserve() {}
+  disconnect() {}
+}
+
+global.ResizeObserver = MockResizeObserver;
+
+const mockChildren = [
+  <div key="1">Item 1</div>,
+  <div key="2">Item 2</div>,
+  <div key="3">Item 3</div>,
+  <div key="4">Item 4</div>,
+  <div key="5">Item 5</div>,
+  <div key="6">Item 6</div>
+];
 
 describe('ResponsiveGrid', () => {
   beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveColumns as jest.Mock).mockReturnValue(3);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1.5rem');
-  });
-
-  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('Basic Rendering', () => {
-    it('renders children in grid layout', () => {
-      render(
-        <ResponsiveGrid>
-          <div>Item 1</div>
-          <div>Item 2</div>
-          <div>Item 3</div>
-        </ResponsiveGrid>
-      );
-      
-      expect(screen.getByText('Item 1')).toBeInTheDocument();
-      expect(screen.getByText('Item 2')).toBeInTheDocument();
-      expect(screen.getByText('Item 3')).toBeInTheDocument();
-    });
-
-    it('applies correct grid styles', () => {
-      const { container } = render(
-        <ResponsiveGrid>
-          <div>Item 1</div>
-          <div>Item 2</div>
-        </ResponsiveGrid>
-      );
-      
-      const gridContainer = container.firstChild as HTMLElement;
-      expect(gridContainer).toHaveStyle({
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '1.5rem',
-      });
-    });
-
-    it('applies custom className', () => {
-      const { container } = render(
-        <ResponsiveGrid className="custom-grid">
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      expect(container.firstChild).toHaveClass('custom-grid');
-    });
-
-    it('applies itemClassName to grid items', () => {
-      render(
-        <ResponsiveGrid itemClassName="grid-item">
-          <div>Item 1</div>
-          <div>Item 2</div>
-        </ResponsiveGrid>
-      );
-      
-      const items = screen.getAllByText(/Item/);
-      items.forEach(item => {
-        expect(item.parentElement).toHaveClass('grid-item');
-      });
-    });
-  });
-
-  describe('Responsive Columns', () => {
-    it('uses responsive column configuration', () => {
-      const columns = {
-        xs: 1,
-        sm: 2,
-        md: 3,
-        lg: 4,
-      };
-      
-      render(
-        <ResponsiveGrid columns={columns}>
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      expect(useResponsiveColumns).toHaveBeenCalledWith(columns);
-    });
-
-    it('adapts to different breakpoints', () => {
-      (useResponsiveColumns as jest.Mock).mockReturnValue(2);
-      
-      const { container } = render(
-        <ResponsiveGrid>
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      const gridContainer = container.firstChild as HTMLElement;
-      expect(gridContainer).toHaveStyle({
-        gridTemplateColumns: 'repeat(2, 1fr)',
-      });
-    });
-  });
-
-  describe('Auto-fit Layout', () => {
-    it('uses auto-fit when enabled', () => {
-      const { container } = render(
-        <ResponsiveGrid autoFit={true} minItemWidth="200px">
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      const gridContainer = container.firstChild as HTMLElement;
-      expect(gridContainer).toHaveStyle({
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      });
-    });
-
-    it('uses maxItemWidth when provided', () => {
-      const { container } = render(
-        <ResponsiveGrid autoFit={true} minItemWidth="200px" maxItemWidth="400px">
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      const gridContainer = container.firstChild as HTMLElement;
-      expect(gridContainer).toHaveStyle({
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 400px))',
-      });
-    });
-  });
-
-  describe('Aspect Ratio', () => {
-    it('applies aspect ratio to grid items', () => {
-      render(
-        <ResponsiveGrid aspectRatio="16/9">
-          <div>Item 1</div>
-          <div>Item 2</div>
-        </ResponsiveGrid>
-      );
-      
-      const items = screen.getAllByText(/Item/);
-      items.forEach(item => {
-        expect(item.parentElement).toHaveStyle({
-          aspectRatio: '16/9',
-        });
-      });
-    });
-  });
-
-  describe('Gap Configuration', () => {
-    it('uses responsive gap configuration', () => {
-      const gap = {
-        xs: '0.5rem',
-        md: '1rem',
-        lg: '2rem',
-      };
-      
-      render(
-        <ResponsiveGrid gap={gap}>
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      expect(useResponsiveSpacing).toHaveBeenCalledWith(gap);
-    });
-  });
-
-  describe('Animation', () => {
-    it('enables animation by default', () => {
-      render(
-        <ResponsiveGrid>
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      // Animation should be enabled (motion.div used)
-      expect(screen.getByText('Item 1')).toBeInTheDocument();
-    });
-
-    it('disables animation when specified', () => {
-      render(
-        <ResponsiveGrid animate={false}>
-          <div>Item 1</div>
-        </ResponsiveGrid>
-      );
-      
-      // Should render without animation
-      expect(screen.getByText('Item 1')).toBeInTheDocument();
-    });
-
-    it('uses custom stagger timing', () => {
-      render(
-        <ResponsiveGrid staggerChildren={0.2}>
-          <div>Item 1</div>
-          <div>Item 2</div>
-        </ResponsiveGrid>
-      );
-      
-      expect(screen.getByText('Item 1')).toBeInTheDocument();
-      expect(screen.getByText('Item 2')).toBeInTheDocument();
-    });
-  });
-});
-
-describe('ProductGrid', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveColumns as jest.Mock).mockReturnValue(3);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1.5rem');
-  });
-
-  it('renders with standard variant by default', () => {
-    render(
-      <ProductGrid>
-        <div>Product 1</div>
-        <div>Product 2</div>
-      </ProductGrid>
-    );
+  it('renders children correctly', () => {
+    render(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
     
-    expect(screen.getByText('Product 1')).toBeInTheDocument();
-    expect(screen.getByText('Product 2')).toBeInTheDocument();
+    expect(screen.getByText('Item 1')).toBeInTheDocument();
+    expect(screen.getByText('Item 2')).toBeInTheDocument();
+    expect(screen.getByText('Item 6')).toBeInTheDocument();
   });
 
-  it('uses compact variant configuration', () => {
-    render(
-      <ProductGrid variant="compact">
-        <div>Product 1</div>
-      </ProductGrid>
-    );
+  it('calculates correct number of columns based on container width', async () => {
+    render(<ResponsiveGrid minItemWidth={280}>{mockChildren}</ResponsiveGrid>);
     
-    // Should use more columns for compact variant
-    expect(useResponsiveColumns).toHaveBeenCalledWith({
-      xs: 2,
-      sm: 3,
-      md: 4,
-      lg: 5,
-      xl: 6,
-      '2xl': 7,
+    // With 1200px width and 280px min item width, should fit 4 columns
+    await waitFor(() => {
+      const grid = document.querySelector('.responsive-grid');
+      expect(grid).toHaveStyle('grid-template-columns: repeat(4, 1fr)');
     });
   });
 
-  it('uses detailed variant configuration', () => {
-    render(
-      <ProductGrid variant="detailed">
-        <div>Product 1</div>
-      </ProductGrid>
-    );
+  it('applies custom gap', () => {
+    render(<ResponsiveGrid gap={24}>{mockChildren}</ResponsiveGrid>);
     
-    // Should use fewer columns for detailed variant
-    expect(useResponsiveColumns).toHaveBeenCalledWith({
-      xs: 1,
-      sm: 1,
-      md: 2,
-      lg: 3,
-      xl: 3,
-      '2xl': 4,
-    });
-  });
-});
-
-describe('CategoryGrid', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveColumns as jest.Mock).mockReturnValue(4);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1rem');
-  });
-
-  it('renders with medium size by default', () => {
-    render(
-      <CategoryGrid>
-        <div>Category 1</div>
-        <div>Category 2</div>
-      </CategoryGrid>
-    );
-    
-    expect(screen.getByText('Category 1')).toBeInTheDocument();
-    expect(screen.getByText('Category 2')).toBeInTheDocument();
-  });
-
-  it('uses small size configuration', () => {
-    render(
-      <CategoryGrid size="small">
-        <div>Category 1</div>
-      </CategoryGrid>
-    );
-    
-    expect(useResponsiveColumns).toHaveBeenCalledWith({
-      xs: 3,
-      sm: 4,
-      md: 6,
-      lg: 8,
-      xl: 10,
-      '2xl': 12,
-    });
-  });
-
-  it('uses large size configuration', () => {
-    render(
-      <CategoryGrid size="large">
-        <div>Category 1</div>
-      </CategoryGrid>
-    );
-    
-    expect(useResponsiveColumns).toHaveBeenCalledWith({
-      xs: 2,
-      sm: 2,
-      md: 3,
-      lg: 4,
-      xl: 5,
-      '2xl': 6,
-    });
-  });
-});
-
-describe('MasonryGrid', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1rem');
-  });
-
-  it('renders with auto-fit layout', () => {
-    const { container } = render(
-      <MasonryGrid>
-        <div>Item 1</div>
-        <div>Item 2</div>
-      </MasonryGrid>
-    );
-    
-    const gridContainer = container.firstChild as HTMLElement;
-    expect(gridContainer).toHaveStyle({
-      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    });
-  });
-
-  it('uses custom column width', () => {
-    const { container } = render(
-      <MasonryGrid columnWidth="250px">
-        <div>Item 1</div>
-      </MasonryGrid>
-    );
-    
-    const gridContainer = container.firstChild as HTMLElement;
-    expect(gridContainer).toHaveStyle({
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-    });
-  });
-});
-
-describe('GridItem', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-  });
-
-  it('renders with default span', () => {
-    const { container } = render(
-      <GridItem>
-        <div>Content</div>
-      </GridItem>
-    );
-    
-    const gridItem = container.firstChild as HTMLElement;
-    expect(gridItem).toHaveStyle({
-      gridColumn: 'span 1',
-    });
-  });
-
-  it('applies responsive span configuration', () => {
-    const span = {
-      xs: 1,
-      md: 2,
-      lg: 3,
-    };
-    
-    const { container } = render(
-      <GridItem span={span}>
-        <div>Content</div>
-      </GridItem>
-    );
-    
-    // Should use md span (2) for current breakpoint
-    const gridItem = container.firstChild as HTMLElement;
-    expect(gridItem).toHaveStyle({
-      gridColumn: 'span 2',
-    });
+    const grid = document.querySelector('.responsive-grid');
+    expect(grid).toHaveStyle('gap: 24');
   });
 
   it('applies custom className', () => {
-    const { container } = render(
-      <GridItem className="custom-item">
-        <div>Content</div>
-      </GridItem>
+    render(<ResponsiveGrid className="custom-grid">{mockChildren}</ResponsiveGrid>);
+    
+    const grid = document.querySelector('.custom-grid');
+    expect(grid).toBeInTheDocument();
+  });
+
+  it('applies item className to children', () => {
+    render(<ResponsiveGrid itemClassName="custom-item">{mockChildren}</ResponsiveGrid>);
+    
+    const items = document.querySelectorAll('.custom-item');
+    expect(items).toHaveLength(mockChildren.length);
+  });
+
+  it('handles empty children array', () => {
+    render(<ResponsiveGrid>{[]}</ResponsiveGrid>);
+    
+    const grid = document.querySelector('.responsive-grid');
+    expect(grid).toBeInTheDocument();
+    expect(grid?.children).toHaveLength(0);
+  });
+
+  it('respects maxItemWidth constraint', async () => {
+    render(
+      <ResponsiveGrid 
+        minItemWidth={200} 
+        maxItemWidth={300}
+      >
+        {mockChildren}
+      </ResponsiveGrid>
     );
     
-    expect(container.firstChild).toHaveClass('custom-item');
-  });
-});
-
-describe('useResponsiveGrid Hook', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveColumns as jest.Mock).mockReturnValue(3);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1.5rem');
-  });
-
-  it('returns grid configuration', () => {
-    const TestComponent = () => {
-      const gridConfig = useResponsiveGrid();
-      return (
-        <div data-testid="grid-config">
-          {JSON.stringify(gridConfig)}
-        </div>
-      );
-    };
-    
-    render(<TestComponent />);
-    
-    const configElement = screen.getByTestId('grid-config');
-    const config = JSON.parse(configElement.textContent || '{}');
-    
-    expect(config).toEqual({
-      columnCount: 3,
-      gridGap: '1.5rem',
-      itemWidth: 'calc((100% - 32px) / 3)',
-      breakpoint: 'md',
-      containerWidth: 768,
+    // Should limit item width to maxItemWidth
+    await waitFor(() => {
+      const items = document.querySelectorAll('[style*="width"]');
+      items.forEach(item => {
+        const width = parseInt((item as HTMLElement).style.width);
+        expect(width).toBeLessThanOrEqual(300);
+      });
     });
   });
 
-  it('calculates item width correctly', () => {
-    (useResponsiveColumns as jest.Mock).mockReturnValue(4);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('2rem');
+  it('enables virtual scrolling when specified', () => {
+    render(
+      <ResponsiveGrid 
+        virtualScrolling={true}
+        itemHeight={400}
+      >
+        {mockChildren}
+      </ResponsiveGrid>
+    );
     
-    const TestComponent = () => {
-      const { itemWidth } = useResponsiveGrid();
-      return <div data-testid="item-width">{itemWidth}</div>;
-    };
+    const grid = document.querySelector('.responsive-grid');
+    expect(grid).toHaveClass('overflow-auto');
+    expect(grid).toHaveStyle('display: block');
+  });
+
+  it('handles scroll events in virtual scrolling mode', async () => {
+    const manyChildren = Array.from({ length: 100 }, (_, i) => (
+      <div key={i}>Item {i + 1}</div>
+    ));
     
-    render(<TestComponent />);
+    render(
+      <ResponsiveGrid 
+        virtualScrolling={true}
+        itemHeight={200}
+      >
+        {manyChildren}
+      </ResponsiveGrid>
+    );
     
-    expect(screen.getByTestId('item-width')).toHaveTextContent('calc((100% - 48px) / 4)');
+    const grid = document.querySelector('.responsive-grid');
+    if (grid) {
+      fireEvent.scroll(grid, { target: { scrollTop: 1000 } });
+      
+      // Should only render visible items plus overscan
+      await waitFor(() => {
+        const renderedItems = grid.children.length;
+        expect(renderedItems).toBeLessThan(manyChildren.length);
+      });
+    }
+  });
+
+  it('applies correct breakpoint classes', async () => {
+    render(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
+    
+    await waitFor(() => {
+      const items = document.querySelectorAll('[class*="grid-"]');
+      expect(items.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('animates items when animateItems is true', () => {
+    render(<ResponsiveGrid animateItems={true}>{mockChildren}</ResponsiveGrid>);
+    
+    // Should wrap children in motion.div components
+    const grid = document.querySelector('.responsive-grid');
+    expect(grid?.children).toHaveLength(mockChildren.length);
+  });
+
+  it('disables animations when animateItems is false', () => {
+    render(<ResponsiveGrid animateItems={false}>{mockChildren}</ResponsiveGrid>);
+    
+    // Should render children directly without animation wrappers
+    const grid = document.querySelector('.responsive-grid');
+    expect(grid?.children).toHaveLength(mockChildren.length);
+  });
+
+  it('shows debug info in development mode', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+    
+    render(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
+    
+    expect(screen.getByText(/Columns:/)).toBeInTheDocument();
+    expect(screen.getByText(/Item Width:/)).toBeInTheDocument();
+    
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('hides debug info in production mode', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    
+    render(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
+    
+    expect(screen.queryByText(/Columns:/)).not.toBeInTheDocument();
+    
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it('handles window resize correctly', async () => {
+    const { rerender } = render(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
+    
+    // Simulate resize by creating new ResizeObserver callback
+    const resizeObserver = new MockResizeObserver(() => {});
+    resizeObserver.callback([{
+      target: document.createElement('div'),
+      contentRect: { width: 800, height: 600 } as DOMRectReadOnly,
+      borderBoxSize: [] as any,
+      contentBoxSize: [] as any,
+      devicePixelContentBoxSize: [] as any
+    }], resizeObserver);
+    
+    rerender(<ResponsiveGrid>{mockChildren}</ResponsiveGrid>);
+    
+    // Should recalculate grid dimensions
+    await waitFor(() => {
+      const grid = document.querySelector('.responsive-grid');
+      expect(grid).toBeInTheDocument();
+    });
+  });
+
+  it('calculates total height correctly for virtual scrolling', () => {
+    render(
+      <ResponsiveGrid 
+        virtualScrolling={true}
+        itemHeight={200}
+        gap={16}
+      >
+        {mockChildren}
+      </ResponsiveGrid>
+    );
+    
+    const grid = document.querySelector('.responsive-grid');
+    // Should calculate height based on number of rows
+    expect(grid).toHaveAttribute('style');
+  });
+
+  it('handles overscan correctly in virtual scrolling', async () => {
+    const manyChildren = Array.from({ length: 50 }, (_, i) => (
+      <div key={i}>Item {i + 1}</div>
+    ));
+    
+    render(
+      <ResponsiveGrid 
+        virtualScrolling={true}
+        itemHeight={200}
+        overscan={3}
+      >
+        {manyChildren}
+      </ResponsiveGrid>
+    );
+    
+    // Should render extra items for smooth scrolling
+    await waitFor(() => {
+      const grid = document.querySelector('.responsive-grid');
+      expect(grid?.children.length).toBeGreaterThan(0);
+    });
   });
 });
 
-describe('Performance and Edge Cases', () => {
-  beforeEach(() => {
-    (useResponsive as jest.Mock).mockReturnValue(mockResponsive);
-    (useResponsiveColumns as jest.Mock).mockReturnValue(3);
-    (useResponsiveSpacing as jest.Mock).mockReturnValue('1rem');
-  });
-
-  it('handles empty children gracefully', () => {
-    render(<ResponsiveGrid />);
+// Test the useResponsiveGrid hook
+describe('useResponsiveGrid hook', () => {
+  const TestComponent: React.FC<{ containerWidth: number }> = ({ containerWidth }) => {
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const gridInfo = useResponsiveGrid(containerRef, 280, 400, 16);
     
-    // Should not crash with no children
-    expect(document.body).toBeInTheDocument();
-  });
-
-  it('handles single child', () => {
-    render(
-      <ResponsiveGrid>
-        <div>Single Item</div>
-      </ResponsiveGrid>
+    // Mock container width
+    React.useEffect(() => {
+      if (containerRef.current) {
+        Object.defineProperty(containerRef.current, 'offsetWidth', {
+          value: containerWidth,
+          writable: true
+        });
+      }
+    }, [containerWidth]);
+    
+    return (
+      <div ref={containerRef}>
+        <div data-testid="columns">{gridInfo.columns}</div>
+        <div data-testid="item-width">{Math.round(gridInfo.itemWidth)}</div>
+        <div data-testid="breakpoint">{gridInfo.breakpoint}</div>
+      </div>
     );
+  };
+
+  it('calculates correct grid info for different container widths', async () => {
+    const { rerender } = render(<TestComponent containerWidth={1200} />);
     
-    expect(screen.getByText('Single Item')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('columns')).toHaveTextContent('4');
+      expect(screen.getByTestId('breakpoint')).toHaveTextContent('wide');
+    });
+    
+    rerender(<TestComponent containerWidth={800} />);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('columns')).toHaveTextContent('2');
+      expect(screen.getByTestId('breakpoint')).toHaveTextContent('tablet');
+    });
+    
+    rerender(<TestComponent containerWidth={400} />);
+    
+    await waitFor(() => {
+      expect(screen.getByTestId('columns')).toHaveTextContent('1');
+      expect(screen.getByTestId('breakpoint')).toHaveTextContent('mobile');
+    });
   });
 
-  it('handles large number of children', () => {
-    const manyChildren = Array.from({ length: 100 }, (_, i) => (
-      <div key={i}>Item {i}</div>
-    ));
+  it('returns correct breakpoint names', async () => {
+    const breakpointTests = [
+      { width: 300, expected: 'mobile' },
+      { width: 600, expected: 'tablet' },
+      { width: 900, expected: 'desktop' },
+      { width: 1400, expected: 'wide' }
+    ];
     
-    render(<ResponsiveGrid>{manyChildren}</ResponsiveGrid>);
-    
-    expect(screen.getByText('Item 0')).toBeInTheDocument();
-    expect(screen.getByText('Item 99')).toBeInTheDocument();
-  });
-
-  it('handles dynamic children updates', () => {
-    const { rerender } = render(
-      <ResponsiveGrid>
-        <div>Item 1</div>
-        <div>Item 2</div>
-      </ResponsiveGrid>
-    );
-    
-    rerender(
-      <ResponsiveGrid>
-        <div>Item 1</div>
-        <div>Item 2</div>
-        <div>Item 3</div>
-      </ResponsiveGrid>
-    );
-    
-    expect(screen.getByText('Item 3')).toBeInTheDocument();
-  });
-
-  it('maintains performance with frequent re-renders', () => {
-    const renderSpy = jest.fn();
-    
-    const TestComponent = ({ count }: { count: number }) => {
-      renderSpy();
-      return (
-        <ResponsiveGrid>
-          {Array.from({ length: count }, (_, i) => (
-            <div key={i}>Item {i}</div>
-          ))}
-        </ResponsiveGrid>
-      );
-    };
-    
-    const { rerender } = render(<TestComponent count={5} />);
-    
-    // Multiple re-renders
-    rerender(<TestComponent count={5} />);
-    rerender(<TestComponent count={5} />);
-    
-    // Should not cause excessive re-renders
-    expect(renderSpy).toHaveBeenCalledTimes(3);
+    for (const test of breakpointTests) {
+      const { unmount } = render(<TestComponent containerWidth={test.width} />);
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('breakpoint')).toHaveTextContent(test.expected);
+      });
+      
+      unmount();
+    }
   });
 });
