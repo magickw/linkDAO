@@ -1,9 +1,13 @@
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useResponsive } from '@/design-system/hooks/useResponsive';
-import { designTokens } from '@/design-system/tokens';
-import BottomSheet from './BottomSheet';
-import GestureHandler from './GestureHandler';
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { 
+  XMarkIcon, 
+  AdjustmentsHorizontalIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
+} from '@heroicons/react/24/outline';
 
 interface FilterOption {
   id: string;
@@ -19,360 +23,293 @@ interface FilterSection {
   options?: FilterOption[];
   min?: number;
   max?: number;
-  step?: number;
   value?: any;
-  multiSelect?: boolean;
+  expanded?: boolean;
 }
 
 interface FilterDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   filters: FilterSection[];
-  onFiltersChange: (filters: Record<string, any>) => void;
-  appliedFilters: Record<string, any>;
+  onFiltersChange: (filters: FilterSection[]) => void;
+  onApplyFilters: () => void;
+  onClearFilters: () => void;
   className?: string;
-  showResultCount?: boolean;
-  resultCount?: number;
 }
 
-export default function FilterDrawer({
+const FilterDrawer: React.FC<FilterDrawerProps> = ({
   isOpen,
   onClose,
   filters,
   onFiltersChange,
-  appliedFilters,
-  className = '',
-  showResultCount = true,
-  resultCount = 0
-}: FilterDrawerProps) {
-  const { isMobile } = useResponsive();
-  const [localFilters, setLocalFilters] = useState<Record<string, any>>(appliedFilters);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  onApplyFilters,
+  onClearFilters,
+  className = ''
+}) => {
+  const [localFilters, setLocalFilters] = useState<FilterSection[]>(filters);
+  const [dragY, setDragY] = useState(0);
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
-  const handleFilterChange = useCallback((sectionId: string, value: any) => {
-    setLocalFilters(prev => ({
-      ...prev,
-      [sectionId]: value
-    }));
-  }, []);
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
-  const handleApplyFilters = useCallback(() => {
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    const shouldClose = info.velocity.y > 500 || info.offset.y > 200;
+    
+    if (shouldClose) {
+      onClose();
+    }
+    
+    setDragY(0);
+  };
+
+  const toggleSection = (sectionId: string) => {
+    const updatedFilters = localFilters.map(filter =>
+      filter.id === sectionId
+        ? { ...filter, expanded: !filter.expanded }
+        : filter
+    );
+    setLocalFilters(updatedFilters);
+  };
+
+  const updateFilterValue = (sectionId: string, value: any) => {
+    const updatedFilters = localFilters.map(filter =>
+      filter.id === sectionId
+        ? { ...filter, value }
+        : filter
+    );
+    setLocalFilters(updatedFilters);
+  };
+
+  const handleApply = () => {
     onFiltersChange(localFilters);
+    onApplyFilters();
     onClose();
-  }, [localFilters, onFiltersChange, onClose]);
+  };
 
-  const handleClearFilters = useCallback(() => {
-    const clearedFilters = {};
+  const handleClear = () => {
+    const clearedFilters = localFilters.map(filter => ({
+      ...filter,
+      value: filter.type === 'checkbox' ? [] : 
+             filter.type === 'range' ? [filter.min || 0, filter.max || 100] : 
+             null
+    }));
     setLocalFilters(clearedFilters);
-    onFiltersChange(clearedFilters);
-  }, [onFiltersChange]);
+    onClearFilters();
+  };
 
-  const toggleSection = useCallback((sectionId: string) => {
-    setExpandedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(sectionId)) {
-        newSet.delete(sectionId);
-      } else {
-        newSet.add(sectionId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const getActiveFilterCount = useCallback(() => {
-    return Object.values(localFilters).filter(value => {
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === 'object' && value !== null) {
-        return Object.values(value).some(v => v !== undefined && v !== null && v !== '');
-      }
-      return value !== undefined && value !== null && value !== '';
-    }).length;
-  }, [localFilters]);
-
-  const renderCheckboxFilter = (section: FilterSection) => {
-    const selectedValues = localFilters[section.id] || [];
-    
-    return (
-      <div className="space-y-3">
-        {section.options?.map((option) => {
-          const isSelected = selectedValues.includes(option.value);
-          
-          return (
-            <GestureHandler
-              key={option.id}
-              onTap={() => {
-                const newValues = isSelected
-                  ? selectedValues.filter((v: any) => v !== option.value)
-                  : [...selectedValues, option.value];
-                handleFilterChange(section.id, newValues);
-              }}
-              className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors touch-manipulation"
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                  isSelected 
-                    ? 'bg-blue-500 border-blue-500' 
-                    : 'border-gray-300 dark:border-gray-600'
-                }`}>
-                  {isSelected && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
+  const renderFilterContent = (filter: FilterSection) => {
+    switch (filter.type) {
+      case 'checkbox':
+        return (
+          <div className="space-y-3">
+            {filter.options?.map((option) => (
+              <label
+                key={option.id}
+                htmlFor={`${filter.id}-${option.id}`}
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center space-x-3">
+                  <input
+                    id={`${filter.id}-${option.id}`}
+                    type="checkbox"
+                    className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    checked={filter.value?.includes(option.value) || false}
+                    onChange={(e) => {
+                      const currentValues = filter.value || [];
+                      const newValues = e.target.checked
+                        ? [...currentValues, option.value]
+                        : currentValues.filter((v: any) => v !== option.value);
+                      updateFilterValue(filter.id, newValues);
+                    }}
+                  />
+                  <span className="text-gray-900 font-medium">{option.label}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {option.label}
-                </span>
-              </div>
-              {option.count !== undefined && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  {option.count}
-                </span>
-              )}
-            </GestureHandler>
-          );
-        })}
-      </div>
-    );
-  };
+                {option.count && (
+                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {option.count}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        );
 
-  const renderRadioFilter = (section: FilterSection) => {
-    const selectedValue = localFilters[section.id];
-    
-    return (
-      <div className="space-y-3">
-        {section.options?.map((option) => {
-          const isSelected = selectedValue === option.value;
-          
-          return (
-            <GestureHandler
-              key={option.id}
-              onTap={() => handleFilterChange(section.id, option.value)}
-              className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors touch-manipulation"
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                  isSelected 
-                    ? 'bg-blue-500 border-blue-500' 
-                    : 'border-gray-300 dark:border-gray-600'
-                }`}>
-                  {isSelected && (
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                  )}
+      case 'radio':
+        return (
+          <div className="space-y-3">
+            {filter.options?.map((option) => (
+              <label
+                key={option.id}
+                htmlFor={`${filter.id}-${option.id}`}
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center space-x-3">
+                  <input
+                    id={`${filter.id}-${option.id}`}
+                    type="radio"
+                    name={filter.id}
+                    className="w-5 h-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    checked={filter.value === option.value}
+                    onChange={() => updateFilterValue(filter.id, option.value)}
+                  />
+                  <span className="text-gray-900 font-medium">{option.label}</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {option.label}
-                </span>
-              </div>
-              {option.count !== undefined && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  {option.count}
-                </span>
-              )}
-            </GestureHandler>
-          );
-        })}
-      </div>
-    );
+                {option.count && (
+                  <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {option.count}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'range':
+        const [min, max] = filter.value || [filter.min || 0, filter.max || 100];
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Min: ${min}</span>
+              <span className="text-sm text-gray-600">Max: ${max}</span>
+            </div>
+            <div className="relative">
+              <input
+                type="range"
+                min={filter.min || 0}
+                max={filter.max || 100}
+                value={min}
+                onChange={(e) => updateFilterValue(filter.id, [parseInt(e.target.value), max])}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              />
+              <input
+                type="range"
+                min={filter.min || 0}
+                max={filter.max || 100}
+                value={max}
+                onChange={(e) => updateFilterValue(filter.id, [min, parseInt(e.target.value)])}
+                className="absolute top-0 w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
-  const renderRangeFilter = (section: FilterSection) => {
-    const value = localFilters[section.id] || { min: section.min, max: section.max };
-    
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Min
-            </label>
-            <input
-              type="number"
-              min={section.min}
-              max={section.max}
-              step={section.step}
-              value={value.min || ''}
-              onChange={(e) => handleFilterChange(section.id, { ...value, min: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Min"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Max
-            </label>
-            <input
-              type="number"
-              min={section.min}
-              max={section.max}
-              step={section.step}
-              value={value.max || ''}
-              onChange={(e) => handleFilterChange(section.id, { ...value, max: Number(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Max"
-            />
-          </div>
-        </div>
-        
-        {/* Range slider for touch-friendly interaction */}
-        <div className="px-2">
-          <input
-            type="range"
-            min={section.min}
-            max={section.max}
-            step={section.step}
-            value={value.min || section.min}
-            onChange={(e) => handleFilterChange(section.id, { ...value, min: Number(e.target.value) })}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider-thumb"
-          />
-          <input
-            type="range"
-            min={section.min}
-            max={section.max}
-            step={section.step}
-            value={value.max || section.max}
-            onChange={(e) => handleFilterChange(section.id, { ...value, max: Number(e.target.value) })}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 slider-thumb mt-2"
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderFilterSection = (section: FilterSection) => {
-    const isExpanded = expandedSections.has(section.id);
-    
-    return (
-      <div key={section.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-        <GestureHandler
-          onTap={() => toggleSection(section.id)}
-          className="flex items-center justify-between p-4 touch-manipulation"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {section.title}
-          </h3>
-          <motion.div
-            animate={{ rotate: isExpanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </motion.div>
-        </GestureHandler>
-        
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div className="px-4 pb-4">
-                {section.type === 'checkbox' && renderCheckboxFilter(section)}
-                {section.type === 'radio' && renderRadioFilter(section)}
-                {section.type === 'range' && renderRangeFilter(section)}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
-
-  const content = (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Filters
-          </h2>
-          {getActiveFilterCount() > 0 && (
-            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-              {getActiveFilterCount()}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Filter sections */}
-      <div className="flex-1 overflow-y-auto">
-        {filters.map(renderFilterSection)}
-      </div>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        {showResultCount && (
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-3 text-center">
-            {resultCount} results found
-          </div>
-        )}
-        
-        <div className="flex space-x-3">
-          <button
-            onClick={handleClearFilters}
-            className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
-          >
-            Clear All
-          </button>
-          <button
-            onClick={handleApplyFilters}
-            className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-          >
-            Apply Filters
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <BottomSheet
-        isOpen={isOpen}
-        onClose={onClose}
-        height="full"
-        className={className}
-        showHandle={false}
-        closeOnBackdrop={true}
-        closeOnSwipeDown={true}
-      >
-        {content}
-      </BottomSheet>
-    );
-  }
-
-  // Desktop version - render as sidebar or modal
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-        >
+        <>
+          {/* Backdrop */}
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className={`w-full max-w-md h-full max-h-[80vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl ${className}`}
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+
+          {/* Drawer */}
+          <motion.div
+            ref={constraintsRef}
+            className={`
+              fixed bottom-0 left-0 right-0 z-50 md:hidden
+              bg-white rounded-t-3xl shadow-2xl
+              max-h-[85vh] overflow-hidden
+              ${className}
+            `}
+            initial={{ y: '100%' }}
+            animate={{ y: dragY }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.1}
+            onDragEnd={handleDragEnd}
+            onDrag={(event, info) => setDragY(info.offset.y)}
           >
-            {content}
+            {/* Handle */}
+            <div className="flex justify-center pt-4 pb-2">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <AdjustmentsHorizontalIcon className="w-6 h-6 text-gray-700" />
+                <h2 className="text-xl font-semibold text-gray-900">Filters</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Close filters"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              {localFilters.map((filter) => (
+                <div key={filter.id} className="border-b border-gray-100 pb-6 last:border-b-0">
+                  <button
+                    onClick={() => toggleSection(filter.id)}
+                    className="flex items-center justify-between w-full py-3 text-left"
+                  >
+                    <h3 className="text-lg font-medium text-gray-900">{filter.title}</h3>
+                    <motion.div
+                      animate={{ rotate: filter.expanded ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDownIcon className="w-5 h-5 text-gray-500" />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence>
+                    {filter.expanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-3">
+                          {renderFilterContent(filter)}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleClear}
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={handleApply}
+                  className="flex-1 py-3 px-4 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
           </motion.div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );
-}
+};
+
+export default FilterDrawer;

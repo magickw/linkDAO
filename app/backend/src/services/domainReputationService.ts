@@ -106,7 +106,7 @@ export class DomainReputationService {
         set: {
           reputationScore: sql`GREATEST(0, LEAST(100, ${domainReputation.reputationScore} + ${reputationImpact}))`,
           analysisCount: sql`${domainReputation.analysisCount} + 1`,
-          maliciousCount: isMalicious ? sql`${domainReputation.maliciousCount} + 1` : domainReputation.maliciousCount,
+          maliciousCount: isMalicious ? sql`${domainReputation.maliciousCount} + 1` : sql`${domainReputation.maliciousCount}`,
           lastUpdated: new Date(),
         },
       });
@@ -248,7 +248,7 @@ export class DomainReputationService {
         set: {
           isVerified: true,
           reputationScore: sql`GREATEST(${domainReputation.reputationScore}, 95)`,
-          category: category || domainReputation.category,
+          category: category || sql`${domainReputation.category}`,
           lastUpdated: new Date(),
         },
       });

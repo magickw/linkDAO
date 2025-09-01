@@ -1,8 +1,14 @@
+'use client';
+
 import React, { useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { useResponsive } from '@/design-system/hooks/useResponsive';
-import { designTokens } from '@/design-system/tokens';
-import GestureHandler from './GestureHandler';
+import { motion, PanInfo, useMotionValue, useTransform } from 'framer-motion';
+import { 
+  HeartIcon, 
+  ShareIcon, 
+  ShoppingCartIcon,
+  EyeIcon
+} from '@heroicons/react/24/outline';
+import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 
 interface Product {
   id: string;
@@ -12,315 +18,372 @@ interface Product {
     fiat: string;
     currency: string;
   };
-  images: string[];
+  image: string;
   seller: {
     name: string;
+    avatar: string;
     verified: boolean;
     reputation: number;
   };
-  trustIndicators: {
-    verified: boolean;
-    escrowProtected: boolean;
-    onChainCertified: boolean;
-  };
+  likes: number;
+  isLiked: boolean;
   category: string;
-  isNFT?: boolean;
+  tags: string[];
+}
+
+interface SwipeAction {
+  id: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  label: string;
+  threshold: number;
 }
 
 interface SwipeableProductCardsProps {
   products: Product[];
-  onProductSelect: (product: Product) => void;
-  onProductFavorite?: (productId: string) => void;
-  onProductShare?: (productId: string) => void;
+  onProductPress?: (product: Product) => void;
+  onLike?: (productId: string) => void;
+  onShare?: (productId: string) => void;
+  onAddToCart?: (productId: string) => void;
+  onQuickView?: (productId: string) => void;
   className?: string;
-  cardVariant?: 'compact' | 'standard' | 'detailed';
-  showSwipeHint?: boolean;
 }
 
-export default function SwipeableProductCards({
+const SwipeableProductCards: React.FC<SwipeableProductCardsProps> = ({
   products,
-  onProductSelect,
-  onProductFavorite,
-  onProductShare,
-  className = '',
-  cardVariant = 'standard',
-  showSwipeHint = true
-}: SwipeableProductCardsProps) {
-  const { isMobile, isTouch } = useResponsive();
+  onProductPress,
+  onLike,
+  onShare,
+  onAddToCart,
+  onQuickView,
+  className = ''
+}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
-  const [showHint, setShowHint] = useState(showSwipeHint);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
-  const handleSwipeLeft = useCallback(() => {
-    if (currentIndex < products.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setDragDirection('left');
-      setTimeout(() => setDragDirection(null), 300);
-    }
-  }, [currentIndex, products.length]);
-
-  const handleSwipeRight = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-      setDragDirection('right');
-      setTimeout(() => setDragDirection(null), 300);
-    }
-  }, [currentIndex]);
-
-  const handleDragEnd = useCallback((event: any, info: PanInfo) => {
-    const threshold = 100;
-    const velocity = info.velocity.x;
-    const offset = info.offset.x;
-
-    if (Math.abs(velocity) > 500 || Math.abs(offset) > threshold) {
-      if (offset > 0 || velocity > 0) {
-        handleSwipeRight();
-      } else {
-        handleSwipeLeft();
+  const swipeActions: { left: SwipeAction[]; right: SwipeAction[] } = {
+    left: [
+      {
+        id: 'like',
+        icon: HeartIcon,
+        color: 'text-red-500',
+        bgColor: 'bg-red-50',
+        label: 'Like',
+        threshold: 100
+      },
+      {
+        id: 'share',
+        icon: ShareIcon,
+        color: 'text-blue-500',
+        bgColor: 'bg-blue-50',
+        label: 'Share',
+        threshold: 150
       }
-    }
-    
-    if (showHint) {
-      setShowHint(false);
-    }
-  }, [handleSwipeLeft, handleSwipeRight, showHint]);
+    ],
+    right: [
+      {
+        id: 'cart',
+        icon: ShoppingCartIcon,
+        color: 'text-green-500',
+        bgColor: 'bg-green-50',
+        label: 'Add to Cart',
+        threshold: 100
+      },
+      {
+        id: 'quickview',
+        icon: EyeIcon,
+        color: 'text-purple-500',
+        bgColor: 'bg-purple-50',
+        label: 'Quick View',
+        threshold: 150
+      }
+    ]
+  };
 
-  const renderTrustIndicators = (indicators: Product['trustIndicators']) => (
-    <div className="flex space-x-1">
-      {indicators.verified && (
-        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
-          ✅ Verified
-        </span>
-      )}
-      {indicators.escrowProtected && (
-        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center">
-          🔒 Escrow
-        </span>
-      )}
-      {indicators.onChainCertified && (
-        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full flex items-center">
-          ⛓️ On-Chain
-        </span>
-      )}
-    </div>
-  );
+  const handleSwipe = useCallback((direction: 'left' | 'right', productId: string, actionId: string) => {
+    switch (actionId) {
+      case 'like':
+        onLike?.(productId);
+        break;
+      case 'share':
+        onShare?.(productId);
+        break;
+      case 'cart':
+        onAddToCart?.(productId);
+        break;
+      case 'quickview':
+        onQuickView?.(productId);
+        break;
+    }
+  }, [onLike, onShare, onAddToCart, onQuickView]);
 
-  const renderProductCard = (product: Product, index: number) => {
-    const isActive = index === currentIndex;
-    const offset = index - currentIndex;
-    
+  const ProductCard: React.FC<{ 
+    product: Product; 
+    index: number; 
+    isActive: boolean;
+    zIndex: number;
+  }> = ({ product, index, isActive, zIndex }) => {
+    const x = useMotionValue(0);
+    const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
+    const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0.5, 0.8, 1, 0.8, 0.5]);
+
+    const [activeAction, setActiveAction] = useState<SwipeAction | null>(null);
+
+    const handleDrag = (event: any, info: PanInfo) => {
+      const threshold = 100;
+      const direction = info.offset.x > 0 ? 'right' : 'left';
+      const distance = Math.abs(info.offset.x);
+      
+      const actions = swipeActions[direction];
+      const triggeredAction = actions.find(action => distance >= action.threshold);
+      
+      setActiveAction(triggeredAction || null);
+      setSwipeDirection(distance > threshold ? direction : null);
+    };
+
+    const handleDragEnd = (event: any, info: PanInfo) => {
+      const threshold = 100;
+      const direction = info.offset.x > 0 ? 'right' : 'left';
+      const distance = Math.abs(info.offset.x);
+
+      if (distance > threshold && activeAction) {
+        handleSwipe(direction, product.id, activeAction.id);
+        
+        // Move to next card
+        if (currentIndex < products.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        }
+      }
+
+      setActiveAction(null);
+      setSwipeDirection(null);
+      x.set(0);
+    };
+
     return (
       <motion.div
-        key={product.id}
-        className="absolute inset-0"
-        initial={false}
-        animate={{
-          x: `${offset * 100}%`,
-          scale: isActive ? 1 : 0.9,
-          opacity: Math.abs(offset) > 1 ? 0 : 1,
-          zIndex: isActive ? 10 : Math.max(0, 10 - Math.abs(offset))
+        className={`
+          absolute inset-0 cursor-grab active:cursor-grabbing
+          ${isActive ? 'pointer-events-auto' : 'pointer-events-none'}
+        `}
+        style={{ 
+          x, 
+          rotate, 
+          opacity,
+          zIndex: zIndex - index
         }}
-        transition={{
-          type: 'spring',
-          stiffness: 300,
-          damping: 30
-        }}
-        drag={isActive && isMobile ? 'x' : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
+        drag={isActive ? 'x' : false}
+        dragConstraints={{ left: -300, right: 300 }}
+        dragElastic={0.1}
+        onDrag={handleDrag}
         onDragEnd={handleDragEnd}
-        style={{
-          background: designTokens.glassmorphism.primary.background,
-          backdropFilter: designTokens.glassmorphism.primary.backdropFilter,
-          border: designTokens.glassmorphism.primary.border,
-          borderRadius: designTokens.glassmorphism.primary.borderRadius,
-          boxShadow: product.isNFT 
-            ? designTokens.nftShadows.standard.boxShadow 
-            : designTokens.glassmorphism.primary.boxShadow,
+        whileTap={{ scale: 0.95 }}
+        animate={{
+          scale: isActive ? 1 : 0.95,
+          y: isActive ? 0 : index * 10
         }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
       >
-        <div className="h-full flex flex-col">
+        <div className="relative w-full h-full bg-white rounded-3xl shadow-xl overflow-hidden">
+          {/* Swipe Actions Background */}
+          {swipeDirection && (
+            <motion.div
+              className={`
+                absolute inset-0 flex items-center justify-center
+                ${activeAction?.bgColor || 'bg-gray-50'}
+              `}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.9 }}
+              exit={{ opacity: 0 }}
+            >
+              {activeAction && (
+                <div className="flex flex-col items-center space-y-2">
+                  <activeAction.icon className={`w-12 h-12 ${activeAction.color}`} />
+                  <span className={`text-lg font-semibold ${activeAction.color}`}>
+                    {activeAction.label}
+                  </span>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* Product Image */}
-          <div className="relative h-48 overflow-hidden rounded-t-2xl">
+          <div className="relative h-2/3 overflow-hidden">
             <img
-              src={product.images[0]}
+              src={product.image}
               alt={product.title}
               className="w-full h-full object-cover"
-              loading="lazy"
+              draggable={false}
             />
             
-            {/* NFT Badge */}
-            {product.isNFT && (
-              <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                NFT
-              </div>
-            )}
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             
-            {/* Action buttons */}
-            <div className="absolute top-3 right-3 flex space-x-2">
-              {onProductShare && (
-                <GestureHandler
-                  onTap={() => onProductShare(product.id)}
-                  className="p-2 bg-black/20 backdrop-blur-sm rounded-full text-white hover:bg-black/30 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                  </svg>
-                </GestureHandler>
-              )}
+            {/* Quick actions */}
+            <div className="absolute top-4 right-4 flex flex-col space-y-2">
+              <motion.button
+                className={`
+                  p-3 rounded-full backdrop-blur-sm border border-white/20
+                  ${product.isLiked ? 'bg-red-500 text-white' : 'bg-white/90 text-gray-700'}
+                `}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLike?.(product.id);
+                }}
+              >
+                {product.isLiked ? (
+                  <HeartIconSolid className="w-5 h-5" />
+                ) : (
+                  <HeartIcon className="w-5 h-5" />
+                )}
+              </motion.button>
               
-              {onProductFavorite && (
-                <GestureHandler
-                  onTap={() => onProductFavorite(product.id)}
-                  className="p-2 bg-black/20 backdrop-blur-sm rounded-full text-white hover:bg-black/30 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </GestureHandler>
-              )}
+              <motion.button
+                className="p-3 rounded-full bg-white/90 backdrop-blur-sm border border-white/20 text-gray-700"
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShare?.(product.id);
+                }}
+              >
+                <ShareIcon className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            {/* Category tag */}
+            <div className="absolute top-4 left-4">
+              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-sm font-medium text-gray-700">
+                {product.category}
+              </span>
             </div>
           </div>
 
           {/* Product Info */}
-          <div className="flex-1 p-4 space-y-3">
+          <div className="p-6 h-1/3 flex flex-col justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+                {product.title}
+              </h3>
+              
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-2xl font-bold text-indigo-600">
+                    {product.price.crypto}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    ≈ {product.price.fiat}
+                  </span>
+                </div>
+                
+                <div className="flex items-center space-x-1">
+                  <HeartIcon className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm text-gray-500">{product.likes}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Seller info */}
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                {product.seller.name.charAt(0)}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={product.seller.avatar}
+                  alt={product.seller.name}
+                  className="w-8 h-8 rounded-full"
+                />
+                <div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      {product.seller.name}
+                    </span>
+                    {product.seller.verified && (
+                      <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">✓</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <div className="flex space-x-1">
+                      {[...Array(5)].map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-2 h-2 rounded-full ${
+                            i < product.seller.reputation ? 'bg-yellow-400' : 'bg-gray-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {product.seller.reputation}/5
+                    </span>
+                  </div>
+                </div>
               </div>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {product.seller.name}
-              </span>
-              {product.seller.verified && (
-                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              )}
+
+              <motion.button
+                className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium"
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onProductPress?.(product);
+                }}
+              >
+                View
+              </motion.button>
             </div>
-
-            {/* Product title */}
-            <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-2">
-              {product.title}
-            </h3>
-
-            {/* Trust indicators */}
-            {renderTrustIndicators(product.trustIndicators)}
-
-            {/* Price */}
-            <div className="space-y-1">
-              <div className="flex items-baseline space-x-2">
-                <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  {product.price.crypto}
-                </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {product.price.currency}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                ≈ {product.price.fiat}
-              </div>
-            </div>
-
-            {/* Action button */}
-            <GestureHandler
-              onTap={() => onProductSelect(product)}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-medium text-center hover:from-blue-600 hover:to-purple-600 transition-all duration-200 touch-manipulation"
-            >
-              View Details
-            </GestureHandler>
           </div>
         </div>
       </motion.div>
     );
   };
 
-  if (!products.length) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-        No products available
-      </div>
-    );
-  }
-
   return (
-    <div className={`relative ${className}`}>
-      {/* Cards container */}
-      <div 
-        ref={containerRef}
-        className="relative h-[500px] overflow-hidden"
-        style={{ perspective: '1000px' }}
-      >
-        {products.map((product, index) => renderProductCard(product, index))}
-      </div>
-
-      {/* Navigation dots */}
-      <div className="flex justify-center space-x-2 mt-4">
-        {products.map((_, index) => (
-          <GestureHandler
-            key={index}
-            onTap={() => setCurrentIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-200 ${
-              index === currentIndex 
-                ? 'bg-blue-500 w-6' 
-                : 'bg-gray-300 dark:bg-gray-600'
-            }`}
-          >
-            <div />
-          </GestureHandler>
+    <div className={`relative w-full h-[600px] ${className}`} ref={constraintsRef}>
+      {/* Cards stack */}
+      <div className="relative w-full h-full">
+        {products.slice(currentIndex, currentIndex + 3).map((product, index) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            index={index}
+            isActive={index === 0}
+            zIndex={products.length - index}
+          />
         ))}
       </div>
 
-      {/* Navigation arrows for desktop */}
-      {!isMobile && (
-        <>
-          <button
-            onClick={handleSwipeRight}
-            disabled={currentIndex === 0}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <button
-            onClick={handleSwipeLeft}
-            disabled={currentIndex === products.length - 1}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/80 backdrop-blur-sm rounded-full shadow-lg hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
-      )}
+      {/* Progress indicator */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+        {products.map((_, index) => (
+          <div
+            key={index}
+            className={`w-2 h-2 rounded-full transition-colors ${
+              index === currentIndex ? 'bg-indigo-600' : 'bg-gray-300'
+            }`}
+          />
+        ))}
+      </div>
 
-      {/* Swipe hint */}
-      <AnimatePresence>
-        {showHint && isMobile && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-black/70 text-white text-sm px-4 py-2 rounded-full flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
-            </svg>
-            <span>Swipe to browse</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Product counter */}
-      <div className="text-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-        {currentIndex + 1} of {products.length}
+      {/* Swipe hints */}
+      <div className="absolute bottom-16 left-4 right-4 flex justify-between pointer-events-none">
+        <div className="flex items-center space-x-2 text-gray-500">
+          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+            <HeartIcon className="w-4 h-4 text-red-500" />
+          </div>
+          <span className="text-sm">Swipe left to like</span>
+        </div>
+        
+        <div className="flex items-center space-x-2 text-gray-500">
+          <span className="text-sm">Swipe right to add</span>
+          <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
+            <ShoppingCartIcon className="w-4 h-4 text-green-500" />
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default SwipeableProductCards;

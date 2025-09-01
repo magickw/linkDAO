@@ -501,7 +501,7 @@ export class LinkSafetyService {
         set: {
           reputationScore: sql`GREATEST(0, ${domainReputation.reputationScore} + (${100 - riskScore} - ${domainReputation.reputationScore}) * 0.1)`,
           analysisCount: sql`${domainReputation.analysisCount} + 1`,
-          maliciousCount: isMalicious ? sql`${domainReputation.maliciousCount} + 1` : domainReputation.maliciousCount,
+          maliciousCount: isMalicious ? sql`${domainReputation.maliciousCount} + 1` : sql`${domainReputation.maliciousCount}`,
           lastUpdated: new Date(),
         },
       });

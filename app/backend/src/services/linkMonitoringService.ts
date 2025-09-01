@@ -315,7 +315,7 @@ export class LinkMonitoringService {
         resolvedAt: new Date(),
         description: resolution ? 
           sql`${linkMonitoringAlerts.description} || ' | Resolution: ' || ${resolution}` : 
-          linkMonitoringAlerts.description,
+          sql`${linkMonitoringAlerts.description}`,
       })
       .where(eq(linkMonitoringAlerts.id, alertId));
   }

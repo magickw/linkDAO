@@ -1,361 +1,301 @@
-import React, { ReactNode, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { useResponsive, useResponsiveColumns, useResponsiveSpacing } from '@/design-system/hooks/useResponsive';
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ResponsiveGridProps {
-  children: ReactNode;
-  columns?: {
-    xs?: number;
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-    '2xl'?: number;
-  };
-  gap?: {
-    xs?: string;
-    sm?: string;
-    md?: string;
-    lg?: string;
-    xl?: string;
-    '2xl'?: string;
-  };
+  children: React.ReactNode[];
+  minItemWidth?: number;
+  maxItemWidth?: number;
+  gap?: number;
   className?: string;
   itemClassName?: string;
-  animate?: boolean;
-  staggerChildren?: number;
-  minItemWidth?: string;
-  maxItemWidth?: string;
-  aspectRatio?: string;
-  autoFit?: boolean;
+  animateItems?: boolean;
+  virtualScrolling?: boolean;
+  itemHeight?: number;
+  overscan?: number;
 }
 
-export default function ResponsiveGrid({
+interface GridDimensions {
+  columns: number;
+  itemWidth: number;
+  containerWidth: number;
+}
+
+const ResponsiveGrid: React.FC<ResponsiveGridProps> = ({
   children,
-  columns = {
-    xs: 1,
-    sm: 2,
-    md: 3,
-    lg: 4,
-    xl: 5,
-    '2xl': 6
-  },
-  gap = {
-    xs: '1rem',
-    sm: '1rem',
-    md: '1.5rem',
-    lg: '1.5rem',
-    xl: '2rem',
-    '2xl': '2rem'
-  },
+  minItemWidth = 280,
+  maxItemWidth = 400,
+  gap = 16,
   className = '',
   itemClassName = '',
-  animate = true,
-  staggerChildren = 0.1,
-  minItemWidth,
-  maxItemWidth,
-  aspectRatio,
-  autoFit = false
-}: ResponsiveGridProps) {
-  const { breakpoint, isMobile, isTablet, isDesktop } = useResponsive();
-  const columnCount = useResponsiveColumns(columns);
-  const gridGap = useResponsiveSpacing(gap);
+  animateItems = true,
+  virtualScrolling = false,
+  itemHeight = 400,
+  overscan = 5
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState<GridDimensions>({
+    columns: 1,
+    itemWidth: minItemWidth,
+    containerWidth: 0
+  });
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: children.length });
+  const [scrollTop, setScrollTop] = useState(0);
 
-  // Convert children to array for easier manipulation
-  const childrenArray = React.Children.toArray(children);
-
-  // Calculate grid template columns
-  const gridTemplateColumns = useMemo(() => {
-    if (autoFit && minItemWidth) {
-      return `repeat(auto-fit, minmax(${minItemWidth}, ${maxItemWidth || '1fr'}))`;
+  // Calculate grid dimensions based on container width
+  const calculateDimensions = useCallback((containerWidth: number): GridDimensions => {
+    if (containerWidth === 0) {
+      return { columns: 1, itemWidth: minItemWidth, containerWidth: 0 };
     }
-    return `repeat(${columnCount}, 1fr)`;
-  }, [columnCount, autoFit, minItemWidth, maxItemWidth]);
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: animate ? staggerChildren : 0,
-        delayChildren: 0.1
+    // Calculate how many columns can fit
+    let columns = Math.floor((containerWidth + gap) / (minItemWidth + gap));
+    columns = Math.max(1, columns);
+
+    // Calculate actual item width
+    const availableWidth = containerWidth - (gap * (columns - 1));
+    let itemWidth = availableWidth / columns;
+
+    // Ensure item width doesn't exceed maximum
+    if (itemWidth > maxItemWidth) {
+      itemWidth = maxItemWidth;
+      // Recalculate columns with max width constraint
+      columns = Math.floor((containerWidth + gap) / (maxItemWidth + gap));
+      columns = Math.max(1, columns);
+    }
+
+    return { columns, itemWidth, containerWidth };
+  }, [minItemWidth, maxItemWidth, gap]);
+
+  // Handle resize observer
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width } = entry.contentRect;
+        setDimensions(calculateDimensions(width));
       }
-    }
+    });
+
+    resizeObserver.observe(container);
+    
+    // Initial calculation
+    setDimensions(calculateDimensions(container.offsetWidth));
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [calculateDimensions]);
+
+  // Virtual scrolling calculations
+  useEffect(() => {
+    if (!virtualScrolling || !containerRef.current) return;
+
+    const handleScroll = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const scrollTop = container.scrollTop;
+      const containerHeight = container.clientHeight;
+      
+      const rowHeight = itemHeight + gap;
+      const totalRows = Math.ceil(children.length / dimensions.columns);
+      
+      const startRow = Math.floor(scrollTop / rowHeight);
+      const endRow = Math.min(
+        totalRows - 1,
+        Math.ceil((scrollTop + containerHeight) / rowHeight)
+      );
+      
+      const start = Math.max(0, (startRow - overscan) * dimensions.columns);
+      const end = Math.min(children.length, (endRow + overscan + 1) * dimensions.columns);
+      
+      setVisibleRange({ start, end });
+      setScrollTop(scrollTop);
+    };
+
+    const container = containerRef.current;
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Initial calculation
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [virtualScrolling, dimensions.columns, itemHeight, gap, overscan, children.length]);
+
+  // Get responsive breakpoint class
+  const getBreakpointClass = () => {
+    const { columns } = dimensions;
+    
+    if (columns === 1) return 'grid-mobile';
+    if (columns === 2) return 'grid-tablet';
+    if (columns === 3) return 'grid-desktop';
+    if (columns >= 4) return 'grid-wide';
+    
+    return 'grid-default';
   };
 
-  const itemVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 20,
-      scale: 0.9
-    },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 24
-      }
-    }
-  };
+  // Render grid items
+  const renderItems = () => {
+    const itemsToRender = virtualScrolling 
+      ? children.slice(visibleRange.start, visibleRange.end)
+      : children;
 
-  // Responsive grid styles
-  const gridStyles = {
-    display: 'grid',
-    gridTemplateColumns,
-    gap: gridGap,
-    width: '100%',
-    ...(aspectRatio && {
-      '& > *': {
-        aspectRatio
-      }
-    })
-  };
+    const startIndex = virtualScrolling ? visibleRange.start : 0;
 
-  // Render grid items with animation
-  const renderGridItems = () => {
-    return childrenArray.map((child, index) => {
-      if (animate) {
+    return itemsToRender.map((child, index) => {
+      const actualIndex = startIndex + index;
+      const row = Math.floor(actualIndex / dimensions.columns);
+      const col = actualIndex % dimensions.columns;
+
+      const style: React.CSSProperties = {
+        width: dimensions.itemWidth,
+        ...(virtualScrolling && {
+          position: 'absolute',
+          top: row * (itemHeight + gap),
+          left: col * (dimensions.itemWidth + gap),
+          height: itemHeight
+        })
+      };
+
+      const itemElement = (
+        <div
+          key={actualIndex}
+          className={`${itemClassName} ${getBreakpointClass()}`}
+          style={style}
+        >
+          {child}
+        </div>
+      );
+
+      if (animateItems && !virtualScrolling) {
         return (
           <motion.div
-            key={index}
-            variants={itemVariants}
+            key={actualIndex}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{
+              duration: 0.3,
+              delay: (actualIndex % dimensions.columns) * 0.1,
+              ease: 'easeOut'
+            }}
             className={itemClassName}
-            style={aspectRatio ? { aspectRatio } : undefined}
+            style={{ width: dimensions.itemWidth }}
           >
             {child}
           </motion.div>
         );
       }
 
-      return (
-        <div 
-          key={index} 
-          className={itemClassName}
-          style={aspectRatio ? { aspectRatio } : undefined}
-        >
-          {child}
-        </div>
-      );
+      return itemElement;
     });
   };
 
-  if (animate) {
-    return (
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className={className}
-        style={gridStyles}
-      >
-        {renderGridItems()}
-      </motion.div>
-    );
-  }
+  // Calculate total height for virtual scrolling
+  const getTotalHeight = () => {
+    if (!virtualScrolling) return 'auto';
+    
+    const totalRows = Math.ceil(children.length / dimensions.columns);
+    return totalRows * (itemHeight + gap) - gap;
+  };
+
+  const gridStyle: React.CSSProperties = {
+    display: virtualScrolling ? 'block' : 'grid',
+    gridTemplateColumns: virtualScrolling ? undefined : `repeat(${dimensions.columns}, 1fr)`,
+    gap: virtualScrolling ? undefined : gap,
+    position: 'relative',
+    height: getTotalHeight()
+  };
 
   return (
     <div
-      className={className}
-      style={gridStyles}
+      ref={containerRef}
+      className={`
+        responsive-grid
+        ${virtualScrolling ? 'overflow-auto' : ''}
+        ${className}
+      `}
+      style={gridStyle}
     >
-      {renderGridItems()}
+      {animateItems && !virtualScrolling ? (
+        <AnimatePresence mode="popLayout">
+          {renderItems()}
+        </AnimatePresence>
+      ) : (
+        renderItems()
+      )}
+      
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed bottom-4 right-4 bg-black/80 text-white p-2 rounded text-xs font-mono z-50">
+          <div>Columns: {dimensions.columns}</div>
+          <div>Item Width: {Math.round(dimensions.itemWidth)}px</div>
+          <div>Container: {Math.round(dimensions.containerWidth)}px</div>
+          {virtualScrolling && (
+            <>
+              <div>Visible: {visibleRange.start}-{visibleRange.end}</div>
+              <div>Total: {children.length}</div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
-}
+};
 
-// Specialized grid components for common use cases
+// Hook for responsive grid utilities
+export const useResponsiveGrid = (
+  containerRef: React.RefObject<HTMLElement>,
+  minItemWidth: number = 280,
+  maxItemWidth: number = 400,
+  gap: number = 16
+) => {
+  const [gridInfo, setGridInfo] = useState({
+    columns: 1,
+    itemWidth: minItemWidth,
+    containerWidth: 0,
+    breakpoint: 'mobile' as 'mobile' | 'tablet' | 'desktop' | 'wide'
+  });
 
-interface ProductGridProps extends Omit<ResponsiveGridProps, 'columns' | 'aspectRatio'> {
-  variant?: 'compact' | 'standard' | 'detailed';
-}
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-export function ProductGrid({ 
-  variant = 'standard', 
-  ...props 
-}: ProductGridProps) {
-  const columns = useMemo(() => {
-    switch (variant) {
-      case 'compact':
-        return {
-          xs: 2,
-          sm: 3,
-          md: 4,
-          lg: 5,
-          xl: 6,
-          '2xl': 7
-        };
-      case 'detailed':
-        return {
-          xs: 1,
-          sm: 1,
-          md: 2,
-          lg: 3,
-          xl: 3,
-          '2xl': 4
-        };
-      default: // standard
-        return {
-          xs: 1,
-          sm: 2,
-          md: 3,
-          lg: 4,
-          xl: 5,
-          '2xl': 6
-        };
-    }
-  }, [variant]);
+    const updateGridInfo = () => {
+      const containerWidth = container.offsetWidth;
+      
+      let columns = Math.floor((containerWidth + gap) / (minItemWidth + gap));
+      columns = Math.max(1, columns);
 
-  const aspectRatio = variant === 'compact' ? '1' : '3/4';
+      const availableWidth = containerWidth - (gap * (columns - 1));
+      let itemWidth = availableWidth / columns;
 
-  return (
-    <ResponsiveGrid
-      columns={columns}
-      aspectRatio={aspectRatio}
-      {...props}
-    />
-  );
-}
-
-interface CategoryGridProps extends Omit<ResponsiveGridProps, 'columns' | 'aspectRatio'> {
-  size?: 'small' | 'medium' | 'large';
-}
-
-export function CategoryGrid({ 
-  size = 'medium', 
-  ...props 
-}: CategoryGridProps) {
-  const columns = useMemo(() => {
-    switch (size) {
-      case 'small':
-        return {
-          xs: 3,
-          sm: 4,
-          md: 6,
-          lg: 8,
-          xl: 10,
-          '2xl': 12
-        };
-      case 'large':
-        return {
-          xs: 2,
-          sm: 2,
-          md: 3,
-          lg: 4,
-          xl: 5,
-          '2xl': 6
-        };
-      default: // medium
-        return {
-          xs: 2,
-          sm: 3,
-          md: 4,
-          lg: 6,
-          xl: 8,
-          '2xl': 10
-        };
-    }
-  }, [size]);
-
-  return (
-    <ResponsiveGrid
-      columns={columns}
-      aspectRatio="1"
-      {...props}
-    />
-  );
-}
-
-interface MasonryGridProps extends Omit<ResponsiveGridProps, 'columns'> {
-  columnWidth?: string;
-}
-
-export function MasonryGrid({ 
-  columnWidth = '300px',
-  ...props 
-}: MasonryGridProps) {
-  return (
-    <ResponsiveGrid
-      autoFit={true}
-      minItemWidth={columnWidth}
-      {...props}
-    />
-  );
-}
-
-// Hook for responsive grid calculations
-export function useResponsiveGrid(
-  columns: ResponsiveGridProps['columns'] = {},
-  gap: ResponsiveGridProps['gap'] = {}
-) {
-  const { breakpoint, width } = useResponsive();
-  const columnCount = useResponsiveColumns(columns);
-  const gridGap = useResponsiveSpacing(gap);
-
-  const itemWidth = useMemo(() => {
-    const gapValue = parseFloat(gridGap) || 16;
-    const totalGap = gapValue * (columnCount - 1);
-    return `calc((100% - ${totalGap}px) / ${columnCount})`;
-  }, [columnCount, gridGap]);
-
-  return {
-    columnCount,
-    gridGap,
-    itemWidth,
-    breakpoint,
-    containerWidth: width
-  };
-}
-
-// Utility component for grid item with responsive behavior
-interface GridItemProps {
-  children: ReactNode;
-  span?: {
-    xs?: number;
-    sm?: number;
-    md?: number;
-    lg?: number;
-    xl?: number;
-    '2xl'?: number;
-  };
-  className?: string;
-}
-
-export function GridItem({ 
-  children, 
-  span = {}, 
-  className = '' 
-}: GridItemProps) {
-  const { breakpoint } = useResponsive();
-  
-  const getSpanValue = () => {
-    const breakpointOrder: (keyof typeof span)[] = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'];
-    const currentIndex = breakpointOrder.indexOf(breakpoint);
-    
-    // Find the appropriate span value for current breakpoint
-    for (let i = currentIndex; i >= 0; i--) {
-      const bp = breakpointOrder[i];
-      if (span[bp] !== undefined) {
-        return span[bp];
+      if (itemWidth > maxItemWidth) {
+        itemWidth = maxItemWidth;
+        columns = Math.floor((containerWidth + gap) / (maxItemWidth + gap));
+        columns = Math.max(1, columns);
       }
-    }
-    
-    return 1;
-  };
 
-  const spanValue = getSpanValue();
-  
-  return (
-    <div 
-      className={className}
-      style={{ 
-        gridColumn: spanValue ? `span ${spanValue}` : undefined 
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+      let breakpoint: 'mobile' | 'tablet' | 'desktop' | 'wide' = 'mobile';
+      if (columns >= 4) breakpoint = 'wide';
+      else if (columns === 3) breakpoint = 'desktop';
+      else if (columns === 2) breakpoint = 'tablet';
+
+      setGridInfo({ columns, itemWidth, containerWidth, breakpoint });
+    };
+
+    const resizeObserver = new ResizeObserver(updateGridInfo);
+    resizeObserver.observe(container);
+    updateGridInfo();
+
+    return () => resizeObserver.disconnect();
+  }, [containerRef, minItemWidth, maxItemWidth, gap]);
+
+  return gridInfo;
+};
+
+export default ResponsiveGrid;

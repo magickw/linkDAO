@@ -1,13 +1,13 @@
 {
-  "name": "Web3 Social Platform",
-  "short_name": "Web3Social",
-  "description": "A decentralized social platform with Web3 features",
+  "name": "Web3 Marketplace",
+  "short_name": "Web3Market",
+  "description": "A decentralized marketplace with Web3 features, NFT trading, and crypto payments",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "background_color": "#0f0f23",
+  "theme_color": "#667eea",
   "orientation": "portrait-primary",
-  "categories": ["social", "productivity", "finance"],
+  "categories": ["shopping", "finance", "productivity", "business"],
   "lang": "en",
   "dir": "ltr",
   "icons": [
@@ -22,52 +22,109 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "screenshots": [
     {
-      "src": "/screenshot-wide.png",
+      "src": "/screenshot-marketplace-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Web3 Marketplace Homepage"
     },
     {
-      "src": "/screenshot-narrow.png",
+      "src": "/screenshot-marketplace-mobile.png",
       "sizes": "750x1334",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile Marketplace View"
+    },
+    {
+      "src": "/screenshot-product-detail.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Product Detail Page"
     }
   ],
   "shortcuts": [
     {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Go to your dashboard",
-      "url": "/dashboard",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Communities",
-      "short_name": "Communities",
-      "description": "Browse communities",
-      "url": "/dashboard?view=communities",
-      "icons": [
-        {
-          "src": "/icon-192x192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Marketplace",
-      "short_name": "Marketplace",
-      "description": "Browse the marketplace",
+      "name": "Browse Products",
+      "short_name": "Browse",
+      "description": "Browse marketplace products",
       "url": "/marketplace",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Sell Products",
+      "short_name": "Sell",
+      "description": "List products for sale",
+      "url": "/marketplace/sell",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "NFT Gallery",
+      "short_name": "NFTs",
+      "description": "Browse NFT collections",
+      "url": "/marketplace/nfts",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "description": "View your orders",
+      "url": "/marketplace/orders",
       "icons": [
         {
           "src": "/icon-192x192.png",
@@ -77,7 +134,7 @@
     }
   ],
   "share_target": {
-    "action": "/share",
+    "action": "/marketplace/share",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -87,19 +144,30 @@
       "files": [
         {
           "name": "files",
-          "accept": ["image/*", "video/*"]
+          "accept": ["image/*", "video/*", "application/json"]
         }
       ]
     }
   },
   "protocol_handlers": [
     {
-      "protocol": "web+web3social",
-      "url": "/handle?url=%s"
+      "protocol": "web+web3marketplace",
+      "url": "/marketplace/handle?url=%s"
+    },
+    {
+      "protocol": "ethereum",
+      "url": "/marketplace/ethereum?address=%s"
     }
   ],
   "prefer_related_applications": false,
   "related_applications": [],
   "scope": "/",
-  "id": "web3-social-platform"
+  "id": "web3-marketplace-platform",
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred"
 }
