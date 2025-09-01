@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GlassPanel } from '../design-system/components/GlassPanel';
-import { Button } from '../design-system/components/Button';
+import { GlassPanel } from './ui/GlassPanel';
+import { Button } from './ui/Button';
+
+// Extend Navigator interface to include Safari's standalone property
+declare global {
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -129,7 +136,7 @@ export function PWAInstallPrompt({
       {canInstall && !showPrompt && (
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={handleManualShow}
           className="fixed bottom-4 right-4 z-40 md:bottom-6 md:right-6"
         >
@@ -231,15 +238,15 @@ export function PWAInstallPrompt({
                   <div className="flex space-x-3">
                     <Button
                       variant="outline"
-                      size="medium"
+                      size="default"
                       onClick={handleDismiss}
                       className="flex-1"
                     >
                       Not Now
                     </Button>
                     <Button
-                      variant="primary"
-                      size="medium"
+                      variant="default"
+                      size="default"
                       onClick={handleInstallClick}
                       className="flex-1"
                     >

@@ -518,5 +518,4 @@ export function useVirtualScrolling<T>(
   };
 }
 
-export { VirtualGrid };
 export default VirtualScrolling;

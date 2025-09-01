@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  FingerprintIcon, 
+  FingerPrintIcon, 
   FaceSmileIcon, 
   DevicePhoneMobileIcon,
   ExclamationTriangleIcon,
@@ -168,7 +168,7 @@ const BiometricAuth: React.FC<BiometricAuthProps> = ({
       case 'face':
         return FaceSmileIcon;
       case 'fingerprint':
-        return FingerprintIcon;
+        return FingerPrintIcon;
       default:
         return DevicePhoneMobileIcon;
     }
