@@ -654,7 +654,12 @@ export class PerformanceBudget {
       severity: 'error' | 'warning';
     }>;
   }> {
-    const violations = [];
+    const violations: Array<{
+      metric: string;
+      actual: number;
+      budget: number;
+      severity: 'warning' | 'error';
+    }> = [];
     const optimizer = new LighthouseOptimizer();
     const metrics = await optimizer.analyzePerformance();
 

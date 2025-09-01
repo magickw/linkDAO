@@ -9,6 +9,7 @@ interface LazyWrapperProps {
   threshold?: number;
   onLoad?: () => void;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function LazyWrapper({
@@ -17,7 +18,8 @@ export function LazyWrapper({
   rootMargin = '50px',
   threshold = 0.1,
   onLoad,
-  className = ''
+  className = '',
+  style
 }: LazyWrapperProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -47,7 +49,7 @@ export function LazyWrapper({
   }, [rootMargin, threshold, hasLoaded, onLoad]);
 
   return (
-    <div ref={elementRef} className={className}>
+    <div ref={elementRef} className={className} style={style}>
       {isVisible ? children : fallback}
     </div>
   );
