@@ -124,6 +124,8 @@ import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoute
 import linkSafetyRoutes from './routes/linkSafetyRoutes';
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
+// Import analytics routes
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
@@ -133,6 +135,9 @@ app.use('/api/link-safety', linkSafetyRoutes);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
+
+// Analytics routes
+app.use('/api/analytics', analyticsRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {
