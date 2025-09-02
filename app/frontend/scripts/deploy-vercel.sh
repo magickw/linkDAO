@@ -6,6 +6,9 @@
 set -e
 
 echo "🚀 Starting LinkDAO frontend deployment..."
+echo "Current directory: $(pwd)"
+echo "Node version: $(node --version)"
+echo "NPM version: $(npm --version)"
 
 # Function to safely remove npm config files
 safe_remove_npmrc() {
@@ -40,7 +43,7 @@ npm config set audit false 2>/dev/null || true
 # Try to install dependencies with multiple fallback strategies
 echo "📥 Installing dependencies..."
 
-# Strategy 1: Try npm install with legacy peer deps
+# Strategy 1: Try npm install with legacy peer deps and ensure TypeScript dependencies
 if npm install --legacy-peer-deps --no-fund --no-audit --prefer-offline --no-package-lock; then
     echo "✅ Dependencies installed successfully (prefer-offline, no-package-lock)"
 elif npm install --legacy-peer-deps --no-fund --no-audit --prefer-offline; then
@@ -55,6 +58,10 @@ else
     restore_npmrc
     exit 1
 fi
+
+# Ensure TypeScript dependencies are installed
+echo "🔍 Ensuring TypeScript dependencies..."
+npm install --save-dev typescript @types/react @types/node @types/react-dom 2>/dev/null || true
 
 # Restore .npmrc if it existed
 restore_npmrc

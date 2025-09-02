@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "cd app/frontend && (npm install --legacy-peer-deps || yarn install) && npm run build",
+    "build": "cd app/frontend && bash scripts/deploy-vercel.sh",
     "build:yarn": "cd app/frontend && yarn install && yarn build",
     "dev": "cd app/frontend && npm run dev",
     "start": "cd app/frontend && npm start"
