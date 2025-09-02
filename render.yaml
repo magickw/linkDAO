@@ -4,14 +4,14 @@ services:
     env: node
     plan: starter
     rootDir: app/backend
-    buildCommand: npm install && bash scripts/deploy-render-minimal.sh
+    buildCommand: npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
     startCommand: node dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_OPTIONS
-        value: '--max-old-space-size=1024'
+        value: '--max-old-space-size=2048'
       - key: PORT
         value: 10000
       - key: DATABASE_URL
