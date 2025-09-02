@@ -2,14 +2,16 @@ services:
   - type: web
     name: linkdao-backend
     env: node
-    plan: free
+    plan: starter
     rootDir: app/backend
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm install && bash scripts/deploy-render-minimal.sh
+    startCommand: node dist/index.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: '--max-old-space-size=1024'
       - key: PORT
         value: 10000
       - key: DATABASE_URL

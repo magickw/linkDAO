@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Marketplace API Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        .glassmorphic {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .code-block {
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        
+        .endpoint-card {
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .method-get { @apply bg-green-100 text-green-800; }
+        .method-post { @apply bg-blue-100 text-blue-800; }
+        .method-put { @apply bg-yellow-100 text-yellow-800; }
+        .method-delete { @apply bg-red-100 text-red-800; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg py-6">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl font-bold text-white mb-2">Web3 Marketplace API Explorer</h1>
+            <p class="text-blue-100">Interactive documentation and testing environment</p>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="glassmorphic mx-6 mt-6 p-4">
+        <div class="flex flex-wrap gap-4">
+            <button onclick="showSection('authentication')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Authentication</button>
+            <button onclick="showSection('products')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Products</button>
+            <button onclick="showSection('orders')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Orders</button>
+            <button onclick="showSection('users')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Users</button>
+            <button onclick="showSection('reviews')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">Reviews</button>
+            <button onclick="showSection('nfts')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">NFTs</button>
+            <button onclick="showSection('websocket')" class="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">WebSocket</button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Authentication Section -->
+        <section id="authentication" class="api-section">
+            <div class="glassmorphic p-6 mb-8">
+                <h2 class="text-3xl font-bold mb-6">Authentication</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Auth Flow -->
+                    <div class="glassmorphic p-4">
+                        <h3 class="text-xl font-semibold mb-4">Web3 Authentication Flow</h3>
+                        <div class="space-y-4">
+                            <div class="endpoint-card glassmorphic p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="method-post px-2 py-1 rounded text-sm font-medium">POST</span>
+                                    <code class="text-blue-300">/api/v1/auth/challenge</code>
+                                </div>
+                                <p class="text-gray-300 text-sm">Request authentication challenge</p>
+                                <button onclick="tryEndpoint('auth-challenge')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                            </div>
+                            
+                            <div class="endpoint-card glassmorphic p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="method-post px-2 py-1 rounded text-sm font-medium">POST</span>
+                                    <code class="text-blue-300">/api/v1/auth/verify</code>
+                                </div>
+                                <p class="text-gray-300 text-sm">Verify signature and get JWT token</p>
+                                <button onclick="tryEndpoint('auth-verify')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Demo -->
+                    <div class="glassmorphic p-4">
+                        <h3 class="text-xl font-semibold mb-4">Live Authentication Demo</h3>
+                        <div id="auth-demo" class="space-y-4">
+                            <button id="connect-wallet" onclick="connectWallet()" class="w-full px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors">
+                                Connect Wallet
+                            </button>
+                            <div id="wallet-info" class="hidden">
+                                <p class="text-sm text-gray-300">Connected: <span id="wallet-address"></span></p>
+                                <button onclick="authenticate()" class="mt-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                                    Authenticate
+                                </button>
+                            </div>
+                            <div id="auth-token" class="hidden">
+                                <p class="text-sm text-gray-300">JWT Token:</p>
+                                <div class="code-block mt-2">
+                                    <code id="token-display" class="text-green-400 text-xs break-all"></code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section id="products" class="api-section hidden">
+            <div class="glassmorphic p-6 mb-8">
+                <h2 class="text-3xl font-bold mb-6">Products API</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Endpoints -->
+                    <div class="space-y-4">
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-get px-2 py-1 rounded text-sm font-medium">GET</span>
+                                <code class="text-blue-300">/api/v1/products</code>
+                            </div>
+                            <p class="text-gray-300 text-sm mb-3">List products with filtering and pagination</p>
+                            
+                            <div class="space-y-2">
+                                <h4 class="font-medium">Query Parameters:</h4>
+                                <div class="text-sm space-y-1">
+                                    <div><code class="text-yellow-300">search</code> - Search term</div>
+                                    <div><code class="text-yellow-300">category</code> - Product category</div>
+                                    <div><code class="text-yellow-300">minPrice</code> - Minimum price</div>
+                                    <div><code class="text-yellow-300">maxPrice</code> - Maximum price</div>
+                                    <div><code class="text-yellow-300">sort</code> - Sort order (price_asc, price_desc, newest)</div>
+                                    <div><code class="text-yellow-300">limit</code> - Results per page (default: 20)</div>
+                                    <div><code class="text-yellow-300">offset</code> - Pagination offset</div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="tryEndpoint('products-list')" class="mt-3 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                        
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-post px-2 py-1 rounded text-sm font-medium">POST</span>
+                                <code class="text-blue-300">/api/v1/products</code>
+                            </div>
+                            <p class="text-gray-300 text-sm">Create a new product</p>
+                            <button onclick="tryEndpoint('products-create')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                        
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-get px-2 py-1 rounded text-sm font-medium">GET</span>
+                                <code class="text-blue-300">/api/v1/products/{id}</code>
+                            </div>
+                            <p class="text-gray-300 text-sm">Get product details</p>
+                            <button onclick="tryEndpoint('products-get')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Interactive Tester -->
+                    <div class="glassmorphic p-4">
+                        <h3 class="text-xl font-semibold mb-4">Interactive Tester</h3>
+                        <div id="api-tester">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Endpoint</label>
+                                    <select id="endpoint-select" class="w-full px-3 py-2 bg-gray-700 rounded-lg">
+                                        <option value="products-list">GET /api/v1/products</option>
+                                        <option value="products-create">POST /api/v1/products</option>
+                                        <option value="products-get">GET /api/v1/products/{id}</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Request Body (JSON)</label>
+                                    <textarea id="request-body" class="w-full h-32 px-3 py-2 bg-gray-700 rounded-lg font-mono text-sm" placeholder="Enter JSON request body..."></textarea>
+                                </div>
+                                
+                                <button onclick="executeRequest()" class="w-full px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                                    Execute Request
+                                </button>
+                                
+                                <div id="response-container" class="hidden">
+                                    <label class="block text-sm font-medium mb-2">Response</label>
+                                    <div class="code-block">
+                                        <pre id="response-output" class="text-sm"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Orders Section -->
+        <section id="orders" class="api-section hidden">
+            <div class="glassmorphic p-6 mb-8">
+                <h2 class="text-3xl font-bold mb-6">Orders API</h2>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-post px-2 py-1 rounded text-sm font-medium">POST</span>
+                                <code class="text-blue-300">/api/v1/orders</code>
+                            </div>
+                            <p class="text-gray-300 text-sm">Create new order with escrow</p>
+                            <button onclick="tryEndpoint('orders-create')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                        
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-get px-2 py-1 rounded text-sm font-medium">GET</span>
+                                <code class="text-blue-300">/api/v1/orders/{id}</code>
+                            </div>
+                            <p class="text-gray-300 text-sm">Get order details and status</p>
+                            <button onclick="tryEndpoint('orders-get')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                        
+                        <div class="endpoint-card glassmorphic p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="method-post px-2 py-1 rounded text-sm font-medium">POST</span>
+                                <code class="text-blue-300">/api/v1/orders/{id}/confirm-delivery</code>
+                            </div>
+                            <p class="text-gray-300 text-sm">Confirm order delivery</p>
+                            <button onclick="tryEndpoint('orders-confirm')" class="mt-2 px-3 py-1 bg-green-600 rounded text-sm hover:bg-green-700">Try it</button>
+                        </div>
+                    </div>
+                    
+                    <div class="glassmorphic p-4">
+                        <h3 class="text-xl font-semibold mb-4">Order Flow Diagram</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                <span>1. Create Order → Escrow Contract Deployed</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                <span>2. Payment Held in Escrow</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                <span>3. Seller Ships Product</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span>4. Buyer Confirms Delivery</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                                <span>5. Payment Released to Seller</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Examples -->
+        <section class="glassmorphic p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-6">Code Examples</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">JavaScript/TypeScript</h3>
+                    <div class="code-block">
+                        <pre><code class="language-javascript">// Initialize SDK
+import { Web3MarketplaceSDK } from '@web3marketplace/sdk';
+
+const sdk = new Web3MarketplaceSDK({
+  apiUrl: 'https://api.web3marketplace.com',
+  network: 'mainnet'
+});
+
+// Connect wallet
+await sdk.connect(window.ethereum);
+
+// Create product
+const product = await sdk.products.create({
+  title: 'Amazing NFT',
+  price: { amount: '0.1', currency: 'ETH' },
+  category: 'digital-art',
+  images: ['ipfs://QmHash1']
+});
+
+// Place order
+const order = await sdk.orders.create({
+  productId: product.id,
+  quantity: 1
+});</code></pre>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">Python</h3>
+                    <div class="code-block">
+                        <pre><code class="language-python"># Initialize SDK
+from web3marketplace import Web3MarketplaceSDK
+
+sdk = Web3MarketplaceSDK(
+    api_url='https://api.web3marketplace.com',
+    network='mainnet'
+)
+
+# Connect wallet
+sdk.connect(private_key='your-private-key')
+
+# Create product
+product = sdk.products.create({
+    'title': 'Amazing NFT',
+    'price': {'amount': '0.1', 'currency': 'ETH'},
+    'category': 'digital-art',
+    'images': ['ipfs://QmHash1']
+})
+
+# Place order
+order = sdk.orders.create({
+    'product_id': product['id'],
+    'quantity': 1
+})</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
+    
+    <script>
+        // Global state
+        let currentWallet = null;
+        let authToken = null;
+        
+        // Navigation
+        function showSection(sectionId) {
+            document.querySelectorAll('.api-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+        
+        // Wallet connection
+        async function connectWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ 
+                        method: 'eth_requestAccounts' 
+                    });
+                    currentWallet = accounts[0];
+                    
+                    document.getElementById('wallet-address').textContent = 
+                        currentWallet.substring(0, 6) + '...' + currentWallet.substring(38);
+                    document.getElementById('wallet-info').classList.remove('hidden');
+                    document.getElementById('connect-wallet').textContent = 'Wallet Connected';
+                    document.getElementById('connect-wallet').disabled = true;
+                } catch (error) {
+                    console.error('Failed to connect wallet:', error);
+                    alert('Failed to connect wallet. Please try again.');
+                }
+            } else {
+                alert('Please install MetaMask or another Web3 wallet.');
+            }
+        }
+        
+        // Authentication
+        async function authenticate() {
+            if (!currentWallet) {
+                alert('Please connect your wallet first.');
+                return;
+            }
+            
+            try {
+                // Request challenge
+                const challengeResponse = await fetch('/api/v1/auth/challenge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: currentWallet })
+                });
+                
+                const challenge = await challengeResponse.json();
+                
+                // Sign challenge
+                const signature = await window.ethereum.request({
+                    method: 'personal_sign',
+                    params: [challenge.message, currentWallet]
+                });
+                
+                // Verify signature
+                const authResponse = await fetch('/api/v1/auth/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: currentWallet,
+                        signature: signature,
+                        message: challenge.message
+                    })
+                });
+                
+                const authResult = await authResponse.json();
+                authToken = authResult.token;
+                
+                document.getElementById('token-display').textContent = authToken;
+                document.getElementById('auth-token').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Authentication failed:', error);
+                alert('Authentication failed. Please try again.');
+            }
+        }
+        
+        // API Testing
+        async function executeRequest() {
+            const endpoint = document.getElementById('endpoint-select').value;
+            const requestBody = document.getElementById('request-body').value;
+            
+            let url, method, body;
+            
+            switch (endpoint) {
+                case 'products-list':
+                    url = '/api/v1/products';
+                    method = 'GET';
+                    break;
+                case 'products-create':
+                    url = '/api/v1/products';
+                    method = 'POST';
+                    body = requestBody;
+                    break;
+                case 'products-get':
+                    url = '/api/v1/products/example-id';
+                    method = 'GET';
+                    break;
+            }
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: headers,
+                    body: body ? JSON.stringify(JSON.parse(body)) : undefined
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('response-output').textContent = 
+                    JSON.stringify(result, null, 2);
+                document.getElementById('response-container').classList.remove('hidden');
+                
+            } catch (error) {
+                document.getElementById('response-output').textContent = 
+                    `Error: ${error.message}`;
+                document.getElementById('response-container').classList.remove('hidden');
+            }
+        }
+        
+        // Try endpoint examples
+        function tryEndpoint(endpointType) {
+            const examples = {
+                'auth-challenge': {
+                    body: JSON.stringify({ address: '0x1234567890abcdef1234567890abcdef12345678' }, null, 2)
+                },
+                'products-create': {
+                    body: JSON.stringify({
+                        title: 'Amazing Digital Art NFT',
+                        description: 'Unique digital artwork with blockchain authenticity',
+                        price: { amount: '0.1', currency: 'ETH' },
+                        category: 'digital-art',
+                        images: ['ipfs://QmExampleHash1', 'ipfs://QmExampleHash2'],
+                        nft: {
+                            contractAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+                            tokenId: '42'
+                        }
+                    }, null, 2)
+                },
+                'orders-create': {
+                    body: JSON.stringify({
+                        productId: 'prod_123456789',
+                        quantity: 1,
+                        paymentMethod: 'crypto',
+                        currency: 'ETH',
+                        shippingAddress: {
+                            street: '123 Blockchain Ave',
+                            city: 'Crypto City',
+                            state: 'CA',
+                            zipCode: '94105',
+                            country: 'US'
+                        }
+                    }, null, 2)
+                }
+            };
+            
+            if (examples[endpointType]) {
+                document.getElementById('request-body').value = examples[endpointType].body;
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showSection('authentication');
+        });
+    </script>
+</body>
+</html>

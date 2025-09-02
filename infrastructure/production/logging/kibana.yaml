@@ -1,0 +1,219 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: web3-marketplace-prod
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.11.0
+        ports:
+        - containerPort: 5601
+          name: kibana
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch-service:9200"
+        - name: ELASTICSEARCH_USERNAME
+          value: "elastic"
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-secrets
+              key: ELASTIC_PASSWORD
+        - name: SERVER_NAME
+          value: "logs.web3marketplace.com"
+        - name: SERVER_BASEPATH
+          value: ""
+        - name: SERVER_REWRITEBASEPATH
+          value: "false"
+        - name: XPACK_SECURITY_ENABLED
+          value: "true"
+        - name: XPACK_MONITORING_ENABLED
+          value: "true"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: kibana-config
+          mountPath: /usr/share/kibana/config/kibana.yml
+          subPath: kibana.yml
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: kibana-config
+        configMap:
+          name: kibana-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+  namespace: web3-marketplace-prod
+  labels:
+    app: kibana
+spec:
+  selector:
+    app: kibana
+  ports:
+  - port: 5601
+    targetPort: 5601
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-config
+  namespace: web3-marketplace-prod
+data:
+  kibana.yml: |
+    server.name: kibana
+    server.host: "0.0.0.0"
+    server.port: 5601
+    server.publicBaseUrl: "https://logs.web3marketplace.com"
+    
+    elasticsearch.hosts: ["http://elasticsearch-service:9200"]
+    elasticsearch.username: "elastic"
+    elasticsearch.password: "${ELASTICSEARCH_PASSWORD}"
+    
+    monitoring.ui.container.elasticsearch.enabled: true
+    
+    xpack.security.enabled: true
+    xpack.encryptedSavedObjects.encryptionKey: "something_at_least_32_characters_long"
+    xpack.reporting.encryptionKey: "something_at_least_32_characters_long"
+    xpack.security.encryptionKey: "something_at_least_32_characters_long"
+    
+    # Index patterns
+    kibana.index: ".kibana"
+    
+    # Logging
+    logging.appenders:
+      file:
+        type: file
+        fileName: /var/log/kibana.log
+        layout:
+          type: json
+    logging.root:
+      appenders:
+        - default
+        - file
+      level: info
+    
+    # Dashboard settings
+    kibana.defaultAppId: "dashboard"
+    
+    # Security settings
+    server.ssl.enabled: false
+    
+    # Performance settings
+    elasticsearch.requestTimeout: 30000
+    elasticsearch.shardTimeout: 30000
+    
+    # Index management
+    data.search.aggs.shardDelay.enabled: true
+    
+    # Saved objects
+    savedObjects.maxImportPayloadBytes: 26214400
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kibana-setup
+  namespace: web3-marketplace-prod
+spec:
+  template:
+    spec:
+      containers:
+      - name: kibana-setup
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Wait for Kibana to be ready
+          until curl -f http://kibana-service:5601/api/status; do
+            echo "Waiting for Kibana..."
+            sleep 10
+          done
+          
+          # Create index patterns
+          curl -X POST "kibana-service:5601/api/saved_objects/index-pattern/web3-marketplace-*" \
+            -H "Content-Type: application/json" \
+            -H "kbn-xsrf: true" \
+            -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+            -d '{
+              "attributes": {
+                "title": "web3-marketplace-*",
+                "timeFieldName": "@timestamp"
+              }
+            }'
+          
+          curl -X POST "kibana-service:5601/api/saved_objects/index-pattern/web3-marketplace-security-*" \
+            -H "Content-Type: application/json" \
+            -H "kbn-xsrf: true" \
+            -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+            -d '{
+              "attributes": {
+                "title": "web3-marketplace-security-*",
+                "timeFieldName": "@timestamp"
+              }
+            }'
+          
+          curl -X POST "kibana-service:5601/api/saved_objects/index-pattern/web3-marketplace-errors-*" \
+            -H "Content-Type: application/json" \
+            -H "kbn-xsrf: true" \
+            -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+            -d '{
+              "attributes": {
+                "title": "web3-marketplace-errors-*",
+                "timeFieldName": "@timestamp"
+              }
+            }'
+          
+          curl -X POST "kibana-service:5601/api/saved_objects/index-pattern/web3-marketplace-business-*" \
+            -H "Content-Type: application/json" \
+            -H "kbn-xsrf: true" \
+            -u "elastic:${ELASTICSEARCH_PASSWORD}" \
+            -d '{
+              "attributes": {
+                "title": "web3-marketplace-business-*",
+                "timeFieldName": "@timestamp"
+              }
+            }'
+          
+          echo "Kibana setup completed"
+        env:
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-secrets
+              key: ELASTIC_PASSWORD
+      restartPolicy: OnFailure

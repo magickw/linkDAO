@@ -1,0 +1,632 @@
+name: Comprehensive Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run comprehensive tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: 'Test scope to run'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - quick
+          - contracts
+          - backend
+          - security
+          - performance
+
+env:
+  NODE_VERSION: '18'
+  POSTGRES_VERSION: '15'
+  REDIS_VERSION: '7'
+
+jobs:
+  setup:
+    name: Setup Test Environment
+    runs-on: ubuntu-latest
+    outputs:
+      test-scope: ${{ steps.determine-scope.outputs.scope }}
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Determine test scope
+        id: determine-scope
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "scope=${{ github.event.inputs.test_scope }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "scope=full" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "scope=quick" >> $GITHUB_OUTPUT
+          else
+            echo "scope=backend" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          echo "key=test-deps-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
+
+  smart-contract-tests:
+    name: Smart Contract Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    if: contains(fromJson('["full", "contracts"]'), needs.setup.outputs.test-scope)
+    services:
+      hardhat:
+        image: ethereum/client-go:latest
+        ports:
+          - 8545:8545
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd app/contracts
+          npm ci
+
+      - name: Compile contracts
+        run: |
+          cd app/contracts
+          npx hardhat compile
+
+      - name: Run contract tests with coverage
+        run: |
+          cd app/contracts
+          npx hardhat coverage --testfiles "test/**/*.test.ts"
+
+      - name: Upload contract coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./app/contracts/coverage/lcov.info
+          flags: smart-contracts
+          name: smart-contract-coverage
+
+      - name: Archive contract artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: contract-artifacts
+          path: |
+            app/contracts/artifacts/
+            app/contracts/coverage/
+          retention-days: 7
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: marketplace_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install backend dependencies
+        run: |
+          cd app/backend
+          npm ci
+
+      - name: Setup test database
+        run: |
+          cd app/backend
+          npm run db:migrate:test
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+
+      - name: Run backend tests
+        run: |
+          cd app/backend
+          npm run test:comprehensive
+        env:
+          NODE_ENV: test
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+          TEST_REDIS_HOST: localhost
+          TEST_REDIS_PORT: 6379
+
+      - name: Upload backend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./app/backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+      - name: Archive backend test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-test-results
+          path: |
+            app/backend/coverage/
+            app/backend/test-reports/
+          retention-days: 7
+
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    if: contains(fromJson('["full", "quick"]'), needs.setup.outputs.test-scope)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: |
+          cd app/frontend
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd app/frontend
+          npm run test:coverage
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./app/frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+      - name: Archive frontend test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-test-results
+          path: |
+            app/frontend/coverage/
+          retention-days: 7
+
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    if: contains(fromJson('["full", "security"]'), needs.setup.outputs.test-scope)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd app/backend
+          npm ci
+
+      - name: Run security audit
+        run: |
+          cd app/backend
+          npm audit --audit-level moderate
+
+      - name: Run security tests
+        run: |
+          cd app/backend
+          npm run test:security
+
+      - name: Run SAST scan
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_JSON: true
+
+      - name: Archive security test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-test-results
+          path: |
+            app/backend/test-reports/security-*.json
+          retention-days: 30
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    if: contains(fromJson('["full", "performance"]'), needs.setup.outputs.test-scope)
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: marketplace_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd app/backend
+          npm ci
+
+      - name: Setup test environment
+        run: |
+          cd app/backend
+          npm run db:migrate:test
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+
+      - name: Run performance tests
+        run: |
+          cd app/backend
+          npm run test:performance
+        env:
+          NODE_ENV: test
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+          TEST_REDIS_HOST: localhost
+          TEST_REDIS_PORT: 6379
+          PERF_TEST_DURATION: 60000
+          MAX_CONCURRENT_USERS: 100
+
+      - name: Archive performance test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-test-results
+          path: |
+            app/backend/test-reports/performance-*.json
+          retention-days: 30
+
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    needs: [setup, backend-tests]
+    if: contains(fromJson('["full"]'), needs.setup.outputs.test-scope)
+    services:
+      postgres:
+        image: postgres:${{ env.POSTGRES_VERSION }}
+        env:
+          POSTGRES_DB: marketplace_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:${{ env.REDIS_VERSION }}
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd app/backend
+          npm ci
+          cd ../frontend
+          npm ci
+
+      - name: Setup test environment
+        run: |
+          cd app/backend
+          npm run db:migrate:test
+        env:
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+
+      - name: Start backend server
+        run: |
+          cd app/backend
+          npm run dev &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3001
+          TEST_DB_HOST: localhost
+          TEST_DB_PORT: 5432
+          TEST_DB_NAME: marketplace_test
+          TEST_DB_USER: test
+          TEST_DB_PASSWORD: test
+          TEST_REDIS_HOST: localhost
+          TEST_REDIS_PORT: 6379
+
+      - name: Start frontend server
+        run: |
+          cd app/frontend
+          npm run build
+          npm run start &
+          sleep 10
+        env:
+          NODE_ENV: test
+          PORT: 3000
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+
+      - name: Install Playwright
+        run: |
+          cd app/backend
+          npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: |
+          cd app/backend
+          npm run test:e2e:full
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_HEADLESS: true
+
+      - name: Archive E2E test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            app/backend/test-results/
+            app/backend/playwright-report/
+          retention-days: 30
+
+  comprehensive-report:
+    name: Generate Comprehensive Report
+    runs-on: ubuntu-latest
+    needs: [smart-contract-tests, backend-tests, frontend-tests, security-tests, performance-tests]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Install dependencies
+        run: |
+          cd app/backend
+          npm ci
+
+      - name: Generate comprehensive report
+        run: |
+          cd app/backend
+          node src/tests/comprehensive/testRunner.ts
+        env:
+          GENERATE_REPORT_ONLY: true
+
+      - name: Upload comprehensive report
+        uses: actions/upload-artifact@v3
+        with:
+          name: comprehensive-test-report
+          path: |
+            app/backend/test-reports/
+            app/backend/test-artifacts/
+          retention-days: 90
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            try {
+              const reportFiles = fs.readdirSync('app/backend/test-reports/');
+              const latestReport = reportFiles
+                .filter(f => f.startsWith('execution-report-'))
+                .sort()
+                .pop();
+              
+              if (latestReport) {
+                const reportPath = path.join('app/backend/test-reports/', latestReport);
+                const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+                
+                const comment = `## 🧪 Comprehensive Test Results
+                
+                **Overall Coverage:** ${report.coverage.overall}%
+                **Pass Rate:** ${report.qualityMetrics.passRate}%
+                **Security Score:** ${report.qualityMetrics.securityScore}
+                **Critical Issues:** ${report.qualityMetrics.criticalIssues}
+                
+                ### Coverage Breakdown
+                - Smart Contracts: ${report.coverage.smartContracts}%
+                - Backend: ${report.coverage.backend}%
+                - Frontend: ${report.coverage.frontend}%
+                
+                ### Test Results
+                - Tests Passed: ${report.qualityMetrics.testsPassed}
+                - Total Tests: ${report.qualityMetrics.testsTotal}
+                - Duration: ${Math.round(report.duration / 1000)}s
+                
+                ${report.recommendations.length > 0 ? `### Recommendations
+                ${report.recommendations.map(r => `- ${r}`).join('\n')}` : ''}
+                `;
+                
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: comment
+                });
+              }
+            } catch (error) {
+              console.log('Could not generate test report comment:', error);
+            }
+
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [comprehensive-report]
+    if: always()
+    steps:
+      - name: Download comprehensive report
+        uses: actions/download-artifact@v3
+        with:
+          name: comprehensive-test-report
+
+      - name: Evaluate quality gate
+        run: |
+          # Parse the latest test report and check quality thresholds
+          REPORT_FILE=$(ls test-reports/execution-report-*.json | sort | tail -n1)
+          
+          if [ -f "$REPORT_FILE" ]; then
+            COVERAGE=$(jq -r '.coverage.overall' "$REPORT_FILE")
+            PASS_RATE=$(jq -r '.qualityMetrics.passRate' "$REPORT_FILE")
+            SECURITY_SCORE=$(jq -r '.qualityMetrics.securityScore' "$REPORT_FILE")
+            CRITICAL_ISSUES=$(jq -r '.qualityMetrics.criticalIssues' "$REPORT_FILE")
+            
+            echo "Coverage: $COVERAGE%"
+            echo "Pass Rate: $PASS_RATE%"
+            echo "Security Score: $SECURITY_SCORE"
+            echo "Critical Issues: $CRITICAL_ISSUES"
+            
+            # Quality gate thresholds
+            MIN_COVERAGE=80
+            MIN_PASS_RATE=95
+            MIN_SECURITY_SCORE=85
+            MAX_CRITICAL_ISSUES=0
+            
+            FAILED=false
+            
+            if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+              echo "❌ Coverage below threshold: $COVERAGE% < $MIN_COVERAGE%"
+              FAILED=true
+            fi
+            
+            if (( $(echo "$PASS_RATE < $MIN_PASS_RATE" | bc -l) )); then
+              echo "❌ Pass rate below threshold: $PASS_RATE% < $MIN_PASS_RATE%"
+              FAILED=true
+            fi
+            
+            if (( $(echo "$SECURITY_SCORE < $MIN_SECURITY_SCORE" | bc -l) )); then
+              echo "❌ Security score below threshold: $SECURITY_SCORE < $MIN_SECURITY_SCORE"
+              FAILED=true
+            fi
+            
+            if (( CRITICAL_ISSUES > MAX_CRITICAL_ISSUES )); then
+              echo "❌ Critical issues found: $CRITICAL_ISSUES > $MAX_CRITICAL_ISSUES"
+              FAILED=true
+            fi
+            
+            if [ "$FAILED" = true ]; then
+              echo "❌ Quality gate failed"
+              exit 1
+            else
+              echo "✅ Quality gate passed"
+            fi
+          else
+            echo "❌ No test report found"
+            exit 1
+          fi

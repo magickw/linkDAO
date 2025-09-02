@@ -1,0 +1,338 @@
+version: '3.8'
+
+services:
+  # Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - frontend-1
+      - frontend-2
+      - backend-1
+      - backend-2
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  # Frontend Services (Multiple instances for HA)
+  frontend-1:
+    build:
+      context: ../../app/frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://api.web3marketplace.com
+      - NEXT_PUBLIC_BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
+    volumes:
+      - frontend-logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend-2:
+    build:
+      context: ../../app/frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://api.web3marketplace.com
+      - NEXT_PUBLIC_BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
+    volumes:
+      - frontend-logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend Services (Multiple instances for HA)
+  backend-1:
+    build:
+      context: ../../app/backend
+      dockerfile: Dockerfile.prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
+      - IPFS_URL=${IPFS_URL}
+    volumes:
+      - backend-logs:/app/logs
+      - blockchain-data:/app/blockchain-data
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    depends_on:
+      - postgres-primary
+      - redis-primary
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-2:
+    build:
+      context: ../../app/backend
+      dockerfile: Dockerfile.prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - BLOCKCHAIN_RPC_URL=${BLOCKCHAIN_RPC_URL}
+      - IPFS_URL=${IPFS_URL}
+    volumes:
+      - backend-logs:/app/logs
+      - blockchain-data:/app/blockchain-data
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    depends_on:
+      - postgres-primary
+      - redis-primary
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database - Primary/Replica Setup
+  postgres-primary:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_REPLICATION_MODE=master
+      - POSTGRES_REPLICATION_USER=${POSTGRES_REPLICATION_USER}
+      - POSTGRES_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+    volumes:
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - postgres-logs:/var/log/postgresql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres-replica:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_MASTER_SERVICE=postgres-primary
+      - POSTGRES_REPLICATION_MODE=slave
+      - POSTGRES_REPLICATION_USER=${POSTGRES_REPLICATION_USER}
+      - POSTGRES_REPLICATION_PASSWORD=${POSTGRES_REPLICATION_PASSWORD}
+      - POSTGRES_MASTER_PORT_NUMBER=5432
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+      - postgres-logs:/var/log/postgresql
+    depends_on:
+      - postgres-primary
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  # Redis - Primary/Replica Setup
+  redis-primary:
+    image: redis:7-alpine
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - redis-primary-data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf
+      - redis-logs:/var/log/redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-replica:
+    image: redis:7-alpine
+    command: redis-server /etc/redis/redis-replica.conf
+    volumes:
+      - redis-replica-data:/data
+      - ./redis/redis-replica.conf:/etc/redis/redis-replica.conf
+      - redis-logs:/var/log/redis
+    depends_on:
+      - redis-primary
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  # IPFS Node
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs-data:/data/ipfs
+      - ipfs-logs:/var/log/ipfs
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5001/api/v0/id"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  # Log Aggregation
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    volumes:
+      - ./monitoring/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./monitoring/logstash/config:/usr/share/logstash/config
+      - backend-logs:/logs/backend
+      - frontend-logs:/logs/frontend
+      - postgres-logs:/logs/postgres
+      - redis-logs:/logs/redis
+      - ipfs-logs:/logs/ipfs
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+  # Backup Service
+  backup-service:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_BACKUP_BUCKET=${S3_BACKUP_BUCKET}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+    volumes:
+      - postgres-primary-data:/backup/postgres:ro
+      - redis-primary-data:/backup/redis:ro
+      - ipfs-data:/backup/ipfs:ro
+      - blockchain-data:/backup/blockchain:ro
+      - ./backup/scripts:/backup/scripts
+    restart: unless-stopped
+    networks:
+      - web3-marketplace
+
+volumes:
+  postgres-primary-data:
+  postgres-replica-data:
+  redis-primary-data:
+  redis-replica-data:
+  ipfs-data:
+  blockchain-data:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  elasticsearch-data:
+  frontend-logs:
+  backend-logs:
+  postgres-logs:
+  redis-logs:
+  ipfs-logs:
+
+networks:
+  web3-marketplace:
+    driver: bridge

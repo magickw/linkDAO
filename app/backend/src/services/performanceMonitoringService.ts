@@ -1,630 +1,631 @@
 import { EventEmitter } from 'events';
-import { PerformanceOptimizationService } from './performanceOptimizationService';
-import { ModerationCacheService } from './moderationCacheService';
-import { VendorApiOptimizer } from './vendorApiOptimizer';
-import { CircuitBreakerManager } from './circuitBreakerService';
+import { performance, PerformanceObserver } from 'perf_hooks';
+import * as os from 'os';
+import * as process from 'process';
 
-export interface PerformanceAlert {
+interface PerformanceMetric {
+  name: string;
+  value: number;
+  unit: string;
+  timestamp: Date;
+  tags?: Record<string, string>;
+}
+
+interface AlertRule {
   id: string;
-  type: 'warning' | 'critical';
+  name: string;
+  metric: string;
+  condition: 'gt' | 'lt' | 'eq' | 'gte' | 'lte';
+  threshold: number;
+  duration: number; // Duration in seconds the condition must be true
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  enabled: boolean;
+  cooldown: number; // Cooldown period in seconds
+  lastTriggered?: Date;
+}
+
+interface Alert {
+  id: string;
+  ruleId: string;
+  ruleName: string;
   metric: string;
   value: number;
   threshold: number;
-  timestamp: number;
-  description: string;
+  severity: string;
+  message: string;
+  timestamp: Date;
+  resolved: boolean;
+  resolvedAt?: Date;
 }
 
-export interface SystemHealthMetrics {
-  overall: 'healthy' | 'degraded' | 'critical';
-  timestamp: number;
-  components: {
-    cache: {
-      status: 'healthy' | 'degraded' | 'critical';
-      hitRate: number;
-      memoryUsage: number;
-      responseTime: number;
-    };
-    vendors: {
-      status: 'healthy' | 'degraded' | 'critical';
-      activeVendors: number;
-      averageLatency: number;
-      errorRate: number;
-    };
-    circuitBreakers: {
-      status: 'healthy' | 'degraded' | 'critical';
-      openCircuits: number;
-      totalCircuits: number;
-    };
-    processing: {
-      status: 'healthy' | 'degraded' | 'critical';
-      throughput: number;
-      averageProcessingTime: number;
-      queueSize: number;
-    };
+interface SystemMetrics {
+  cpu: {
+    usage: number;
+    loadAverage: number[];
+  };
+  memory: {
+    used: number;
+    free: number;
+    total: number;
+    usage: number;
+  };
+  disk: {
+    used: number;
+    free: number;
+    total: number;
+    usage: number;
+  };
+  network: {
+    bytesIn: number;
+    bytesOut: number;
+    packetsIn: number;
+    packetsOut: number;
   };
 }
 
-export interface PerformanceTrend {
-  metric: string;
-  timeWindow: number;
-  dataPoints: Array<{
-    timestamp: number;
-    value: number;
-  }>;
-  trend: 'improving' | 'stable' | 'degrading';
-  changeRate: number;
+interface ApplicationMetrics {
+  requests: {
+    total: number;
+    perSecond: number;
+    averageResponseTime: number;
+    errorRate: number;
+  };
+  database: {
+    connections: number;
+    queryTime: number;
+    slowQueries: number;
+  };
+  cache: {
+    hitRate: number;
+    missRate: number;
+    evictions: number;
+  };
+  blockchain: {
+    transactionCount: number;
+    gasUsage: number;
+    failedTransactions: number;
+  };
 }
 
-/**
- * Performance monitoring service for real-time system health tracking
- * Provides alerts, metrics collection, and trend analysis
- */
 export class PerformanceMonitoringService extends EventEmitter {
-  private readonly performanceService: PerformanceOptimizationService;
-  private readonly cacheService: ModerationCacheService;
-  private readonly vendorOptimizer: VendorApiOptimizer;
-  private readonly circuitBreakerManager: CircuitBreakerManager;
+  private metrics: Map<string, PerformanceMetric[]> = new Map();
+  private alertRules: Map<string, AlertRule> = new Map();
+  private activeAlerts: Map<string, Alert> = new Map();
+  private metricsRetentionPeriod = 24 * 60 * 60 * 1000; // 24 hours
+  private collectionInterval = 5000; // 5 seconds
+  private intervalId?: NodeJS.Timeout;
+  private performanceObserver?: PerformanceObserver;
 
-  private alerts: Map<string, PerformanceAlert> = new Map();
-  private metricsHistory: Map<string, Array<{ timestamp: number; value: number }>> = new Map();
-  private monitoringInterval?: NodeJS.Timeout;
-  private alertThresholds = {
-    cacheHitRate: { warning: 0.7, critical: 0.5 },
-    averageProcessingTime: { warning: 5000, critical: 10000 },
-    errorRate: { warning: 0.05, critical: 0.1 },
-    memoryUsage: { warning: 500 * 1024 * 1024, critical: 1024 * 1024 * 1024 }, // 500MB/1GB
-    circuitBreakerFailures: { warning: 0.3, critical: 0.5 },
-    vendorLatency: { warning: 3000, critical: 5000 }
-  };
-
-  private readonly maxHistorySize = 1000; // Keep last 1000 data points per metric
-  private readonly monitoringIntervalMs = 30000; // Monitor every 30 seconds
-
-  constructor(
-    performanceService: PerformanceOptimizationService,
-    cacheService: ModerationCacheService,
-    vendorOptimizer: VendorApiOptimizer,
-    circuitBreakerManager: CircuitBreakerManager
-  ) {
+  constructor() {
     super();
+    this.setupPerformanceObserver();
+    this.startMetricsCollection();
+    this.setupDefaultAlertRules();
+  }
+
+  private setupPerformanceObserver(): void {
+    this.performanceObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      entries.forEach((entry) => {
+        this.recordMetric('performance', entry.duration, 'ms', {
+          name: entry.name,
+          type: entry.entryType,
+        });
+      });
+    });
+
+    this.performanceObserver.observe({ entryTypes: ['measure', 'navigation', 'resource'] });
+  }
+
+  private startMetricsCollection(): void {
+    this.intervalId = setInterval(() => {
+      this.collectSystemMetrics();
+      this.evaluateAlertRules();
+      this.cleanupOldMetrics();
+    }, this.collectionInterval);
+  }
+
+  // Record custom metrics
+  recordMetric(name: string, value: number, unit: string = '', tags?: Record<string, string>): void {
+    const metric: PerformanceMetric = {
+      name,
+      value,
+      unit,
+      timestamp: new Date(),
+      tags,
+    };
+
+    if (!this.metrics.has(name)) {
+      this.metrics.set(name, []);
+    }
+
+    this.metrics.get(name)!.push(metric);
+    this.emit('metricRecorded', metric);
+  }
+
+  // Collect system metrics
+  private collectSystemMetrics(): void {
+    const systemMetrics = this.getSystemMetrics();
     
-    this.performanceService = performanceService;
-    this.cacheService = cacheService;
-    this.vendorOptimizer = vendorOptimizer;
-    this.circuitBreakerManager = circuitBreakerManager;
+    // CPU metrics
+    this.recordMetric('system.cpu.usage', systemMetrics.cpu.usage, '%');
+    this.recordMetric('system.cpu.loadAverage1m', systemMetrics.cpu.loadAverage[0], '');
+    this.recordMetric('system.cpu.loadAverage5m', systemMetrics.cpu.loadAverage[1], '');
+    this.recordMetric('system.cpu.loadAverage15m', systemMetrics.cpu.loadAverage[2], '');
 
-    this.setupEventListeners();
-  }
+    // Memory metrics
+    this.recordMetric('system.memory.used', systemMetrics.memory.used, 'bytes');
+    this.recordMetric('system.memory.free', systemMetrics.memory.free, 'bytes');
+    this.recordMetric('system.memory.usage', systemMetrics.memory.usage, '%');
 
-  /**
-   * Setup event listeners for real-time monitoring
-   */
-  private setupEventListeners(): void {
-    // Listen to performance service events
-    this.performanceService.on('processingError', (event) => {
-      this.handleProcessingError(event);
-    });
+    // Process metrics
+    const memUsage = process.memoryUsage();
+    this.recordMetric('process.memory.rss', memUsage.rss, 'bytes');
+    this.recordMetric('process.memory.heapUsed', memUsage.heapUsed, 'bytes');
+    this.recordMetric('process.memory.heapTotal', memUsage.heapTotal, 'bytes');
+    this.recordMetric('process.memory.external', memUsage.external, 'bytes');
 
-    this.performanceService.on('configurationOptimized', (event) => {
-      this.emit('systemOptimized', event);
-    });
-
-    // Listen to circuit breaker events
-    this.circuitBreakerManager.on('circuitOpened', (event) => {
-      this.handleCircuitBreakerOpened(event);
-    });
-
-    this.circuitBreakerManager.on('circuitClosed', (event) => {
-      this.emit('circuitBreakerRecovered', event);
-    });
-
-    // Listen to vendor optimizer events
-    this.vendorOptimizer.on('batchError', (event) => {
-      this.handleVendorError(event);
+    // Event loop lag
+    const start = process.hrtime.bigint();
+    setImmediate(() => {
+      const lag = Number(process.hrtime.bigint() - start) / 1e6; // Convert to milliseconds
+      this.recordMetric('process.eventLoopLag', lag, 'ms');
     });
   }
 
-  /**
-   * Start continuous monitoring
-   */
-  startMonitoring(): void {
-    if (this.monitoringInterval) {
-      return; // Already monitoring
-    }
+  private getSystemMetrics(): SystemMetrics {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
 
-    this.monitoringInterval = setInterval(async () => {
-      try {
-        await this.collectMetrics();
-        await this.checkAlerts();
-        this.analyzePerformanceTrends();
-      } catch (error) {
-        console.error('Error during performance monitoring:', error);
+    return {
+      cpu: {
+        usage: this.getCpuUsage(),
+        loadAverage: os.loadavg(),
+      },
+      memory: {
+        used: usedMem,
+        free: freeMem,
+        total: totalMem,
+        usage: (usedMem / totalMem) * 100,
+      },
+      disk: {
+        used: 0, // Would need additional library for disk metrics
+        free: 0,
+        total: 0,
+        usage: 0,
+      },
+      network: {
+        bytesIn: 0, // Would need additional library for network metrics
+        bytesOut: 0,
+        packetsIn: 0,
+        packetsOut: 0,
+      },
+    };
+  }
+
+  private getCpuUsage(): number {
+    const cpus = os.cpus();
+    let totalIdle = 0;
+    let totalTick = 0;
+
+    cpus.forEach((cpu) => {
+      for (const type in cpu.times) {
+        totalTick += cpu.times[type as keyof typeof cpu.times];
       }
-    }, this.monitoringIntervalMs);
+      totalIdle += cpu.times.idle;
+    });
 
-    this.emit('monitoringStarted');
+    return 100 - (totalIdle / totalTick) * 100;
   }
 
-  /**
-   * Stop continuous monitoring
-   */
-  stopMonitoring(): void {
-    if (this.monitoringInterval) {
-      clearInterval(this.monitoringInterval);
-      this.monitoringInterval = undefined;
-      this.emit('monitoringStopped');
+  // Application-specific metrics
+  recordRequestMetrics(responseTime: number, statusCode: number, endpoint: string): void {
+    this.recordMetric('http.request.duration', responseTime, 'ms', {
+      endpoint,
+      status: statusCode.toString(),
+    });
+
+    this.recordMetric('http.request.count', 1, 'count', {
+      endpoint,
+      status: statusCode.toString(),
+    });
+
+    if (statusCode >= 400) {
+      this.recordMetric('http.request.errors', 1, 'count', {
+        endpoint,
+        status: statusCode.toString(),
+      });
     }
   }
 
-  /**
-   * Collect current system metrics
-   */
-  private async collectMetrics(): Promise<void> {
-    const timestamp = Date.now();
+  recordDatabaseMetrics(queryTime: number, operation: string, success: boolean): void {
+    this.recordMetric('database.query.duration', queryTime, 'ms', {
+      operation,
+      success: success.toString(),
+    });
 
-    try {
-      // Collect performance metrics
-      const performanceMetrics = this.performanceService.getPerformanceMetrics();
-      this.recordMetric('cacheHitRate', performanceMetrics.cacheHitRate, timestamp);
-      this.recordMetric('averageProcessingTime', performanceMetrics.averageProcessingTime, timestamp);
-      this.recordMetric('totalRequests', performanceMetrics.totalRequests, timestamp);
-      this.recordMetric('totalCost', performanceMetrics.totalCost, timestamp);
+    this.recordMetric('database.query.count', 1, 'count', {
+      operation,
+      success: success.toString(),
+    });
 
-      // Collect cache metrics
-      const cacheStats = await this.cacheService.getCacheStats();
-      this.recordMetric('cacheMemoryUsage', cacheStats.memoryUsage, timestamp);
-      this.recordMetric('cacheKeyCount', cacheStats.keyCount, timestamp);
-
-      // Collect vendor metrics
-      const vendorStats = this.vendorOptimizer.getSystemStats();
-      this.recordMetric('vendorQueueSize', vendorStats.totalQueueSize, timestamp);
-      this.recordMetric('vendorCostEstimate', vendorStats.totalCostEstimate, timestamp);
-
-      // Collect circuit breaker metrics
-      const circuitBreakerHealth = this.circuitBreakerManager.getHealthSummary();
-      this.recordMetric('openCircuits', circuitBreakerHealth.openCircuits, timestamp);
-      this.recordMetric('totalCircuits', circuitBreakerHealth.totalCircuits, timestamp);
-
-      // Collect system memory metrics
-      const memoryUsage = process.memoryUsage();
-      this.recordMetric('systemMemoryUsage', memoryUsage.heapUsed, timestamp);
-      this.recordMetric('systemMemoryTotal', memoryUsage.heapTotal, timestamp);
-
-    } catch (error) {
-      console.error('Error collecting metrics:', error);
+    if (queryTime > 1000) { // Slow query threshold
+      this.recordMetric('database.query.slow', 1, 'count', { operation });
     }
   }
 
-  /**
-   * Record a metric value with timestamp
-   */
-  private recordMetric(metric: string, value: number, timestamp: number): void {
-    if (!this.metricsHistory.has(metric)) {
-      this.metricsHistory.set(metric, []);
-    }
+  recordCacheMetrics(operation: 'hit' | 'miss' | 'set' | 'delete', key?: string): void {
+    this.recordMetric(`cache.${operation}`, 1, 'count', key ? { key } : undefined);
+  }
 
-    const history = this.metricsHistory.get(metric)!;
-    history.push({ timestamp, value });
+  recordBlockchainMetrics(transactionHash: string, gasUsed: number, success: boolean): void {
+    this.recordMetric('blockchain.transaction.count', 1, 'count', {
+      success: success.toString(),
+    });
 
-    // Keep only recent history
-    if (history.length > this.maxHistorySize) {
-      history.shift();
+    this.recordMetric('blockchain.gas.used', gasUsed, 'gas', {
+      transactionHash,
+    });
+
+    if (!success) {
+      this.recordMetric('blockchain.transaction.failed', 1, 'count');
     }
   }
 
-  /**
-   * Check for alert conditions
-   */
-  private async checkAlerts(): Promise<void> {
-    const currentMetrics = await this.getCurrentMetrics();
-
-    // Check cache hit rate
-    this.checkThresholdAlert(
-      'cacheHitRate',
-      currentMetrics.cacheHitRate,
-      this.alertThresholds.cacheHitRate,
-      'Cache hit rate is below optimal levels',
-      'lower'
-    );
-
-    // Check processing time
-    this.checkThresholdAlert(
-      'averageProcessingTime',
-      currentMetrics.averageProcessingTime,
-      this.alertThresholds.averageProcessingTime,
-      'Average processing time is too high',
-      'upper'
-    );
-
-    // Check memory usage
-    this.checkThresholdAlert(
-      'systemMemoryUsage',
-      currentMetrics.systemMemoryUsage,
-      this.alertThresholds.memoryUsage,
-      'System memory usage is high',
-      'upper'
-    );
-
-    // Check circuit breaker health
-    const circuitBreakerFailureRate = currentMetrics.openCircuits / Math.max(currentMetrics.totalCircuits, 1);
-    this.checkThresholdAlert(
-      'circuitBreakerFailures',
-      circuitBreakerFailureRate,
-      this.alertThresholds.circuitBreakerFailures,
-      'High number of circuit breaker failures',
-      'upper'
-    );
+  // Alert management
+  addAlertRule(rule: Omit<AlertRule, 'id'>): string {
+    const id = `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const alertRule: AlertRule = { ...rule, id };
+    this.alertRules.set(id, alertRule);
+    return id;
   }
 
-  /**
-   * Check threshold-based alerts
-   */
-  private checkThresholdAlert(
-    metric: string,
-    value: number,
-    thresholds: { warning: number; critical: number },
-    description: string,
-    direction: 'upper' | 'lower'
-  ): void {
-    const alertId = `${metric}_threshold`;
-    const isUpperThreshold = direction === 'upper';
+  removeAlertRule(ruleId: string): boolean {
+    return this.alertRules.delete(ruleId);
+  }
+
+  updateAlertRule(ruleId: string, updates: Partial<AlertRule>): boolean {
+    const rule = this.alertRules.get(ruleId);
+    if (rule) {
+      this.alertRules.set(ruleId, { ...rule, ...updates });
+      return true;
+    }
+    return false;
+  }
+
+  private setupDefaultAlertRules(): void {
+    // High CPU usage
+    this.addAlertRule({
+      name: 'High CPU Usage',
+      metric: 'system.cpu.usage',
+      condition: 'gt',
+      threshold: 80,
+      duration: 300, // 5 minutes
+      severity: 'high',
+      enabled: true,
+      cooldown: 600, // 10 minutes
+    });
+
+    // High memory usage
+    this.addAlertRule({
+      name: 'High Memory Usage',
+      metric: 'system.memory.usage',
+      condition: 'gt',
+      threshold: 85,
+      duration: 300,
+      severity: 'high',
+      enabled: true,
+      cooldown: 600,
+    });
+
+    // High response time
+    this.addAlertRule({
+      name: 'High Response Time',
+      metric: 'http.request.duration',
+      condition: 'gt',
+      threshold: 2000, // 2 seconds
+      duration: 180, // 3 minutes
+      severity: 'medium',
+      enabled: true,
+      cooldown: 300,
+    });
+
+    // High error rate
+    this.addAlertRule({
+      name: 'High Error Rate',
+      metric: 'http.request.errors',
+      condition: 'gt',
+      threshold: 10, // 10 errors per collection interval
+      duration: 120, // 2 minutes
+      severity: 'critical',
+      enabled: true,
+      cooldown: 300,
+    });
+
+    // Event loop lag
+    this.addAlertRule({
+      name: 'High Event Loop Lag',
+      metric: 'process.eventLoopLag',
+      condition: 'gt',
+      threshold: 100, // 100ms
+      duration: 60,
+      severity: 'medium',
+      enabled: true,
+      cooldown: 300,
+    });
+  }
+
+  private evaluateAlertRules(): void {
+    this.alertRules.forEach((rule) => {
+      if (!rule.enabled) return;
+
+      const metrics = this.getRecentMetrics(rule.metric, rule.duration * 1000);
+      if (metrics.length === 0) return;
+
+      const latestValue = metrics[metrics.length - 1].value;
+      const shouldTrigger = this.evaluateCondition(latestValue, rule.condition, rule.threshold);
+
+      if (shouldTrigger && this.canTriggerAlert(rule)) {
+        this.triggerAlert(rule, latestValue);
+      } else if (!shouldTrigger) {
+        this.resolveAlert(rule.id);
+      }
+    });
+  }
+
+  private evaluateCondition(value: number, condition: string, threshold: number): boolean {
+    switch (condition) {
+      case 'gt': return value > threshold;
+      case 'lt': return value < threshold;
+      case 'eq': return value === threshold;
+      case 'gte': return value >= threshold;
+      case 'lte': return value <= threshold;
+      default: return false;
+    }
+  }
+
+  private canTriggerAlert(rule: AlertRule): boolean {
+    if (!rule.lastTriggered) return true;
     
-    let alertType: 'warning' | 'critical' | null = null;
-    let threshold: number;
+    const timeSinceLastTrigger = Date.now() - rule.lastTriggered.getTime();
+    return timeSinceLastTrigger >= rule.cooldown * 1000;
+  }
 
-    if (isUpperThreshold) {
-      if (value >= thresholds.critical) {
-        alertType = 'critical';
-        threshold = thresholds.critical;
-      } else if (value >= thresholds.warning) {
-        alertType = 'warning';
-        threshold = thresholds.warning;
-      }
-    } else {
-      if (value <= thresholds.critical) {
-        alertType = 'critical';
-        threshold = thresholds.critical;
-      } else if (value <= thresholds.warning) {
-        alertType = 'warning';
-        threshold = thresholds.warning;
-      }
+  private triggerAlert(rule: AlertRule, value: number): void {
+    const alertId = `${rule.id}_${Date.now()}`;
+    const alert: Alert = {
+      id: alertId,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      metric: rule.metric,
+      value,
+      threshold: rule.threshold,
+      severity: rule.severity,
+      message: `${rule.name}: ${rule.metric} is ${value} (threshold: ${rule.threshold})`,
+      timestamp: new Date(),
+      resolved: false,
+    };
+
+    this.activeAlerts.set(rule.id, alert);
+    rule.lastTriggered = new Date();
+    
+    this.emit('alertTriggered', alert);
+    console.warn(`ALERT: ${alert.message}`);
+  }
+
+  private resolveAlert(ruleId: string): void {
+    const alert = this.activeAlerts.get(ruleId);
+    if (alert && !alert.resolved) {
+      alert.resolved = true;
+      alert.resolvedAt = new Date();
+      
+      this.emit('alertResolved', alert);
+      console.info(`RESOLVED: ${alert.message}`);
+    }
+  }
+
+  // Data retrieval methods
+  getMetrics(name: string, startTime?: Date, endTime?: Date): PerformanceMetric[] {
+    const metrics = this.metrics.get(name) || [];
+    
+    if (!startTime && !endTime) {
+      return metrics;
     }
 
-    if (alertType) {
-      const alert: PerformanceAlert = {
-        id: alertId,
-        type: alertType,
-        metric,
-        value,
-        threshold: threshold!,
-        timestamp: Date.now(),
-        description
+    return metrics.filter(metric => {
+      const time = metric.timestamp.getTime();
+      const start = startTime?.getTime() || 0;
+      const end = endTime?.getTime() || Date.now();
+      return time >= start && time <= end;
+    });
+  }
+
+  private getRecentMetrics(name: string, durationMs: number): PerformanceMetric[] {
+    const cutoff = new Date(Date.now() - durationMs);
+    return this.getMetrics(name, cutoff);
+  }
+
+  getAggregatedMetrics(name: string, interval: number = 60000): Array<{
+    timestamp: Date;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  }> {
+    const metrics = this.getMetrics(name);
+    const buckets = new Map<number, PerformanceMetric[]>();
+
+    // Group metrics into time buckets
+    metrics.forEach(metric => {
+      const bucketTime = Math.floor(metric.timestamp.getTime() / interval) * interval;
+      if (!buckets.has(bucketTime)) {
+        buckets.set(bucketTime, []);
+      }
+      buckets.get(bucketTime)!.push(metric);
+    });
+
+    // Calculate aggregations for each bucket
+    return Array.from(buckets.entries()).map(([bucketTime, bucketMetrics]) => {
+      const values = bucketMetrics.map(m => m.value);
+      return {
+        timestamp: new Date(bucketTime),
+        avg: values.reduce((sum, val) => sum + val, 0) / values.length,
+        min: Math.min(...values),
+        max: Math.max(...values),
+        count: values.length,
       };
-
-      this.alerts.set(alertId, alert);
-      this.emit('performanceAlert', alert);
-    } else {
-      // Clear alert if it exists and conditions are now normal
-      if (this.alerts.has(alertId)) {
-        this.alerts.delete(alertId);
-        this.emit('alertResolved', { alertId, metric });
-      }
-    }
+    }).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
-  /**
-   * Get current metrics snapshot
-   */
-  private async getCurrentMetrics(): Promise<any> {
-    const performanceMetrics = this.performanceService.getPerformanceMetrics();
-    const cacheStats = await this.cacheService.getCacheStats();
-    const vendorStats = this.vendorOptimizer.getSystemStats();
-    const circuitBreakerHealth = this.circuitBreakerManager.getHealthSummary();
-    const memoryUsage = process.memoryUsage();
-
-    return {
-      cacheHitRate: performanceMetrics.cacheHitRate,
-      averageProcessingTime: performanceMetrics.averageProcessingTime,
-      systemMemoryUsage: memoryUsage.heapUsed,
-      openCircuits: circuitBreakerHealth.openCircuits,
-      totalCircuits: circuitBreakerHealth.totalCircuits,
-      vendorQueueSize: vendorStats.totalQueueSize
-    };
+  getActiveAlerts(): Alert[] {
+    return Array.from(this.activeAlerts.values()).filter(alert => !alert.resolved);
   }
 
-  /**
-   * Analyze performance trends
-   */
-  private analyzePerformanceTrends(): void {
-    const trendsToAnalyze = [
-      'cacheHitRate',
-      'averageProcessingTime',
-      'systemMemoryUsage',
-      'vendorQueueSize'
-    ];
-
-    trendsToAnalyze.forEach(metric => {
-      const trend = this.calculateTrend(metric, 300000); // 5 minute window
-      if (trend) {
-        this.emit('performanceTrend', trend);
-        
-        // Alert on significant degradation
-        if (trend.trend === 'degrading' && Math.abs(trend.changeRate) > 0.2) {
-          this.emit('performanceDegradation', {
-            metric,
-            trend,
-            severity: Math.abs(trend.changeRate) > 0.5 ? 'critical' : 'warning'
-          });
-        }
-      }
-    });
+  getAllAlerts(limit: number = 100): Alert[] {
+    return Array.from(this.activeAlerts.values())
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, limit);
   }
 
-  /**
-   * Calculate trend for a specific metric
-   */
-  private calculateTrend(metric: string, timeWindow: number): PerformanceTrend | null {
-    const history = this.metricsHistory.get(metric);
-    if (!history || history.length < 2) {
-      return null;
-    }
-
-    const now = Date.now();
-    const windowStart = now - timeWindow;
-    const relevantData = history.filter(point => point.timestamp >= windowStart);
-
-    if (relevantData.length < 2) {
-      return null;
-    }
-
-    // Calculate linear regression for trend
-    const n = relevantData.length;
-    const sumX = relevantData.reduce((sum, point, index) => sum + index, 0);
-    const sumY = relevantData.reduce((sum, point) => sum + point.value, 0);
-    const sumXY = relevantData.reduce((sum, point, index) => sum + (index * point.value), 0);
-    const sumXX = relevantData.reduce((sum, point, index) => sum + (index * index), 0);
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    const changeRate = slope / (sumY / n); // Normalized change rate
-
-    let trend: 'improving' | 'stable' | 'degrading';
-    if (Math.abs(changeRate) < 0.05) {
-      trend = 'stable';
-    } else if (changeRate > 0) {
-      // For metrics like cache hit rate, positive is improving
-      // For metrics like processing time, positive is degrading
-      const improvingMetrics = ['cacheHitRate'];
-      trend = improvingMetrics.includes(metric) ? 'improving' : 'degrading';
-    } else {
-      const improvingMetrics = ['cacheHitRate'];
-      trend = improvingMetrics.includes(metric) ? 'degrading' : 'improving';
-    }
-
-    return {
-      metric,
-      timeWindow,
-      dataPoints: relevantData,
-      trend,
-      changeRate
-    };
+  getAlertRules(): AlertRule[] {
+    return Array.from(this.alertRules.values());
   }
 
-  /**
-   * Get system health summary
-   */
-  async getSystemHealth(): Promise<SystemHealthMetrics> {
-    const performanceMetrics = this.performanceService.getPerformanceMetrics();
-    const cacheStats = await this.cacheService.getCacheStats();
-    const vendorStats = this.vendorOptimizer.getSystemStats();
-    const circuitBreakerHealth = this.circuitBreakerManager.getHealthSummary();
-
-    // Determine component health
-    const cacheHealth = this.determineComponentHealth('cache', {
-      hitRate: cacheStats.hitRate,
-      memoryUsage: cacheStats.memoryUsage,
-      responseTime: 0 // Would need to track this separately
-    });
-
-    const vendorHealth = this.determineComponentHealth('vendors', {
-      activeVendors: vendorStats.activeVendors,
-      averageLatency: 0, // Would need to track this
-      errorRate: 0 // Would need to track this
-    });
-
-    const circuitBreakerHealthStatus = circuitBreakerHealth.overallHealth;
-
-    const processingHealth = this.determineComponentHealth('processing', {
-      throughput: performanceMetrics.totalRequests / (Date.now() / 1000), // Rough throughput
-      averageProcessingTime: performanceMetrics.averageProcessingTime,
-      queueSize: vendorStats.totalQueueSize
-    });
-
-    // Determine overall health
-    const componentStatuses = [cacheHealth.status, vendorHealth.status, circuitBreakerHealthStatus, processingHealth.status];
-    let overallHealth: 'healthy' | 'degraded' | 'critical';
-
-    if (componentStatuses.includes('critical')) {
-      overallHealth = 'critical';
-    } else if (componentStatuses.includes('degraded')) {
-      overallHealth = 'degraded';
-    } else {
-      overallHealth = 'healthy';
-    }
-
-    return {
-      overall: overallHealth,
-      timestamp: Date.now(),
-      components: {
-        cache: cacheHealth,
-        vendors: vendorHealth,
-        circuitBreakers: {
-          status: circuitBreakerHealthStatus,
-          openCircuits: circuitBreakerHealth.openCircuits,
-          totalCircuits: circuitBreakerHealth.totalCircuits
-        },
-        processing: processingHealth
-      }
-    };
-  }
-
-  /**
-   * Determine component health based on metrics
-   */
-  private determineComponentHealth(component: string, metrics: any): any {
-    let status: 'healthy' | 'degraded' | 'critical' = 'healthy';
-
-    switch (component) {
-      case 'cache':
-        if (metrics.hitRate < 0.5) status = 'critical';
-        else if (metrics.hitRate < 0.7) status = 'degraded';
-        break;
-      
-      case 'vendors':
-        if (metrics.errorRate > 0.1) status = 'critical';
-        else if (metrics.errorRate > 0.05) status = 'degraded';
-        break;
-      
-      case 'processing':
-        if (metrics.averageProcessingTime > 10000) status = 'critical';
-        else if (metrics.averageProcessingTime > 5000) status = 'degraded';
-        break;
-    }
-
-    return { status, ...metrics };
-  }
-
-  /**
-   * Handle processing errors
-   */
-  private handleProcessingError(event: any): void {
-    const alert: PerformanceAlert = {
-      id: `processing_error_${Date.now()}`,
-      type: 'warning',
-      metric: 'processingErrors',
-      value: 1,
-      threshold: 0,
-      timestamp: Date.now(),
-      description: `Processing error for content ${event.contentId}: ${event.error.message}`
-    };
-
-    this.emit('performanceAlert', alert);
-  }
-
-  /**
-   * Handle circuit breaker opened events
-   */
-  private handleCircuitBreakerOpened(event: any): void {
-    const alert: PerformanceAlert = {
-      id: `circuit_breaker_${event.name}`,
-      type: 'critical',
-      metric: 'circuitBreakerFailures',
-      value: event.failureCount,
-      threshold: this.alertThresholds.circuitBreakerFailures.critical,
-      timestamp: Date.now(),
-      description: `Circuit breaker opened for ${event.name} after ${event.failureCount} failures`
-    };
-
-    this.alerts.set(alert.id, alert);
-    this.emit('performanceAlert', alert);
-  }
-
-  /**
-   * Handle vendor errors
-   */
-  private handleVendorError(event: any): void {
-    const alert: PerformanceAlert = {
-      id: `vendor_error_${event.vendor}_${Date.now()}`,
-      type: 'warning',
-      metric: 'vendorErrors',
-      value: event.requestCount,
-      threshold: 0,
-      timestamp: Date.now(),
-      description: `Vendor ${event.vendor} batch error affecting ${event.requestCount} requests`
-    };
-
-    this.emit('performanceAlert', alert);
-  }
-
-  /**
-   * Get current active alerts
-   */
-  getActiveAlerts(): PerformanceAlert[] {
-    return Array.from(this.alerts.values());
-  }
-
-  /**
-   * Get metrics history for a specific metric
-   */
-  getMetricsHistory(metric: string, timeWindow?: number): Array<{ timestamp: number; value: number }> {
-    const history = this.metricsHistory.get(metric) || [];
-    
-    if (timeWindow) {
-      const cutoff = Date.now() - timeWindow;
-      return history.filter(point => point.timestamp >= cutoff);
-    }
-    
-    return [...history];
-  }
-
-  /**
-   * Update alert thresholds
-   */
-  updateAlertThresholds(newThresholds: Partial<typeof this.alertThresholds>): void {
-    Object.assign(this.alertThresholds, newThresholds);
-    this.emit('thresholdsUpdated', this.alertThresholds);
-  }
-
-  /**
-   * Clear all metrics history
-   */
-  clearMetricsHistory(): void {
-    this.metricsHistory.clear();
-    this.emit('metricsHistoryCleared');
-  }
-
-  /**
-   * Get performance summary report
-   */
-  async getPerformanceReport(timeWindow: number = 3600000): Promise<any> {
-    const systemHealth = await this.getSystemHealth();
+  // Performance analysis
+  getPerformanceSummary(): {
+    system: SystemMetrics;
+    application: ApplicationMetrics;
+    alerts: { active: number; total: number };
+  } {
+    const systemMetrics = this.getSystemMetrics();
+    const applicationMetrics = this.calculateApplicationMetrics();
     const activeAlerts = this.getActiveAlerts();
-    
-    const metricsReport: any = {};
-    for (const [metric, history] of this.metricsHistory) {
-      const recentData = this.getMetricsHistory(metric, timeWindow);
-      if (recentData.length > 0) {
-        const values = recentData.map(point => point.value);
-        metricsReport[metric] = {
-          current: values[values.length - 1],
-          average: values.reduce((sum, val) => sum + val, 0) / values.length,
-          min: Math.min(...values),
-          max: Math.max(...values),
-          trend: this.calculateTrend(metric, timeWindow)?.trend || 'stable'
-        };
-      }
-    }
 
     return {
-      timestamp: Date.now(),
-      timeWindow,
-      systemHealth,
-      activeAlerts: activeAlerts.length,
-      criticalAlerts: activeAlerts.filter(a => a.type === 'critical').length,
-      metrics: metricsReport
+      system: systemMetrics,
+      application: applicationMetrics,
+      alerts: {
+        active: activeAlerts.length,
+        total: this.activeAlerts.size,
+      },
     };
+  }
+
+  private calculateApplicationMetrics(): ApplicationMetrics {
+    const now = new Date();
+    const oneMinuteAgo = new Date(now.getTime() - 60000);
+
+    // HTTP metrics
+    const requestMetrics = this.getMetrics('http.request.count', oneMinuteAgo);
+    const responseTimeMetrics = this.getMetrics('http.request.duration', oneMinuteAgo);
+    const errorMetrics = this.getMetrics('http.request.errors', oneMinuteAgo);
+
+    // Database metrics
+    const dbQueryMetrics = this.getMetrics('database.query.duration', oneMinuteAgo);
+    const slowQueryMetrics = this.getMetrics('database.query.slow', oneMinuteAgo);
+
+    // Cache metrics
+    const cacheHits = this.getMetrics('cache.hit', oneMinuteAgo);
+    const cacheMisses = this.getMetrics('cache.miss', oneMinuteAgo);
+
+    // Blockchain metrics
+    const blockchainTxMetrics = this.getMetrics('blockchain.transaction.count', oneMinuteAgo);
+    const gasMetrics = this.getMetrics('blockchain.gas.used', oneMinuteAgo);
+    const failedTxMetrics = this.getMetrics('blockchain.transaction.failed', oneMinuteAgo);
+
+    return {
+      requests: {
+        total: requestMetrics.length,
+        perSecond: requestMetrics.length / 60,
+        averageResponseTime: responseTimeMetrics.length > 0
+          ? responseTimeMetrics.reduce((sum, m) => sum + m.value, 0) / responseTimeMetrics.length
+          : 0,
+        errorRate: requestMetrics.length > 0 ? errorMetrics.length / requestMetrics.length : 0,
+      },
+      database: {
+        connections: 0, // Would need to track this separately
+        queryTime: dbQueryMetrics.length > 0
+          ? dbQueryMetrics.reduce((sum, m) => sum + m.value, 0) / dbQueryMetrics.length
+          : 0,
+        slowQueries: slowQueryMetrics.length,
+      },
+      cache: {
+        hitRate: (cacheHits.length + cacheMisses.length) > 0
+          ? cacheHits.length / (cacheHits.length + cacheMisses.length)
+          : 0,
+        missRate: (cacheHits.length + cacheMisses.length) > 0
+          ? cacheMisses.length / (cacheHits.length + cacheMisses.length)
+          : 0,
+        evictions: 0, // Would need to track this separately
+      },
+      blockchain: {
+        transactionCount: blockchainTxMetrics.length,
+        gasUsage: gasMetrics.reduce((sum, m) => sum + m.value, 0),
+        failedTransactions: failedTxMetrics.length,
+      },
+    };
+  }
+
+  // Cleanup old metrics
+  private cleanupOldMetrics(): void {
+    const cutoff = new Date(Date.now() - this.metricsRetentionPeriod);
+    
+    this.metrics.forEach((metricArray, name) => {
+      const filtered = metricArray.filter(metric => metric.timestamp > cutoff);
+      this.metrics.set(name, filtered);
+    });
+  }
+
+  // Export metrics for external monitoring systems
+  exportMetrics(format: 'prometheus' | 'json' = 'json'): string {
+    if (format === 'prometheus') {
+      return this.exportPrometheusFormat();
+    }
+    
+    const allMetrics: Record<string, PerformanceMetric[]> = {};
+    this.metrics.forEach((metrics, name) => {
+      allMetrics[name] = metrics;
+    });
+    
+    return JSON.stringify(allMetrics, null, 2);
+  }
+
+  private exportPrometheusFormat(): string {
+    let output = '';
+    
+    this.metrics.forEach((metrics, name) => {
+      if (metrics.length === 0) return;
+      
+      const latest = metrics[metrics.length - 1];
+      const metricName = name.replace(/[^a-zA-Z0-9_]/g, '_');
+      
+      output += `# HELP ${metricName} ${name}\n`;
+      output += `# TYPE ${metricName} gauge\n`;
+      
+      if (latest.tags) {
+        const labels = Object.entries(latest.tags)
+          .map(([key, value]) => `${key}="${value}"`)
+          .join(',');
+        output += `${metricName}{${labels}} ${latest.value}\n`;
+      } else {
+        output += `${metricName} ${latest.value}\n`;
+      }
+    });
+    
+    return output;
+  }
+
+  // Cleanup
+  destroy(): void {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+    
+    if (this.performanceObserver) {
+      this.performanceObserver.disconnect();
+    }
+    
+    this.removeAllListeners();
   }
 }
-
-export const createPerformanceMonitoringService = (
-  performanceService: PerformanceOptimizationService,
-  cacheService: ModerationCacheService,
-  vendorOptimizer: VendorApiOptimizer,
-  circuitBreakerManager: CircuitBreakerManager
-): PerformanceMonitoringService => {
-  return new PerformanceMonitoringService(
-    performanceService,
-    cacheService,
-    vendorOptimizer,
-    circuitBreakerManager
-  );
-};

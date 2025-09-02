@@ -1,22 +1,15 @@
 /**
- * Global Teardown for Comprehensive Test Suite
- * Runs once after all tests
+ * Global Test Teardown
+ * 
+ * Runs once after all tests to cleanup the testing environment
  */
 
-export default async function globalTeardown() {
-  console.log('🌍 Global teardown starting...');
+export default async function globalTeardown(): Promise<void> {
+  console.log('Starting global test teardown...');
   
-  // Clean up test databases
-  console.log('🗑️  Cleaning up test databases...');
-  
-  // Shut down mock services
-  console.log('🛑 Shutting down mock services...');
-  
-  // Generate final reports
-  console.log('📊 Generating final test reports...');
-  
+  // Cleanup any global resources
+  // Stop test services if they were started
   // Clean up temporary files
-  console.log('🧹 Cleaning up temporary files...');
   
-  console.log('✅ Global teardown completed');
+  console.log('Global test teardown completed');
 }

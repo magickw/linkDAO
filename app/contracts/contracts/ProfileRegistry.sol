@@ -43,7 +43,7 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         string bioCid
     );
     
-    constructor() ERC721("LinkDAOProfile", "LDP") {}
+    constructor() ERC721("LinkDAOProfile", "LDP") Ownable(msg.sender) {}
     
     /**
      * @dev Creates a new profile for the caller
@@ -94,7 +94,7 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         string memory avatarCid,
         string memory bioCid
     ) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Not owner or approved");
+        require(_ownerOf(tokenId) == msg.sender || getApproved(tokenId) == msg.sender || isApprovedForAll(_ownerOf(tokenId), msg.sender), "Not owner or approved");
         
         Profile storage profile = profiles[tokenId];
         profile.avatarCid = avatarCid;
@@ -109,7 +109,7 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
      * @param ens The new ENS name
      */
     function updateEns(uint256 tokenId, string memory ens) public {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "Not owner or approved");
+        require(_ownerOf(tokenId) == msg.sender || getApproved(tokenId) == msg.sender || isApprovedForAll(_ownerOf(tokenId), msg.sender), "Not owner or approved");
         profiles[tokenId].ens = ens;
     }
     
@@ -134,13 +134,16 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
     }
     
     // The following functions are overrides required by Solidity.
-    function _beforeTokenTransfer(
-        address from,
+    function _update(
         address to,
         uint256 tokenId,
-        uint256 batchSize
-    ) internal override(ERC721, ERC721Enumerable) {
-        super._beforeTokenTransfer(from, to, tokenId, batchSize);
+        address auth
+    ) internal override(ERC721, ERC721Enumerable) returns (address) {
+        return super._update(to, tokenId, auth);
+    }
+    
+    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
+        super._increaseBalance(account, value);
     }
     
     function supportsInterface(bytes4 interfaceId)

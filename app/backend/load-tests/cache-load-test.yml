@@ -1,0 +1,117 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Cache performance test phases
+    - duration: 30
+      arrivalRate: 50
+      name: "Cache warm-up"
+    
+    - duration: 120
+      arrivalRate: 50
+      rampTo: 500
+      name: "Cache ramp-up"
+    
+    - duration: 180
+      arrivalRate: 500
+      name: "Cache sustained load"
+    
+    - duration: 60
+      arrivalRate: 500
+      rampTo: 1000
+      name: "Cache peak load"
+
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+  processor: "./load-test-functions.js"
+
+scenarios:
+  # Cache hit scenario (70% of traffic)
+  - name: "Cache hits"
+    weight: 70
+    flow:
+      # Request popular products (likely to be cached)
+      - get:
+          url: "/api/products/{{ $randomInt(1, 50) }}"  # Popular products
+      
+      - get:
+          url: "/api/products/{{ $randomInt(1, 50) }}/reviews"
+      
+      - get:
+          url: "/api/categories/popular"
+      
+      - get:
+          url: "/api/search/trending"
+
+  # Cache miss scenario (20% of traffic)
+  - name: "Cache misses"
+    weight: 20
+    flow:
+      # Request less popular products (likely cache misses)
+      - get:
+          url: "/api/products/{{ $randomInt(1000, 10000) }}"  # Less popular products
+      
+      - get:
+          url: "/api/users/{{ $randomInt(1000, 10000) }}/profile"
+      
+      - get:
+          url: "/api/products/search"
+          qs:
+            q: "{{ $randomString(15, 'alpha') }}"  # Unique search terms
+      
+      - get:
+          url: "/api/analytics/custom"
+          qs:
+            metric: "{{ $randomString(10, 'alpha') }}"
+            timeframe: "1h"
+
+  # Cache invalidation scenario (10% of traffic)
+  - name: "Cache invalidation"
+    weight: 10
+    flow:
+      - function: "generateWalletAddress"
+      - function: "generateProductData"
+      
+      - post:
+          url: "/api/auth/wallet-connect"
+          json:
+            walletAddress: "{{ walletAddress }}"
+            signature: "{{ $randomString(130, 'hex') }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      # Operations that invalidate cache
+      - put:
+          url: "/api/products/{{ $randomInt(1, 100) }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            title: "Updated {{ productTitle }}"
+            price: "{{ productPrice }}"
+          ifTrue: "authToken"
+      
+      - post:
+          url: "/api/reviews"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            productId: "{{ $randomInt(1, 100) }}"
+            rating: "{{ $randomInt(1, 5) }}"
+            comment: "Cache invalidation test"
+          ifTrue: "authToken"
+
+expect:
+  - statusCode: [200, 201, 204]
+  - maxResponseTime: 1000  # Cache should be fast
+
+metrics:
+  - name: "cache_response_time_p95"
+    threshold: 500
+  
+  - name: "cache_response_time_p99"
+    threshold: 1000
+  
+  - name: "cache_hit_rate"
+    threshold: 0.8  # 80% cache hit rate expected
