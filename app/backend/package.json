@@ -34,7 +34,7 @@
     "build:render": "NODE_OPTIONS='--max-old-space-size=3072' tsc --project tsconfig.prod.json",
     "build:js": "NODE_OPTIONS='--max-old-space-size=2048' babel src --out-dir dist --extensions '.ts,.js' --presets @babel/preset-env,@babel/preset-typescript --ignore '**/*.test.ts,**/*.spec.ts'",
     "deploy:render:enhanced": "bash scripts/deploy-render-enhanced.sh",
-    "build:emergency": "NODE_OPTIONS='--max-old-space-size=1024' node -e 'console.log(\"Emergency build completed\")'"
+    "build:emergency": "NODE_OPTIONS='--max-old-space-size=1024' node -e 'console.log(\"Emergency build completed\")'",
     "deploy:dev": "bash scripts/deploy.sh development",
     "deploy:staging": "bash scripts/deploy.sh staging",
     "deploy:prod": "bash scripts/deploy.sh production",

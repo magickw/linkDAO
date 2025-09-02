@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter
     rootDir: app/backend
-    buildCommand: npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
+    buildCommand: bash scripts/prebuild.sh && npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
     startCommand: node dist/index.js
     healthCheckPath: /health
     envVars:
@@ -24,15 +24,13 @@ services:
           name: linkdao-redis
           property: connectionString
     autoDeploy: true
-    
+  - type: redis
+    name: linkdao-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
 databases:
   - name: linkdao
     databaseName: linkdao
     user: neondb_owner
     plan: free
-
-services:
-  - type: redis
-    name: linkdao-redis
-    plan: free
-    maxmemoryPolicy: allkeys-lru
