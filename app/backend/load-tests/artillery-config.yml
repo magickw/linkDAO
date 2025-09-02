@@ -1,0 +1,178 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm-up"
+    
+    # Ramp-up phase
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp-up"
+    
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained load"
+    
+    # Peak load phase
+    - duration: 120
+      arrivalRate: 50
+      rampTo: 100
+      name: "Peak load"
+    
+    # Cool-down phase
+    - duration: 60
+      arrivalRate: 100
+      rampTo: 5
+      name: "Cool-down"
+
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+      User-Agent: 'Artillery Load Test'
+
+  variables:
+    productIds:
+      - "product-1"
+      - "product-2"
+      - "product-3"
+      - "product-4"
+      - "product-5"
+    
+    userIds:
+      - "user-1"
+      - "user-2"
+      - "user-3"
+      - "user-4"
+      - "user-5"
+    
+    categories:
+      - "electronics"
+      - "clothing"
+      - "books"
+      - "home"
+      - "sports"
+
+  processor: "./load-test-functions.js"
+
+scenarios:
+  # Marketplace browsing scenario (60% of traffic)
+  - name: "Browse marketplace"
+    weight: 60
+    flow:
+      - get:
+          url: "/api/products"
+          qs:
+            page: "{{ $randomInt(1, 10) }}"
+            limit: "20"
+            category: "{{ $pick(categories) }}"
+          capture:
+            - json: "$.data[0].id"
+              as: "productId"
+      
+      - think: 2
+      
+      - get:
+          url: "/api/products/{{ productId }}"
+          ifTrue: "productId"
+      
+      - think: 3
+      
+      - get:
+          url: "/api/products/{{ productId }}/reviews"
+          ifTrue: "productId"
+
+  # User authentication scenario (20% of traffic)
+  - name: "User authentication"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/wallet-connect"
+          json:
+            walletAddress: "0x{{ $randomString(40, 'hex') }}"
+            signature: "0x{{ $randomString(130, 'hex') }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - think: 1
+      
+      - get:
+          url: "/api/users/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          ifTrue: "authToken"
+
+  # Search scenario (15% of traffic)
+  - name: "Search products"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/search"
+          qs:
+            q: "{{ $randomString(5, 'alpha') }}"
+            category: "{{ $pick(categories) }}"
+            minPrice: "{{ $randomInt(10, 100) }}"
+            maxPrice: "{{ $randomInt(100, 1000) }}"
+      
+      - think: 2
+      
+      - get:
+          url: "/api/search/suggestions"
+          qs:
+            q: "{{ $randomString(3, 'alpha') }}"
+
+  # Order management scenario (5% of traffic)
+  - name: "Order management"
+    weight: 5
+    flow:
+      - post:
+          url: "/api/auth/wallet-connect"
+          json:
+            walletAddress: "0x{{ $randomString(40, 'hex') }}"
+            signature: "0x{{ $randomString(130, 'hex') }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/orders"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            productId: "{{ $pick(productIds) }}"
+            quantity: "{{ $randomInt(1, 5) }}"
+            paymentMethod: "crypto"
+          ifTrue: "authToken"
+          capture:
+            - json: "$.id"
+              as: "orderId"
+      
+      - think: 5
+      
+      - get:
+          url: "/api/orders/{{ orderId }}"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          ifTrue: "orderId && authToken"
+
+# Performance thresholds
+expect:
+  - statusCode: 200
+  - contentType: json
+  - hasProperty: data
+  - maxResponseTime: 2000  # 2 seconds max response time
+
+# Metrics to track
+metrics:
+  - name: "response_time_p95"
+    threshold: 1500  # 95th percentile should be under 1.5 seconds
+  
+  - name: "response_time_p99"
+    threshold: 3000  # 99th percentile should be under 3 seconds
+  
+  - name: "error_rate"
+    threshold: 0.05  # Error rate should be under 5%

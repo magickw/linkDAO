@@ -1,0 +1,244 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-config
+  namespace: web3-marketplace-monitoring
+data:
+  grafana.ini: |
+    [server]
+    http_port = 3000
+    domain = grafana.web3marketplace.com
+    root_url = https://grafana.web3marketplace.com
+    
+    [security]
+    admin_user = admin
+    cookie_secure = true
+    cookie_samesite = strict
+    
+    [auth]
+    disable_login_form = false
+    
+    [auth.google]
+    enabled = true
+    client_id = ${GOOGLE_CLIENT_ID}
+    client_secret = ${GOOGLE_CLIENT_SECRET}
+    scopes = https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email
+    auth_url = https://accounts.google.com/o/oauth2/auth
+    token_url = https://accounts.google.com/o/oauth2/token
+    allowed_domains = web3marketplace.com
+    
+    [database]
+    type = postgres
+    host = postgres-primary-service:5432
+    name = grafana
+    user = grafana
+    password = ${GRAFANA_DB_PASSWORD}
+    
+    [session]
+    provider = redis
+    provider_config = addr=redis-master-service:6379,pool_size=100,db=grafana
+    
+    [alerting]
+    enabled = true
+    execute_alerts = true
+    
+    [metrics]
+    enabled = true
+    
+    [log]
+    mode = console
+    level = info
+    
+    [plugins]
+    allow_loading_unsigned_plugins = grafana-piechart-panel,grafana-worldmap-panel
+  
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-service:9090
+      isDefault: true
+      editable: false
+    - name: PostgreSQL
+      type: postgres
+      access: proxy
+      url: postgres-primary-service:5432
+      database: web3marketplace
+      user: grafana_readonly
+      secureJsonData:
+        password: ${GRAFANA_DB_PASSWORD}
+      jsonData:
+        sslmode: require
+        postgresVersion: 1500
+        timescaledb: false
+    - name: Redis
+      type: redis-datasource
+      access: proxy
+      url: redis://redis-master-service:6379
+      jsonData:
+        client: standalone
+        poolSize: 5
+        timeout: 10
+        pingInterval: 0
+        pipelineWindow: 0
+  
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      updateIntervalSeconds: 10
+      allowUiUpdates: true
+      options:
+        path: /var/lib/grafana/dashboards
+    - name: 'web3-marketplace'
+      orgId: 1
+      folder: 'Web3 Marketplace'
+      type: file
+      disableDeletion: false
+      updateIntervalSeconds: 10
+      allowUiUpdates: true
+      options:
+        path: /var/lib/grafana/dashboards/web3-marketplace
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-overview
+  namespace: web3-marketplace-monitoring
+data:
+  overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Web3 Marketplace Overview",
+        "tags": ["web3", "marketplace", "overview"],
+        "style": "dark",
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "System Health",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up",
+                "legendFormat": "{{job}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {
+                  "mode": "thresholds"
+                },
+                "thresholds": {
+                  "steps": [
+                    {"color": "red", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Request Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total[5m])",
+                "legendFormat": "{{method}} {{status}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m])",
+                "legendFormat": "Error Rate"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Active Users",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "marketplace_active_users",
+                "legendFormat": "Active Users"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "Transaction Volume",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(marketplace_transactions_total[1h]) * 3600",
+                "legendFormat": "Transactions/Hour"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "Revenue (24h)",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "increase(marketplace_revenue_total[24h])",
+                "legendFormat": "Revenue USD"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16}
+          },
+          {
+            "id": 8,
+            "title": "Gas Price",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "ethereum_gas_price_gwei",
+                "legendFormat": "Gas Price (Gwei)"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 16}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }

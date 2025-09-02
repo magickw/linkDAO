@@ -1,0 +1,225 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: web3-marketplace-prod
+data:
+  postgres-backup.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Configuration
+    BACKUP_DIR="/backups/postgres"
+    RETENTION_DAYS=30
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="postgres_backup_${TIMESTAMP}.sql.gz"
+    
+    # Create backup directory
+    mkdir -p ${BACKUP_DIR}
+    
+    # Perform backup
+    echo "Starting PostgreSQL backup at $(date)"
+    pg_dump -h postgres-primary-service -U postgres -d web3marketplace | gzip > ${BACKUP_DIR}/${BACKUP_FILE}
+    
+    # Verify backup
+    if [ -f "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
+        echo "Backup completed successfully: ${BACKUP_FILE}"
+        echo "Backup size: $(du -h ${BACKUP_DIR}/${BACKUP_FILE} | cut -f1)"
+    else
+        echo "Backup failed!"
+        exit 1
+    fi
+    
+    # Upload to S3
+    aws s3 cp ${BACKUP_DIR}/${BACKUP_FILE} s3://web3marketplace-backups/postgres/${BACKUP_FILE}
+    
+    # Clean up old backups
+    find ${BACKUP_DIR} -name "postgres_backup_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
+    
+    # Clean up old S3 backups
+    aws s3 ls s3://web3marketplace-backups/postgres/ | while read -r line; do
+        createDate=$(echo $line | awk '{print $1" "$2}')
+        createDate=$(date -d "$createDate" +%s)
+        olderThan=$(date -d "${RETENTION_DAYS} days ago" +%s)
+        if [[ $createDate -lt $olderThan ]]; then
+            fileName=$(echo $line | awk '{print $4}')
+            if [[ $fileName != "" ]]; then
+                aws s3 rm s3://web3marketplace-backups/postgres/$fileName
+            fi
+        fi
+    done
+    
+    echo "PostgreSQL backup completed at $(date)"
+  
+  redis-backup.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Configuration
+    BACKUP_DIR="/backups/redis"
+    RETENTION_DAYS=7
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="redis_backup_${TIMESTAMP}.rdb"
+    
+    # Create backup directory
+    mkdir -p ${BACKUP_DIR}
+    
+    # Perform backup
+    echo "Starting Redis backup at $(date)"
+    redis-cli -h redis-master-service --rdb ${BACKUP_DIR}/${BACKUP_FILE}
+    
+    # Verify backup
+    if [ -f "${BACKUP_DIR}/${BACKUP_FILE}" ]; then
+        echo "Backup completed successfully: ${BACKUP_FILE}"
+        echo "Backup size: $(du -h ${BACKUP_DIR}/${BACKUP_FILE} | cut -f1)"
+    else
+        echo "Backup failed!"
+        exit 1
+    fi
+    
+    # Upload to S3
+    aws s3 cp ${BACKUP_DIR}/${BACKUP_FILE} s3://web3marketplace-backups/redis/${BACKUP_FILE}
+    
+    # Clean up old backups
+    find ${BACKUP_DIR} -name "redis_backup_*.rdb" -mtime +${RETENTION_DAYS} -delete
+    
+    echo "Redis backup completed at $(date)"
+  
+  blockchain-backup.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Configuration
+    BACKUP_DIR="/backups/blockchain"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    
+    # Create backup directory
+    mkdir -p ${BACKUP_DIR}
+    
+    echo "Starting blockchain data backup at $(date)"
+    
+    # Backup contract addresses and ABIs
+    kubectl get configmap contract-addresses -o yaml > ${BACKUP_DIR}/contract-addresses_${TIMESTAMP}.yaml
+    kubectl get configmap contract-abis -o yaml > ${BACKUP_DIR}/contract-abis_${TIMESTAMP}.yaml
+    
+    # Backup deployment transactions
+    psql -h postgres-primary-service -U postgres -d web3marketplace -c "
+    COPY (
+        SELECT * FROM blockchain_transactions 
+        WHERE transaction_type = 'contract_deployment'
+    ) TO STDOUT WITH CSV HEADER
+    " > ${BACKUP_DIR}/deployment_transactions_${TIMESTAMP}.csv
+    
+    # Backup critical on-chain data references
+    psql -h postgres-primary-service -U postgres -d web3marketplace -c "
+    COPY (
+        SELECT order_id, escrow_contract, transaction_hash, block_number, created_at
+        FROM orders 
+        WHERE escrow_contract IS NOT NULL
+    ) TO STDOUT WITH CSV HEADER
+    " > ${BACKUP_DIR}/escrow_contracts_${TIMESTAMP}.csv
+    
+    # Create archive
+    tar -czf ${BACKUP_DIR}/blockchain_backup_${TIMESTAMP}.tar.gz -C ${BACKUP_DIR} \
+        contract-addresses_${TIMESTAMP}.yaml \
+        contract-abis_${TIMESTAMP}.yaml \
+        deployment_transactions_${TIMESTAMP}.csv \
+        escrow_contracts_${TIMESTAMP}.csv
+    
+    # Upload to S3
+    aws s3 cp ${BACKUP_DIR}/blockchain_backup_${TIMESTAMP}.tar.gz s3://web3marketplace-backups/blockchain/
+    
+    # Clean up temporary files
+    rm ${BACKUP_DIR}/contract-addresses_${TIMESTAMP}.yaml
+    rm ${BACKUP_DIR}/contract-abis_${TIMESTAMP}.yaml
+    rm ${BACKUP_DIR}/deployment_transactions_${TIMESTAMP}.csv
+    rm ${BACKUP_DIR}/escrow_contracts_${TIMESTAMP}.csv
+    
+    echo "Blockchain backup completed at $(date)"
+  
+  restore-postgres.sh: |
+    #!/bin/bash
+    set -e
+    
+    if [ -z "$1" ]; then
+        echo "Usage: $0 <backup_file>"
+        echo "Available backups:"
+        aws s3 ls s3://web3marketplace-backups/postgres/ | tail -10
+        exit 1
+    fi
+    
+    BACKUP_FILE=$1
+    RESTORE_DIR="/tmp/restore"
+    
+    echo "Starting PostgreSQL restore from ${BACKUP_FILE}"
+    
+    # Download backup from S3
+    mkdir -p ${RESTORE_DIR}
+    aws s3 cp s3://web3marketplace-backups/postgres/${BACKUP_FILE} ${RESTORE_DIR}/
+    
+    # Stop application pods
+    kubectl scale deployment backend-deployment --replicas=0
+    
+    # Wait for connections to close
+    sleep 30
+    
+    # Drop and recreate database
+    psql -h postgres-primary-service -U postgres -c "DROP DATABASE IF EXISTS web3marketplace;"
+    psql -h postgres-primary-service -U postgres -c "CREATE DATABASE web3marketplace;"
+    
+    # Restore database
+    gunzip -c ${RESTORE_DIR}/${BACKUP_FILE} | psql -h postgres-primary-service -U postgres -d web3marketplace
+    
+    # Restart application pods
+    kubectl scale deployment backend-deployment --replicas=3
+    
+    # Clean up
+    rm -rf ${RESTORE_DIR}
+    
+    echo "PostgreSQL restore completed successfully"
+  
+  health-check.sh: |
+    #!/bin/bash
+    
+    # Health check script for backup system
+    BACKUP_DIR="/backups"
+    S3_BUCKET="s3://web3marketplace-backups"
+    
+    echo "=== Backup System Health Check ==="
+    echo "Timestamp: $(date)"
+    echo
+    
+    # Check local backup directories
+    echo "Local Backup Status:"
+    for dir in postgres redis blockchain; do
+        if [ -d "${BACKUP_DIR}/${dir}" ]; then
+            latest=$(ls -t ${BACKUP_DIR}/${dir}/ | head -1)
+            if [ -n "$latest" ]; then
+                age=$(find ${BACKUP_DIR}/${dir}/${latest} -mtime +1 | wc -l)
+                if [ $age -eq 0 ]; then
+                    echo "✓ ${dir}: Latest backup is fresh (${latest})"
+                else
+                    echo "⚠ ${dir}: Latest backup is old (${latest})"
+                fi
+            else
+                echo "✗ ${dir}: No backups found"
+            fi
+        else
+            echo "✗ ${dir}: Backup directory not found"
+        fi
+    done
+    
+    echo
+    echo "S3 Backup Status:"
+    for dir in postgres redis blockchain; do
+        count=$(aws s3 ls ${S3_BUCKET}/${dir}/ | wc -l)
+        if [ $count -gt 0 ]; then
+            latest=$(aws s3 ls ${S3_BUCKET}/${dir}/ | tail -1 | awk '{print $4}')
+            echo "✓ ${dir}: ${count} backups in S3, latest: ${latest}"
+        else
+            echo "✗ ${dir}: No S3 backups found"
+        fi
+    done
+    
+    echo
+    echo "=== End Health Check ==="

@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: web3-marketplace-monitoring
+data:
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'alerts@web3marketplace.com'
+      smtp_auth_username: 'alerts@web3marketplace.com'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+      slack_api_url: '${SLACK_WEBHOOK_URL}'
+      pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+    
+    templates:
+    - '/etc/alertmanager/templates/*.tmpl'
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'web.hook'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+        group_wait: 5s
+        repeat_interval: 5m
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+        group_wait: 30s
+        repeat_interval: 30m
+      - match:
+          service: security
+        receiver: 'security-alerts'
+        group_wait: 0s
+        repeat_interval: 1m
+      - match:
+          service: blockchain
+        receiver: 'blockchain-alerts'
+        group_wait: 10s
+        repeat_interval: 15m
+      - match:
+          service: business
+        receiver: 'business-alerts'
+        group_wait: 5m
+        repeat_interval: 2h
+    
+    inhibit_rules:
+    - source_match:
+        severity: 'critical'
+      target_match:
+        severity: 'warning'
+      equal: ['alertname', 'cluster', 'service']
+    
+    receivers:
+    - name: 'web.hook'
+      webhook_configs:
+      - url: 'http://webhook-service:8080/webhook'
+        send_resolved: true
+    
+    - name: 'critical-alerts'
+      email_configs:
+      - to: 'oncall@web3marketplace.com'
+        subject: '[CRITICAL] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+      slack_configs:
+      - channel: '#critical-alerts'
+        title: 'Critical Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+      pagerduty_configs:
+      - routing_key: '${PAGERDUTY_INTEGRATION_KEY}'
+        description: '{{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+        severity: 'critical'
+        details:
+          summary: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          runbook_url: '{{ range .Alerts }}{{ .Annotations.runbook_url }}{{ end }}'
+    
+    - name: 'warning-alerts'
+      email_configs:
+      - to: 'alerts@web3marketplace.com'
+        subject: '[WARNING] {{ .GroupLabels.alertname }} - {{ .GroupLabels.service }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+      slack_configs:
+      - channel: '#alerts'
+        title: 'Warning: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Service:* {{ .Labels.service }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
+    
+    - name: 'security-alerts'
+      email_configs:
+      - to: 'security@web3marketplace.com'
+        subject: '[SECURITY] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Security Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Immediate Action Required: {{ .Annotations.runbook_url }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+        headers:
+          Priority: 'high'
+      slack_configs:
+      - channel: '#security-alerts'
+        title: 'Security Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          🚨 *Security Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Action Required:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+    
+    - name: 'blockchain-alerts'
+      email_configs:
+      - to: 'blockchain-team@web3marketplace.com'
+        subject: '[BLOCKCHAIN] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Blockchain Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Runbook: {{ .Annotations.runbook_url }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+      slack_configs:
+      - channel: '#blockchain-alerts'
+        title: 'Blockchain Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          ⛓️ *Blockchain Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
+    
+    - name: 'business-alerts'
+      email_configs:
+      - to: 'business-ops@web3marketplace.com'
+        subject: '[BUSINESS] {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Business Metric Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Analysis: {{ .Annotations.runbook_url }}
+          Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+          {{ end }}
+      slack_configs:
+      - channel: '#business-alerts'
+        title: 'Business Alert: {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          📊 *Business Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Analysis:* {{ .Annotations.runbook_url }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true

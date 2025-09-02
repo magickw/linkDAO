@@ -1,0 +1,140 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Database stress test phases
+    - duration: 60
+      arrivalRate: 10
+      name: "Database warm-up"
+    
+    - duration: 180
+      arrivalRate: 10
+      rampTo: 100
+      name: "Database ramp-up"
+    
+    - duration: 300
+      arrivalRate: 100
+      name: "Database sustained load"
+    
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 200
+      name: "Database peak load"
+
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+  processor: "./load-test-functions.js"
+
+scenarios:
+  # Heavy database read operations (50% of traffic)
+  - name: "Heavy database reads"
+    weight: 50
+    flow:
+      - function: "generateWalletAddress"
+      
+      - get:
+          url: "/api/products"
+          qs:
+            page: "{{ $randomInt(1, 100) }}"
+            limit: "50"
+            category: "electronics"
+            sortBy: "price"
+            order: "desc"
+      
+      - think: 1
+      
+      - get:
+          url: "/api/products/search"
+          qs:
+            q: "{{ $randomString(8, 'alpha') }}"
+            filters: "price:100-1000,rating:4+"
+      
+      - think: 1
+      
+      - get:
+          url: "/api/analytics/trending"
+          qs:
+            timeframe: "24h"
+            category: "all"
+
+  # Complex join queries (30% of traffic)
+  - name: "Complex queries"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/users/{{ $randomInt(1, 1000) }}/orders"
+          qs:
+            status: "all"
+            include: "products,reviews,shipping"
+      
+      - think: 2
+      
+      - get:
+          url: "/api/products/recommendations"
+          qs:
+            userId: "{{ $randomInt(1, 1000) }}"
+            limit: "20"
+            algorithm: "collaborative"
+      
+      - think: 1
+      
+      - get:
+          url: "/api/analytics/seller-dashboard"
+          qs:
+            sellerId: "{{ $randomInt(1, 100) }}"
+            period: "30d"
+
+  # Write-heavy operations (20% of traffic)
+  - name: "Database writes"
+    weight: 20
+    flow:
+      - function: "generateWalletAddress"
+      - function: "generateProductData"
+      
+      - post:
+          url: "/api/auth/wallet-connect"
+          json:
+            walletAddress: "{{ walletAddress }}"
+            signature: "{{ $randomString(130, 'hex') }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      
+      - post:
+          url: "/api/products"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            title: "{{ productTitle }}"
+            description: "High-quality product for testing"
+            price: "{{ productPrice }}"
+            category: "{{ productCategory }}"
+            inventory: "{{ $randomInt(1, 100) }}"
+          ifTrue: "authToken"
+      
+      - think: 3
+      
+      - post:
+          url: "/api/reviews"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            productId: "{{ $randomInt(1, 1000) }}"
+            rating: "{{ $randomInt(1, 5) }}"
+            comment: "Load test review comment"
+          ifTrue: "authToken"
+
+expect:
+  - statusCode: [200, 201]
+  - maxResponseTime: 5000  # Allow longer for complex queries
+
+metrics:
+  - name: "database_response_time_p95"
+    threshold: 3000
+  
+  - name: "database_response_time_p99"
+    threshold: 8000
+  
+  - name: "database_error_rate"
+    threshold: 0.02

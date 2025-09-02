@@ -6,6 +6,7 @@
     "build": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts",
     "deploy:local": "node scripts/mock-deploy.cjs",
+    "deploy:direct": "node scripts/direct-deploy.js",
     "deploy:baseSepolia": "hardhat --config hardhat.config.production.cjs run scripts/deploy-testnet.cjs --network baseSepolia",
     "deploy:sepolia": "hardhat --config hardhat.config.production.cjs run scripts/deploy-testnet.cjs --network sepolia",
     "deploy:base": "hardhat --config hardhat.config.production.cjs run scripts/deploy-testnet.cjs --network base",
@@ -31,7 +32,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.6",
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "ethers": "^5.7.2"
   },
   "engines": {
     "node": ">=18.0.0",

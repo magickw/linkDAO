@@ -12,7 +12,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Line, Bar, Doughnut, Pie, Area } from 'react-chartjs-2';
+import { Line, Bar, Doughnut, Pie } from 'react-chartjs-2';
 import { GlassPanel } from '../../design-system/components/GlassPanel';
 import { LoadingSkeleton } from '../../design-system/components/LoadingSkeleton';
 
@@ -186,7 +186,7 @@ export const ChartContainer: React.FC<ChartContainerProps> = ({
         <div className="mb-4">
           <div className="h-5 bg-gray-600 rounded w-1/3 animate-pulse"></div>
         </div>
-        <LoadingSkeleton className="w-full" style={{ height }} />
+        <LoadingSkeleton className="w-full" height={height} />
       </GlassPanel>
     );
   }

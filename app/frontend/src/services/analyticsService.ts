@@ -1,4 +1,7 @@
-import { apiClient } from './apiClient';
+import { requestManager } from './requestManager';
+
+// Get the backend API base URL from environment variables
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
 export interface AnalyticsMetrics {
   totalUsers: number;
@@ -85,7 +88,7 @@ export interface RealTimeStats {
 }
 
 class AnalyticsService {
-  private baseUrl = '/api/analytics';
+  private baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
 
   /**
    * Get overview metrics including GMV, user acquisition, and transaction success rates
@@ -95,8 +98,8 @@ class AnalyticsService {
     if (startDate) params.append('startDate', startDate.toISOString());
     if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await apiClient.get(`${this.baseUrl}/overview?${params}`);
-    return response.data.data;
+    const response = await requestManager.request<{data: AnalyticsMetrics}>(`${this.baseUrl}/overview?${params}`);
+    return response.data;
   }
 
   /**
@@ -107,8 +110,8 @@ class AnalyticsService {
     if (startDate) params.append('startDate', startDate.toISOString());
     if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await apiClient.get(`${this.baseUrl}/user-behavior?${params}`);
-    return response.data.data;
+    const response = await requestManager.request<{data: UserBehaviorData}>(`${this.baseUrl}/user-behavior?${params}`);
+    return response.data;
   }
 
   /**
@@ -119,8 +122,8 @@ class AnalyticsService {
     if (startDate) params.append('startDate', startDate.toISOString());
     if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await apiClient.get(`${this.baseUrl}/sales?${params}`);
-    return response.data.data;
+    const response = await requestManager.request<{data: SalesAnalytics}>(`${this.baseUrl}/sales?${params}`);
+    return response.data;
   }
 
   /**
@@ -135,40 +138,40 @@ class AnalyticsService {
     if (startDate) params.append('startDate', startDate.toISOString());
     if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await apiClient.get(`${this.baseUrl}/seller/${sellerId}?${params}`);
-    return response.data.data;
+    const response = await requestManager.request<{data: SellerAnalytics}>(`${this.baseUrl}/seller/${sellerId}?${params}`);
+    return response.data;
   }
 
   /**
    * Get market trends and seasonal patterns
    */
   async getMarketTrends(): Promise<MarketTrends> {
-    const response = await apiClient.get(`${this.baseUrl}/market-trends`);
-    return response.data.data;
+    const response = await requestManager.request<{data: MarketTrends}>(`${this.baseUrl}/market-trends`);
+    return response.data;
   }
 
   /**
    * Get anomaly detection alerts
    */
   async getAnomalies(): Promise<AnomalyAlert[]> {
-    const response = await apiClient.get(`${this.baseUrl}/anomalies`);
-    return response.data.data;
+    const response = await requestManager.request<{data: AnomalyAlert[]}>(`${this.baseUrl}/anomalies`);
+    return response.data;
   }
 
   /**
    * Get real-time dashboard metrics
    */
   async getRealTimeStats(): Promise<RealTimeStats> {
-    const response = await apiClient.get(`${this.baseUrl}/dashboard`);
-    return response.data.data;
+    const response = await requestManager.request<{data: RealTimeStats}>(`${this.baseUrl}/dashboard`);
+    return response.data;
   }
 
   /**
    * Get platform health metrics
    */
   async getPlatformHealth(): Promise<any> {
-    const response = await apiClient.get(`${this.baseUrl}/health`);
-    return response.data.data;
+    const response = await requestManager.request<{data: any}>(`${this.baseUrl}/health`);
+    return response.data;
   }
 
   /**
@@ -192,19 +195,25 @@ class AnalyticsService {
     const userId = this.getCurrentUserId();
     const sessionId = this.getSessionId();
 
-    await apiClient.post(`${this.baseUrl}/track/event`, {
-      userId,
-      sessionId,
-      eventType,
-      eventData,
-      metadata: {
-        pageUrl: window.location.href,
-        userAgent: navigator.userAgent,
-        referrer: document.referrer,
-        deviceType: this.getDeviceType(),
-        browser: this.getBrowserName(),
-        ...metadata
-      }
+    await requestManager.request(`${this.baseUrl}/track/event`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId,
+        sessionId,
+        eventType,
+        eventData,
+        metadata: {
+          pageUrl: window.location.href,
+          userAgent: navigator.userAgent,
+          referrer: document.referrer,
+          deviceType: this.getDeviceType(),
+          browser: this.getBrowserName(),
+          ...metadata
+        }
+      })
     });
   }
 
@@ -226,18 +235,30 @@ class AnalyticsService {
     processingTime?: number;
     errorMessage?: string;
   }): Promise<void> {
-    await apiClient.post(`${this.baseUrl}/track/transaction`, transactionData);
+    await requestManager.request(`${this.baseUrl}/track/transaction`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transactionData)
+    });
   }
 
   /**
    * Generate custom analytics reports
    */
   async generateReport(reportType: string, parameters: any = {}): Promise<any> {
-    const response = await apiClient.post(`${this.baseUrl}/report`, {
-      reportType,
-      parameters
+    const response = await requestManager.request<{data: any}>(`${this.baseUrl}/report`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reportType,
+        parameters
+      })
     });
-    return response.data.data;
+    return response.data;
   }
 
   /**
@@ -253,8 +274,8 @@ class AnalyticsService {
     if (endDate) params.append('endDate', endDate.toISOString());
     params.append('format', format);
 
-    const response = await apiClient.get(`${this.baseUrl}/export?${params}`);
-    return response.data;
+    const response = await requestManager.request<any>(`${this.baseUrl}/export?${params}`);
+    return response;
   }
 
   // Utility methods for tracking
