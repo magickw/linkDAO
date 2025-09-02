@@ -1,0 +1,15 @@
+{
+  "name": "linkdao-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd app/frontend && (npm install --legacy-peer-deps || yarn install) && npm run build",
+    "build:yarn": "cd app/frontend && yarn install && yarn build",
+    "dev": "cd app/frontend && npm run dev",
+    "start": "cd app/frontend && npm start"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
