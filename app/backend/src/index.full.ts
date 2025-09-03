@@ -25,6 +25,7 @@ import reportRoutes from './routes/reportRoutes';
 import moderationRoutes from './routes/moderationRoutes';
 import appealsRoutes from './routes/appealsRoutes';
 import marketplaceModerationRoutes from './routes/marketplaceModerationRoutes';
+import marketplaceRegistrationRoutes from './routes/marketplaceRegistrationRoutes';
 // import serviceRoutes from './routes/serviceRoutes';
 // import projectManagementRoutes from './routes/projectManagementRoutes';
 
@@ -107,6 +108,7 @@ try {
   app.use('/api/moderation', moderationRoutes);
   app.use('/api/appeals', appealsRoutes);
   app.use('/api/marketplace-moderation', marketplaceModerationRoutes);
+  app.use('/api/marketplace/registration', marketplaceRegistrationRoutes);
   // app.use('/api/services', serviceRoutes);
   // app.use('/api/project-management', projectManagementRoutes);
   

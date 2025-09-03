@@ -1,0 +1,18 @@
+{
+  "id": "new-snapshot-id-0025",
+  "prevId": "3b8a6c03-ee1f-459a-b31d-cfd9e9e8e032",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
