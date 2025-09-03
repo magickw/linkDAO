@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { motion } from 'framer-motion';
-import { ProductDetailPage } from '@/components/Marketplace/ProductDisplay/ProductDetailPage';
+import ProductDetailPage from '@/components/Marketplace/ProductDisplay/ProductDetailPage';
 import { designTokens } from '@/design-system/tokens';
 import { useToast } from '@/context/ToastContext';
 import { Button, GlassPanel } from '@/design-system';

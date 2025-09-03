@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useWallet } from '../../context/WalletContext';
+import { useWeb3 } from '@/context/Web3Context';
 
 interface RegistrationFormProps {
   onRegistrationComplete: () => void;
@@ -7,7 +7,7 @@ interface RegistrationFormProps {
 }
 
 const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegistrationComplete, role }) => {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected } = useWeb3();
   const [formData, setFormData] = useState({
     email: '',
     legalName: '',
@@ -97,7 +97,11 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onRegistrationCompl
       console.log('Registration successful:', result);
       onRegistrationComplete();
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      if (err instanceof Error) {
+        setError(err.message || 'Registration failed');
+      } else {
+        setError('Registration failed');
+      }
     } finally {
       setLoading(false);
     }

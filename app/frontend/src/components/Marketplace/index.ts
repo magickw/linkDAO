@@ -4,7 +4,13 @@
  */
 
 // Homepage Components
-export * from './Homepage';
+export { Homepage } from './Homepage';
+export { HeroSection } from './Homepage';
+export { GlassmorphicNavbar } from './Homepage';
+export { SearchBar } from './Homepage';
+export { CategoryGrid } from './Homepage';
+export { FeaturedProductCarousel } from './Homepage';
+export { CurrencyToggle } from './Homepage';
 
 // Product Display Components  
 export * from './ProductDisplay';
