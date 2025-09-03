@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/design-system/components/Button';
 
 interface PolicyConfiguration {
   id?: number;

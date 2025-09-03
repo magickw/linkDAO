@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
+import Layout from '@/components/Layout';
 import DashboardRightSidebar from '@/components/DashboardRightSidebar';
 import FeedView from '@/components/FeedView';
 import CommunityView from '@/components/CommunityView';
@@ -318,12 +318,14 @@ export default function Dashboard() {
 
   if (!isConnected) {
     return (
-      <DashboardLayout title="Dashboard - LinkDAO" activeView="feed">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Personalized Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to access your personalized dashboard.</p>
+      <Layout title="Dashboard - LinkDAO">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Personalized Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to access your personalized dashboard.</p>
+          </div>
         </div>
-      </DashboardLayout>
+      </Layout>
     );
   }
 
@@ -335,7 +337,8 @@ export default function Dashboard() {
   };
 
   return (
-    <>
+    <Layout title="Dashboard - LinkDAO">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Legacy Functionality Preserver */}
       <LegacyFunctionalityPreserver />
       
@@ -349,13 +352,6 @@ export default function Dashboard() {
       
       {/* Dashboard Tour */}
       <DashboardTour />
-      
-      <DashboardLayout
-        title="Dashboard - LinkDAO"
-        activeView={navigationState.activeView}
-        rightSidebar={<DashboardRightSidebar />}
-        onCreatePost={handleCreatePost}
-      >
       <div className="space-y-6">
         {/* Top Section (User Snapshot) */}
         <div className="mb-8">
@@ -715,7 +711,7 @@ export default function Dashboard() {
           </button>
         </div>
       </BottomSheet>
-    </DashboardLayout>
-    </>
+    </div>
+    </Layout>
   );
-}
+};
