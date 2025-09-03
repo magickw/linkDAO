@@ -3,7 +3,7 @@ services:
     name: web3-marketplace-backend
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -13,7 +13,3 @@ services:
       - key: FRONTEND_URL
         value: https://your-frontend-domain.com
     healthCheckPath: /health
-    disk:
-      name: web3-marketplace-data
-      mountPath: /opt/render/project/data
-      sizeGB: 1
