@@ -291,6 +291,412 @@ app.get('/api/analytics/dashboard', (req, res) => {
   });
 });
 
+// Seller Profile Endpoints
+app.get('/api/seller/profile/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  // Mock seller profile
+  res.json({
+    success: true,
+    data: {
+      id: `seller_${walletAddress.slice(-8)}`,
+      walletAddress,
+      tier: 'basic',
+      displayName: 'Sample Seller',
+      storeName: 'Sample Store',
+      bio: 'Welcome to my store!',
+      description: 'We sell quality products with fast shipping.',
+      profilePicture: '',
+      logo: '',
+      email: '',
+      emailVerified: false,
+      phone: '',
+      phoneVerified: false,
+      kycStatus: 'none',
+      payoutPreferences: {
+        defaultCrypto: 'USDC',
+        cryptoAddresses: { USDC: walletAddress, ETH: walletAddress },
+        fiatEnabled: false
+      },
+      stats: {
+        totalSales: 0,
+        activeListings: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalReviews: 0,
+        reputationScore: 100,
+        joinDate: new Date().toISOString(),
+        lastActive: new Date().toISOString()
+      },
+      badges: [],
+      onboardingProgress: {
+        profileSetup: true,
+        verification: false,
+        payoutSetup: false,
+        firstListing: false,
+        completed: false,
+        currentStep: 1,
+        totalSteps: 5
+      },
+      settings: {
+        notifications: {
+          orders: true,
+          disputes: true,
+          daoActivity: true,
+          tips: true,
+          marketing: false
+        },
+        privacy: {
+          showEmail: false,
+          showPhone: false,
+          showStats: true
+        },
+        escrow: {
+          defaultEnabled: true,
+          minimumAmount: 10
+        }
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  });
+});
+
+app.post('/api/seller/profile', (req, res) => {
+  const profileData = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Seller profile created successfully',
+    data: {
+      id: `seller_${Date.now()}`,
+      ...profileData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  });
+});
+
+app.put('/api/seller/profile/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  const updates = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Seller profile updated successfully',
+    data: {
+      id: `seller_${walletAddress.slice(-8)}`,
+      walletAddress,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
+  });
+});
+
+// Seller Onboarding Endpoints
+app.get('/api/seller/onboarding/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 'wallet-connect',
+        title: 'Connect Wallet',
+        description: 'Connect your Web3 wallet to get started',
+        component: 'WalletConnect',
+        required: true,
+        completed: true
+      },
+      {
+        id: 'profile-setup',
+        title: 'Profile Setup',
+        description: 'Set up your seller profile and store information',
+        component: 'ProfileSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'verification',
+        title: 'Verification',
+        description: 'Verify your email and phone for enhanced features',
+        component: 'Verification',
+        required: false,
+        completed: false
+      },
+      {
+        id: 'payout-setup',
+        title: 'Payout Setup',
+        description: 'Configure your payment preferences',
+        component: 'PayoutSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'first-listing',
+        title: 'Create First Listing',
+        description: 'Create your first product listing',
+        component: 'FirstListing',
+        required: true,
+        completed: false
+      }
+    ]
+  });
+});
+
+app.put('/api/seller/onboarding/:walletAddress/:stepId', (req, res) => {
+  const { walletAddress, stepId } = req.params;
+  const data = req.body;
+  
+  res.json({
+    success: true,
+    message: `Onboarding step ${stepId} updated successfully`,
+    data
+  });
+});
+
+// Seller Dashboard Endpoints
+app.get('/api/seller/dashboard/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  res.json({
+    success: true,
+    data: {
+      sales: {
+        today: Math.floor(Math.random() * 500),
+        thisWeek: Math.floor(Math.random() * 2000),
+        thisMonth: Math.floor(Math.random() * 8000),
+        total: Math.floor(Math.random() * 50000)
+      },
+      orders: {
+        pending: Math.floor(Math.random() * 10),
+        processing: Math.floor(Math.random() * 5),
+        shipped: Math.floor(Math.random() * 15),
+        delivered: Math.floor(Math.random() * 100),
+        disputed: Math.floor(Math.random() * 2)
+      },
+      listings: {
+        active: Math.floor(Math.random() * 20),
+        draft: Math.floor(Math.random() * 5),
+        sold: Math.floor(Math.random() * 50),
+        expired: Math.floor(Math.random() * 3)
+      },
+      balance: {
+        crypto: {
+          USDC: Math.floor(Math.random() * 1000),
+          ETH: Math.random() * 2,
+          BTC: Math.random() * 0.1
+        },
+        fiatEquivalent: Math.floor(Math.random() * 5000),
+        pendingEscrow: Math.floor(Math.random() * 500),
+        availableWithdraw: Math.floor(Math.random() * 2000)
+      },
+      reputation: {
+        score: 85 + Math.floor(Math.random() * 15),
+        trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)],
+        recentReviews: Math.floor(Math.random() * 10),
+        averageRating: 4.0 + Math.random()
+      }
+    }
+  });
+});
+
+// Seller Notifications
+app.get('/api/seller/notifications/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  const notifications = [
+    {
+      id: 'notif_1',
+      type: 'order',
+      title: 'New Order Received',
+      message: 'You have received a new order for "Sample Product"',
+      read: false,
+      priority: 'high',
+      createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
+    },
+    {
+      id: 'notif_2',
+      type: 'system',
+      title: 'Profile Verification',
+      message: 'Complete your profile verification to unlock more features',
+      read: false,
+      priority: 'medium',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+    },
+    {
+      id: 'notif_3',
+      type: 'tip',
+      title: 'Seller Tip',
+      message: 'Add more product images to increase your sales by up to 30%',
+      read: true,
+      priority: 'low',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: notifications
+  });
+});
+
+app.put('/api/seller/notifications/:notificationId/read', (req, res) => {
+  const { notificationId } = req.params;
+  
+  res.json({
+    success: true,
+    message: 'Notification marked as read'
+  });
+});
+
+// Seller Orders
+app.get('/api/seller/orders/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  const { status } = req.query;
+  
+  const orders = [
+    {
+      id: 'order_1',
+      listingId: 'listing_1',
+      listingTitle: 'Sample Product 1',
+      buyerAddress: '0x1234...5678',
+      buyerName: 'John Doe',
+      quantity: 1,
+      totalAmount: 99.99,
+      currency: 'USDC',
+      status: 'pending',
+      escrowStatus: 'locked',
+      paymentMethod: 'crypto',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+    },
+    {
+      id: 'order_2',
+      listingId: 'listing_2',
+      listingTitle: 'Sample Product 2',
+      buyerAddress: '0x8765...4321',
+      quantity: 2,
+      totalAmount: 149.98,
+      currency: 'USDC',
+      status: 'shipped',
+      escrowStatus: 'locked',
+      paymentMethod: 'crypto',
+      trackingNumber: 'TRK123456789',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString()
+    }
+  ];
+  
+  const filteredOrders = status ? orders.filter(order => order.status === status) : orders;
+  
+  res.json({
+    success: true,
+    data: filteredOrders
+  });
+});
+
+app.put('/api/seller/orders/:orderId/status', (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+  
+  res.json({
+    success: true,
+    message: `Order ${orderId} status updated to ${status}`
+  });
+});
+
+// Seller Listings
+app.get('/api/seller/listings/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  const { status } = req.query;
+  
+  const listings = [
+    {
+      id: 'listing_1',
+      title: 'Sample Product 1',
+      description: 'A great product for everyone',
+      category: 'electronics',
+      price: 99.99,
+      currency: 'USDC',
+      quantity: 10,
+      condition: 'new',
+      images: ['https://picsum.photos/400/300?random=1'],
+      status: 'active',
+      saleType: 'fixed',
+      escrowEnabled: true,
+      views: 45,
+      favorites: 8,
+      questions: 2,
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+    }
+  ];
+  
+  const filteredListings = status ? listings.filter(listing => listing.status === status) : listings;
+  
+  res.json({
+    success: true,
+    data: filteredListings
+  });
+});
+
+app.post('/api/seller/listings', (req, res) => {
+  const listingData = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Listing created successfully',
+    data: {
+      id: `listing_${Date.now()}`,
+      ...listingData,
+      status: 'active',
+      views: 0,
+      favorites: 0,
+      questions: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  });
+});
+
+// Seller Verification
+app.post('/api/seller/verification/email', (req, res) => {
+  const { email } = req.body;
+  
+  res.json({
+    success: true,
+    message: `Verification email sent to ${email}`
+  });
+});
+
+app.post('/api/seller/verification/email/verify', (req, res) => {
+  const { token } = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Email verified successfully'
+  });
+});
+
+app.post('/api/seller/verification/phone', (req, res) => {
+  const { phone } = req.body;
+  
+  res.json({
+    success: true,
+    message: `Verification code sent to ${phone}`
+  });
+});
+
+app.post('/api/seller/verification/phone/verify', (req, res) => {
+  const { phone, code } = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Phone verified successfully'
+  });
+});
+
 // Catch-all for API routes
 app.use('/api/*', (req, res) => {
   res.status(404).json({
