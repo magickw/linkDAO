@@ -9,7 +9,6 @@ import {
   type UserReputation 
 } from '@/services/marketplaceService';
 import { 
-  GlassmorphicNavbar,
   HeroSection,
   CategoryGrid,
   FeaturedProductCarousel 
@@ -17,6 +16,7 @@ import {
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
+import Layout from '@/components/Layout'; // Import the standard Layout component
 
 const MarketplacePage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -133,7 +133,7 @@ const MarketplacePage: React.FC = () => {
   }) : [];
 
   return (
-    <div className="min-h-screen">
+    <Layout title="Marketplace - LinkDAO">
       {/* Background */}
       <div 
         className="fixed inset-0 z-0"
@@ -144,9 +144,6 @@ const MarketplacePage: React.FC = () => {
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Glassmorphic Navigation */}
-        <GlassmorphicNavbar />
-
         {/* Hero Section */}
         <HeroSection
           onStartSelling={() => setActiveTab('create')}
@@ -324,7 +321,7 @@ const MarketplacePage: React.FC = () => {
           </div>
         </footer>
       </div>
-    </div>
+    </Layout>
   );
 };
 
