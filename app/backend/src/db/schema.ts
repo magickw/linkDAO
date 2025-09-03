@@ -1,4 +1,5 @@
 import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey } from "drizzle-orm/pg-core";
+import * as marketplaceSchema from "./marketplaceSchema";
 
 // Users / Profiles
 export const users = pgTable("users", {
@@ -1902,3 +1903,19 @@ export const alert_configurations = pgTable("alert_configurations", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Export all marketplace tables
+export const {
+  marketplaceUsers,
+  marketplaceProducts,
+  marketplaceOrders,
+  marketplaceDisputes,
+  disputeJudges,
+  marketplaceVerifications,
+  sellerVerifications,
+  marketplaceReviews,
+  reviewHelpfulness,
+  reviewReports,
+  marketplaceAnalytics,
+  marketplaceConfig
+} = marketplaceSchema;
