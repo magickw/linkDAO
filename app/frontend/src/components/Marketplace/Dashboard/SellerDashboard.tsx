@@ -1,284 +1,385 @@
 import React, { useState } from 'react';
-import { 
-  Package, 
-  TrendingUp, 
-  DollarSign, 
-  ShoppingCart, 
-  BadgeCheck, 
-  Award, 
-  Plus,
-  Edit3,
-  Eye,
-  BarChart3
-} from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useSellerDashboard, useSeller, useSellerTiers } from '../../../hooks/useSeller';
+import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 
-// Sample data
-const stats = [
-  { title: 'Total Sales', value: '124', icon: ShoppingCart, change: '+12%' },
-  { title: 'Revenue', value: '2,450 USDC', icon: DollarSign, change: '+8%' },
-  { title: 'Products', value: '24', icon: Package, change: '+3%' },
-  { title: 'Rating', value: '4.8/5', icon: BadgeCheck, change: '+0.2' }
-];
-
-const recentSales = [
-  { id: '1', customer: 'Alice Johnson', product: 'Wooden Watch', amount: '45.99 USDC', date: '2023-06-15', status: 'Completed' },
-  { id: '2', customer: 'Bob Smith', product: 'Coffee Subscription', amount: '29.99 USDC', date: '2023-06-14', status: 'Shipped' },
-  { id: '3', customer: 'Carol Williams', product: 'Leather Wallet', amount: '35.50 USDC', date: '2023-06-14', status: 'Processing' },
-  { id: '4', customer: 'David Brown', product: 'Wooden Sunglasses', amount: '42.00 USDC', date: '2023-06-13', status: 'Completed' }
-];
-
-const products = [
-  { id: '1', name: 'Handcrafted Wooden Watch', price: '45.99 USDC', stock: 12, status: 'Active' },
-  { id: '2', name: 'Premium Coffee Subscription', price: '29.99 USDC', stock: 45, status: 'Active' },
-  { id: '3', name: 'Leather Wallet', price: '35.50 USDC', stock: 3, status: 'Low Stock' },
-  { id: '4', name: 'Wooden Sunglasses', price: '42.00 USDC', stock: 0, status: 'Out of Stock' }
-];
-
-const SellerDashboard = () => {
+export function SellerDashboard() {
+  const router = useRouter();
+  const { profile, loading: profileLoading } = useSeller();
+  const { stats, notifications, unreadNotifications, loading, markNotificationRead } = useSellerDashboard();
+  const { getTierById, getNextTier } = useSellerTiers();
   const [activeTab, setActiveTab] = useState('overview');
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+  if (profileLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+        <div className="max-w-7xl mx-auto">
+          <LoadingSkeleton className="h-8 w-64 mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <LoadingSkeleton key={i} className="h-32" />
+            ))}
+          </div>
+          <LoadingSkeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <GlassPanel className="max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Seller Profile Not Found</h1>
+            <p className="text-gray-300 mb-6">
+              You need to complete the seller onboarding process to access the dashboard.
+            </p>
+          </div>
+          <Button onClick={() => router.push('/seller/onboarding')} variant="primary">
+            Start Seller Onboarding
+          </Button>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  const currentTier = getTierById(profile.tier);
+  const nextTier = getNextTier(profile.tier);
+
+  const formatCurrency = (amount: number, currency = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+    }).format(amount);
+  };
+
+  const StatCard = ({ title, value, change, icon, color = 'blue' }: any) => (
+    <GlassPanel className="p-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Seller Dashboard</h1>
-          <p className="text-gray-600">Manage your products, sales, and performance</p>
+          <p className="text-gray-400 text-sm font-medium">{title}</p>
+          <p className="text-2xl font-bold text-white mt-1">{value}</p>
+          {change && (
+            <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {change >= 0 ? '+' : ''}{change}% from last month
+            </p>
+          )}
         </div>
-        <div className="mt-4 md:mt-0">
-          <Link href="/marketplace/listings/new" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center transition-colors">
-            <Plus size={20} className="mr-2" />
-            Add New Product
-          </Link>
+        <div className={`w-12 h-12 bg-${color}-500 bg-opacity-20 rounded-lg flex items-center justify-center`}>
+          {icon}
         </div>
       </div>
+    </GlassPanel>
+  );
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <div key={index} className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Icon size={24} className="text-blue-600" />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div className="flex items-center mb-4 md:mb-0">
+            {profile.profilePicture ? (
+              <img
+                src={profile.profilePicture}
+                alt={profile.displayName}
+                className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mr-4">
+                <span className="text-white text-xl font-bold">
+                  {profile.displayName?.charAt(0) || profile.storeName?.charAt(0) || 'S'}
+                </span>
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-white">{profile.storeName || profile.displayName}</h1>
+              <div className="flex items-center space-x-2 mt-1">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  currentTier?.id === 'pro' ? 'bg-purple-600 text-white' :
+                  currentTier?.id === 'verified' ? 'bg-blue-600 text-white' :
+                  currentTier?.id === 'basic' ? 'bg-green-600 text-white' :
+                  'bg-gray-600 text-white'
+                }`}>
+                  {currentTier?.name}
+                </span>
+                <div className="flex items-center">
+                  {[...Array(5)].map((_, i) => (
+                    <svg
+                      key={i}
+                      className={`w-4 h-4 ${
+                        i < Math.floor(profile.stats.averageRating) ? 'text-yellow-400' : 'text-gray-600'
+                      }`}
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                  <span className="text-gray-400 text-sm ml-1">
+                    ({profile.stats.totalReviews})
+                  </span>
                 </div>
               </div>
-              <p className="text-sm text-green-600 mt-3 flex items-center">
-                <TrendingUp size={16} className="mr-1" />
-                {stat.change} from last month
-              </p>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-md mb-8">
-        <div className="border-b border-gray-200">
-          <nav className="flex">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-4 font-medium ${activeTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          </div>
+          
+          <div className="flex space-x-3">
+            {unreadNotifications.length > 0 && (
+              <Button
+                onClick={() => setActiveTab('notifications')}
+                variant="outline"
+                className="relative"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM11 19H6a2 2 0 01-2-2V7a2 2 0 012-2h5m5 0v5" />
+                </svg>
+                Notifications
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadNotifications.length}
+                </span>
+              </Button>
+            )}
+            <Button
+              onClick={() => router.push('/seller/listings/create')}
+              variant="primary"
             >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`px-6 py-4 font-medium ${activeTab === 'products' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              My Products
-            </button>
-            <button
-              onClick={() => setActiveTab('sales')}
-              className={`px-6 py-4 font-medium ${activeTab === 'sales' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Sales
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`px-6 py-4 font-medium ${activeTab === 'analytics' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              Analytics
-            </button>
-          </nav>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Listing
+            </Button>
+          </div>
         </div>
 
-        <div className="p-6">
+        {/* Tier Upgrade Banner */}
+        {nextTier && (
+          <GlassPanel className="mb-8 p-6 border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-1">
+                  Upgrade to {nextTier.name}
+                </h3>
+                <p className="text-gray-300 text-sm mb-2">{nextTier.description}</p>
+                <div className="flex flex-wrap gap-2">
+                  {nextTier.benefits.slice(0, 3).map((benefit, index) => (
+                    <span key={index} className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+                      {benefit}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <Button
+                onClick={() => router.push('/seller/upgrade')}
+                variant="primary"
+                size="small"
+              >
+                Upgrade Now
+              </Button>
+            </div>
+          </GlassPanel>
+        )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard
+            title="Total Sales"
+            value={formatCurrency(stats?.sales.total || 0)}
+            change={12}
+            color="green"
+            icon={
+              <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+            }
+          />
+          
+          <StatCard
+            title="Active Listings"
+            value={stats?.listings.active || 0}
+            change={5}
+            color="blue"
+            icon={
+              <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            }
+          />
+          
+          <StatCard
+            title="Pending Orders"
+            value={stats?.orders.pending || 0}
+            change={-2}
+            color="orange"
+            icon={
+              <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            }
+          />
+          
+          <StatCard
+            title="Reputation Score"
+            value={profile.stats.reputationScore}
+            change={8}
+            color="purple"
+            icon={
+              <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.921-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            }
+          />
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 mb-6">
+          {[
+            { id: 'overview', label: 'Overview', icon: '📊' },
+            { id: 'orders', label: 'Orders', icon: '📦' },
+            { id: 'listings', label: 'Listings', icon: '🏪' },
+            { id: 'analytics', label: 'Analytics', icon: '📈' },
+            { id: 'notifications', label: 'Notifications', icon: '🔔' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+              {tab.id === 'notifications' && unreadNotifications.length > 0 && (
+                <span className="ml-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadNotifications.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-6">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Recent Sales */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Sales</h3>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {recentSales.map((sale) => (
-                        <tr key={sale.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.customer}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.product}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{sale.amount}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              sale.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                              sale.status === 'Shipped' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {sale.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Orders */}
+              <GlassPanel className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">Recent Orders</h3>
+                  <Button
+                    onClick={() => router.push('/seller/orders')}
+                    variant="outline"
+                    size="small"
+                  >
+                    View All
+                  </Button>
                 </div>
-              </div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div>
+                        <p className="text-white font-medium">Order #{1000 + i}</p>
+                        <p className="text-gray-400 text-sm">Sample Product {i}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white font-medium">${(Math.random() * 100 + 20).toFixed(2)}</p>
+                        <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded">
+                          Processing
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </GlassPanel>
 
-              {/* Seller Reputation */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Seller Reputation</h3>
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="p-3 bg-white rounded-full shadow mr-4">
-                      <Award size={24} className="text-blue-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-gray-800">Verified Seller</h4>
-                      <p className="text-sm text-gray-600">DAO-approved since Jan 2023</p>
-                    </div>
+              {/* Performance Metrics */}
+              <GlassPanel className="p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Performance</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Response Rate</span>
+                    <span className="text-white font-medium">98%</span>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">Reputation Score</span>
-                        <span className="text-sm font-medium text-gray-700">4.8/5</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '96%' }}></div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">Trust Badge</span>
-                        <span className="text-sm font-medium text-gray-700">Gold Tier</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '85%' }}></div>
-                      </div>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Shipping Time</span>
+                    <span className="text-white font-medium">2.3 days avg</span>
                   </div>
-                  
-                  <div className="mt-6 flex items-center text-sm text-gray-600">
-                    <BadgeCheck size={16} className="mr-2 text-green-500" />
-                    <span>Eligible for featured placement</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Customer Satisfaction</span>
+                    <span className="text-white font-medium">4.8/5.0</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Dispute Rate</span>
+                    <span className="text-green-400 font-medium">0.2%</span>
                   </div>
                 </div>
-              </div>
+              </GlassPanel>
             </div>
           )}
 
-          {activeTab === 'products' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">My Products</h3>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+          {activeTab === 'notifications' && (
+            <GlassPanel className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Notifications</h3>
+              <div className="space-y-3">
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 rounded-lg border-l-4 ${
+                        notification.read
+                          ? 'bg-gray-800 border-gray-600'
+                          : 'bg-blue-900 bg-opacity-50 border-blue-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-white font-medium">{notification.title}</h4>
+                          <p className="text-gray-300 text-sm mt-1">{notification.message}</p>
+                          <p className="text-gray-400 text-xs mt-2">
+                            {new Date(notification.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {!notification.read && (
+                          <Button
+                            onClick={() => markNotificationRead(notification.id)}
+                            variant="outline"
+                            size="small"
+                          >
+                            Mark Read
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM11 19H6a2 2 0 01-2-2V7a2 2 0 012-2h5m5 0v5" />
+                    </svg>
+                    <p className="text-gray-400">No notifications yet</p>
+                  </div>
+                )}
               </div>
-              
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {products.map((product) => (
-                      <tr key={product.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.price}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stock}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            product.status === 'Active' ? 'bg-green-100 text-green-800' :
-                            product.status === 'Low Stock' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {product.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-blue-600 hover:text-blue-900 mr-3 flex items-center">
-                            <Edit3 size={16} className="mr-1" />
-                            Edit
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-900 flex items-center">
-                            <Eye size={16} className="mr-1" />
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            </GlassPanel>
           )}
 
-          {activeTab === 'sales' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales Overview</h3>
-              <div className="bg-gray-50 rounded-lg p-8 text-center">
-                <BarChart3 size={48} className="mx-auto text-gray-400 mb-4" />
-                <h4 className="text-xl font-medium text-gray-800 mb-2">Sales Analytics</h4>
-                <p className="text-gray-600 mb-4">Detailed sales reports and analytics will be available here</p>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
-                  View Full Report
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'analytics' && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Performance Analytics</h3>
-              <div className="bg-gray-50 rounded-lg p-8 text-center">
-                <BarChart3 size={48} className="mx-auto text-gray-400 mb-4" />
-                <h4 className="text-xl font-medium text-gray-800 mb-2">Performance Insights</h4>
-                <p className="text-gray-600 mb-4">Comprehensive analytics on your store performance will be available here</p>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">
-                  View Analytics
-                </button>
-              </div>
-            </div>
+          {/* Other tabs would be implemented similarly */}
+          {activeTab !== 'overview' && activeTab !== 'notifications' && (
+            <GlassPanel className="p-6 text-center">
+              <p className="text-gray-400">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
+              </p>
+            </GlassPanel>
           )}
         </div>
       </div>
     </div>
   );
-};
-
-export default SellerDashboard;
+}

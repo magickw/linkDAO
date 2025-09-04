@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import TopNavigation from '@/components/Layout/TopNavigation';
+// import TopNavigation from '@/components/Layout/TopNavigation';
 import { designTokens } from '@/design-system/tokens';
 
 const CommunitiesPage: React.FC = () => {
@@ -12,7 +12,7 @@ const CommunitiesPage: React.FC = () => {
       </Head>
 
       {/* Background */}
-      <div 
+      <div
         className="fixed inset-0 z-0"
         style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -22,7 +22,7 @@ const CommunitiesPage: React.FC = () => {
       {/* Content */}
       <div className="relative z-10">
         {/* Top Navigation */}
-        <TopNavigation variant="community" />
+        {/* <TopNavigation variant="community" /> */}
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -33,7 +33,7 @@ const CommunitiesPage: React.FC = () => {
             <p className="text-xl text-white/80 mb-8">
               Connect with like-minded individuals in decentralized communities
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
               <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
                 <div className="text-4xl mb-4">🔷</div>
@@ -43,7 +43,7 @@ const CommunitiesPage: React.FC = () => {
                   Join Community
                 </button>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
                 <div className="text-4xl mb-4">💰</div>
                 <h3 className="text-xl font-semibold text-white mb-2">DeFi Traders</h3>
@@ -52,7 +52,7 @@ const CommunitiesPage: React.FC = () => {
                   Join Community
                 </button>
               </div>
-              
+
               <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-6 rounded-lg">
                 <div className="text-4xl mb-4">🎨</div>
                 <h3 className="text-xl font-semibold text-white mb-2">NFT Collectors</h3>

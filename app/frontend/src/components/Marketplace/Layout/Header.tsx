@@ -63,7 +63,7 @@ const Header = () => {
           <div className="flex items-center space-x-4">
             {/* Wallet Connect */}
             <div className="flex items-center">
-              <ConnectButton 
+              <ConnectButton
                 showBalance={false}
                 chainStatus="none"
               />

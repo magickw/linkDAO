@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from '../../design-system/components/Button';
-import { SellerProfile } from '../../../types/seller';
+import { SellerProfile } from '../../../../types/seller';
+import { Button } from '../../../../design-system';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;
