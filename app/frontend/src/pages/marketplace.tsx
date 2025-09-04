@@ -380,7 +380,7 @@ const MarketplacePage: React.FC = () => {
             {activeTab === 'my-listings' && (
               <div>
                 {isConnected ? (
-                  <MyListingsTab address={address} />
+                  <MyListingsTab address={address} onCreateClick={() => setActiveTab('create')} />
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">
                     <p className="text-white/70">Please connect your wallet to view your listings.</p>
@@ -445,10 +445,12 @@ const MarketplacePage: React.FC = () => {
   );
 };
 
-const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) => {
+const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () => void }> = ({ address, onCreateClick }) => {
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
+  const { profile } = useSeller();
+  const router = useRouter();
   
   const marketplaceService = new MarketplaceService();
 
@@ -516,7 +518,7 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
                     if (!profile) {
                       router.push('/seller/onboarding');
                     } else {
-                      setActiveTab('create');
+                      onCreateClick();
                     }
                   }}
                 >
