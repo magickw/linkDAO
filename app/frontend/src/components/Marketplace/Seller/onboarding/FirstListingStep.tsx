@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from '../../design-system/components/Button';
+import { Button } from '../../../../design-system';
 
 interface FirstListingStepProps {
   onComplete: (data: any) => void;
@@ -112,8 +112,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
         shippingCost: formData.shippingFree ? 0 : parseFloat(formData.shippingCost || '0'),
-        images: formData.images.filter(img => img.trim()),
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+        images: formData.images.filter((img: string) => img.trim()),
+        tags: formData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag),
         saleType: 'fixed',
         status: 'draft', // Start as draft
       };
@@ -145,14 +145,14 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
   const removeImageField = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_: string, i: number) => i !== index)
     }));
   };
 
   const updateImageField = (index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
-      images: prev.images.map((img, i) => i === index ? value : img)
+      images: prev.images.map((img: string, i: number) => i === index ? value : img)
     }));
   };
 
@@ -327,7 +327,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-white">Product Images</h3>
         
-        {formData.images.map((image, index) => (
+        {formData.images.map((image: string, index: number) => (
           <div key={index} className="flex gap-3">
             <div className="flex-1">
               <label htmlFor={`image-${index}`} className="block text-sm font-medium text-gray-300 mb-2">
@@ -361,7 +361,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
                 type="button"
                 onClick={() => removeImageField(index)}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="mt-7"
               >
                 Remove
@@ -377,7 +377,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
             type="button"
             onClick={addImageField}
             variant="outline"
-            size="sm"
+            size="small"
           >
             Add Another Image
           </Button>

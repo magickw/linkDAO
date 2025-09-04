@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { Button } from '../../design-system/components/Button';
+import { Button } from '../../../../design-system';
 
 interface WalletConnectStepProps {
   onComplete: (data: any) => void;
@@ -9,7 +9,7 @@ interface WalletConnectStepProps {
 
 export function WalletConnectStep({ onComplete, onConnect }: WalletConnectStepProps) {
   const { address, isConnected } = useAccount();
-  const { connect, connectors, error, isLoading, pendingConnector } = useConnect();
+  const { connect, connectors, error, isPending } = useConnect();
   const { disconnect } = useDisconnect();
 
   React.useEffect(() => {
@@ -41,7 +41,7 @@ export function WalletConnectStep({ onComplete, onConnect }: WalletConnectStepPr
         </div>
         
         <div className="flex justify-center space-x-3">
-          <Button onClick={() => disconnect()} variant="outline" size="sm">
+          <Button onClick={() => disconnect()} variant="outline" size="small">
             Disconnect
           </Button>
           <Button onClick={() => onComplete({ walletAddress: address })} variant="primary">
@@ -129,7 +129,7 @@ export function WalletConnectStep({ onComplete, onConnect }: WalletConnectStepPr
             onClick={() => connect({ connector })}
             variant="outline"
             className="w-full justify-between"
-            disabled={!connector.ready || isLoading}
+            disabled={!connector.ready || isPending}
           >
             <div className="flex items-center">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mr-3 flex items-center justify-center">
@@ -140,7 +140,7 @@ export function WalletConnectStep({ onComplete, onConnect }: WalletConnectStepPr
               <span>{connector.name}</span>
               {!connector.ready && ' (unsupported)'}
             </div>
-            {isLoading && connector.id === pendingConnector?.id && (
+            {isPending && (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
           </Button>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
-import { useSellerOnboarding, useSeller } from '../../hooks/useSeller';
-import { Button, GlassPanel, LoadingSkeleton } from '../../design-system';
+import { useSellerOnboarding, useSeller } from '../../../hooks/useSeller';
+import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { Button } from '../../design-system/components/Button';
+import { Button } from '../../../../design-system';
 
 interface PayoutSetupStepProps {
   onComplete: (data: any) => void;
@@ -84,7 +84,7 @@ export function PayoutSetupStep({ onComplete, data }: PayoutSetupStepProps) {
 
     // Validate other provided addresses
     Object.entries(formData.cryptoAddresses).forEach(([crypto, address]) => {
-      if (address && !validateAddress(address, crypto)) {
+      if (address && !validateAddress(address as string, crypto)) {
         newErrors[`${crypto}_address`] = `Invalid ${crypto} address format`;
       }
     });

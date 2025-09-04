@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from '../../design-system/components/Button';
-import { sellerService } from '../../../services/sellerService';
+import { sellerService } from '../../../../services/sellerService';
+import { Button } from '../../../../design-system';
 
 interface VerificationStepProps {
   onComplete: (data: any) => void;

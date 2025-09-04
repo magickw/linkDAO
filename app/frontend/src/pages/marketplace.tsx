@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
+import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
 import { ImageWithFallback } from '@/utils/imageUtils';
 import { 
@@ -13,6 +14,7 @@ import {
   CategoryGrid,
   FeaturedProductCarousel 
 } from '@/components/Marketplace/Homepage';
+import { useSeller } from '@/hooks/useSeller';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
@@ -22,6 +24,8 @@ const MarketplacePage: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
   const { addToast } = useToast();
+  const router = useRouter();
+  const { profile } = useSeller();
   
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'create'>('browse');
@@ -146,15 +150,111 @@ const MarketplacePage: React.FC = () => {
       <div className="relative z-10">
         {/* Hero Section */}
         <HeroSection
-          onStartSelling={() => setActiveTab('create')}
+          onStartSelling={() => {
+            if (!isConnected) {
+              addToast('Please connect your wallet first', 'warning');
+              return;
+            }
+            if (!profile) {
+              router.push('/seller/onboarding');
+            } else {
+              setActiveTab('create');
+            }
+          }}
           onBrowseMarketplace={() => setActiveTab('browse')}
         />
 
         {/* Category Grid */}
         <CategoryGrid />
 
+        {/* Seller Navigation */}
+        {isConnected && profile && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <GlassPanel variant="secondary" className="mb-4">
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    {profile.profilePicture ? (
+                      <img
+                        src={profile.profilePicture}
+                        alt={profile.displayName}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">
+                          {profile.displayName?.charAt(0) || 'S'}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-white font-medium text-sm">{profile.storeName || profile.displayName}</p>
+                      <p className="text-white/60 text-xs">Seller Dashboard</p>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => router.push('/seller/dashboard')}
+                  variant="outline"
+                  size="small"
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
+            </GlassPanel>
+          </div>
+        )}
+
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          
+          {/* Tab Navigation */}
+          <div className="flex justify-center mb-8">
+            <div className="flex space-x-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
+              <button
+                onClick={() => setActiveTab('browse')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'browse'
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                Browse
+              </button>
+              <button
+                onClick={() => setActiveTab('my-listings')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'my-listings'
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                disabled={!isConnected}
+              >
+                My Listings
+              </button>
+              <button
+                onClick={() => {
+                  if (!isConnected) {
+                    addToast('Please connect your wallet first', 'warning');
+                    return;
+                  }
+                  if (!profile) {
+                    addToast('Please complete seller onboarding first', 'info');
+                    router.push('/seller/onboarding');
+                    return;
+                  }
+                  setActiveTab('create');
+                }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'create'
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                Create Listing
+              </button>
+            </div>
+          </div>
 
           {activeTab === 'browse' && (
             <GlassPanel variant="secondary" className="mb-6">
@@ -292,7 +392,27 @@ const MarketplacePage: React.FC = () => {
             {activeTab === 'create' && (
               <div>
                 {isConnected ? (
-                  <CreateListingTab address={address} onListingCreated={fetchListings} />
+                  profile ? (
+                    <CreateListingTab address={address} onListingCreated={fetchListings} />
+                  ) : (
+                    <GlassPanel variant="primary" className="text-center py-12">
+                      <div className="mb-6">
+                        <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <h3 className="mt-2 text-lg font-medium text-white">Complete Seller Onboarding</h3>
+                        <p className="mt-1 text-white/70">
+                          You need to complete the seller onboarding process before creating listings.
+                        </p>
+                      </div>
+                      <Button
+                        variant="primary"
+                        onClick={() => router.push('/seller/onboarding')}
+                      >
+                        Start Seller Onboarding
+                      </Button>
+                    </GlassPanel>
+                  )
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">
                     <p className="text-white/70">Please connect your wallet to create a listing.</p>
@@ -393,9 +513,11 @@ const MyListingsTab: React.FC<{ address: string | undefined }> = ({ address }) =
                 <Button
                   variant="primary"
                   onClick={() => {
-                    // This would typically navigate to the create listing tab
-                    // For now, we'll just show a toast
-                    addToast('Navigate to Create Listing tab to get started', 'info');
+                    if (!profile) {
+                      router.push('/seller/onboarding');
+                    } else {
+                      setActiveTab('create');
+                    }
                   }}
                 >
                   Create Listing
