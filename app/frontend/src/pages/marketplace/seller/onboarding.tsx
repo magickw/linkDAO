@@ -9,7 +9,7 @@ export default function SellerOnboardingPage() {
   const { isConnected } = useAccount();
 
   const handleOnboardingComplete = () => {
-    router.push('/seller/dashboard');
+    router.push('/marketplace/seller/dashboard');
   };
 
   return (

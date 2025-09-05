@@ -107,14 +107,14 @@ export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
 
           <div className="space-y-3">
             <Button
-              onClick={() => router.push('/seller/dashboard')}
+              onClick={() => router.push('/marketplace/seller/dashboard')}
               variant="primary"
               className="w-full"
             >
               Go to Seller Dashboard
             </Button>
             <Button
-              onClick={() => router.push('/seller/listings/create')}
+              onClick={() => router.push('/marketplace/seller/listings/create')}
               variant="secondary"
               className="w-full"
             >

@@ -58,7 +58,7 @@ app.get('/health', (req, res) => {
 });
 
 // Marketplace registration routes (essential for the deployment)
-app.post('/api/marketplace/registration/seller', (req, res) => {
+app.post('/marketplace/registration/seller', (req, res) => {
   const { businessName, email, businessType, description } = req.body;
   
   if (!businessName || !email) {
@@ -83,7 +83,7 @@ app.post('/api/marketplace/registration/seller', (req, res) => {
   });
 });
 
-app.post('/api/marketplace/registration/buyer', (req, res) => {
+app.post('/marketplace/registration/buyer', (req, res) => {
   const { firstName, lastName, email, preferences } = req.body;
   
   if (!firstName || !lastName || !email) {
@@ -110,7 +110,7 @@ app.post('/api/marketplace/registration/buyer', (req, res) => {
 });
 
 // Essential marketplace endpoints
-app.get('/api/marketplace/listings', (req, res) => {
+app.get('/marketplace/listings', (req, res) => {
   const { category, limit = 10, offset = 0 } = req.query;
   
   // Mock listings data
@@ -142,7 +142,7 @@ app.get('/api/marketplace/listings', (req, res) => {
   });
 });
 
-app.get('/api/marketplace/listings/:id', (req, res) => {
+app.get('/marketplace/listings/:id', (req, res) => {
   const { id } = req.params;
   
   // Mock detailed listing
@@ -183,7 +183,7 @@ app.get('/api/marketplace/listings/:id', (req, res) => {
 });
 
 // User authentication endpoints (simplified)
-app.post('/api/auth/login', (req, res) => {
+app.post('/auth/login', (req, res) => {
   const { email, password } = req.body;
   
   if (!email || !password) {
@@ -209,7 +209,7 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-app.post('/api/auth/register', (req, res) => {
+app.post('/auth/register', (req, res) => {
   const { email, password, name, role = 'buyer' } = req.body;
   
   if (!email || !password || !name) {
@@ -237,7 +237,7 @@ app.post('/api/auth/register', (req, res) => {
 });
 
 // Orders endpoint
-app.get('/api/orders', (req, res) => {
+app.get('/orders', (req, res) => {
   res.json({
     success: true,
     data: [],
@@ -245,7 +245,7 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-app.post('/api/orders', (req, res) => {
+app.post('/orders', (req, res) => {
   const { listingId, quantity = 1 } = req.body;
   
   if (!listingId) {
@@ -269,7 +269,7 @@ app.post('/api/orders', (req, res) => {
 });
 
 // Analytics endpoint (lightweight)
-app.get('/api/analytics/dashboard', (req, res) => {
+app.get('/analytics/dashboard', (req, res) => {
   res.json({
     success: true,
     data: {
@@ -292,7 +292,7 @@ app.get('/api/analytics/dashboard', (req, res) => {
 });
 
 // Seller Profile Endpoints
-app.get('/api/seller/profile/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/profile/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   
   // Mock seller profile
@@ -362,7 +362,7 @@ app.get('/api/seller/profile/:walletAddress', (req, res) => {
   });
 });
 
-app.post('/api/seller/profile', (req, res) => {
+app.post('/marketplace/seller/profile', (req, res) => {
   const profileData = req.body;
   
   res.json({
@@ -377,7 +377,7 @@ app.post('/api/seller/profile', (req, res) => {
   });
 });
 
-app.put('/api/seller/profile/:walletAddress', (req, res) => {
+app.put('/marketplace/seller/profile/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   const updates = req.body;
   
@@ -394,7 +394,7 @@ app.put('/api/seller/profile/:walletAddress', (req, res) => {
 });
 
 // Seller Onboarding Endpoints
-app.get('/api/seller/onboarding/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/onboarding/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   
   res.json({
@@ -444,7 +444,7 @@ app.get('/api/seller/onboarding/:walletAddress', (req, res) => {
   });
 });
 
-app.put('/api/seller/onboarding/:walletAddress/:stepId', (req, res) => {
+app.put('/marketplace/seller/onboarding/:walletAddress/:stepId', (req, res) => {
   const { walletAddress, stepId } = req.params;
   const data = req.body;
   
@@ -456,7 +456,7 @@ app.put('/api/seller/onboarding/:walletAddress/:stepId', (req, res) => {
 });
 
 // Seller Dashboard Endpoints
-app.get('/api/seller/dashboard/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/dashboard/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   
   res.json({
@@ -502,7 +502,7 @@ app.get('/api/seller/dashboard/:walletAddress', (req, res) => {
 });
 
 // Seller Notifications
-app.get('/api/seller/notifications/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/notifications/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   
   const notifications = [
@@ -541,7 +541,7 @@ app.get('/api/seller/notifications/:walletAddress', (req, res) => {
   });
 });
 
-app.put('/api/seller/notifications/:notificationId/read', (req, res) => {
+app.put('/marketplace/seller/notifications/:notificationId/read', (req, res) => {
   const { notificationId } = req.params;
   
   res.json({
@@ -551,7 +551,7 @@ app.put('/api/seller/notifications/:notificationId/read', (req, res) => {
 });
 
 // Seller Orders
-app.get('/api/seller/orders/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/orders/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   const { status } = req.query;
   
@@ -596,7 +596,7 @@ app.get('/api/seller/orders/:walletAddress', (req, res) => {
   });
 });
 
-app.put('/api/seller/orders/:orderId/status', (req, res) => {
+app.put('/marketplace/seller/orders/:orderId/status', (req, res) => {
   const { orderId } = req.params;
   const { status } = req.body;
   
@@ -607,7 +607,7 @@ app.put('/api/seller/orders/:orderId/status', (req, res) => {
 });
 
 // Seller Listings
-app.get('/api/seller/listings/:walletAddress', (req, res) => {
+app.get('/marketplace/seller/listings/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   const { status } = req.query;
   
@@ -641,7 +641,7 @@ app.get('/api/seller/listings/:walletAddress', (req, res) => {
   });
 });
 
-app.post('/api/seller/listings', (req, res) => {
+app.post('/marketplace/seller/listings', (req, res) => {
   const listingData = req.body;
   
   res.json({
@@ -661,7 +661,7 @@ app.post('/api/seller/listings', (req, res) => {
 });
 
 // Seller Verification
-app.post('/api/seller/verification/email', (req, res) => {
+app.post('/marketplace/seller/verification/email', (req, res) => {
   const { email } = req.body;
   
   res.json({
@@ -670,7 +670,7 @@ app.post('/api/seller/verification/email', (req, res) => {
   });
 });
 
-app.post('/api/seller/verification/email/verify', (req, res) => {
+app.post('/marketplace/seller/verification/email/verify', (req, res) => {
   const { token } = req.body;
   
   res.json({
@@ -679,7 +679,7 @@ app.post('/api/seller/verification/email/verify', (req, res) => {
   });
 });
 
-app.post('/api/seller/verification/phone', (req, res) => {
+app.post('/marketplace/seller/verification/phone', (req, res) => {
   const { phone } = req.body;
   
   res.json({
@@ -688,7 +688,7 @@ app.post('/api/seller/verification/phone', (req, res) => {
   });
 });
 
-app.post('/api/seller/verification/phone/verify', (req, res) => {
+app.post('/marketplace/seller/verification/phone/verify', (req, res) => {
   const { phone, code } = req.body;
   
   res.json({
@@ -698,7 +698,7 @@ app.post('/api/seller/verification/phone/verify', (req, res) => {
 });
 
 // Catch-all for API routes
-app.use('/api/*', (req, res) => {
+app.use('/*', (req, res) => {
   res.status(404).json({
     success: false,
     error: 'API endpoint not found',

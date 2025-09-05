@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     case 'GET':
       try {
         // Redirect to the seller onboarding page
-        res.redirect(307, '/seller/onboarding');
+        res.redirect(307, '/marketplace/seller/onboarding');
       } catch (error) {
         console.error('Error redirecting to onboarding:', error);
         res.status(500).json({ error: 'Failed to redirect to onboarding' });

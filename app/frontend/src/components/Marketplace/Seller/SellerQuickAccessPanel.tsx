@@ -24,9 +24,9 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
     
     if (!profile) {
       // Redirect to seller onboarding API endpoint
-      router.push('/api/marketplace/seller/onboarding');
+      router.push('/marketplace/seller/onboarding');
     } else {
-      router.push('/seller/dashboard');
+      router.push('/marketplace/seller/dashboard');
     }
     
     if (onActionComplete) {
@@ -86,7 +86,7 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
           </Button>
           {profile && (
             <Button
-              onClick={() => router.push('/seller/listings/create')}
+              onClick={() => router.push('/marketplace/seller/listings/create')}
               variant="outline"
               size="small"
             >
