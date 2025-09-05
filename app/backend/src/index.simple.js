@@ -11,14 +11,35 @@ const PORT = process.env.PORT || 10000;
 // Enable compression to reduce memory usage
 app.use(compression());
 
-// Optimized CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
+// Custom CORS middleware to handle multiple origins
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Get allowed origins from environment variable
+    const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [];
+    
+    // Check if the origin is in our allowed list
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // For development, allow localhost origins
+    if (process.env.NODE_ENV === 'development' && origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    
+    // Block the request if the origin is not allowed
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   maxAge: 86400 // Cache preflight for 24 hours
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Limit JSON payload size to reduce memory usage
 app.use(express.json({ limit: '1mb' }));

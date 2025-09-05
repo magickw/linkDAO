@@ -190,23 +190,25 @@ export function useSellerOnboarding() {
   };
 }
 
-export function useSellerDashboard() {
+export function useSellerDashboard(mockWalletAddress?: string) {
   const { address } = useAccount();
+  // Use mockWalletAddress if provided, otherwise use the actual wallet address
+  const effectiveAddress = mockWalletAddress || address;
   const [stats, setStats] = useState<SellerDashboardStats | null>(null);
   const [notifications, setNotifications] = useState<SellerNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
-    if (!address) return;
+    if (!effectiveAddress) return;
     
     setLoading(true);
     setError(null);
     
     try {
       const [dashboardStats, sellerNotifications] = await Promise.all([
-        sellerService.getDashboardStats(address),
-        sellerService.getNotifications(address),
+        sellerService.getDashboardStats(effectiveAddress),
+        sellerService.getNotifications(effectiveAddress),
       ]);
       
       setStats(dashboardStats);
@@ -216,7 +218,7 @@ export function useSellerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [effectiveAddress]);
 
   const markNotificationRead = useCallback(async (notificationId: string) => {
     try {
@@ -234,13 +236,13 @@ export function useSellerDashboard() {
   }, []);
 
   useEffect(() => {
-    if (address) {
+    if (effectiveAddress) {
       fetchDashboardData();
     } else {
       setStats(null);
       setNotifications([]);
     }
-  }, [address, fetchDashboardData]);
+  }, [effectiveAddress, fetchDashboardData]);
 
   const unreadNotifications = notifications.filter(n => !n.read);
 
@@ -252,6 +254,7 @@ export function useSellerDashboard() {
     error,
     markNotificationRead,
     refetch: fetchDashboardData,
+    address: effectiveAddress,
   };
 }
 
