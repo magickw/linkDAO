@@ -12,6 +12,9 @@ export { CategoryGrid } from './Homepage';
 export { FeaturedProductCarousel } from './Homepage';
 export { CurrencyToggle } from './Homepage';
 
+// Seller Components
+export * from './Seller';
+
 // Product Display Components  
 export * from './ProductDisplay';
 
