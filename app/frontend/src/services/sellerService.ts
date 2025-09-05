@@ -72,9 +72,19 @@ class SellerService {
 
   // Onboarding Flow
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
-    const response = await fetch(`${this.baseUrl}/api/seller/onboarding/${walletAddress}`);
-    if (!response.ok) {
-      // Return default onboarding steps if not found
+    try {
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/onboarding/${walletAddress}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch onboarding steps');
+      }
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: [...] }
+      // We need to return the data array
+      return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+      console.error('Error fetching onboarding steps:', error);
+      // Return default onboarding steps if there's an error
       return [
         {
           id: 'wallet-connect',
@@ -118,11 +128,10 @@ class SellerService {
         }
       ];
     }
-    return response.json();
   }
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/onboarding/${walletAddress}/${stepId}`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/onboarding/${walletAddress}/${stepId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -133,17 +142,27 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to update onboarding step');
     }
+    
+    // Parse the response to ensure it's successful
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update onboarding step');
+    }
   }
 
   // Seller Profile Management
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/seller/profile/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error('Failed to fetch seller profile');
       }
-      return response.json();
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: {...} }
+      // We need to return the data object
+      return result.data || null;
     } catch (error) {
       console.error('Error fetching seller profile:', error);
       return null;
@@ -151,7 +170,7 @@ class SellerService {
   }
 
   async createSellerProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    const response = await fetch(`${this.baseUrl}/api/seller/profile`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/profile`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -163,11 +182,14 @@ class SellerService {
       throw new Error('Failed to create seller profile');
     }
     
-    return response.json();
+    const result = await response.json();
+    // The backend returns { success: true, data: {...} }
+    // We need to return the data object
+    return result.data;
   }
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
-    const response = await fetch(`${this.baseUrl}/api/seller/profile/${walletAddress}`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -179,17 +201,24 @@ class SellerService {
       throw new Error('Failed to update seller profile');
     }
     
-    return response.json();
+    const result = await response.json();
+    // The backend returns { success: true, data: {...} }
+    // We need to return the data object
+    return result.data;
   }
 
   // Dashboard Data
   async getDashboardStats(walletAddress: string): Promise<SellerDashboardStats> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/seller/dashboard/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/dashboard/${walletAddress}`);
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard stats');
       }
-      return response.json();
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: {...} }
+      // We need to return the data object
+      return result.data || {};
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
       // Return mock data for development
@@ -232,11 +261,15 @@ class SellerService {
   // Notifications
   async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/seller/notifications/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${walletAddress}`);
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
       }
-      return response.json();
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: [...] }
+      // We need to return the data array
+      return Array.isArray(result.data) ? result.data : [];
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];
@@ -244,18 +277,23 @@ class SellerService {
   }
 
   async markNotificationRead(notificationId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/notifications/${notificationId}/read`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${notificationId}/read`, {
       method: 'PUT',
     });
     
     if (!response.ok) {
       throw new Error('Failed to mark notification as read');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to mark notification as read');
+    }
   }
 
   // Orders Management
   async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
-    const url = new URL(`${this.baseUrl}/api/seller/orders/${walletAddress}`);
+    const url = new URL(`${this.baseUrl}/marketplace/seller/orders/${walletAddress}`);
     if (status) {
       url.searchParams.append('status', status);
     }
@@ -265,7 +303,11 @@ class SellerService {
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
-      return response.json();
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: [...] }
+      // We need to return the data array
+      return Array.isArray(result.data) ? result.data : [];
     } catch (error) {
       console.error('Error fetching orders:', error);
       return [];
@@ -273,7 +315,7 @@ class SellerService {
   }
 
   async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/orders/${orderId}/status`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -284,10 +326,15 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to update order status');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update order status');
+    }
   }
 
   async addTrackingNumber(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/orders/${orderId}/tracking`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/tracking`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -298,11 +345,16 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to add tracking number');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to add tracking number');
+    }
   }
 
   // Listings Management
   async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
-    const url = new URL(`${this.baseUrl}/api/seller/listings/${walletAddress}`);
+    const url = new URL(`${this.baseUrl}/marketplace/seller/listings/${walletAddress}`);
     if (status) {
       url.searchParams.append('status', status);
     }
@@ -312,7 +364,11 @@ class SellerService {
       if (!response.ok) {
         throw new Error('Failed to fetch listings');
       }
-      return response.json();
+      
+      const result = await response.json();
+      // The backend returns { success: true, data: [...] }
+      // We need to return the data array
+      return Array.isArray(result.data) ? result.data : [];
     } catch (error) {
       console.error('Error fetching listings:', error);
       return [];
@@ -320,7 +376,7 @@ class SellerService {
   }
 
   async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/api/seller/listings`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -332,11 +388,14 @@ class SellerService {
       throw new Error('Failed to create listing');
     }
     
-    return response.json();
+    const result = await response.json();
+    // The backend returns { success: true, data: {...} }
+    // We need to return the data object
+    return result.data;
   }
 
   async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/api/seller/listings/${listingId}`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -348,16 +407,24 @@ class SellerService {
       throw new Error('Failed to update listing');
     }
     
-    return response.json();
+    const result = await response.json();
+    // The backend returns { success: true, data: {...} }
+    // We need to return the data object
+    return result.data;
   }
 
   async deleteListing(listingId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/listings/${listingId}`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
       method: 'DELETE',
     });
     
     if (!response.ok) {
       throw new Error('Failed to delete listing');
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to delete listing');
     }
   }
 
@@ -410,7 +477,7 @@ class SellerService {
 
   // Verification
   async sendEmailVerification(email: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/verification/email`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -421,10 +488,15 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to send email verification');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to send email verification');
+    }
   }
 
   async verifyEmail(token: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/verification/email/verify`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -435,10 +507,15 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to verify email');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to verify email');
+    }
   }
 
   async sendPhoneVerification(phone: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/verification/phone`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -449,10 +526,15 @@ class SellerService {
     if (!response.ok) {
       throw new Error('Failed to send phone verification');
     }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to send phone verification');
+    }
   }
 
   async verifyPhone(phone: string, code: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/seller/verification/phone/verify`, {
+    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -462,6 +544,11 @@ class SellerService {
     
     if (!response.ok) {
       throw new Error('Failed to verify phone');
+    }
+    
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to verify phone');
     }
   }
 

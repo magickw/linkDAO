@@ -41,7 +41,7 @@ export function SellerDashboard() {
               You need to complete the seller onboarding process to access the dashboard.
             </p>
           </div>
-          <Button onClick={() => router.push('/seller/onboarding')} variant="primary">
+          <Button onClick={() => router.push('/marketplace/seller/onboarding')} variant="primary">
             Start Seller Onboarding
           </Button>
         </GlassPanel>

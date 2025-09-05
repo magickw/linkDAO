@@ -158,9 +158,9 @@ const MarketplacePage: React.FC = () => {
             }
             if (!profile) {
               // Redirect to seller onboarding API endpoint
-              router.push('/api/marketplace/seller/onboarding');
+              router.push('/marketplace/seller/onboarding');
             } else {
-              router.push('/seller/dashboard');
+              router.push('/marketplace/seller/dashboard');
             }
           }}
           onBrowseMarketplace={() => setActiveTab('browse')}
@@ -187,7 +187,7 @@ const MarketplacePage: React.FC = () => {
                 </div>
                 <Button
                   variant="primary"
-                  onClick={() => router.push('/seller/dashboard')}
+                  onClick={() => router.push('/marketplace/seller/dashboard')}
                   className="bg-white text-purple-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
                 >
                   Go to Seller Dashboard
@@ -210,7 +210,7 @@ const MarketplacePage: React.FC = () => {
                 </div>
                 <Button
                   variant="primary"
-                  onClick={() => router.push('/api/marketplace/seller/onboarding')}
+                  onClick={() => router.push('/marketplace/seller/onboarding')}
                   className="bg-white text-blue-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
                 >
                   Become a Seller
@@ -255,7 +255,7 @@ const MarketplacePage: React.FC = () => {
                   }
                   if (!profile) {
                     addToast('Please complete seller onboarding first', 'info');
-                    router.push('/seller/onboarding');
+                    router.push('/marketplace/seller/onboarding');
                     return;
                   }
                   setActiveTab('create');
@@ -422,7 +422,7 @@ const MarketplacePage: React.FC = () => {
                       </div>
                       <Button
                         variant="primary"
-                        onClick={() => router.push('/seller/onboarding')}
+                        onClick={() => router.push('/marketplace/seller/onboarding')}
                       >
                         Start Seller Onboarding
                       </Button>
@@ -531,7 +531,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                   variant="primary"
                   onClick={() => {
                     if (!profile) {
-                      router.push('/seller/onboarding');
+                      router.push('/marketplace/seller/onboarding');
                     } else {
                       onCreateClick();
                     }

@@ -34,10 +34,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     
     if (!profile) {
       // Redirect to seller onboarding API endpoint
-      router.push('/api/marketplace/seller/onboarding');
+      router.push('/marketplace/seller/onboarding');
     } else {
       // Redirect to seller dashboard
-      router.push('/seller/dashboard');
+      router.push('/marketplace/seller/dashboard');
     }
   };
 
