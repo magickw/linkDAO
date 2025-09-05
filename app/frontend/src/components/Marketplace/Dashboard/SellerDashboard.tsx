@@ -3,14 +3,92 @@ import { useRouter } from 'next/router';
 import { useSellerDashboard, useSeller, useSellerTiers } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 
-export function SellerDashboard() {
+interface SellerDashboardProps {
+  mockWalletAddress?: string;
+}
+
+export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
   const router = useRouter();
   const { profile, loading: profileLoading } = useSeller();
+  // If mockWalletAddress is provided, use it; otherwise use the actual wallet address
+  const walletAddress = mockWalletAddress || (useSellerDashboard() as any).address;
   const { stats, notifications, unreadNotifications, loading, markNotificationRead } = useSellerDashboard();
   const { getTierById, getNextTier } = useSellerTiers();
   const [activeTab, setActiveTab] = useState('overview');
 
-  if (profileLoading || loading) {
+  // If we're using a mock wallet address, we need to fetch data for that address
+  const [mockStats, setMockStats] = useState<any>(null);
+  const [mockProfile, setMockProfile] = useState<any>(null);
+  const [mockLoading, setMockLoading] = useState(false);
+
+  // Use mock data if mockWalletAddress is provided
+  const effectiveProfile = mockWalletAddress ? mockProfile : profile;
+  const effectiveStats = mockWalletAddress ? mockStats : stats;
+  const effectiveLoading = mockWalletAddress ? mockLoading : (profileLoading || loading);
+
+  // Fetch mock data if needed
+  React.useEffect(() => {
+    if (mockWalletAddress) {
+      setMockLoading(true);
+      // In a real implementation, you would fetch data for the mock wallet address
+      // For now, we'll use sample data
+      setTimeout(() => {
+        setMockProfile({
+          walletAddress: mockWalletAddress,
+          displayName: 'Sample Seller',
+          storeName: 'Sample Store',
+          tier: 'pro',
+          profilePicture: null,
+          stats: {
+            reputationScore: 95,
+            averageRating: 4.8,
+            totalReviews: 127
+          }
+        });
+        
+        setMockStats({
+          sales: {
+            today: 1250,
+            thisWeek: 8750,
+            thisMonth: 32500,
+            total: 125000
+          },
+          orders: {
+            pending: 3,
+            processing: 5,
+            shipped: 12,
+            delivered: 89,
+            disputed: 1
+          },
+          listings: {
+            active: 24,
+            draft: 2,
+            sold: 142,
+            expired: 3
+          },
+          balance: {
+            crypto: {
+              USDC: 12500,
+              ETH: 2.5,
+              BTC: 0.1
+            },
+            fiatEquivalent: 12500,
+            pendingEscrow: 3200,
+            availableWithdraw: 9300
+          },
+          reputation: {
+            score: 95,
+            trend: 'up',
+            recentReviews: 5,
+            averageRating: 4.8
+          }
+        });
+        setMockLoading(false);
+      }, 1000);
+    }
+  }, [mockWalletAddress]);
+
+  if (effectiveLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-7xl mx-auto">
@@ -26,7 +104,7 @@ export function SellerDashboard() {
     );
   }
 
-  if (!profile) {
+  if (!effectiveProfile && !mockWalletAddress) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -50,7 +128,7 @@ export function SellerDashboard() {
   }
 
   // If stats is null or undefined, show a loading state or message
-  if (!stats) {
+  if (!effectiveStats) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -70,8 +148,8 @@ export function SellerDashboard() {
     );
   }
 
-  const currentTier = getTierById(profile.tier);
-  const nextTier = getNextTier(profile.tier);
+  const currentTier = getTierById(effectiveProfile?.tier);
+  const nextTier = getNextTier(effectiveProfile?.tier);
 
   const formatCurrency = (amount: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -105,21 +183,21 @@ export function SellerDashboard() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center mb-4 md:mb-0">
-            {profile.profilePicture ? (
+            {effectiveProfile?.profilePicture ? (
               <img
-                src={profile.profilePicture}
-                alt={profile.displayName}
+                src={effectiveProfile.profilePicture}
+                alt={effectiveProfile.displayName}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
               />
             ) : (
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mr-4">
                 <span className="text-white text-xl font-bold">
-                  {profile.displayName?.charAt(0) || profile.storeName?.charAt(0) || 'S'}
+                  {effectiveProfile?.displayName?.charAt(0) || effectiveProfile?.storeName?.charAt(0) || 'S'}
                 </span>
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white">{profile.storeName || profile.displayName}</h1>
+              <h1 className="text-2xl font-bold text-white">{effectiveProfile?.storeName || effectiveProfile?.displayName}</h1>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   currentTier?.id === 'pro' ? 'bg-purple-600 text-white' :
@@ -134,7 +212,7 @@ export function SellerDashboard() {
                     <svg
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(profile?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
+                        i < Math.floor(effectiveProfile?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
                       }`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
@@ -143,7 +221,7 @@ export function SellerDashboard() {
                     </svg>
                   ))}
                   <span className="text-gray-400 text-sm ml-1">
-                    ({profile?.stats?.totalReviews || 0})
+                    ({effectiveProfile?.stats?.totalReviews || 0})
                   </span>
                 </div>
               </div>
@@ -210,7 +288,7 @@ export function SellerDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Sales"
-            value={formatCurrency(stats?.sales?.total || 0)}
+            value={formatCurrency(effectiveStats?.sales?.total || 0)}
             change={12}
             color="green"
             icon={
@@ -222,7 +300,7 @@ export function SellerDashboard() {
           
           <StatCard
             title="Active Listings"
-            value={stats?.listings?.active || 0}
+            value={effectiveStats?.listings?.active || 0}
             change={5}
             color="blue"
             icon={
@@ -234,7 +312,7 @@ export function SellerDashboard() {
           
           <StatCard
             title="Pending Orders"
-            value={stats?.orders?.pending || 0}
+            value={effectiveStats?.orders?.pending || 0}
             change={-2}
             color="orange"
             icon={
@@ -246,7 +324,7 @@ export function SellerDashboard() {
           
           <StatCard
             title="Reputation Score"
-            value={profile?.stats?.reputationScore || 0}
+            value={effectiveProfile?.stats?.reputationScore || 0}
             change={8}
             color="purple"
             icon={
