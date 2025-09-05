@@ -9,6 +9,9 @@ import { Button, GradientButton } from '@/design-system/components/Button';
 import { designTokens } from '@/design-system/tokens';
 import { FeaturedProductCarousel } from './FeaturedProductCarousel';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
+import { useRouter } from 'next/router';
+import { useSeller } from '@/hooks/useSeller';
 
 interface HeroSectionProps {
   onStartSelling?: () => void;
@@ -19,6 +22,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onStartSelling,
   onBrowseMarketplace,
 }) => {
+  const { isConnected } = useAccount();
+  const { profile } = useSeller();
+  const router = useRouter();
+  
+  const handleSellerDashboard = () => {
+    if (!isConnected) {
+      // In a real implementation, this would trigger wallet connection
+      return;
+    }
+    
+    if (!profile) {
+      // Redirect to seller onboarding API endpoint
+      router.push('/api/marketplace/seller/onboarding');
+    } else {
+      // Redirect to seller dashboard
+      router.push('/seller/dashboard');
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -181,6 +203,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <span className="mr-2">📋</span> My Listings
+              </Button>
+              
+              {/* Seller Dashboard Button */}
+              <Button
+                variant="secondary"
+                size="large"
+                onClick={onStartSelling}
+                className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="mr-2">📊</span> 
+                {profile ? 'Seller Dashboard' : 'Become a Seller'}
               </Button>
             </div>
           </motion.div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
+import { useSeller } from '@/hooks/useSeller';
 import { ImageWithFallback } from '@/utils/imageUtils';
 import { 
   MarketplaceService, 
@@ -14,7 +15,7 @@ import {
   CategoryGrid,
   FeaturedProductCarousel 
 } from '@/components/Marketplace/Homepage';
-import { useSeller } from '@/hooks/useSeller';
+import { SellerQuickAccessPanel } from '@/components/Marketplace/Seller';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
@@ -156,9 +157,10 @@ const MarketplacePage: React.FC = () => {
               return;
             }
             if (!profile) {
-              router.push('/seller/onboarding');
+              // Redirect to seller onboarding API endpoint
+              router.push('/api/marketplace/seller/onboarding');
             } else {
-              setActiveTab('create');
+              router.push('/seller/dashboard');
             }
           }}
           onBrowseMarketplace={() => setActiveTab('browse')}
@@ -167,41 +169,54 @@ const MarketplacePage: React.FC = () => {
         {/* Category Grid */}
         <CategoryGrid />
 
-        {/* Seller Navigation */}
+        {/* Seller Quick Access Panel */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <SellerQuickAccessPanel />
+        </div>
+
+        {/* Seller Dashboard Entry Point - Prominent CTA for sellers */}
         {isConnected && profile && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <GlassPanel variant="secondary" className="mb-4">
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    {profile.profilePicture ? (
-                      <img
-                        src={profile.profilePicture}
-                        alt={profile.displayName}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">
-                          {profile.displayName?.charAt(0) || 'S'}
-                        </span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-white font-medium text-sm">{profile.storeName || profile.displayName}</p>
-                      <p className="text-white/60 text-xs">Seller Dashboard</p>
-                    </div>
-                  </div>
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="text-xl font-bold text-white">Ready to manage your store?</h3>
+                  <p className="text-purple-100 mt-1">
+                    Access your seller dashboard to view orders, manage listings, and track performance.
+                  </p>
                 </div>
                 <Button
+                  variant="primary"
                   onClick={() => router.push('/seller/dashboard')}
-                  variant="outline"
-                  size="small"
+                  className="bg-white text-purple-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
                 >
-                  Go to Dashboard
+                  Go to Seller Dashboard
                 </Button>
               </div>
-            </GlassPanel>
+            </div>
+          </div>
+        )}
+        
+        {/* Seller Onboarding Entry Point - For users who want to become sellers */}
+        {isConnected && !profile && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-6 shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="text-xl font-bold text-white">Want to start selling?</h3>
+                  <p className="text-blue-100 mt-1">
+                    Complete our quick onboarding process to unlock all seller features.
+                  </p>
+                </div>
+                <Button
+                  variant="primary"
+                  onClick={() => router.push('/api/marketplace/seller/onboarding')}
+                  className="bg-white text-blue-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
+                >
+                  Become a Seller
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 

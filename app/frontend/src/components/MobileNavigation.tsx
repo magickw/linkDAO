@@ -107,6 +107,8 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
   // Update active item based on current path
   useEffect(() => {
+    if (!pathname) return;
+    
     const currentItem = navItems.find(item => 
       item.path === pathname || 
       (item.path !== '/' && pathname.startsWith(item.path))
