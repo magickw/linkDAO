@@ -23,6 +23,46 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
   // Initialize service worker and performance monitoring
   React.useEffect(() => {
+    // Global error handler for extension-related errors
+    const handleGlobalError = (event: ErrorEvent) => {
+      const message = event.message || '';
+      const source = event.filename || '';
+      
+      // Ignore extension-related errors
+      if (
+        message.includes('chrome.runtime.sendMessage') ||
+        message.includes('Extension ID') ||
+        source.includes('chrome-extension://') ||
+        source.includes('inpage.js')
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        console.debug('Ignored extension-related error:', message);
+        return false;
+      }
+    };
+
+    // Global unhandled promise rejection handler for extension errors
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason || '';
+      const message = typeof reason === 'string' ? reason : reason.message || '';
+      
+      // Ignore extension-related promise rejections
+      if (
+        message.includes('chrome.runtime.sendMessage') ||
+        message.includes('Extension ID') ||
+        message.includes('chrome-extension')
+      ) {
+        event.preventDefault();
+        console.debug('Ignored extension-related promise rejection:', message);
+        return false;
+      }
+    };
+
+    // Add global error listeners
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
     const initializeServices = async () => {
       try {
         // Initialize performance monitoring
@@ -63,6 +103,8 @@ function AppContent({ Component, pageProps, router }: AppProps) {
     initializeServices();
 
     return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       if (swUtilRef.current) {
         swUtilRef.current.destroy();
       }
