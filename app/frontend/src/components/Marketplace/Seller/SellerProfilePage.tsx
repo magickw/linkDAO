@@ -1,16 +1,33 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSeller } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
+
+interface FormData {
+  displayName: string;
+  storeName: string;
+  bio: string;
+  description: string;
+  email: string;
+  phone: string;
+}
 
 export function SellerProfilePage() {
   const router = useRouter();
   const { profile, loading, error, updateProfile } = useSeller();
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<FormData>({
+    displayName: '',
+    storeName: '',
+    bio: '',
+    description: '',
+    email: '',
+    phone: '',
+  });
 
   // Initialize form data when profile loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (profile) {
       setFormData({
         displayName: profile.displayName || '',
@@ -25,7 +42,7 @@ export function SellerProfilePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev: FormData) => ({
       ...prev,
       [name]: value
     }));
