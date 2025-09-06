@@ -119,7 +119,7 @@ export default function TestPosting() {
             <h3 className="font-semibold mb-2">Debug Information</h3>
             <div className="text-sm space-y-1">
               <p>Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
-              <p>API URL: {process.env.NEXT_PUBLIC_API_URL || 'Not set'}</p>
+              <p>Backend URL: {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
               <p>Loading: {isLoading ? 'Yes' : 'No'}</p>
               <p>Error: {error || 'None'}</p>
               <p>Success: {success ? 'Yes' : 'No'}</p>

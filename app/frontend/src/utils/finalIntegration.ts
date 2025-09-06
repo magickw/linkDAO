@@ -265,7 +265,7 @@ export class ComponentIntegrationChecker {
   private async checkEnvironmentConfig(): Promise<boolean> {
     // Check if required environment variables are set
     const requiredEnvVars = [
-      'NEXT_PUBLIC_API_URL',
+      'NEXT_PUBLIC_BACKEND_URL',
       'NEXT_PUBLIC_WS_URL',
       'NEXT_PUBLIC_CHAIN_ID'
     ];

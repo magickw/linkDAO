@@ -1,7 +1,7 @@
 import type { Notification, NotificationPreferences } from '@/types/notifications';
 
 class NotificationService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
   private notifications: Notification[] = [];
   private listeners: ((notifications: Notification[]) => void)[] = [];
 

@@ -16,7 +16,7 @@ This guide explains how to deploy the LinkDAO frontend application to Vercel.
 Before deploying, ensure you have the correct environment variables in your Vercel project:
 
 1. `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` - Your WalletConnect project ID
-2. `NEXT_PUBLIC_API_URL` - Your backend API URL (e.g., https://your-backend.vercel.app/api)
+2. `NEXT_PUBLIC_BACKEND_URL` - Your backend API URL (e.g., https://your-backend.vercel.app)
 3. `NEXT_PUBLIC_BASE_RPC_URL` - Base mainnet RPC URL
 4. `NEXT_PUBLIC_BASE_GOERLI_RPC_URL` - Base testnet RPC URL
 5. `NEXT_PUBLIC_ADMIN_ADDRESS` - Admin wallet address for demo purposes
@@ -82,7 +82,7 @@ In your Vercel project, go to Settings > Environment Variables and add:
 | Variable Name | Value | Environment |
 |---------------|-------|-------------|
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | Your WalletConnect project ID | Production & Preview |
-| `NEXT_PUBLIC_API_URL` | Your backend API URL | Production & Preview |
+| `NEXT_PUBLIC_BACKEND_URL` | Your backend API URL | Production & Preview |
 | `NEXT_PUBLIC_BASE_RPC_URL` | `https://mainnet.base.org` | Production & Preview |
 | `NEXT_PUBLIC_BASE_GOERLI_RPC_URL` | `https://goerli.base.org` | Production & Preview |
 | `NEXT_PUBLIC_ADMIN_ADDRESS` | Your admin wallet address | Production & Preview |
@@ -114,7 +114,7 @@ After deployment, you may need to:
    - Check that your WalletConnect project is configured for the correct network
 
 2. **API Connection Issues**
-   - Verify that `NEXT_PUBLIC_API_URL` points to your deployed backend
+   - Verify that `NEXT_PUBLIC_BACKEND_URL` points to your deployed backend
    - Ensure CORS is properly configured on your backend
 
 3. **Build Failures**

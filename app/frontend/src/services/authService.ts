@@ -62,7 +62,7 @@ class AuthService {
   private token: string | null = null;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
     
     // Load token from localStorage on initialization
     if (typeof window !== 'undefined') {

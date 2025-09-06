@@ -27,7 +27,7 @@ Create environment files for each deployment environment:
 
 #### `.env.local` (Development)
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 NEXT_PUBLIC_WS_URL=ws://localhost:8000
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_ENABLE_ANALYTICS=false
@@ -37,7 +37,7 @@ NEXT_PUBLIC_LOG_LEVEL=debug
 
 #### `.env.staging` (Staging)
 ```bash
-NEXT_PUBLIC_API_URL=https://api-staging.linkdao.com
+NEXT_PUBLIC_BACKEND_URL=https://api-staging.linkdao.com
 NEXT_PUBLIC_WS_URL=wss://ws-staging.linkdao.com
 NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_ENABLE_ANALYTICS=true
@@ -47,7 +47,7 @@ NEXT_PUBLIC_LOG_LEVEL=info
 
 #### `.env.production` (Production)
 ```bash
-NEXT_PUBLIC_API_URL=https://api.linkdao.com
+NEXT_PUBLIC_BACKEND_URL=https://api.linkdao.com
 NEXT_PUBLIC_WS_URL=wss://ws.linkdao.com
 NEXT_PUBLIC_CHAIN_ID=1
 NEXT_PUBLIC_ENABLE_ANALYTICS=true
@@ -260,7 +260,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${API_URL}
+      - NEXT_PUBLIC_BACKEND_URL=${API_URL}
       - NEXT_PUBLIC_WS_URL=${WS_URL}
       - NEXT_PUBLIC_CHAIN_ID=${CHAIN_ID}
     restart: unless-stopped

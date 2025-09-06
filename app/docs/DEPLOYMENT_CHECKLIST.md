@@ -24,7 +24,7 @@
   - [ ] `NEXT_PUBLIC_BASE_RPC_URL`
   - [ ] `NEXT_PUBLIC_BASE_GOERLI_RPC_URL`
   - [ ] `NEXT_PUBLIC_ADMIN_ADDRESS`
-  - [ ] `NEXT_PUBLIC_API_URL`
+  - [ ] `NEXT_PUBLIC_BACKEND_URL`
   - [ ] `NEXT_PUBLIC_BACKEND_URL`
 - [ ] Verify build settings in Vercel dashboard
 - [ ] Trigger deployment

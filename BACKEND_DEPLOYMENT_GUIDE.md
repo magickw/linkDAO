@@ -140,7 +140,7 @@ After deployment, test the following endpoints:
 - `POST /api/auth/register` - Should allow user registration
 
 ### 2. Update Frontend Configuration
-Update the `NEXT_PUBLIC_API_URL` environment variable in your frontend Vercel project to point to your deployed backend URL.
+Update the `NEXT_PUBLIC_BACKEND_URL` environment variable in your frontend Vercel project to point to your deployed backend URL.
 
 ### 3. Monitor Logs
 Check your hosting provider's logging system for any errors or issues.
