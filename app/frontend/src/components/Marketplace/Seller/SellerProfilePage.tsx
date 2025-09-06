@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSeller } from '../../../hooks/useSeller';
@@ -180,15 +179,15 @@ export function SellerProfilePage() {
               <div className="mt-6 pt-6 border-t border-gray-700">
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-gray-400">Reputation Score</span>
-                  <span className="text-white font-bold">{profile.stats.reputationScore}</span>
+                  <span className="text-white font-bold">{profile.stats?.reputationScore || 0}</span>
                 </div>
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-gray-400">Total Sales</span>
-                  <span className="text-white font-bold">{profile.stats.totalSales}</span>
+                  <span className="text-white font-bold">{profile.stats?.totalSales || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Active Listings</span>
-                  <span className="text-white font-bold">{profile.stats.activeListings}</span>
+                  <span className="text-white font-bold">{profile.stats?.activeListings || 0}</span>
                 </div>
               </div>
             </div>
