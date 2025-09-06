@@ -14,8 +14,9 @@ interface FormData {
 
 export function SellerProfilePage() {
   const router = useRouter();
-  const { profile, loading, error, updateProfile } = useSeller();
+  const { profile, loading, error, updateProfile, walletAddress, isConnected } = useSeller();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     displayName: '',
     storeName: '',
@@ -24,6 +25,11 @@ export function SellerProfilePage() {
     email: '',
     phone: '',
   });
+
+  // Debug logging
+  console.log('SellerProfilePage - Wallet connected:', isConnected);
+  console.log('SellerProfilePage - Wallet address:', walletAddress);
+  console.log('SellerProfilePage - Profile:', profile);
 
   // Initialize form data when profile loads
   useEffect(() => {
@@ -49,11 +55,35 @@ export function SellerProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check wallet connection
+    if (!isConnected) {
+      alert('Please connect your wallet first');
+      return;
+    }
+    
+    // Add validation
+    if (!formData.displayName.trim() && !formData.storeName.trim()) {
+      alert('Please enter either a display name or store name');
+      return;
+    }
+    
+    setIsSaving(true);
     try {
-      await updateProfile(formData);
+      console.log('Updating profile with data:', formData);
+      console.log('Using wallet address:', walletAddress);
+      const result = await updateProfile(formData);
+      console.log('Profile updated successfully:', result);
       setIsEditing(false);
+      // Show success message
+      alert('Profile updated successfully!');
     } catch (err) {
       console.error('Failed to update profile:', err);
+      // Show error message to user
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -130,15 +160,24 @@ export function SellerProfilePage() {
           <div className="mt-4 md:mt-0">
             {isEditing ? (
               <div className="flex space-x-3">
-                <Button onClick={() => setIsEditing(false)} variant="outline">
+                <Button onClick={() => setIsEditing(false)} variant="outline" disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} variant="primary">
-                  Save Changes
+                <Button type="submit" form="profile-form" variant="primary" disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => setIsEditing(true)} variant="primary">
+              <Button 
+                onClick={() => {
+                  if (!isConnected) {
+                    alert('Please connect your wallet to edit your profile');
+                    return;
+                  }
+                  setIsEditing(true);
+                }} 
+                variant="primary"
+              >
                 Edit Profile
               </Button>
             )}
@@ -195,11 +234,10 @@ export function SellerProfilePage() {
 
           {/* Profile Details */}
           <div className="md:col-span-2">
-            <GlassPanel className="p-6 mb-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Profile Information</h3>
-              
-              {isEditing ? (
-                <form onSubmit={handleSubmit}>
+            {isEditing ? (
+              <form id="profile-form" onSubmit={handleSubmit}>
+                <GlassPanel className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Profile Information</h3>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-gray-400 text-sm mb-1">Display Name</label>
@@ -245,98 +283,104 @@ export function SellerProfilePage() {
                       />
                     </div>
                   </div>
-                </form>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-400 text-sm">Display Name</p>
-                    <p className="text-white">{profile.displayName || 'Not set'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-gray-400 text-sm">Store Name</p>
-                    <p className="text-white">{profile.storeName || 'Not set'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-gray-400 text-sm">Bio</p>
-                    <p className="text-white">{profile.bio || 'No bio provided'}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-gray-400 text-sm">Description</p>
-                    <p className="text-white">{profile.description || 'No description provided'}</p>
-                  </div>
-                </div>
-              )}
-            </GlassPanel>
+                </GlassPanel>
 
-            {/* Contact Information */}
-            <GlassPanel className="p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
-              
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-400 text-sm mb-1">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    {profile.emailVerified ? (
-                      <span className="text-green-400 text-sm mt-1 inline-block">Verified</span>
-                    ) : (
-                      <span className="text-yellow-400 text-sm mt-1 inline-block">Not verified</span>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-gray-400 text-sm mb-1">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    {profile.phoneVerified ? (
-                      <span className="text-green-400 text-sm mt-1 inline-block">Verified</span>
-                    ) : (
-                      <span className="text-yellow-400 text-sm mt-1 inline-block">Not verified</span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-400 text-sm">Email</p>
-                    <p className="text-white">{profile.email || 'Not provided'}</p>
-                    {profile.email && (
-                      profile.emailVerified ? (
-                        <span className="text-green-400 text-sm">Verified</span>
+                {/* Contact Information - Now part of the main form */}
+                <GlassPanel className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      {profile.emailVerified ? (
+                        <span className="text-green-400 text-sm mt-1 inline-block">Verified</span>
                       ) : (
-                        <span className="text-yellow-400 text-sm">Not verified</span>
-                      )
-                    )}
-                  </div>
-                  
-                  <div>
-                    <p className="text-gray-400 text-sm">Phone</p>
-                    <p className="text-white">{profile.phone || 'Not provided'}</p>
-                    {profile.phone && (
-                      profile.phoneVerified ? (
-                        <span className="text-green-400 text-sm">Verified</span>
+                        <span className="text-yellow-400 text-sm mt-1 inline-block">Not verified</span>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Phone</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      {profile.phoneVerified ? (
+                        <span className="text-green-400 text-sm mt-1 inline-block">Verified</span>
                       ) : (
-                        <span className="text-yellow-400 text-sm">Not verified</span>
-                      )
-                    )}
+                        <span className="text-yellow-400 text-sm mt-1 inline-block">Not verified</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </GlassPanel>
+                </GlassPanel>
+              </form>
+            ) : (
+              <>
+                <GlassPanel className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Profile Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Display Name</p>
+                      <p className="text-white">{profile.displayName || 'Not set'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Store Name</p>
+                      <p className="text-white">{profile.storeName || 'Not set'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Bio</p>
+                      <p className="text-white">{profile.bio || 'No bio provided'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Description</p>
+                      <p className="text-white">{profile.description || 'No description provided'}</p>
+                    </div>
+                  </div>
+                </GlassPanel>
+
+                {/* Contact Information */}
+                <GlassPanel className="p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Email</p>
+                      <p className="text-white">{profile.email || 'Not provided'}</p>
+                      {profile.email && (
+                        profile.emailVerified ? (
+                          <span className="text-green-400 text-sm">Verified</span>
+                        ) : (
+                          <span className="text-yellow-400 text-sm">Not verified</span>
+                        )
+                      )}
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Phone</p>
+                      <p className="text-white">{profile.phone || 'Not provided'}</p>
+                      {profile.phone && (
+                        profile.phoneVerified ? (
+                          <span className="text-green-400 text-sm">Verified</span>
+                        ) : (
+                          <span className="text-yellow-400 text-sm">Not verified</span>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </GlassPanel>
+              </>
+            )}
           </div>
         </div>
 
