@@ -312,89 +312,119 @@ app.get('/analytics/dashboard', (req, res) => {
   });
 });
 
+// In-memory storage for seller profiles
+const sellerProfiles = new Map();
+
+// Helper function to get default profile
+function getDefaultSellerProfile(walletAddress) {
+  return {
+    id: `seller_${walletAddress.slice(-8)}`,
+    walletAddress,
+    tier: 'basic',
+    displayName: 'Sample Seller',
+    storeName: 'Sample Store',
+    bio: 'Welcome to my store!',
+    description: 'We sell quality products with fast shipping.',
+    profilePicture: '',
+    logo: '',
+    email: '',
+    emailVerified: false,
+    phone: '',
+    phoneVerified: false,
+    kycStatus: 'none',
+    payoutPreferences: {
+      defaultCrypto: 'USDC',
+      cryptoAddresses: { USDC: walletAddress, ETH: walletAddress },
+      fiatEnabled: false
+    },
+    stats: {
+      totalSales: 0,
+      activeListings: 0,
+      completedOrders: 0,
+      averageRating: 0,
+      totalReviews: 0,
+      reputationScore: 100,
+      joinDate: new Date().toISOString(),
+      lastActive: new Date().toISOString()
+    },
+    badges: [],
+    onboardingProgress: {
+      profileSetup: true,
+      verification: false,
+      payoutSetup: false,
+      firstListing: false,
+      completed: false,
+      currentStep: 1,
+      totalSteps: 5
+    },
+    settings: {
+      notifications: {
+        orders: true,
+        disputes: true,
+        daoActivity: true,
+        tips: true,
+        marketing: false
+      },
+      privacy: {
+        showEmail: false,
+        showPhone: false,
+        showStats: true
+      },
+      escrow: {
+        defaultEnabled: true,
+        minimumAmount: 10
+      }
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
 // Seller Profile Endpoints
 app.get('/marketplace/seller/profile/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   
-  // Mock seller profile
+  // Check if we have stored profile data, otherwise return default
+  let profileData = sellerProfiles.get(walletAddress);
+  if (!profileData) {
+    profileData = getDefaultSellerProfile(walletAddress);
+  }
+  
   res.json({
     success: true,
-    data: {
-      id: `seller_${walletAddress.slice(-8)}`,
-      walletAddress,
-      tier: 'basic',
-      displayName: 'Sample Seller',
-      storeName: 'Sample Store',
-      bio: 'Welcome to my store!',
-      description: 'We sell quality products with fast shipping.',
-      profilePicture: '',
-      logo: '',
-      email: '',
-      emailVerified: false,
-      phone: '',
-      phoneVerified: false,
-      kycStatus: 'none',
-      payoutPreferences: {
-        defaultCrypto: 'USDC',
-        cryptoAddresses: { USDC: walletAddress, ETH: walletAddress },
-        fiatEnabled: false
-      },
-      stats: {
-        totalSales: 0,
-        activeListings: 0,
-        completedOrders: 0,
-        averageRating: 0,
-        totalReviews: 0,
-        reputationScore: 100,
-        joinDate: new Date().toISOString(),
-        lastActive: new Date().toISOString()
-      },
-      badges: [],
-      onboardingProgress: {
-        profileSetup: true,
-        verification: false,
-        payoutSetup: false,
-        firstListing: false,
-        completed: false,
-        currentStep: 1,
-        totalSteps: 5
-      },
-      settings: {
-        notifications: {
-          orders: true,
-          disputes: true,
-          daoActivity: true,
-          tips: true,
-          marketing: false
-        },
-        privacy: {
-          showEmail: false,
-          showPhone: false,
-          showStats: true
-        },
-        escrow: {
-          defaultEnabled: true,
-          minimumAmount: 10
-        }
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    data: profileData
   });
 });
 
 app.post('/marketplace/seller/profile', (req, res) => {
   const profileData = req.body;
+  const walletAddress = profileData.walletAddress;
+  
+  if (!walletAddress) {
+    return res.status(400).json({
+      success: false,
+      error: 'Wallet address is required'
+    });
+  }
+  
+  // Create new profile
+  const newProfile = {
+    id: `seller_${Date.now()}`,
+    ...getDefaultSellerProfile(walletAddress),
+    ...profileData,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Store the new profile
+  sellerProfiles.set(walletAddress, newProfile);
+  
+  console.log(`New profile created for ${walletAddress}:`, newProfile);
   
   res.json({
     success: true,
     message: 'Seller profile created successfully',
-    data: {
-      id: `seller_${Date.now()}`,
-      ...profileData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    data: newProfile
   });
 });
 
@@ -402,15 +432,29 @@ app.put('/marketplace/seller/profile/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   const updates = req.body;
   
+  // Get existing profile or create default
+  let existingProfile = sellerProfiles.get(walletAddress);
+  if (!existingProfile) {
+    existingProfile = getDefaultSellerProfile(walletAddress);
+  }
+  
+  // Merge updates with existing profile
+  const updatedProfile = {
+    ...existingProfile,
+    ...updates,
+    walletAddress, // Ensure wallet address is preserved
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Store the updated profile
+  sellerProfiles.set(walletAddress, updatedProfile);
+  
+  console.log(`Profile updated for ${walletAddress}:`, updatedProfile);
+  
   res.json({
     success: true,
     message: 'Seller profile updated successfully',
-    data: {
-      id: `seller_${walletAddress.slice(-8)}`,
-      walletAddress,
-      ...updates,
-      updatedAt: new Date().toISOString()
-    }
+    data: updatedProfile
   });
 });
 
