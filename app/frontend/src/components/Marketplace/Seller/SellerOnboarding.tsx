@@ -114,6 +114,13 @@ export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
               Go to Seller Dashboard
             </Button>
             <Button
+              onClick={() => router.push('/marketplace/seller/profile')}
+              variant="outline"
+              className="w-full"
+            >
+              View Your Profile
+            </Button>
+            <Button
               onClick={() => router.push('/marketplace/seller/listings/create')}
               variant="secondary"
               className="w-full"

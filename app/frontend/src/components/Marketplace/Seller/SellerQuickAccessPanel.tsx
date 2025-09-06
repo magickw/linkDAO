@@ -85,13 +85,22 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
             {profile ? 'Go to Dashboard' : 'Start Selling'}
           </Button>
           {profile && (
-            <Button
-              onClick={() => router.push('/marketplace/seller/listings/create')}
-              variant="outline"
-              size="small"
-            >
-              Create Listing
-            </Button>
+            <>
+              <Button
+                onClick={() => router.push('/marketplace/seller/profile')}
+                variant="outline"
+                size="small"
+              >
+                Profile
+              </Button>
+              <Button
+                onClick={() => router.push('/marketplace/seller/listings/create')}
+                variant="outline"
+                size="small"
+              >
+                Create Listing
+              </Button>
+            </>
           )}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { formatEther, parseEther } from '@ethersproject/units';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
 
 type NFTMetadata = {
   name: string;
