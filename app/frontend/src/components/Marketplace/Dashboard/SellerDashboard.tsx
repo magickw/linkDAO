@@ -10,25 +10,26 @@ interface SellerDashboardProps {
 export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
   const router = useRouter();
   const { profile, loading: profileLoading } = useSeller();
-  // If mockWalletAddress is provided, use it; otherwise use the actual wallet address
-  const walletAddress = mockWalletAddress || (useSellerDashboard() as any).address;
+  // Only use mockWalletAddress if explicitly provided and in development mode
+  const shouldUseMock = mockWalletAddress && process.env.NODE_ENV === 'development';
+  const walletAddress = shouldUseMock ? mockWalletAddress : (useSellerDashboard() as any).address;
   const { stats, notifications, unreadNotifications, loading, markNotificationRead } = useSellerDashboard();
   const { getTierById, getNextTier } = useSellerTiers();
   const [activeTab, setActiveTab] = useState('overview');
 
-  // If we're using a mock wallet address, we need to fetch data for that address
+  // Mock data state - only used in development with explicit mock parameter
   const [mockStats, setMockStats] = useState<any>(null);
   const [mockProfile, setMockProfile] = useState<any>(null);
   const [mockLoading, setMockLoading] = useState(false);
 
-  // Use mock data if mockWalletAddress is provided
-  const effectiveProfile = mockWalletAddress ? mockProfile : profile;
-  const effectiveStats = mockWalletAddress ? mockStats : stats;
-  const effectiveLoading = mockWalletAddress ? mockLoading : (profileLoading || loading);
+  // Use mock data only if shouldUseMock is true
+  const effectiveProfile = shouldUseMock ? mockProfile : profile;
+  const effectiveStats = shouldUseMock ? mockStats : stats;
+  const effectiveLoading = shouldUseMock ? mockLoading : (profileLoading || loading);
 
-  // Fetch mock data if needed
+  // Fetch mock data only if shouldUseMock is true
   React.useEffect(() => {
-    if (mockWalletAddress) {
+    if (shouldUseMock) {
       setMockLoading(true);
       // In a real implementation, you would fetch data for the mock wallet address
       // For now, we'll use sample data
@@ -86,7 +87,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
         setMockLoading(false);
       }, 1000);
     }
-  }, [mockWalletAddress]);
+  }, [shouldUseMock, mockWalletAddress]);
 
   if (effectiveLoading) {
     return (
@@ -104,7 +105,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  if (!effectiveProfile && !mockWalletAddress) {
+  if (!effectiveProfile && !shouldUseMock) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
