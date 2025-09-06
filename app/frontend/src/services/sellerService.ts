@@ -1,7 +1,7 @@
 import { SellerProfile, SellerDashboardStats, SellerNotification, SellerOrder, SellerListing, SellerAnalytics, OnboardingStep, SellerTier } from '../types/seller';
 
 class SellerService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
   // Seller Tiers Configuration
   getSellerTiers(): SellerTier[] {

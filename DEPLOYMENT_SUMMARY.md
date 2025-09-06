@@ -18,7 +18,7 @@ The LinkDAO platform consists of:
 - **Output Directory**: `.next`
 - **Environment Variables Required**:
   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-  - `NEXT_PUBLIC_API_URL`
+  - `NEXT_PUBLIC_BACKEND_URL`
   - `NEXT_PUBLIC_BASE_RPC_URL`
   - `NEXT_PUBLIC_BASE_GOERLI_RPC_URL`
   - `NEXT_PUBLIC_ADMIN_ADDRESS`
@@ -69,7 +69,7 @@ The LinkDAO platform consists of:
 ### Backend → Frontend
 After deploying the backend, update the frontend environment variable:
 ```
-NEXT_PUBLIC_API_URL=https://your-backend-url.com/api
+NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
 ```
 
 ### Contract Addresses
@@ -154,7 +154,7 @@ To update your deployment:
    - Check network configuration
 
 3. **API Connection Issues**
-   - Verify `NEXT_PUBLIC_API_URL` points to correct backend
+   - Verify `NEXT_PUBLIC_BACKEND_URL` points to correct backend
    - Check backend logs for errors
 
 4. **Contract Interaction Issues**

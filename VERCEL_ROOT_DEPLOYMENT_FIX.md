@@ -28,7 +28,7 @@ I've restructured the project to work with Vercel's current settings by moving t
   "outputDirectory": ".next",
   "installCommand": "npm install --legacy-peer-deps",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api",
+    "NEXT_PUBLIC_BACKEND_URL": "https://linkdao-backend.onrender.com",
     "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
     "NEXT_PUBLIC_BASE_GOERLI_RPC_URL": "https://goerli.base.org"
   }

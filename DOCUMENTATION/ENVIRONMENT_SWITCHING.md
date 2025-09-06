@@ -19,7 +19,7 @@ NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 NEXT_PUBLIC_ADMIN_ADDRESS=your_admin_address
 
 # Backend API URL - Local development
-NEXT_PUBLIC_API_URL=http://localhost:3002/api
+NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 ```
 
@@ -42,7 +42,7 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 NEXT_PUBLIC_ADMIN_ADDRESS=your_admin_address
-NEXT_PUBLIC_API_URL=https://your-backend-url.com/api
+NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
 NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
 ```
 
@@ -58,7 +58,7 @@ BACKEND_URL=https://your-backend-url.com
 
 1. Update frontend [.env.local](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/.env.local):
    ```
-   NEXT_PUBLIC_API_URL=http://localhost:3002/api
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
    NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
    ```
 
@@ -82,7 +82,7 @@ BACKEND_URL=https://your-backend-url.com
 
 1. Update frontend environment variables in Vercel dashboard:
    ```
-   NEXT_PUBLIC_API_URL=https://your-backend-url.com/api
+   NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
    NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
    ```
 
@@ -107,7 +107,7 @@ If WebSocket connections fail:
 
 ### API Connection Issues
 If API calls fail:
-1. Verify that the `NEXT_PUBLIC_API_URL` points to the correct backend API endpoint
+1. Verify that the `NEXT_PUBLIC_BACKEND_URL` points to the correct backend API endpoint
 2. Check that the backend server is running
 3. Ensure that CORS is properly configured
 

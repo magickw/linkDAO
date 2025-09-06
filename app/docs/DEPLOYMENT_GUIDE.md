@@ -28,7 +28,7 @@ NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 NEXT_PUBLIC_ADMIN_ADDRESS=your_admin_address
 
 # Backend API URL - Update this to your actual backend URL when deploying
-NEXT_PUBLIC_API_URL=https://your-backend-url.com/api
+NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
 NEXT_PUBLIC_BACKEND_URL=https://your-backend-url.com
 ```
 
@@ -182,7 +182,7 @@ If you encounter build issues with Vercel, make sure:
 ### API Connection Issues
 
 If the frontend cannot connect to the backend:
-1. Verify the `NEXT_PUBLIC_API_URL` is correctly set
+1. Verify the `NEXT_PUBLIC_BACKEND_URL` is correctly set
 2. Ensure the backend is running and accessible
 3. Check CORS configuration in the backend
 

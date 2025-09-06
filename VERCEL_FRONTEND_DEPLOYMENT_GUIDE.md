@@ -23,7 +23,7 @@ Install Command: npm install --legacy-peer-deps
 Ensure these are set in Vercel dashboard under **Settings** → **Environment Variables**:
 
 ```
-NEXT_PUBLIC_API_URL=https://linkdao-backend.onrender.com/api
+NEXT_PUBLIC_BACKEND_URL=https://linkdao-backend.onrender.com
 NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 ```

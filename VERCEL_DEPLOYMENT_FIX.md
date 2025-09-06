@@ -23,7 +23,7 @@ Created a proper `vercel.json` at the root level that:
   "outputDirectory": "app/frontend/.next",
   "installCommand": "cd app/frontend && npm install --legacy-peer-deps",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://linkdao-backend.onrender.com/api",
+    "NEXT_PUBLIC_BACKEND_URL": "https://linkdao-backend.onrender.com",
     "NEXT_PUBLIC_BASE_RPC_URL": "https://mainnet.base.org",
     "NEXT_PUBLIC_BASE_GOERLI_RPC_URL": "https://goerli.base.org"
   }
@@ -68,7 +68,7 @@ If using GitHub integration:
 Ensure these environment variables are set in Vercel dashboard:
 
 ```
-NEXT_PUBLIC_API_URL=https://linkdao-backend.onrender.com/api
+NEXT_PUBLIC_BACKEND_URL=https://linkdao-backend.onrender.com
 NEXT_PUBLIC_BASE_RPC_URL=https://mainnet.base.org
 NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 ```
