@@ -1,33 +1,29 @@
 import React, { useState } from 'react';
 import { useAccount, useBalance } from 'wagmi';
-import { 
-  MarketplaceListing,
-  MarketplaceService,
-  PlaceBidInput
-} from '@/services/marketplaceService';
+import { MarketplaceListing, MarketplaceService } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 
-interface BidModalProps {
+interface MakeOfferModalProps {
   listing: MarketplaceListing;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const BidModal: React.FC<BidModalProps> = ({ 
-  listing, 
-  isOpen, 
-  onClose, 
+const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
+  listing,
+  isOpen,
+  onClose,
   onSuccess
 }) => {
   const { address } = useAccount();
   const { data: balance } = useBalance({ address });
   const { addToast } = useToast();
-  const [bidAmount, setBidAmount] = useState('');
+  const [offerAmount, setOfferAmount] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const marketplaceService = new MarketplaceService();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,47 +35,36 @@ const BidModal: React.FC<BidModalProps> = ({
     }
     
     if (address.toLowerCase() === listing.sellerWalletAddress.toLowerCase()) {
-      addToast('You cannot bid on your own listing', 'error');
+      addToast('You cannot make an offer on your own listing', 'error');
       return;
     }
     
-    if (!bidAmount || parseFloat(bidAmount) <= 0) {
-      addToast('Please enter a valid bid amount', 'error');
+    if (!offerAmount || parseFloat(offerAmount) <= 0) {
+      addToast('Please enter a valid offer amount', 'error');
       return;
     }
     
     // Check balance
     const userBalance = balance ? parseFloat(balance.formatted) : 0;
-    if (userBalance < parseFloat(bidAmount)) {
-      addToast(`Insufficient balance. You need ${bidAmount} ETH but have ${userBalance.toFixed(4)} ETH`, 'error');
+    if (userBalance < parseFloat(offerAmount)) {
+      addToast(`Insufficient balance. You need ${offerAmount} ETH but have ${userBalance.toFixed(4)} ETH`, 'error');
       return;
-    }
-    
-    // For auctions, bid must be higher than current highest bid
-    if (listing.listingType === 'AUCTION') {
-      const currentHighest = listing.highestBid ? parseFloat(listing.highestBid) : parseFloat(listing.price);
-      if (parseFloat(bidAmount) <= currentHighest) {
-        addToast(`Bid must be higher than current highest bid of ${currentHighest} ETH`, 'error');
-        return;
-      }
     }
     
     try {
       setLoading(true);
       
-      const bidInput: PlaceBidInput = {
-        bidderWalletAddress: address,
-        amount: bidAmount
-      };
+      await marketplaceService.makeOffer(listing.id, {
+        buyerWalletAddress: address,
+        amount: offerAmount
+      });
       
-      await marketplaceService.placeBid(listing.id, bidInput);
-      
-      addToast('Bid placed successfully!', 'success');
+      addToast('Offer submitted successfully!', 'success');
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Bid error:', err);
-      addToast(err.message || 'Failed to place bid', 'error');
+      console.error('Offer error:', err);
+      addToast(err.message || 'Failed to submit offer', 'error');
     } finally {
       setLoading(false);
     }
@@ -92,9 +77,7 @@ const BidModal: React.FC<BidModalProps> = ({
       <GlassPanel variant="primary" className="w-full max-w-md">
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold text-white">
-              Place Bid
-            </h3>
+            <h3 className="text-xl font-semibold text-white">Make Offer</h3>
             <button
               onClick={onClose}
               className="text-white/60 hover:text-white transition-colors"
@@ -104,7 +87,7 @@ const BidModal: React.FC<BidModalProps> = ({
               </svg>
             </button>
           </div>
-          
+
           <div className="mb-6">
             <h4 className="text-lg font-medium text-white mb-2">
               {listing.metadataURI || 'Unnamed Item'}
@@ -114,33 +97,27 @@ const BidModal: React.FC<BidModalProps> = ({
             </p>
             <div className="bg-white/10 rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="text-white/80">Starting Price:</span>
-                <span className="text-white">{listing.price} ETH</span>
+                <span className="text-white/80">Listed Price:</span>
+                <span className="text-white font-semibold">{listing.price} ETH</span>
               </div>
-              {listing.highestBid && (
-                <div className="flex justify-between items-center mt-2">
-                  <span className="text-white/80">Current Highest:</span>
-                  <span className="text-white font-semibold">{listing.highestBid} ETH</span>
-                </div>
-              )}
               <div className="flex justify-between items-center mt-2">
                 <span className="text-white/80">Your Balance:</span>
                 <span className="text-white">{balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} ETH</span>
               </div>
             </div>
           </div>
-          
+
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <label htmlFor="bidAmount" className="block text-sm font-medium text-white/90 mb-2">
-                Bid Amount (ETH)
+              <label htmlFor="offerAmount" className="block text-sm font-medium text-white/90 mb-2">
+                Offer Amount (ETH)
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  id="bidAmount"
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
+                  id="offerAmount"
+                  value={offerAmount}
+                  onChange={(e) => setOfferAmount(e.target.value)}
                   step="0.0001"
                   min="0"
                   className="w-full px-3 py-2 pr-12 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
@@ -150,8 +127,11 @@ const BidModal: React.FC<BidModalProps> = ({
                   <span className="text-white/60 text-sm">ETH</span>
                 </div>
               </div>
+              <p className="mt-1 text-sm text-white/70">
+                Make a competitive offer below the listed price
+              </p>
             </div>
-            
+
             <div className="flex space-x-3">
               <Button
                 type="button"
@@ -167,7 +147,7 @@ const BidModal: React.FC<BidModalProps> = ({
                 loading={loading}
                 className="flex-1"
               >
-                {loading ? 'Processing...' : 'Place Bid'}
+                {loading ? 'Submitting...' : 'Submit Offer'}
               </Button>
             </div>
           </form>
@@ -177,4 +157,4 @@ const BidModal: React.FC<BidModalProps> = ({
   );
 };
 
-export default BidModal;
+export default MakeOfferModal;

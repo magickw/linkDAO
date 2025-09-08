@@ -62,7 +62,7 @@ const CreateListingPage: React.FC = () => {
       }
       
       await marketplaceService.createListing({
-        sellerAddress: address,
+        sellerWalletAddress: address,
         tokenAddress: formData.tokenAddress || '0x0000000000000000000000000000000000000000', // ETH
         price: formData.price,
         quantity: formData.quantity,

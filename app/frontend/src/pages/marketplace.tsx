@@ -16,6 +16,10 @@ import {
   FeaturedProductCarousel 
 } from '@/components/Marketplace/Homepage';
 import { SellerQuickAccessPanel } from '@/components/Marketplace/Seller';
+import BidModal from '@/components/Marketplace/BidModal';
+import PurchaseModal from '@/components/Marketplace/PurchaseModal';
+import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
+import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
@@ -34,6 +38,11 @@ const MarketplacePage: React.FC = () => {
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   
   const marketplaceService = new MarketplaceService();
 
@@ -57,7 +66,7 @@ const MarketplacePage: React.FC = () => {
       setListings([
         {
           id: '1',
-          sellerAddress: '0x1234567890123456789012345678901234567890',
+          sellerWalletAddress: '0x1234567890123456789012345678901234567890',
           tokenAddress: '0x0000000000000000000000000000000000000000',
           price: '0.5',
           quantity: 1,
@@ -72,7 +81,7 @@ const MarketplacePage: React.FC = () => {
         },
         {
           id: '2',
-          sellerAddress: '0x2345678901234567890123456789012345678901',
+          sellerWalletAddress: '0x2345678901234567890123456789012345678901',
           tokenAddress: '0x0000000000000000000000000000000000000000',
           price: '1.2',
           quantity: 1,
@@ -82,7 +91,7 @@ const MarketplacePage: React.FC = () => {
           startTime: new Date().toISOString(),
           endTime: new Date(Date.now() + 86400000).toISOString(), // 24 hours from now
           highestBid: '1.0',
-          highestBidder: '0x3456789012345678901234567890123456789012',
+          highestBidderWalletAddress: '0x3456789012345678901234567890123456789012',
           metadataURI: 'DeFi Art Collection',
           isEscrowed: false,
           createdAt: new Date().toISOString(),
@@ -102,7 +111,7 @@ const MarketplacePage: React.FC = () => {
       console.error('Error fetching reputation:', error);
       // Use mock data as fallback
       setReputation({
-        address: userAddress,
+        walletAddress: userAddress,
         score: 750,
         daoApproved: true
       });
@@ -130,7 +139,7 @@ const MarketplacePage: React.FC = () => {
   // Filter listings based on search term and category
   const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
     const matchesSearch = listing.metadataURI?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.sellerAddress?.toLowerCase().includes(searchTerm.toLowerCase());
+      listing.sellerWalletAddress?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || listing.itemType === selectedCategory.toUpperCase();
     
@@ -344,7 +353,7 @@ const MarketplacePage: React.FC = () => {
                                 {listing.metadataURI || 'Unnamed Item'}
                               </h3>
                               <p className="text-sm text-white/70">
-                                Seller: {formatAddress(listing.sellerAddress)}
+                                Seller: {formatAddress(listing.sellerWalletAddress)}
                               </p>
                             </div>
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
@@ -372,17 +381,64 @@ const MarketplacePage: React.FC = () => {
                             )}
                           </div>
                           
-                          <div className="mt-6">
+                          <div className="mt-6 space-y-2">
                             <Button
-                              variant="primary"
-                              className="w-full"
+                              variant="outline"
+                              className="w-full border-white/30 text-white/80 hover:bg-white/10"
                               onClick={() => {
-                                // TODO: Implement buy/bid functionality
-                                addToast('Feature coming soon!', 'info');
+                                setSelectedListing(listing);
+                                setShowDetailModal(true);
                               }}
                             >
-                              {listing.listingType === 'AUCTION' ? 'Place Bid' : 'Buy Now'}
+                              View Details
                             </Button>
+                            {listing.listingType === 'AUCTION' ? (
+                              <Button
+                                variant="primary"
+                                className="w-full"
+                                onClick={() => {
+                                  if (!isConnected) {
+                                    addToast('Please connect your wallet first', 'warning');
+                                    return;
+                                  }
+                                  setSelectedListing(listing);
+                                  setShowBidModal(true);
+                                }}
+                              >
+                                Place Bid
+                              </Button>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  variant="primary"
+                                  className="w-full"
+                                  onClick={() => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
+                                    }
+                                    setSelectedListing(listing);
+                                    setShowPurchaseModal(true);
+                                  }}
+                                >
+                                  Buy Now
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                  onClick={() => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
+                                    }
+                                    setSelectedListing(listing);
+                                    setShowOfferModal(true);
+                                  }}
+                                >
+                                  Offer
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </GlassPanel>
@@ -455,6 +511,56 @@ const MarketplacePage: React.FC = () => {
             </div>
           </div>
         </footer>
+
+        {/* Modals */}
+        {selectedListing && (
+          <>
+            <BidModal
+              listing={selectedListing}
+              isOpen={showBidModal}
+              onClose={() => {
+                setShowBidModal(false);
+                setSelectedListing(null);
+              }}
+              onSuccess={() => {
+                fetchListings();
+              }}
+            />
+            <PurchaseModal
+              listing={selectedListing}
+              isOpen={showPurchaseModal}
+              onClose={() => {
+                setShowPurchaseModal(false);
+                setSelectedListing(null);
+              }}
+              onSuccess={() => {
+                fetchListings();
+              }}
+            />
+            <MakeOfferModal
+              listing={selectedListing}
+              isOpen={showOfferModal}
+              onClose={() => {
+                setShowOfferModal(false);
+                setSelectedListing(null);
+              }}
+              onSuccess={() => {
+                fetchListings();
+              }}
+            />
+            <ProductDetailModal
+              listing={selectedListing}
+              isOpen={showDetailModal}
+              onClose={() => {
+                setShowDetailModal(false);
+                setSelectedListing(null);
+              }}
+              onRefresh={() => {
+                fetchListings();
+              }}
+            />
+          </>
+        )}
       </div>
     </Layout>
   );
@@ -488,7 +594,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
       setListings([
         {
           id: '3',
-          sellerAddress: address!,
+          sellerWalletAddress: address!,
           tokenAddress: '0x0000000000000000000000000000000000000000',
           price: '0.8',
           quantity: 1,
@@ -537,7 +643,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                     }
                   }}
                 >
-                  Create Listing
+                  Create Your First Listing
                 </Button>
               </div>
             </GlassPanel>
@@ -594,13 +700,15 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                         variant="outline"
                         className="flex-1 border-red-400/30 text-red-300 hover:bg-red-500/20"
                         onClick={async () => {
-                          try {
-                            await marketplaceService.cancelListing(listing.id);
-                            addToast('Listing cancelled successfully', 'success');
-                            fetchMyListings();
-                          } catch (error) {
-                            addToast('Failed to cancel listing', 'error');
-                            console.error('Error cancelling listing:', error);
+                          if (window.confirm('Are you sure you want to cancel this listing?')) {
+                            try {
+                              await marketplaceService.cancelListing(listing.id);
+                              addToast('Listing cancelled successfully', 'success');
+                              fetchMyListings();
+                            } catch (error) {
+                              addToast('Failed to cancel listing', 'error');
+                              console.error('Error cancelling listing:', error);
+                            }
                           }
                         }}
                       >
@@ -673,7 +781,7 @@ const CreateListingTab: React.FC<{
       }
       
       await marketplaceService.createListing({
-        sellerAddress: address,
+        sellerWalletAddress: address,
         tokenAddress: formData.tokenAddress || '0x0000000000000000000000000000000000000000', // ETH
         price: formData.price,
         quantity: formData.quantity,

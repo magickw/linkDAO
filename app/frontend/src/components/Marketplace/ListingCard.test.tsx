@@ -14,7 +14,7 @@ jest.mock('@/services/marketplaceService', () => ({
 describe('ListingCard', () => {
   const mockListing: MarketplaceListing = {
     id: '1',
-    sellerAddress: '0x1234567890123456789012345678901234567890',
+    sellerWalletAddress: '0x1234567890123456789012345678901234567890',
     tokenAddress: '0x0000000000000000000000000000000000000000',
     price: '1.5',
     quantity: 1,
