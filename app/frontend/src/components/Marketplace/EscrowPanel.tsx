@@ -20,8 +20,8 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
   
   const marketplaceService = new MarketplaceService();
   
-  const isBuyer = escrow.buyerAddress.toLowerCase() === userAddress.toLowerCase();
-  const isSeller = escrow.sellerAddress.toLowerCase() === userAddress.toLowerCase();
+  const isBuyer = escrow.buyerWalletAddress.toLowerCase() === userAddress.toLowerCase();
+  const isSeller = escrow.sellerWalletAddress.toLowerCase() === userAddress.toLowerCase();
   const isParticipant = isBuyer || isSeller;
   
   const handleApprove = async () => {
@@ -91,11 +91,11 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h4 className="text-sm font-medium text-gray-500">Buyer</h4>
-          <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.buyerAddress)}</p>
+          <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.buyerWalletAddress)}</p>
         </div>
         <div>
           <h4 className="text-sm font-medium text-gray-500">Seller</h4>
-          <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.sellerAddress)}</p>
+          <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.sellerWalletAddress)}</p>
         </div>
         <div>
           <h4 className="text-sm font-medium text-gray-500">Amount</h4>
@@ -111,10 +111,10 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
             <p className="mt-1 text-sm text-gray-900">{formatDate(escrow.resolvedAt)}</p>
           </div>
         )}
-        {escrow.resolverAddress && (
+        {escrow.resolverWalletAddress && (
           <div>
             <h4 className="text-sm font-medium text-gray-500">Resolver</h4>
-            <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.resolverAddress)}</p>
+            <p className="mt-1 text-sm text-gray-900">{formatAddress(escrow.resolverWalletAddress)}</p>
           </div>
         )}
       </div>

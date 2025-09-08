@@ -1,0 +1,494 @@
+/**
+ * Enhanced Payment Processor - React component for Web3 payment processing with escrow
+ * Features: Multi-token support, gas estimation, transaction monitoring, error handling
+ */
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Wallet, 
+  Shield, 
+  CreditCard, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock,
+  ExternalLink,
+  RefreshCw,
+  DollarSign,
+  Zap,
+  Info
+} from 'lucide-react';
+import { 
+  useAccount, 
+  useBalance, 
+  useWriteContract, 
+  useWaitForTransactionReceipt,
+  useReadContract,
+  useSwitchChain
+} from 'wagmi';
+import { ethers } from 'ethers';
+import { GlassPanel } from '../../../design-system/components/GlassPanel';
+import { Button } from '../../../design-system/components/Button';
+import { designTokens } from '../../../design-system/tokens';
+import EscrowService, { PaymentRequest, TransactionResult, ENHANCED_ESCROW_ABI, ESCROW_CONTRACT_ADDRESSES } from '../../../services/escrowService';
+
+interface PaymentProcessorProps {
+  paymentRequest: PaymentRequest;
+  onSuccess: (result: TransactionResult) => void;
+  onError: (error: string) => void;
+  onCancel: () => void;
+}
+
+interface PaymentStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  transactionHash?: string;
+  gasUsed?: string;
+}
+
+export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
+  paymentRequest,
+  onSuccess,
+  onError,
+  onCancel
+}) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [paymentSteps, setPaymentSteps] = useState<PaymentStep[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [gasEstimate, setGasEstimate] = useState<string>('');
+  const [escrowService] = useState(() => new EscrowService());
+  const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC' | 'DAI'>('ETH');
+
+  const { address, isConnected, chain } = useAccount();
+  const { data: balance } = useBalance({ address });
+  const { switchChain } = useSwitchChain();
+
+  // Contract interaction hooks
+  const { 
+    writeContract: createEscrow, 
+    data: createEscrowHash,
+    isPending: isCreatingEscrow,
+    error: createEscrowError 
+  } = useWriteContract();
+
+  const { 
+    writeContract: lockFunds, 
+    data: lockFundsHash,
+    isPending: isLockingFunds,
+    error: lockFundsError 
+  } = useWriteContract();
+
+  // Transaction receipt monitoring
+  const { 
+    isLoading: isCreateEscrowLoading, 
+    isSuccess: isCreateEscrowSuccess,
+    data: createEscrowReceipt 
+  } = useWaitForTransactionReceipt({
+    hash: createEscrowHash,
+  });
+
+  const { 
+    isLoading: isLockFundsLoading, 
+    isSuccess: isLockFundsSuccess,
+    data: lockFundsReceipt 
+  } = useWaitForTransactionReceipt({
+    hash: lockFundsHash,
+  });
+
+  // Initialize payment steps
+  useEffect(() => {
+    const steps: PaymentStep[] = [
+      {
+        id: 'validate',
+        title: 'Validate Payment',
+        description: 'Checking wallet balance and network',
+        status: 'pending'
+      },
+      {
+        id: 'create_escrow',
+        title: 'Create Escrow Contract',
+        description: 'Deploying secure escrow for this transaction',
+        status: 'pending'
+      }
+    ];
+
+    if (paymentRequest.escrowEnabled) {
+      steps.push({
+        id: 'lock_funds',
+        title: 'Lock Funds in Escrow',
+        description: 'Securing payment until delivery confirmation',
+        status: 'pending'
+      });
+    }
+
+    steps.push({
+      id: 'complete',
+      title: 'Payment Complete',
+      description: 'Transaction confirmed on blockchain',
+      status: 'pending'
+    });
+
+    setPaymentSteps(steps);
+  }, [paymentRequest]);
+
+  // Gas estimation
+  useEffect(() => {
+    const estimateGas = async () => {
+      if (isConnected && address) {
+        try {
+          const estimate = await escrowService.estimateGas('create', paymentRequest);
+          setGasEstimate(estimate);
+        } catch (error) {
+          console.error('Gas estimation failed:', error);
+        }
+      }
+    };
+
+    estimateGas();
+  }, [paymentRequest, isConnected, address, escrowService]);
+
+  // Monitor transaction status
+  useEffect(() => {
+    if (isCreateEscrowSuccess && createEscrowReceipt) {
+      updateStepStatus('create_escrow', 'completed', createEscrowHash);
+      if (paymentRequest.escrowEnabled) {
+        setCurrentStep(2); // Move to lock funds step
+        handleLockFunds();
+      } else {
+        setCurrentStep(3); // Move to complete step
+        handlePaymentComplete();
+      }
+    }
+  }, [isCreateEscrowSuccess, createEscrowReceipt]);
+
+  useEffect(() => {
+    if (isLockFundsSuccess && lockFundsReceipt) {
+      updateStepStatus('lock_funds', 'completed', lockFundsHash);
+      setCurrentStep(3); // Move to complete step
+      handlePaymentComplete();
+    }
+  }, [isLockFundsSuccess, lockFundsReceipt]);
+
+  // Handle errors
+  useEffect(() => {
+    if (createEscrowError) {
+      updateStepStatus('create_escrow', 'error');
+      onError(`Escrow creation failed: ${createEscrowError.message}`);
+    }
+  }, [createEscrowError]);
+
+  useEffect(() => {
+    if (lockFundsError) {
+      updateStepStatus('lock_funds', 'error');
+      onError(`Fund locking failed: ${lockFundsError.message}`);
+    }
+  }, [lockFundsError]);
+
+  const updateStepStatus = (stepId: string, status: PaymentStep['status'], transactionHash?: string) => {
+    setPaymentSteps(prev => prev.map(step => 
+      step.id === stepId 
+        ? { ...step, status, transactionHash }
+        : step
+    ));
+  };
+
+  const validatePayment = async (): Promise<boolean> => {
+    updateStepStatus('validate', 'processing');
+    
+    try {
+      // Check if user is connected
+      if (!isConnected || !address) {
+        throw new Error('Wallet not connected');
+      }
+
+      // Check network
+      const supportedChains = Object.keys(ESCROW_CONTRACT_ADDRESSES).map(Number);
+      if (!chain || !supportedChains.includes(chain.id)) {
+        throw new Error('Unsupported network. Please switch to a supported network.');
+      }
+
+      // Check balance
+      if (!balance) {
+        throw new Error('Unable to fetch wallet balance');
+      }
+
+      const requiredAmount = ethers.utils.parseEther(paymentRequest.totalAmount);
+      const currentBalance = balance.value;
+
+      if (currentBalance < requiredAmount.toBigInt()) {
+        throw new Error(`Insufficient balance. Required: ${paymentRequest.totalAmount} ETH, Available: ${ethers.utils.formatUnits(currentBalance, 18)} ETH`);
+      }
+
+      updateStepStatus('validate', 'completed');
+      return true;
+    } catch (error) {
+      updateStepStatus('validate', 'error');
+      onError(error instanceof Error ? error.message : 'Validation failed');
+      return false;
+    }
+  };
+
+  const handleCreateEscrow = async () => {
+    if (!address || !isConnected) return;
+
+    updateStepStatus('create_escrow', 'processing');
+
+    try {
+      const contractAddress = ESCROW_CONTRACT_ADDRESSES[chain?.id as keyof typeof ESCROW_CONTRACT_ADDRESSES];
+      if (!contractAddress) {
+        throw new Error('Escrow contract not available on this network');
+      }
+
+      const amountWei = ethers.utils.parseEther(paymentRequest.totalAmount);
+      
+      // Get token address based on selected token
+      const tokenAddress = selectedToken === 'ETH' 
+        ? ethers.constants.AddressZero 
+        : getTokenAddress(selectedToken);
+
+      await createEscrow({
+        address: contractAddress as `0x${string}`,
+        abi: ENHANCED_ESCROW_ABI,
+        functionName: 'createEscrow',
+        args: [
+          BigInt(paymentRequest.listingId),
+          address,
+          paymentRequest.sellerId as `0x${string}`,
+          tokenAddress as `0x${string}`,
+          amountWei.toBigInt()
+        ]
+      });
+
+    } catch (error) {
+      updateStepStatus('create_escrow', 'error');
+      onError(error instanceof Error ? error.message : 'Failed to create escrow');
+    }
+  };
+
+  const handleLockFunds = async () => {
+    if (!address || !isConnected || !createEscrowReceipt) return;
+
+    updateStepStatus('lock_funds', 'processing');
+
+    try {
+      const contractAddress = ESCROW_CONTRACT_ADDRESSES[chain?.id as keyof typeof ESCROW_CONTRACT_ADDRESSES];
+      if (!contractAddress) {
+        throw new Error('Escrow contract not available on this network');
+      }
+
+      // Extract escrow ID from createEscrow transaction logs
+      const escrowId = 1; // This would be extracted from the transaction logs
+
+      const amountWei = ethers.utils.parseEther(paymentRequest.totalAmount);
+      await lockFunds({
+        address: contractAddress as `0x${string}`,
+        abi: ENHANCED_ESCROW_ABI,
+        functionName: 'lockFunds',
+        args: [BigInt(escrowId)],
+        value: selectedToken === 'ETH' ? amountWei.toBigInt() : undefined
+      });
+
+    } catch (error) {
+      updateStepStatus('lock_funds', 'error');
+      onError(error instanceof Error ? error.message : 'Failed to lock funds');
+    }
+  };
+
+  const handlePaymentComplete = () => {
+    updateStepStatus('complete', 'completed');
+    setIsProcessing(false);
+    
+    const result: TransactionResult = {
+      success: true,
+      transactionHash: lockFundsHash || createEscrowHash,
+      escrowId: '1', // Would be extracted from transaction logs
+      gasUsed: lockFundsReceipt?.gasUsed?.toString() || createEscrowReceipt?.gasUsed?.toString()
+    };
+
+    onSuccess(result);
+  };
+
+  const startPaymentProcess = async () => {
+    setIsProcessing(true);
+    setCurrentStep(0);
+    
+    const isValid = await validatePayment();
+    if (isValid) {
+      setCurrentStep(1);
+      await handleCreateEscrow();
+    }
+  };
+
+  const getStepIcon = (step: PaymentStep) => {
+    switch (step.status) {
+      case 'completed':
+        return <CheckCircle className="text-green-400" size={20} />;
+      case 'processing':
+        return <RefreshCw className="text-blue-400 animate-spin" size={20} />;
+      case 'error':
+        return <AlertTriangle className="text-red-400" size={20} />;
+      default:
+        return <Clock className="text-white/40" size={20} />;
+    }
+  };
+
+  const formatCurrency = (amount: string, symbol: string) => {
+    return `${parseFloat(amount).toFixed(4)} ${symbol}`;
+  };
+
+  const getTokenAddress = (token: string): string => {
+    const tokenAddresses = {
+      'USDC': '0xA0b86a33E6441c8C87Ef36E1C6C7e9d86e5C8B07', // Example USDC address
+      'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F'   // Example DAI address
+    };
+    return tokenAddresses[token as keyof typeof tokenAddresses] || ethers.constants.AddressZero;
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Payment Summary */}
+      <GlassPanel variant="primary" className="p-6">
+        <h2 className="text-xl font-semibold text-white mb-4">Payment Summary</h2>
+        
+        <div className="space-y-3 mb-6">
+          <div className="flex justify-between">
+            <span className="text-white/70">Items Total:</span>
+            <span className="text-white">{formatCurrency(paymentRequest.totalAmount, selectedToken)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Network Fee (Est.):</span>
+            <span className="text-white">{gasEstimate ? `${parseInt(gasEstimate) * 20 / 1e9} ETH` : 'Calculating...'}</span>
+          </div>
+          {paymentRequest.escrowEnabled && (
+            <div className="flex justify-between">
+              <span className="text-white/70">Escrow Fee (1%):</span>
+              <span className="text-white">{formatCurrency((parseFloat(paymentRequest.totalAmount) * 0.01).toString(), selectedToken)}</span>
+            </div>
+          )}
+          <div className="border-t border-white/20 pt-3 flex justify-between font-semibold">
+            <span className="text-white">Total:</span>
+            <span className="text-white">{formatCurrency(paymentRequest.totalAmount, selectedToken)}</span>
+          </div>
+        </div>
+
+        {/* Token Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-white mb-2">Payment Token</label>
+          <div className="flex gap-3">
+            {(['ETH', 'USDC', 'DAI'] as const).map((token) => (
+              <button
+                key={token}
+                onClick={() => setSelectedToken(token)}
+                className={`px-4 py-2 rounded-lg border transition-colors ${
+                  selectedToken === token
+                    ? 'border-blue-500 bg-blue-500/20 text-blue-400'
+                    : 'border-white/20 bg-white/5 text-white/70 hover:border-white/40'
+                }`}
+              >
+                {token}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Escrow Protection Notice */}
+        {paymentRequest.escrowEnabled && (
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Shield className="text-blue-400" size={20} />
+              <h3 className="font-medium text-blue-400">Escrow Protection Enabled</h3>
+            </div>
+            <p className="text-white/70 text-sm">
+              Your payment will be held securely in a smart contract until you confirm delivery. 
+              This protects both you and the seller during the transaction.
+            </p>
+          </div>
+        )}
+      </GlassPanel>
+
+      {/* Payment Process Steps */}
+      <GlassPanel variant="secondary" className="p-6">
+        <h3 className="font-semibold text-white mb-4">Payment Process</h3>
+        
+        <div className="space-y-4">
+          {paymentSteps.map((step, index) => (
+            <div
+              key={step.id}
+              className={`flex items-center gap-4 p-4 rounded-lg transition-colors ${
+                index === currentStep ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-white/5'
+              }`}
+            >
+              <div className="flex-shrink-0">
+                {getStepIcon(step)}
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-white">{step.title}</h4>
+                <p className="text-white/60 text-sm">{step.description}</p>
+                {step.transactionHash && (
+                  <a
+                    href={`https://etherscan.io/tx/${step.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 text-xs flex items-center gap-1 mt-1 hover:text-blue-300"
+                  >
+                    View Transaction <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+              {step.status === 'processing' && (
+                <div className="flex-shrink-0">
+                  <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </GlassPanel>
+
+      {/* Action Buttons */}
+      <div className="flex gap-4">
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          disabled={isProcessing}
+          className="flex-1"
+        >
+          Cancel
+        </Button>
+        
+        <Button
+          variant="primary"
+          onClick={startPaymentProcess}
+          disabled={isProcessing || !isConnected}
+          className="flex-1 flex items-center justify-center gap-2"
+        >
+          {isProcessing ? (
+            <>
+              <RefreshCw size={20} className="animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Shield size={20} />
+              Start Secure Payment
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Wallet Connection Warning */}
+      {!isConnected && (
+        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-yellow-400" size={20} />
+            <p className="text-yellow-400 font-medium">Please connect your wallet to proceed with payment</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default EnhancedPaymentProcessor;

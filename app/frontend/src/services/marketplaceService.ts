@@ -2,7 +2,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
 export interface CreateListingInput {
-  sellerAddress: string;
+  sellerWalletAddress: string;
   tokenAddress: string;
   price: string;
   quantity: number;
@@ -21,18 +21,18 @@ export interface UpdateListingInput {
 }
 
 export interface PlaceBidInput {
-  bidderAddress: string;
+  bidderWalletAddress: string;
   amount: string;
 }
 
 export interface MakeOfferInput {
-  buyerAddress: string;
+  buyerWalletAddress: string;
   amount: string;
 }
 
 export interface MarketplaceListing {
   id: string;
-  sellerAddress: string;
+  sellerWalletAddress: string;
   tokenAddress: string;
   price: string;
   quantity: number;
@@ -42,7 +42,7 @@ export interface MarketplaceListing {
   startTime: string;
   endTime?: string;
   highestBid?: string;
-  highestBidder?: string;
+  highestBidderWalletAddress?: string;
   metadataURI: string;
   isEscrowed: boolean;
   // NFT specific fields
@@ -55,7 +55,7 @@ export interface MarketplaceListing {
 export interface MarketplaceBid {
   id: string;
   listingId: string;
-  bidderAddress: string;
+  bidderWalletAddress: string;
   amount: string;
   timestamp: string;
 }
@@ -63,7 +63,7 @@ export interface MarketplaceBid {
 export interface MarketplaceOffer {
   id: string;
   listingId: string;
-  buyerAddress: string;
+  buyerWalletAddress: string;
   amount: string;
   createdAt: string;
   accepted: boolean;
@@ -72,13 +72,13 @@ export interface MarketplaceOffer {
 export interface MarketplaceEscrow {
   id: string;
   listingId: string;
-  buyerAddress: string;
-  sellerAddress: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
   amount: string;
   buyerApproved: boolean;
   sellerApproved: boolean;
   disputeOpened: boolean;
-  resolverAddress?: string;
+  resolverWalletAddress?: string;
   createdAt: string;
   resolvedAt?: string;
   // Delivery tracking
@@ -89,8 +89,8 @@ export interface MarketplaceEscrow {
 export interface MarketplaceOrder {
   id: string;
   listingId: string;
-  buyerAddress: string;
-  sellerAddress: string;
+  buyerWalletAddress: string;
+  sellerWalletAddress: string;
   escrowId?: string;
   amount: string;
   paymentToken: string;
@@ -101,7 +101,7 @@ export interface MarketplaceOrder {
 export interface MarketplaceDispute {
   id: string;
   escrowId: string;
-  reporterAddress: string;
+  reporterWalletAddress: string;
   reason: string;
   status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED';
   createdAt: string;
@@ -110,7 +110,7 @@ export interface MarketplaceDispute {
 }
 
 export interface UserReputation {
-  address: string;
+  walletAddress: string;
   score: number;
   daoApproved: boolean;
 }
@@ -198,98 +198,98 @@ export class MarketplaceService {
 
   // Bids
   async placeBid(listingId: string, input: PlaceBidInput): Promise<MarketplaceBid> {
-    return this.request(`/api/marketplace/bids/listing/${listingId}`, {
+    return this.request(`/marketplace/bids/listing/${listingId}`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
-    return this.request(`/api/marketplace/bids/listing/${listingId}`);
+    return this.request(`/marketplace/bids/listing/${listingId}`);
   }
 
   async getBidsByBidder(bidderAddress: string): Promise<MarketplaceBid[]> {
-    return this.request(`/api/marketplace/bids/bidder/${bidderAddress}`);
+    return this.request(`/marketplace/bids/bidder/${bidderAddress}`);
   }
 
   // Offers
   async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer> {
-    return this.request(`/api/marketplace/offers/listing/${listingId}`, {
+    return this.request(`/marketplace/offers/listing/${listingId}`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   }
 
   async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
-    return this.request(`/api/marketplace/offers/listing/${listingId}`);
+    return this.request(`/marketplace/offers/listing/${listingId}`);
   }
 
   async getOffersByBuyer(buyerAddress: string): Promise<MarketplaceOffer[]> {
-    return this.request(`/api/marketplace/offers/buyer/${buyerAddress}`);
+    return this.request(`/marketplace/offers/buyer/${buyerAddress}`);
   }
 
   async acceptOffer(offerId: string): Promise<void> {
-    await this.request(`/api/marketplace/offers/${offerId}/accept`, {
+    await this.request(`/marketplace/offers/${offerId}/accept`, {
       method: 'POST',
     });
   }
 
   // Escrow
   async createEscrow(listingId: string, buyerAddress: string, deliveryInfo?: string): Promise<MarketplaceEscrow> {
-    return this.request(`/api/marketplace/escrows/listing/${listingId}`, {
+    return this.request(`/marketplace/escrows/listing/${listingId}`, {
       method: 'POST',
       body: JSON.stringify({ buyerAddress, deliveryInfo }),
     });
   }
 
   async approveEscrow(escrowId: string, userAddress: string): Promise<void> {
-    await this.request(`/api/marketplace/escrows/${escrowId}/approve`, {
+    await this.request(`/marketplace/escrows/${escrowId}/approve`, {
       method: 'POST',
       body: JSON.stringify({ userAddress }),
     });
   }
 
   async openDispute(escrowId: string, userAddress: string): Promise<void> {
-    await this.request(`/api/marketplace/escrows/${escrowId}/dispute`, {
+    await this.request(`/marketplace/escrows/${escrowId}/dispute`, {
       method: 'POST',
       body: JSON.stringify({ userAddress }),
     });
   }
 
   async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<void> {
-    await this.request(`/api/marketplace/escrows/${escrowId}/confirm-delivery`, {
+    await this.request(`/marketplace/escrows/${escrowId}/confirm-delivery`, {
       method: 'POST',
       body: JSON.stringify({ deliveryInfo }),
     });
   }
 
   async getEscrowById(id: string): Promise<MarketplaceEscrow> {
-    return this.request(`/api/marketplace/escrows/${id}`);
+    return this.request(`/marketplace/escrows/${id}`);
   }
 
   async getEscrowsByUser(userAddress: string): Promise<MarketplaceEscrow[]> {
-    return this.request(`/api/marketplace/escrows/user/${userAddress}`);
+    return this.request(`/marketplace/escrows/user/${userAddress}`);
   }
 
   // Orders
   async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
                     amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder> {
-    return this.request('/api/marketplace/orders', {
+    return this.request('/marketplace/orders', {
       method: 'POST',
       body: JSON.stringify({ listingId, buyerAddress, sellerAddress, amount, paymentToken, escrowId }),
     });
   }
 
   async getOrderById(id: string): Promise<MarketplaceOrder> {
-    return this.request(`/api/marketplace/orders/${id}`);
+    return this.request(`/marketplace/orders/${id}`);
   }
 
   async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
-    return this.request(`/api/marketplace/orders/user/${userAddress}`);
+    return this.request(`/marketplace/orders/user/${userAddress}`);
   }
 
   async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<void> {
-    await this.request(`/api/marketplace/orders/${orderId}/status`, {
+    await this.request(`/marketplace/orders/${orderId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
@@ -297,23 +297,23 @@ export class MarketplaceService {
 
   // Disputes
   async createDispute(escrowId: string, reporterAddress: string, reason: string): Promise<MarketplaceDispute> {
-    return this.request('/api/marketplace/disputes', {
+    return this.request('/marketplace/disputes', {
       method: 'POST',
       body: JSON.stringify({ escrowId, reporterAddress, reason }),
     });
   }
 
   async getDisputeById(id: string): Promise<MarketplaceDispute> {
-    return this.request(`/api/marketplace/disputes/${id}`);
+    return this.request(`/marketplace/disputes/${id}`);
   }
 
   async getDisputesByUser(userAddress: string): Promise<MarketplaceDispute[]> {
-    return this.request(`/api/marketplace/disputes/user/${userAddress}`);
+    return this.request(`/marketplace/disputes/user/${userAddress}`);
   }
 
   async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED', 
                             resolution?: string): Promise<void> {
-    await this.request(`/api/marketplace/disputes/${disputeId}/status`, {
+    await this.request(`/marketplace/disputes/${disputeId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status, resolution }),
     });

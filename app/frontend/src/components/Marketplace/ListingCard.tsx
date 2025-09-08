@@ -56,7 +56,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
               {listing.metadataURI || 'Unnamed Item'}
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              Seller: {formatAddress(listing.sellerAddress)}
+              Seller: {formatAddress(listing.sellerWalletAddress)}
             </p>
           </div>
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(listing.status)}`}>
