@@ -20,12 +20,15 @@ import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
+import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
+import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
+import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout'; // Import the standard Layout component
 
-const MarketplacePage: React.FC = () => {
+const MarketplaceContent: React.FC = () => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
   const { addToast } = useToast();
@@ -43,6 +46,10 @@ const MarketplacePage: React.FC = () => {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCart, setShowCart] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  
+  const cart = useEnhancedCart();
   
   const marketplaceService = new MarketplaceService();
 
@@ -183,51 +190,28 @@ const MarketplacePage: React.FC = () => {
           <SellerQuickAccessPanel />
         </div>
 
-        {/* Seller Dashboard Entry Point - Prominent CTA for sellers */}
-        {isConnected && profile && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 shadow-lg">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="mb-4 md:mb-0">
-                  <h3 className="text-xl font-bold text-white">Ready to manage your store?</h3>
-                  <p className="text-purple-100 mt-1">
-                    Access your seller dashboard to view orders, manage listings, and track performance.
-                  </p>
-                </div>
-                <Button
-                  variant="primary"
-                  onClick={() => router.push('/marketplace/seller/dashboard')}
-                  className="bg-white text-purple-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
-                >
-                  Go to Seller Dashboard
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Seller Onboarding Entry Point - For users who want to become sellers */}
+        {/* Want to Start Selling Banner - Show for non-sellers */}
         {isConnected && !profile && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl p-6 shadow-lg">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="mb-4 md:mb-0">
-                  <h3 className="text-xl font-bold text-white">Want to start selling?</h3>
-                  <p className="text-blue-100 mt-1">
-                    Complete our quick onboarding process to unlock all seller features.
-                  </p>
+            <GlassPanel variant="secondary" className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Want to start selling?</h3>
+                  <p className="text-white/80">Join our marketplace and start earning with your products and services.</p>
                 </div>
                 <Button
                   variant="primary"
                   onClick={() => router.push('/marketplace/seller/onboarding')}
-                  className="bg-white text-blue-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg transition-all"
+                  className="ml-6 whitespace-nowrap"
                 >
                   Become a Seller
                 </Button>
               </div>
-            </div>
+            </GlassPanel>
           </div>
         )}
+
+
 
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -236,9 +220,9 @@ const MarketplacePage: React.FC = () => {
           <div className="flex justify-center mb-8">
             <div className="flex space-x-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
               <button
-                onClick={() => setActiveTab('browse')}
+                onClick={() => { setActiveTab('browse'); setShowCart(false); setShowCheckout(false); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'browse'
+                  activeTab === 'browse' && !showCart && !showCheckout
                     ? 'bg-white text-gray-900'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
@@ -246,9 +230,23 @@ const MarketplacePage: React.FC = () => {
                 Browse
               </button>
               <button
-                onClick={() => setActiveTab('my-listings')}
+                onClick={() => { setShowCart(true); setShowCheckout(false); setActiveTab('browse'); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+                  showCart && !showCheckout
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <ShoppingCart size={16} />
+                Cart ({cart.state.totals.itemCount})
+                {cart.state.totals.itemCount > 0 && (
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                )}
+              </button>
+              <button
+                onClick={() => { setActiveTab('my-listings'); setShowCart(false); setShowCheckout(false); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'my-listings'
+                  activeTab === 'my-listings' && !showCart && !showCheckout
                     ? 'bg-white text-gray-900'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
@@ -268,9 +266,11 @@ const MarketplacePage: React.FC = () => {
                     return;
                   }
                   setActiveTab('create');
+                  setShowCart(false);
+                  setShowCheckout(false);
                 }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'create'
+                  activeTab === 'create' && !showCart && !showCheckout
                     ? 'bg-white text-gray-900'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
@@ -320,7 +320,7 @@ const MarketplacePage: React.FC = () => {
             </GlassPanel>
           ) : (
           <>
-            {activeTab === 'browse' && (
+            {(activeTab === 'browse' && !showCart && !showCheckout) && (
               <div>
                 {filteredListings.length === 0 ? (
                   <GlassPanel variant="primary" className="text-center py-12">
@@ -333,13 +333,29 @@ const MarketplacePage: React.FC = () => {
                         ? 'No items match your search criteria.' 
                         : 'No listings available at the moment.'}
                     </p>
+                    {isConnected && (
+                      <div className="mt-6">
+                        <Button
+                          variant="primary"
+                          onClick={() => {
+                            if (!profile) {
+                              router.push('/marketplace/seller/onboarding');
+                            } else {
+                              setActiveTab('create');
+                            }
+                          }}
+                        >
+                          {!profile ? 'Become a Seller' : 'Create First Listing'}
+                        </Button>
+                      </div>
+                    )}
                   </GlassPanel>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredListings.map((listing) => (
                       <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
                         <div className="p-6">
-                          <div className="mt-4 relative h-48 bg-gray-800/50 rounded-lg overflow-hidden">
+                          <div className="relative h-48 bg-gray-800/50 rounded-lg overflow-hidden mb-4">
                             <ImageWithFallback
                               src={formatImageUrl(listing.metadataURI, 400, 300)}
                               alt={listing.metadataURI || 'Product image'}
@@ -347,7 +363,7 @@ const MarketplacePage: React.FC = () => {
                               fallbackType="product"
                             />
                           </div>
-                          <div className="flex justify-between items-start">
+                          <div className="flex justify-between items-start mb-4">
                             <div>
                               <h3 className="text-lg font-medium text-white">
                                 {listing.metadataURI || 'Unnamed Item'}
@@ -361,7 +377,7 @@ const MarketplacePage: React.FC = () => {
                             </span>
                           </div>
                           
-                          <div className="mt-4">
+                          <div className="mb-4">
                             <p className="text-2xl font-bold text-white">
                               {listing.price} ETH
                             </p>
@@ -370,7 +386,7 @@ const MarketplacePage: React.FC = () => {
                             </p>
                           </div>
                           
-                          <div className="mt-4 flex items-center justify-between">
+                          <div className="mb-6 flex items-center justify-between">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                               {listing.listingType.replace('_', ' ')}
                             </span>
@@ -417,11 +433,47 @@ const MarketplacePage: React.FC = () => {
                                       addToast('Please connect your wallet first', 'warning');
                                       return;
                                     }
-                                    setSelectedListing(listing);
-                                    setShowPurchaseModal(true);
+                                    // Add to cart
+                                    const cartProduct = {
+                                      id: listing.id,
+                                      title: listing.metadataURI || 'Unnamed Item',
+                                      description: listing.metadataURI || '',
+                                      image: '',
+                                      price: {
+                                        crypto: listing.price,
+                                        cryptoSymbol: 'ETH',
+                                        fiat: (parseFloat(listing.price) * 1650).toFixed(2),
+                                        fiatSymbol: 'USD'
+                                      },
+                                      seller: {
+                                        id: listing.sellerWalletAddress,
+                                        name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
+                                        avatar: '',
+                                        verified: true,
+                                        daoApproved: false,
+                                        escrowSupported: true
+                                      },
+                                      category: listing.itemType.toLowerCase(),
+                                      isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                      isNFT: listing.itemType === 'NFT',
+                                      inventory: listing.quantity,
+                                      shipping: {
+                                        cost: '0',
+                                        freeShipping: true,
+                                        estimatedDays: listing.itemType === 'DIGITAL' ? 'instant' : '3-5',
+                                        regions: ['US', 'CA', 'EU']
+                                      },
+                                      trust: {
+                                        escrowProtected: true,
+                                        onChainCertified: true,
+                                        safetyScore: 95
+                                      }
+                                    };
+                                    cart.addItem(cartProduct);
+                                    addToast('Added to cart!', 'success');
                                   }}
                                 >
-                                  Buy Now
+                                  Add to Cart
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -492,6 +544,131 @@ const MarketplacePage: React.FC = () => {
               </div>
             )}
           </>
+          )}
+
+          {/* Cart View */}
+          {showCart && !showCheckout && (
+            <div>
+              <div className="text-center mb-8">
+                <h2 className="text-4xl font-bold text-white mb-4">Shopping Cart</h2>
+                <p className="text-xl text-white/80">Review your items and proceed to checkout</p>
+              </div>
+
+              {cart.state.items.length === 0 ? (
+                <GlassPanel variant="primary" className="text-center py-12">
+                  <ShoppingCart size={48} className="mx-auto text-white/60 mb-4" />
+                  <h3 className="text-2xl font-bold text-white mb-2">Your cart is empty</h3>
+                  <p className="text-white/80 mb-6 text-lg">Start shopping to add items to your cart</p>
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowCart(false)}
+                    className="px-6 py-3 text-lg font-medium"
+                  >
+                    Continue Shopping
+                  </Button>
+                </GlassPanel>
+              ) : (
+                <div className="space-y-6">
+                  {/* Cart Items */}
+                  <div className="space-y-4">
+                    {cart.state.items.map((item) => (
+                      <GlassPanel key={item.id} variant="secondary" className="p-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 bg-gray-800/50 rounded-lg flex items-center justify-center">
+                            <ShoppingCart className="text-white/60" size={24} />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-white">{item.title}</h3>
+                            <p className="text-white/70 text-sm">{item.seller.name}</p>
+                            <div className="flex items-center gap-4 mt-2">
+                              <span className="text-white font-medium">
+                                {item.price.crypto} {item.price.cryptoSymbol}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => cart.updateQuantity(item.id, item.quantity - 1)}
+                                  className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                                >
+                                  -
+                                </button>
+                                <span className="text-white w-8 text-center">{item.quantity}</span>
+                                <button
+                                  onClick={() => cart.updateQuantity(item.id, item.quantity + 1)}
+                                  className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => cart.removeItem(item.id)}
+                            className="text-red-400 hover:text-red-300 p-2"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </GlassPanel>
+                    ))}
+                  </div>
+
+                  {/* Cart Summary */}
+                  <GlassPanel variant="primary" className="p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4">Order Summary</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/70">Subtotal:</span>
+                        <span className="text-white">{cart.state.totals.subtotal.toFixed(4)} ETH</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/70">Shipping:</span>
+                        <span className="text-white">{cart.state.totals.shipping.toFixed(4)} ETH</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/70">Escrow Fee:</span>
+                        <span className="text-white">{cart.state.totals.escrowFees.toFixed(4)} ETH</span>
+                      </div>
+                      <div className="border-t border-white/20 pt-2 flex justify-between font-medium">
+                        <span className="text-white">Total:</span>
+                        <span className="text-white">{cart.state.totals.total.toFixed(4)} ETH</span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      className="w-full mt-6"
+                      onClick={() => setShowCheckout(true)}
+                    >
+                      Proceed to Checkout
+                    </Button>
+                  </GlassPanel>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Checkout Flow */}
+          {showCheckout && (
+            <EnhancedCheckoutFlow
+              cartItems={cart.state.items.map(item => ({
+                id: item.id,
+                title: item.title,
+                price: item.price,
+                seller: item.seller,
+                image: item.image || '',
+                quantity: item.quantity,
+                isDigital: item.isDigital,
+                escrowProtected: item.trust.escrowProtected,
+                shippingCost: item.shipping.cost,
+                estimatedDelivery: item.shipping.estimatedDays
+              }))}
+              onComplete={(orderData) => {
+                addToast('Order completed successfully!', 'success');
+                cart.clearCart();
+                setShowCheckout(false);
+                setShowCart(false);
+              }}
+              onCancel={() => setShowCheckout(false)}
+            />
           )}
         </div>
 
@@ -971,6 +1148,14 @@ const CreateListingTab: React.FC<{
       </form>
       </div>
     </GlassPanel>
+  );
+};
+
+const MarketplacePage: React.FC = () => {
+  return (
+    <EnhancedCartProvider>
+      <MarketplaceContent />
+    </EnhancedCartProvider>
   );
 };
 

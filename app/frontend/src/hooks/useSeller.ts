@@ -20,6 +20,7 @@ export function useSeller() {
       setProfile(sellerProfile);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch seller profile');
+      setProfile(null); // Ensure we don't show mock data
     } finally {
       setLoading(false);
     }
