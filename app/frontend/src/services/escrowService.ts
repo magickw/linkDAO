@@ -459,6 +459,23 @@ class EscrowService {
       };
     }
   }
+
+  /**
+   * Estimate gas for a specific operation type
+   */
+  async estimateGas(operationType: 'create' | 'release' | 'dispute', paymentRequest: any): Promise<string> {
+    const costs = await this.estimateGasCosts();
+    switch (operationType) {
+      case 'create':
+        return costs.createEscrow;
+      case 'release':
+        return costs.releaseEscrow;
+      case 'dispute':
+        return costs.disputeEscrow;
+      default:
+        return costs.createEscrow;
+    }
+  }
 }
 
 export const escrowService = new EscrowService();

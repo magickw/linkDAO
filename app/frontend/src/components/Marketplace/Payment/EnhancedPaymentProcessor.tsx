@@ -30,7 +30,24 @@ import { ethers } from 'ethers';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
-import EscrowService, { PaymentRequest, TransactionResult, ENHANCED_ESCROW_ABI, ESCROW_CONTRACT_ADDRESSES } from '../../../services/escrowService';
+import escrowService from '../../../services/escrowService';
+import { PaymentRequest, TransactionResult } from '../../../types/payment';
+
+// Enhanced Escrow ABI and contract addresses
+export const ENHANCED_ESCROW_ABI = [
+  'function createEscrow(uint256 listingId, address buyer, address seller, address tokenAddress, uint256 amount) external returns (uint256)',
+  'function lockFunds(uint256 escrowId) external payable',
+  'function confirmDelivery(uint256 escrowId, string deliveryInfo) external',
+  'function approveEscrow(uint256 escrowId) external',
+  'function openDispute(uint256 escrowId, string reason) external',
+];
+
+export const ESCROW_CONTRACT_ADDRESSES = {
+  1: '0x1234567890123456789012345678901234567890',      // Mainnet
+  5: '0x1234567890123456789012345678901234567890',      // Goerli
+  11155111: '0x1234567890123456789012345678901234567890', // Sepolia
+  31337: '0x1234567890123456789012345678901234567890',    // Hardhat
+};
 
 interface PaymentProcessorProps {
   paymentRequest: PaymentRequest;
@@ -58,7 +75,6 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const [paymentSteps, setPaymentSteps] = useState<PaymentStep[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [gasEstimate, setGasEstimate] = useState<string>('');
-  const [escrowService] = useState(() => new EscrowService());
   const [selectedToken, setSelectedToken] = useState<'ETH' | 'USDC' | 'DAI'>('ETH');
 
   const { address, isConnected, chain } = useAccount();
@@ -214,6 +230,10 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
         throw new Error('Unable to fetch wallet balance');
       }
 
+      if (!paymentRequest.totalAmount) {
+        throw new Error('Invalid payment amount');
+      }
+
       const requiredAmount = ethers.utils.parseEther(paymentRequest.totalAmount);
       const currentBalance = balance.value;
 
@@ -239,6 +259,18 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
       const contractAddress = ESCROW_CONTRACT_ADDRESSES[chain?.id as keyof typeof ESCROW_CONTRACT_ADDRESSES];
       if (!contractAddress) {
         throw new Error('Escrow contract not available on this network');
+      }
+
+      if (!paymentRequest.totalAmount) {
+        throw new Error('Invalid payment amount');
+      }
+
+      if (!paymentRequest.listingId) {
+        throw new Error('Invalid listing ID');
+      }
+
+      if (!paymentRequest.sellerId) {
+        throw new Error('Invalid seller ID');
       }
 
       const amountWei = ethers.utils.parseEther(paymentRequest.totalAmount);
@@ -280,6 +312,10 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
 
       // Extract escrow ID from createEscrow transaction logs
       const escrowId = 1; // This would be extracted from the transaction logs
+
+      if (!paymentRequest.totalAmount) {
+        throw new Error('Invalid payment amount');
+      }
 
       const amountWei = ethers.utils.parseEther(paymentRequest.totalAmount);
       await lockFunds({
@@ -355,7 +391,7 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
         <div className="space-y-3 mb-6">
           <div className="flex justify-between">
             <span className="text-white/70">Items Total:</span>
-            <span className="text-white">{formatCurrency(paymentRequest.totalAmount, selectedToken)}</span>
+            <span className="text-white">{formatCurrency(paymentRequest.totalAmount || '0', selectedToken)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/70">Network Fee (Est.):</span>
@@ -364,12 +400,12 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
           {paymentRequest.escrowEnabled && (
             <div className="flex justify-between">
               <span className="text-white/70">Escrow Fee (1%):</span>
-              <span className="text-white">{formatCurrency((parseFloat(paymentRequest.totalAmount) * 0.01).toString(), selectedToken)}</span>
+              <span className="text-white">{formatCurrency((parseFloat(paymentRequest.totalAmount || '0') * 0.01).toString(), selectedToken)}</span>
             </div>
           )}
           <div className="border-t border-white/20 pt-3 flex justify-between font-semibold">
             <span className="text-white">Total:</span>
-            <span className="text-white">{formatCurrency(paymentRequest.totalAmount, selectedToken)}</span>
+            <span className="text-white">{formatCurrency(paymentRequest.totalAmount || '0', selectedToken)}</span>
           </div>
         </div>
 

@@ -873,98 +873,99 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
         </GlassPanel>
       </div>
     );
-    
-    const getCurrentStepComponent = () => {
-      const currentStepKey = steps[currentStep]?.key;
-      switch (currentStepKey) {
-        case 'cart': return <CartReviewStep />;
-        case 'shipping': return <ShippingStep />;
-        case 'payment': return <PaymentStep />;
-        case 'review': return <ReviewStep />;
-        default: return <CartReviewStep />;
-      }
-    };
-    
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        {/* Header */}
-        <div className="sticky top-0 z-40 backdrop-blur-lg bg-black/50 border-b border-white/20">
-          <div className="flex items-center justify-between p-4">
-            <motion.button
-              onClick={onCancel}
-              className="p-2 rounded-lg bg-white/10 text-white touch-manipulation"
-              whileTap={{ scale: 0.95 }}
-              style={{ WebkitTapHighlightColor: 'transparent' }}
-            >
-              <X size={20} />
-            </motion.button>
-              
-            <div className="text-center">
-              <h1 className="text-lg font-bold text-white">Checkout</h1>
-              <p className="text-sm text-white/70">
-                Step {currentStep + 1} of {steps.length}
-              </p>
-            </div>
-              
-            <div className="w-10" /> {/* Spacer */}
-          </div>
-        </div>
-    
-        {/* Step Indicator */}
-        <div className="px-4 py-6">
-          <MobileStepIndicator />
-        </div>
-    
-        {/* Main Content */}
-        <motion.div
-          ref={formRef}
-          className="px-4 pb-80" // Extra padding for sticky summary
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          style={{ WebkitTapHighlightColor: 'transparent' }}
-        >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ 
-                type: 'spring', 
-                damping: 25, 
-                stiffness: 300,
-                duration: 0.3 
-              }}
-            >
-              {getCurrentStepComponent()}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-    
-        {/* Sticky Checkout Summary */}
-        <StickyCheckoutSummary />
-          
-        {/* Processing Overlay */}
-        <AnimatePresence>
-          {isProcessing && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center"
-            >
-              <GlassPanel variant="primary" className="p-8 text-center max-w-sm mx-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  Processing Your Order
-                </h3>
-                <p className="text-white/70 text-sm">
-                  Please wait while we process your transaction...
-                </p>
-              </GlassPanel>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
   };
+
+  const getCurrentStepComponent = () => {
+    const currentStepKey = steps[currentStep]?.key;
+    switch (currentStepKey) {
+      case 'cart': return <div className="text-white">Cart Review Step - Coming Soon</div>;
+      case 'shipping': return <div className="text-white">Shipping Step - Coming Soon</div>;
+      case 'payment': return <div className="text-white">Payment Step - Coming Soon</div>;
+      case 'review': return <div className="text-white">Review Step - Coming Soon</div>;
+      default: return <div className="text-white">Cart Review Step - Coming Soon</div>;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+      {/* Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-lg bg-black/50 border-b border-white/20">
+        <div className="flex items-center justify-between p-4">
+          <motion.button
+            onClick={onCancel}
+            className="p-2 rounded-lg bg-white/10 text-white touch-manipulation"
+            whileTap={{ scale: 0.95 }}
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+          >
+            <X size={20} />
+          </motion.button>
+            
+          <div className="text-center">
+            <h1 className="text-lg font-bold text-white">Checkout</h1>
+            <p className="text-sm text-white/70">
+              Step {currentStep + 1} of {steps.length}
+            </p>
+          </div>
+            
+          <div className="w-10" /> {/* Spacer */}
+        </div>
+      </div>
+
+      {/* Step Indicator */}
+      <div className="px-4 py-6">
+        <MobileStepIndicator />
+      </div>
+
+      {/* Main Content */}
+      <motion.div
+        ref={formRef}
+        className="px-4 pb-80" // Extra padding for sticky summary
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+      >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ 
+              type: 'spring', 
+              damping: 25, 
+              stiffness: 300,
+              duration: 0.3 
+            }}
+          >
+            {getCurrentStepComponent()}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Sticky Checkout Summary */}
+      <StickyCheckoutSummary />
+        
+      {/* Processing Overlay */}
+      <AnimatePresence>
+        {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center"
+          >
+            <GlassPanel variant="primary" className="p-8 text-center max-w-sm mx-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-white/30 border-t-white mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Processing Your Order
+              </h3>
+              <p className="text-white/70 text-sm">
+                Please wait while we process your transaction...
+              </p>
+            </GlassPanel>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
