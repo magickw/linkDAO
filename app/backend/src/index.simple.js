@@ -1,9 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
+const CacheService = require('./services/cacheService');
+const escrowRoutes = require('./routes/escrowRoutes');
 
 // Load environment variables
 require('dotenv').config();
+
+// Initialize cache service
+const cacheService = new CacheService();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -130,77 +135,485 @@ app.post('/marketplace/registration/buyer', (req, res) => {
   });
 });
 
-// Essential marketplace endpoints
-app.get('/marketplace/listings', (req, res) => {
-  const { category, limit = 10, offset = 0 } = req.query;
+// Essential marketplace endpoints with caching
+app.get('/marketplace/listings', async (req, res) => {
+  const { category, limit = 12, offset = 0, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
   
-  // Mock listings data
-  const mockListings = Array.from({ length: Math.min(Number(limit), 10) }, (_, i) => ({
-    id: `listing_${i + 1}`,
-    title: `Sample Product ${i + 1}`,
-    description: `This is a sample product description for item ${i + 1}`,
-    price: (Math.random() * 100 + 10).toFixed(2),
-    currency: 'USD',
-    category: category || 'general',
-    seller: {
-      id: `seller_${i + 1}`,
-      name: `Seller ${i + 1}`,
-      rating: (Math.random() * 2 + 3).toFixed(1)
-    },
-    images: [`https://picsum.photos/300/300?random=${i + 1}`],
-    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
-  }));
-  
-  res.json({
-    success: true,
-    data: mockListings,
-    pagination: {
-      limit: Number(limit),
-      offset: Number(offset),
-      total: 100,
-      hasMore: Number(offset) + Number(limit) < 100
+  try {
+    // Create cache key based on query parameters
+    const cacheKey = `listings:${category || 'all'}:${limit}:${offset}:${search || ''}:${sortBy}:${sortOrder}`;
+    
+    // Try to get from cache first
+    let cachedListings = await cacheService.get(cacheKey);
+    
+    if (cachedListings) {
+      return res.json({
+        success: true,
+        data: cachedListings.data,
+        pagination: cachedListings.pagination,
+        cached: true
+      });
     }
-  });
+
+    // Enhanced mock products with realistic data
+    const mockProducts = [
+      {
+        id: 'prod_001',
+        title: 'Premium Wireless Headphones',
+        description: 'High-quality noise-canceling wireless headphones with 30-hour battery life and premium sound quality.',
+        price: '299.99',
+        currency: 'USD',
+        cryptoPrice: '0.1245',
+        cryptoSymbol: 'ETH',
+        category: 'electronics',
+        listingType: 'FIXED_PRICE',
+        seller: {
+          id: 'seller_001',
+          name: 'TechGear Pro',
+          rating: 4.8,
+          reputation: 95,
+          verified: true,
+          daoApproved: true,
+          walletAddress: '0x1234567890123456789012345678901234567890'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: true,
+          safetyScore: 98
+        },
+        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop'],
+        inventory: 15,
+        isNFT: false,
+        tags: ['electronics', 'audio', 'wireless', 'premium'],
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-20T14:22:00Z',
+        views: 1247,
+        favorites: 89
+      },
+      {
+        id: 'prod_002',
+        title: 'Rare Digital Art NFT Collection',
+        description: 'Exclusive digital artwork from renowned crypto artist. Limited edition with utility benefits.',
+        price: '6000.00',
+        currency: 'USD',
+        cryptoPrice: '2.5000',
+        cryptoSymbol: 'ETH',
+        category: 'nft',
+        listingType: 'AUCTION',
+        seller: {
+          id: 'seller_002',
+          name: 'CryptoArtist',
+          rating: 4.9,
+          reputation: 88,
+          verified: true,
+          daoApproved: true,
+          walletAddress: '0x2345678901234567890123456789012345678901'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: true,
+          safetyScore: 96
+        },
+        images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=400&h=300&fit=crop'],
+        inventory: 1,
+        isNFT: true,
+        tags: ['nft', 'art', 'digital', 'exclusive'],
+        createdAt: '2024-01-18T16:45:00Z',
+        updatedAt: '2024-01-22T09:15:00Z',
+        views: 892,
+        favorites: 156,
+        auctionEndTime: '2024-02-01T18:00:00Z',
+        highestBid: '2.1000',
+        bidCount: 12
+      },
+      {
+        id: 'prod_003',
+        title: 'Vintage Mechanical Keyboard',
+        description: 'Restored 1980s mechanical keyboard with Cherry MX switches. Perfect for collectors.',
+        price: '450.00',
+        currency: 'USD',
+        cryptoPrice: '0.1875',
+        cryptoSymbol: 'ETH',
+        category: 'collectibles',
+        listingType: 'FIXED_PRICE',
+        seller: {
+          id: 'seller_003',
+          name: 'RetroTech Collector',
+          rating: 4.6,
+          reputation: 72,
+          verified: true,
+          daoApproved: false,
+          walletAddress: '0x3456789012345678901234567890123456789012'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: false,
+          safetyScore: 85
+        },
+        images: ['https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400&h=300&fit=crop'],
+        inventory: 1,
+        isNFT: false,
+        tags: ['vintage', 'keyboard', 'mechanical', 'collectible'],
+        createdAt: '2024-01-12T08:20:00Z',
+        updatedAt: '2024-01-19T11:30:00Z',
+        views: 543,
+        favorites: 67
+      },
+      {
+        id: 'prod_004',
+        title: 'Smart Home Security Camera',
+        description: '4K wireless security camera with AI detection, night vision, and cloud storage.',
+        price: '189.99',
+        currency: 'USD',
+        cryptoPrice: '0.0790',
+        cryptoSymbol: 'ETH',
+        category: 'electronics',
+        listingType: 'AUCTION',
+        seller: {
+          id: 'seller_004',
+          name: 'SmartHome Solutions',
+          rating: 4.7,
+          reputation: 91,
+          verified: true,
+          daoApproved: true,
+          walletAddress: '0x4567890123456789012345678901234567890123'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: true,
+          safetyScore: 93
+        },
+        images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop'],
+        inventory: 8,
+        isNFT: false,
+        tags: ['security', 'camera', 'smart-home', '4k'],
+        createdAt: '2024-01-20T13:15:00Z',
+        updatedAt: '2024-01-23T16:45:00Z',
+        views: 756,
+        favorites: 94,
+        auctionEndTime: '2024-01-30T20:00:00Z',
+        highestBid: '0.0650',
+        bidCount: 7
+      },
+      {
+        id: 'prod_005',
+        title: 'Handcrafted Leather Wallet',
+        description: 'Premium handcrafted leather wallet with RFID protection and minimalist design.',
+        price: '89.99',
+        currency: 'USD',
+        cryptoPrice: '0.0375',
+        cryptoSymbol: 'ETH',
+        category: 'fashion',
+        listingType: 'FIXED_PRICE',
+        seller: {
+          id: 'seller_005',
+          name: 'Artisan Leather Co',
+          rating: 4.9,
+          reputation: 78,
+          verified: false,
+          daoApproved: false,
+          walletAddress: '0x5678901234567890123456789012345678901234'
+        },
+        trust: {
+          verified: false,
+          escrowProtected: true,
+          onChainCertified: false,
+          safetyScore: 76
+        },
+        images: ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=300&fit=crop'],
+        inventory: 25,
+        isNFT: false,
+        tags: ['leather', 'wallet', 'handcrafted', 'rfid'],
+        createdAt: '2024-01-10T09:30:00Z',
+        updatedAt: '2024-01-21T12:00:00Z',
+        views: 432,
+        favorites: 38
+      },
+      {
+        id: 'prod_006',
+        title: 'Gaming Metaverse Land NFT',
+        description: 'Prime virtual real estate in popular metaverse game. Includes building rights.',
+        price: '12480.00',
+        currency: 'USD',
+        cryptoPrice: '5.2000',
+        cryptoSymbol: 'ETH',
+        category: 'nft',
+        listingType: 'AUCTION',
+        seller: {
+          id: 'seller_006',
+          name: 'MetaLand Ventures',
+          rating: 4.5,
+          reputation: 84,
+          verified: true,
+          daoApproved: true,
+          walletAddress: '0x6789012345678901234567890123456789012345'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: true,
+          safetyScore: 91
+        },
+        images: ['https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400&h=300&fit=crop'],
+        inventory: 1,
+        isNFT: true,
+        tags: ['nft', 'metaverse', 'land', 'gaming'],
+        createdAt: '2024-01-22T14:20:00Z',
+        updatedAt: '2024-01-24T10:15:00Z',
+        views: 1156,
+        favorites: 203,
+        auctionEndTime: '2024-02-05T15:30:00Z',
+        highestBid: '4.8000',
+        bidCount: 18
+      },
+      {
+        id: 'prod_007',
+        title: 'Professional Drone with 4K Camera',
+        description: 'High-end professional drone with 4K camera, 45-minute flight time, and obstacle avoidance.',
+        price: '1299.99',
+        currency: 'USD',
+        cryptoPrice: '0.5416',
+        cryptoSymbol: 'ETH',
+        category: 'electronics',
+        listingType: 'FIXED_PRICE',
+        seller: {
+          id: 'seller_007',
+          name: 'AerialTech Pro',
+          rating: 4.8,
+          reputation: 96,
+          verified: true,
+          daoApproved: true,
+          walletAddress: '0x7890123456789012345678901234567890123456'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: true,
+          safetyScore: 97
+        },
+        images: ['https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=400&h=300&fit=crop'],
+        inventory: 5,
+        isNFT: false,
+        tags: ['drone', '4k', 'professional', 'camera'],
+        createdAt: '2024-01-16T11:45:00Z',
+        updatedAt: '2024-01-25T08:30:00Z',
+        views: 987,
+        favorites: 142
+      },
+      {
+        id: 'prod_008',
+        title: 'Rare Pokemon Trading Card',
+        description: 'Mint condition Charizard holographic card from Base Set. PSA graded 10.',
+        price: '15000.00',
+        currency: 'USD',
+        cryptoPrice: '6.2500',
+        cryptoSymbol: 'ETH',
+        category: 'collectibles',
+        listingType: 'AUCTION',
+        seller: {
+          id: 'seller_008',
+          name: 'CardMaster Collectibles',
+          rating: 4.9,
+          reputation: 89,
+          verified: true,
+          daoApproved: false,
+          walletAddress: '0x8901234567890123456789012345678901234567'
+        },
+        trust: {
+          verified: true,
+          escrowProtected: true,
+          onChainCertified: false,
+          safetyScore: 88
+        },
+        images: ['https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=300&fit=crop'],
+        inventory: 1,
+        isNFT: false,
+        tags: ['pokemon', 'trading-card', 'charizard', 'collectible'],
+        createdAt: '2024-01-08T15:00:00Z',
+        updatedAt: '2024-01-26T13:20:00Z',
+        views: 2341,
+        favorites: 387,
+        auctionEndTime: '2024-02-10T19:00:00Z',
+        highestBid: '5.8000',
+        bidCount: 24
+      }
+    ];
+
+    // Apply category filter
+    let filteredListings = mockProducts;
+    if (category && category !== 'all') {
+      filteredListings = mockProducts.filter(product => product.category === category);
+    }
+
+    // Apply search filter
+    if (search) {
+      filteredListings = filteredListings.filter(listing => 
+        listing.title.toLowerCase().includes(search.toLowerCase()) ||
+        listing.description.toLowerCase().includes(search.toLowerCase()) ||
+        listing.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))
+      );
+    }
+
+    // Apply sorting
+    filteredListings.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortBy) {
+        case 'price':
+          aValue = parseFloat(a.price);
+          bValue = parseFloat(b.price);
+          break;
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'rating':
+          aValue = parseFloat(a.seller.rating);
+          bValue = parseFloat(b.seller.rating);
+          break;
+        default:
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+      }
+      
+      if (sortOrder === 'desc') {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      } else {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      }
+    });
+
+    // Apply pagination
+    const startIndex = Number(offset);
+    const endIndex = startIndex + Number(limit);
+    const paginatedListings = filteredListings.slice(startIndex, endIndex);
+
+    const responseData = {
+      data: paginatedListings,
+      pagination: {
+        limit: Number(limit),
+        offset: Number(offset),
+        total: filteredListings.length,
+        hasMore: endIndex < filteredListings.length
+      }
+    };
+
+    // Cache the results for 5 minutes
+    await cacheService.set(cacheKey, responseData, 300);
+
+    res.json({
+      success: true,
+      ...responseData,
+      cached: false
+    });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch listings'
+    });
+  }
 });
 
-app.get('/marketplace/listings/:id', (req, res) => {
+app.get('/marketplace/listings/:id', async (req, res) => {
   const { id } = req.params;
   
-  // Mock detailed listing
-  res.json({
-    success: true,
-    data: {
+  try {
+    // Try to get from cache first
+    const cacheKey = `listing:${id}`;
+    let cachedListing = await cacheService.get(cacheKey);
+    
+    if (cachedListing) {
+      return res.json({
+        success: true,
+        data: cachedListing,
+        cached: true
+      });
+    }
+
+    // Mock detailed listing with enhanced data
+    const listingData = {
       id,
       title: `Product ${id}`,
-      description: `Detailed description for product ${id}`,
+      description: `Detailed description for product ${id}. This is a high-quality item with excellent features and reliable performance.`,
       price: (Math.random() * 100 + 10).toFixed(2),
       currency: 'USD',
+      cryptoPrice: (Math.random() * 0.1 + 0.01).toFixed(4),
+      cryptoSymbol: 'ETH',
       category: 'electronics',
       condition: 'new',
+      listingType: Math.random() > 0.7 ? 'AUCTION' : 'FIXED_PRICE',
       seller: {
         id: 'seller_1',
         name: 'Sample Seller',
         rating: 4.5,
+        reputation: 85,
         totalSales: 150,
-        memberSince: '2023-01-01'
+        memberSince: '2023-01-01',
+        verified: true,
+        daoApproved: Math.random() > 0.5,
+        walletAddress: '0x1234567890123456789012345678901234567890'
+      },
+      trust: {
+        verified: true,
+        escrowProtected: true,
+        onChainCertified: true,
+        safetyScore: 95
       },
       images: [
         `https://picsum.photos/600/400?random=${id}1`,
-        `https://picsum.photos/600/400?random=${id}2`
+        `https://picsum.photos/600/400?random=${id}2`,
+        `https://picsum.photos/600/400?random=${id}3`
       ],
       specifications: {
         brand: 'Sample Brand',
         model: 'Model X',
-        warranty: '1 year'
+        warranty: '1 year',
+        dimensions: '10 x 8 x 2 inches',
+        weight: '2.5 lbs'
       },
       shipping: {
         free: true,
-        estimatedDays: '3-5'
+        cost: '0',
+        estimatedDays: '3-5',
+        regions: ['US', 'CA', 'EU'],
+        expedited: true
       },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      inventory: Math.floor(Math.random() * 20) + 1,
+      isNFT: Math.random() > 0.8,
+      tags: ['electronics', 'gadget', 'popular'],
+      createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date().toISOString(),
+      views: Math.floor(Math.random() * 1000),
+      favorites: Math.floor(Math.random() * 50)
+    };
+
+    // Add auction-specific data if it's an auction
+    if (listingData.listingType === 'AUCTION') {
+      listingData.auctionEndTime = new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString();
+      listingData.highestBid = (parseFloat(listingData.cryptoPrice) * 0.8).toFixed(4);
+      listingData.bidCount = Math.floor(Math.random() * 10);
     }
-  });
+
+    // Cache the listing for 10 minutes
+    await cacheService.set(cacheKey, listingData, 600);
+
+    res.json({
+      success: true,
+      data: listingData,
+      cached: false
+    });
+  } catch (error) {
+    console.error('Error fetching listing:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch listing details'
+    });
+  }
 });
 
 // User authentication endpoints (simplified)
@@ -762,6 +1175,41 @@ app.post('/marketplace/seller/verification/phone/verify', (req, res) => {
   });
 });
 
+// Mount escrow routes
+app.use('/api/escrow', escrowRoutes);
+
+// Cache statistics endpoint
+app.get('/api/cache/stats', async (req, res) => {
+  try {
+    const stats = await cacheService.getStats();
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get cache statistics'
+    });
+  }
+});
+
+// Cache warming endpoint
+app.post('/api/cache/warm', async (req, res) => {
+  try {
+    await cacheService.warmCache();
+    res.json({
+      success: true,
+      message: 'Cache warming initiated'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to warm cache'
+    });
+  }
+});
+
 // Catch-all for API routes
 app.use('/*', (req, res) => {
   res.status(404).json({
@@ -798,13 +1246,15 @@ app.use('*', (req, res) => {
 });
 
 // Graceful shutdown handling
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
+  await cacheService.close();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
+  await cacheService.close();
   process.exit(0);
 });
 

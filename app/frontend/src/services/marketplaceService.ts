@@ -50,6 +50,36 @@ export interface MarketplaceListing {
   tokenId?: string; // Only for NFT items
   createdAt: string;
   updatedAt: string;
+  // Enhanced marketplace data
+  enhancedData?: {
+    title?: string;
+    description?: string;
+    images?: string[];
+    price?: {
+      crypto: string;
+      cryptoSymbol: string;
+      fiat: string;
+      fiatSymbol: string;
+    };
+    seller?: {
+      id: string;
+      name: string;
+      rating: number;
+      verified: boolean;
+      daoApproved: boolean;
+      walletAddress: string;
+    };
+    trust?: {
+      verified: boolean;
+      escrowProtected: boolean;
+      onChainCertified: boolean;
+      safetyScore: number;
+    };
+    category?: string;
+    tags?: string[];
+    views?: number;
+    favorites?: number;
+  };
 }
 
 export interface MarketplaceBid {
