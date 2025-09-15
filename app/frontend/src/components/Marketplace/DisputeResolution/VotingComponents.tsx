@@ -36,7 +36,7 @@ export const VotingPanel: React.FC<{
     return acc;
   }, {});
 
-  const totalVotingPower = Object.values(voteDistribution).reduce((sum: number, power: number) => sum + power, 0);
+  const totalVotingPower = Object.values(voteDistribution).reduce((sum: any, power: any) => sum + power, 0) as number;
 
   return (
     <div className="space-y-6">
