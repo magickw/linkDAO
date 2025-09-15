@@ -11,49 +11,8 @@ export default function TestNotifications() {
   const { notifications, unreadCount, markAllAsRead } = useNotifications();
 
   const simulateNotifications = () => {
-    // Simulate different types of notifications
-    notificationService.createCommunityPostNotification(
-      'user1',
-      'web3-devs',
-      'Web3 Developers',
-      `post${Date.now()}`,
-      'testuser',
-      'Test User'
-    );
-
-    setTimeout(() => {
-      notificationService.createCommunityMentionNotification(
-        'user1',
-        'defi-discussion',
-        'DeFi Discussion',
-        `post${Date.now()}`,
-        'trader123',
-        'Pro Trader'
-      );
-    }, 1000);
-
-    setTimeout(() => {
-      notificationService.addNotification({
-        type: 'tip_received',
-        userId: 'user1',
-        message: 'You received 25 USDC tip',
-        read: false,
-        transactionHash: `0x${Date.now()}`,
-        tokenAmount: '25',
-        tokenSymbol: 'USDC',
-        actionUrl: '/wallet/transactions'
-      } as any);
-    }, 2000);
-
-    setTimeout(() => {
-      notificationService.createCommunityModerationNotification(
-        'user1',
-        'crypto-news',
-        'Crypto News',
-        `post${Date.now()}`,
-        'approved'
-      );
-    }, 3000);
+    // Test the messaging notification service
+    notificationService.testNotification();
   };
 
   const clearAllNotifications = () => {
@@ -106,10 +65,10 @@ export default function TestNotifications() {
                   </button>
                   
                   <button
-                    onClick={() => notificationService.simulateRealTimeNotification()}
+                    onClick={() => notificationService.testNotification()}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                   >
-                    Random Notification
+                    Test Notification
                   </button>
                   
                   <button
@@ -135,56 +94,25 @@ export default function TestNotifications() {
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => notificationService.addNotification({
-                      type: 'follow',
-                      userId: 'user1',
-                      message: 'New follower joined',
-                      read: false,
-                      fromUserId: 'newuser',
-                      fromUserName: 'New User'
-                    } as any)}
-                    className="p-3 text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                  >
-                    <div className="font-medium text-blue-900 dark:text-blue-100">Social Follow</div>
-                    <div className="text-sm text-blue-700 dark:text-blue-300">Someone followed you</div>
-                  </button>
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="font-medium text-blue-900 dark:text-blue-100">Messaging Notifications</div>
+                    <div className="text-sm text-blue-700 dark:text-blue-300">Wallet-to-wallet messaging system</div>
+                  </div>
                   
-                  <button
-                    onClick={() => notificationService.createCommunityPostNotification(
-                      'user1', 'test-community', 'Test Community', 'post123', 'author1', 'Author'
-                    )}
-                    className="p-3 text-left bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-                  >
-                    <div className="font-medium text-purple-900 dark:text-purple-100">Community Post</div>
-                    <div className="text-sm text-purple-700 dark:text-purple-300">New post in community</div>
-                  </button>
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <div className="font-medium text-purple-900 dark:text-purple-100">NFT Offers</div>
+                    <div className="text-sm text-purple-700 dark:text-purple-300">NFT negotiation notifications</div>
+                  </div>
                   
-                  <button
-                    onClick={() => notificationService.addNotification({
-                      type: 'tip_received',
-                      userId: 'user1',
-                      message: 'You received 10 USDC tip',
-                      read: false,
-                      transactionHash: '0x123',
-                      tokenAmount: '10',
-                      tokenSymbol: 'USDC'
-                    } as any)}
-                    className="p-3 text-left bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                  >
-                    <div className="font-medium text-green-900 dark:text-green-100">Web3 Tip</div>
-                    <div className="text-sm text-green-700 dark:text-green-300">Received cryptocurrency tip</div>
-                  </button>
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="font-medium text-green-900 dark:text-green-100">System Messages</div>
+                    <div className="text-sm text-green-700 dark:text-green-300">System and reward notifications</div>
+                  </div>
                   
-                  <button
-                    onClick={() => notificationService.createCommunityModerationNotification(
-                      'user1', 'test-community', 'Test Community', 'post123', 'approved'
-                    )}
-                    className="p-3 text-left bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
-                  >
-                    <div className="font-medium text-orange-900 dark:text-orange-100">Moderation</div>
-                    <div className="text-sm text-orange-700 dark:text-orange-300">Post moderation action</div>
-                  </button>
+                  <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                    <div className="font-medium text-orange-900 dark:text-orange-100">File Sharing</div>
+                    <div className="text-sm text-orange-700 dark:text-orange-300">File sharing notifications</div>
+                  </div>
                 </div>
               </div>
 

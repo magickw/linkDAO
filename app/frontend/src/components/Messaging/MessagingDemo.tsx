@@ -18,8 +18,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useAccount, useConnect } from 'wagmi';
-import { GlassPanel } from '../design-system/components/GlassPanel';
-import { Button } from '../design-system/components/Button';
+import { GlassPanel, Button } from '../../design-system';
 import { 
   MessagingWidget, 
   messagingService, 
