@@ -1,332 +1,472 @@
-import type { Notification, NotificationPreferences } from '@/types/notifications';
+/**
+ * Notification Service for Wallet-to-Wallet Messaging
+ * Handles browser notifications and block explorer integration
+ */
+
+export interface NotificationSettings {
+  browserNotifications: boolean;
+  messageNotifications: boolean;
+  nftOfferNotifications: boolean;
+  blockExplorerNotifications: boolean;
+  sound: boolean;
+  vibration: boolean;
+}
+
+export interface MessageNotificationData {
+  id: string;
+  fromAddress: string;
+  toAddress: string;
+  content: string;
+  messageType: 'text' | 'nft_offer' | 'nft_counter' | 'system';
+  timestamp: Date;
+  conversationId: string;
+}
+
+export interface BlockExplorerNotification {
+  id: string;
+  address: string;
+  transactionHash?: string;
+  blockNumber?: number;
+  type: 'message_received' | 'message_sent' | 'nft_offer' | 'reward_received';
+  message: string;
+  timestamp: Date;
+  explorerUrl: string;
+}
 
 class NotificationService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
-  private notifications: Notification[] = [];
-  private listeners: ((notifications: Notification[]) => void)[] = [];
-
-  // Mock data for development
-  private mockNotifications: Notification[] = [
-    {
-      id: '1',
-      type: 'follow',
-      userId: 'user1',
-      title: 'New Follower',
-      message: 'Alex Johnson followed you',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      read: false,
-      fromUserId: 'alex123',
-      fromUserName: 'Alex Johnson'
-    },
-    {
-      id: '2',
-      type: 'community_new_post',
-      userId: 'user1',
-      title: 'New Community Post',
-      message: 'New post in Web3 Developers community',
-      timestamp: new Date(Date.now() - 1000 * 60 * 10),
-      read: false,
-      communityId: 'web3-devs',
-      communityName: 'Web3 Developers',
-      postId: 'post123',
-      authorId: 'dev456',
-      authorName: 'Sarah Chen',
-      actionUrl: '/community/web3-devs/post/post123'
-    },
-    {
-      id: '3',
-      type: 'community_mention',
-      userId: 'user1',
-      title: 'Community Mention',
-      message: 'You were mentioned in DeFi Discussion',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15),
-      read: false,
-      communityId: 'defi-discussion',
-      communityName: 'DeFi Discussion',
-      postId: 'post456',
-      authorId: 'trader789',
-      authorName: 'Mike Trader',
-      actionUrl: '/community/defi-discussion/post/post456'
-    },
-    {
-      id: '4',
-      type: 'tip_received',
-      userId: 'user1',
-      title: 'Tip Received',
-      message: 'You received 10 USDC tip',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-      read: true,
-      fromUserId: 'tipper123',
-      fromUserName: 'Anonymous Tipper',
-      amount: '10 USDC',
-      actionUrl: '/wallet/transactions'
-    },
-    {
-      id: '5',
-      type: 'community_moderation',
-      userId: 'user1',
-      title: 'Post Moderated',
-      message: 'Your post was approved in Crypto News',
-      timestamp: new Date(Date.now() - 1000 * 60 * 45),
-      read: true,
-      communityId: 'crypto-news',
-      communityName: 'Crypto News',
-      postId: 'post789',
-      authorId: 'moderator123',
-      authorName: 'Community Moderator',
-      actionUrl: '/community/crypto-news/post/post789'
-    }
-  ];
+  private settings: NotificationSettings;
+  private isInitialized = false;
+  private notificationQueue: MessageNotificationData[] = [];
+  private blockExplorerQueue: BlockExplorerNotification[] = [];
 
   constructor() {
-    this.notifications = [...this.mockNotifications];
+    this.settings = this.loadSettings();
+    this.initializeService();
   }
 
-  // Subscribe to notification updates
-  subscribe(callback: (notifications: Notification[]) => void): () => void {
-    this.listeners.push(callback);
-    // Immediately call with current notifications
-    callback(this.notifications);
-    
-    // Return unsubscribe function
-    return () => {
-      const index = this.listeners.indexOf(callback);
-      if (index > -1) {
-        this.listeners.splice(index, 1);
+  /**
+   * Initialize the notification service
+   */
+  async initializeService(): Promise<void> {
+    try {
+      // Request notification permission
+      if ('Notification' in window) {
+        await this.requestNotificationPermission();
       }
-    };
-  }
 
-  // Notify all listeners
-  private notifyListeners() {
-    this.listeners.forEach(callback => callback([...this.notifications]));
-  }
+      // Initialize service worker for background notifications
+      if ('serviceWorker' in navigator) {
+        await this.initializeServiceWorker();
+      }
 
-  // Get notifications
-  async getNotifications(): Promise<Notification[]> {
-    return [...this.notifications].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }
-
-  // Mark notification as read
-  async markAsRead(notificationId: string): Promise<void> {
-    const notification = this.notifications.find(n => n.id === notificationId);
-    if (notification) {
-      notification.read = true;
-      this.notifyListeners();
+      this.isInitialized = true;
+      console.log('Notification service initialized');
+    } catch (error) {
+      console.error('Failed to initialize notification service:', error);
     }
   }
 
-  // Mark all notifications as read
-  async markAllAsRead(): Promise<void> {
-    this.notifications.forEach(n => n.read = true);
-    this.notifyListeners();
+  /**
+   * Request browser notification permission
+   */
+  async requestNotificationPermission(): Promise<boolean> {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission === 'denied') {
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    return permission === 'granted';
   }
 
-  // Mark community notifications as read
-  async markCommunityAsRead(communityId: string): Promise<void> {
-    this.notifications
-      .filter(n => 'communityId' in n && n.communityId === communityId)
-      .forEach(n => n.read = true);
-    this.notifyListeners();
+  /**
+   * Initialize service worker for background notifications
+   */
+  private async initializeServiceWorker(): Promise<void> {
+    try {
+      // Register service worker if not already registered
+      if ('serviceWorker' in navigator) {
+        // In a real implementation, you'd register an actual service worker file
+        console.log('Service worker support detected');
+      }
+    } catch (error) {
+      console.error('Service worker initialization failed:', error);
+    }
   }
 
-  // Get unread count
-  getUnreadCount(): number {
-    return this.notifications.filter(n => !n.read).length;
+  /**
+   * Show message notification
+   */
+  async showMessageNotification(data: MessageNotificationData): Promise<void> {
+    if (!this.settings.messageNotifications) {
+      return;
+    }
+
+    try {
+      // Queue notification if service not ready
+      if (!this.isInitialized) {
+        this.notificationQueue.push(data);
+        return;
+      }
+
+      const title = this.getNotificationTitle(data);
+      const body = this.getNotificationBody(data);
+      const icon = this.getNotificationIcon(data);
+
+      // Show browser notification
+      if (this.settings.browserNotifications && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body,
+          icon,
+          badge: '/icons/message-badge.png',
+          tag: `message-${data.id}`,
+          // timestamp: data.timestamp.getTime(), // Not supported in all browsers
+          data: {
+            conversationId: data.conversationId,
+            messageId: data.id,
+            fromAddress: data.fromAddress
+          }
+          // actions: [ // Not supported in all browsers
+          //   {
+          //     action: 'reply',
+          //     title: 'Reply',
+          //     icon: '/icons/reply.png'
+          //   },
+          //   {
+          //     action: 'view',
+          //     title: 'View',
+          //     icon: '/icons/view.png'
+          //   }
+          // ]
+        });
+
+        // Handle notification click
+        notification.onclick = () => {
+          this.handleNotificationClick(data);
+          notification.close();
+        };
+
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+      }
+
+      // Play sound if enabled
+      if (this.settings.sound) {
+        this.playNotificationSound(data.messageType);
+      }
+
+      // Vibrate if enabled and supported
+      if (this.settings.vibration && 'vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+
+      // Create block explorer notification
+      if (this.settings.blockExplorerNotifications) {
+        await this.createBlockExplorerNotification(data);
+      }
+
+    } catch (error) {
+      console.error('Failed to show message notification:', error);
+    }
   }
 
-  // Get unread count for specific community
-  getCommunityUnreadCount(communityId: string): number {
-    return this.notifications.filter(n => 
-      !n.read && 'communityId' in n && n.communityId === communityId
-    ).length;
+  /**
+   * Show NFT offer notification
+   */
+  async showNFTOfferNotification(data: MessageNotificationData): Promise<void> {
+    if (!this.settings.nftOfferNotifications) {
+      return;
+    }
+
+    const title = '🎨 NFT Offer Received';
+    const body = `New NFT offer from ${this.formatAddress(data.fromAddress)}`;
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: '/icons/nft-icon.png',
+        badge: '/icons/nft-badge.png',
+        tag: `nft-offer-${data.id}`,
+        data: data
+        // actions: [ // Not supported in all browsers
+        //   {
+        //     action: 'view_offer',
+        //     title: 'View Offer',
+        //     icon: '/icons/view.png'
+        //   },
+        //   {
+        //     action: 'decline',
+        //     title: 'Decline',
+        //     icon: '/icons/decline.png'
+        //   }
+        // ]
+      });
+
+      notification.onclick = () => {
+        this.handleNFTOfferClick(data);
+        notification.close();
+      };
+    }
+
+    // Special sound for NFT offers
+    if (this.settings.sound) {
+      this.playNotificationSound('nft_offer');
+    }
   }
 
-  // Add new notification (for real-time updates)
-  addNotification(notification: any): void {
-    const newNotification: Notification = {
-      ...notification,
-      id: Date.now().toString(),
-      timestamp: new Date()
-    } as Notification;
+  /**
+   * Create block explorer notification
+   */
+  private async createBlockExplorerNotification(data: MessageNotificationData): Promise<void> {
+    try {
+      // In a real implementation, this would integrate with actual block explorers
+      // and potentially create on-chain notifications or use services like Push Protocol
+
+      const explorerNotification: BlockExplorerNotification = {
+        id: `explorer-${data.id}`,
+        address: data.toAddress,
+        type: 'message_received',
+        message: `New message from ${this.formatAddress(data.fromAddress)}`,
+        timestamp: data.timestamp,
+        explorerUrl: this.getExplorerUrl(data.toAddress)
+      };
+
+      this.blockExplorerQueue.push(explorerNotification);
+
+      // Simulate block explorer integration
+      console.log('Block explorer notification created:', explorerNotification);
+
+      // In a real implementation, you might:
+      // 1. Use Push Protocol or similar for decentralized notifications
+      // 2. Create a transaction with notification data
+      // 3. Use IPFS to store notification metadata
+      // 4. Integrate with specific explorer APIs
+
+    } catch (error) {
+      console.error('Failed to create block explorer notification:', error);
+    }
+  }
+
+  /**
+   * Handle notification interactions
+   */
+  private handleNotificationClick(data: MessageNotificationData): void {
+    // Focus window and navigate to conversation
+    window.focus();
     
-    this.notifications.unshift(newNotification);
-    this.notifyListeners();
-  }
-
-  // Create community-specific notifications
-  createCommunityPostNotification(
-    userId: string,
-    communityId: string,
-    communityName: string,
-    postId: string,
-    authorId: string,
-    authorName: string
-  ): void {
-    this.addNotification({
-      type: 'community_post',
-      userId,
-      message: `New post in ${communityName}`,
-      read: false,
-      communityId,
-      communityName,
-      postId,
-      fromUserId: authorId,
-      fromUserName: authorName,
-      actionUrl: `/community/${communityId}/post/${postId}`
+    // Emit event for the main app to handle
+    const event = new CustomEvent('notification-click', {
+      detail: {
+        type: 'message',
+        conversationId: data.conversationId,
+        messageId: data.id
+      }
     });
+    window.dispatchEvent(event);
   }
 
-  createCommunityMentionNotification(
-    userId: string,
-    communityId: string,
-    communityName: string,
-    postId: string,
-    mentionedBy: string,
-    mentionedByName: string
-  ): void {
-    this.addNotification({
-      type: 'community_mention',
-      userId,
-      message: `You were mentioned in ${communityName}`,
-      read: false,
-      communityId,
-      communityName,
-      postId,
-      fromUserId: mentionedBy,
-      fromUserName: mentionedByName,
-      actionUrl: `/community/${communityId}/post/${postId}`
+  private handleNFTOfferClick(data: MessageNotificationData): void {
+    window.focus();
+    
+    const event = new CustomEvent('notification-click', {
+      detail: {
+        type: 'nft_offer',
+        conversationId: data.conversationId,
+        messageId: data.id
+      }
     });
+    window.dispatchEvent(event);
   }
 
-  createCommunityModerationNotification(
-    userId: string,
-    communityId: string,
-    communityName: string,
-    postId: string,
-    action: 'approved' | 'rejected' | 'removed' | 'pinned' | 'locked'
-  ): void {
-    const actionMessages = {
-      approved: 'Your post was approved',
-      rejected: 'Your post was rejected',
-      removed: 'Your post was removed',
-      pinned: 'Your post was pinned',
-      locked: 'Your post was locked'
-    };
+  /**
+   * Play notification sounds
+   */
+  private playNotificationSound(messageType: string): void {
+    try {
+      let soundFile = '/sounds/message.mp3';
+      
+      switch (messageType) {
+        case 'nft_offer':
+          soundFile = '/sounds/nft-offer.mp3';
+          break;
+        case 'nft_counter':
+          soundFile = '/sounds/nft-counter.mp3';
+          break;
+        case 'system':
+          soundFile = '/sounds/system.mp3';
+          break;
+        default:
+          soundFile = '/sounds/message.mp3';
+      }
 
-    this.addNotification({
-      type: 'community_moderation',
-      userId,
-      message: `${actionMessages[action]} in ${communityName}`,
-      read: false,
-      communityId,
-      communityName,
-      postId,
-      moderationAction: action,
-      actionUrl: `/community/${communityId}/post/${postId}`
-    });
+      const audio = new Audio(soundFile);
+      audio.volume = 0.5;
+      audio.play().catch(error => {
+        console.warn('Failed to play notification sound:', error);
+      });
+    } catch (error) {
+      console.warn('Audio playback failed:', error);
+    }
   }
 
-  // Get notification preferences
-  async getPreferences(userId: string): Promise<NotificationPreferences> {
-    // Mock preferences - in real app, fetch from API
+  /**
+   * Utility methods
+   */
+  private getNotificationTitle(data: MessageNotificationData): string {
+    switch (data.messageType) {
+      case 'nft_offer':
+        return '🎨 NFT Offer';
+      case 'nft_counter':
+        return '🔄 NFT Counter Offer';
+      case 'system':
+        return '🔔 System Message';
+      default:
+        return '💬 New Message';
+    }
+  }
+
+  private getNotificationBody(data: MessageNotificationData): string {
+    const fromFormatted = this.formatAddress(data.fromAddress);
+    
+    switch (data.messageType) {
+      case 'nft_offer':
+        return `NFT offer from ${fromFormatted}`;
+      case 'nft_counter':
+        return `Counter offer from ${fromFormatted}`;
+      case 'system':
+        return data.content;
+      default:
+        return `Message from ${fromFormatted}: ${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}`;
+    }
+  }
+
+  private getNotificationIcon(data: MessageNotificationData): string {
+    switch (data.messageType) {
+      case 'nft_offer':
+      case 'nft_counter':
+        return '/icons/nft-icon.png';
+      case 'system':
+        return '/icons/system-icon.png';
+      default:
+        return '/icons/message-icon.png';
+    }
+  }
+
+  private formatAddress(address: string): string {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  }
+
+  private getExplorerUrl(address: string): string {
+    // Default to Etherscan for now
+    return `https://etherscan.io/address/${address}`;
+  }
+
+  /**
+   * Settings management
+   */
+  updateSettings(newSettings: Partial<NotificationSettings>): void {
+    this.settings = { ...this.settings, ...newSettings };
+    this.saveSettings();
+  }
+
+  getSettings(): NotificationSettings {
+    return { ...this.settings };
+  }
+
+  private loadSettings(): NotificationSettings {
+    try {
+      const stored = localStorage.getItem('messaging-notification-settings');
+      if (stored) {
+        return { ...this.getDefaultSettings(), ...JSON.parse(stored) };
+      }
+    } catch (error) {
+      console.error('Failed to load notification settings:', error);
+    }
+    
+    return this.getDefaultSettings();
+  }
+
+  private saveSettings(): void {
+    try {
+      localStorage.setItem('messaging-notification-settings', JSON.stringify(this.settings));
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+    }
+  }
+
+  private getDefaultSettings(): NotificationSettings {
     return {
-      userId,
-      email: true,
-      push: true,
-      inApp: true,
-      follows: true,
-      likes: true,
-      comments: true,
-      mentions: true,
-      tips: true,
-      communityPosts: true,
-      communityReplies: true,
-      communityMentions: true,
-      communityModeration: true,
-      communityMembers: true,
-      governanceProposals: true,
-      governanceVotes: true,
-      governanceResults: true,
-      communityPreferences: {
-        'web3-devs': {
-          communityId: 'web3-devs',
-          enabled: true,
-          newPosts: true,
-          replies: true,
-          mentions: true,
-          moderation: true,
-          memberActivity: true
-        },
-        'defi-discussion': {
-          communityId: 'defi-discussion',
-          enabled: true,
-          newPosts: false,
-          replies: true,
-          mentions: true,
-          moderation: true,
-          memberActivity: true
-        }
-      }
+      browserNotifications: true,
+      messageNotifications: true,
+      nftOfferNotifications: true,
+      blockExplorerNotifications: false, // Disabled by default (requires integration)
+      sound: true,
+      vibration: true
     };
   }
 
-  // Update notification preferences
-  async updatePreferences(preferences: NotificationPreferences): Promise<void> {
-    // In real app, send to API
-    console.log('Updated notification preferences:', preferences);
+  /**
+   * Process queued notifications
+   */
+  private async processNotificationQueue(): Promise<void> {
+    while (this.notificationQueue.length > 0) {
+      const notification = this.notificationQueue.shift();
+      if (notification) {
+        await this.showMessageNotification(notification);
+      }
+    }
   }
 
-  // Simulate real-time notifications via WebSocket
-  simulateRealTimeNotification(): void {
-    const types = ['community_post', 'community_mention', 'tip_received', 'follow'] as const;
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    
-    switch (randomType) {
-      case 'community_post':
-        this.createCommunityPostNotification(
-          'user1',
-          'web3-devs',
-          'Web3 Developers',
-          `post${Date.now()}`,
-          'newuser123',
-          'New Developer'
-        );
-        break;
-      case 'community_mention':
-        this.createCommunityMentionNotification(
-          'user1',
-          'defi-discussion',
-          'DeFi Discussion',
-          `post${Date.now()}`,
-          'trader456',
-          'Pro Trader'
-        );
-        break;
-      case 'tip_received':
-        this.addNotification({
-          type: 'tip_received',
-          userId: 'user1',
-          message: 'You received 5 USDC tip',
-          read: false,
-          transactionHash: `0x${Date.now()}`,
-          tokenAmount: '5',
-          tokenSymbol: 'USDC',
-          actionUrl: '/wallet/transactions'
-        });
-        break;
-      case 'follow':
-        this.addNotification({
-          type: 'follow',
-          userId: 'user1',
-          message: 'Someone new followed you',
-          read: false,
-          fromUserId: `user${Date.now()}`,
-          fromUserName: 'New Follower'
-        });
-        break;
-    }
+  /**
+   * Get block explorer notifications
+   */
+  getBlockExplorerNotifications(): BlockExplorerNotification[] {
+    return [...this.blockExplorerQueue];
+  }
+
+  /**
+   * Clear notifications
+   */
+  clearNotifications(): void {
+    this.notificationQueue = [];
+    this.blockExplorerQueue = [];
+  }
+
+  /**
+   * Test notification
+   */
+  async testNotification(): Promise<void> {
+    const testData: MessageNotificationData = {
+      id: 'test-' + Date.now(),
+      fromAddress: '0x742d35Cc6634C0532925a3b8D91B062fd8AfD34a',
+      toAddress: '0x123456789abcdef123456789abcdef1234567890',
+      content: 'This is a test notification',
+      messageType: 'text',
+      timestamp: new Date(),
+      conversationId: 'test-conversation'
+    };
+
+    await this.showMessageNotification(testData);
+  }
+
+  /**
+   * Cleanup
+   */
+  cleanup(): void {
+    this.clearNotifications();
   }
 }
 
+// Export singleton instance
 export const notificationService = new NotificationService();
+export default notificationService;
