@@ -22,6 +22,8 @@ import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
 import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
+import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
+import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
 import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -36,7 +38,7 @@ const MarketplaceContent: React.FC = () => {
   const { profile } = useSeller();
   
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'create'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'create' | 'orders' | 'disputes'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,46 +65,161 @@ const MarketplaceContent: React.FC = () => {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const activeListings = await marketplaceService.getActiveListings();
-      // Ensure we always have an array
-      setListings(Array.isArray(activeListings) ? activeListings : []);
+      
+      // Fetch from our enhanced backend API
+      const response = await fetch('/api/marketplace/listings?limit=20&sortBy=createdAt&sortOrder=desc');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Transform backend data to frontend format
+        const transformedListings = data.data.map((product: any) => ({
+          id: product.id,
+          sellerWalletAddress: product.seller?.walletAddress || '0x1234567890123456789012345678901234567890',
+          tokenAddress: '0x0000000000000000000000000000000000000000',
+          price: product.cryptoPrice || '0.1',
+          quantity: product.inventory || 1,
+          itemType: product.category?.toUpperCase() === 'NFT' ? 'NFT' : 
+                   product.isNFT ? 'NFT' : 
+                   product.category?.toUpperCase() === 'ELECTRONICS' ? 'DIGITAL' : 'PHYSICAL',
+          listingType: product.listingType === 'AUCTION' ? 'AUCTION' : 'FIXED_PRICE',
+          status: 'ACTIVE',
+          startTime: product.createdAt || new Date().toISOString(),
+          endTime: product.auctionEndTime || undefined,
+          highestBid: product.highestBid || undefined,
+          metadataURI: product.title || 'Unnamed Item',
+          description: product.description || '',
+          images: product.images || [],
+          seller: product.seller || {},
+          trust: product.trust || {},
+          tags: product.tags || [],
+          isEscrowed: false,
+          createdAt: product.createdAt || new Date().toISOString(),
+          updatedAt: product.updatedAt || new Date().toISOString(),
+          // Enhanced fields for better display
+          enhancedData: {
+            title: product.title,
+            description: product.description,
+            images: product.images,
+            price: {
+              crypto: product.cryptoPrice,
+              cryptoSymbol: product.cryptoSymbol,
+              fiat: product.price,
+              fiatSymbol: product.currency
+            },
+            seller: product.seller,
+            trust: product.trust,
+            category: product.category,
+            tags: product.tags,
+            views: product.views,
+            favorites: product.favorites
+          }
+        }));
+        
+        setListings(transformedListings);
+        addToast(`Loaded ${transformedListings.length} products from marketplace`, 'success');
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
       console.error('Error fetching listings:', error);
-      addToast('Failed to fetch listings. Displaying mock data as fallback.', 'warning');
-      // Use mock data as fallback
+      addToast('Failed to fetch listings from API. Using fallback data.', 'warning');
+      
+      // Enhanced fallback data that matches our backend structure
       setListings([
         {
-          id: '1',
+          id: 'prod_001',
           sellerWalletAddress: '0x1234567890123456789012345678901234567890',
           tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.5',
-          quantity: 1,
+          price: '0.1245',
+          quantity: 15,
           itemType: 'DIGITAL',
           listingType: 'FIXED_PRICE',
           status: 'ACTIVE',
           startTime: new Date().toISOString(),
-          metadataURI: 'Rare CryptoPunk #1234',
+          metadataURI: 'Premium Wireless Headphones',
           isEscrowed: false,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          enhancedData: {
+            title: 'Premium Wireless Headphones',
+            description: 'High-quality noise-canceling wireless headphones with 30-hour battery life and premium sound quality.',
+            images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop'],
+            price: {
+              crypto: '0.1245',
+              cryptoSymbol: 'ETH',
+              fiat: '299.99',
+              fiatSymbol: 'USD'
+            },
+            seller: {
+              id: 'seller_001',
+              name: 'TechGear Pro',
+              rating: 4.8,
+              verified: true,
+              daoApproved: true,
+              walletAddress: '0x1234567890123456789012345678901234567890'
+            },
+            trust: {
+              verified: true,
+              escrowProtected: true,
+              onChainCertified: true,
+              safetyScore: 98
+            },
+            category: 'electronics',
+            tags: ['electronics', 'audio', 'wireless', 'premium'],
+            views: 1247,
+            favorites: 89
+          }
         },
         {
-          id: '2',
+          id: 'prod_002',
           sellerWalletAddress: '0x2345678901234567890123456789012345678901',
           tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '1.2',
+          price: '2.5000',
           quantity: 1,
           itemType: 'NFT',
           listingType: 'AUCTION',
           status: 'ACTIVE',
           startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 86400000).toISOString(), // 24 hours from now
-          highestBid: '1.0',
-          highestBidderWalletAddress: '0x3456789012345678901234567890123456789012',
-          metadataURI: 'DeFi Art Collection',
+          endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          highestBid: '2.1000',
+          metadataURI: 'Rare Digital Art NFT Collection',
           isEscrowed: false,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          enhancedData: {
+            title: 'Rare Digital Art NFT Collection',
+            description: 'Exclusive digital artwork from renowned crypto artist. Limited edition with utility benefits.',
+            images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=400&h=300&fit=crop'],
+            price: {
+              crypto: '2.5000',
+              cryptoSymbol: 'ETH',
+              fiat: '6000.00',
+              fiatSymbol: 'USD'
+            },
+            seller: {
+              id: 'seller_002',
+              name: 'CryptoArtist',
+              rating: 4.9,
+              verified: true,
+              daoApproved: true,
+              walletAddress: '0x2345678901234567890123456789012345678901'
+            },
+            trust: {
+              verified: true,
+              escrowProtected: true,
+              onChainCertified: true,
+              safetyScore: 96
+            },
+            category: 'nft',
+            tags: ['nft', 'art', 'digital', 'exclusive'],
+            views: 892,
+            favorites: 156
+          }
         }
       ]);
     } finally {
@@ -244,6 +361,28 @@ const MarketplaceContent: React.FC = () => {
                 )}
               </button>
               <button
+                onClick={() => { setActiveTab('orders'); setShowCart(false); setShowCheckout(false); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'orders' && !showCart && !showCheckout
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                disabled={!isConnected}
+              >
+                Orders
+              </button>
+              <button
+                onClick={() => { setActiveTab('disputes'); setShowCart(false); setShowCheckout(false); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'disputes' && !showCart && !showCheckout
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                disabled={!isConnected}
+              >
+                Disputes
+              </button>
+              <button
                 onClick={() => { setActiveTab('my-listings'); setShowCart(false); setShowCheckout(false); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'my-listings' && !showCart && !showCheckout
@@ -351,80 +490,129 @@ const MarketplaceContent: React.FC = () => {
                     )}
                   </GlassPanel>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
                     {filteredListings.map((listing) => (
                       <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
                         <div className="p-6">
-                          <div className="relative h-48 bg-gray-800/50 rounded-lg overflow-hidden mb-4">
+                          {/* Enhanced Product Image with S3/CloudFront optimization */}
+                          <div className="relative h-48 bg-gray-800/50 rounded-lg overflow-hidden mb-4 group">
                             <ImageWithFallback
                               src={formatImageUrl(listing.metadataURI, 400, 300)}
                               alt={listing.metadataURI || 'Product image'}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               fallbackType="product"
                             />
-                          </div>
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="text-lg font-medium text-white">
-                                {listing.metadataURI || 'Unnamed Item'}
-                              </h3>
-                              <p className="text-sm text-white/70">
-                                Seller: {formatAddress(listing.sellerWalletAddress)}
-                              </p>
+                            {/* Trust Indicators Overlay */}
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              <span className="bg-green-500/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+                                ✅ Escrow Protected
+                              </span>
                             </div>
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                            {/* Quick Action Overlay */}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                              <Button
+                                variant="primary"
+                                size="small"
+                                onClick={() => {
+                                  setSelectedListing(listing);
+                                  setShowDetailModal(true);
+                                }}
+                                className="backdrop-blur-sm"
+                              >
+                                Quick View
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Enhanced Product Info */}
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-medium text-white truncate" title={listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}>
+                                {listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
+                              </h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                <p className="text-sm text-white/70 truncate">
+                                  {listing.enhancedData?.seller?.name || formatAddress(listing.sellerWalletAddress)}
+                                </p>
+                                {/* Enhanced Seller Badges */}
+                                <div className="flex gap-1">
+                                  {listing.enhancedData?.seller?.verified && (
+                                    <span className="text-xs" title="Verified Seller">✅</span>
+                                  )}
+                                  {listing.enhancedData?.seller?.daoApproved && (
+                                    <span className="text-xs" title="DAO Approved">🏛️</span>
+                                  )}
+                                  {listing.enhancedData?.trust?.escrowProtected && (
+                                    <span className="text-xs" title="Escrow Protected">🔒</span>
+                                  )}
+                                  {listing.enhancedData?.trust?.onChainCertified && (
+                                    <span className="text-xs" title="On-Chain Certified">⛓️</span>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Seller Rating */}
+                              {listing.enhancedData?.seller?.rating && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="flex text-yellow-400 text-xs">
+                                    {'⭐'.repeat(Math.floor(listing.enhancedData.seller.rating))}
+                                  </div>
+                                  <span className="text-xs text-white/60">
+                                    {listing.enhancedData.seller.rating.toFixed(1)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30 ml-2 flex-shrink-0">
                               {formatItemType(listing.itemType)}
                             </span>
                           </div>
                           
+                          {/* Enhanced Pricing Display */}
                           <div className="mb-4">
-                            <p className="text-2xl font-bold text-white">
-                              {listing.price} ETH
-                            </p>
-                            <p className="text-sm text-white/70">
-                              Quantity: {listing.quantity}
-                            </p>
+                            <div className="flex items-baseline gap-2">
+                              <p className="text-2xl font-bold text-white">
+                                {listing.enhancedData?.price?.crypto || listing.price} {listing.enhancedData?.price?.cryptoSymbol || 'ETH'}
+                              </p>
+                              <p className="text-sm text-white/60">
+                                ≈ ${listing.enhancedData?.price?.fiat || (parseFloat(listing.price) * 2400).toFixed(2)} {listing.enhancedData?.price?.fiatSymbol || 'USD'}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-sm text-white/70">
+                                Qty: {listing.quantity}
+                              </p>
+                              <div className="flex items-center gap-2">
+                                {listing.quantity > 0 && (
+                                  <span className="text-xs text-green-400">In Stock</span>
+                                )}
+                                {listing.enhancedData?.views && (
+                                  <span className="text-xs text-white/50">
+                                    👁 {listing.enhancedData.views}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           
+                          {/* Enhanced Status and Auction Info */}
                           <div className="mb-6 flex items-center justify-between">
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
                               {listing.listingType.replace('_', ' ')}
                             </span>
                             {listing.listingType === 'AUCTION' && listing.endTime && (
-                              <span className="text-sm text-white/70">
-                                Ends: {new Date(listing.endTime).toLocaleDateString()}
-                              </span>
+                              <div className="text-right">
+                                <span className="text-xs text-white/70 block">Ends:</span>
+                                <span className="text-xs text-white font-medium">
+                                  {new Date(listing.endTime).toLocaleDateString()}
+                                </span>
+                              </div>
                             )}
                           </div>
                           
+                          {/* Enhanced Action Buttons */}
                           <div className="mt-6 space-y-2">
-                            <Button
-                              variant="outline"
-                              className="w-full border-white/30 text-white/80 hover:bg-white/10"
-                              onClick={() => {
-                                setSelectedListing(listing);
-                                setShowDetailModal(true);
-                              }}
-                            >
-                              View Details
-                            </Button>
                             {listing.listingType === 'AUCTION' ? (
-                              <Button
-                                variant="primary"
-                                className="w-full"
-                                onClick={() => {
-                                  if (!isConnected) {
-                                    addToast('Please connect your wallet first', 'warning');
-                                    return;
-                                  }
-                                  setSelectedListing(listing);
-                                  setShowBidModal(true);
-                                }}
-                              >
-                                Place Bid
-                              </Button>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-2">
+                              <>
                                 <Button
                                   variant="primary"
                                   className="w-full"
@@ -433,16 +621,43 @@ const MarketplaceContent: React.FC = () => {
                                       addToast('Please connect your wallet first', 'warning');
                                       return;
                                     }
-                                    // Add to cart
+                                    setSelectedListing(listing);
+                                    setShowBidModal(true);
+                                  }}
+                                >
+                                  🔨 Bid Now
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                  onClick={() => {
+                                    setSelectedListing(listing);
+                                    setShowDetailModal(true);
+                                  }}
+                                >
+                                  View Details
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="primary"
+                                  className="w-full"
+                                  onClick={() => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
+                                    }
+                                    // Enhanced cart product with all required fields
                                     const cartProduct = {
                                       id: listing.id,
                                       title: listing.metadataURI || 'Unnamed Item',
                                       description: listing.metadataURI || '',
-                                      image: '',
+                                      image: formatImageUrl(listing.metadataURI, 400, 300) || '',
                                       price: {
                                         crypto: listing.price,
                                         cryptoSymbol: 'ETH',
-                                        fiat: (parseFloat(listing.price) * 1650).toFixed(2),
+                                        fiat: (parseFloat(listing.price) * 2400).toFixed(2),
                                         fiatSymbol: 'USD'
                                       },
                                       seller: {
@@ -450,7 +665,7 @@ const MarketplaceContent: React.FC = () => {
                                         name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
                                         avatar: '',
                                         verified: true,
-                                        daoApproved: false,
+                                        daoApproved: true,
                                         escrowSupported: true
                                       },
                                       category: listing.itemType.toLowerCase(),
@@ -458,9 +673,9 @@ const MarketplaceContent: React.FC = () => {
                                       isNFT: listing.itemType === 'NFT',
                                       inventory: listing.quantity,
                                       shipping: {
-                                        cost: '0',
-                                        freeShipping: true,
-                                        estimatedDays: listing.itemType === 'DIGITAL' ? 'instant' : '3-5',
+                                        cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
+                                        freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                        estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
                                         regions: ['US', 'CA', 'EU']
                                       },
                                       trust: {
@@ -470,26 +685,38 @@ const MarketplaceContent: React.FC = () => {
                                       }
                                     };
                                     cart.addItem(cartProduct);
-                                    addToast('Added to cart!', 'success');
+                                    addToast('Added to cart! 🛒', 'success');
                                   }}
                                 >
-                                  Add to Cart
+                                  🛒 Add to Cart
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  className="w-full border-white/30 text-white/80 hover:bg-white/10"
-                                  onClick={() => {
-                                    if (!isConnected) {
-                                      addToast('Please connect your wallet first', 'warning');
-                                      return;
-                                    }
-                                    setSelectedListing(listing);
-                                    setShowOfferModal(true);
-                                  }}
-                                >
-                                  Offer
-                                </Button>
-                              </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button
+                                    variant="outline"
+                                    className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                    onClick={() => {
+                                      setSelectedListing(listing);
+                                      setShowDetailModal(true);
+                                    }}
+                                  >
+                                    Details
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                    onClick={() => {
+                                      if (!isConnected) {
+                                        addToast('Please connect your wallet first', 'warning');
+                                        return;
+                                      }
+                                      setSelectedListing(listing);
+                                      setShowOfferModal(true);
+                                    }}
+                                  >
+                                    Offer
+                                  </Button>
+                                </div>
+                              </>
                             )}
                           </div>
                         </div>
@@ -539,6 +766,48 @@ const MarketplaceContent: React.FC = () => {
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">
                     <p className="text-white/70">Please connect your wallet to create a listing.</p>
+                  </GlassPanel>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'orders' && (
+              <div>
+                {isConnected ? (
+                  <div>
+                    <div className="text-center mb-8">
+                      <h2 className="text-4xl font-bold text-white mb-4">Order Management</h2>
+                      <p className="text-xl text-white/80">Track your orders and manage deliveries</p>
+                    </div>
+                    <OrderTrackingDashboard
+                      userType={profile ? 'seller' : 'buyer'}
+                      className="text-white"
+                    />
+                  </div>
+                ) : (
+                  <GlassPanel variant="primary" className="text-center py-12">
+                    <p className="text-white/70">Please connect your wallet to view your orders.</p>
+                  </GlassPanel>
+                )}
+              </div>
+            )}
+            
+            {activeTab === 'disputes' && (
+              <div>
+                {isConnected ? (
+                  <div>
+                    <div className="text-center mb-8">
+                      <h2 className="text-4xl font-bold text-white mb-4">Dispute Resolution</h2>
+                      <p className="text-xl text-white/80">Community-driven dispute arbitration with DAO integration</p>
+                    </div>
+                    <DisputeResolutionPanel
+                      userRole={profile ? 'seller' : 'buyer'}
+                      className="text-white"
+                    />
+                  </div>
+                ) : (
+                  <GlassPanel variant="primary" className="text-center py-12">
+                    <p className="text-white/70">Please connect your wallet to access dispute resolution.</p>
                   </GlassPanel>
                 )}
               </div>

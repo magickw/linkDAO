@@ -128,6 +128,14 @@ import adminRoutes from './routes/adminRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
 import marketplaceRegistrationRoutes from './routes/marketplaceRegistrationRoutes';
+// Import dispute resolution routes
+import { disputeRouter } from './routes/disputeRoutes';
+// Import gas fee sponsorship routes
+import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
+// Import DAO shipping partners routes
+import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
+// Import advanced analytics routes
+import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
@@ -143,6 +151,18 @@ app.use('/api/analytics', analyticsRoutes);
 
 // Marketplace registration routes
 app.use('/api/marketplace/registration', marketplaceRegistrationRoutes);
+
+// Dispute resolution routes
+app.use('/api/marketplace/disputes', disputeRouter);
+
+// Gas fee sponsorship routes
+app.use('/api/gas-sponsorship', gasFeeSponsorshipRouter);
+
+// DAO shipping partners routes
+app.use('/api/shipping', daoShippingPartnersRouter);
+
+// Advanced analytics routes
+app.use('/api/analytics', advancedAnalyticsRouter);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {

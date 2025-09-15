@@ -1,352 +1,282 @@
 /**
- * Enhanced Escrow Service - Web3 smart contract integration for secure marketplace transactions
- * Features: Contract deployment, payment processing, dispute resolution, multi-sig support
+ * Multi-Seller Escrow Service
+ * Handles separate escrow contracts per seller with automated release mechanisms
  */
 
 import { ethers } from 'ethers';
-import { useAccount, useWriteContract, useReadContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useContractWrite, useContractRead } from 'wagmi';
 
-// Enhanced Escrow Contract ABI (subset for key functions)
-export const ENHANCED_ESCROW_ABI = [
-  {
-    "inputs": [
-      {"internalType": "uint256", "name": "listingId", "type": "uint256"},
-      {"internalType": "address", "name": "buyer", "type": "address"},
-      {"internalType": "address", "name": "seller", "type": "address"},
-      {"internalType": "address", "name": "tokenAddress", "type": "address"},
-      {"internalType": "uint256", "name": "amount", "type": "uint256"}
-    ],
-    "name": "createEscrow",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "escrowId", "type": "uint256"}],
-    "name": "lockFunds",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"internalType": "uint256", "name": "escrowId", "type": "uint256"},
-      {"internalType": "string", "name": "deliveryInfo", "type": "string"}
-    ],
-    "name": "confirmDelivery",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "escrowId", "type": "uint256"}],
-    "name": "approveEscrow",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {"internalType": "uint256", "name": "escrowId", "type": "uint256"},
-      {"internalType": "string", "name": "reason", "type": "string"}
-    ],
-    "name": "openDispute",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "escrowId", "type": "uint256"}],
-    "name": "getEscrow",
-    "outputs": [
-      {
-        "components": [
-          {"internalType": "uint256", "name": "id", "type": "uint256"},
-          {"internalType": "uint256", "name": "listingId", "type": "uint256"},
-          {"internalType": "address", "name": "buyer", "type": "address"},
-          {"internalType": "address", "name": "seller", "type": "address"},
-          {"internalType": "address", "name": "tokenAddress", "type": "address"},
-          {"internalType": "uint256", "name": "amount", "type": "uint256"},
-          {"internalType": "uint256", "name": "feeAmount", "type": "uint256"},
-          {"internalType": "string", "name": "deliveryInfo", "type": "string"},
-          {"internalType": "uint256", "name": "deliveryDeadline", "type": "uint256"},
-          {"internalType": "uint256", "name": "createdAt", "type": "uint256"},
-          {"internalType": "uint256", "name": "resolvedAt", "type": "uint256"},
-          {"internalType": "uint8", "name": "status", "type": "uint8"}
-        ],
-        "internalType": "struct EnhancedEscrow.Escrow",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
+// Escrow contract ABI (simplified for demo)
+const ESCROW_ABI = [
+  'function createEscrow(address seller, address buyer, uint256 amount, bytes32 orderId) external payable returns (address)',
+  'function releaseEscrow(address escrowContract) external',
+  'function disputeEscrow(address escrowContract, string reason) external',
+  'function resolveDispute(address escrowContract, bool releaseToBuyer) external',
+  'function getEscrowStatus(address escrowContract) external view returns (uint8)',
+  'function getEscrowDetails(address escrowContract) external view returns (address, address, uint256, uint256, uint8)',
+  'event EscrowCreated(address indexed escrowContract, address indexed seller, address indexed buyer, uint256 amount)',
+  'event EscrowReleased(address indexed escrowContract, address indexed recipient, uint256 amount)',
+  'event EscrowDisputed(address indexed escrowContract, string reason)',
+];
 
-// Contract addresses by network
-export const ESCROW_CONTRACT_ADDRESSES = {
-  1: '0x...', // Mainnet
-  5: '0x...', // Goerli
-  11155111: '0x...', // Sepolia
-  1337: '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Local hardhat
-} as const;
-
-export interface EscrowDetails {
-  id: string;
-  listingId: string;
-  buyer: string;
-  seller: string;
-  tokenAddress: string;
-  amount: string;
-  feeAmount: string;
-  deliveryInfo: string;
-  deliveryDeadline: Date;
-  createdAt: Date;
-  resolvedAt?: Date;
-  status: EscrowStatus;
-  requiresMultiSig: boolean;
-  signatureCount: number;
-  timeLockExpiry?: Date;
-}
+const ESCROW_FACTORY_ADDRESS = process.env.NEXT_PUBLIC_ESCROW_FACTORY_ADDRESS || '0x1234567890123456789012345678901234567890';
 
 export enum EscrowStatus {
-  CREATED = 0,
-  FUNDS_LOCKED = 1,
-  DELIVERY_CONFIRMED = 2,
-  DISPUTE_OPENED = 3,
-  RESOLVED_BUYER_WINS = 4,
-  RESOLVED_SELLER_WINS = 5,
-  CANCELLED = 6
+  PENDING = 0,
+  FUNDED = 1,
+  RELEASED = 2,
+  DISPUTED = 3,
+  RESOLVED = 4,
+  CANCELLED = 5,
 }
 
-export interface PaymentRequest {
-  listingId: string;
+export interface EscrowContract {
+  address: string;
+  seller: string;
+  buyer: string;
+  amount: string;
+  orderId: string;
+  status: EscrowStatus;
+  createdAt: Date;
+  expiresAt: Date;
+  disputeReason?: string;
+  transactionHash: string;
+}
+
+export interface CreateEscrowParams {
   sellerId: string;
+  sellerAddress: string;
+  buyerAddress: string;
+  amount: string;
+  orderId: string;
   items: Array<{
     id: string;
     title: string;
     price: string;
     quantity: number;
   }>;
-  shippingAddress?: {
-    firstName: string;
-    lastName: string;
-    address1: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  paymentToken: 'ETH' | 'USDC' | 'DAI';
+  autoReleaseHours?: number;
+}
+
+export interface EscrowGroup {
+  sellerId: string;
+  sellerName: string;
+  sellerAddress: string;
+  contracts: EscrowContract[];
   totalAmount: string;
-  escrowEnabled: boolean;
+  status: 'pending' | 'funded' | 'partial' | 'completed' | 'disputed';
 }
 
-export interface TransactionResult {
-  success: boolean;
-  transactionHash?: string;
-  escrowId?: string;
-  error?: string;
-  gasUsed?: string;
-}
+class EscrowService {
+  private provider: ethers.providers.Web3Provider | null = null;
+  private signer: ethers.Signer | null = null;
+  private factoryContract: ethers.Contract | null = null;
 
-export class EscrowService {
-  private contractAddress: string;
-  private chainId: number;
+  constructor() {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      this.provider = new ethers.providers.Web3Provider(window.ethereum);
+      this.initializeSigner();
+    }
+  }
 
-  constructor(chainId: number = 1337) {
-    this.chainId = chainId;
-    this.contractAddress = ESCROW_CONTRACT_ADDRESSES[chainId as keyof typeof ESCROW_CONTRACT_ADDRESSES] || '';
+  private async initializeSigner() {
+    if (this.provider) {
+      try {
+        this.signer = this.provider.getSigner();
+        if (this.signer) {
+          this.factoryContract = new ethers.Contract(
+            ESCROW_FACTORY_ADDRESS,
+            ESCROW_ABI,
+            this.signer
+          );
+        }
+      } catch (error) {
+        console.error('Failed to initialize signer:', error);
+      }
+    }
   }
 
   /**
-   * Create a new escrow contract for a marketplace transaction
+   * Create multiple escrow contracts for multi-seller order
    */
-  async createEscrow(request: PaymentRequest, userAddress: string): Promise<TransactionResult> {
+  async createMultiSellerEscrow(
+    sellerGroups: Array<{
+      sellerId: string;
+      sellerAddress: string;
+      items: Array<{ id: string; title: string; price: string; quantity: number }>;
+      totalAmount: string;
+    }>,
+    buyerAddress: string,
+    orderId: string
+  ): Promise<EscrowGroup[]> {
+    if (!this.factoryContract || !this.signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    const escrowGroups: EscrowGroup[] = [];
+
     try {
-      if (!this.contractAddress) {
-        throw new Error('Escrow contract not deployed on this network');
+      // Create escrow contract for each seller
+      for (const group of sellerGroups) {
+        const escrowParams: CreateEscrowParams = {
+          sellerId: group.sellerId,
+          sellerAddress: group.sellerAddress,
+          buyerAddress,
+          amount: group.totalAmount,
+          orderId: `${orderId}_${group.sellerId}`,
+          items: group.items,
+          autoReleaseHours: 168, // 7 days default
+        };
+
+        const escrowContract = await this.createSingleEscrow(escrowParams);
+        
+        escrowGroups.push({
+          sellerId: group.sellerId,
+          sellerName: `Seller ${group.sellerId.slice(0, 6)}`,
+          sellerAddress: group.sellerAddress,
+          contracts: [escrowContract],
+          totalAmount: group.totalAmount,
+          status: 'funded',
+        });
       }
 
-      // Convert amount to Wei if using ETH
-      const amountWei = request.paymentToken === 'ETH' 
-        ? ethers.utils.parseEther(request.totalAmount)
-        : ethers.utils.parseUnits(request.totalAmount, 18); // Assuming 18 decimals for ERC20
-
-      const tokenAddress = request.paymentToken === 'ETH' 
-        ? ethers.constants.AddressZero 
-        : this.getTokenAddress(request.paymentToken);
-
-      // This would be called from a React component using wagmi hooks
-      const createEscrowCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'createEscrow',
-        args: [
-          BigInt(request.listingId),
-          userAddress as `0x${string}`,
-          request.sellerId as `0x${string}`,
-          tokenAddress as `0x${string}`,
-          amountWei
-        ]
-      };
-
-      return {
-        success: true,
-        transactionHash: 'pending', // Will be filled by the component
-        escrowId: 'pending'
-      };
-
+      return escrowGroups;
     } catch (error) {
-      console.error('Error creating escrow:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+      console.error('Error creating multi-seller escrow:', error);
+      throw new Error('Failed to create escrow contracts');
     }
   }
 
   /**
-   * Lock funds in the escrow contract
+   * Create single escrow contract
    */
-  async lockFunds(escrowId: string, amount: string, paymentToken: string): Promise<TransactionResult> {
-    try {
-      const amountWei = paymentToken === 'ETH' 
-        ? ethers.utils.parseEther(amount)
-        : ethers.utils.parseUnits(amount, 18);
-
-      // For ETH payments, include value in transaction
-      const lockFundsCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'lockFunds',
-        args: [BigInt(escrowId)],
-        ...(paymentToken === 'ETH' && { value: amountWei })
-      };
-
-      return {
-        success: true,
-        transactionHash: 'pending'
-      };
-
-    } catch (error) {
-      console.error('Error locking funds:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
+  async createSingleEscrow(params: CreateEscrowParams): Promise<EscrowContract> {
+    if (!this.factoryContract || !this.signer) {
+      throw new Error('Wallet not connected');
     }
-  }
 
-  /**
-   * Confirm delivery (seller action)
-   */
-  async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<TransactionResult> {
     try {
-      const confirmDeliveryCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'confirmDelivery',
-        args: [BigInt(escrowId), deliveryInfo]
-      };
+      const amountWei = ethers.utils.parseEther(params.amount);
+      const orderIdBytes = ethers.utils.formatBytes32String(params.orderId);
 
-      return {
-        success: true,
-        transactionHash: 'pending'
-      };
+      // Call factory contract to create escrow
+      const tx = await this.factoryContract.createEscrow(
+        params.sellerAddress,
+        params.buyerAddress,
+        amountWei,
+        orderIdBytes,
+        { value: amountWei }
+      );
 
-    } catch (error) {
-      console.error('Error confirming delivery:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
+      const receipt = await tx.wait();
+      
+      // Extract escrow contract address from events
+      const escrowCreatedEvent = receipt.events?.find(
+        (event: any) => event.event === 'EscrowCreated'
+      );
+      
+      if (!escrowCreatedEvent) {
+        throw new Error('Escrow creation event not found');
+      }
 
-  /**
-   * Approve escrow and release funds (buyer action)
-   */
-  async approveEscrow(escrowId: string): Promise<TransactionResult> {
-    try {
-      const approveCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'approveEscrow',
-        args: [BigInt(escrowId)]
-      };
-
-      return {
-        success: true,
-        transactionHash: 'pending'
-      };
-
-    } catch (error) {
-      console.error('Error approving escrow:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Open a dispute
-   */
-  async openDispute(escrowId: string, reason: string): Promise<TransactionResult> {
-    try {
-      const disputeCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'openDispute',
-        args: [BigInt(escrowId), reason]
-      };
-
-      return {
-        success: true,
-        transactionHash: 'pending'
-      };
-
-    } catch (error) {
-      console.error('Error opening dispute:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  /**
-   * Get escrow details
-   */
-  async getEscrowDetails(escrowId: string): Promise<EscrowDetails | null> {
-    try {
-      // This would be called from a React component using useReadContract
-      const readCall = {
-        address: this.contractAddress as `0x${string}`,
-        abi: ENHANCED_ESCROW_ABI,
-        functionName: 'getEscrow',
-        args: [BigInt(escrowId)]
-      };
-
-      // Placeholder return - actual implementation would process contract response
-      return {
-        id: escrowId,
-        listingId: '1',
-        buyer: '0x...',
-        seller: '0x...',
-        tokenAddress: ethers.constants.AddressZero,
-        amount: '1000000000000000000', // 1 ETH in Wei
-        feeAmount: '10000000000000000', // 0.01 ETH fee
-        deliveryInfo: '',
-        deliveryDeadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      const escrowAddress = escrowCreatedEvent.args.escrowContract;
+      
+      const escrowContract: EscrowContract = {
+        address: escrowAddress,
+        seller: params.sellerAddress,
+        buyer: params.buyerAddress,
+        amount: params.amount,
+        orderId: params.orderId,
+        status: EscrowStatus.FUNDED,
         createdAt: new Date(),
-        status: EscrowStatus.CREATED,
-        requiresMultiSig: false,
-        signatureCount: 0
+        expiresAt: new Date(Date.now() + (params.autoReleaseHours || 168) * 60 * 60 * 1000),
+        transactionHash: tx.hash,
       };
 
+      // Store escrow details locally
+      this.storeEscrowContract(escrowContract);
+
+      return escrowContract;
+    } catch (error) {
+      console.error('Error creating escrow contract:', error);
+      throw new Error('Failed to create escrow contract');
+    }
+  }
+
+  /**
+   * Release escrow funds to seller
+   */
+  async releaseEscrow(escrowAddress: string, buyerAddress: string): Promise<string> {
+    if (!this.factoryContract || !this.signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const signerAddress = await this.signer.getAddress();
+      
+      // Only buyer can release escrow
+      if (signerAddress.toLowerCase() !== buyerAddress.toLowerCase()) {
+        throw new Error('Only buyer can release escrow');
+      }
+
+      const tx = await this.factoryContract.releaseEscrow(escrowAddress);
+      await tx.wait();
+
+      // Update local storage
+      this.updateEscrowStatus(escrowAddress, EscrowStatus.RELEASED);
+
+      return tx.hash;
+    } catch (error) {
+      console.error('Error releasing escrow:', error);
+      throw new Error('Failed to release escrow');
+    }
+  }
+
+  /**
+   * Create dispute for escrow
+   */
+  async disputeEscrow(escrowAddress: string, reason: string): Promise<string> {
+    if (!this.factoryContract || !this.signer) {
+      throw new Error('Wallet not connected');
+    }
+
+    try {
+      const tx = await this.factoryContract.disputeEscrow(escrowAddress, reason);
+      await tx.wait();
+
+      // Update local storage
+      this.updateEscrowStatus(escrowAddress, EscrowStatus.DISPUTED, reason);
+
+      return tx.hash;
+    } catch (error) {
+      console.error('Error creating dispute:', error);
+      throw new Error('Failed to create dispute');
+    }
+  }
+
+  /**
+   * Get escrow contract details
+   */
+  async getEscrowDetails(escrowAddress: string): Promise<EscrowContract | null> {
+    if (!this.factoryContract) {
+      return this.getStoredEscrowContract(escrowAddress);
+    }
+
+    try {
+      const details = await this.factoryContract.getEscrowDetails(escrowAddress);
+      const [seller, buyer, amount, createdTimestamp, status] = details;
+
+      return {
+        address: escrowAddress,
+        seller,
+        buyer,
+        amount: ethers.utils.formatEther(amount),
+        orderId: '', // Would need to be stored separately
+        status: status as EscrowStatus,
+        createdAt: new Date(createdTimestamp * 1000),
+        expiresAt: new Date(createdTimestamp * 1000 + 7 * 24 * 60 * 60 * 1000), // 7 days
+        transactionHash: '',
+      };
     } catch (error) {
       console.error('Error getting escrow details:', error);
       return null;
@@ -354,50 +284,182 @@ export class EscrowService {
   }
 
   /**
-   * Get token address for ERC20 tokens
+   * Get all escrow contracts for a user
    */
-  private getTokenAddress(token: string): string {
-    const tokenAddresses = {
-      'USDC': '0xA0b86a33E6441c8C87Ef36E1C6C7e9d86e5C8B07', // Example USDC address
-      'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F'   // Example DAI address
-    };
-
-    return tokenAddresses[token as keyof typeof tokenAddresses] || ethers.constants.AddressZero;
+  async getUserEscrowContracts(userAddress: string): Promise<EscrowContract[]> {
+    const stored = this.getStoredEscrowContracts();
+    return stored.filter(
+      contract => 
+        contract.buyer.toLowerCase() === userAddress.toLowerCase() ||
+        contract.seller.toLowerCase() === userAddress.toLowerCase()
+    );
   }
 
   /**
-   * Estimate gas for escrow operations
+   * Get escrow contracts grouped by seller
    */
-  async estimateGas(operation: 'create' | 'lock' | 'approve' | 'dispute', params: any): Promise<string> {
-    try {
-      // Mock gas estimation - in real implementation, would call contract estimateGas
-      const gasEstimates = {
-        create: '150000',
-        lock: '100000',
-        approve: '80000',
-        dispute: '120000'
-      };
+  async getEscrowGroupsBySeller(userAddress: string): Promise<EscrowGroup[]> {
+    const contracts = await this.getUserEscrowContracts(userAddress);
+    const groupedBySeller = contracts.reduce((groups, contract) => {
+      const sellerId = contract.seller;
+      if (!groups[sellerId]) {
+        groups[sellerId] = {
+          sellerId,
+          sellerName: `Seller ${sellerId.slice(0, 6)}`,
+          sellerAddress: sellerId,
+          contracts: [],
+          totalAmount: '0',
+          status: 'pending' as const,
+        };
+      }
+      groups[sellerId].contracts.push(contract);
+      return groups;
+    }, {} as Record<string, EscrowGroup>);
 
-      return gasEstimates[operation];
-    } catch (error) {
-      console.error('Error estimating gas:', error);
-      return '200000'; // Fallback gas limit
+    // Calculate totals and status for each group
+    Object.values(groupedBySeller).forEach(group => {
+      group.totalAmount = group.contracts
+        .reduce((sum, contract) => sum + parseFloat(contract.amount), 0)
+        .toString();
+      
+      // Determine group status
+      const statuses = group.contracts.map(c => c.status);
+      if (statuses.every(s => s === EscrowStatus.RELEASED)) {
+        group.status = 'completed';
+      } else if (statuses.some(s => s === EscrowStatus.DISPUTED)) {
+        group.status = 'disputed';
+      } else if (statuses.every(s => s === EscrowStatus.FUNDED)) {
+        group.status = 'funded';
+      } else {
+        group.status = 'partial';
+      }
+    });
+
+    return Object.values(groupedBySeller);
+  }
+
+  /**
+   * Auto-release expired escrows
+   */
+  async processExpiredEscrows(): Promise<void> {
+    const contracts = this.getStoredEscrowContracts();
+    const now = new Date();
+
+    for (const contract of contracts) {
+      if (
+        contract.status === EscrowStatus.FUNDED &&
+        contract.expiresAt < now
+      ) {
+        try {
+          await this.releaseEscrow(contract.address, contract.buyer);
+          console.log(`Auto-released expired escrow: ${contract.address}`);
+        } catch (error) {
+          console.error(`Failed to auto-release escrow ${contract.address}:`, error);
+        }
+      }
     }
   }
 
   /**
-   * Check if escrow is supported on current network
+   * Local storage helpers
    */
-  isSupported(): boolean {
-    return this.contractAddress !== '';
+  private storeEscrowContract(contract: EscrowContract): void {
+    const stored = this.getStoredEscrowContracts();
+    stored.push(contract);
+    localStorage.setItem('escrow_contracts', JSON.stringify(stored));
+  }
+
+  private getStoredEscrowContracts(): EscrowContract[] {
+    try {
+      const stored = localStorage.getItem('escrow_contracts');
+      if (!stored) return [];
+      
+      const contracts = JSON.parse(stored);
+      return contracts.map((c: any) => ({
+        ...c,
+        createdAt: new Date(c.createdAt),
+        expiresAt: new Date(c.expiresAt),
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  private getStoredEscrowContract(address: string): EscrowContract | null {
+    const contracts = this.getStoredEscrowContracts();
+    return contracts.find(c => c.address.toLowerCase() === address.toLowerCase()) || null;
+  }
+
+  private updateEscrowStatus(
+    address: string, 
+    status: EscrowStatus, 
+    disputeReason?: string
+  ): void {
+    const contracts = this.getStoredEscrowContracts();
+    const contractIndex = contracts.findIndex(
+      c => c.address.toLowerCase() === address.toLowerCase()
+    );
+    
+    if (contractIndex >= 0) {
+      contracts[contractIndex].status = status;
+      if (disputeReason) {
+        contracts[contractIndex].disputeReason = disputeReason;
+      }
+      localStorage.setItem('escrow_contracts', JSON.stringify(contracts));
+    }
   }
 
   /**
-   * Get contract address for current network
+   * Calculate escrow fees
    */
-  getContractAddress(): string {
-    return this.contractAddress;
+  calculateEscrowFee(amount: string, feePercentage: number = 1): string {
+    const amountNum = parseFloat(amount);
+    const fee = amountNum * (feePercentage / 100);
+    return fee.toString();
+  }
+
+  /**
+   * Estimate gas costs for escrow operations
+   */
+  async estimateGasCosts(): Promise<{
+    createEscrow: string;
+    releaseEscrow: string;
+    disputeEscrow: string;
+  }> {
+    if (!this.provider) {
+      return {
+        createEscrow: '0.001',
+        releaseEscrow: '0.0005',
+        disputeEscrow: '0.0007',
+      };
+    }
+
+    try {
+      const gasPrice = await this.provider.getGasPrice();
+      const gasPriceGwei = ethers.utils.formatUnits(gasPrice, 'gwei');
+      
+      // Estimated gas limits for each operation
+      const gasLimits = {
+        createEscrow: 150000,
+        releaseEscrow: 50000,
+        disputeEscrow: 70000,
+      };
+
+      return {
+        createEscrow: ethers.utils.formatEther(gasPrice.mul(gasLimits.createEscrow)),
+        releaseEscrow: ethers.utils.formatEther(gasPrice.mul(gasLimits.releaseEscrow)),
+        disputeEscrow: ethers.utils.formatEther(gasPrice.mul(gasLimits.disputeEscrow)),
+      };
+    } catch (error) {
+      console.error('Error estimating gas costs:', error);
+      return {
+        createEscrow: '0.001',
+        releaseEscrow: '0.0005',
+        disputeEscrow: '0.0007',
+      };
+    }
   }
 }
 
-export default EscrowService;
+export const escrowService = new EscrowService();
+export default escrowService;

@@ -1,5 +1,10 @@
+/**
+ * Dispute Resolution API Controller
+ * Handles dispute creation, evidence submission, community voting, and DAO escalation
+ */
+
 import { Request, Response } from 'express';
-import { DisputeService, CreateDisputeRequest, SubmitEvidenceRequest, CommunityVote, ArbitratorDecision } from '../services/disputeService';
+import { DisputeService, CreateDisputeRequest, SubmitEvidenceRequest, CommunityVote } from '../services/disputeService';
 
 export class DisputeController {
   private disputeService: DisputeService;
@@ -9,24 +14,117 @@ export class DisputeController {
   }
 
   /**
+   * GET /api/marketplace/disputes/community
+   * Get all active disputes for community voting
+   */
+  async getCommunityDisputes(req: Request, res: Response): Promise<void> {
+    try {
+      const { status = 'community_voting', limit = 20, offset = 0 } = req.query;
+      
+      // Mock implementation - in real app, would filter by status and pagination
+      const disputes = await this.disputeService.getUserDisputeHistory('community');
+      
+      res.status(200).json({
+        success: true,
+        disputes: disputes.slice(Number(offset), Number(offset) + Number(limit)),
+        total: disputes.length,
+        pagination: {
+          offset: Number(offset),
+          limit: Number(limit),
+          hasMore: disputes.length > Number(offset) + Number(limit)
+        }
+      });
+    } catch (error) {
+      console.error('Error getting community disputes:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * GET /api/marketplace/disputes/:id
+   * Get specific dispute details
+   */
+  async getDisputeById(req: Request, res: Response): Promise<void> {
+    try {
+      const disputeId = parseInt(req.params.id);
+      
+      if (isNaN(disputeId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid dispute ID'
+        });
+        return;
+      }
+
+      const dispute = await this.disputeService.getDisputeDetails(disputeId);
+      
+      res.status(200).json({
+        success: true,
+        dispute
+      });
+    } catch (error) {
+      console.error('Error getting dispute:', error);
+      
+      if (error instanceof Error && error.message === 'Dispute not found') {
+        res.status(404).json({
+          success: false,
+          error: 'Dispute not found'
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error'
+        });
+      }
+    }
+  }
+
+  /**
+   * GET /api/marketplace/orders/:orderId/disputes
+   * Get disputes for a specific order
+   */
+  async getOrderDisputes(req: Request, res: Response): Promise<void> {
+    try {
+      const { orderId } = req.params;
+      
+      // Mock implementation - would query disputes by order/escrow ID
+      const disputes = [];
+      
+      res.status(200).json({
+        success: true,
+        disputes,
+        orderId
+      });
+    } catch (error) {
+      console.error('Error getting order disputes:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * POST /api/marketplace/disputes
    * Create a new dispute
    */
-  createDispute = async (req: Request, res: Response): Promise<void> => {
+  async createDispute(req: Request, res: Response): Promise<void> {
     try {
-      const { escrowId, reason, disputeType, evidence } = req.body;
-      const reporterId = req.user?.userId || req.user?.walletAddress; // Assuming user is attached to request
+      const { escrowId, reason, disputeType, evidence, reporterId } = req.body;
 
-      if (!reporterId) {
-        res.status(401).json({ error: 'Authentication required' });
+      // Validation
+      if (!escrowId || !reason || !disputeType || !reporterId) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: escrowId, reason, disputeType, reporterId'
+        });
         return;
       }
 
-      if (!escrowId || !reason || !disputeType) {
-        res.status(400).json({ error: 'Missing required fields' });
-        return;
-      }
-
-      const request: CreateDisputeRequest = {
+      const createRequest: CreateDisputeRequest = {
         escrowId: parseInt(escrowId),
         reporterId,
         reason,
@@ -34,328 +132,324 @@ export class DisputeController {
         evidence
       };
 
-      const disputeId = await this.disputeService.createDispute(request);
-
+      const disputeId = await this.disputeService.createDispute(createRequest);
+      
       res.status(201).json({
         success: true,
-        data: { disputeId },
+        disputeId,
         message: 'Dispute created successfully'
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating dispute:', error);
-      res.status(500).json({
-        error: 'Failed to create dispute',
-        details: error.message
-      });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Escrow not found')) {
+          res.status(404).json({
+            success: false,
+            error: 'Escrow not found'
+          });
+        } else if (error.message.includes('Dispute already exists')) {
+          res.status(409).json({
+            success: false,
+            error: 'Dispute already exists for this escrow'
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: error.message
+          });
+        }
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error'
+        });
+      }
     }
-  };
+  }
 
   /**
+   * POST /api/marketplace/disputes/:id/evidence
    * Submit evidence for a dispute
    */
-  submitEvidence = async (req: Request, res: Response): Promise<void> => {
+  async submitEvidence(req: Request, res: Response): Promise<void> {
     try {
-      const { disputeId } = req.params;
-      const { evidenceType, ipfsHash, description } = req.body;
-      const submitterId = req.user?.userId || req.user?.walletAddress;
+      const disputeId = parseInt(req.params.id);
+      const { submitterId, evidenceType, ipfsHash, description } = req.body;
 
-      if (!submitterId) {
-        res.status(401).json({ error: 'Authentication required' });
+      if (isNaN(disputeId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid dispute ID'
+        });
         return;
       }
 
-      if (!evidenceType || !ipfsHash || !description) {
-        res.status(400).json({ error: 'Missing required fields' });
+      // Validation
+      if (!submitterId || !evidenceType || !description) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: submitterId, evidenceType, description'
+        });
         return;
       }
 
-      const request: SubmitEvidenceRequest = {
-        disputeId: parseInt(disputeId),
+      const evidenceRequest: SubmitEvidenceRequest = {
+        disputeId,
         submitterId,
         evidenceType,
-        ipfsHash,
+        ipfsHash: ipfsHash || '',
         description
       };
 
-      await this.disputeService.submitEvidence(request);
-
-      res.json({
+      await this.disputeService.submitEvidence(evidenceRequest);
+      
+      res.status(200).json({
         success: true,
         message: 'Evidence submitted successfully'
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting evidence:', error);
-      res.status(500).json({
-        error: 'Failed to submit evidence',
-        details: error.message
-      });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Dispute not found')) {
+          res.status(404).json({
+            success: false,
+            error: 'Dispute not found'
+          });
+        } else if (error.message.includes('not in evidence submission phase')) {
+          res.status(400).json({
+            success: false,
+            error: 'Dispute is not in evidence submission phase'
+          });
+        } else if (error.message.includes('deadline has passed')) {
+          res.status(400).json({
+            success: false,
+            error: 'Evidence submission deadline has passed'
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: error.message
+          });
+        }
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error'
+        });
+      }
     }
-  };
+  }
 
   /**
-   * Proceed dispute to arbitration phase
+   * POST /api/marketplace/disputes/:id/vote
+   * Cast a community vote on a dispute
    */
-  proceedToArbitration = async (req: Request, res: Response): Promise<void> => {
+  async castVote(req: Request, res: Response): Promise<void> {
     try {
-      const { disputeId } = req.params;
+      const disputeId = parseInt(req.params.id);
+      const { voterId, verdict, votingPower, reasoning } = req.body;
 
-      await this.disputeService.proceedToArbitration(parseInt(disputeId));
-
-      res.json({
-        success: true,
-        message: 'Dispute proceeded to arbitration'
-      });
-    } catch (error: any) {
-      console.error('Error proceeding to arbitration:', error);
-      res.status(500).json({
-        error: 'Failed to proceed to arbitration',
-        details: error.message
-      });
-    }
-  };
-
-  /**
-   * Cast community vote on dispute
-   */
-  castCommunityVote = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { disputeId } = req.params;
-      const { verdict, votingPower, reasoning } = req.body;
-      const voterId = req.user?.userId || req.user?.walletAddress;
-
-      if (!voterId) {
-        res.status(401).json({ error: 'Authentication required' });
+      if (isNaN(disputeId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid dispute ID'
+        });
         return;
       }
 
-      if (!verdict || !votingPower) {
-        res.status(400).json({ error: 'Missing required fields' });
+      // Validation
+      if (!voterId || !verdict) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: voterId, verdict'
+        });
+        return;
+      }
+
+      const validVerdicts = ['favor_buyer', 'favor_seller', 'partial_refund', 'no_fault'];
+      if (!validVerdicts.includes(verdict)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid verdict. Must be one of: ' + validVerdicts.join(', ')
+        });
         return;
       }
 
       const vote: CommunityVote = {
-        disputeId: parseInt(disputeId),
+        disputeId,
         voterId,
         verdict,
-        votingPower: parseInt(votingPower),
+        votingPower: votingPower || 100, // Default voting power
         reasoning
       };
 
       await this.disputeService.castCommunityVote(vote);
-
-      res.json({
+      
+      res.status(200).json({
         success: true,
         message: 'Vote cast successfully'
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error casting vote:', error);
-      res.status(500).json({
-        error: 'Failed to cast vote',
-        details: error.message
-      });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Dispute not found')) {
+          res.status(404).json({
+            success: false,
+            error: 'Dispute not found'
+          });
+        } else if (error.message.includes('not in community voting phase')) {
+          res.status(400).json({
+            success: false,
+            error: 'Dispute is not in community voting phase'
+          });
+        } else if (error.message.includes('already voted')) {
+          res.status(409).json({
+            success: false,
+            error: 'User has already voted on this dispute'
+          });
+        } else if (error.message.includes('Insufficient reputation')) {
+          res.status(403).json({
+            success: false,
+            error: 'Insufficient reputation to vote'
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: error.message
+          });
+        }
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error'
+        });
+      }
     }
-  };
+  }
 
   /**
+   * POST /api/marketplace/disputes/:id/arbitrate
    * Resolve dispute as arbitrator
    */
-  resolveAsArbitrator = async (req: Request, res: Response): Promise<void> => {
+  async arbitrateDispute(req: Request, res: Response): Promise<void> {
     try {
-      const { disputeId } = req.params;
-      const { verdict, refundAmount, reasoning } = req.body;
-      const arbitratorId = req.user?.userId || req.user?.walletAddress;
+      const disputeId = parseInt(req.params.id);
+      const { arbitratorId, verdict, refundAmount, reasoning } = req.body;
 
-      if (!arbitratorId) {
-        res.status(401).json({ error: 'Authentication required' });
+      if (isNaN(disputeId)) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid dispute ID'
+        });
         return;
       }
 
-      if (!verdict || !reasoning) {
-        res.status(400).json({ error: 'Missing required fields' });
+      // Validation
+      if (!arbitratorId || !verdict || !reasoning) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required fields: arbitratorId, verdict, reasoning'
+        });
         return;
       }
 
-      const decision: ArbitratorDecision = {
-        disputeId: parseInt(disputeId),
+      await this.disputeService.resolveAsArbitrator({
+        disputeId,
         arbitratorId,
         verdict,
-        refundAmount: refundAmount ? parseFloat(refundAmount) : undefined,
+        refundAmount,
         reasoning
-      };
-
-      await this.disputeService.resolveAsArbitrator(decision);
-
-      res.json({
+      });
+      
+      res.status(200).json({
         success: true,
         message: 'Dispute resolved successfully'
       });
-    } catch (error: any) {
-      console.error('Error resolving dispute:', error);
-      res.status(500).json({
-        error: 'Failed to resolve dispute',
-        details: error.message
-      });
+    } catch (error) {
+      console.error('Error arbitrating dispute:', error);
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Dispute not found')) {
+          res.status(404).json({
+            success: false,
+            error: 'Dispute not found'
+          });
+        } else if (error.message.includes('not in arbitration phase')) {
+          res.status(400).json({
+            success: false,
+            error: 'Dispute is not in arbitration phase'
+          });
+        } else if (error.message.includes('Insufficient reputation')) {
+          res.status(403).json({
+            success: false,
+            error: 'Insufficient reputation to arbitrate'
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            error: error.message
+          });
+        }
+      } else {
+        res.status(500).json({
+          success: false,
+          error: 'Internal server error'
+        });
+      }
     }
-  };
+  }
 
   /**
-   * Get dispute details
+   * GET /api/marketplace/disputes/analytics
+   * Get dispute analytics and statistics
    */
-  getDisputeDetails = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { disputeId } = req.params;
-
-      const dispute = await this.disputeService.getDisputeDetails(parseInt(disputeId));
-
-      res.json({
-        success: true,
-        data: dispute
-      });
-    } catch (error: any) {
-      console.error('Error getting dispute details:', error);
-      res.status(500).json({
-        error: 'Failed to get dispute details',
-        details: error.message
-      });
-    }
-  };
-
-  /**
-   * Get dispute analytics
-   */
-  getDisputeAnalytics = async (req: Request, res: Response): Promise<void> => {
+  async getDisputeAnalytics(req: Request, res: Response): Promise<void> {
     try {
       const analytics = await this.disputeService.getDisputeAnalytics();
-
-      res.json({
+      
+      res.status(200).json({
         success: true,
-        data: analytics
+        analytics
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error getting dispute analytics:', error);
       res.status(500).json({
-        error: 'Failed to get dispute analytics',
-        details: error.message
+        success: false,
+        error: 'Internal server error'
       });
     }
-  };
+  }
 
   /**
+   * GET /api/marketplace/disputes/user/:userId
    * Get user's dispute history
    */
-  getUserDisputeHistory = async (req: Request, res: Response): Promise<void> => {
+  async getUserDisputes(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId || req.user?.walletAddress;
-
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
+      const { userId } = req.params;
+      const { limit = 20, offset = 0 } = req.query;
+      
       const disputes = await this.disputeService.getUserDisputeHistory(userId);
-
-      res.json({
+      
+      res.status(200).json({
         success: true,
-        data: disputes
-      });
-    } catch (error: any) {
-      console.error('Error getting user dispute history:', error);
-      res.status(500).json({
-        error: 'Failed to get dispute history',
-        details: error.message
-      });
-    }
-  };
-
-  /**
-   * Get disputes for arbitration (for arbitrators)
-   */
-  getDisputesForArbitration = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { status, limit = 10, offset = 0 } = req.query;
-
-      // This would be implemented to get disputes available for arbitration
-      // For now, return empty array
-      res.json({
-        success: true,
-        data: {
-          disputes: [],
-          total: 0,
-          limit: parseInt(limit as string),
-          offset: parseInt(offset as string)
+        disputes: disputes.slice(Number(offset), Number(offset) + Number(limit)),
+        total: disputes.length,
+        pagination: {
+          offset: Number(offset),
+          limit: Number(limit),
+          hasMore: disputes.length > Number(offset) + Number(limit)
         }
       });
-    } catch (error: any) {
-      console.error('Error getting disputes for arbitration:', error);
+    } catch (error) {
+      console.error('Error getting user disputes:', error);
       res.status(500).json({
-        error: 'Failed to get disputes for arbitration',
-        details: error.message
+        success: false,
+        error: 'Internal server error'
       });
     }
-  };
-
-  /**
-   * Apply to become an arbitrator
-   */
-  applyForArbitrator = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { qualifications, experience } = req.body;
-      const applicantId = req.user?.userId || req.user?.walletAddress;
-
-      if (!applicantId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      if (!qualifications) {
-        res.status(400).json({ error: 'Qualifications are required' });
-        return;
-      }
-
-      // This would be implemented to handle arbitrator applications
-      // For now, just return success
-      res.json({
-        success: true,
-        message: 'Arbitrator application submitted successfully'
-      });
-    } catch (error: any) {
-      console.error('Error applying for arbitrator:', error);
-      res.status(500).json({
-        error: 'Failed to submit arbitrator application',
-        details: error.message
-      });
-    }
-  };
-
-  /**
-   * Get arbitrator dashboard data
-   */
-  getArbitratorDashboard = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const arbitratorId = req.user?.userId || req.user?.walletAddress;
-
-      if (!arbitratorId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
-
-      // This would return arbitrator-specific dashboard data
-      res.json({
-        success: true,
-        data: {
-          assignedDisputes: [],
-          completedCases: 0,
-          successRate: 0,
-          averageResolutionTime: 0,
-          reputation: 0
-        }
-      });
-    } catch (error: any) {
-      console.error('Error getting arbitrator dashboard:', error);
-      res.status(500).json({
-        error: 'Failed to get arbitrator dashboard',
-        details: error.message
-      });
-    }
-  };
+  }
 }
