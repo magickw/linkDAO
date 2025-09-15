@@ -17,7 +17,7 @@ export interface MessageNotificationData {
   fromAddress: string;
   toAddress: string;
   content: string;
-  messageType: 'text' | 'nft_offer' | 'nft_counter' | 'system';
+  messageType: 'text' | 'nft_offer' | 'nft_counter' | 'system' | 'file';
   timestamp: Date;
   conversationId: string;
 }
@@ -305,6 +305,9 @@ class NotificationService {
         case 'system':
           soundFile = '/sounds/system.mp3';
           break;
+        case 'file':
+          soundFile = '/sounds/file.mp3';
+          break;
         default:
           soundFile = '/sounds/message.mp3';
       }
@@ -330,6 +333,8 @@ class NotificationService {
         return '🔄 NFT Counter Offer';
       case 'system':
         return '🔔 System Message';
+      case 'file':
+        return '📎 File Shared';
       default:
         return '💬 New Message';
     }
@@ -345,6 +350,8 @@ class NotificationService {
         return `Counter offer from ${fromFormatted}`;
       case 'system':
         return data.content;
+      case 'file':
+        return `File shared by ${fromFormatted}`;
       default:
         return `Message from ${fromFormatted}: ${data.content.slice(0, 50)}${data.content.length > 50 ? '...' : ''}`;
     }
@@ -357,6 +364,8 @@ class NotificationService {
         return '/icons/nft-icon.png';
       case 'system':
         return '/icons/system-icon.png';
+      case 'file':
+        return '/icons/file-icon.png';
       default:
         return '/icons/message-icon.png';
     }
