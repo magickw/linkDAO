@@ -38,6 +38,10 @@ const EXTENSION_ERROR_PATTERNS = [
   'chrome.runtime.sendMessage() called from a webpage must specify an Extension ID',
   'runtime.sendMessage(optional string extensionId',
   'must specify an Extension ID (string) for its first argument',
+  'Error in invocation of runtime.sendMessage',
+  'called from a webpage must specify an Extension ID',
+  'for its first argument',
+  'opfgelmcmbiajamepnmloijbpoleiama', // Specific extension ID from your error
   
   // Extension-specific errors
   'coinbase wallet',
@@ -84,7 +88,20 @@ export function isExtensionError(error: ExtensionError | Error | string): boolea
  */
 export function suppressExtensionError(error: ExtensionError | Error | string): boolean {
   if (isExtensionError(error)) {
-    console.debug('Suppressed extension error:', error);
+    // Debug logging in development or when debug flag is set
+    if (process.env.NODE_ENV === 'development' || (typeof window !== 'undefined' && (window as any).__DEBUG_EXTENSION_ERRORS__)) {
+      console.group('🔇 Extension Error Suppressed');
+      console.log('Error:', error);
+      console.log('Type:', typeof error);
+      if (error instanceof Error) {
+        console.log('Stack:', error.stack);
+        console.log('Name:', error.name);
+      }
+      console.log('Timestamp:', new Date().toISOString());
+      console.groupEnd();
+    } else {
+      console.debug('Suppressed extension error:', error);
+    }
     return true;
   }
   return false;
@@ -207,6 +224,18 @@ export function safeWalletOperation<T>(
   });
 }
 
+/**
+ * Debug utility to log extension error suppression in development
+ */
+export function debugExtensionErrors(enabled: boolean = process.env.NODE_ENV === 'development') {
+  if (!enabled) return;
+  
+  console.log('🐛 Extension error debugging enabled - will log suppressed errors');
+  
+  // Add global debug flag
+  (window as any).__DEBUG_EXTENSION_ERRORS__ = true;
+}
+
 export default {
   isExtensionError,
   suppressExtensionError,
@@ -214,5 +243,6 @@ export default {
   createExtensionSafeRejectionHandler,
   withExtensionErrorSuppression,
   initializeExtensionErrorSuppression,
-  safeWalletOperation
+  safeWalletOperation,
+  debugExtensionErrors
 };

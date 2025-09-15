@@ -11,7 +11,7 @@ import { NavigationProvider } from '@/context/NavigationContext';
 import { ThemeProvider } from '@/components/ui/EnhancedTheme';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
-import { initializeExtensionErrorSuppression } from '@/utils/extensionErrorHandler';
+import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import '../styles/globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -25,20 +25,74 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
   // Initialize service worker and performance monitoring
   React.useEffect(() => {
+    // Enable debug mode for extension errors in development
+    debugExtensionErrors(process.env.NODE_ENV === 'development');
+    
     // Initialize extension error suppression
     const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
     
     // Add specific handler for chrome.runtime.sendMessage errors
     const handleError = (event: ErrorEvent) => {
-      if (event.message?.includes('chrome.runtime.sendMessage')) {
+      const message = event.message || '';
+      const filename = event.filename || '';
+      const stack = event.error?.stack || '';
+      
+      // Check for specific extension error patterns
+      const extensionPatterns = [
+        'chrome.runtime.sendMessage',
+        'Extension ID',
+        'runtime.sendMessage(optional string extensionId',
+        'must specify an Extension ID',
+        'chrome-extension://',
+        'inpage.js',
+        'opfgelmcmbiajamepnmloijbpoleiama' // The specific extension ID from the error
+      ];
+      
+      const textToCheck = `${message} ${filename} ${stack}`.toLowerCase();
+      const isExtensionError = extensionPatterns.some(pattern => 
+        textToCheck.includes(pattern.toLowerCase())
+      );
+      
+      if (isExtensionError) {
+        console.debug('App-level suppression: Extension error caught and suppressed:', {
+          message,
+          filename,
+          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama'
+        });
         event.preventDefault();
         event.stopPropagation();
-        console.debug('Suppressed chrome.runtime.sendMessage error');
         return false;
       }
     };
     
+    // Add rejection handler for promises
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason || '';
+      const message = typeof reason === 'string' ? reason : (reason?.message || reason?.toString() || '');
+      
+      const extensionPatterns = [
+        'chrome.runtime.sendMessage',
+        'Extension ID',
+        'runtime.sendMessage(optional string extensionId',
+        'must specify an Extension ID',
+        'chrome-extension://',
+        'opfgelmcmbiajamepnmloijbpoleiama'
+      ];
+      
+      const isExtensionError = extensionPatterns.some(pattern => 
+        message.toLowerCase().includes(pattern.toLowerCase())
+      );
+      
+      if (isExtensionError) {
+        console.debug('App-level suppression: Extension promise rejection suppressed:', message);
+        event.preventDefault();
+        return false;
+      }
+    };
+    
+    // Add both handlers with capture phase
     window.addEventListener('error', handleError, true);
+    window.addEventListener('unhandledrejection', handleRejection, true);
     
     const initializeServices = async () => {
       try {
@@ -82,6 +136,7 @@ function AppContent({ Component, pageProps, router }: AppProps) {
     return () => {
       cleanupExtensionErrorSuppression();
       window.removeEventListener('error', handleError, true);
+      window.removeEventListener('unhandledrejection', handleRejection, true);
       if (swUtilRef.current) {
         swUtilRef.current.destroy();
       }
