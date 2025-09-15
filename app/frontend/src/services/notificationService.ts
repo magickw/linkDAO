@@ -40,8 +40,12 @@ class NotificationService {
   private blockExplorerQueue: BlockExplorerNotification[] = [];
 
   constructor() {
-    this.settings = this.loadSettings();
-    this.initializeService();
+    this.settings = this.getDefaultSettings();
+    // Initialize settings after constructor in browser
+    if (typeof window !== 'undefined') {
+      this.settings = this.loadSettings();
+      this.initializeService();
+    }
   }
 
   /**
@@ -49,6 +53,11 @@ class NotificationService {
    */
   async initializeService(): Promise<void> {
     try {
+      // Only initialize in browser environment
+      if (typeof window === 'undefined') {
+        return;
+      }
+
       // Request notification permission
       if ('Notification' in window) {
         await this.requestNotificationPermission();
@@ -394,6 +403,11 @@ class NotificationService {
 
   private loadSettings(): NotificationSettings {
     try {
+      // Only access localStorage in browser
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return this.getDefaultSettings();
+      }
+      
       const stored = localStorage.getItem('messaging-notification-settings');
       if (stored) {
         return { ...this.getDefaultSettings(), ...JSON.parse(stored) };
@@ -407,6 +421,11 @@ class NotificationService {
 
   private saveSettings(): void {
     try {
+      // Only access localStorage in browser
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      
       localStorage.setItem('messaging-notification-settings', JSON.stringify(this.settings));
     } catch (error) {
       console.error('Failed to save notification settings:', error);

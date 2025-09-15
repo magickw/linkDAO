@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { notificationService } from '@/services/notificationService';
+import notificationService from '@/services/notificationService';
 import { useWeb3 } from '@/context/Web3Context';
 
 interface RealTimeNotificationsProps {
@@ -20,7 +20,7 @@ export default function RealTimeNotifications({ children }: RealTimeNotification
     const interval = setInterval(() => {
       // Randomly generate notifications (10% chance every 5 seconds)
       if (Math.random() < 0.1) {
-        notificationService.simulateRealTimeNotification();
+        notificationService.testNotification();
       }
     }, 5000);
 

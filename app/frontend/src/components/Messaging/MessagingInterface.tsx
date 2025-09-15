@@ -84,9 +84,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   // Initialize messaging service
   useEffect(() => {
-    if (isConnected && address) {
-      initializeMessaging();
-    }
+    if (typeof window === 'undefined' || !isConnected || !address) return;
+    
+    initializeMessaging();
   }, [isConnected, address]);
 
   // Load initial conversation
