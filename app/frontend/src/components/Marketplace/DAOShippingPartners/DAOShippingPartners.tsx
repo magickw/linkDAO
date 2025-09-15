@@ -266,29 +266,29 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
       className={`relative ${selectedPartner?.id === partner.id ? 'ring-2 ring-blue-500' : ''}`}
     >
       <GlassPanel 
-        variant=\"primary\" 
-        className=\"p-6 cursor-pointer transition-all hover:shadow-lg\"
+        variant="primary" 
+        className="p-6 cursor-pointer transition-all hover:shadow-lg"
         onClick={() => setSelectedPartner(partner)}
       >
         {/* Header */}
-        <div className=\"flex items-center justify-between mb-4\">
-          <div className=\"flex items-center space-x-3\">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
             <img 
               src={partner.logo} 
               alt={partner.name}
-              className=\"w-12 h-12 rounded-lg object-cover bg-white/10\"
+              className="w-12 h-12 rounded-lg object-cover bg-white/10"
               onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"0 0 48 48\"><rect width=\"48\" height=\"48\" fill=\"%23374151\"/><text x=\"24\" y=\"30\" text-anchor=\"middle\" fill=\"%23ffffff\" font-size=\"12\">SHIP</text></svg>';
+                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><rect width="48" height="48" fill="%23374151"/><text x="24" y="30" text-anchor="middle" fill="%23ffffff" font-size="12">SHIP</text></svg>';
               }}
             />
             <div>
-              <h3 className=\"text-lg font-semibold text-gray-900 dark:text-white\">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {partner.name}
               </h3>
-              <div className=\"flex items-center space-x-2\">
-                <div className=\"flex items-center\">
-                  <Star size={14} className=\"text-yellow-400 fill-current\" />
-                  <span className=\"text-sm text-gray-600 dark:text-gray-400 ml-1\">
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <Star size={14} className="text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">
                     {partner.rating} ({partner.reviewCount} reviews)
                   </span>
                 </div>
@@ -296,20 +296,20 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
             </div>
           </div>
           
-          <div className=\"flex flex-col items-end space-y-2\">
+          <div className="flex flex-col items-end space-y-2">
             {partner.daoApproved ? (
-              <div className=\"flex items-center space-x-1 bg-green-500/20 text-green-400 px-2 py-1 rounded-full text-xs\">
+              <div className="flex items-center space-x-1 bg-green-500/20 text-green-400 px-2 py-1 rounded-full text-xs">
                 <CheckCircle size={12} />
                 <span>DAO Approved</span>
               </div>
             ) : (
-              <div className=\"flex items-center space-x-1 bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full text-xs\">
+              <div className="flex items-center space-x-1 bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full text-xs">
                 <Clock size={12} />
                 <span>Pending Review</span>
               </div>
             )}
             
-            <div className=\"flex items-center space-x-1 text-xs text-gray-500\">
+            <div className="flex items-center space-x-1 text-xs text-gray-500">
               <Vote size={12} />
               <span>{partner.votingPower} votes</span>
             </div>
@@ -317,12 +317,12 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
         </div>
 
         {/* Description */}
-        <p className=\"text-sm text-gray-600 dark:text-gray-400 mb-4\">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           {partner.description}
         </p>
 
         {/* Features */}
-        <div className=\"grid grid-cols-2 md:grid-cols-5 gap-2 mb-4\">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
           {Object.entries(partner.features).map(([feature, available]) => (
             <div 
               key={feature}
@@ -331,41 +331,41 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
               }`}
             >
               {available ? <CheckCircle size={12} /> : <AlertTriangle size={12} />}
-              <span className=\"capitalize\">{feature.replace('_', ' ')}</span>
+              <span className="capitalize">{feature.replace('_', ' ')}</span>
             </div>
           ))}
         </div>
 
         {/* Metrics */}
-        <div className=\"grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm\">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
           <div>
-            <span className=\"text-gray-600 dark:text-gray-400\">On Time:</span>
-            <p className=\"font-semibold text-gray-900 dark:text-white\">
+            <span className="text-gray-600 dark:text-gray-400">On Time:</span>
+            <p className="font-semibold text-gray-900 dark:text-white">
               {partner.metrics.onTimeDelivery}%
             </p>
           </div>
           <div>
-            <span className=\"text-gray-600 dark:text-gray-400\">Damage Rate:</span>
-            <p className=\"font-semibold text-gray-900 dark:text-white\">
+            <span className="text-gray-600 dark:text-gray-400">Damage Rate:</span>
+            <p className="font-semibold text-gray-900 dark:text-white">
               {partner.metrics.damageRate}%
             </p>
           </div>
           <div>
-            <span className=\"text-gray-600 dark:text-gray-400\">Satisfaction:</span>
-            <p className=\"font-semibold text-gray-900 dark:text-white\">
+            <span className="text-gray-600 dark:text-gray-400">Satisfaction:</span>
+            <p className="font-semibold text-gray-900 dark:text-white">
               {partner.metrics.customerSatisfaction}/5
             </p>
           </div>
           <div>
-            <span className=\"text-gray-600 dark:text-gray-400\">Processing:</span>
-            <p className=\"font-semibold text-gray-900 dark:text-white\">
+            <span className="text-gray-600 dark:text-gray-400">Processing:</span>
+            <p className="font-semibold text-gray-900 dark:text-white">
               {partner.metrics.avgProcessingTime}d
             </p>
           </div>
         </div>
 
         {/* Services */}
-        <div className=\"space-y-2\">
+        <div className="space-y-2">
           {Object.entries(partner.services)
             .filter(([_, service]) => service.available)
             .map(([serviceType, service]) => (
@@ -382,20 +382,20 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
                 }}
               >
                 <div>
-                  <h4 className=\"font-medium text-gray-900 dark:text-white capitalize\">
+                  <h4 className="font-medium text-gray-900 dark:text-white capitalize">
                     {serviceType.replace('_', ' ')}
                   </h4>
-                  <p className=\"text-sm text-gray-600 dark:text-gray-400\">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {service.minDays === service.maxDays 
                       ? `${service.minDays} day${service.minDays !== 1 ? 's' : ''}` 
                       : `${service.minDays}-${service.maxDays} days`}
                   </p>
                 </div>
-                <div className=\"text-right\">
-                  <p className=\"font-bold text-gray-900 dark:text-white\">
+                <div className="text-right">
+                  <p className="font-bold text-gray-900 dark:text-white">
                     {getServiceCost(partner, serviceType)} ETH
                   </p>
-                  <p className=\"text-xs text-gray-500\">
+                  <p className="text-xs text-gray-500">
                     Base: {service.baseCost} ETH
                   </p>
                 </div>
@@ -409,105 +409,105 @@ export const DAOShippingPartners: React.FC<DAOShippingPartnersProps> = ({
 
   if (loading) {
     return (
-      <GlassPanel variant=\"primary\" className=\"p-8 text-center\">
-        <div className=\"animate-spin rounded-full h-12 w-12 border-4 border-blue-500/30 border-t-blue-500 mx-auto mb-4\" />
-        <p className=\"text-gray-600 dark:text-gray-400\">Loading shipping partners...</p>
+      <GlassPanel variant="primary" className="p-8 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500/30 border-t-blue-500 mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">Loading shipping partners...</p>
       </GlassPanel>
     );
   }
 
   return (
-    <div className=\"space-y-6\">
+    <div className="space-y-6">
       {/* Header */}
-      <div className=\"flex items-center justify-between\">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className=\"text-2xl font-bold text-gray-900 dark:text-white flex items-center\">
-            <Truck size={28} className=\"mr-3 text-blue-500\" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+            <Truck size={28} className="mr-3 text-blue-500" />
             DAO-Approved Shipping Partners
           </h2>
-          <p className=\"text-gray-600 dark:text-gray-400 mt-1\">
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             Community-verified shipping partners with transparent governance
           </p>
         </div>
         
-        <div className=\"flex items-center space-x-4\">
+        <div className="flex items-center space-x-4">
           {/* Filter */}
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
-            className=\"px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white\"
+            className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
           >
-            <option value=\"all\">All Partners</option>
-            <option value=\"dao_approved\">DAO Approved</option>
-            <option value=\"pending_approval\">Pending Approval</option>
+            <option value="all">All Partners</option>
+            <option value="dao_approved">DAO Approved</option>
+            <option value="pending_approval">Pending Approval</option>
           </select>
           
           {/* Sort */}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className=\"px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white\"
+            className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
           >
-            <option value=\"rating\">Sort by Rating</option>
-            <option value=\"cost\">Sort by Cost</option>
-            <option value=\"speed\">Sort by Speed</option>
-            <option value=\"dao_votes\">Sort by DAO Votes</option>
+            <option value="rating">Sort by Rating</option>
+            <option value="cost">Sort by Cost</option>
+            <option value="speed">Sort by Speed</option>
+            <option value="dao_votes">Sort by DAO Votes</option>
           </select>
         </div>
       </div>
 
       {/* Summary Stats */}
-      <div className=\"grid grid-cols-1 md:grid-cols-4 gap-4\">
-        <GlassPanel variant=\"secondary\" className=\"p-4 text-center\">
-          <div className=\"text-2xl font-bold text-blue-500 mb-1\">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <GlassPanel variant="secondary" className="p-4 text-center">
+          <div className="text-2xl font-bold text-blue-500 mb-1">
             {partners.filter(p => p.daoApproved).length}
           </div>
-          <div className=\"text-sm text-gray-600 dark:text-gray-400\">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             DAO Approved
           </div>
         </GlassPanel>
         
-        <GlassPanel variant=\"secondary\" className=\"p-4 text-center\">
-          <div className=\"text-2xl font-bold text-green-500 mb-1\">
+        <GlassPanel variant="secondary" className="p-4 text-center">
+          <div className="text-2xl font-bold text-green-500 mb-1">
             {(partners.reduce((sum, p) => sum + p.rating, 0) / partners.length).toFixed(1)}
           </div>
-          <div className=\"text-sm text-gray-600 dark:text-gray-400\">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Avg Rating
           </div>
         </GlassPanel>
         
-        <GlassPanel variant=\"secondary\" className=\"p-4 text-center\">
-          <div className=\"text-2xl font-bold text-purple-500 mb-1\">
+        <GlassPanel variant="secondary" className="p-4 text-center">
+          <div className="text-2xl font-bold text-purple-500 mb-1">
             {partners.reduce((sum, p) => sum + p.reviewCount, 0).toLocaleString()}
           </div>
-          <div className=\"text-sm text-gray-600 dark:text-gray-400\">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Total Reviews
           </div>
         </GlassPanel>
         
-        <GlassPanel variant=\"secondary\" className=\"p-4 text-center\">
-          <div className=\"text-2xl font-bold text-orange-500 mb-1\">
+        <GlassPanel variant="secondary" className="p-4 text-center">
+          <div className="text-2xl font-bold text-orange-500 mb-1">
             {(partners.reduce((sum, p) => sum + p.metrics.onTimeDelivery, 0) / partners.length).toFixed(1)}%
           </div>
-          <div className=\"text-sm text-gray-600 dark:text-gray-400\">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             Avg On-Time
           </div>
         </GlassPanel>
       </div>
 
       {/* Partners List */}
-      <div className=\"grid grid-cols-1 lg:grid-cols-2 gap-6\">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredPartners.map(renderPartnerCard)}
       </div>
 
       {/* No partners found */}
       {filteredPartners.length === 0 && (
-        <GlassPanel variant=\"primary\" className=\"p-8 text-center\">
-          <Truck size={48} className=\"mx-auto text-gray-400 mb-4\" />
-          <h3 className=\"text-lg font-semibold text-gray-900 dark:text-white mb-2\">
+        <GlassPanel variant="primary" className="p-8 text-center">
+          <Truck size={48} className="mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No Partners Found
           </h3>
-          <p className=\"text-gray-600 dark:text-gray-400\">
+          <p className="text-gray-600 dark:text-gray-400">
             No shipping partners match your current filter criteria.
           </p>
         </GlassPanel>
@@ -545,48 +545,48 @@ export const DAOShippingGovernance: React.FC = () => {
   ]);
 
   return (
-    <div className=\"space-y-6\">
-      <GlassPanel variant=\"primary\" className=\"p-6\">
-        <h2 className=\"text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center\">
-          <Vote size={24} className=\"mr-3 text-purple-500\" />
+    <div className="space-y-6">
+      <GlassPanel variant="primary" className="p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+          <Vote size={24} className="mr-3 text-purple-500" />
           Shipping Partner Governance
         </h2>
         
-        <div className=\"space-y-6\">
+        <div className="space-y-6">
           {proposals.map((proposal) => (
-            <GlassPanel key={proposal.id} variant=\"secondary\" className=\"p-6\">
-              <div className=\"flex items-start justify-between mb-4\">
+            <GlassPanel key={proposal.id} variant="secondary" className="p-6">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className=\"text-lg font-semibold text-gray-900 dark:text-white\">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     {proposal.partnerName}
                   </h3>
-                  <p className=\"text-sm text-gray-600 dark:text-gray-400\">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     Proposal ID: {proposal.id}
                   </p>
                 </div>
-                <div className=\"text-right\">
-                  <div className=\"bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm\">
+                <div className="text-right">
+                  <div className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm">
                     {proposal.status.toUpperCase()}
                   </div>
-                  <p className=\"text-xs text-gray-500 mt-1\">
+                  <p className="text-xs text-gray-500 mt-1">
                     Ends {proposal.votingPeriod.end.toLocaleDateString()}
                   </p>
                 </div>
               </div>
               
-              <p className=\"text-gray-600 dark:text-gray-400 mb-4\">
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {proposal.description}
               </p>
               
-              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className=\"font-medium text-gray-900 dark:text-white mb-2\">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
                     Requirements
                   </h4>
-                  <ul className=\"space-y-1 text-sm text-gray-600 dark:text-gray-400\">
+                  <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     {proposal.requirements.map((req, index) => (
-                      <li key={index} className=\"flex items-center space-x-2\">
-                        <CheckCircle size={12} className=\"text-green-400\" />
+                      <li key={index} className="flex items-center space-x-2">
+                        <CheckCircle size={12} className="text-green-400" />
                         <span>{req}</span>
                       </li>
                     ))}
@@ -594,31 +594,31 @@ export const DAOShippingGovernance: React.FC = () => {
                 </div>
                 
                 <div>
-                  <h4 className=\"font-medium text-gray-900 dark:text-white mb-2\">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
                     Voting Results
                   </h4>
-                  <div className=\"space-y-2\">
-                    <div className=\"flex justify-between items-center\">
-                      <span className=\"text-sm text-green-400\">For</span>
-                      <span className=\"font-medium\">{proposal.votes.for} votes</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-400">For</span>
+                      <span className="font-medium">{proposal.votes.for} votes</span>
                     </div>
-                    <div className=\"flex justify-between items-center\">
-                      <span className=\"text-sm text-red-400\">Against</span>
-                      <span className=\"font-medium\">{proposal.votes.against} votes</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-red-400">Against</span>
+                      <span className="font-medium">{proposal.votes.against} votes</span>
                     </div>
-                    <div className=\"flex justify-between items-center\">
-                      <span className=\"text-sm text-gray-400\">Abstain</span>
-                      <span className=\"font-medium\">{proposal.votes.abstain} votes</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">Abstain</span>
+                      <span className="font-medium">{proposal.votes.abstain} votes</span>
                     </div>
                     
-                    <div className=\"mt-4\">
-                      <div className=\"flex justify-between text-xs text-gray-500 mb-1\">
+                    <div className="mt-4">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
                         <span>Progress</span>
                         <span>{((proposal.votes.for + proposal.votes.against + proposal.votes.abstain) / proposal.totalVotingPower * 100).toFixed(1)}%</span>
                       </div>
-                      <div className=\"w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2\">
+                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div 
-                          className=\"bg-blue-500 h-2 rounded-full transition-all\"
+                          className="bg-blue-500 h-2 rounded-full transition-all"
                           style={{ 
                             width: `${(proposal.votes.for + proposal.votes.against + proposal.votes.abstain) / proposal.totalVotingPower * 100}%` 
                           }}
@@ -629,15 +629,15 @@ export const DAOShippingGovernance: React.FC = () => {
                 </div>
               </div>
               
-              <div className=\"mt-6 flex space-x-3\">
-                <Button variant=\"primary\" className=\"flex-1\">
-                  <Vote size={16} className=\"mr-2\" />
+              <div className="mt-6 flex space-x-3">
+                <Button variant="primary" className="flex-1">
+                  <Vote size={16} className="mr-2" />
                   Vote For
                 </Button>
-                <Button variant=\"outline\" className=\"flex-1\">
+                <Button variant="outline" className="flex-1">
                   Vote Against
                 </Button>
-                <Button variant=\"outline\">
+                <Button variant="outline">
                   View Details
                 </Button>
               </div>
@@ -647,4 +647,4 @@ export const DAOShippingGovernance: React.FC = () => {
       </GlassPanel>
     </div>
   );
-};", "original_text": "", "replace_all": false}]
+};

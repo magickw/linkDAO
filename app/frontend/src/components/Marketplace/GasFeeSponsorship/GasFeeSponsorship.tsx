@@ -73,7 +73,7 @@ export const GasFeeSponsorship: React.FC<GasFeeSponsorshipProps> = ({
       description: 'Gas fee support for new users getting started',
       coveragePercentage: 50,
       requirements: {
-        maxTransactions: 10
+        // No requirements for newcomers
       },
       maxSponsorshipPerDay: '0.01',
       icon: Users,
@@ -149,7 +149,6 @@ export const GasFeeSponsorship: React.FC<GasFeeSponsorshipProps> = ({
     
     if (requirements.minReputation && userReputation < requirements.minReputation) return false;
     if (requirements.minTransactions && userTransactionCount < requirements.minTransactions) return false;
-    if (requirements.maxTransactions && userTransactionCount > requirements.maxTransactions) return false;
     if (requirements.daoMember && !isDaoMember) return false;
     
     return true;
