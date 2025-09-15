@@ -24,7 +24,7 @@ on:
           - performance
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '24'
   POSTGRES_VERSION: '15'
   REDIS_VERSION: '7'
 
@@ -115,7 +115,7 @@ jobs:
     needs: setup
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15
         env:
           POSTGRES_DB: marketplace_test
           POSTGRES_USER: test
@@ -129,7 +129,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -291,7 +291,7 @@ jobs:
     if: contains(fromJson('["full", "performance"]'), needs.setup.outputs.test-scope)
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15
         env:
           POSTGRES_DB: marketplace_test
           POSTGRES_USER: test
@@ -305,7 +305,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -372,7 +372,7 @@ jobs:
     if: contains(fromJson('["full"]'), needs.setup.outputs.test-scope)
     services:
       postgres:
-        image: postgres:${{ env.POSTGRES_VERSION }}
+        image: postgres:15
         env:
           POSTGRES_DB: marketplace_test
           POSTGRES_USER: test
@@ -386,7 +386,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:${{ env.REDIS_VERSION }}
+        image: redis:7
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
