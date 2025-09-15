@@ -1,14 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
-const CacheService = require('./services/cacheService');
+const SimpleCacheService = require('./services/simpleCacheService');
 const escrowRoutes = require('./routes/escrowRoutes');
 
 // Load environment variables
 require('dotenv').config();
 
 // Initialize cache service
-const cacheService = new CacheService();
+const cacheService = new SimpleCacheService();
 
 const app = express();
 const PORT = process.env.PORT || 10000;
