@@ -17,7 +17,7 @@ import {
   Loader,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '../design-system/components/Button';
+import { Button } from '../../design-system';
 import multichainResolver, { ResolvedAddress, AddressSearchResult } from '../../services/multichainResolver';
 import messagingService from '../../services/messagingService';
 
@@ -91,8 +91,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       
       // Extract unique addresses from recent conversations
       const uniqueAddresses = new Set<string>();
-      conversations.slice(0, 5).forEach(conv => {
-        conv.participants.forEach(addr => {
+      conversations.slice(0, 5).forEach((conv: any) => {
+        conv.participants.forEach((addr: string) => {
           if (!uniqueAddresses.has(addr)) {
             uniqueAddresses.add(addr);
             // Create a basic resolved address (in real app, these would be cached)
@@ -252,7 +252,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         {searchResults.addresses.length > 0 && (
           <div className="p-2">
             <h4 className="text-sm font-medium text-gray-300 px-2 py-1">Addresses</h4>
-            {searchResults.addresses.map((address, index) => (
+            {searchResults.addresses.map((address: ResolvedAddress, index: number) => (
               <motion.div
                 key={address.address}
                 initial={{ opacity: 0, y: 10 }}
@@ -292,7 +292,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                       variant="outline"
                       size="small"
                       className="p-1"
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation();
                         window.open(multichainResolver.getExplorerUrl(address), '_blank');
                       }}
@@ -311,7 +311,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         {searchResults.suggestions.length > 0 && (
           <div className="p-2 border-t border-gray-700">
             <h4 className="text-sm font-medium text-gray-300 px-2 py-1">Suggestions</h4>
-            {searchResults.suggestions.map((suggestion, index) => {
+            {searchResults.suggestions.map((suggestion: string, index: number) => {
               const globalIndex = searchResults.addresses.length + index;
               return (
                 <motion.div

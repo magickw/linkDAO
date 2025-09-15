@@ -35,8 +35,7 @@ import {
   BellOff
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { GlassPanel } from '../design-system/components/GlassPanel';
-import { Button } from '../design-system/components/Button';
+import { GlassPanel, Button } from '../../design-system';
 import messagingService, { 
   ChatMessage, 
   ChatConversation, 
@@ -312,14 +311,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     const conversation = conversations.find(c => c.id === conversationId);
     if (!conversation || !address) return null;
 
-    return conversation.participants.find(p => p.toLowerCase() !== address.toLowerCase()) || null;
+    return conversation.participants.find((p: string) => p.toLowerCase() !== address.toLowerCase()) || null;
   };
-
-  // Helper to get other participant in current conversation context
-  const otherParticipant = selectedConversation ? getOtherParticipant(selectedConversation) : null;
-
-  // Helper to get other participant in current conversation context
-  const otherParticipant = selectedConversation ? getOtherParticipant(selectedConversation) : null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -593,6 +586,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                     size="small"
                                     onClick={() => {
                                       // Accept offer
+                                      const otherParticipant = getOtherParticipant(selectedConversation);
                                       if (otherParticipant) {
                                         messagingService.sendMessage(
                                           otherParticipant,
@@ -610,6 +604,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                                     onClick={() => {
                                       // Counter offer
                                       const counterAmount = prompt('Enter counter offer (ETH):');
+                                      const otherParticipant = getOtherParticipant(selectedConversation);
                                       if (counterAmount && otherParticipant) {
                                         messagingService.sendNFTCounter(
                                           otherParticipant,
