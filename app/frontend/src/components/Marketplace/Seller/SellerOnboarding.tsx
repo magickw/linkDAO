@@ -18,7 +18,7 @@ interface SellerOnboardingProps {
 export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
   const router = useRouter();
   const { isConnected } = useAccount();
-  const { profile } = useSeller();
+  const { profile, createProfile } = useSeller();
   const {
     steps,
     currentStep,
@@ -138,6 +138,12 @@ export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
 
   const handleStepComplete = async (data: any) => {
     try {
+      // Special handling for profile setup step
+      if (currentStepData.id === 'profile-setup') {
+        // Create the actual seller profile
+        await createProfile(data);
+      }
+      
       await updateStep(currentStepData.id, data);
       setStepData(prev => ({ ...prev, [currentStepData.id]: data }));
 

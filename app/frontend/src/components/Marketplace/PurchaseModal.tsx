@@ -4,6 +4,7 @@ import { MarketplaceListing, MarketplaceService } from '@/services/marketplaceSe
 import { useToast } from '@/context/ToastContext';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
+import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 interface PurchaseModalProps {
   listing: MarketplaceListing;
@@ -21,7 +22,9 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const { address } = useAccount();
   const { data: balance } = useBalance({ address });
   const { addToast } = useToast();
+  const cart = useEnhancedCart();
   const [loading, setLoading] = useState(false);
+  const [purchaseType, setPurchaseType] = useState<'direct' | 'cart'>('cart');
   const [useEscrow, setUseEscrow] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState('');
 
@@ -41,7 +44,52 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     try {
       setLoading(true);
 
-      // Check if user has sufficient balance
+      if (purchaseType === 'cart') {
+        // Add to cart
+        const cartProduct = {
+          id: listing.id,
+          title: listing.metadataURI || 'Unnamed Item',
+          description: listing.metadataURI || '',
+          image: '',
+          price: {
+            crypto: listing.price,
+            cryptoSymbol: 'ETH',
+            fiat: (parseFloat(listing.price) * 1650).toFixed(2),
+            fiatSymbol: 'USD'
+          },
+          seller: {
+            id: listing.sellerWalletAddress,
+            name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
+            avatar: '',
+            verified: true,
+            daoApproved: false,
+            escrowSupported: true
+          },
+          category: listing.itemType.toLowerCase(),
+          isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+          isNFT: listing.itemType === 'NFT',
+          inventory: listing.quantity,
+          shipping: {
+            cost: '0',
+            freeShipping: true,
+            estimatedDays: listing.itemType === 'DIGITAL' ? 'instant' : '3-5',
+            regions: ['US', 'CA', 'EU']
+          },
+          trust: {
+            escrowProtected: true,
+            onChainCertified: true,
+            safetyScore: 95
+          }
+        };
+        
+        cart.addItem(cartProduct);
+        addToast('Added to cart! Go to cart to complete purchase.', 'success');
+        onSuccess();
+        onClose();
+        return;
+      }
+
+      // Direct purchase flow
       const price = parseFloat(listing.price);
       const userBalance = balance ? parseFloat(balance.formatted) : 0;
       
@@ -114,7 +162,37 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             </div>
           </div>
 
-          {listing.itemType === 'PHYSICAL' && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-white/90 mb-3">
+              Purchase Method
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="purchaseType"
+                  value="cart"
+                  checked={purchaseType === 'cart'}
+                  onChange={(e) => setPurchaseType(e.target.value as 'direct' | 'cart')}
+                  className="mr-2"
+                />
+                <span className="text-white">Add to Cart (Recommended)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="purchaseType"
+                  value="direct"
+                  checked={purchaseType === 'direct'}
+                  onChange={(e) => setPurchaseType(e.target.value as 'direct' | 'cart')}
+                  className="mr-2"
+                />
+                <span className="text-white">Buy Now (Direct)</span>
+              </label>
+            </div>
+          </div>
+
+          {listing.itemType === 'PHYSICAL' && purchaseType === 'direct' && (
             <div className="mb-6">
               <div className="flex items-center mb-3">
                 <input
@@ -160,7 +238,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
               loading={loading}
               className="flex-1"
             >
-              {loading ? 'Processing...' : 'Buy Now'}
+              {loading ? 'Processing...' : purchaseType === 'cart' ? 'Add to Cart' : 'Buy Now'}
             </Button>
           </div>
         </div>

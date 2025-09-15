@@ -11,6 +11,8 @@ import { NavigationProvider } from '@/context/NavigationContext';
 import { ThemeProvider } from '@/components/ui/EnhancedTheme';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
+import { initializeExtensionErrorSuppression } from '@/utils/extensionErrorHandler';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import '../styles/globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -23,45 +25,20 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
   // Initialize service worker and performance monitoring
   React.useEffect(() => {
-    // Global error handler for extension-related errors
-    const handleGlobalError = (event: ErrorEvent) => {
-      const message = event.message || '';
-      const source = event.filename || '';
-      
-      // Ignore extension-related errors
-      if (
-        message.includes('chrome.runtime.sendMessage') ||
-        message.includes('Extension ID') ||
-        source.includes('chrome-extension://') ||
-        source.includes('inpage.js')
-      ) {
+    // Initialize extension error suppression
+    const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
+    
+    // Add specific handler for chrome.runtime.sendMessage errors
+    const handleError = (event: ErrorEvent) => {
+      if (event.message?.includes('chrome.runtime.sendMessage')) {
         event.preventDefault();
         event.stopPropagation();
-        console.debug('Ignored extension-related error:', message);
+        console.debug('Suppressed chrome.runtime.sendMessage error');
         return false;
       }
     };
-
-    // Global unhandled promise rejection handler for extension errors
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason || '';
-      const message = typeof reason === 'string' ? reason : reason.message || '';
-      
-      // Ignore extension-related promise rejections
-      if (
-        message.includes('chrome.runtime.sendMessage') ||
-        message.includes('Extension ID') ||
-        message.includes('chrome-extension')
-      ) {
-        event.preventDefault();
-        console.debug('Ignored extension-related promise rejection:', message);
-        return false;
-      }
-    };
-
-    // Add global error listeners
-    window.addEventListener('error', handleGlobalError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    window.addEventListener('error', handleError, true);
     
     const initializeServices = async () => {
       try {
@@ -103,8 +80,8 @@ function AppContent({ Component, pageProps, router }: AppProps) {
     initializeServices();
 
     return () => {
-      window.removeEventListener('error', handleGlobalError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      cleanupExtensionErrorSuppression();
+      window.removeEventListener('error', handleError, true);
       if (swUtilRef.current) {
         swUtilRef.current.destroy();
       }
@@ -171,26 +148,28 @@ export default function App({ Component, pageProps, router }: AppProps) {
   if (!mounted) return null;
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <Web3Provider>
-            <AuthProvider>
-              <ToastProvider>
-                <NavigationProvider>
-                  <ThemeProvider defaultTheme="system">
-                    <AppContent
-                      Component={Component}
-                      pageProps={pageProps}
-                      router={router}
-                    />
-                  </ThemeProvider>
-                </NavigationProvider>
-              </ToastProvider>
-            </AuthProvider>
-          </Web3Provider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider>
+            <Web3Provider>
+              <AuthProvider>
+                <ToastProvider>
+                  <NavigationProvider>
+                    <ThemeProvider defaultTheme="system">
+                      <AppContent
+                        Component={Component}
+                        pageProps={pageProps}
+                        router={router}
+                      />
+                    </ThemeProvider>
+                  </NavigationProvider>
+                </ToastProvider>
+              </AuthProvider>
+            </Web3Provider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   );
 }

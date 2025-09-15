@@ -241,8 +241,7 @@ class SellerService {
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
-      // Return mock data for development
-      return this.getDefaultDashboardStats();
+      throw error; // Don't return mock data, let the error propagate
     }
   }
   
@@ -491,8 +490,7 @@ class SellerService {
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      // Return mock data for development
-      return this.getDefaultSellerAnalytics();
+      throw error; // Don't return mock data, let the error propagate
     }
   }
   
