@@ -35,6 +35,18 @@ export interface PaymentRequest {
   chainId: number;
   deadline?: number;
   metadata?: Record<string, any>;
+  // Enhanced properties for escrow payments
+  totalAmount?: string;
+  listingId?: number;
+  sellerId?: string;
+  escrowEnabled?: boolean;
+}
+
+export interface TransactionResult {
+  success: boolean;
+  transactionHash?: string;
+  escrowId?: string;
+  gasUsed?: string;
 }
 
 export interface PaymentTransaction {
