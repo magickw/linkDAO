@@ -6,6 +6,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { Analytics } from "@vercel/analytics/next"
 import NotificationSystem from '@/components/NotificationSystem';
+import { MessagingWidget } from '@/components/Messaging';
 
 interface LayoutProps {
   children: ReactNode;
@@ -61,6 +62,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
     { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Feed', href: '/social', icon: '📰' },
     { name: 'Communities', href: '/dao/ethereum-builders', icon: '👥' },
+    { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
   ];
@@ -241,6 +243,9 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
       </footer>
 
       {/* {isConnected && <NotificationSystem />} */}
+      
+      {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
+      {isConnected && <MessagingWidget />}
     </div>
   );
 }

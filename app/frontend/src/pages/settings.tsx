@@ -113,7 +113,10 @@ export default function Settings() {
                         </div>
                       </Link>
 
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <Link 
+                        href="/profile?edit=true" 
+                        className="block bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                      >
                         <div className="flex items-center">
                           <span className="text-xl mr-3">✏️</span>
                           <div>
@@ -121,7 +124,7 @@ export default function Settings() {
                             <p className="text-sm text-gray-600 dark:text-gray-400">Update your information</p>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     </div>
 
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
