@@ -24,6 +24,7 @@ import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
 import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
 import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
+import { SellersDirectory } from '@/components/Marketplace/SellersDirectory';
 import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -38,7 +39,7 @@ const MarketplaceContent: React.FC = () => {
   const { profile } = useSeller();
   
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'create' | 'orders' | 'disputes'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'sellers' | 'my-listings' | 'create' | 'orders' | 'disputes'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -307,6 +308,125 @@ const MarketplaceContent: React.FC = () => {
           <SellerQuickAccessPanel />
         </div>
 
+        {/* Featured Sellers Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-2">Featured Sellers</h2>
+            <p className="text-white/80">Discover trusted sellers in our marketplace</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+            {[
+              {
+                id: '0x1234567890123456789012345678901234567890',
+                name: 'TechGear Pro',
+                rating: 4.8,
+                sales: 1247,
+                verified: true,
+                daoApproved: true,
+                category: 'Electronics'
+              },
+              {
+                id: '0x2345678901234567890123456789012345678901',
+                name: 'CryptoArtist',
+                rating: 4.9,
+                sales: 892,
+                verified: true,
+                daoApproved: true,
+                category: 'NFTs & Art'
+              },
+              {
+                id: '0x3456789012345678901234567890123456789012',
+                name: 'FashionHub',
+                rating: 4.7,
+                sales: 2156,
+                verified: true,
+                daoApproved: false,
+                category: 'Fashion'
+              },
+              {
+                id: '0x4567890123456789012345678901234567890123',
+                name: 'BookWorms',
+                rating: 4.6,
+                sales: 543,
+                verified: true,
+                daoApproved: true,
+                category: 'Books & Media'
+              }
+            ].map((seller) => (
+              <GlassPanel 
+                key={seller.id} 
+                variant="secondary" 
+                hoverable 
+                className="p-4 cursor-pointer transform transition-all duration-200 hover:scale-105" 
+                onClick={() => router.push(`/seller/${seller.id}`)}
+              >
+                <div className="text-center">
+                  <div className="relative mx-auto mb-3">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xl font-bold">
+                      {seller.name.charAt(0)}
+                    </div>
+                    {seller.verified && (
+                      <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-1 rounded-full">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-semibold text-white mb-1 truncate" title={seller.name}>{seller.name}</h3>
+                  <p className="text-xs text-white/60 mb-2">{seller.category}</p>
+                  
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-400 text-sm">⭐</span>
+                      <span className="text-xs text-white">{seller.rating}</span>
+                    </div>
+                    <span className="text-white/40">•</span>
+                    <span className="text-xs text-white/70">{seller.sales.toLocaleString()} sales</span>
+                  </div>
+                  
+                  <div className="flex justify-center gap-1 mb-3">
+                    {seller.verified && (
+                      <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full border border-blue-400/30">✅</span>
+                    )}
+                    {seller.daoApproved && (
+                      <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full border border-purple-400/30">🏛️</span>
+                    )}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/seller/${seller.id}`);
+                    }}
+                  >
+                    🏪 Visit Store
+                  </Button>
+                </div>
+              </GlassPanel>
+            ))}
+          </div>
+          
+          {/* View All Sellers Link */}
+          <div className="text-center">
+            <Button
+              variant="outline"
+              onClick={() => {
+                // In a real app, this would navigate to a dedicated sellers page
+                addToast('Full sellers directory coming soon!', 'info');
+              }}
+              className="border-white/30 text-white/80 hover:bg-white/10"
+            >
+              View All Sellers →
+            </Button>
+          </div>
+        </div>
+
         {/* Want to Start Selling Banner - Show for non-sellers */}
         {isConnected && !profile && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -345,6 +465,16 @@ const MarketplaceContent: React.FC = () => {
                 }`}
               >
                 Browse
+              </button>
+              <button
+                onClick={() => { setActiveTab('sellers'); setShowCart(false); setShowCheckout(false); }}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  activeTab === 'sellers' && !showCart && !showCheckout
+                    ? 'bg-white text-gray-900'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                🏪 Sellers
               </button>
               <button
                 onClick={() => { setShowCart(true); setShowCheckout(false); setActiveTab('browse'); }}
@@ -510,17 +640,27 @@ const MarketplaceContent: React.FC = () => {
                             </div>
                             {/* Quick Action Overlay */}
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <Button
-                                variant="primary"
-                                size="small"
-                                onClick={() => {
-                                  setSelectedListing(listing);
-                                  setShowDetailModal(true);
-                                }}
-                                className="backdrop-blur-sm"
-                              >
-                                Quick View
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="primary"
+                                  size="small"
+                                  onClick={() => {
+                                    setSelectedListing(listing);
+                                    setShowDetailModal(true);
+                                  }}
+                                  className="backdrop-blur-sm"
+                                >
+                                  Quick View
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="small"
+                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
+                                  className="backdrop-blur-sm border-blue-400/50 text-blue-300 hover:bg-blue-500/20"
+                                >
+                                  🏪 Store
+                                </Button>
+                              </div>
                             </div>
                           </div>
 
@@ -530,10 +670,23 @@ const MarketplaceContent: React.FC = () => {
                               <h3 className="text-lg font-medium text-white truncate" title={listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}>
                                 {listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
                               </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <p className="text-sm text-white/70 truncate">
+                              
+                              {/* Enhanced Seller Info with Profile Link */}
+                              <div className="flex items-center gap-2 mt-2">
+                                {/* Seller Avatar */}
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
+                                  {(listing.enhancedData?.seller?.name || listing.sellerWalletAddress).charAt(0).toUpperCase()}
+                                </div>
+                                
+                                {/* Clickable Seller Name */}
+                                <button
+                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
+                                  className="text-sm text-blue-300 hover:text-blue-200 hover:underline font-medium transition-colors truncate"
+                                  title="Visit seller store"
+                                >
                                   {listing.enhancedData?.seller?.name || formatAddress(listing.sellerWalletAddress)}
-                                </p>
+                                </button>
+                                
                                 {/* Enhanced Seller Badges */}
                                 <div className="flex gap-1">
                                   {listing.enhancedData?.seller?.verified && (
@@ -550,17 +703,27 @@ const MarketplaceContent: React.FC = () => {
                                   )}
                                 </div>
                               </div>
-                              {/* Seller Rating */}
-                              {listing.enhancedData?.seller?.rating && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <div className="flex text-yellow-400 text-xs">
-                                    {'⭐'.repeat(Math.floor(listing.enhancedData.seller.rating))}
+                              
+                              {/* Seller Rating and Store Link */}
+                              <div className="flex items-center justify-between mt-1">
+                                {listing.enhancedData?.seller?.rating && (
+                                  <div className="flex items-center gap-1">
+                                    <div className="flex text-yellow-400 text-xs">
+                                      {'⭐'.repeat(Math.floor(listing.enhancedData.seller.rating))}
+                                    </div>
+                                    <span className="text-xs text-white/60">
+                                      {listing.enhancedData.seller.rating.toFixed(1)}
+                                    </span>
                                   </div>
-                                  <span className="text-xs text-white/60">
-                                    {listing.enhancedData.seller.rating.toFixed(1)}
-                                  </span>
-                                </div>
-                              )}
+                                )}
+                                <button
+                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
+                                  className="text-xs text-blue-300 hover:text-blue-200 underline transition-colors"
+                                  title="Visit seller store"
+                                >
+                                  Visit Store →
+                                </button>
+                              </div>
                             </div>
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30 ml-2 flex-shrink-0">
                               {formatItemType(listing.itemType)}
@@ -629,13 +792,20 @@ const MarketplaceContent: React.FC = () => {
                                 </Button>
                                 <Button
                                   variant="outline"
-                                  className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                  className="w-full border-white/30 text-white/80 hover:bg-white/10 flex items-center gap-2"
                                   onClick={() => {
                                     setSelectedListing(listing);
                                     setShowDetailModal(true);
                                   }}
                                 >
                                   View Details
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-blue-400/50 text-blue-300 hover:bg-blue-500/20 flex items-center gap-1"
+                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
+                                >
+                                  🏪 Visit Store
                                 </Button>
                               </>
                             ) : (
@@ -690,10 +860,10 @@ const MarketplaceContent: React.FC = () => {
                                 >
                                   🛒 Add to Cart
                                 </Button>
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-3 gap-2">
                                   <Button
                                     variant="outline"
-                                    className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                    className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
                                     onClick={() => {
                                       setSelectedListing(listing);
                                       setShowDetailModal(true);
@@ -703,7 +873,14 @@ const MarketplaceContent: React.FC = () => {
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    className="w-full border-white/30 text-white/80 hover:bg-white/10"
+                                    className="w-full border-blue-400/50 text-blue-300 hover:bg-blue-500/20 text-xs"
+                                    onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
+                                  >
+                                    🏪 Store
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
                                     onClick={() => {
                                       if (!isConnected) {
                                         addToast('Please connect your wallet first', 'warning');
@@ -725,6 +902,10 @@ const MarketplaceContent: React.FC = () => {
                   </div>
                 )}
               </div>
+            )}
+            
+            {activeTab === 'sellers' && (
+              <SellersDirectory />
             )}
             
             {activeTab === 'my-listings' && (

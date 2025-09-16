@@ -1,6 +1,6 @@
 import { createConfig, http } from 'wagmi'
 import { base, baseGoerli, mainnet, polygon, arbitrum } from 'wagmi/chains'
-import { injected, metaMask, walletConnect } from 'wagmi/connectors'
+import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 
 // WalletConnect project ID - in production, this should be from environment variables
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
@@ -23,6 +23,11 @@ export const config = createConfig({
         url: getFrontendUrl(),
         iconUrl: 'https://linkdao.io/icon.png',
       },
+    }),
+    coinbaseWallet({
+      appName: 'LinkDAO Marketplace',
+      appLogoUrl: 'https://linkdao.io/icon.png',
+      preference: 'smartWalletOnly', // Use Smart Wallet for Base
     }),
     walletConnect({
       projectId,

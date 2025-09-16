@@ -92,8 +92,30 @@ class AuthService {
       // Get nonce and message
       const { nonce, message } = await this.getNonce(address);
       
-      // Sign message with wallet
-      const signature = await signMessage(config, { message });
+      // Check if we're running in a browser environment
+      if (typeof window === 'undefined') {
+        throw new Error('Wallet authentication requires browser environment');
+      }
+      
+      let signature: string;
+      try {
+        // Sign message with wallet - this will prompt the user
+        signature = await signMessage(config, { message });
+        
+        if (!signature) {
+          throw new Error('Signature is required for authentication');
+        }
+      } catch (signError: any) {
+        // Handle specific signing errors
+        if (signError.message?.includes('rejected') || signError.message?.includes('denied')) {
+          throw new Error('Signature request was rejected by user');
+        } else if (signError.message?.includes('not supported')) {
+          throw new Error('Your wallet does not support message signing');
+        } else {
+          console.error('Signing error:', signError);
+          throw new Error('Failed to sign authentication message');
+        }
+      }
       
       // Send authentication request
       const response = await fetch(`${this.baseUrl}/api/auth/wallet`, {
@@ -109,10 +131,18 @@ class AuthService {
         }),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+        throw new Error(errorData.error || `Authentication failed (${response.status})`);
+      }
+      
       const data = await response.json();
       
       if (data.success && data.token) {
         this.setToken(data.token);
+        console.log('Authentication successful for address:', address);
+      } else {
+        throw new Error(data.error || 'Authentication failed - no token received');
       }
       
       return data;

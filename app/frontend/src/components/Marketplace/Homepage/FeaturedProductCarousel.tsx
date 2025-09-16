@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard, NFTGlassCard, PremiumNFTCard } from '@/design-system/components/GlassPanel';
 import { Button, GhostButton } from '@/design-system/components/Button';
@@ -23,6 +24,7 @@ interface FeaturedProduct {
     currency: string;
   };
   seller: {
+    id: string;
     name: string;
     avatar: string;
     verified: boolean;
@@ -56,6 +58,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const router = useRouter();
 
   const featuredProducts: FeaturedProduct[] = [
     {
@@ -70,6 +73,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
         currency: 'ETH',
       },
       seller: {
+        id: '0x2345678901234567890123456789012345678901',
         name: 'CryptoArtist',
         avatar: '/api/placeholder/40/40',
         verified: true,
@@ -101,6 +105,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
         currency: 'USDC',
       },
       seller: {
+        id: '0x1234567890123456789012345678901234567890',
         name: 'CryptoGear Store',
         avatar: '/api/placeholder/40/40',
         verified: true,
@@ -129,6 +134,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
         currency: 'USDC',
       },
       seller: {
+        id: '0x3456789012345678901234567890123456789012',
         name: 'Web3Academy',
         avatar: '/api/placeholder/40/40',
         verified: true,
@@ -158,6 +164,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
         currency: 'ETH',
       },
       seller: {
+        id: '0x4567890123456789012345678901234567890123',
         name: 'MetaLand Ventures',
         avatar: '/api/placeholder/40/40',
         verified: true,
@@ -324,20 +331,26 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
                     </p>
 
                     {/* Seller Info */}
-                    <div className="flex items-center space-x-3 mb-4">
+                    <button 
+                      onClick={() => router.push(`/seller/${currentProduct.seller.id}`)}
+                      className="flex items-center space-x-3 mb-4 p-2 rounded-lg hover:bg-white/10 transition-colors group cursor-pointer w-full text-left"
+                    >
                       <img
                         src={currentProduct.seller.avatar}
                         alt={currentProduct.seller.name}
                         className="w-8 h-8 rounded-full"
                       />
-                      <div>
+                      <div className="flex-1">
                         <div className="flex items-center space-x-1">
-                          <span className="text-white font-medium text-sm">
+                          <span className="text-white font-medium text-sm group-hover:text-blue-300 transition-colors">
                             {currentProduct.seller.name}
                           </span>
                           {currentProduct.seller.verified && (
                             <span className="text-green-400">✓</span>
                           )}
+                          <span className="text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                            → Visit Store
+                          </span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <span className="text-yellow-400">⭐</span>
@@ -346,7 +359,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
                   </div>
 
                   {/* Price and Actions */}

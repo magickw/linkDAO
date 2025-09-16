@@ -670,6 +670,90 @@ app.post('/auth/register', (req, res) => {
   });
 });
 
+// Web3 Wallet Authentication Endpoints
+app.get('/api/auth/nonce/:address', (req, res) => {
+  const { address } = req.params;
+  
+  if (!address) {
+    return res.status(400).json({
+      success: false,
+      error: 'Wallet address is required'
+    });
+  }
+  
+  // Generate a simple nonce for testing
+  const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const message = `Sign this message to authenticate with LinkDAO Marketplace.\n\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
+  
+  console.log(`🔑 Generated nonce for ${address}: ${nonce}`);
+  
+  res.json({
+    success: true,
+    nonce,
+    message
+  });
+});
+
+app.post('/api/auth/wallet', (req, res) => {
+  const { address, signature, message, nonce } = req.body;
+  
+  console.log(`🔐 Wallet auth attempt for ${address}`);
+  
+  if (!address || !signature || !message || !nonce) {
+    return res.status(400).json({
+      success: false,
+      error: 'Address, signature, message, and nonce are required'
+    });
+  }
+  
+  // Mock successful wallet authentication (in production, verify signature)
+  const user = {
+    id: `user_${Date.now()}`,
+    address: address,
+    handle: `user_${address.slice(-8)}`,
+    ens: '',
+    kycStatus: 'none',
+    createdAt: new Date().toISOString()
+  };
+  
+  const token = `jwt_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+  
+  console.log(`✅ Wallet auth successful for ${address}`);
+  
+  res.json({
+    success: true,
+    token,
+    user
+  });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      error: 'Access token required'
+    });
+  }
+  
+  // Mock user data based on token
+  const user = {
+    id: 'user_123',
+    address: '0x1234567890123456789012345678901234567890',
+    handle: 'test_user',
+    ens: '',
+    kycStatus: 'none',
+    createdAt: new Date().toISOString()
+  };
+  
+  res.json({
+    success: true,
+    user
+  });
+});
+
 // Orders endpoint
 app.get('/orders', (req, res) => {
   res.json({

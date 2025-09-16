@@ -286,18 +286,32 @@ const EnhancedProductCard: React.FC<{
         <div className="p-4 space-y-3">
           {/* Seller info */}
           <div className="flex items-center gap-2 text-sm">
-            <img 
-              src={product.seller.avatar} 
-              alt={product.seller.name}
-              className="w-5 h-5 rounded-full"
-            />
-            <span className="text-gray-900 dark:text-white font-medium">{product.seller.name}</span>
-            {product.seller.verified && <CheckCircle size={14} className="text-green-400" />}
-            {product.seller.daoApproved && (
-              <span className="px-1.5 py-0.5 bg-yellow-500/30 text-yellow-800 dark:text-yellow-300 text-xs rounded font-medium">
-                DAO
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onProductClick?.(`seller-${product.seller.id}`);
+              }}
+              className="flex items-center gap-2 hover:bg-white/10 dark:hover:bg-white/10 rounded px-2 py-1 -mx-2 -my-1 transition-colors group/seller"
+              title="View seller profile"
+            >
+              <img 
+                src={product.seller.avatar} 
+                alt={product.seller.name}
+                className="w-5 h-5 rounded-full"
+              />
+              <span className="text-gray-900 dark:text-white font-medium group-hover/seller:text-blue-600 dark:group-hover/seller:text-blue-400 transition-colors">
+                {product.seller.name}
               </span>
-            )}
+              {product.seller.verified && <CheckCircle size={14} className="text-green-400" />}
+              {product.seller.daoApproved && (
+                <span className="px-1.5 py-0.5 bg-yellow-500/30 text-yellow-800 dark:text-yellow-300 text-xs rounded font-medium">
+                  DAO
+                </span>
+              )}
+              <span className="text-xs text-gray-400 opacity-0 group-hover/seller:opacity-100 transition-opacity">
+                →
+              </span>
+            </button>
           </div>
 
           {/* Product title */}
@@ -376,7 +390,7 @@ const EnhancedProductCard: React.FC<{
         </div>
         
         {/* Add to Cart Button - Always visible */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 space-y-2">
           <Button
             variant="primary"
             size="small"
@@ -398,6 +412,19 @@ const EnhancedProductCard: React.FC<{
                 Add to Cart
               </>
             )}
+          </Button>
+          
+          {/* View Store Button */}
+          <Button
+            variant="outline"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onProductClick?.(`seller-${product.seller.id}`);
+            }}
+            className="w-full font-medium text-gray-700 dark:text-white/80 border-gray-300 dark:border-white/30 hover:bg-gray-100 dark:hover:bg-white/10"
+          >
+            View {product.seller.name}'s Store
           </Button>
         </div>
       </GlassPanel>
