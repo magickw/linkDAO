@@ -6,6 +6,7 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { SellerStorePage } from '@/components/Marketplace/Seller/SellerStorePage';
+import { EnhancedCartProvider } from '@/hooks/useEnhancedCart';
 import Layout from '@/components/Layout';
 import { designTokens } from '@/design-system/tokens';
 
@@ -48,10 +49,12 @@ export default function SellerStoreRoute() {
         className="min-h-screen"
         style={{ background: designTokens.gradients.heroMain }}
       >
-        <SellerStorePage
-          sellerId={sellerId}
-          onContactSeller={handleContactSeller}
-        />
+        <EnhancedCartProvider>
+          <SellerStorePage
+            sellerId={sellerId}
+            onContactSeller={handleContactSeller}
+          />
+        </EnhancedCartProvider>
       </div>
     </Layout>
   );

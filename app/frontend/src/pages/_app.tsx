@@ -13,6 +13,7 @@ import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
 import '../styles/globals.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
@@ -263,6 +264,8 @@ export default function App({ Component, pageProps, router }: AppProps) {
             <Web3Provider>
               <AuthProvider>
                 <ToastProvider>
+                  {/* Automatic wallet login bridge with toast notifications */}
+                  <WalletLoginBridgeWithToast />
                   <NavigationProvider>
                     <ThemeProvider defaultTheme="system">
                       <AppContent
