@@ -15,6 +15,7 @@ import { performanceMonitor } from '@/utils/performanceMonitor';
 import { PageTransition, ViewTransition } from '@/components/animations/TransitionComponents';
 import { ThemeToggle } from '@/components/ui/EnhancedTheme';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
+import { MessagingWidget } from '@/components/Messaging';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -201,6 +202,16 @@ export default function DashboardLayout({
                 </svg>
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               </button>
+              
+              {/* Quick Messaging Access */}
+              <button 
+                className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 relative transition-all duration-200 hover:scale-110 active:scale-95 group"
+                title="Open Messaging"
+              >
+                <svg className="w-5 h-5 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </button>
             </div>
           </header>
 
@@ -269,6 +280,9 @@ export default function DashboardLayout({
 
       {/* Notification System */}
       {isConnected && <NotificationSystem />}
+      
+      {/* Wallet-to-Wallet Messaging Widget */}
+      {isConnected && <MessagingWidget />}
       
       {/* Performance Monitoring (Development only) */}
       {process.env.NODE_ENV === 'development' && (

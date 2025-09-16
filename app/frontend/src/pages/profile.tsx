@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
@@ -47,6 +48,7 @@ const mockDAOs = [
 ];
 
 export default function Profile() {
+  const router = useRouter();
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
   const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
@@ -103,6 +105,20 @@ export default function Profile() {
       });
     }
   }, [backendProfile, contractProfileData]);
+
+  // Check for edit query parameter
+  useEffect(() => {
+    if (router.query.edit === 'true') {
+      setIsEditing(true);
+      // Clean up the URL after entering edit mode
+      const newQuery = { ...router.query };
+      delete newQuery.edit;
+      router.replace({
+        pathname: router.pathname,
+        query: newQuery
+      }, undefined, { shallow: true });
+    }
+  }, [router.query.edit, router]);
 
   // Show success toast when profile is created or updated
   useEffect(() => {

@@ -25,74 +25,124 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
   // Initialize service worker and performance monitoring
   React.useEffect(() => {
+    // IMMEDIATE: Set up chrome.runtime error suppression before anything else
+    const immediateErrorSuppressor = (event: any) => {
+      if (event && (event.message || event.reason || event.error)) {
+        const errorText = String(event.message || event.reason || event.error?.message || '').toLowerCase();
+        if (errorText.includes('chrome.runtime.sendmessage') || 
+            errorText.includes('opfgelmcmbiajamepnmloijbpoleiama') ||
+            errorText.includes('extension id') ||
+            errorText.includes('runtime.sendmessage(optional string extensionid')) {
+          console.debug('🚫 IMMEDIATE: Chrome runtime error blocked');
+          event.preventDefault?.();
+          event.stopPropagation?.();
+          event.stopImmediatePropagation?.();
+          return false;
+        }
+      }
+    };
+    
+    // Apply immediately with highest priority
+    window.addEventListener('error', immediateErrorSuppressor, { capture: true, passive: false });
+    window.addEventListener('unhandledrejection', immediateErrorSuppressor, { capture: true, passive: false });
+    
     // Enable debug mode for extension errors in development
     debugExtensionErrors(process.env.NODE_ENV === 'development');
     
     // Initialize extension error suppression
     const cleanupExtensionErrorSuppression = initializeExtensionErrorSuppression();
     
-    // Add specific handler for chrome.runtime.sendMessage errors
-    const handleError = (event: ErrorEvent) => {
+    // More aggressive error handling for chrome.runtime.sendMessage specifically
+    const chromeRuntimeErrorHandler = (event: ErrorEvent) => {
       const message = event.message || '';
       const filename = event.filename || '';
       const stack = event.error?.stack || '';
       
-      // Check for specific extension error patterns
-      const extensionPatterns = [
+      // Very specific patterns for chrome.runtime.sendMessage errors
+      const chromeRuntimePatterns = [
         'chrome.runtime.sendMessage',
-        'Extension ID',
+        'Error in invocation of runtime.sendMessage',
         'runtime.sendMessage(optional string extensionId',
         'must specify an Extension ID',
-        'chrome-extension://',
-        'inpage.js',
-        'opfgelmcmbiajamepnmloijbpoleiama' // The specific extension ID from the error
-      ];
-      
-      const textToCheck = `${message} ${filename} ${stack}`.toLowerCase();
-      const isExtensionError = extensionPatterns.some(pattern => 
-        textToCheck.includes(pattern.toLowerCase())
-      );
-      
-      if (isExtensionError) {
-        console.debug('App-level suppression: Extension error caught and suppressed:', {
-          message,
-          filename,
-          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama'
-        });
-        event.preventDefault();
-        event.stopPropagation();
-        return false;
-      }
-    };
-    
-    // Add rejection handler for promises
-    const handleRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason || '';
-      const message = typeof reason === 'string' ? reason : (reason?.message || reason?.toString() || '');
-      
-      const extensionPatterns = [
-        'chrome.runtime.sendMessage',
-        'Extension ID',
-        'runtime.sendMessage(optional string extensionId',
-        'must specify an Extension ID',
-        'chrome-extension://',
+        'called from a webpage must specify an Extension ID',
+        'for its first argument',
         'opfgelmcmbiajamepnmloijbpoleiama'
       ];
       
-      const isExtensionError = extensionPatterns.some(pattern => 
+      // Check all error information
+      const allErrorText = `${message} ${filename} ${stack}`.toLowerCase();
+      
+      // Look for the specific error pattern
+      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
+        allErrorText.includes(pattern.toLowerCase())
+      ) || allErrorText.includes('chrome-extension://opfgelmcmbiajamepnmloijbpoleiama');
+      
+      if (isChromeRuntimeError) {
+        console.debug('🔇 Chrome runtime error suppressed:', {
+          message: message.substring(0, 200),
+          filename,
+          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Prevent error from propagating
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
+      }
+    };
+    
+    // Handle promise rejections for chrome runtime errors
+    const chromeRuntimeRejectionHandler = (event: PromiseRejectionEvent) => {
+      const reason = event.reason || '';
+      let message = '';
+      
+      if (typeof reason === 'string') {
+        message = reason;
+      } else if (reason && typeof reason === 'object') {
+        message = reason.message || reason.toString() || '';
+      }
+      
+      const chromeRuntimePatterns = [
+        'chrome.runtime.sendMessage',
+        'Error in invocation of runtime.sendMessage',
+        'runtime.sendMessage(optional string extensionId',
+        'must specify an Extension ID',
+        'called from a webpage must specify an Extension ID',
+        'opfgelmcmbiajamepnmloijbpoleiama'
+      ];
+      
+      const isChromeRuntimeError = chromeRuntimePatterns.some(pattern => 
         message.toLowerCase().includes(pattern.toLowerCase())
       );
       
-      if (isExtensionError) {
-        console.debug('App-level suppression: Extension promise rejection suppressed:', message);
+      if (isChromeRuntimeError) {
+        console.debug('🔇 Chrome runtime promise rejection suppressed:', {
+          reason: message.substring(0, 200),
+          extensionId: 'opfgelmcmbiajamepnmloijbpoleiama',
+          timestamp: new Date().toISOString()
+        });
+        
         event.preventDefault();
         return false;
       }
     };
     
-    // Add both handlers with capture phase
-    window.addEventListener('error', handleError, true);
-    window.addEventListener('unhandledrejection', handleRejection, true);
+    // Add Chrome runtime specific handlers with highest priority (capture phase, first)
+    window.addEventListener('error', chromeRuntimeErrorHandler, { capture: true, passive: false });
+    window.addEventListener('unhandledrejection', chromeRuntimeRejectionHandler, { capture: true, passive: false });
+    
+    // Also override console.error temporarily to catch any console-level errors
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+      const message = args.join(' ');
+      if (message.toLowerCase().includes('chrome.runtime.sendmessage') || 
+          message.toLowerCase().includes('opfgelmcmbiajamepnmloijbpoleiama')) {
+        console.debug('🔇 Console error suppressed (chrome.runtime):', message.substring(0, 200));
+        return;
+      }
+      originalConsoleError.apply(console, args);
+    };
     
     const initializeServices = async () => {
       try {
@@ -134,9 +184,12 @@ function AppContent({ Component, pageProps, router }: AppProps) {
     initializeServices();
 
     return () => {
+      window.removeEventListener('error', immediateErrorSuppressor, true);
+      window.removeEventListener('unhandledrejection', immediateErrorSuppressor, true);
       cleanupExtensionErrorSuppression();
-      window.removeEventListener('error', handleError, true);
-      window.removeEventListener('unhandledrejection', handleRejection, true);
+      window.removeEventListener('error', chromeRuntimeErrorHandler, true);
+      window.removeEventListener('unhandledrejection', chromeRuntimeRejectionHandler, true);
+      console.error = originalConsoleError; // Restore original console.error
       if (swUtilRef.current) {
         swUtilRef.current.destroy();
       }
