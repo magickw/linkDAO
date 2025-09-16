@@ -2,13 +2,44 @@ import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useWritePaymentRouterSendEthPayment, useWritePaymentRouterSendTokenPayment } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
+import { useWalletData, usePortfolioPerformance } from '@/hooks/useWalletData';
+import { useToast } from '@/context/ToastContext';
+import { formatDistanceToNow } from 'date-fns';
+import { RefreshCw, TrendingUp, TrendingDown, ExternalLink, Copy } from 'lucide-react';
 
 export default function Wallet() {
   const { address, balance } = useWeb3();
+  const { addToast } = useToast();
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [token, setToken] = useState('ETH');
   const [activeTab, setActiveTab] = useState<'overview' | 'send' | 'history'>('overview');
+  const [portfolioTimeframe, setPortfolioTimeframe] = useState<'1d' | '1w' | '1m' | '1y'>('1d');
+  
+  // Use real wallet data
+  const {
+    walletData,
+    portfolio,
+    tokens,
+    transactions,
+    isLoading,
+    isRefreshing,
+    error,
+    lastUpdated,
+    refresh,
+    clearError
+  } = useWalletData({
+    autoRefresh: true,
+    refreshInterval: 30000,
+    enableTransactionHistory: true,
+    maxTransactions: 20
+  });
+
+  // Portfolio performance data
+  const {
+    data: performanceData,
+    isLoading: isPerformanceLoading
+  } = usePortfolioPerformance(portfolioTimeframe);
   
   const {
     writeContract: sendEthPayment,
@@ -44,27 +75,129 @@ export default function Wallet() {
     }
   };
 
-  // Mock portfolio data
-  const portfolioData = [
-    { name: 'ETH', balance: '2.5', value: '$4,250', change: '+2.5%', changeType: 'positive' },
-    { name: 'USDC', balance: '1,200', value: '$1,200', change: '0%', changeType: 'neutral' },
-    { name: 'USDT', balance: '800', value: '$800', change: '-0.2%', changeType: 'negative' },
-    { name: 'LINK', balance: '50', value: '$650', change: '+5.2%', changeType: 'positive' },
-  ];
+  // Helper functions
+  const handleRefresh = async () => {
+    try {
+      await refresh();
+      addToast('Wallet data refreshed', 'success');
+    } catch (err) {
+      addToast('Failed to refresh wallet data', 'error');
+    }
+  };
 
-  // Mock transaction history
-  const transactions = [
-    { id: 1, type: 'Received', amount: '+1.2 ETH', value: '$2,040', date: '2023-07-15', status: 'Completed' },
-    { id: 2, type: 'Sent', amount: '-0.5 ETH', value: '$850', date: '2023-07-10', status: 'Completed' },
-    { id: 3, type: 'Received', amount: '+1,200 USDC', value: '$1,200', date: '2023-07-05', status: 'Completed' },
-    { id: 4, type: 'Sent', amount: '-500 USDT', value: '$500', date: '2023-07-01', status: 'Completed' },
-  ];
+  const handleCopyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address);
+      addToast('Address copied to clipboard', 'success');
+    }
+  };
+
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  const formatPercentage = (value: number): string => {
+    const formatted = Math.abs(value).toFixed(2);
+    return `${value >= 0 ? '+' : '-'}${formatted}%`;
+  };
+
+  const getChangeColor = (change: number): string => {
+    if (change > 0) return 'text-green-500';
+    if (change < 0) return 'text-red-500';
+    return 'text-gray-500 dark:text-gray-400';
+  };
+
+  const getChangeIcon = (change: number) => {
+    if (change > 0) return <TrendingUp className="w-4 h-4" />;
+    if (change < 0) return <TrendingDown className="w-4 h-4" />;
+    return null;
+  };
+
+  // Transform real data for display
+  const portfolioData = tokens.map(token => ({
+    name: token.symbol,
+    balance: token.balanceFormatted,
+    value: formatCurrency(token.valueUSD),
+    change: formatPercentage(token.change24h),
+    changeType: token.change24h > 0 ? 'positive' : token.change24h < 0 ? 'negative' : 'neutral'
+  }));
+
+  const transactionData = transactions.map(tx => ({
+    id: tx.id,
+    type: tx.type === 'receive' ? 'Received' : 'Sent',
+    amount: `${tx.type === 'receive' ? '+' : '-'}${tx.amount} ${tx.token.symbol}`,
+    value: formatCurrency(parseFloat(tx.valueUSD)),
+    date: new Date(tx.timestamp).toLocaleDateString(),
+    status: tx.status === 'confirmed' ? 'Completed' : tx.status === 'failed' ? 'Failed' : 'Pending',
+    hash: tx.hash
+  }));
 
   return (
     <Layout title="Wallet - LinkDAO">
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Your Wallet</h1>
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Your Wallet</h1>
+            <div className="flex items-center space-x-3">
+              {lastUpdated && (
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+                </span>
+              )}
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ${
+                  isRefreshing ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                title="Refresh wallet data"
+              >
+                <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${
+                  isRefreshing ? 'animate-spin' : ''
+                }`} />
+              </button>
+              {address && (
+                <button
+                  onClick={handleCopyAddress}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Copy wallet address"
+                >
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    {address.slice(0, 6)}...{address.slice(-4)}
+                  </span>
+                  <Copy className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-red-800 dark:text-red-200">{error}</p>
+                <button
+                  onClick={clearError}
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="mb-6 flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
+              <span className="ml-3 text-gray-600 dark:text-gray-300">Loading wallet data...</span>
+            </div>
+          )}
           
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -108,8 +241,17 @@ export default function Wallet() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg shadow-md p-6 text-white">
                   <h2 className="text-lg font-medium mb-2">Total Balance</h2>
-                  <p className="text-3xl font-bold">${(parseFloat(balance || '0') * 1700 + 2000).toLocaleString()}</p>
-                  <p className="text-sm mt-1">+2.5% (24h)</p>
+                  <p className="text-3xl font-bold">
+                    {portfolio ? formatCurrency(portfolio.totalValueUSD) : formatCurrency(parseFloat(balance || '0') * 1700)}
+                  </p>
+                  <div className="flex items-center mt-1">
+                    {portfolio && getChangeIcon(portfolio.change24hPercent)}
+                    <p className={`text-sm ml-1 ${
+                      portfolio ? getChangeColor(portfolio.change24hPercent) : 'text-white/80'
+                    }`}>
+                      {portfolio ? formatPercentage(portfolio.change24hPercent) : '+2.5%'} (24h)
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
@@ -120,8 +262,17 @@ export default function Wallet() {
                 
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Portfolio Value</h2>
-                  <p className="text-3xl font-bold text-secondary-600 dark:text-secondary-400 mt-2">$6,900</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">+3.2% (7d)</p>
+                  <p className="text-3xl font-bold text-secondary-600 dark:text-secondary-400 mt-2">
+                    {portfolio ? formatCurrency(portfolio.totalValueUSD) : '$6,900'}
+                  </p>
+                  <div className="flex items-center mt-1">
+                    {portfolio && getChangeIcon(portfolio.change24hPercent)}
+                    <p className={`text-sm ml-1 ${
+                      portfolio ? getChangeColor(portfolio.change24hPercent) : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {portfolio ? formatPercentage(portfolio.change24hPercent) : '+3.2%'} (7d)
+                    </p>
+                  </div>
                 </div>
               </div>
               
@@ -130,14 +281,41 @@ export default function Wallet() {
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Portfolio Performance</h2>
                   <div className="flex space-x-2">
-                    <button className="px-3 py-1 text-xs rounded-full bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">1D</button>
-                    <button className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">1W</button>
-                    <button className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">1M</button>
-                    <button className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">1Y</button>
+                    {(['1d', '1w', '1m', '1y'] as const).map((timeframe) => (
+                      <button
+                        key={timeframe}
+                        onClick={() => setPortfolioTimeframe(timeframe)}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          portfolioTimeframe === timeframe
+                            ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {timeframe.toUpperCase()}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <p className="text-gray-500 dark:text-gray-400">Portfolio performance chart would be displayed here</p>
+                  {isPerformanceLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div>
+                      <span className="text-gray-500 dark:text-gray-400">Loading chart...</span>
+                    </div>
+                  ) : performanceData ? (
+                    <div className="w-full h-full p-4">
+                      <p className="text-gray-500 dark:text-gray-400 text-center mb-4">
+                        Portfolio Performance ({portfolioTimeframe})
+                      </p>
+                      <div className="text-center text-gray-500 dark:text-gray-400">
+                        Chart visualization would be displayed here
+                        <br />
+                        Current value: {formatCurrency(performanceData.values[performanceData.values.length - 1] || 0)}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">Portfolio performance chart would be displayed here</p>
+                  )}
                 </div>
               </div>
               
@@ -166,7 +344,7 @@ export default function Wallet() {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {portfolioData.map((asset) => (
+                      {portfolioData.length > 0 ? portfolioData.map((asset) => (
                         <tr key={asset.name} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -204,7 +382,13 @@ export default function Wallet() {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                      )) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            {isLoading ? 'Loading assets...' : 'No assets found'}
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -307,10 +491,21 @@ export default function Wallet() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {transactions.map((transaction) => (
+                    {transactionData.length > 0 ? transactionData.map((transaction) => (
                       <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          {transaction.type}
+                          <div className="flex items-center space-x-2">
+                            <span>{transaction.type}</span>
+                            <a
+                              href={`https://etherscan.io/tx/${transaction.hash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
+                              title="View on Etherscan"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                           {transaction.amount}
@@ -319,7 +514,13 @@ export default function Wallet() {
                           {transaction.value}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            transaction.status === 'Completed'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : transaction.status === 'Failed'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                          }`}>
                             {transaction.status}
                           </span>
                         </td>
@@ -327,7 +528,13 @@ export default function Wallet() {
                           {transaction.date}
                         </td>
                       </tr>
-                    ))}
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                          {isLoading ? 'Loading transactions...' : 'No transactions found'}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
