@@ -571,8 +571,11 @@ app.get('/api/marketplace/listings/seller/:address', async (req, res) => {
 // Generic marketplace endpoints for compatibility
 app.get('/marketplace/listings', async (req, res) => {
   try {
+    console.log('📦 Fetching marketplace listings...');
+    
+    // Use a LEFT JOIN to get wallet addresses but still include listings without users
     const query = dbConnected 
-      ? 'SELECT l.*, u.wallet_address as seller_address FROM listings l JOIN users u ON l.seller_id = u.id WHERE l.status = $1 ORDER BY l.created_at DESC LIMIT 50'
+      ? 'SELECT l.*, u.wallet_address as seller_wallet_address FROM listings l LEFT JOIN users u ON l.seller_id = u.id WHERE l.status = $1 ORDER BY l.created_at DESC LIMIT 50'
       : null;
     
     const fallback = () => {
@@ -582,12 +585,94 @@ app.get('/marketplace/listings', async (req, res) => {
     
     const result = await executeQuery(query, ['ACTIVE'], fallback);
     
+    console.log(`📦 Found ${result.rows.length} marketplace listings`);
+    
+    // Transform the results to match the expected format
+    const transformedListings = result.rows.map(listing => {
+      let enhancedData = {};
+      
+      try {
+        if (listing.metadata_uri) {
+          const firstParse = JSON.parse(listing.metadata_uri);
+          // Check if this is a nested JSON string (from our enhanced form)
+          if (typeof firstParse.description === 'string' && firstParse.description.startsWith('{')) {
+            const secondParse = JSON.parse(firstParse.description);
+            enhancedData = { ...firstParse, ...secondParse };
+          } else {
+            enhancedData = firstParse;
+          }
+        }
+      } catch (e) {
+        console.log(`Failed to parse metadata for listing ${listing.id}:`, e.message);
+        enhancedData = { title: listing.metadata_uri || 'Untitled' };
+      }
+      
+      return {
+        id: listing.id.toString(),
+        sellerWalletAddress: listing.seller_wallet_address || 'Unknown',
+        tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
+        price: listing.price || '0',
+        quantity: listing.quantity || 1,
+        itemType: listing.item_type || 'DIGITAL',
+        listingType: listing.listing_type || 'FIXED_PRICE',
+        status: listing.status || 'ACTIVE',
+        startTime: listing.start_time || listing.created_at || new Date().toISOString(),
+        endTime: listing.end_time || null,
+        highestBid: listing.highest_bid || null,
+        highestBidderWalletAddress: listing.highest_bidder || null,
+        metadataURI: enhancedData.title || listing.metadata_uri || 'Untitled',
+        isEscrowed: listing.is_escrowed || false,
+        nftStandard: listing.nft_standard || null,
+        tokenId: listing.token_id || null,
+        createdAt: listing.created_at || new Date().toISOString(),
+        updatedAt: listing.updated_at || new Date().toISOString(),
+        enhancedData: {
+          title: enhancedData.title || 'Untitled',
+          description: enhancedData.description || '',
+          images: enhancedData.images || [],
+          category: enhancedData.category || 'general',
+          tags: enhancedData.tags || [],
+          condition: enhancedData.condition || 'new',
+          escrowEnabled: enhancedData.escrowEnabled || false,
+          views: 0,
+          favorites: 0
+        }
+      };
+    });
+    
+    res.json({
+      success: true,
+      data: transformedListings
+    });
+  } catch (error) {
+    console.error('Error fetching marketplace listings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+  }
+});
+
+// Add API path for frontend compatibility
+app.get('/api/marketplace/listings', async (req, res) => {
+  try {
+    console.log('📦 API endpoint called, forwarding to main marketplace listings...');
+    
+    // Use the same logic as the main endpoint but in memory storage for now
+    const fallback = () => {
+      const listings = memoryStorage.listings.filter(l => l.status === 'ACTIVE').slice(0, 50);
+      return { rows: listings };
+    };
+    
+    const result = fallback();
+    
+    console.log(`📦 API endpoint found ${result.rows.length} listings from memory`);
+    
     res.json({
       success: true,
       data: result.rows
     });
   } catch (error) {
-    console.error('Error fetching listings:', error);
+    console.error('Error fetching API marketplace listings:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -597,25 +682,6 @@ app.get('/marketplace/listings', async (req, res) => {
 
 // Seller listings endpoint to match frontend expectations
 app.get('/marketplace/seller/listings/:address', async (req, res) => {
-  try {
-    const { address } = req.params;
-    const result = await getListingsBySeller(address);
-    
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('Error fetching seller listings:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Create seller listing endpoint
-app.post('/marketplace/seller/listings', async (req, res) => {
   try {
     const listingData = req.body;
     
