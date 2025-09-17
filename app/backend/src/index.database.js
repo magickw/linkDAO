@@ -7,7 +7,7 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3002;
 
 // PostgreSQL connection
 let db = null;
@@ -230,7 +230,39 @@ async function getListingsBySeller(sellerAddress) {
     return { rows: listings };
   };
   
-  return executeQuery(query, [sellerAddress], fallback);
+  const result = await executeQuery(query, [sellerAddress], fallback);
+  
+  // Transform database format to match frontend MarketplaceListing interface
+  const transformedRows = result.rows.map(listing => ({
+    id: listing.id.toString(),
+    sellerWalletAddress: listing.seller_address || sellerAddress,
+    tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
+    price: listing.price.toString(),
+    quantity: listing.quantity || 1,
+    itemType: listing.item_type || 'PHYSICAL',
+    listingType: listing.listing_type || 'FIXED_PRICE',
+    status: listing.status ? listing.status.toUpperCase() : 'ACTIVE',
+    startTime: listing.start_time || listing.created_at,
+    endTime: listing.end_time || null,
+    highestBid: listing.highest_bid ? listing.highest_bid.toString() : null,
+    highestBidderWalletAddress: listing.highest_bidder || null,
+    metadataURI: listing.metadata_uri || '',
+    isEscrowed: listing.is_escrowed || false,
+    nftStandard: listing.nft_standard || null,
+    tokenId: listing.token_id || null,
+    createdAt: listing.created_at,
+    updatedAt: listing.updated_at,
+    enhancedData: {
+      title: listing.title || null,
+      description: listing.description || null,
+      images: listing.images ? [listing.images] : [],
+      category: listing.category || listing.item_type?.toLowerCase(),
+      views: listing.views || 0,
+      favorites: listing.favorites || 0
+    }
+  }));
+  
+  return { rows: transformedRows };
 }
 
 // Initialize middleware
@@ -540,6 +572,25 @@ app.get('/marketplace/listings', async (req, res) => {
   }
 });
 
+// Seller listings endpoint to match frontend expectations
+app.get('/marketplace/seller/listings/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const result = await getListingsBySeller(address);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching seller listings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handler
 app.use((error, req, res, next) => {
   console.error('Error:', error);
@@ -563,15 +614,25 @@ app.use('*', (req, res) => {
 
 // Initialize database and start server
 async function startServer() {
-  await initializeDatabase();
-  
-  app.listen(PORT, () => {
-    console.log(`🚀 Web3 Marketplace Backend with Database running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🗄️  Database: ${dbConnected ? 'PostgreSQL connected' : 'In-memory fallback'}`);
-    console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-    console.log(`📡 API ready: http://localhost:${PORT}/`);
-  });
+  try {
+    console.log('🚀 Starting Web3 Marketplace Backend...');
+    console.log('📊 Environment:', process.env.NODE_ENV || 'development');
+    console.log('🔌 Port:', PORT);
+    console.log('🗄️ Database URL:', process.env.DATABASE_URL ? 'configured' : 'not configured');
+    
+    await initializeDatabase();
+    
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Web3 Marketplace Backend with Database running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🗄️  Database: ${dbConnected ? 'PostgreSQL connected' : 'In-memory fallback'}`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+      console.log(`📡 API ready: http://localhost:${PORT}/`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
 }
 
 startServer().catch(console.error);

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { MarketplaceService } from '@/services/marketplaceService';
+import { MarketplaceService, MarketplaceListing as ServiceMarketplaceListing } from '@/services/marketplaceService';
 import { 
   Star, 
   Shield, 
@@ -80,7 +80,7 @@ interface NFTItem {
   blockchain: string;
 }
 
-interface MarketplaceListing {
+interface DisplayMarketplaceListing {
   id: string;
   title: string;
   price: number;
@@ -93,6 +93,23 @@ interface MarketplaceListing {
   likes: number;
   isEscrowProtected: boolean;
 }
+
+// Transform service listing to display listing
+const transformListing = (serviceListing: ServiceMarketplaceListing): DisplayMarketplaceListing => {
+  return {
+    id: serviceListing.id,
+    title: serviceListing.enhancedData?.title || serviceListing.metadataURI || 'Untitled Listing',
+    price: parseFloat(serviceListing.price) || 0,
+    currency: 'ETH', // Default currency
+    image: serviceListing.enhancedData?.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+    category: serviceListing.enhancedData?.category || serviceListing.itemType.toLowerCase(),
+    status: serviceListing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
+    createdAt: new Date(serviceListing.createdAt),
+    views: serviceListing.enhancedData?.views || 0,
+    likes: serviceListing.enhancedData?.favorites || 0,
+    isEscrowProtected: serviceListing.isEscrowed
+  };
+};
 
 interface Review {
   id: string;
@@ -116,7 +133,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   
   // State management
   const [seller, setSeller] = useState<SellerInfo | null>(null);
-  const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [listings, setListings] = useState<DisplayMarketplaceListing[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +194,9 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
         try {
           const listingsResponse = await marketplaceService.getListingsBySeller(sellerId);
           if (listingsResponse.success) {
-            setListings(listingsResponse.data);
+            // Transform service listings to display listings
+            const transformedListings = listingsResponse.data.map(transformListing);
+            setListings(transformedListings);
           } else {
             setListings([]);
           }

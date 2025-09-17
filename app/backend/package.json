@@ -1,12 +1,12 @@
 {
   "name": "web3-marketplace-backend-full",
   "version": "1.0.0",
-  "description": "Web3 Marketplace Backend - Full TypeScript with Database",
-  "main": "dist/index.js",
+  "description": "Web3 Marketplace Backend - Full with Database",
+  "main": "src/index.database.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node src/index.full.ts",
+    "build": "echo 'Using JavaScript backend - no build needed'",
+    "start": "node src/index.database.js",
+    "dev": "node src/index.database.js",
     "simple": "node src/index.simple.js",
     "database": "node src/index.database.js",
     "migrate": "ts-node src/scripts/migrate.ts",
