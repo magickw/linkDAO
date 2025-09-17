@@ -447,7 +447,7 @@ class SellerService {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...listingData, sellerAddress: walletAddress }),
+      body: JSON.stringify({ ...listingData, sellerWalletAddress: walletAddress }),
     });
     
     if (!response.ok) {
