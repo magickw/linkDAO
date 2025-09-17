@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: web3-marketplace-backend
+    name: linkdao-backend
     env: node
     plan: free
     buildCommand: npm install
@@ -11,5 +11,5 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://your-frontend-domain.com
+        value: https://linkdao.vercel.app
     healthCheckPath: /health
