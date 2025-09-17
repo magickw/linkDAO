@@ -1,767 +1,558 @@
-/**
- * SellerStorePage Component - Public seller store page for buyers
- * Features seller information, product listings, and purchase functionality
- */
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAccount } from 'wagmi';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { useAccount } from 'wagmi';
 import { 
-  Star, Shield, CheckCircle, MapPin, Clock, Calendar, 
-  Filter, Grid, List, Search, Heart, Share2, 
-  ShoppingCart, Eye, MessageCircle, Phone, Mail,
-  Award, Users, Package, TrendingUp
+  Star, 
+  Shield, 
+  Award, 
+  Users, 
+  MessageCircle, 
+  Calendar,
+  TrendingUp,
+  Filter,
+  Grid,
+  List,
+  Heart,
+  Share2,
+  MapPin,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Zap
 } from 'lucide-react';
-import { useToast } from '@/context/ToastContext';
-import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { Button } from '@/design-system/components/Button';
-import { useEnhancedCart } from '@/hooks/useEnhancedCart';
-import ProductDetailModal from '../ProductDetailModal';
-import { ImageWithFallback } from '@/utils/imageUtils';
-import { MarketplaceService, type MarketplaceListing } from '@/services/marketplaceService';
 
+// Enhanced interfaces for Web3 seller profile
 interface SellerInfo {
   id: string;
-  displayName: string;
-  storeName: string;
-  bio: string;
-  description: string;
+  name: string;
   avatar: string;
-  coverImage?: string;
+  walletAddress: string;
+  ensName?: string;
+  description: string;
+  memberSince: Date;
   location?: string;
-  memberSince: string;
-  verified: boolean;
-  daoApproved: boolean;
-  stats: {
-    totalSales: number;
-    activeListings: number;
-    reputationScore: number;
-    responseTime: string;
-    completionRate: number;
-    totalReviews: number;
-  };
-  badges: string[];
-  socialLinks?: {
-    website?: string;
-    twitter?: string;
-    discord?: string;
-  };
-  policies: {
-    returns: string;
-    shipping: string;
-    warranty: string;
-  };
+  
+  // Trust & Reputation
+  reputationScore: number;
+  totalTransactions: number;
+  successfulTransactions: number;
+  disputesRatio: number;
+  safetyScore: number;
+  
+  // Verification & Badges
+  tier: 'TIER_1' | 'TIER_2' | 'TIER_3';
+  isKYCVerified: boolean;
+  isDAOEndorsed: boolean;
+  hasEscrowProtection: boolean;
+  
+  // Social & DAO
+  followers: number;
+  following: number;
+  daoMemberships: string[];
+  
+  // Analytics
+  topCategories: string[];
+  totalListings: number;
+  activeListings: number;
+  
+  // NFT & Web3 Flair
+  nftPortfolio?: NFTItem[];
+  web3Badges: Badge[];
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  type: 'VERIFICATION' | 'ACHIEVEMENT' | 'DAO' | 'NFT';
+  icon: string;
+  description: string;
+  earnedDate: Date;
+}
+
+interface NFTItem {
+  id: string;
+  name: string;
+  image: string;
+  collection: string;
+  blockchain: string;
+}
+
+interface MarketplaceListing {
+  id: string;
+  title: string;
+  price: number;
+  currency: 'ETH' | 'USDC' | 'DAI';
+  image: string;
+  category: string;
+  status: 'ACTIVE' | 'SOLD' | 'DRAFT';
+  createdAt: Date;
+  views: number;
+  likes: number;
+  isEscrowProtected: boolean;
+}
+
+interface Review {
+  id: string;
+  buyerAddress: string;
+  buyerENS?: string;
+  rating: number;
+  comment: string;
+  transactionHash: string;
+  isVerifiedPurchase: boolean;
+  createdAt: Date;
+  listingId: string;
 }
 
 interface SellerStorePageProps {
   sellerId: string;
-  onContactSeller?: (sellerId: string) => void;
 }
 
-export const SellerStorePage: React.FC<SellerStorePageProps> = ({
-  sellerId,
-  onContactSeller
-}) => {
+const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   const router = useRouter();
-  const { isConnected } = useAccount();
-  const { addToast } = useToast();
-  const cart = useEnhancedCart();
+  const { address } = useAccount();
   
+  // State management
   const [seller, setSeller] = useState<SellerInfo | null>(null);
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [listingsLoading, setListingsLoading] = useState(true);
-  const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'listings' | 'reviews' | 'about'>('listings');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState('newest');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isFollowing, setIsFollowing] = useState(false);
 
-  const marketplaceService = new MarketplaceService();
-
+  // Fetch seller data
   useEffect(() => {
-    fetchSellerInfo();
-    fetchSellerListings();
+    const fetchSellerData = async () => {
+      try {
+        setLoading(true);
+        
+        // Simulate API calls - replace with actual API endpoints
+        const sellerResponse = await fetch(`/api/sellers/${sellerId}`);
+        if (!sellerResponse.ok) throw new Error('Seller not found');
+        
+        const sellerData = await sellerResponse.json();
+        setSeller(sellerData);
+        
+        // Fetch listings
+        const listingsResponse = await fetch(`/api/sellers/${sellerId}/listings`);
+        const listingsData = await listingsResponse.json();
+        setListings(listingsData);
+        
+        // Fetch reviews
+        await fetchSellerReviews();
+        
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load seller data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (sellerId) {
+      fetchSellerData();
+    }
   }, [sellerId]);
 
-  const fetchSellerInfo = async () => {
+  const fetchSellerReviews = async () => {
     try {
-      setLoading(true);
-      // Mock seller data - in real app, fetch from API
-      const mockSeller: SellerInfo = {
-        id: sellerId,
-        displayName: 'TechGear Pro',
-        storeName: 'TechGear Pro Store',
-        bio: 'Premium electronics and gadgets for tech enthusiasts',
-        description: 'We specialize in high-quality electronics, gadgets, and tech accessories. Our team has over 10 years of experience in the tech industry, ensuring that every product we sell meets the highest standards of quality and performance. We offer comprehensive warranty coverage and exceptional customer service.',
-        avatar: '/api/placeholder/150/150',
-        coverImage: '/api/placeholder/1200/300',
-        location: 'San Francisco, CA',
-        memberSince: '2022-03-15',
-        verified: true,
-        daoApproved: true,
-        stats: {
-          totalSales: 1247,
-          activeListings: 28,
-          reputationScore: 4.8,
-          responseTime: '< 2 hours',
-          completionRate: 98.5,
-          totalReviews: 324
-        },
-        badges: ['Verified Seller', 'DAO Approved', 'Fast Shipping', 'Top Rated'],
-        socialLinks: {
-          website: 'https://techgearpro.com',
-          twitter: '@techgearpro',
-          discord: 'TechGearPro#1234'
-        },
-        policies: {
-          returns: '30-day return policy with free returns on defective items',
-          shipping: 'Free shipping on orders over $50. Express shipping available',
-          warranty: '1-year manufacturer warranty + extended protection available'
-        }
-      };
-      
-      setSeller(mockSeller);
-    } catch (error) {
-      console.error('Error fetching seller info:', error);
-      addToast('Failed to load seller information', 'error');
-    } finally {
-      setLoading(false);
+      const reviewsResponse = await fetch(`/api/sellers/${sellerId}/reviews`);
+      const reviewsData = await reviewsResponse.json();
+      setReviews(reviewsData);
+    } catch (err) {
+      console.error('Failed to fetch reviews:', err);
     }
   };
 
-  const fetchSellerListings = async () => {
-    try {
-      setListingsLoading(true);
-      // Mock listings data - in real app, fetch from API
-      const mockListings: MarketplaceListing[] = [
-        {
-          id: '1',
-          sellerWalletAddress: sellerId,
-          tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.25',
-          quantity: 1,
-          itemType: 'PHYSICAL',
-          listingType: 'FIXED_PRICE',
-          status: 'ACTIVE',
-          startTime: new Date().toISOString(),
-          metadataURI: 'ipfs://example1',
-          isEscrowed: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          enhancedData: {
-            title: 'Premium Wireless Headphones',
-            description: 'High-quality wireless headphones with noise cancellation',
-            images: ['/api/placeholder/300/300'],
-            price: {
-              crypto: '0.25',
-              cryptoSymbol: 'ETH',
-              fiat: '425.00',
-              fiatSymbol: 'USD'
-            },
-            seller: {
-              id: sellerId,
-              name: 'TechGear Pro',
-              rating: 4.8,
-              verified: true,
-              daoApproved: true,
-              walletAddress: sellerId
-            },
-            trust: {
-              verified: true,
-              escrowProtected: true,
-              onChainCertified: true,
-              safetyScore: 95
-            },
-            category: 'Electronics',
-            tags: ['headphones', 'wireless', 'premium'],
-            views: 156,
-            favorites: 23
-          }
-        },
-        {
-          id: '2',
-          sellerWalletAddress: sellerId,
-          tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.15',
-          quantity: 1,
-          itemType: 'PHYSICAL',
-          listingType: 'FIXED_PRICE',
-          status: 'ACTIVE',
-          startTime: new Date().toISOString(),
-          metadataURI: 'ipfs://example2',
-          isEscrowed: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          enhancedData: {
-            title: 'Smart Fitness Tracker',
-            description: 'Advanced fitness tracker with heart rate monitoring',
-            images: ['/api/placeholder/300/300'],
-            price: {
-              crypto: '0.15',
-              cryptoSymbol: 'ETH',
-              fiat: '255.00',
-              fiatSymbol: 'USD'
-            },
-            seller: {
-              id: sellerId,
-              name: 'TechGear Pro',
-              rating: 4.8,
-              verified: true,
-              daoApproved: true,
-              walletAddress: sellerId
-            },
-            trust: {
-              verified: true,
-              escrowProtected: true,
-              onChainCertified: true,
-              safetyScore: 95
-            },
-            category: 'Wearables',
-            tags: ['fitness', 'tracker', 'health'],
-            views: 89,
-            favorites: 15
-          }
-        },
-        {
-          id: '3',
-          sellerWalletAddress: sellerId,
-          tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.12',
-          quantity: 1,
-          itemType: 'PHYSICAL',
-          listingType: 'AUCTION',
-          status: 'ACTIVE',
-          startTime: new Date().toISOString(),
-          metadataURI: 'ipfs://example3',
-          isEscrowed: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          enhancedData: {
-            title: 'Gaming Mechanical Keyboard',
-            description: 'RGB mechanical keyboard perfect for gaming',
-            images: ['/api/placeholder/300/300'],
-            price: {
-              crypto: '0.12',
-              cryptoSymbol: 'ETH',
-              fiat: '204.00',
-              fiatSymbol: 'USD'
-            },
-            seller: {
-              id: sellerId,
-              name: 'TechGear Pro',
-              rating: 4.8,
-              verified: true,
-              daoApproved: true,
-              walletAddress: sellerId
-            },
-            trust: {
-              verified: true,
-              escrowProtected: true,
-              onChainCertified: true,
-              safetyScore: 95
-            },
-            category: 'Gaming',
-            tags: ['gaming', 'keyboard', 'mechanical'],
-            views: 234,
-            favorites: 31
-          }
-        }
-      ];
-      
-      setListings(mockListings);
-    } catch (error) {
-      console.error('Error fetching listings:', error);
-      addToast('Failed to load listings', 'error');
-    } finally {
-      setListingsLoading(false);
+  // Helper functions
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case 'TIER_3': return 'text-purple-400 bg-purple-500/20';
+      case 'TIER_2': return 'text-blue-400 bg-blue-500/20';
+      case 'TIER_1': return 'text-green-400 bg-green-500/20';
+      default: return 'text-gray-400 bg-gray-500/20';
     }
   };
 
-  const handleAddToCart = (listing: MarketplaceListing) => {
-    if (!isConnected) {
-      addToast('Please connect your wallet to add items to cart', 'warning');
-      return;
-    }
-
-    cart.addItem({
-      id: listing.id,
-      title: listing.enhancedData?.title || 'Untitled Item',
-      description: listing.enhancedData?.description || 'No description available',
-      price: {
-        crypto: listing.enhancedData?.price?.crypto || listing.price,
-        cryptoSymbol: listing.enhancedData?.price?.cryptoSymbol || 'ETH',
-        fiat: listing.enhancedData?.price?.fiat || (parseFloat(listing.price) * 1700).toFixed(2),
-        fiatSymbol: listing.enhancedData?.price?.fiatSymbol || 'USD'
-      },
-      seller: {
-        id: listing.sellerWalletAddress,
-        name: seller?.displayName || 'Unknown Seller',
-        avatar: seller?.avatar || '/api/placeholder/40/40',
-        verified: seller?.verified || false,
-        daoApproved: seller?.daoApproved || false,
-        escrowSupported: listing.isEscrowed
-      },
-      image: listing.enhancedData?.images?.[0] || '/api/placeholder/300/300',
-      category: listing.enhancedData?.category || 'Uncategorized',
-      isDigital: listing.itemType === 'DIGITAL',
-      isNFT: listing.itemType === 'NFT',
-      inventory: listing.quantity,
-      trust: {
-        escrowProtected: listing.itemType === 'PHYSICAL',
-        onChainCertified: true,
-        safetyScore: 95
-      },
-      shipping: {
-        freeShipping: true,
-        estimatedDays: '2-3 business days',
-        cost: '0',
-        regions: ['US', 'CA', 'EU']
-      }
-    });
-
-    addToast(`Added "${listing.enhancedData?.title || 'Item'}" to cart`, 'success');
+  const getSuccessRate = () => {
+    if (!seller) return 0;
+    return Math.round((seller.successfulTransactions / seller.totalTransactions) * 100);
   };
 
-  const handleContactSeller = () => {
-    if (onContactSeller) {
-      onContactSeller(sellerId);
-    } else {
-      addToast('Contact feature coming soon', 'info');
-    }
+  const formatWalletAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const handleFollowSeller = () => {
-    setIsFollowing(!isFollowing);
-    addToast(isFollowing ? 'Unfollowed seller' : 'Following seller', 'success');
-  };
-
-  const filteredListings = listings.filter(listing => {
-    const matchesSearch = searchTerm === '' || 
-      (listing.enhancedData?.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (listing.enhancedData?.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = categoryFilter === 'all' || listing.enhancedData?.category === categoryFilter;
-    
-    const listingPrice = parseFloat(listing.price);
-    const matchesPrice = listingPrice >= priceRange[0] && listingPrice <= priceRange[1];
-    
-    return matchesSearch && matchesCategory && matchesPrice;
-  });
-
-  const sortedListings = [...filteredListings].sort((a, b) => {
-    switch (sortBy) {
-      case 'price-low':
-        return parseFloat(a.price) - parseFloat(b.price);
-      case 'price-high':
-        return parseFloat(b.price) - parseFloat(a.price);
-      case 'oldest':
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case 'newest':
-      default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-  });
+  const filteredListings = listings.filter(listing => 
+    selectedCategory === 'all' || listing.category === selectedCategory
+  );
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading seller profile...</div>
       </div>
     );
   }
 
-  if (!seller) {
+  if (error || !seller) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <GlassPanel className="max-w-md w-full text-center p-8">
-          <h1 className="text-2xl font-bold text-white mb-4">Store Not Found</h1>
-          <p className="text-white/70 mb-6">The seller store you're looking for doesn't exist.</p>
-          <Button
-            onClick={() => router.push('/marketplace')}
-            variant="primary"
-          >
-            Back to Marketplace
-          </Button>
-        </GlassPanel>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-red-400 text-xl">{error || 'Seller not found'}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Store Header */}
-      <div className="relative">
-        {/* Cover Image */}
-        <div className="h-64 lg:h-80 relative overflow-hidden">
-          <ImageWithFallback
-            src={seller.coverImage || '/api/placeholder/1200/300'}
-            alt="Store cover"
-            className="w-full h-full object-cover"
-            fallbackSrc="/api/placeholder/1200/300"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        </div>
-
-        {/* Store Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-6">
-              {/* Store Avatar */}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8"
+        >
+          <div className="flex flex-col md:flex-row items-start gap-6">
+            {/* Avatar & Basic Info */}
+            <div className="flex flex-col items-center">
               <div className="relative">
-                <ImageWithFallback
+                <Image
                   src={seller.avatar}
-                  alt={seller.displayName}
-                  className="w-24 h-24 lg:w-32 lg:h-32 rounded-full border-4 border-white shadow-lg"
-                  fallbackSrc="/api/placeholder/150/150"
+                  alt={seller.name}
+                  width={120}
+                  height={120}
+                  className="rounded-full border-4 border-white/20"
                 />
-                {seller.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-2 rounded-full">
-                    <CheckCircle size={16} />
+                {seller.isKYCVerified && (
+                  <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2">
+                    <CheckCircle className="w-4 h-4 text-white" />
                   </div>
                 )}
               </div>
+              
+              {/* Tier Badge */}
+              <div className={`mt-4 px-3 py-1 rounded-full text-sm font-semibold ${getTierColor(seller.tier)}`}>
+                {seller.tier.replace('_', ' ')}
+              </div>
+            </div>
 
-              {/* Store Details */}
-              <div className="flex-1">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div>
-                    <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                      {seller.storeName}
-                    </h1>
-                    <div className="flex flex-wrap items-center gap-3 text-white/80">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{seller.stats.reputationScore}</span>
-                        <span>({seller.stats.totalReviews} reviews)</span>
-                      </div>
-                      {seller.location && (
+            {/* Main Info */}
+            <div className="flex-1">
+              <div className="flex flex-col md:flex-row justify-between items-start mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-white mb-2">{seller.name}</h1>
+                  <div className="flex items-center gap-3 text-white/70 mb-2">
+                    <span>{seller.ensName || formatWalletAddress(seller.walletAddress)}</span>
+                    {seller.location && (
+                      <>
+                        <span>•</span>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
                           <span>{seller.location}</span>
                         </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>Member since {new Date(seller.memberSince).getFullYear()}</span>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleFollowSeller}
-                      variant={isFollowing ? "outline" : "secondary"}
-                      className="flex items-center gap-2"
-                    >
-                      <Heart className={`w-4 h-4 ${isFollowing ? 'fill-current' : ''}`} />
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </Button>
-                    <Button
-                      onClick={handleContactSeller}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Contact
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        navigator.share?.({
-                          title: seller.storeName,
-                          text: seller.bio,
-                          url: window.location.href
-                        }) || addToast('Link copied to clipboard', 'success');
-                      }}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      Share
-                    </Button>
+                  <div className="flex items-center gap-1 text-white/70">
+                    <Calendar className="w-4 h-4" />
+                    <span>Member since {seller.memberSince.getFullYear()}</span>
                   </div>
                 </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-4 md:mt-0">
+                  <button
+                    onClick={() => setIsFollowing(!isFollowing)}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+                      isFollowing 
+                        ? 'bg-gray-600 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </button>
+                  <button className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all">
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
+                  <button className="p-2 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all">
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-white/80 mb-6">{seller.description}</p>
+
+              {/* Trust Indicators */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{seller.reputationScore}</div>
+                  <div className="text-sm text-white/70">Reputation</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{getSuccessRate()}%</div>
+                  <div className="text-sm text-white/70">Success Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{seller.totalTransactions}</div>
+                  <div className="text-sm text-white/70">Transactions</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{seller.followers}</div>
+                  <div className="text-sm text-white/70">Followers</div>
+                </div>
+              </div>
+
+              {/* Verification Badges */}
+              <div className="flex flex-wrap gap-2">
+                {seller.isKYCVerified && (
+                  <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <Shield className="w-4 h-4" />
+                    KYC Verified
+                  </span>
+                )}
+                {seller.isDAOEndorsed && (
+                  <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    DAO Endorsed
+                  </span>
+                )}
+                {seller.hasEscrowProtection && (
+                  <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <Shield className="w-4 h-4" />
+                    Escrow Protected
+                  </span>
+                )}
+                {seller.web3Badges.map((badge) => (
+                  <span key={badge.id} className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                    <span>{badge.icon}</span>
+                    <span>{badge.name}</span>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Navigation Tabs */}
+        <div className="flex flex-wrap gap-6 mb-8">
+          {['listings', 'reviews', 'about'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all capitalize ${
+                activeTab === tab
+                  ? 'bg-white/20 text-white'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6">
-              {/* Store Stats */}
-              <GlassPanel className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Store Statistics</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70">Total Sales</span>
-                    <span className="text-white font-medium">{seller.stats.totalSales.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70">Active Listings</span>
-                    <span className="text-white font-medium">{seller.stats.activeListings}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70">Response Time</span>
-                    <span className="text-white font-medium">{seller.stats.responseTime}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-white/70">Completion Rate</span>
-                    <span className="text-white font-medium">{seller.stats.completionRate}%</span>
-                  </div>
-                </div>
-              </GlassPanel>
-
-              {/* Badges */}
-              <GlassPanel className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Achievements</h3>
-                <div className="flex flex-wrap gap-2">
-                  {seller.badges.map((badge, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full"
-                    >
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              </GlassPanel>
-
-              {/* About */}
-              <GlassPanel className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">About</h3>
-                <p className="text-white/80 text-sm leading-relaxed mb-4">{seller.description}</p>
-                
-                {seller.socialLinks && (
-                  <div className="space-y-2">
-                    {seller.socialLinks.website && (
-                      <a
-                        href={seller.socialLinks.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Website
-                      </a>
-                    )}
-                    {seller.socialLinks.twitter && (
-                      <a
-                        href={`https://twitter.com/${seller.socialLinks.twitter.replace('@', '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        {seller.socialLinks.twitter}
-                      </a>
-                    )}
-                  </div>
-                )}
-              </GlassPanel>
-
-              {/* Policies */}
-              <GlassPanel className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Store Policies</h3>
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-white font-medium text-sm mb-1">Returns</h4>
-                    <p className="text-white/70 text-xs">{seller.policies.returns}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-white font-medium text-sm mb-1">Shipping</h4>
-                    <p className="text-white/70 text-xs">{seller.policies.shipping}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-white font-medium text-sm mb-1">Warranty</h4>
-                    <p className="text-white/70 text-xs">{seller.policies.warranty}</p>
-                  </div>
-                </div>
-              </GlassPanel>
-            </div>
-          </div>
-
-          {/* Listings */}
-          <div className="lg:col-span-3">
-            {/* Filters and Search */}
-            <GlassPanel className="p-6 mb-6">
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Search */}
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+        {/* Content based on active tab */}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/10 backdrop-blur-lg rounded-2xl p-8"
+        >
+          {activeTab === 'listings' && (
+            <div>
+              {/* Filters and View Controls */}
+              <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <div className="flex items-center gap-4">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20"
+                  >
+                    <option value="all">All Categories</option>
+                    {seller.topCategories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Category Filter */}
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Categories</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Wearables">Wearables</option>
-                  <option value="Gaming">Gaming</option>
-                </select>
-
-                {/* Sort */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                </select>
-
-                {/* View Mode */}
-                <div className="flex border border-white/20 rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
+                    className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-white/20' : 'bg-white/10'}`}
                   >
-                    <Grid className="w-5 h-5" />
+                    <Grid className="w-5 h-5 text-white" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'}`}
+                    className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-white/20' : 'bg-white/10'}`}
                   >
-                    <List className="w-5 h-5" />
+                    <List className="w-5 h-5 text-white" />
                   </button>
                 </div>
               </div>
-            </GlassPanel>
 
-            {/* Listings Grid/List */}
-            {listingsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <GlassPanel key={i} className="p-6 animate-pulse">
-                    <div className="bg-white/10 h-48 rounded-lg mb-4"></div>
-                    <div className="bg-white/10 h-4 rounded mb-2"></div>
-                    <div className="bg-white/10 h-3 rounded w-2/3"></div>
-                  </GlassPanel>
-                ))}
-              </div>
-            ) : sortedListings.length > 0 ? (
-              <div className={viewMode === 'grid' 
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                : "space-y-4"
-              }>
-                {sortedListings.map((listing) => (
+              {/* Listings Grid/List */}
+              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                {filteredListings.map((listing) => (
                   <motion.div
                     key={listing.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white/10 rounded-lg overflow-hidden cursor-pointer"
+                    onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                   >
-                    <GlassPanel className={viewMode === 'grid' ? "p-4" : "p-4 flex gap-4"}>
-                      {/* Product Image */}
-                      <div className={viewMode === 'grid' ? "relative mb-4" : "flex-shrink-0"}>
-                        <ImageWithFallback
-                          src={listing.enhancedData?.images?.[0] || '/api/placeholder/300/300'}
-                          alt={listing.enhancedData?.title || 'Product image'}
-                          className={viewMode === 'grid' 
-                            ? "w-full h-48 object-cover rounded-lg"
-                            : "w-24 h-24 object-cover rounded-lg"
-                          }
-                          fallbackSrc="/api/placeholder/300/300"
-                        />
-                        {listing.listingType === 'AUCTION' && (
-                          <span className="absolute top-2 left-2 bg-purple-500 text-white px-2 py-1 rounded text-xs">
-                            Auction
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <h3 className="text-white font-medium mb-2 line-clamp-2">{listing.enhancedData?.title || 'Untitled Item'}</h3>
-                        <p className="text-white/70 text-sm mb-3 line-clamp-2">{listing.enhancedData?.description || 'No description available'}</p>
-                        
-                        <div className="flex items-center justify-between mb-3">
-                          <div>
-                            <span className="text-white font-bold text-lg">
-                              {listing.enhancedData?.price?.crypto || listing.price} {listing.enhancedData?.price?.cryptoSymbol || 'ETH'}
-                            </span>
-                            {listing.listingType === 'AUCTION' && listing.highestBid && (
-                              <div className="text-green-400 text-sm">
-                                Current bid: {listing.highestBid} {listing.enhancedData?.price?.cryptoSymbol || 'ETH'}
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-white/60 text-sm">{listing.enhancedData?.category || 'Uncategorized'}</span>
+                    <div className="relative">
+                      <Image
+                        src={listing.image}
+                        alt={listing.title}
+                        width={400}
+                        height={300}
+                        className="w-full h-48 object-cover"
+                      />
+                      {listing.isEscrowProtected && (
+                        <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                          <Shield className="w-4 h-4 text-white" />
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className={viewMode === 'grid' ? "space-y-2" : "flex gap-2"}>
-                          <Button
-                            onClick={() => handleAddToCart(listing)}
-                            variant="primary"
-                            size="small"
-                            className="flex items-center gap-2 w-full"
-                          >
-                            <ShoppingCart className="w-4 h-4" />
-                            Add to Cart
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              setSelectedListing(listing);
-                              setShowDetailModal(true);
-                            }}
-                            variant="outline"
-                            size="small"
-                            className="flex items-center gap-2 w-full"
-                          >
-                            <Eye className="w-4 h-4" />
-                            View Details
-                          </Button>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-white font-semibold mb-2 truncate">{listing.title}</h3>
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-bold text-white">
+                          {listing.price} {listing.currency}
+                        </span>
+                        <div className="flex items-center gap-2 text-white/70 text-sm">
+                          <Heart className="w-4 h-4" />
+                          <span>{listing.likes}</span>
                         </div>
                       </div>
-                    </GlassPanel>
+                    </div>
                   </motion.div>
                 ))}
               </div>
-            ) : (
-              <GlassPanel className="p-12 text-center">
-                <Package className="w-16 h-16 text-white/30 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">No Products Found</h3>
-                <p className="text-white/70">This seller doesn't have any products matching your criteria.</p>
-              </GlassPanel>
-            )}
-          </div>
-        </div>
-      </div>
+            </div>
+          )}
 
-      {/* Product Detail Modal */}
-      {selectedListing && (
-        <ProductDetailModal
-          listing={selectedListing}
-          isOpen={showDetailModal}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedListing(null);
-          }}
-          onRefresh={fetchSellerListings}
-        />
-      )}
+          {activeTab === 'reviews' && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Customer Reviews</h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-5 h-5 ${star <= Math.round(seller.reputationScore / 20) ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-white/70">({reviews.length} reviews)</span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <div key={review.id} className="bg-white/10 rounded-lg p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {(review.buyerENS || review.buyerAddress).slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-white font-semibold">
+                            {review.buyerENS || formatWalletAddress(review.buyerAddress)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+                                />
+                              ))}
+                            </div>
+                            {review.isVerifiedPurchase && (
+                              <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
+                                Verified Purchase
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-white/70 text-sm">
+                        {review.createdAt.toLocaleDateString()}
+                      </div>
+                    </div>
+                    <p className="text-white/80">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'about' && (
+            <div className="space-y-8">
+              {/* DAO Memberships */}
+              {seller.daoMemberships.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">DAO Memberships</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {seller.daoMemberships.map((dao) => (
+                      <div key={dao} className="bg-white/10 rounded-lg p-4 text-center">
+                        <div className="text-white font-semibold">{dao}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Analytics */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4">Store Analytics</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-white">{seller.activeListings}</div>
+                    <div className="text-white/70">Active Listings</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-white">{seller.totalListings}</div>
+                    <div className="text-white/70">Total Listed</div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-4">
+                    <div className="text-2xl font-bold text-white">{seller.safetyScore}%</div>
+                    <div className="text-white/70">Safety Score</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* NFT Portfolio */}
+              {seller.nftPortfolio && seller.nftPortfolio.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-4">NFT Portfolio</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {seller.nftPortfolio.slice(0, 8).map((nft) => (
+                      <div key={nft.id} className="bg-white/10 rounded-lg overflow-hidden">
+                        <Image
+                          src={nft.image}
+                          alt={nft.name}
+                          width={200}
+                          height={200}
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="p-3">
+                          <div className="text-white font-semibold text-sm truncate">{nft.name}</div>
+                          <div className="text-white/70 text-xs">{nft.collection}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 };
