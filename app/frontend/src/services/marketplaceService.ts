@@ -201,8 +201,8 @@ export class MarketplaceService {
     return this.request(`/marketplace/listings/${id}`);
   }
 
-  async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
-    return this.request(`/marketplace/listings/seller/${sellerAddress}`);
+  async getListingsBySeller(sellerAddress: string): Promise<{success: boolean, data: MarketplaceListing[]}> {
+    return this.request(`/marketplace/seller/listings/${sellerAddress}`);
   }
 
   async getAllListings(): Promise<MarketplaceListing[]> {

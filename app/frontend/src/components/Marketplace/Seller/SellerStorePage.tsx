@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
+import { MarketplaceService } from '@/services/marketplaceService';
 import { 
   Star, 
   Shield, 
@@ -124,26 +125,93 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isFollowing, setIsFollowing] = useState(false);
 
+  const marketplaceService = new MarketplaceService();
+
   // Fetch seller data
   useEffect(() => {
     const fetchSellerData = async () => {
       try {
         setLoading(true);
         
-        // Simulate API calls - replace with actual API endpoints
-        const sellerResponse = await fetch(`/api/sellers/${sellerId}`);
-        if (!sellerResponse.ok) throw new Error('Seller not found');
+        // For now, use mock seller data until we have a proper sellers endpoint
+        const mockSeller: SellerInfo = {
+          id: sellerId,
+          name: 'Sample Seller',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face',
+          walletAddress: sellerId,
+          ensName: undefined,
+          description: 'A trusted seller with high-quality products and excellent customer service.',
+          memberSince: new Date('2023-01-15'),
+          location: 'Digital Marketplace',
+          reputationScore: 95,
+          totalTransactions: 150,
+          successfulTransactions: 147,
+          disputesRatio: 0.02,
+          safetyScore: 98,
+          tier: 'TIER_2',
+          isKYCVerified: true,
+          isDAOEndorsed: true,
+          hasEscrowProtection: true,
+          followers: 1250,
+          following: 89,
+          daoMemberships: ['LinkDAO', 'TechDAO'],
+          topCategories: ['electronics', 'digital', 'collectibles'],
+          totalListings: 25,
+          activeListings: 12,
+          nftPortfolio: [],
+          web3Badges: [
+            {
+              id: 'badge1',
+              name: 'Verified Creator',
+              type: 'VERIFICATION',
+              icon: '🎨',
+              description: 'Verified digital content creator',
+              earnedDate: new Date('2023-06-01')
+            }
+          ]
+        };
         
-        const sellerData = await sellerResponse.json();
-        setSeller(sellerData);
+        setSeller(mockSeller);
         
-        // Fetch listings
-        const listingsResponse = await fetch(`/api/sellers/${sellerId}/listings`);
-        const listingsData = await listingsResponse.json();
-        setListings(listingsData);
+        // Fetch actual listings using MarketplaceService
+        try {
+          const listingsResponse = await marketplaceService.getListingsBySeller(sellerId);
+          if (listingsResponse.success) {
+            setListings(listingsResponse.data);
+          } else {
+            setListings([]);
+          }
+        } catch (listingsError) {
+          console.error('Failed to fetch listings:', listingsError);
+          setListings([]);
+        }
         
-        // Fetch reviews
-        await fetchSellerReviews();
+        // Mock reviews data
+        const mockReviews: Review[] = [
+          {
+            id: 'review1',
+            buyerAddress: '0x1234567890123456789012345678901234567890',
+            buyerENS: 'buyer1.eth',
+            rating: 5,
+            comment: 'Excellent seller! Fast shipping and exactly as described.',
+            transactionHash: '0xabcdef...',
+            isVerifiedPurchase: true,
+            createdAt: new Date('2024-01-10'),
+            listingId: 'listing1'
+          },
+          {
+            id: 'review2',
+            buyerAddress: '0x2345678901234567890123456789012345678901',
+            rating: 4,
+            comment: 'Great product, minor packaging issues but overall satisfied.',
+            transactionHash: '0x123456...',
+            isVerifiedPurchase: true,
+            createdAt: new Date('2024-01-05'),
+            listingId: 'listing2'
+          }
+        ];
+        
+        setReviews(mockReviews);
         
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load seller data');
@@ -158,13 +226,8 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   }, [sellerId]);
 
   const fetchSellerReviews = async () => {
-    try {
-      const reviewsResponse = await fetch(`/api/sellers/${sellerId}/reviews`);
-      const reviewsData = await reviewsResponse.json();
-      setReviews(reviewsData);
-    } catch (err) {
-      console.error('Failed to fetch reviews:', err);
-    }
+    // This function is kept for compatibility but reviews are now loaded in the main fetch
+    console.log('Reviews loaded with seller data');
   };
 
   // Helper functions

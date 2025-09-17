@@ -399,9 +399,39 @@ class SellerService {
       
       const result = await response.json();
       // The backend returns { success: true, data: [...] }
-      // We need to return the data array
+      // We need to transform and return the data array
       if (result.success) {
-        return Array.isArray(result.data) ? result.data : [];
+        const backendListings = Array.isArray(result.data) ? result.data : [];
+        
+        // Transform backend data to match SellerListing interface
+        return backendListings.map((listing: any): SellerListing => ({
+          id: listing.id,
+          title: listing.title || 'Untitled Listing',
+          description: listing.description || '',
+          category: listing.category || 'general',
+          subcategory: listing.subcategory,
+          price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
+          currency: listing.currency || 'ETH',
+          quantity: listing.quantity || 1,
+          condition: listing.condition || 'new',
+          images: listing.images || [],
+          specifications: listing.specifications || {},
+          tags: listing.tags || [],
+          status: listing.status || 'active',
+          saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
+          escrowEnabled: listing.escrowEnabled || false,
+          shippingOptions: {
+            free: false,
+            cost: 0,
+            estimatedDays: '3-5 days',
+            international: false
+          },
+          views: listing.views || 0,
+          favorites: listing.favorites || 0,
+          questions: listing.questions || 0,
+          createdAt: listing.createdAt || new Date().toISOString(),
+          updatedAt: listing.updatedAt || new Date().toISOString()
+        }));
       } else {
         throw new Error(result.message || 'Failed to fetch listings');
       }

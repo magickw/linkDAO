@@ -18,7 +18,7 @@ import postRoutes from './routes/postRoutes';
 import aiRoutes from './routes/aiRoutes';
 import searchRoutes from './routes/searchRoutes';
 import orderRoutes from './routes/orderRoutes';
-import disputeRoutes from './routes/disputeRoutes';
+import { disputeRouter } from './routes/disputeRoutes';
 import reviewRoutes from './routes/reviewRoutes';
 import contentIngestionRoutes from './routes/contentIngestionRoutes';
 import reportRoutes from './routes/reportRoutes';
@@ -101,7 +101,7 @@ try {
   app.use('/api/ai', aiRoutes);
   app.use('/api/search', searchRoutes);
   app.use('/api/orders', orderRoutes);
-  app.use('/api', disputeRoutes);
+  app.use('/api', disputeRouter);
   app.use('/api', reviewRoutes);
   app.use('/api/content', contentIngestionRoutes);
   app.use('/api/reports', reportRoutes);

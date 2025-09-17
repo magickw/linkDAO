@@ -10,6 +10,9 @@ require('dotenv').config();
 // Initialize cache service
 const cacheService = new SimpleCacheService();
 
+// In-memory storage for created listings
+const createdListings = [];
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -1173,7 +1176,11 @@ app.get('/marketplace/seller/listings/:walletAddress', (req, res) => {
   const { walletAddress } = req.params;
   const { status } = req.query;
   
-  const listings = [
+  console.log(`Fetching listings for wallet: ${walletAddress}`);
+  console.log(`Total created listings in memory: ${createdListings.length}`);
+  
+  // Static mock listings
+  const mockListings = [
     {
       id: 'listing_1',
       title: 'Sample Product 1',
@@ -1190,12 +1197,27 @@ app.get('/marketplace/seller/listings/:walletAddress', (req, res) => {
       views: 45,
       favorites: 8,
       questions: 2,
+      sellerWalletAddress: walletAddress, // Assign to requested wallet
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
       updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
     }
   ];
   
-  const filteredListings = status ? listings.filter(listing => listing.status === status) : listings;
+  // Filter created listings by wallet address
+  const userCreatedListings = createdListings.filter(listing => {
+    console.log(`Checking listing ${listing.id} with seller: ${listing.sellerWalletAddress}`);
+    return listing.sellerWalletAddress === walletAddress;
+  });
+  
+  console.log(`Found ${userCreatedListings.length} created listings for ${walletAddress}`);
+  
+  // Combine mock and created listings
+  const allListings = [...mockListings, ...userCreatedListings];
+  
+  // Filter by status if provided
+  const filteredListings = status ? allListings.filter(listing => listing.status === status) : allListings;
+  
+  console.log(`Returning ${filteredListings.length} total listings`);
   
   res.json({
     success: true,
@@ -1206,19 +1228,24 @@ app.get('/marketplace/seller/listings/:walletAddress', (req, res) => {
 app.post('/marketplace/seller/listings', (req, res) => {
   const listingData = req.body;
   
+  const newListing = {
+    id: `listing_${Date.now()}`,
+    ...listingData,
+    status: 'active',
+    views: 0,
+    favorites: 0,
+    questions: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Store the listing in memory
+  createdListings.push(newListing);
+  
   res.json({
     success: true,
     message: 'Listing created successfully',
-    data: {
-      id: `listing_${Date.now()}`,
-      ...listingData,
-      status: 'active',
-      views: 0,
-      favorites: 0,
-      questions: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    data: newListing
   });
 });
 
