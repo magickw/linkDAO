@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
@@ -6,6 +6,7 @@ import { MarketplaceService, type MarketplaceListing } from '@/services/marketpl
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 const CreateListingPage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -21,6 +22,9 @@ const CreateListingPage: React.FC = () => {
     duration: 86400, // 24 hours in seconds
     metadataURI: ''
   });
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   
   const marketplaceService = new MarketplaceService();
@@ -31,6 +35,68 @@ const CreateListingPage: React.FC = () => {
       ...prev,
       [name]: name === 'quantity' || name === 'duration' ? parseInt(value) : value
     }));
+  };
+
+  // Image upload handlers
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  }, []);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleFiles = (files: File[]) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length === 0) {
+      addToast('Please select valid image files', 'error');
+      return;
+    }
+
+    // Limit to 5 images total
+    const remainingSlots = 5 - images.length;
+    const filesToAdd = imageFiles.slice(0, remainingSlots);
+    
+    if (filesToAdd.length < imageFiles.length) {
+      addToast(`Only ${remainingSlots} more images can be added (max 5 total)`, 'warning');
+    }
+
+    setImages(prev => [...prev, ...filesToAdd]);
+    
+    // Create preview URLs
+    filesToAdd.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImagePreviews(prev => [...prev, e.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,10 +153,13 @@ const CreateListingPage: React.FC = () => {
   if (!isConnected) {
     return (
       <Layout title="Create Listing - LinkDAO Marketplace">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <GlassPanel variant="primary" className="text-center py-12">
-            <p className="text-white/70">Please connect your wallet to create a listing.</p>
-          </GlassPanel>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <GlassPanel variant="primary" className="text-center py-12">
+              <h2 className="text-2xl font-semibold text-white mb-4">Connect Your Wallet</h2>
+              <p className="text-white/80">Please connect your wallet to create a listing.</p>
+            </GlassPanel>
+          </div>
         </div>
       </Layout>
     );
@@ -98,10 +167,11 @@ const CreateListingPage: React.FC = () => {
 
   return (
     <Layout title="Create Listing - LinkDAO Marketplace">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <GlassPanel variant="primary" className="max-w-2xl mx-auto">
-          <div className="p-8">
-            <h2 className="text-xl font-semibold text-white mb-6">Create New Listing</h2>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <GlassPanel variant="primary" className="max-w-2xl mx-auto">
+            <div className="p-8">
+              <h2 className="text-2xl font-semibold text-white mb-6">Create New Listing</h2>
           
             <form onSubmit={handleSubmit}>
               <div className="space-y-6">
@@ -114,7 +184,7 @@ const CreateListingPage: React.FC = () => {
                     name="itemType"
                     value={formData.itemType}
                     onChange={handleChange}
-                    className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                    className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white"
                   >
                     <option value="PHYSICAL">Physical Goods</option>
                     <option value="DIGITAL">Digital Goods</option>
@@ -132,7 +202,7 @@ const CreateListingPage: React.FC = () => {
                     name="listingType"
                     value={formData.listingType}
                     onChange={handleChange}
-                    className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                    className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white"
                   >
                     <option value="FIXED_PRICE">Fixed Price</option>
                     <option value="AUCTION">Auction</option>
@@ -193,6 +263,62 @@ const CreateListingPage: React.FC = () => {
                 )}
                 
                 <div>
+                  <label className="block text-sm font-medium text-white/90 mb-2">
+                    Product Images (Max 5)
+                  </label>
+                  <div
+                    className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-all ${
+                      dragActive 
+                        ? 'border-indigo-400 bg-indigo-500/10' 
+                        : 'border-white/30 hover:border-white/50'
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileInput}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="space-y-2">
+                      <Upload className="mx-auto h-8 w-8 text-white/60" />
+                      <div className="text-white/80">
+                        <span className="font-medium">Click to upload</span> or drag and drop
+                      </div>
+                      <p className="text-sm text-white/60">
+                        PNG, JPG, GIF up to 10MB each
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Image Previews */}
+                  {imagePreviews.length > 0 && (
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {imagePreviews.map((preview, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-white/20"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div>
                   <label htmlFor="metadataURI" className="block text-sm font-medium text-white/90 mb-2">
                     Item Description
                   </label>
@@ -245,16 +371,19 @@ const CreateListingPage: React.FC = () => {
                         duration: 86400,
                         metadataURI: ''
                       });
+                      setImages([]);
+                      setImagePreviews([]);
                     }}
                     className="border-white/30 text-white/80 hover:bg-white/10"
                   >
-                    Reset
+                    Reset Form
                   </Button>
                 </div>
               </div>
             </form>
           </div>
-        </GlassPanel>
+          </GlassPanel>
+        </div>
       </div>
     </Layout>
   );

@@ -191,7 +191,7 @@ export class MarketplaceService {
 
   // Listings
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
-    return this.request('/marketplace/listings', {
+    return this.request('/marketplace/seller/listings', {
       method: 'POST',
       body: JSON.stringify(input),
     });
