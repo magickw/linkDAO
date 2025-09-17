@@ -64,8 +64,8 @@ export default function WalletTest() {
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                   <p><strong>Error:</strong> {error.message}</p>
                   <p><strong>Name:</strong> {error.name}</p>
-                  {error.cause && (
-                    <p><strong>Cause:</strong> {String(error.cause)}</p>
+                  {(error as any).cause && (
+                    <p><strong>Cause:</strong> {String((error as any).cause)}</p>
                   )}
                 </div>
               </div>
