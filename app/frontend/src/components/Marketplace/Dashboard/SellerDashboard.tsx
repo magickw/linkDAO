@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSellerDashboard, useSeller, useSellerTiers } from '../../../hooks/useSeller';
+import { useSellerDashboard, useSeller, useSellerTiers, useSellerListings } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 
 interface SellerDashboardProps {
@@ -12,9 +12,9 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
   const { profile, loading: profileLoading } = useSeller();
   // Only use mockWalletAddress if explicitly provided and in development mode
   const shouldUseMock = mockWalletAddress && process.env.NODE_ENV === 'development';
-  const walletAddress = shouldUseMock ? mockWalletAddress : (useSellerDashboard() as any).address;
-  const { stats, notifications, unreadNotifications, loading, markNotificationRead } = useSellerDashboard();
+  const { stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
+  const { listings, loading: listingsLoading, fetchListings } = useSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mock data state - only used in development with explicit mock parameter
@@ -479,8 +479,98 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
             </GlassPanel>
           )}
 
+          {activeTab === 'listings' && (
+            <GlassPanel className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-white">My Listings</h3>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => fetchListings()}
+                    variant="outline"
+                    size="small"
+                    loading={listingsLoading}
+                  >
+                    Refresh
+                  </Button>
+                  <Button
+                    onClick={() => router.push('/marketplace/seller/listings/create')}
+                    variant="primary"
+                    size="small"
+                  >
+                    New Listing
+                  </Button>
+                </div>
+              </div>
+              
+              {listingsLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <LoadingSkeleton key={i} className="h-20" />
+                  ))}
+                </div>
+              ) : listings.length > 0 ? (
+                <div className="space-y-4">
+                  {listings.map((listing) => (
+                    <div key={listing.id} className="bg-gray-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="text-white font-medium mb-1">{listing.title}</h4>
+                          <p className="text-gray-300 text-sm mb-2">{listing.description}</p>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-green-400 font-medium">
+                              {typeof listing.price === 'string' ? listing.price : listing.price.toString()} {listing.currency || 'ETH'}
+                            </span>
+                            <span className="text-gray-400">
+                              Qty: {listing.quantity}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              listing.status === 'active' ? 'bg-green-600 text-white' :
+                              listing.status === 'sold' ? 'bg-blue-600 text-white' :
+                              'bg-gray-600 text-white'
+                            }`}>
+                              {listing.status?.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right text-sm text-gray-400">
+                            <div>Views: {listing.views || 0}</div>
+                            <div>Likes: {listing.favorites || 0}</div>
+                          </div>
+                          <Button
+                            onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
+                            variant="outline"
+                            size="small"
+                          >
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">No listings yet</h3>
+                  <p className="text-gray-400 mb-6">Create your first listing to start selling</p>
+                  <Button
+                    onClick={() => router.push('/marketplace/seller/listings/create')}
+                    variant="primary"
+                  >
+                    Create First Listing
+                  </Button>
+                </div>
+              )}
+            </GlassPanel>
+          )}
+
           {/* Other tabs would be implemented similarly */}
-          {activeTab !== 'overview' && activeTab !== 'notifications' && (
+          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && (
             <GlassPanel className="p-6 text-center">
               <p className="text-gray-400">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...

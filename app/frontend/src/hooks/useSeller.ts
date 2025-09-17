@@ -338,36 +338,37 @@ export function useSellerOrders() {
   };
 }
 
-export function useSellerListings() {
+export function useSellerListings(walletAddress?: string) {
   const { address } = useAccount();
+  const effectiveAddress = walletAddress || address;
   const [listings, setListings] = useState<SellerListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchListings = useCallback(async (status?: string) => {
-    if (!address) return;
+    if (!effectiveAddress) return;
     
     setLoading(true);
     setError(null);
     
     try {
-      const sellerListings = await sellerService.getListings(address, status);
+      const sellerListings = await sellerService.getListings(effectiveAddress, status);
       setListings(sellerListings);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch listings');
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [effectiveAddress]);
 
   const createListing = useCallback(async (listingData: Partial<SellerListing>) => {
-    if (!address) throw new Error('Wallet not connected');
+    if (!effectiveAddress) throw new Error('Wallet not connected');
     
     setLoading(true);
     setError(null);
     
     try {
-      const newListing = await sellerService.createListing(address, listingData);
+      const newListing = await sellerService.createListing(effectiveAddress, listingData);
       setListings(prev => [newListing, ...prev]);
       return newListing;
     } catch (err) {
@@ -377,7 +378,7 @@ export function useSellerListings() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [effectiveAddress]);
 
   const updateListing = useCallback(async (listingId: string, updates: Partial<SellerListing>) => {
     try {
@@ -407,12 +408,12 @@ export function useSellerListings() {
   }, []);
 
   useEffect(() => {
-    if (address) {
+    if (effectiveAddress) {
       fetchListings();
     } else {
       setListings([]);
     }
-  }, [address, fetchListings]);
+  }, [effectiveAddress, fetchListings]);
 
   return {
     listings,
