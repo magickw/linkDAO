@@ -1,5 +1,5 @@
 import { createConfig, http } from 'wagmi'
-import { base, baseGoerli, mainnet, polygon, arbitrum } from 'wagmi/chains'
+import { base, baseGoerli, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 
 // WalletConnect project ID - in production, this should be from environment variables
@@ -15,7 +15,7 @@ const getFrontendUrl = () => {
 
 // Set up wagmi config with enhanced connectors
 export const config = createConfig({
-  chains: [base, baseGoerli, mainnet, polygon, arbitrum],
+  chains: [base, baseGoerli, mainnet, polygon, arbitrum, sepolia],
   connectors: [
     metaMask({
       dappMetadata: {
@@ -55,10 +55,11 @@ export const config = createConfig({
     [mainnet.id]: http(process.env.NEXT_PUBLIC_ETHEREUM_RPC_URL || 'https://eth.llamarpc.com'),
     [polygon.id]: http(process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon.llamarpc.com'),
     [arbitrum.id]: http(process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arbitrum.llamarpc.com'),
+    [sepolia.id]: http(process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL || 'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'),
   },
 })
 
-export { base, baseGoerli, mainnet, polygon, arbitrum }
+export { base, baseGoerli, mainnet, polygon, arbitrum, sepolia }
 
 // Add a health check function
 export const checkWagmiConnection = async () => {
