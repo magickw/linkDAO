@@ -123,7 +123,15 @@ const MarketplaceContent: React.FC = () => {
         // Transform backend data to frontend format
         const transformedListings = data.data.map((listing: any) => {
           // Parse enhanced metadata if available
-          let enhancedData = {};
+          let enhancedData: {
+            title?: string;
+            description?: string;
+            images?: string[];
+            category?: string;
+            tags?: string[];
+            condition?: string;
+            escrowEnabled?: boolean;
+          } = {};
           try {
             if (listing.enhancedData) {
               enhancedData = listing.enhancedData;

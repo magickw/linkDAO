@@ -192,14 +192,10 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
         
         // Fetch actual listings using MarketplaceService
         try {
-          const listingsResponse = await marketplaceService.getListingsBySeller(sellerId);
-          if (listingsResponse.success) {
-            // Transform service listings to display listings
-            const transformedListings = listingsResponse.data.map(transformListing);
-            setListings(transformedListings);
-          } else {
-            setListings([]);
-          }
+          const listingsData = await marketplaceService.getListingsBySeller(sellerId);
+          // Transform service listings to display listings
+          const transformedListings = listingsData.map(transformListing);
+          setListings(transformedListings);
         } catch (listingsError) {
           console.error('Failed to fetch listings:', listingsError);
           setListings([]);
