@@ -591,6 +591,376 @@ app.get('/marketplace/seller/listings/:address', async (req, res) => {
   }
 });
 
+// Create seller listing endpoint
+app.post('/marketplace/seller/listings', async (req, res) => {
+  try {
+    const listingData = req.body;
+    
+    // Handle both seller-specific and marketplace-generic data formats
+    const isMarketplaceFormat = listingData.tokenAddress && listingData.metadataURI && !listingData.title;
+    
+    let sellerWalletAddress, title, description, price, currency, quantity, condition, images, tags, escrowEnabled, shippingFree, shippingCost, estimatedDays, category, tokenAddress, itemType, listingType, metadataURI;
+    
+    if (isMarketplaceFormat) {
+      // Handle MarketplaceService.createListing format (CreateListingInput)
+      ({ sellerWalletAddress, tokenAddress, price, quantity, itemType, listingType, metadataURI } = listingData);
+      
+      // Extract basic info from metadataURI for compatibility
+      title = 'Marketplace Listing';
+      description = metadataURI || '';
+      currency = 'ETH';
+      condition = 'new';
+      category = itemType ? itemType.toLowerCase() : 'general';
+      images = [];
+      tags = [];
+      escrowEnabled = false;
+      shippingFree = false;
+      shippingCost = 0;
+      estimatedDays = '3-5';
+      
+      console.log(`📦 Creating marketplace listing for seller ${sellerWalletAddress}:`, {
+        itemType,
+        listingType,
+        price,
+        quantity
+      });
+    } else {
+      // Handle SellerService.createListing format (seller-specific)
+      ({ sellerWalletAddress, title, description, price, currency, quantity, condition, images, tags, escrowEnabled, shippingFree, shippingCost, estimatedDays, category } = listingData);
+      
+      // Set defaults for marketplace fields
+      tokenAddress = '0x0000000000000000000000000000000000000000';
+      itemType = category || 'PHYSICAL';
+      listingType = 'FIXED_PRICE';
+      metadataURI = description || '';
+      
+      console.log(`📦 Creating seller listing for seller ${sellerWalletAddress}:`, {
+        title,
+        price,
+        currency,
+        quantity,
+        imageCount: images ? images.length : 0
+      });
+    }
+    
+    if (!sellerWalletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Seller wallet address is required'
+      });
+    }
+    
+    // Create or get user first
+    let userResult = await getUserByAddress(sellerWalletAddress);
+    if (userResult.rows.length === 0) {
+      userResult = await createOrUpdateUser(sellerWalletAddress, '', {});
+    }
+    
+    const userId = userResult.rows[0].id;
+    
+    // Create the listing with enhanced data
+    const enhancedListingData = {
+      seller_id: userId,
+      token_address: tokenAddress || '0x0000000000000000000000000000000000000000',
+      price: price ? price.toString() : '0',
+      quantity: quantity || 1,
+      item_type: itemType || category || 'PHYSICAL',
+      listing_type: listingType || 'FIXED_PRICE',
+      status: 'ACTIVE',
+      metadata_uri: JSON.stringify({
+        title: title || 'Marketplace Listing',
+        description: description || metadataURI || '',
+        currency: currency || 'ETH',
+        condition: condition || 'new',
+        images: images || [],
+        tags: tags || [],
+        escrowEnabled: escrowEnabled || false,
+        shippingFree: shippingFree || false,
+        shippingCost: shippingCost || 0,
+        estimatedDays: estimatedDays || '3-5',
+        category: category || itemType?.toLowerCase() || 'general',
+        // Include original marketplace data if available
+        originalMarketplaceData: isMarketplaceFormat ? {
+          tokenAddress,
+          itemType,
+          listingType,
+          metadataURI
+        } : null
+      }),
+      is_escrowed: escrowEnabled || false
+    };
+    
+    const result = await createListing(sellerWalletAddress, enhancedListingData);
+    
+    // Return appropriate response format based on input format
+    let responseData;
+    if (isMarketplaceFormat) {
+      // Return MarketplaceListing format for marketplace service
+      responseData = {
+        id: result.rows[0].id.toString(),
+        sellerWalletAddress,
+        tokenAddress: tokenAddress || '0x0000000000000000000000000000000000000000',
+        price: price ? price.toString() : '0',
+        quantity: quantity || 1,
+        itemType: itemType || 'PHYSICAL',
+        listingType: listingType || 'FIXED_PRICE',
+        status: 'ACTIVE',
+        startTime: new Date().toISOString(),
+        endTime: null,
+        highestBid: null,
+        highestBidderWalletAddress: null,
+        metadataURI: metadataURI || '',
+        isEscrowed: false,
+        nftStandard: listingData.nftStandard || null,
+        tokenId: listingData.tokenId || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      // Return SellerListing format for seller service
+      responseData = {
+        id: result.rows[0].id,
+        sellerWalletAddress,
+        title: title || 'Untitled Listing',
+        description: description || '',
+        price: price || 0,
+        currency: currency || 'ETH',
+        quantity: quantity || 1,
+        condition: condition || 'new',
+        images: images || [],
+        tags: tags || [],
+        escrowEnabled: escrowEnabled || false,
+        shippingFree: shippingFree || false,
+        shippingCost: shippingCost || 0,
+        estimatedDays: estimatedDays || '3-5',
+        category: category || 'general',
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString()
+      };
+    }
+    
+    console.log(`✅ Listing created successfully with ID: ${result.rows[0].id}`);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Listing created successfully',
+      data: responseData
+    });
+  } catch (error) {
+    console.error('Error creating seller listing:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Seller profile endpoints
+app.get('/marketplace/seller/profile/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const result = await getUserByAddress(walletAddress);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Seller profile not found'
+      });
+    }
+    
+    const user = result.rows[0];
+    
+    // Transform user data to seller profile format
+    const sellerProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      displayName: user.handle || '',
+      storeName: user.handle || '',
+      bio: '',
+      description: '',
+      profilePicture: '',
+      logo: '',
+      createdAt: user.created_at,
+      updatedAt: user.created_at
+    };
+    
+    res.json({
+      success: true,
+      data: sellerProfile
+    });
+  } catch (error) {
+    console.error('Error fetching seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/marketplace/seller/profile', async (req, res) => {
+  try {
+    const profileData = req.body;
+    const { walletAddress, displayName, storeName, bio, description, profilePicture, logo } = profileData;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Wallet address is required'
+      });
+    }
+    
+    // Create or update user with seller profile data
+    const result = await createOrUpdateUser(walletAddress, displayName || storeName, {
+      profileCid: JSON.stringify({
+        displayName,
+        storeName,
+        bio,
+        description,
+        profilePicture,
+        logo
+      })
+    });
+    
+    const user = result.rows[0];
+    const newProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      displayName: displayName || '',
+      storeName: storeName || '',
+      bio: bio || '',
+      description: description || '',
+      profilePicture: profilePicture || '',
+      logo: logo || '',
+      createdAt: user.created_at,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log(`Seller profile created/updated for ${walletAddress}:`, newProfile);
+    
+    res.json({
+      success: true,
+      message: 'Seller profile created successfully',
+      data: newProfile
+    });
+  } catch (error) {
+    console.error('Error creating seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.put('/marketplace/seller/profile/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const updateData = req.body;
+    const { displayName, storeName, bio, description, profilePicture, logo } = updateData;
+    
+    // Update user with new seller profile data
+    const result = await createOrUpdateUser(walletAddress, displayName || storeName, {
+      profileCid: JSON.stringify({
+        displayName,
+        storeName,
+        bio,
+        description,
+        profilePicture,
+        logo
+      })
+    });
+    
+    const user = result.rows[0];
+    const updatedProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      displayName: displayName || '',
+      storeName: storeName || '',
+      bio: bio || '',
+      description: description || '',
+      profilePicture: profilePicture || '',
+      logo: logo || '',
+      createdAt: user.created_at,
+      updatedAt: new Date().toISOString()
+    };
+    
+    res.json({
+      success: true,
+      message: 'Seller profile updated successfully',
+      data: updatedProfile
+    });
+  } catch (error) {
+    console.error('Error updating seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Seller onboarding endpoints
+app.get('/marketplace/seller/onboarding/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 'wallet-connect',
+        title: 'Connect Wallet',
+        description: 'Connect your Web3 wallet to get started',
+        component: 'WalletConnect',
+        required: true,
+        completed: true
+      },
+      {
+        id: 'profile-setup',
+        title: 'Profile Setup',
+        description: 'Set up your seller profile and store information',
+        component: 'ProfileSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'verification',
+        title: 'Verification',
+        description: 'Verify your email and phone for enhanced features',
+        component: 'Verification',
+        required: false,
+        completed: false
+      },
+      {
+        id: 'payout-setup',
+        title: 'Payout Setup',
+        description: 'Configure your payment preferences',
+        component: 'PayoutSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'first-listing',
+        title: 'Create First Listing',
+        description: 'Create your first product listing',
+        component: 'FirstListing',
+        required: true,
+        completed: false
+      }
+    ]
+  });
+});
+
+app.put('/marketplace/seller/onboarding/:walletAddress/:stepId', (req, res) => {
+  const { walletAddress, stepId } = req.params;
+  const data = req.body;
+  
+  console.log(`Onboarding step ${stepId} updated for ${walletAddress}:`, data);
+  
+  res.json({
+    success: true,
+    message: `Onboarding step ${stepId} updated successfully`,
+    data
+  });
+});
+
 // Error handler
 app.use((error, req, res, next) => {
   console.error('Error:', error);

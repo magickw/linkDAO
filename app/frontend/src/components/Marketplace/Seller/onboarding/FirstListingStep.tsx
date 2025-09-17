@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '../../../../design-system';
 
 interface FirstListingStepProps {
@@ -15,7 +15,7 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     currency: data?.currency || 'USDC',
     quantity: data?.quantity || '1',
     condition: data?.condition || 'new',
-    images: data?.images || [''],
+    images: data?.images || [],
     tags: data?.tags || '',
     escrowEnabled: data?.escrowEnabled !== undefined ? data.escrowEnabled : true,
     shippingFree: data?.shippingFree !== undefined ? data.shippingFree : true,
@@ -25,6 +25,9 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const categories = [
     'Electronics',
@@ -81,15 +84,8 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
       newErrors.shippingCost = 'Please enter a valid shipping cost';
     }
 
-    const validImageUrl = formData.images[0] && formData.images[0].trim();
-    if (!validImageUrl) {
+    if (formData.images.length === 0) {
       newErrors.images = 'At least one product image is required';
-    } else {
-      try {
-        new URL(formData.images[0]);
-      } catch {
-        newErrors.images = 'Please enter a valid image URL';
-      }
     }
 
     setErrors(newErrors);
@@ -112,11 +108,19 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity),
         shippingCost: formData.shippingFree ? 0 : parseFloat(formData.shippingCost || '0'),
-        images: formData.images.filter((img: string) => img.trim()),
+        images: formData.images,
         tags: formData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag),
         saleType: 'fixed',
         status: 'draft', // Start as draft
+        imageCount: formData.images.length, // Add image count for logging
       };
+
+      // Log image info instead of full base64 strings
+      console.log('📸 Creating listing with', listingData.imageCount, 'images');
+      formData.images.forEach((img: string, index: number) => {
+        const sizeKB = Math.round((img.length * 0.75) / 1024); // Approximate size in KB
+        console.log(`Image ${index + 1}: ${sizeKB}KB`);
+      });
 
       await onComplete(listingData);
     } catch (error) {
@@ -135,25 +139,100 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
     }
   };
 
-  const addImageField = () => {
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, '']
-    }));
+  // Image upload functions
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
-  const removeImageField = (index: number) => {
+  const handleImageUpload = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validImages = fileArray.filter(file => {
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      return validTypes.includes(file.type) && file.size <= maxSize;
+    });
+
+    if (validImages.length === 0) {
+      setErrors(prev => ({
+        ...prev,
+        images: 'Please upload valid image files (JPEG, PNG, WebP) under 5MB'
+      }));
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const base64Images = await Promise.all(
+        validImages.map(file => convertToBase64(file))
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...base64Images].slice(0, 5) // Max 5 images
+      }));
+      
+      // Show success feedback
+      console.log(`✅ Successfully uploaded ${validImages.length} image(s)`);
+      validImages.forEach((file, index) => {
+        const sizeKB = Math.round(file.size / 1024);
+        console.log(`📸 ${file.name}: ${sizeKB}KB`);
+      });
+      
+      // Show temporary success indicator
+      setUploadSuccess(true);
+      setTimeout(() => setUploadSuccess(false), 3000);
+      
+      // Clear any previous errors
+      if (errors.images) {
+        setErrors(prev => ({ ...prev, images: '' }));
+      }
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        images: 'Failed to process images. Please try again.'
+      }));
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_: string, i: number) => i !== index)
     }));
   };
 
-  const updateImageField = (index: number, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.map((img: string, i: number) => i === index ? value : img)
-    }));
+  // Drag and drop handlers
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageUpload(e.dataTransfer.files);
+    }
+  }, []);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleImageUpload(e.target.files);
+    }
   };
 
   return (
@@ -325,66 +404,152 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
 
       {/* Images */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Product Images</h3>
+        <h3 className="text-lg font-semibold text-white">Product Images *</h3>
         
-        {formData.images.map((image: string, index: number) => (
-          <div key={index} className="flex gap-3">
-            <div className="flex-1">
-              <label htmlFor={`image-${index}`} className="block text-sm font-medium text-gray-300 mb-2">
-                Image URL {index === 0 ? '*' : '(Optional)'}
-              </label>
-              <input
-                type="url"
-                id={`image-${index}`}
-                value={image}
-                onChange={(e) => updateImageField(index, e.target.value)}
-                className={`w-full px-3 py-2 bg-gray-800 border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                  errors.images && index === 0 ? 'border-red-500' : 'border-gray-600'
-                }`}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-            {image && (
-              <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-600">
-                <img
-                  src={image}
-                  alt={`Product ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+        {/* Drag and Drop Upload Area */}
+        <div
+          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
+            dragActive
+              ? 'border-purple-400 bg-purple-900/20'
+              : errors.images
+              ? 'border-red-400 bg-red-900/10'
+              : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleFileInput}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            disabled={uploadingImage || formData.images.length >= 5}
+          />
+          
+          <div className="text-center">
+            {uploadingImage ? (
+              <div className="flex flex-col items-center">
+                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-2" />
+                <p className="text-gray-300">Processing images...</p>
               </div>
-            )}
-            {index > 0 && (
-              <Button
-                type="button"
-                onClick={() => removeImageField(index)}
-                variant="outline"
-                size="small"
-                className="mt-7"
-              >
-                Remove
-              </Button>
+            ) : (
+              <>
+                <svg
+                  className={`mx-auto h-12 w-12 mb-4 ${
+                    dragActive ? 'text-purple-400' : 'text-gray-400'
+                  }`}
+                  stroke="currentColor"
+                  fill="none"
+                  viewBox="0 0 48 48"
+                >
+                  <path
+                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <div className="space-y-2">
+                  <p className={`text-lg font-medium ${
+                    dragActive ? 'text-purple-300' : 'text-gray-300'
+                  }`}>
+                    {dragActive ? 'Drop images here' : 'Drag & drop images here'}
+                  </p>
+                  <p className="text-gray-400">or click to browse files</p>
+                  <p className="text-sm text-gray-500">
+                    JPEG, PNG, WebP • Max 5MB per image • Up to 5 images
+                  </p>
+                </div>
+              </>
             )}
           </div>
-        ))}
+        </div>
         
-        {errors.images && <p className="text-sm text-red-400">{errors.images}</p>}
+        {errors.images && (
+          <p className="text-sm text-red-400 flex items-center">
+            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            {errors.images}
+          </p>
+        )}
         
-        {formData.images.length < 5 && (
-          <Button
-            type="button"
-            onClick={addImageField}
-            variant="outline"
-            size="small"
-          >
-            Add Another Image
-          </Button>
+        {/* Success notification */}
+        {uploadSuccess && (
+          <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-3 animate-pulse">
+            <p className="text-green-200 text-sm flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Images uploaded successfully! ✅
+            </p>
+          </div>
+        )}
+        
+        {/* Image Previews */}
+        {formData.images.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-gray-300">
+              Uploaded Images ({formData.images.length}/5)
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {formData.images.map((image: string, index: number) => (
+                <div key={index} className="relative group">
+                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-600 bg-gray-800">
+                    <img
+                      src={image}
+                      alt={`Product ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  {/* Image Controls */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
+                      {index === 0 && (
+                        <span className="px-2 py-1 bg-purple-600 text-white text-xs rounded font-medium">
+                          Main
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors"
+                        title="Remove image"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Main Image Indicator */}
+                  {index === 0 && (
+                    <div className="absolute top-2 left-2 px-2 py-1 bg-purple-600 text-white text-xs rounded font-medium">
+                      Main
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="bg-blue-900/30 rounded-lg p-3">
+              <p className="text-blue-200 text-sm flex items-start">
+                <svg className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                The first image will be used as the main thumbnail. Images are stored securely and will be processed when you create the listing.
+              </p>
+            </div>
+          </div>
         )}
         
         <p className="text-xs text-gray-400">
-          Tip: Use high-quality images from different angles. First image will be the main thumbnail.
+          💡 Tip: Use high-quality images from different angles. Good photos significantly increase your chances of selling!
         </p>
       </div>
 
@@ -513,14 +678,14 @@ export function FirstListingStep({ onComplete, data }: FirstListingStepProps) {
           type="button"
           onClick={() => onComplete({ ...formData, status: 'draft' })}
           variant="outline"
-          disabled={isSubmitting}
+          disabled={isSubmitting || uploadingImage}
         >
           Save as Draft
         </Button>
         <Button
           type="submit"
           variant="primary"
-          disabled={isSubmitting}
+          disabled={isSubmitting || uploadingImage}
           className="min-w-32"
         >
           {isSubmitting ? (
