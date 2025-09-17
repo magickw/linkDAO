@@ -1,5 +1,5 @@
 import { PaymentToken, ChainConfig } from '../types/payment';
-import { mainnet, polygon, arbitrum } from 'wagmi/chains';
+import { mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains';
 
 // Native tokens
 export const ETH: PaymentToken = {
@@ -68,6 +68,26 @@ export const USDT_POLYGON: PaymentToken = {
   logoURI: 'https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png'
 };
 
+// Sepolia testnet tokens
+export const ETH_SEPOLIA: PaymentToken = {
+  address: '0x0000000000000000000000000000000000000000',
+  symbol: 'ETH',
+  name: 'Sepolia Ethereum',
+  decimals: 18,
+  chainId: sepolia.id,
+  isNative: true,
+  logoURI: 'https://tokens.1inch.io/0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png'
+};
+
+export const USDC_SEPOLIA: PaymentToken = {
+  address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+  symbol: 'USDC',
+  name: 'USD Coin (Sepolia)',
+  decimals: 6,
+  chainId: sepolia.id,
+  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+};
+
 // Chain configurations
 export const SUPPORTED_CHAINS: ChainConfig[] = [
   {
@@ -93,6 +113,14 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     rpcUrls: ['https://arbitrum.llamarpc.com'],
     blockExplorerUrls: ['https://arbiscan.io'],
     supportedTokens: [{ ...ETH, chainId: arbitrum.id }, USDC_ARBITRUM]
+  },
+  {
+    chainId: sepolia.id,
+    name: 'Sepolia Testnet',
+    nativeCurrency: ETH_SEPOLIA,
+    rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
+    blockExplorerUrls: ['https://sepolia.etherscan.io'],
+    supportedTokens: [ETH_SEPOLIA, USDC_SEPOLIA]
   }
 ];
 
@@ -118,7 +146,8 @@ export const PAYMENT_CONFIG = {
   CONFIRMATION_BLOCKS: {
     [mainnet.id]: 12,
     [polygon.id]: 20,
-    [arbitrum.id]: 1
+    [arbitrum.id]: 1,
+    [sepolia.id]: 3
   },
   
   // Gas price multipliers for different priority levels

@@ -94,6 +94,15 @@ const getTokensForChain = (chainId: number) => {
           decimals: 6
         }
       ];
+    case 11155111: // Sepolia Testnet
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin (Sepolia)',
+          address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' as Address,
+          decimals: 6
+        }
+      ];
     case 1: // Ethereum Mainnet
     default:
       return [
