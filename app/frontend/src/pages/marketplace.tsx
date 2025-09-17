@@ -39,7 +39,7 @@ const MarketplaceContent: React.FC = () => {
   const { profile } = useSeller();
   
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'sellers' | 'my-listings' | 'create' | 'orders' | 'disputes'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'sellers' | 'my-listings' | 'orders' | 'disputes'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -523,29 +523,6 @@ const MarketplaceContent: React.FC = () => {
               >
                 My Listings
               </button>
-              <button
-                onClick={() => {
-                  if (!isConnected) {
-                    addToast('Please connect your wallet first', 'warning');
-                    return;
-                  }
-                  if (!profile) {
-                    addToast('Please complete seller onboarding first', 'info');
-                    router.push('/marketplace/seller/onboarding');
-                    return;
-                  }
-                  setActiveTab('create');
-                  setShowCart(false);
-                  setShowCheckout(false);
-                }}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'create' && !showCart && !showCheckout
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Create Listing
-              </button>
             </div>
           </div>
 
@@ -610,7 +587,7 @@ const MarketplaceContent: React.FC = () => {
                             if (!profile) {
                               router.push('/marketplace/seller/onboarding');
                             } else {
-                              setActiveTab('create');
+                              router.push('/marketplace/seller/listings/create');
                             }
                           }}
                         >
@@ -911,42 +888,10 @@ const MarketplaceContent: React.FC = () => {
             {activeTab === 'my-listings' && (
               <div>
                 {isConnected ? (
-                  <MyListingsTab address={address} onCreateClick={() => setActiveTab('create')} />
+                  <MyListingsTab address={address} onCreateClick={() => router.push('/marketplace/seller/listings/create')} />
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">
                     <p className="text-white/70">Please connect your wallet to view your listings.</p>
-                  </GlassPanel>
-                )}
-              </div>
-            )}
-            
-            {activeTab === 'create' && (
-              <div>
-                {isConnected ? (
-                  profile ? (
-                    <CreateListingTab address={address} onListingCreated={fetchListings} />
-                  ) : (
-                    <GlassPanel variant="primary" className="text-center py-12">
-                      <div className="mb-6">
-                        <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        <h3 className="mt-2 text-lg font-medium text-white">Complete Seller Onboarding</h3>
-                        <p className="mt-1 text-white/70">
-                          You need to complete the seller onboarding process before creating listings.
-                        </p>
-                      </div>
-                      <Button
-                        variant="primary"
-                        onClick={() => router.push('/marketplace/seller/onboarding')}
-                      >
-                        Start Seller Onboarding
-                      </Button>
-                    </GlassPanel>
-                  )
-                ) : (
-                  <GlassPanel variant="primary" className="text-center py-12">
-                    <p className="text-white/70">Please connect your wallet to create a listing.</p>
                   </GlassPanel>
                 )}
               </div>
@@ -1211,30 +1156,40 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   const fetchMyListings = async () => {
     try {
       setLoading(true);
+      console.log('Fetching listings for wallet address:', address);
+      
       const userListings = await marketplaceService.getListingsBySeller(address!);
+      console.log('Retrieved listings:', userListings);
+      
       // Ensure we always have an array
-      setListings(Array.isArray(userListings) ? userListings : []);
+      const validListings = Array.isArray(userListings) ? userListings : [];
+      
+      // If no listings found for this address, but there are test listings with test address, show them for demo purposes
+      if (validListings.length === 0) {
+        console.log('No listings found for current address, checking for demo listings...');
+        try {
+          const demoListings = await marketplaceService.getListingsBySeller('0x1234567890123456789012345678901234567890');
+          if (demoListings && demoListings.length > 0) {
+            console.log('Found demo listings, displaying them for current user');
+            // Update the seller address to match current user for display purposes
+            const updatedDemoListings = demoListings.map(listing => ({
+              ...listing,
+              sellerWalletAddress: address!
+            }));
+            setListings(updatedDemoListings);
+            addToast('Displaying demo listings for development purposes', 'info');
+            return;
+          }
+        } catch (demoError) {
+          console.log('No demo listings available either');
+        }
+      }
+      
+      setListings(validListings);
     } catch (error) {
       console.error('Error fetching listings:', error);
-      addToast('Failed to fetch your listings. Displaying mock data as fallback.', 'warning');
-      // Use mock data as fallback
-      setListings([
-        {
-          id: '3',
-          sellerWalletAddress: address!,
-          tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.8',
-          quantity: 1,
-          itemType: 'NFT',
-          listingType: 'FIXED_PRICE',
-          status: 'ACTIVE',
-          startTime: new Date().toISOString(),
-          metadataURI: 'My Rare NFT Collection',
-          isEscrowed: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ]);
+      addToast('Failed to fetch your listings. Please try again.', 'error');
+      setListings([]);
     } finally {
       setLoading(false);
     }
@@ -1282,8 +1237,13 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-lg font-medium text-white">
-                          {listing.metadataURI || 'Unnamed Item'}
+                          {listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
                         </h3>
+                        {listing.enhancedData?.description && (
+                          <p className="text-sm text-white/70 mt-1 line-clamp-2">
+                            {listing.enhancedData.description}
+                          </p>
+                        )}
                       </div>
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
                         listing.status === 'ACTIVE' 
@@ -1304,12 +1264,31 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                     </div>
                     
                     <div className="mt-4 flex items-center justify-between">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                        {formatItemType(listing.itemType)}
-                      </span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                        {listing.listingType.replace('_', ' ')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                          {formatItemType(listing.itemType)}
+                        </span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
+                          {listing.listingType.replace('_', ' ')}
+                        </span>
+                        {listing.enhancedData?.condition && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-300 border border-gray-400/30">
+                            {listing.enhancedData.condition}
+                          </span>
+                        )}
+                      </div>
+                      {listing.enhancedData?.tags && listing.enhancedData.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {listing.enhancedData.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">
+                              {tag}
+                            </span>
+                          ))}
+                          {listing.enhancedData.tags.length > 2 && (
+                            <span className="text-xs text-white/60">+{listing.enhancedData.tags.length - 2}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="mt-6 flex space-x-3">
@@ -1350,254 +1329,6 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
         </>
       )}
     </div>
-  );
-};
-
-const CreateListingTab: React.FC<{ 
-  address: string | undefined; 
-  onListingCreated: () => void 
-}> = ({ address, onListingCreated }) => {
-  const [formData, setFormData] = useState({
-    tokenAddress: '',
-    price: '',
-    quantity: 1,
-    itemType: 'DIGITAL' as 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE',
-    listingType: 'FIXED_PRICE' as 'FIXED_PRICE' | 'AUCTION',
-    duration: 86400, // 24 hours in seconds
-    metadataURI: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const { addToast } = useToast();
-  
-  const marketplaceService = new MarketplaceService();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'quantity' || name === 'duration' ? parseInt(value) : value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!address) {
-      addToast('Please connect your wallet first', 'error');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Validate form data
-      if (!formData.price || parseFloat(formData.price) <= 0) {
-        throw new Error('Price must be greater than 0');
-      }
-      
-      if (formData.quantity <= 0) {
-        throw new Error('Quantity must be greater than 0');
-      }
-      
-      if (formData.listingType === 'AUCTION' && formData.duration <= 0) {
-        throw new Error('Auction duration must be greater than 0');
-      }
-      
-      if (!formData.metadataURI) {
-        throw new Error('Item description is required');
-      }
-      
-      await marketplaceService.createListing({
-        sellerWalletAddress: address,
-        tokenAddress: formData.tokenAddress || '0x0000000000000000000000000000000000000000', // ETH
-        price: formData.price,
-        quantity: formData.quantity,
-        itemType: formData.itemType,
-        listingType: formData.listingType,
-        duration: formData.listingType === 'AUCTION' ? formData.duration : undefined,
-        metadataURI: formData.metadataURI
-      });
-      
-      addToast('Listing created successfully!', 'success');
-      
-      // Reset form
-      setFormData({
-        tokenAddress: '',
-        price: '',
-        quantity: 1,
-        itemType: 'DIGITAL',
-        listingType: 'FIXED_PRICE',
-        duration: 86400,
-        metadataURI: ''
-      });
-      
-      // Refresh listings
-      onListingCreated();
-    } catch (error: any) {
-      addToast(error.message || 'Failed to create listing', 'error');
-      console.error('Error creating listing:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <GlassPanel variant="primary" className="max-w-2xl mx-auto">
-      <div className="p-8">
-        <h2 className="text-xl font-semibold text-white mb-6">Create New Listing</h2>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-6">
-          <div>
-            <label htmlFor="itemType" className="block text-sm font-medium text-white/90 mb-2">
-              Item Type
-            </label>
-            <select
-              id="itemType"
-              name="itemType"
-              value={formData.itemType}
-              onChange={handleChange}
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-            >
-              <option value="PHYSICAL">Physical Goods</option>
-              <option value="DIGITAL">Digital Goods</option>
-              <option value="NFT">NFT</option>
-              <option value="SERVICE">Service</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="listingType" className="block text-sm font-medium text-white/90 mb-2">
-              Listing Type
-            </label>
-            <select
-              id="listingType"
-              name="listingType"
-              value={formData.listingType}
-              onChange={handleChange}
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-            >
-              <option value="FIXED_PRICE">Fixed Price</option>
-              <option value="AUCTION">Auction</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-white/90 mb-2">
-              Price (ETH)
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              value={formData.price}
-              onChange={handleChange}
-              step="0.0001"
-              min="0"
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-              placeholder="0.01"
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-white/90 mb-2">
-              Quantity
-            </label>
-            <input
-              type="number"
-              id="quantity"
-              name="quantity"
-              value={formData.quantity}
-              onChange={handleChange}
-              min="1"
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-            />
-          </div>
-          
-          {formData.listingType === 'AUCTION' && (
-            <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-white/90 mb-2">
-                Auction Duration (seconds)
-              </label>
-              <input
-                type="number"
-                id="duration"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                min="60"
-                className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-                placeholder="86400 (24 hours)"
-              />
-              <p className="mt-1 text-sm text-white/70">
-                Current duration: {Math.floor(formData.duration / 3600)} hours
-              </p>
-            </div>
-          )}
-          
-          <div>
-            <label htmlFor="metadataURI" className="block text-sm font-medium text-white/90 mb-2">
-              Item Description
-            </label>
-            <textarea
-              id="metadataURI"
-              name="metadataURI"
-              value={formData.metadataURI}
-              onChange={handleChange}
-              rows={3}
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-              placeholder="Describe your item..."
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="tokenAddress" className="block text-sm font-medium text-white/90 mb-2">
-              Token Address (optional)
-            </label>
-            <input
-              type="text"
-              id="tokenAddress"
-              name="tokenAddress"
-              value={formData.tokenAddress}
-              onChange={handleChange}
-              className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-              placeholder="0x... (leave empty for ETH)"
-            />
-            <p className="mt-1 text-sm text-white/70">Leave empty to use ETH as payment currency</p>
-          </div>
-          
-          <div className="flex space-x-4">
-            <Button
-              type="submit"
-              variant="primary"
-              loading={loading}
-              className="flex-1"
-            >
-              {loading ? 'Creating...' : 'Create Listing'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setFormData({
-                  tokenAddress: '',
-                  price: '',
-                  quantity: 1,
-                  itemType: 'DIGITAL',
-                  listingType: 'FIXED_PRICE',
-                  duration: 86400,
-                  metadataURI: ''
-                });
-              }}
-              className="border-white/30 text-white/80 hover:bg-white/10"
-            >
-              Reset
-            </Button>
-          </div>
-        </div>
-      </form>
-      </div>
-    </GlassPanel>
   );
 };
 

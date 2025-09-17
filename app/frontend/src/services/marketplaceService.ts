@@ -77,6 +77,8 @@ export interface MarketplaceListing {
     };
     category?: string;
     tags?: string[];
+    condition?: string;
+    escrowEnabled?: boolean;
     views?: number;
     favorites?: number;
   };
@@ -201,8 +203,9 @@ export class MarketplaceService {
     return this.request(`/marketplace/listings/${id}`);
   }
 
-  async getListingsBySeller(sellerAddress: string): Promise<{success: boolean, data: MarketplaceListing[]}> {
-    return this.request(`/marketplace/seller/listings/${sellerAddress}`);
+  async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
+    const response = await this.request<{success: boolean, data: MarketplaceListing[]}>(`/marketplace/seller/listings/${sellerAddress}`);
+    return response.data || [];
   }
 
   async getAllListings(): Promise<MarketplaceListing[]> {
