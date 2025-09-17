@@ -404,34 +404,45 @@ class SellerService {
         const backendListings = Array.isArray(result.data) ? result.data : [];
         
         // Transform backend data to match SellerListing interface
-        return backendListings.map((listing: any): SellerListing => ({
-          id: listing.id,
-          title: listing.title || 'Untitled Listing',
-          description: listing.description || '',
-          category: listing.category || 'general',
-          subcategory: listing.subcategory,
-          price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
-          currency: listing.currency || 'ETH',
-          quantity: listing.quantity || 1,
-          condition: listing.condition || 'new',
-          images: listing.images || [],
-          specifications: listing.specifications || {},
-          tags: listing.tags || [],
-          status: listing.status || 'active',
-          saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
-          escrowEnabled: listing.escrowEnabled || false,
-          shippingOptions: {
-            free: false,
-            cost: 0,
-            estimatedDays: '3-5 days',
-            international: false
-          },
-          views: listing.views || 0,
-          favorites: listing.favorites || 0,
-          questions: listing.questions || 0,
-          createdAt: listing.createdAt || new Date().toISOString(),
-          updatedAt: listing.updatedAt || new Date().toISOString()
-        }));
+        return backendListings.map((listing: any): SellerListing => {
+          // Extract enhanced data if available
+          const enhanced = listing.enhancedData || {};
+          const title = enhanced.title || listing.metadataURI || listing.title || 'Untitled Listing';
+          const description = enhanced.description || listing.description || '';
+          const images = enhanced.images || listing.images || [];
+          const tags = enhanced.tags || listing.tags || [];
+          const condition = enhanced.condition || listing.condition || 'new';
+          const category = enhanced.category || listing.category || 'general';
+          
+          return {
+            id: listing.id,
+            title,
+            description,
+            category,
+            subcategory: listing.subcategory,
+            price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
+            currency: listing.currency || 'ETH',
+            quantity: listing.quantity || 1,
+            condition,
+            images,
+            specifications: listing.specifications || {},
+            tags,
+            status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
+            saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
+            escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
+            shippingOptions: {
+              free: false,
+              cost: 0,
+              estimatedDays: '3-5 days',
+              international: false
+            },
+            views: enhanced.views || listing.views || 0,
+            favorites: enhanced.favorites || listing.favorites || 0,
+            questions: listing.questions || 0,
+            createdAt: listing.createdAt || new Date().toISOString(),
+            updatedAt: listing.updatedAt || new Date().toISOString()
+          };
+        });
       } else {
         throw new Error(result.message || 'Failed to fetch listings');
       }

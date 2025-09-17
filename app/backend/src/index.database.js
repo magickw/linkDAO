@@ -207,12 +207,12 @@ async function createListing(sellerAddress, listingData) {
   
   return executeQuery(query, [
     sellerAddress,
-    listingData.tokenAddress || '0x0000000000000000000000000000000000000000', // Default token address
+    listingData.token_address || listingData.tokenAddress || '0x0000000000000000000000000000000000000000', // Default token address
     listingData.price,
     listingData.quantity || 1,
-    listingData.itemType || 'PHYSICAL',
-    listingData.listingType || 'FIXED_PRICE',
-    listingData.metadataURI
+    listingData.item_type || listingData.itemType || 'PHYSICAL',
+    listingData.listing_type || listingData.listingType || 'FIXED_PRICE',
+    listingData.metadata_uri || listingData.metadataURI || ''
   ], fallback);
 }
 
@@ -233,34 +233,57 @@ async function getListingsBySeller(sellerAddress) {
   const result = await executeQuery(query, [sellerAddress], fallback);
   
   // Transform database format to match frontend MarketplaceListing interface
-  const transformedRows = result.rows.map(listing => ({
-    id: listing.id.toString(),
-    sellerWalletAddress: listing.seller_address || sellerAddress,
-    tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
-    price: listing.price.toString(),
-    quantity: listing.quantity || 1,
-    itemType: listing.item_type || 'PHYSICAL',
-    listingType: listing.listing_type || 'FIXED_PRICE',
-    status: listing.status ? listing.status.toUpperCase() : 'ACTIVE',
-    startTime: listing.start_time || listing.created_at,
-    endTime: listing.end_time || null,
-    highestBid: listing.highest_bid ? listing.highest_bid.toString() : null,
-    highestBidderWalletAddress: listing.highest_bidder || null,
-    metadataURI: listing.metadata_uri || '',
-    isEscrowed: listing.is_escrowed || false,
-    nftStandard: listing.nft_standard || null,
-    tokenId: listing.token_id || null,
-    createdAt: listing.created_at,
-    updatedAt: listing.updated_at,
-    enhancedData: {
-      title: listing.title || null,
-      description: listing.description || null,
-      images: listing.images ? [listing.images] : [],
-      category: listing.category || listing.item_type?.toLowerCase(),
-      views: listing.views || 0,
-      favorites: listing.favorites || 0
+  const transformedRows = result.rows.map(listing => {
+    // Parse metadata to extract enhanced information
+    let parsedMetadata = {};
+    try {
+      if (listing.metadata_uri) {
+        const firstParse = JSON.parse(listing.metadata_uri);
+        // Check if this is a nested JSON string (from our enhanced form)
+        if (typeof firstParse.description === 'string' && firstParse.description.startsWith('{')) {
+          const secondParse = JSON.parse(firstParse.description);
+          parsedMetadata = { ...firstParse, ...secondParse };
+        } else {
+          parsedMetadata = firstParse;
+        }
+      }
+    } catch (e) {
+      // If parsing fails, use the raw metadata_uri as title
+      parsedMetadata = { title: listing.metadata_uri || 'Untitled' };
     }
-  }));
+
+    return {
+      id: listing.id.toString(),
+      sellerWalletAddress: listing.seller_address || sellerAddress,
+      tokenAddress: listing.token_address || '0x0000000000000000000000000000000000000000',
+      price: listing.price.toString(),
+      quantity: listing.quantity || 1,
+      itemType: listing.item_type || 'PHYSICAL',
+      listingType: listing.listing_type || 'FIXED_PRICE',
+      status: listing.status ? listing.status.toUpperCase() : 'ACTIVE',
+      startTime: listing.start_time || listing.created_at,
+      endTime: listing.end_time || null,
+      highestBid: listing.highest_bid ? listing.highest_bid.toString() : null,
+      highestBidderWalletAddress: listing.highest_bidder || null,
+      metadataURI: parsedMetadata.title || listing.metadata_uri || '',
+      isEscrowed: listing.is_escrowed || false,
+      nftStandard: listing.nft_standard || null,
+      tokenId: listing.token_id || null,
+      createdAt: listing.created_at,
+      updatedAt: listing.updated_at,
+      enhancedData: {
+        title: parsedMetadata.title || null,
+        description: parsedMetadata.description || null,
+        images: parsedMetadata.images || [],
+        category: parsedMetadata.category || listing.item_type?.toLowerCase(),
+        tags: parsedMetadata.tags || [],
+        condition: parsedMetadata.condition || 'new',
+        escrowEnabled: parsedMetadata.escrowEnabled || false,
+        views: listing.views || 0,
+        favorites: listing.favorites || 0
+      }
+    };
+  });
   
   return { rows: transformedRows };
 }
