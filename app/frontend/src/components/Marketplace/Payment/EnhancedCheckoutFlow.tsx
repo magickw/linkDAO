@@ -13,6 +13,7 @@ import { useAccount, useConnect, useBalance } from 'wagmi';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { useProfile } from '../../../hooks/useProfile';
+import { countries } from '../../../utils/countries';
 
 interface CartItem {
   id: string;
@@ -88,6 +89,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         if (!shippingAddress.city) newErrors.city = 'Required';
         if (!shippingAddress.state) newErrors.state = 'Required';
         if (!shippingAddress.zipCode) newErrors.zipCode = 'Required';
+        if (!shippingAddress.country) newErrors.country = 'Required';
         break;
       case 'payment':
         if (!isConnected) newErrors.wallet = 'Please connect your wallet';
@@ -324,7 +326,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         {errors.address1 && <p className="text-red-400 text-sm mt-1">{errors.address1}</p>}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-white mb-2">City *</label>
           <input
@@ -338,7 +340,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-white mb-2">State *</label>
+          <label className="block text-sm font-medium text-white mb-2">State/Province *</label>
           <input
             type="text"
             value={shippingAddress.state}
@@ -350,7 +352,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-white mb-2">ZIP Code *</label>
+          <label className="block text-sm font-medium text-white mb-2">ZIP/Postal Code *</label>
           <input
             type="text"
             value={shippingAddress.zipCode}
@@ -360,6 +362,34 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
           />
           {errors.zipCode && <p className="text-red-400 text-sm mt-1">{errors.zipCode}</p>}
         </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">Country *</label>
+          <select
+            value={shippingAddress.country}
+            onChange={(e) => setShippingAddress(prev => ({ ...prev, country: e.target.value }))}
+            className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select Country</option>
+            {countries.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.flag} {country.name}
+              </option>
+            ))}
+          </select>
+          {errors.country && <p className="text-red-400 text-sm mt-1">{errors.country}</p>}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Phone</label>
+        <input
+          type="tel"
+          value={shippingAddress.phone}
+          onChange={(e) => setShippingAddress(prev => ({ ...prev, phone: e.target.value }))}
+          className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter phone number"
+        />
       </div>
     </div>
   );
