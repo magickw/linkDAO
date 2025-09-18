@@ -30,7 +30,7 @@ interface DualPricingProps {
 
 export const DualPricing: React.FC<DualPricingProps> = ({
   cryptoPrice,
-  cryptoSymbol = 'ETH',
+  cryptoSymbol = 'USDC', // Default to USDC for stable pricing
   fiatPrice,
   fiatSymbol = 'USD',
   realTimeConversion = true,
