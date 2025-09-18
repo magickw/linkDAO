@@ -23,10 +23,8 @@ export default function Profile() {
   const router = useRouter();
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
-  // Temporarily disable backend profile loading due to 503 errors
-  const backendProfile = null;
-  const isBackendProfileLoading = false;
-  const backendProfileError = null;
+  // Backend profile loading with error handling
+  const { data: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(address);
 
   // Smart contract profile data - temporarily disabled due to webpack issues
@@ -82,8 +80,14 @@ export default function Profile() {
 
   // Load profile data from backend first, fallback to contract data
   useEffect(() => {
-    // Backend profile loading is temporarily disabled
-    if (contractProfileData && contractProfileData.handle) {
+    if (backendProfile) {
+      setProfile({
+        handle: backendProfile.handle,
+        ens: backendProfile.ens,
+        bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
+        avatar: backendProfile.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
+      });
+    } else if (contractProfileData && contractProfileData.handle) {
       setProfile({
         handle: contractProfileData.handle,
         ens: contractProfileData.ens,
@@ -91,7 +95,7 @@ export default function Profile() {
         avatar: contractProfileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
       });
     }
-  }, [contractProfileData]);
+  }, [backendProfile, contractProfileData]);
 
   // Check for edit query parameter
   useEffect(() => {
