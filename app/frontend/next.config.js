@@ -16,7 +16,7 @@ const nextConfig = {
   
   // Image optimization
   images: {
-    domains: ['placehold.co', 'placeholder.com', 'ipfs.io', 'gateway.pinata.cloud'],
+    domains: ['placehold.co', 'placeholder.com', 'ipfs.io', 'gateway.pinata.cloud', 'images.unsplash.com'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
     dangerouslyAllowSVG: true,
