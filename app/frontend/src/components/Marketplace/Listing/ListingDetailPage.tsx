@@ -237,7 +237,9 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
               <div className="flex items-center gap-2 mb-2">
                 <h1 className="text-3xl font-bold text-white">{listing.title}</h1>
                 {listing.isEscrowProtected && (
-                  <Shield className="w-6 h-6 text-green-400" title="Escrow Protected" />
+                  <div title="Escrow Protected">
+                    <Shield className="w-6 h-6 text-green-400" />
+                  </div>
                 )}
               </div>
               <div className="flex items-center justify-between">
@@ -277,6 +279,34 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
                 </span>
               ))}
             </div>
+
+            {/* Physical Product Options */}
+            {listing.category === 'Electronics' && (
+              <div className="space-y-4 bg-white/5 rounded-lg p-4">
+                <h4 className="text-white font-medium">Product Options</h4>
+                
+                {/* Color Selection */}
+                <div>
+                  <label className="text-white/70 text-sm block mb-2">Color:</label>
+                  <div className="flex gap-2">
+                    {['Black', 'White', 'Silver'].map(color => (
+                      <button key={color} className="px-3 py-2 bg-white/10 text-white/80 rounded border border-white/20 hover:bg-white/20 text-sm">
+                        {color}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Size/Dimensions */}
+                <div>
+                  <label className="text-white/70 text-sm block mb-2">Size:</label>
+                  <select className="bg-white/10 text-white rounded px-3 py-2 border border-white/20 text-sm">
+                    <option>Standard (25cm x 20cm x 8cm)</option>
+                    <option>Compact (22cm x 18cm x 7cm)</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="space-y-3">
