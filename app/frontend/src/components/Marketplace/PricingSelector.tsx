@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, useNetwork } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import { getPreferredStablecoin, getStablecoinsForChain, formatStablecoinPrice, SUGGESTED_PRICING_TIERS } from '../../utils/stablecoinPricing';
 import { PaymentToken } from '../../types/payment';
 import StablecoinPricingInfo from './StablecoinPricingInfo';
@@ -21,25 +21,25 @@ export default function PricingSelector({
   category = 'digital_art',
   className = ''
 }: PricingSelectorProps) {
-  const { chain } = useNetwork();
+  const chainId = useChainId();
   const [availableTokens, setAvailableTokens] = useState<PaymentToken[]>([]);
   const [showPricingInfo, setShowPricingInfo] = useState(false);
   const [suggestedPrices] = useState(SUGGESTED_PRICING_TIERS[category] || SUGGESTED_PRICING_TIERS.digital_art);
 
   useEffect(() => {
-    if (chain?.id) {
-      const stablecoins = getStablecoinsForChain(chain.id);
+    if (chainId) {
+      const stablecoins = getStablecoinsForChain(chainId);
       setAvailableTokens(stablecoins);
       
       // Auto-select preferred stablecoin if no currency is set
       if (!currency && stablecoins.length > 0) {
-        const preferred = getPreferredStablecoin(chain.id);
+        const preferred = getPreferredStablecoin(chainId);
         if (preferred) {
           onCurrencyChange(preferred.symbol);
         }
       }
     }
-  }, [chain?.id, currency, onCurrencyChange]);
+  }, [chainId, currency, onCurrencyChange]);
 
   const handleSuggestedPriceClick = (price: string) => {
     onPriceChange(price);
