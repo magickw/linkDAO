@@ -7,11 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingCart, Shield, CreditCard, Truck, CheckCircle, AlertTriangle,
-  ArrowLeft, ArrowRight, User, MapPin, Wallet, Clock, Info, Lock, Vote
+  ArrowLeft, ArrowRight, User, MapPin, Wallet, Clock, Info, Lock, Vote, BookOpen
 } from 'lucide-react';
 import { useAccount, useConnect, useBalance } from 'wagmi';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
+import { useProfile } from '../../../hooks/useProfile';
 
 interface CartItem {
   id: string;
@@ -48,10 +49,12 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [escrowSetup, setEscrowSetup] = useState(false);
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
 
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { data: balance } = useBalance({ address });
+  const { data: userProfile } = useProfile(address);
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => 
@@ -175,8 +178,95 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
     </div>
   );
 
+  const loadSavedAddress = (type: 'billing' | 'shipping') => {
+    if (!userProfile) return;
+    
+    const savedAddress = type === 'billing' 
+      ? {
+          firstName: userProfile.billingFirstName || '',
+          lastName: userProfile.billingLastName || '',
+          email: userProfile.email || '',
+          address1: userProfile.billingAddress1 || '',
+          address2: userProfile.billingAddress2 || '',
+          city: userProfile.billingCity || '',
+          state: userProfile.billingState || '',
+          zipCode: userProfile.billingZipCode || '',
+          country: userProfile.billingCountry || 'US',
+          phone: userProfile.billingPhone || ''
+        }
+      : {
+          firstName: userProfile.shippingFirstName || '',
+          lastName: userProfile.shippingLastName || '',
+          email: userProfile.email || '',
+          address1: userProfile.shippingAddress1 || '',
+          address2: userProfile.shippingAddress2 || '',
+          city: userProfile.shippingCity || '',
+          state: userProfile.shippingState || '',
+          zipCode: userProfile.shippingZipCode || '',
+          country: userProfile.shippingCountry || 'US',
+          phone: userProfile.shippingPhone || ''
+        };
+    
+    setShippingAddress(savedAddress);
+    setShowSavedAddresses(false);
+  };
+
   const ShippingStep = () => (
     <div className="space-y-4">
+      {/* Saved Addresses Section */}
+      {userProfile && (userProfile.billingAddress1 || userProfile.shippingAddress1) && (
+        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BookOpen className="text-blue-400" size={16} />
+              <h4 className="font-medium text-blue-400">Use Saved Address</h4>
+            </div>
+            <Button
+              variant="outline"
+              size="small"
+              onClick={() => setShowSavedAddresses(!showSavedAddresses)}
+              className="border-blue-400/30 text-blue-300 hover:bg-blue-500/20"
+            >
+              {showSavedAddresses ? 'Hide' : 'Show'} Saved
+            </Button>
+          </div>
+          
+          {showSavedAddresses && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {userProfile.billingAddress1 && (
+                <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-400/30 cursor-pointer transition-colors"
+                     onClick={() => loadSavedAddress('billing')}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard size={14} className="text-blue-400" />
+                    <span className="text-sm font-medium text-blue-400">Billing Address</span>
+                  </div>
+                  <div className="text-xs text-white/70">
+                    <p>{userProfile.billingFirstName} {userProfile.billingLastName}</p>
+                    <p>{userProfile.billingAddress1}</p>
+                    <p>{userProfile.billingCity}, {userProfile.billingState} {userProfile.billingZipCode}</p>
+                  </div>
+                </div>
+              )}
+              
+              {userProfile.shippingAddress1 && (
+                <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-400/30 cursor-pointer transition-colors"
+                     onClick={() => loadSavedAddress('shipping')}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck size={14} className="text-blue-400" />
+                    <span className="text-sm font-medium text-blue-400">Shipping Address</span>
+                  </div>
+                  <div className="text-xs text-white/70">
+                    <p>{userProfile.shippingFirstName} {userProfile.shippingLastName}</p>
+                    <p>{userProfile.shippingAddress1}</p>
+                    <p>{userProfile.shippingCity}, {userProfile.shippingState} {userProfile.shippingZipCode}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-white mb-2">First Name *</label>
