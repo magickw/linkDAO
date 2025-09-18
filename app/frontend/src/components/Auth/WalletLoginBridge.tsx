@@ -39,7 +39,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     lastAddressRef.current = address;
 
     // Skip if conditions not met
-    if (!autoLogin || !isConnected || !address || isLoggingIn || status !== 'connected') { // Added status check
+    if (!autoLogin || !isConnected || !address || isLoggingIn || status !== 'connected' || !connector) {
       return;
     }
 
@@ -55,13 +55,17 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       return;
     }
 
-    console.log('🚀 Triggering auto-login for:', address);
-    // Trigger automatic login
-    handleAutoLogin();
-  }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn, status]); // Added status to dependency array
+    // Add delay to ensure connector is fully ready
+    const timer = setTimeout(() => {
+      console.log('🚀 Triggering auto-login for:', address);
+      handleAutoLogin();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn, status, connector]);
 
   const handleAutoLogin = async () => {
-    if (!address || isLoggingIn || !connector || status !== 'connected') return; // Added !connector and status check
+    if (!address || isLoggingIn || !connector || status !== 'connected' || failedAttempts >= maxFailedAttempts) return;
 
     try {
       setIsLoggingIn(true);
@@ -69,64 +73,59 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
 
       console.log(`🔐 Attempting automatic login for wallet: ${address} via ${connector?.name || 'Unknown'}`);
 
-      // Show user-friendly notification for Base wallet
-      if (connector?.name?.toLowerCase().includes('coinbase') || connector?.id === 'coinbaseWallet') {
-        notify('Base wallet connected! Signing in...', 'info');
-      } else {
-        notify('Wallet connected! Signing in...', 'info');
-      }
-
-      const result = await login(address, connector, status); // Pass connector and status
+      const result = await login(address, connector, status);
       console.log('🔍 Login result:', result);
 
       if (result.success) {
-        // Success notification
         const walletName = connector?.name || 'Wallet';
         console.log(`✅ Login successful for ${walletName}!`);
-        notify(`Successfully logged in with ${walletName}!`, 'success');
+        setFailedAttempts(0); // Reset failed attempts on success
         
-        // Call success callback with address - user state will be updated by AuthContext
         if (onLoginSuccess) {
           onLoginSuccess({ address });
         }
       } else {
-        // Handle login failure
         const errorMessage = result.error || 'Authentication failed';
         console.error('❌ Auto-login failed:', errorMessage);
         
-        // User-friendly error notification
-        if (errorMessage.includes('signature')) {
-          notify('Please sign the message in your wallet to complete login', 'warning');
-        } else if (errorMessage.includes('rejected') || errorMessage.includes('denied')) {
-          notify('Login cancelled. You can connect again anytime.', 'info');
-        } else {
-          notify('Login failed. Please try connecting your wallet again.', 'error');
+        // Increment failed attempts for certain types of errors
+        if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign')) {
+          setFailedAttempts(prev => prev + 1);
         }
-
-        if (onLoginError) {
-          onLoginError(errorMessage);
+        
+        // Don't show error notifications for connector issues to prevent spam
+        if (!errorMessage.includes('Connector not connected')) {
+          if (onLoginError) {
+            onLoginError(errorMessage);
+          }
         }
       }
     } catch (error) {
       console.error('💥 Auto-login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       
-      notify('Wallet login failed. Please try again.', 'error');
+      // Increment failed attempts for connector errors
+      if (errorMessage.includes('Connector not connected') || errorMessage.includes('Failed to sign')) {
+        setFailedAttempts(prev => prev + 1);
+      }
       
-      if (onLoginError) {
-        onLoginError(errorMessage);
+      // Don't show error notifications for connector issues
+      if (!errorMessage.includes('Connector not connected')) {
+        if (onLoginError) {
+          onLoginError(errorMessage);
+        }
       }
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  // Reset attempt flag when wallet disconnects
+  // Reset attempt flag when wallet disconnects or connector changes
   useEffect(() => {
-    if (!isConnected) {
+    if (!isConnected || !connector) {
       hasTriedLoginRef.current = false;
     }
-  }, [isConnected]);
+  }, [isConnected, connector]);
 
   // Monitor authentication status and reset login attempt when authenticated
   useEffect(() => {
@@ -137,6 +136,17 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('User authenticated successfully, resetting login attempt flag');
     }
   }, [isAuthenticated]);
+
+  // Prevent page refresh loops by tracking failed attempts
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const maxFailedAttempts = 3;
+
+  useEffect(() => {
+    if (failedAttempts >= maxFailedAttempts) {
+      console.log('Max failed login attempts reached, stopping auto-login');
+      hasTriedLoginRef.current = true; // Prevent further attempts
+    }
+  }, [failedAttempts]);
 
   // This component doesn't render anything visible
   return null;

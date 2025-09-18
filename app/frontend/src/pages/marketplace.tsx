@@ -246,7 +246,7 @@ const MarketplaceContent: React.FC = () => {
           enhancedData: {
             title: 'Premium Wireless Headphones',
             description: 'High-quality noise-canceling wireless headphones with 30-hour battery life and premium sound quality.',
-            images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop'],
+            images: [],
             price: {
               crypto: '0.1245',
               cryptoSymbol: 'ETH',
@@ -292,7 +292,7 @@ const MarketplaceContent: React.FC = () => {
           enhancedData: {
             title: 'Rare Digital Art NFT Collection',
             description: 'Exclusive digital artwork from renowned crypto artist. Limited edition with utility benefits.',
-            images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=400&h=300&fit=crop'],
+            images: [],
             price: {
               crypto: '2.5000',
               cryptoSymbol: 'ETH',

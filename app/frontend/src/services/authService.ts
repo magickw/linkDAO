@@ -90,9 +90,16 @@ class AuthService {
   async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
     try {
       // Ensure wallet is connected and ready
-      if (!connector || status !== 'connected') {
-        throw new Error('Wallet not connected or not ready for signing.');
+      if (!connector) {
+        return { success: false, error: 'Connector not available' };
       }
+      
+      if (status !== 'connected') {
+        return { success: false, error: 'Wallet not connected' };
+      }
+
+      // Add small delay to ensure connector is fully ready
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Get nonce and message
       const { nonce, message } = await this.getNonce(address);
