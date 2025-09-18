@@ -152,7 +152,7 @@ export default function Profile() {
     try {
       // Backend profile operations are temporarily disabled
       // If profile exists on-chain, update it
-      if (contractProfileData && contractProfileData.handle) {
+      if (contractProfileData && contractProfileData.handle && updateProfile) {
         // Update on-chain profile
         updateProfile({
           args: [1n, profile.avatar, profile.bio],
@@ -160,12 +160,15 @@ export default function Profile() {
         addToast('Profile updated successfully!', 'success');
       }
       // If no profile exists, create on-chain
-      else {
+      else if (createProfile) {
         // Create on-chain profile
         createProfile({
           args: [profile.handle, profile.ens, profile.avatar, profile.bio],
         });
         addToast('Profile created successfully!', 'success');
+      } else {
+        // Smart contract operations not available, just update local state
+        addToast('Profile updated locally (smart contract operations unavailable)', 'info');
       }
 
       setIsEditing(false);
