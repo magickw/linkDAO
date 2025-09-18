@@ -36,7 +36,7 @@ interface EnhancedFormData {
   
   // Pricing
   price: string;
-  currency: 'ETH' | 'USD';
+  currency: 'USDC' | 'USDT' | 'ETH' | 'USD';
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration: number;
   royalty: number;
@@ -104,7 +104,7 @@ const CreateListingPage: React.FC = () => {
     itemType: 'DIGITAL',
     condition: 'new',
     price: '',
-    currency: 'ETH',
+    currency: 'USDC', // Default to USDC for stable pricing
     listingType: 'FIXED_PRICE',
     duration: 86400,
     royalty: 0,

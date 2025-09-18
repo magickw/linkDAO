@@ -96,7 +96,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: ETH,
     rpcUrls: ['https://eth.llamarpc.com'],
     blockExplorerUrls: ['https://etherscan.io'],
-    supportedTokens: [ETH, USDC_MAINNET, USDT_MAINNET]
+    supportedTokens: [USDC_MAINNET, USDT_MAINNET, ETH] // Prioritize stablecoins
   },
   {
     chainId: polygon.id,
@@ -104,7 +104,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: MATIC,
     rpcUrls: ['https://polygon.llamarpc.com'],
     blockExplorerUrls: ['https://polygonscan.com'],
-    supportedTokens: [MATIC, USDC_POLYGON, USDT_POLYGON]
+    supportedTokens: [USDC_POLYGON, USDT_POLYGON, MATIC] // Prioritize stablecoins
   },
   {
     chainId: arbitrum.id,
@@ -112,7 +112,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: { ...ETH, chainId: arbitrum.id },
     rpcUrls: ['https://arbitrum.llamarpc.com'],
     blockExplorerUrls: ['https://arbiscan.io'],
-    supportedTokens: [{ ...ETH, chainId: arbitrum.id }, USDC_ARBITRUM]
+    supportedTokens: [USDC_ARBITRUM, { ...ETH, chainId: arbitrum.id }] // Prioritize stablecoins
   },
   {
     chainId: sepolia.id,
@@ -120,7 +120,7 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     nativeCurrency: ETH_SEPOLIA,
     rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
     blockExplorerUrls: ['https://sepolia.etherscan.io'],
-    supportedTokens: [ETH_SEPOLIA, USDC_SEPOLIA]
+    supportedTokens: [USDC_SEPOLIA, ETH_SEPOLIA] // Prioritize stablecoins
   }
 ];
 

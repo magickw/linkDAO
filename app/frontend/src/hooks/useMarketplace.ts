@@ -402,7 +402,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       const orderDate = new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000);
       const statuses: Order['status'][] = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const paymentMethods = ['ETH', 'USDC', 'DAI'];
+      const paymentMethods = ['USDC', 'USDT', 'ETH']; // Prioritize stablecoins
       const paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
       
       return {
