@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useRouter } from 'next/router';
 import { ArrowRight, CheckCircle, ChevronRight, Compass, DollarSign, Lock, Users } from 'lucide-react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const { isConnected, connectWallet } = useWeb3();
+  const { isConnected } = useWeb3();
   const router = useRouter();
 
   useEffect(() => {
@@ -25,10 +26,6 @@ export default function Home() {
     return null; // Don't render anything during SSR or while redirecting
   }
 
-  const handleGetStarted = async () => {
-    await connectWallet();
-  };
-
   return (
     <Layout title="LinkDAO - The Web3 Social Network">
       {/* Hero Section */}
@@ -37,12 +34,27 @@ export default function Home() {
           LinkDAO — The Web3 Social Network where Identity, Money, and Governance are Yours.
         </h1>
         <div className="mt-8 flex justify-center gap-4">
-          <button
-            onClick={handleGetStarted}
-            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-          >
-            Get Started
-          </button>
+          <ConnectButton.Custom>
+            {({ account, chain, openConnectModal, authenticationStatus, mounted: rainbowMounted }) => {
+              const ready = rainbowMounted && authenticationStatus !== 'loading';
+              const connected =
+                ready &&
+                account &&
+                chain &&
+                (!authenticationStatus ||
+                  authenticationStatus === 'authenticated');
+
+              return (
+                <button
+                  onClick={openConnectModal}
+                  disabled={!ready}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+                >
+                  Get Started
+                </button>
+              );
+            }}
+          </ConnectButton.Custom>
           <Link href="#features" className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 dark:border-gray-700 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
               Learn More
           </Link>
