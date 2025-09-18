@@ -6,6 +6,7 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useProfile, useCreateProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useFollowCount } from '@/hooks/useFollow';
 import { useToast } from '@/context/ToastContext';
+import { countries } from '@/utils/countries';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
@@ -1059,13 +1060,11 @@ export default function Profile() {
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                           >
                             <option value="">Select Country</option>
-                            <option value="US">United States</option>
-                            <option value="CA">Canada</option>
-                            <option value="GB">United Kingdom</option>
-                            <option value="AU">Australia</option>
-                            <option value="DE">Germany</option>
-                            <option value="FR">France</option>
-                            <option value="JP">Japan</option>
+                            {countries.map((country) => (
+                              <option key={country.code} value={country.code}>
+                                {country.flag} {country.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                         <div>
@@ -1198,13 +1197,11 @@ export default function Profile() {
                               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                             >
                               <option value="">Select Country</option>
-                              <option value="US">United States</option>
-                              <option value="CA">Canada</option>
-                              <option value="GB">United Kingdom</option>
-                              <option value="AU">Australia</option>
-                              <option value="DE">Germany</option>
-                              <option value="FR">France</option>
-                              <option value="JP">Japan</option>
+                              {countries.map((country) => (
+                                <option key={country.code} value={country.code}>
+                                  {country.flag} {country.name}
+                                </option>
+                              ))}
                             </select>
                           </div>
                           <div>
