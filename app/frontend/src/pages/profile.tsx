@@ -10,6 +10,7 @@ import { CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserPro
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
 import TipBar from '@/components/TipBar';
+import { PaymentMethodsTab } from '@/components/PaymentMethodsTab';
 
 // Mock DAO data
 const mockDAOs = [
@@ -48,7 +49,7 @@ export default function Profile() {
     bio: '',
     avatar: '',
   });
-  const [activeTab, setActiveTab] = useState<'posts' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses' | 'payments'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [featuredNFT, setFeaturedNFT] = useState<any>(null);
   const [addresses, setAddresses] = useState({
@@ -542,6 +543,21 @@ export default function Profile() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </button>
+                <button
+                  onClick={() => setActiveTab('payments')}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'payments'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Payment Methods
+                  <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </button>
               </nav>
             </div>
           )}
@@ -939,6 +955,14 @@ export default function Profile() {
 
               {activeTab === 'following' && address && (
                 <FollowingList userAddress={address} />
+              )}
+
+              {activeTab === 'payments' && (
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Payment Methods</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Manage your secure payment methods for marketplace purchases.</p>
+                  <PaymentMethodsTab />
+                </div>
               )}
 
               {activeTab === 'addresses' && (
