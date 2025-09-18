@@ -118,13 +118,19 @@ export class UserProfileService {
     }
 
     // Parse additional data from physicalAddress field
-    let additionalData = {};
+    let additionalData: any = {};
     try {
       if (dbUser.physicalAddress) {
-        additionalData = JSON.parse(dbUser.physicalAddress);
+        const parsed = JSON.parse(dbUser.physicalAddress);
+        if (typeof parsed === 'object' && parsed !== null) {
+          additionalData = parsed;
+        } else {
+          console.warn('physicalAddress field contains non-object JSON:', dbUser.physicalAddress);
+        }
       }
     } catch (error) {
-      console.error('Error parsing user additional data:', error);
+      console.error('Error parsing user additional data, defaulting to empty object:', error);
+      // If parsing fails, additionalData remains an empty object
     }
 
     // Handle potential null dates by providing default values

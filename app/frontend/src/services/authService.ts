@@ -87,8 +87,13 @@ class AuthService {
   /**
    * Authenticate with Web3 wallet signature
    */
-  async authenticateWallet(address: string): Promise<AuthResponse> {
+  async authenticateWallet(address: string, connector: any, status: string): Promise<AuthResponse> {
     try {
+      // Ensure wallet is connected and ready
+      if (!connector || status !== 'connected') {
+        throw new Error('Wallet not connected or not ready for signing.');
+      }
+
       // Get nonce and message
       const { nonce, message } = await this.getNonce(address);
       

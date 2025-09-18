@@ -143,7 +143,7 @@ export function OptimizedImage({
   };
 
   return (
-    <div style={containerStyle} className="relative">
+    <div style={containerStyle} className={`relative ${width || height ? '' : 'max-w-full h-auto'}`}>
       {/* Placeholder/Loading state */}
       {(state.isLoading || state.hasError) && (
         <div 
@@ -192,7 +192,7 @@ export function OptimizedImage({
         alt={alt}
         width={width}
         height={height}
-        className={imageClasses}
+        className={`${imageClasses} max-w-full h-auto`}
         style={{
           width: '100%',
           height: '100%',

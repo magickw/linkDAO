@@ -10,7 +10,7 @@ interface FollowingListProps {
 
 export default function FollowingList({ userAddress, className = '' }: FollowingListProps) {
   const { address: currentUserAddress } = useWeb3();
-  const { following, isLoading, error } = useFollowing(userAddress);
+  const { data: following, isLoading, error } = useFollowing(userAddress);
 
   if (isLoading) {
     return (
@@ -28,13 +28,13 @@ export default function FollowingList({ userAddress, className = '' }: Following
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h2>
         <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
-          <p>Error loading following: {error}</p>
+          <p>Error loading following: {error?.message}</p>
         </div>
       </div>
     );
   }
 
-  if (following.length === 0) {
+  if (!following || (following as string[]).length === 0) {
     return (
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h2>
@@ -65,14 +65,14 @@ export default function FollowingList({ userAddress, className = '' }: Following
     },
   };
 
-  const followingProfiles = following.map(address => ({
+  const followingProfiles = (following as string[]).map(address => ({
     address,
     ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/48' })
   }));
 
   return (
     <div className={className}>
-      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following ({following.length})</h2>
+      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following ({(following as string[]).length})</h2>
       <div className="space-y-4">
         {followingProfiles.map((profile) => (
           <ProfileCard 

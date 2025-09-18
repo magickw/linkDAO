@@ -1,6 +1,6 @@
 export interface UserProfile {
   id: string;
-  address: string;
+  walletAddress: string;
   handle: string;
   ens: string;
   avatarCid: string;
@@ -10,7 +10,7 @@ export interface UserProfile {
 }
 
 export interface CreateUserProfileInput {
-  address: string;
+  walletAddress: string;
   handle: string;
   ens?: string;
   avatarCid?: string;

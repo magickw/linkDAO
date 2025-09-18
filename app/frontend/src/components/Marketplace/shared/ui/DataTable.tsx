@@ -80,14 +80,14 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="w-full">
+      <table className="min-w-full divide-y divide-white/5">
         <thead>
           <tr className={cn('text-left text-xs font-medium text-white/60', headerClassName)}>
             {columns.map((column) => (
               <th 
                 key={column.key}
                 className={cn(
-                  'px-4 py-3 first:pl-6 last:pr-6',
+                  'px-3 py-2 sm:px-4 sm:py-3 first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6 text-xs sm:text-sm',
                   column.headerClassName,
                   compact ? 'py-2' : 'py-3',
                   column.sortable && 'cursor-pointer hover:text-white/80'
@@ -97,7 +97,7 @@ export function DataTable<T extends Record<string, any>>({
                 {column.header}
               </th>
             ))}
-            {actions && <th className={cn('w-0', actionsColumnClassName)} />}
+            {actions && <th className={cn('w-0 px-3 sm:px-4', actionsColumnClassName)} />}
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
@@ -111,7 +111,7 @@ export function DataTable<T extends Record<string, any>>({
                 <td 
                   key={`${item[keyField]}-${column.key}`}
                   className={cn(
-                    'whitespace-nowrap px-4 py-3 text-sm first:pl-6 last:pr-6',
+                    'whitespace-nowrap px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm first:pl-4 sm:first:pl-6 last:pr-4 sm:last:pr-6',
                     column.className,
                     compact ? 'py-2' : 'py-3'
                   )}
@@ -121,12 +121,12 @@ export function DataTable<T extends Record<string, any>>({
               ))}
               {actions && (
                 <td 
-                  className="whitespace-nowrap px-4 py-3 text-right text-sm"
+                  className="whitespace-nowrap px-3 py-2 sm:px-4 sm:py-3 text-right text-xs sm:text-sm"
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 >
                   <ActionButtons 
                     actions={typeof actions === 'function' ? actions(item) : actions} 
-                    size={compact ? 'sm' : 'default'}
+                    size={compact ? 'icon' : 'sm'}
                     spacing="xs"
                   />
                 </td>

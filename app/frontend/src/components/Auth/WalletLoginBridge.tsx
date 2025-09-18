@@ -20,7 +20,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   onLoginError,
   skipIfAuthenticated = true
 }) => {
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected, connector, status } = useAccount();
   const { user, isAuthenticated, login } = useAuth();
   
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -39,7 +39,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     lastAddressRef.current = address;
 
     // Skip if conditions not met
-    if (!autoLogin || !isConnected || !address || isLoggingIn) {
+    if (!autoLogin || !isConnected || !address || isLoggingIn || status !== 'connected') { // Added status check
       return;
     }
 
@@ -58,10 +58,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
     console.log('🚀 Triggering auto-login for:', address);
     // Trigger automatic login
     handleAutoLogin();
-  }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn]);
+  }, [address, isConnected, isAuthenticated, autoLogin, skipIfAuthenticated, isLoggingIn, status]); // Added status to dependency array
 
   const handleAutoLogin = async () => {
-    if (!address || isLoggingIn) return;
+    if (!address || isLoggingIn || !connector || status !== 'connected') return; // Added !connector and status check
 
     try {
       setIsLoggingIn(true);
@@ -76,7 +76,7 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
         notify('Wallet connected! Signing in...', 'info');
       }
 
-      const result = await login(address);
+      const result = await login(address, connector, status); // Pass connector and status
       console.log('🔍 Login result:', result);
 
       if (result.success) {

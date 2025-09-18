@@ -11,7 +11,7 @@ interface FollowButtonProps {
 export default function FollowButton({ targetUserAddress, className = '' }: FollowButtonProps) {
   const { address: currentUserAddress, isConnected } = useWeb3();
   const { addToast } = useToast();
-  const { isFollowing, isLoading: isStatusLoading } = useFollowStatus(currentUserAddress, targetUserAddress);
+  const { data: isFollowing, isLoading: isStatusLoading } = useFollowStatus(currentUserAddress, targetUserAddress);
   const { follow, unfollow, isLoading: isActionLoading } = useFollow();
 
   const handleFollowToggle = async () => {
@@ -22,10 +22,10 @@ export default function FollowButton({ targetUserAddress, className = '' }: Foll
 
     try {
       if (isFollowing) {
-        await unfollow(currentUserAddress, targetUserAddress);
+        await unfollow({ follower: currentUserAddress, following: targetUserAddress });
         addToast('Unfollowed user successfully', 'success');
       } else {
-        await follow(currentUserAddress, targetUserAddress);
+        await follow({ follower: currentUserAddress, following: targetUserAddress });
         addToast('Followed user successfully', 'success');
       }
     } catch (error) {

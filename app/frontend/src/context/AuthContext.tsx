@@ -7,7 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   kycStatus: KYCStatus | null;
-  login: (address: string) => Promise<{ success: boolean; error?: string }>;
+  login: (address: string, connector: any, status: string) => Promise<{ success: boolean; error?: string }>;
   register: (userData: {
     address: string;
     handle: string;
@@ -73,11 +73,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Login with wallet authentication
-  const login = async (walletAddress: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (walletAddress: string, connector: any, status: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
       
-      const result = await authService.authenticateWallet(walletAddress);
+      const result = await authService.authenticateWallet(walletAddress, connector, status);
       
       if (result.success && result.user) {
         setUser(result.user);
