@@ -111,17 +111,46 @@ export class ProfileService {
         if (response.status === 404) {
           return null;
         }
-        const error = await response.json();
-        console.error(`Failed to fetch profile for address ${address}:`, error);
-        throw new Error(error.error || 'Failed to fetch profile');
+        
+        let errorMessage = 'Failed to fetch profile';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || error.message || errorMessage;
+        } catch (jsonError) {
+          // If response is not JSON (e.g., HTML error page), provide a better error message
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('text/html')) {
+            errorMessage = `Backend service unavailable (received HTML instead of JSON). Please check if the backend is running on ${BACKEND_API_BASE_URL}`;
+          } else {
+            errorMessage = `Invalid response from backend (status: ${response.status})`;
+          }
+        }
+        
+        console.error(`Failed to fetch profile for address ${address}:`, errorMessage);
+        throw new Error(errorMessage);
       }
       
-      return response.json();
+      try {
+        return await response.json();
+      } catch (jsonError) {
+        console.error(`Failed to parse JSON response for address ${address}:`, jsonError);
+        throw new Error('Backend returned invalid JSON response');
+      }
     } catch (error) {
       clearTimeout(timeoutId);
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
+      }
+      
+      // Handle network connection errors
+      if (error instanceof Error && 
+          (error.message.includes('fetch') || 
+           error.message.includes('NetworkError') || 
+           error.message.includes('Failed to fetch'))) {
+        console.warn(`Backend unavailable, falling back to minimal profile for ${address}`);
+        // Return null instead of throwing error to allow graceful degradation
+        return null;
       }
       
       console.error(`Error fetching profile for address ${address}:`, error);
