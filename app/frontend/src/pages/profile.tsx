@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
+// import { useReadProfileRegistryGetProfileByAddress, useWriteProfileRegistryCreateProfile, useWriteProfileRegistryUpdateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile, useCreateProfile, useUpdateProfile } from '@/hooks/useProfile';
 import { useFollowCount } from '@/hooks/useFollow';
@@ -9,36 +9,7 @@ import { useToast } from '@/context/ToastContext';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '@/models/UserProfile';
 import FollowerList from '@/components/FollowerList';
 import FollowingList from '@/components/FollowingList';
-import NFTPreview from '@/components/Marketplace/NFT/NFTPreview';
 import TipBar from '@/components/TipBar';
-
-// Mock NFT data - in a real app this would come from an NFT API
-const mockNFTs = [
-  {
-    id: '1',
-    name: 'Crypto Punk #1234',
-    image: 'https://placehold.co/300',
-    collection: 'Crypto Punks',
-    tokenId: '1234',
-    contractAddress: '0x1234567890123456789012345678901234567890'
-  },
-  {
-    id: '2',
-    name: 'Bored Ape #5678',
-    image: 'https://placehold.co/300',
-    collection: 'Bored Ape Yacht Club',
-    tokenId: '5678',
-    contractAddress: '0x5678901234567890123456789012345678901234'
-  },
-  {
-    id: '3',
-    name: 'Art Blocks #9012',
-    image: 'https://placehold.co/300',
-    collection: 'Art Blocks',
-    tokenId: '9012',
-    contractAddress: '0x9012345678901234567890123456789012345678'
-  }
-];
 
 // Mock DAO data
 const mockDAOs = [
@@ -51,31 +22,29 @@ export default function Profile() {
   const router = useRouter();
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
-  const { data: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
+  // Temporarily disable backend profile loading due to 503 errors
+  const backendProfile = null;
+  const isBackendProfileLoading = false;
+  const backendProfileError = null;
   const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(address);
 
-  // Smart contract profile data
-  const { data: contractProfileData, isLoading: isContractProfileLoading } = useReadProfileRegistryGetProfileByAddress({
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    },
-  });
+  // Smart contract profile data - temporarily disabled due to webpack issues
+  const contractProfileData: any = null;
+  const isContractProfileLoading = false;
+  const createProfile = () => {};
+  const isCreatingProfile = false;
+  const isProfileCreated = false;
+  const updateProfile = () => {};
+  const isUpdatingProfile = false;
+  const isProfileUpdated = false;
 
-  const {
-    writeContract: createProfile,
-    isPending: isCreatingProfile,
-    isSuccess: isProfileCreated
-  } = useWriteProfileRegistryCreateProfile();
-
-  const {
-    writeContract: updateProfile,
-    isPending: isUpdatingProfile,
-    isSuccess: isProfileUpdated
-  } = useWriteProfileRegistryUpdateProfile();
-
-  const { mutate: createBackendProfile, isPending: isCreatingBackendProfile, error: createBackendProfileError } = useCreateProfile();
-  const { mutate: updateBackendProfile, isPending: isUpdatingBackendProfile, error: updateBackendProfileError } = useUpdateProfile();
+  // Temporarily disable backend profile mutations
+  const createBackendProfile = () => {};
+  const isCreatingBackendProfile = false;
+  const createBackendProfileError = null;
+  const updateBackendProfile = () => {};
+  const isUpdatingBackendProfile = false;
+  const updateBackendProfileError = null;
 
   const [profile, setProfile] = useState({
     handle: '',
@@ -83,9 +52,36 @@ export default function Profile() {
     bio: '',
     avatar: '',
   });
-  const [activeTab, setActiveTab] = useState<'posts' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'activity' | 'wallet' | 'reputation' | 'tips' | 'followers' | 'following' | 'addresses'>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [featuredNFT, setFeaturedNFT] = useState<any>(null);
+  const [addresses, setAddresses] = useState({
+    billing: {
+      firstName: '',
+      lastName: '',
+      company: '',
+      address1: '',
+      address2: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      phone: ''
+    },
+    shipping: {
+      firstName: '',
+      lastName: '',
+      company: '',
+      address1: '',
+      address2: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: '',
+      phone: '',
+      sameAsBilling: true
+    }
+  });
 
   // Load profile data from backend first, fallback to contract data
   useEffect(() => {
@@ -573,6 +569,22 @@ export default function Profile() {
                   </svg>
                   Following
                 </button>
+                <button
+                  onClick={() => setActiveTab('addresses')}
+                  className={`whitespace-nowrap py-3 px-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'addresses'
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
+                >
+                  <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Addresses
+                  <svg className="ml-1 h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </button>
               </nav>
             </div>
           )}
@@ -970,6 +982,273 @@ export default function Profile() {
 
               {activeTab === 'following' && address && (
                 <FollowingList userAddress={address} />
+              )}
+
+              {activeTab === 'addresses' && (
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Billing & Shipping Addresses</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">This information is private and only used for marketplace transactions.</p>
+                  
+                  <form className="space-y-8">
+                    {/* Billing Address */}
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Billing Address</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.firstName}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, firstName: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.lastName}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, lastName: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company (Optional)</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.company}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, company: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.address1}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, address1: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2 (Optional)</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.address2}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, address2: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.city}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, city: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State/Province</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.state}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, state: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ZIP/Postal Code</label>
+                          <input
+                            type="text"
+                            value={addresses.billing.zipCode}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, zipCode: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+                          <select
+                            value={addresses.billing.country}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, country: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="">Select Country</option>
+                            <option value="US">United States</option>
+                            <option value="CA">Canada</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="AU">Australia</option>
+                            <option value="DE">Germany</option>
+                            <option value="FR">France</option>
+                            <option value="JP">Japan</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                          <input
+                            type="tel"
+                            value={addresses.billing.phone}
+                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, phone: e.target.value } }))}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Shipping Address */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-md font-medium text-gray-900 dark:text-white">Shipping Address</h4>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={addresses.shipping.sameAsBilling}
+                            onChange={(e) => {
+                              const sameAsBilling = e.target.checked;
+                              setAddresses(prev => ({
+                                ...prev,
+                                shipping: {
+                                  ...prev.shipping,
+                                  sameAsBilling,
+                                  ...(sameAsBilling ? {
+                                    firstName: prev.billing.firstName,
+                                    lastName: prev.billing.lastName,
+                                    company: prev.billing.company,
+                                    address1: prev.billing.address1,
+                                    address2: prev.billing.address2,
+                                    city: prev.billing.city,
+                                    state: prev.billing.state,
+                                    zipCode: prev.billing.zipCode,
+                                    country: prev.billing.country,
+                                    phone: prev.billing.phone
+                                  } : {})
+                                }
+                              }));
+                            }}
+                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
+                          />
+                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Same as billing address</span>
+                        </label>
+                      </div>
+                      
+                      {!addresses.shipping.sameAsBilling && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.firstName}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, firstName: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.lastName}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, lastName: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company (Optional)</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.company}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, company: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.address1}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, address1: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2 (Optional)</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.address2}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, address2: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.city}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, city: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State/Province</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.state}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, state: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ZIP/Postal Code</label>
+                            <input
+                              type="text"
+                              value={addresses.shipping.zipCode}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, zipCode: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
+                            <select
+                              value={addresses.shipping.country}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, country: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            >
+                              <option value="">Select Country</option>
+                              <option value="US">United States</option>
+                              <option value="CA">Canada</option>
+                              <option value="GB">United Kingdom</option>
+                              <option value="AU">Australia</option>
+                              <option value="DE">Germany</option>
+                              <option value="FR">France</option>
+                              <option value="JP">Japan</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                            <input
+                              type="tel"
+                              value={addresses.shipping.phone}
+                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, phone: e.target.value } }))}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          addToast('Addresses saved successfully!', 'success');
+                        }}
+                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
+                      >
+                        Save Addresses
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
             </div>
           )}

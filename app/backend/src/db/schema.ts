@@ -7,7 +7,33 @@ export const users = pgTable("users", {
   walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
   handle: varchar("handle", { length: 64 }).unique(),
   profileCid: text("profile_cid"), // IPFS metadata
-  physicalAddress: text("physical_address"), // JSON object for shipping/billing address
+  physicalAddress: text("physical_address"), // JSON object for shipping/billing address (deprecated)
+  
+  // Billing address fields
+  billingFirstName: varchar("billing_first_name", { length: 100 }),
+  billingLastName: varchar("billing_last_name", { length: 100 }),
+  billingCompany: varchar("billing_company", { length: 200 }),
+  billingAddress1: varchar("billing_address1", { length: 255 }),
+  billingAddress2: varchar("billing_address2", { length: 255 }),
+  billingCity: varchar("billing_city", { length: 100 }),
+  billingState: varchar("billing_state", { length: 100 }),
+  billingZipCode: varchar("billing_zip_code", { length: 20 }),
+  billingCountry: varchar("billing_country", { length: 2 }),
+  billingPhone: varchar("billing_phone", { length: 20 }),
+  
+  // Shipping address fields
+  shippingFirstName: varchar("shipping_first_name", { length: 100 }),
+  shippingLastName: varchar("shipping_last_name", { length: 100 }),
+  shippingCompany: varchar("shipping_company", { length: 200 }),
+  shippingAddress1: varchar("shipping_address1", { length: 255 }),
+  shippingAddress2: varchar("shipping_address2", { length: 255 }),
+  shippingCity: varchar("shipping_city", { length: 100 }),
+  shippingState: varchar("shipping_state", { length: 100 }),
+  shippingZipCode: varchar("shipping_zip_code", { length: 20 }),
+  shippingCountry: varchar("shipping_country", { length: 2 }),
+  shippingPhone: varchar("shipping_phone", { length: 20 }),
+  shippingSameAsBilling: boolean("shipping_same_as_billing").default(true),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
