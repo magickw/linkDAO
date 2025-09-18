@@ -251,6 +251,95 @@ export const productTags = pgTable("product_tags", {
   })
 }));
 
+// Sellers table for enhanced store functionality
+export const sellers = pgTable("sellers", {
+  id: serial("id").primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }),
+  storeName: varchar("store_name", { length: 255 }),
+  bio: text("bio"),
+  description: text("description"),
+  sellerStory: text("seller_story"),
+  location: varchar("location", { length: 255 }),
+  coverImageUrl: text("cover_image_url"),
+  socialLinks: text("social_links"), // JSON
+  performanceMetrics: text("performance_metrics"), // JSON
+  verificationLevels: text("verification_levels"), // JSON
+  isOnline: boolean("is_online").default(false),
+  lastSeen: timestamp("last_seen"),
+  tier: varchar("tier", { length: 32 }).default("basic"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Seller activities for timeline
+export const sellerActivities = pgTable("seller_activities", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  metadata: text("metadata"), // JSON
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Seller badges
+export const sellerBadges = pgTable("seller_badges", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  badgeType: varchar("badge_type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }),
+  color: varchar("color", { length: 50 }),
+  earnedAt: timestamp("earned_at").defaultNow(),
+  isActive: boolean("is_active").default(true),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// DAO endorsements
+export const sellerDaoEndorsements = pgTable("seller_dao_endorsements", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  endorserAddress: varchar("endorser_address", { length: 66 }).notNull(),
+  endorserEns: varchar("endorser_ens", { length: 255 }),
+  proposalHash: varchar("proposal_hash", { length: 66 }),
+  voteCount: integer("vote_count").default(0),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Seller transactions
+export const sellerTransactions = pgTable("seller_transactions", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  transactionType: varchar("transaction_type", { length: 20 }).notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("ETH"),
+  counterpartyAddress: varchar("counterparty_address", { length: 66 }),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
 // Marketplace listings (keeping for backward compatibility)
 export const listings = pgTable("listings", {
   id: serial("id").primaryKey(),
