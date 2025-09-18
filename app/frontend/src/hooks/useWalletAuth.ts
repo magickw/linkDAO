@@ -64,7 +64,7 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
 
       console.log(`Starting authentication for ${isBaseWallet ? 'Base' : 'other'} wallet:`, address);
 
-      const result = await login(address);
+      const result = await login(address, connector, 'connected');
 
       if (!result.success) {
         setAuthError(result.error || 'Authentication failed');

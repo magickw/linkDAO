@@ -144,7 +144,7 @@ export default function Dashboard() {
   const { navigationState, openModal, closeModal } = useNavigation();
   const { feed, isLoading: isFeedLoading, error: feedError } = useFeed(address);
   const { createPost, isLoading: isCreatingPost, error: createPostError, success: createPostSuccess } = useCreatePost();
-  const { profile: userProfile } = useProfile(address);
+  const { data: userProfile } = useProfile(address);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState<'all' | 'users' | 'daos' | 'marketplace'>('all');
   const [isPostSheetOpen, setIsPostSheetOpen] = useState(false);

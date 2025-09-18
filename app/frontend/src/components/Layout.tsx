@@ -6,6 +6,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { Analytics } from "@vercel/analytics/next"
 import NotificationSystem from '@/components/NotificationSystem';
+import MobileNavigation from './MobileNavigation';
 import { MessagingWidget } from '@/components/Messaging';
 
 interface LayoutProps {
@@ -228,7 +229,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
         )}
       </header>
 
-      <main>
+      <main className="pb-16 md:pb-0">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           {children}
         </div>
@@ -292,6 +293,9 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
       
       {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
       {isConnected && <MessagingWidget />}
+
+      {/* Mobile Navigation */}
+      <MobileNavigation />
     </div>
   );
 }

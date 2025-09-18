@@ -146,7 +146,7 @@ export default function RecommendationSystem({
       if (itemType === 'community') {
         router.push(`/dashboard?community=${(item as Community).id}`);
       } else {
-        router.push(`/profile?user=${(item as UserProfile).address}`);
+        router.push(`/profile?user=${(item as UserProfile).walletAddress}`);
       }
     }
   };
@@ -339,7 +339,7 @@ export default function RecommendationSystem({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {recommendedUsers.map((user) => (
                 <div
-                  key={user.address}
+                  key={user.walletAddress}
                   onClick={() => handleItemClick('user', user)}
                   className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
@@ -354,7 +354,7 @@ export default function RecommendationSystem({
                         {user.handle || 'Anonymous'}
                       </h4>
                       <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                        {user.ens || `${user.address.slice(0, 6)}...${user.address.slice(-4)}`}
+                        {user.ens || `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`}
                       </p>
                     </div>
                   </div>

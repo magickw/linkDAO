@@ -1,189 +1,123 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FollowService } from '../services/followService';
 
 /**
- * Custom hook to follow/unfollow users
+ * Custom hook to follow/unfollow users using React Query Mutations
  * @returns Object containing follow/unfollow functions, loading state, and error
  */
 export const useFollow = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
+  const queryClient = useQueryClient();
 
-  const follow = useCallback(async (follower: string, following: string) => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-    
-    try {
-      await FollowService.follow(follower, following);
-      setSuccess(true);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to follow user');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const followMutation = useMutation<boolean, Error, { follower: string, following: string }>({
+    mutationFn: ({ follower, following }) => FollowService.follow(follower, following),
+    onSuccess: (_, variables) => {
+      // Invalidate follow counts for both users
+      queryClient.invalidateQueries({ queryKey: ['followCount', variables.follower] });
+      queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
+      queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
+      queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
+      queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
+    },
+  });
 
-  const unfollow = useCallback(async (follower: string, following: string) => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-    
-    try {
-      await FollowService.unfollow(follower, following);
-      setSuccess(true);
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unfollow user');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const unfollowMutation = useMutation<boolean, Error, { follower: string, following: string }>({
+    mutationFn: ({ follower, following }) => FollowService.unfollow(follower, following),
+    onSuccess: (_, variables) => {
+      // Invalidate follow counts for both users
+      queryClient.invalidateQueries({ queryKey: ['followCount', variables.follower] });
+      queryClient.invalidateQueries({ queryKey: ['followCount', variables.following] });
+      queryClient.invalidateQueries({ queryKey: ['followers', variables.following] });
+      queryClient.invalidateQueries({ queryKey: ['following', variables.follower] });
+      queryClient.invalidateQueries({ queryKey: ['followStatus', variables.follower, variables.following] });
+    },
+  });
 
-  return { follow, unfollow, isLoading, error, success };
+  return {
+    follow: followMutation.mutateAsync,
+    unfollow: unfollowMutation.mutateAsync,
+    isLoading: followMutation.isPending || unfollowMutation.isPending,
+    error: followMutation.error || unfollowMutation.error,
+    success: followMutation.isSuccess || unfollowMutation.isSuccess,
+  };
 };
 
 /**
- * Custom hook to check if one user is following another
+ * Custom hook to check if one user is following another using React Query
  * @param follower - Address of the follower
  * @param following - Address of the user being followed
  * @returns Object containing follow status, loading state, and error
  */
 export const useFollowStatus = (follower: string | undefined, following: string | undefined) => {
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!follower || !following) {
-      setIsFollowing(false);
-      return;
-    }
-
-    const checkFollowStatus = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const status = await FollowService.isFollowing(follower, following);
-        setIsFollowing(status);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to check follow status');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkFollowStatus();
-  }, [follower, following]);
-
-  return { isFollowing, isLoading, error };
+  return useQuery<boolean, Error>({
+    queryKey: ['followStatus', follower, following],
+    queryFn: async () => {
+      if (!follower || !following) return false;
+      return FollowService.isFollowing(follower, following);
+    },
+    enabled: !!follower && !!following,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
+  });
 };
 
 /**
- * Custom hook to get followers of a user
+ * Custom hook to get followers of a user using React Query
  * @param address - Address of the user
  * @returns Object containing followers data, loading state, and error
  */
 export const useFollowers = (address: string | undefined) => {
-  const [followers, setFollowers] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!address) {
-      setFollowers([]);
-      return;
-    }
-
-    const fetchFollowers = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedFollowers = await FollowService.getFollowers(address);
-        setFollowers(fetchedFollowers);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch followers');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFollowers();
-  }, [address]);
-
-  return { followers, isLoading, error };
+  return useQuery<string[], Error>({
+    queryKey: ['followers', address],
+    queryFn: async () => {
+      if (!address) return [];
+      return FollowService.getFollowers(address);
+    },
+    enabled: !!address,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
+  });
 };
 
 /**
- * Custom hook to get users that a user is following
+ * Custom hook to get users that a user is following using React Query
  * @param address - Address of the user
  * @returns Object containing following data, loading state, and error
  */
 export const useFollowing = (address: string | undefined) => {
-  const [following, setFollowing] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!address) {
-      setFollowing([]);
-      return;
-    }
-
-    const fetchFollowing = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedFollowing = await FollowService.getFollowing(address);
-        setFollowing(fetchedFollowing);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch following');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFollowing();
-  }, [address]);
-
-  return { following, isLoading, error };
+  return useQuery<string[], Error>({
+    queryKey: ['following', address],
+    queryFn: async () => {
+      if (!address) return [];
+      return FollowService.getFollowing(address);
+    },
+    enabled: !!address,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
+  });
 };
 
 /**
- * Custom hook to get follow counts for a user
+ * Custom hook to get follow counts for a user using React Query
  * @param address - Address of the user
  * @returns Object containing follow counts, loading state, and error
  */
 export const useFollowCount = (address: string | undefined) => {
-  const [followCount, setFollowCount] = useState<{ followers: number, following: number }>({ followers: 0, following: 0 });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!address) {
-      setFollowCount({ followers: 0, following: 0 });
-      return;
-    }
-
-    const fetchFollowCount = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const count = await FollowService.getFollowCount(address);
-        setFollowCount(count);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch follow count');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchFollowCount();
-  }, [address]);
-
-  return { followCount, isLoading, error };
+  return useQuery<{ followers: number, following: number }, Error>({
+    queryKey: ['followCount', address],
+    queryFn: async () => {
+      if (!address) return { followers: 0, following: 0 };
+      return FollowService.getFollowCount(address);
+    },
+    enabled: !!address,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * (2 ** attemptIndex), 30000),
+  });
 };

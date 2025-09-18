@@ -65,7 +65,7 @@ interface NavigationSidebarProps {
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
   const { balance } = useWeb3();
-  const { profile } = useProfile(address);
+  const { data: profile } = useProfile(address);
   const { getCommunityUnreadCount } = useNotifications();
   const { 
     navigationState, 
@@ -124,13 +124,13 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {profile?.handle ? profile.handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                  {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
                 </div>
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {profile?.handle || profile?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                  {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {balance} ETH
@@ -159,7 +159,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           <div className="flex justify-center">
             <div className="relative">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                {profile?.handle ? profile.handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
               </div>
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
             </div>

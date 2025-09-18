@@ -51,8 +51,8 @@ export default function Profile() {
   const router = useRouter();
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
-  const { profile: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
-  const { followCount, isLoading: isFollowCountLoading } = useFollowCount(address);
+  const { data: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
+  const { data: followCount, isLoading: isFollowCountLoading } = useFollowCount(address);
 
   // Smart contract profile data
   const { data: contractProfileData, isLoading: isContractProfileLoading } = useReadProfileRegistryGetProfileByAddress({
@@ -74,8 +74,8 @@ export default function Profile() {
     isSuccess: isProfileUpdated
   } = useWriteProfileRegistryUpdateProfile();
 
-  const { createProfile: createBackendProfile, isLoading: isCreatingBackendProfile, error: createBackendProfileError } = useCreateProfile();
-  const { updateProfile: updateBackendProfile, isLoading: isUpdatingBackendProfile, error: updateBackendProfileError } = useUpdateProfile();
+  const { mutate: createBackendProfile, isPending: isCreatingBackendProfile, error: createBackendProfileError } = useCreateProfile();
+  const { mutate: updateBackendProfile, isPending: isUpdatingBackendProfile, error: updateBackendProfileError } = useUpdateProfile();
 
   const [profile, setProfile] = useState({
     handle: '',
@@ -169,7 +169,7 @@ export default function Profile() {
           bioCid: profile.bio,
         };
 
-        await updateBackendProfile(backendProfile.id, updateData);
+        await updateBackendProfile({ id: backendProfile.id, data: updateData });
         addToast('Profile updated successfully!', 'success');
 
         // Also update on-chain if needed
@@ -182,7 +182,7 @@ export default function Profile() {
       // If profile exists on-chain but not in backend, create in backend
       else if (contractProfileData && contractProfileData.handle) {
         const createData: CreateUserProfileInput = {
-          address: address,
+          walletAddress: address,
           handle: profile.handle,
           ens: profile.ens,
           avatarCid: profile.avatar,
@@ -206,7 +206,7 @@ export default function Profile() {
 
         // Create in backend
         const createData: CreateUserProfileInput = {
-          address: address,
+          walletAddress: address,
           handle: profile.handle,
           ens: profile.ens,
           avatarCid: profile.avatar,
@@ -318,6 +318,9 @@ export default function Profile() {
                   <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error loading profile</h3>
                   <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                     <p>We encountered an issue while loading your profile information.</p>
+                    {backendProfileError && <p>Backend Error: {backendProfileError.message || backendProfileError.toString()}</p>}
+                    {createBackendProfileError && <p>Create Error: {createBackendProfileError.message || createBackendProfileError.toString()}</p>}
+                    {updateBackendProfileError && <p>Update Error: {updateBackendProfileError.message || updateBackendProfileError.toString()}</p>}
                   </div>
                   <div className="mt-4">
                     <button
