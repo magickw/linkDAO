@@ -38,13 +38,9 @@ export default function Profile() {
   const isUpdatingProfile = false;
   const isProfileUpdated = false;
 
-  // Temporarily disable backend profile mutations
-  const createBackendProfile = () => {};
-  const isCreatingBackendProfile = false;
-  const createBackendProfileError = null;
-  const updateBackendProfile = () => {};
-  const isUpdatingBackendProfile = false;
-  const updateBackendProfileError = null;
+  // Backend profile mutations
+  const { mutate: createBackendProfile, isPending: isCreatingBackendProfile, error: createBackendProfileError } = useCreateProfile();
+  const { mutate: updateBackendProfile, isPending: isUpdatingBackendProfile, error: updateBackendProfileError } = useUpdateProfile();
 
   const [profile, setProfile] = useState({
     handle: '',
@@ -150,26 +146,29 @@ export default function Profile() {
     }
 
     try {
-      // Backend profile operations are temporarily disabled
-      // If profile exists on-chain, update it
-      if (contractProfileData && contractProfileData.handle && updateProfile) {
-        // Update on-chain profile
-        updateProfile({
-          args: [1n, profile.avatar, profile.bio],
-        });
-        addToast('Profile updated successfully!', 'success');
-      }
-      // If no profile exists, create on-chain
-      else if (createProfile) {
-        // Create on-chain profile
-        createProfile({
-          args: [profile.handle, profile.ens, profile.avatar, profile.bio],
-        });
-        addToast('Profile created successfully!', 'success');
+      // Save to backend database
+      if (backendProfile) {
+        // Update existing profile
+        const updateData: UpdateUserProfileInput = {
+          handle: profile.handle,
+          ens: profile.ens,
+          avatarCid: profile.avatar,
+          bioCid: profile.bio,
+        };
+        updateBackendProfile({ id: backendProfile.id, data: updateData });
       } else {
-        // Smart contract operations not available, just update local state
-        addToast('Profile updated locally (smart contract operations unavailable)', 'info');
+        // Create new profile
+        const createData: CreateUserProfileInput = {
+          walletAddress: address,
+          handle: profile.handle,
+          ens: profile.ens,
+          avatarCid: profile.avatar,
+          bioCid: profile.bio,
+        };
+        createBackendProfile(createData);
       }
+      
+      addToast('Profile updated successfully!', 'success');
 
       setIsEditing(false);
     } catch (error) {
@@ -640,10 +639,10 @@ export default function Profile() {
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        disabled={isCreatingProfile || isUpdatingProfile || isCreatingBackendProfile || isUpdatingBackendProfile}
+                        disabled={isCreatingBackendProfile || isUpdatingBackendProfile}
                         className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 dark:focus:ring-offset-gray-800 transition-all"
                       >
-                        {(isCreatingProfile || isUpdatingProfile || isCreatingBackendProfile || isUpdatingBackendProfile) ? (
+                        {(isCreatingBackendProfile || isUpdatingBackendProfile) ? (
                           <>
                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
