@@ -85,14 +85,8 @@ export default function Profile() {
 
   // Load profile data from backend first, fallback to contract data
   useEffect(() => {
-    if (backendProfile) {
-      setProfile({
-        handle: backendProfile.handle,
-        ens: backendProfile.ens,
-        bio: backendProfile.bioCid, // In a real app, we'd fetch the actual bio content from IPFS
-        avatar: backendProfile.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
-      });
-    } else if (contractProfileData && contractProfileData.handle) {
+    // Backend profile loading is temporarily disabled
+    if (contractProfileData && contractProfileData.handle) {
       setProfile({
         handle: contractProfileData.handle,
         ens: contractProfileData.ens,
@@ -100,7 +94,7 @@ export default function Profile() {
         avatar: contractProfileData.avatarCid, // In a real app, we'd fetch the actual avatar from IPFS
       });
     }
-  }, [backendProfile, contractProfileData]);
+  }, [contractProfileData]);
 
   // Check for edit query parameter
   useEffect(() => {
@@ -156,60 +150,21 @@ export default function Profile() {
     }
 
     try {
-      // If profile exists in backend, update it
-      if (backendProfile) {
-        const updateData: UpdateUserProfileInput = {
-          handle: profile.handle,
-          ens: profile.ens,
-          avatarCid: profile.avatar,
-          bioCid: profile.bio,
-        };
-
-        await updateBackendProfile({ id: backendProfile.id, data: updateData });
-        addToast('Profile updated successfully!', 'success');
-
-        // Also update on-chain if needed
-        if (contractProfileData && contractProfileData.handle) {
-          updateProfile({
-            args: [1n, profile.avatar, profile.bio],
-          });
-        }
-      }
-      // If profile exists on-chain but not in backend, create in backend
-      else if (contractProfileData && contractProfileData.handle) {
-        const createData: CreateUserProfileInput = {
-          walletAddress: address,
-          handle: profile.handle,
-          ens: profile.ens,
-          avatarCid: profile.avatar,
-          bioCid: profile.bio,
-        };
-
-        await createBackendProfile(createData);
-        addToast('Profile created successfully!', 'success');
-
-        // Update on-chain if needed
+      // Backend profile operations are temporarily disabled
+      // If profile exists on-chain, update it
+      if (contractProfileData && contractProfileData.handle) {
+        // Update on-chain profile
         updateProfile({
           args: [1n, profile.avatar, profile.bio],
         });
+        addToast('Profile updated successfully!', 'success');
       }
-      // If no profile exists anywhere, create both
+      // If no profile exists, create on-chain
       else {
-        // Create on-chain first
+        // Create on-chain profile
         createProfile({
           args: [profile.handle, profile.ens, profile.avatar, profile.bio],
         });
-
-        // Create in backend
-        const createData: CreateUserProfileInput = {
-          walletAddress: address,
-          handle: profile.handle,
-          ens: profile.ens,
-          avatarCid: profile.avatar,
-          bioCid: profile.bio,
-        };
-
-        await createBackendProfile(createData);
         addToast('Profile created successfully!', 'success');
       }
 
@@ -607,7 +562,7 @@ export default function Profile() {
                         onChange={handleChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                         placeholder="your-handle"
-                        disabled={!!(backendProfile || (contractProfileData && contractProfileData.handle))}
+                        disabled={!!(contractProfileData && contractProfileData.handle)}
                       />
                     </div>
 
