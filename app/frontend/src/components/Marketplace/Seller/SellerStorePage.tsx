@@ -101,7 +101,7 @@ const transformListing = (serviceListing: ServiceMarketplaceListing): DisplayMar
     title: serviceListing.enhancedData?.title || serviceListing.metadataURI || 'Untitled Listing',
     price: parseFloat(serviceListing.price) || 0,
     currency: 'ETH', // Default currency
-    image: serviceListing.enhancedData?.images?.[0] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+    image: serviceListing.enhancedData?.images?.[0] || '',
     category: serviceListing.enhancedData?.category || serviceListing.itemType.toLowerCase(),
     status: serviceListing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
     createdAt: new Date(serviceListing.createdAt),
@@ -154,7 +154,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
         const mockSeller: SellerInfo = {
           id: sellerId,
           name: 'Sample Seller',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face',
+          avatar: '',
           walletAddress: sellerId,
           ensName: undefined,
           description: 'A trusted seller with high-quality products and excellent customer service.',
@@ -297,13 +297,19 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
             {/* Avatar & Basic Info */}
             <div className="flex flex-col items-center">
               <div className="relative">
-                <Image
-                  src={seller.avatar}
-                  alt={seller.name}
-                  width={120}
-                  height={120}
-                  className="rounded-full border-4 border-white/20"
-                />
+                {seller.avatar ? (
+                  <Image
+                    src={seller.avatar}
+                    alt={seller.name}
+                    width={120}
+                    height={120}
+                    className="rounded-full border-4 border-white/20"
+                  />
+                ) : (
+                  <div className="w-[120px] h-[120px] rounded-full border-4 border-white/20 bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                    {seller.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 {seller.isKYCVerified && (
                   <div className="absolute -bottom-2 -right-2 bg-green-500 rounded-full p-2">
                     <CheckCircle className="w-4 h-4 text-white" />
@@ -481,13 +487,19 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
                     onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                   >
                     <div className="relative">
-                      <Image
-                        src={listing.image}
-                        alt={listing.title}
-                        width={400}
-                        height={300}
-                        className="w-full h-48 object-cover"
-                      />
+                      {listing.image ? (
+                        <Image
+                          src={listing.image}
+                          alt={listing.title}
+                          width={400}
+                          height={300}
+                          className="w-full h-48 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center text-white">
+                          <span className="text-lg font-medium">No Image</span>
+                        </div>
+                      )}
                       {listing.isEscrowProtected && (
                         <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
                           <Shield className="w-4 h-4 text-white" />
