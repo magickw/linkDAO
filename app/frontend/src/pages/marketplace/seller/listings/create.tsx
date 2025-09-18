@@ -519,9 +519,9 @@ const CreateListingPage: React.FC = () => {
                     <textarea
                       value={formData.description}
                       onChange={(e) => handleFormChange('description', e.target.value)}
-                      rows={4}
+                      rows={6}
                       className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
-                      placeholder="Describe your item in detail. Include key features, condition, and what makes it special..."
+                      placeholder="Describe your item in detail. Include key features, condition, and what makes it special...&#10;&#10;For physical items, mention materials, dimensions, weight, and any special care instructions."
                       maxLength={2000}
                     />
                     <div className="flex justify-between mt-1">
@@ -655,6 +655,52 @@ const CreateListingPage: React.FC = () => {
                       <option value="vintage">Vintage</option>
                       <option value="refurbished">Refurbished</option>
                     </select>
+                  </div>
+
+                  {/* Product Options for Physical Items */}
+                  {formData.itemType === 'PHYSICAL' && (
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-medium text-white">Product Options</h4>
+                      
+                      {/* Colors */}
+                      <div>
+                        <label className="block text-sm font-medium text-white/90 mb-2">
+                          Available Colors
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Black, White, Silver (comma separated)"
+                          className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        />
+                      </div>
+                      
+                      {/* Sizes/Dimensions */}
+                      <div>
+                        <label className="block text-sm font-medium text-white/90 mb-2">
+                          Size Options
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Small (20x15x5cm), Medium (25x20x8cm)"
+                          className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specifications */}
+                  <div>
+                    <label className="block text-sm font-medium text-white/90 mb-2">
+                      Specifications (Optional)
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Brand: AudioTech Pro&#10;Model: AT-WH1000XM5&#10;Weight: 250g&#10;Battery Life: 30 hours"
+                      className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                    />
+                    <p className="text-xs text-white/60 mt-1">
+                      Enter key specifications, one per line (Key: Value format)
+                    </p>
                   </div>
 
                   {/* Quantity */}
