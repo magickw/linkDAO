@@ -8,8 +8,16 @@ interface FormData {
   storeName: string;
   bio: string;
   description: string;
+  sellerStory: string;
+  location: string;
   email: string;
   phone: string;
+  coverImage: string;
+  socialLinks: {
+    twitter: string;
+    linkedin: string;
+    website: string;
+  };
 }
 
 export function SellerProfilePage() {
@@ -22,8 +30,16 @@ export function SellerProfilePage() {
     storeName: '',
     bio: '',
     description: '',
+    sellerStory: '',
+    location: '',
     email: '',
     phone: '',
+    coverImage: '',
+    socialLinks: {
+      twitter: '',
+      linkedin: '',
+      website: ''
+    }
   });
 
   // Debug logging
@@ -39,18 +55,37 @@ export function SellerProfilePage() {
         storeName: profile.storeName || '',
         bio: profile.bio || '',
         description: profile.description || '',
+        sellerStory: profile.sellerStory || '',
+        location: profile.location || '',
         email: profile.email || '',
         phone: profile.phone || '',
+        coverImage: profile.coverImage || '',
+        socialLinks: {
+          twitter: profile.socialLinks?.twitter || '',
+          linkedin: profile.socialLinks?.linkedin || '',
+          website: profile.socialLinks?.website || ''
+        }
       });
     }
   }, [profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: FormData) => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name.startsWith('socialLinks.')) {
+      const field = name.split('.')[1];
+      setFormData((prev: FormData) => ({
+        ...prev,
+        socialLinks: {
+          ...prev.socialLinks,
+          [field]: value
+        }
+      }));
+    } else {
+      setFormData((prev: FormData) => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,7 +192,17 @@ export function SellerProfilePage() {
             <h1 className="text-3xl font-bold text-white">Seller Profile</h1>
             <p className="text-gray-400 mt-2">Manage your seller information and settings</p>
           </div>
-          <div className="mt-4 md:mt-0">
+          <div className="mt-4 md:mt-0 flex gap-3">
+            <Button
+              onClick={() => router.push(`/marketplace/seller/store/${profile.walletAddress}`)}
+              variant="outline"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View Store Page
+            </Button>
             {isEditing ? (
               <div className="flex space-x-3">
                 <Button onClick={() => setIsEditing(false)} variant="outline" disabled={isSaving}>
@@ -278,7 +323,85 @@ export function SellerProfilePage() {
                         name="description"
                         value={formData.description}
                         onChange={handleInputChange}
+                        rows={3}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Seller Story</label>
+                      <textarea
+                        name="sellerStory"
+                        value={formData.sellerStory}
+                        onChange={handleInputChange}
                         rows={4}
+                        placeholder="Tell customers about your background, mission, and what makes you unique..."
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Location</label>
+                      <input
+                        type="text"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        placeholder="e.g., San Francisco, CA"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Cover Image URL</label>
+                      <input
+                        type="url"
+                        name="coverImage"
+                        value={formData.coverImage}
+                        onChange={handleInputChange}
+                        placeholder="https://example.com/cover-image.jpg"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                </GlassPanel>
+
+                {/* Social Links */}
+                <GlassPanel className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Social Links</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Twitter</label>
+                      <input
+                        type="url"
+                        name="socialLinks.twitter"
+                        value={formData.socialLinks.twitter}
+                        onChange={handleInputChange}
+                        placeholder="https://twitter.com/username"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">LinkedIn</label>
+                      <input
+                        type="url"
+                        name="socialLinks.linkedin"
+                        value={formData.socialLinks.linkedin}
+                        onChange={handleInputChange}
+                        placeholder="https://linkedin.com/in/username"
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Website</label>
+                      <input
+                        type="url"
+                        name="socialLinks.website"
+                        value={formData.socialLinks.website}
+                        onChange={handleInputChange}
+                        placeholder="https://yourwebsite.com"
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
@@ -346,6 +469,42 @@ export function SellerProfilePage() {
                     <div>
                       <p className="text-gray-400 text-sm">Description</p>
                       <p className="text-white">{profile.description || 'No description provided'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Seller Story</p>
+                      <p className="text-white">{profile.sellerStory || 'No seller story provided'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Location</p>
+                      <p className="text-white">{profile.location || 'Not specified'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Cover Image</p>
+                      <p className="text-white">{profile.coverImage ? 'Set' : 'Not set'}</p>
+                    </div>
+                  </div>
+                </GlassPanel>
+
+                {/* Social Links */}
+                <GlassPanel className="p-6 mb-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Social Links</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-gray-400 text-sm">Twitter</p>
+                      <p className="text-white">{profile.socialLinks?.twitter || 'Not provided'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">LinkedIn</p>
+                      <p className="text-white">{profile.socialLinks?.linkedin || 'Not provided'}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-gray-400 text-sm">Website</p>
+                      <p className="text-white">{profile.socialLinks?.website || 'Not provided'}</p>
                     </div>
                   </div>
                 </GlassPanel>

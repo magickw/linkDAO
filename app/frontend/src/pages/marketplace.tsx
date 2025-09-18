@@ -718,13 +718,10 @@ const MarketplaceContent: React.FC = () => {
                                 <Button
                                   variant="primary"
                                   size="small"
-                                  onClick={() => {
-                                    setSelectedListing(listing);
-                                    setShowDetailModal(true);
-                                  }}
+                                  onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                                   className="backdrop-blur-sm"
                                 >
-                                  Quick View
+                                  View Details
                                 </Button>
                                 <Button
                                   variant="outline"
@@ -741,9 +738,13 @@ const MarketplaceContent: React.FC = () => {
                           {/* Enhanced Product Info */}
                           <div className="flex justify-between items-start mb-4">
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-medium text-white truncate" title={listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}>
+                              <button
+                                onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
+                                className="text-lg font-medium text-white truncate hover:text-blue-300 transition-colors text-left w-full"
+                                title={listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
+                              >
                                 {listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
-                              </h3>
+                              </button>
                               
                               {/* Enhanced Seller Info with Profile Link */}
                               <div className="flex items-center gap-2 mt-2">
@@ -867,10 +868,7 @@ const MarketplaceContent: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   className="w-full border-white/30 text-white/80 hover:bg-white/10 flex items-center gap-2"
-                                  onClick={() => {
-                                    setSelectedListing(listing);
-                                    setShowDetailModal(true);
-                                  }}
+                                  onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                                 >
                                   View Details
                                 </Button>
@@ -938,10 +936,7 @@ const MarketplaceContent: React.FC = () => {
                                   <Button
                                     variant="outline"
                                     className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
-                                    onClick={() => {
-                                      setSelectedListing(listing);
-                                      setShowDetailModal(true);
-                                    }}
+                                    onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                                   >
                                     Details
                                   </Button>
