@@ -18,7 +18,7 @@ import { UserProfileService } from './userProfileService';
 const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
 
-export class MarketplaceService {
+export class BlockchainMarketplaceService {
   // Listings
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     // Ensure seller exists

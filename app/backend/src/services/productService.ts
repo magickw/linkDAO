@@ -19,7 +19,7 @@ import {
 import { DatabaseService } from './databaseService';
 import { MetadataService } from './metadataService';
 import { ValidationHelper, ValidationError } from '../models/validation';
-import { eq, and, or, like, gte, lte, inArray, desc, asc, count, isNull } from 'drizzle-orm';
+import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export class ProductService {
@@ -142,7 +142,7 @@ export class ProductService {
     const db = this.databaseService.getDatabase();
     
     // Check if category has products
-    const productCount = await db.select({ count: count() })
+    const productCount = await db.select({ count: sql<number>`count(*)` })
       .from(schema.products)
       .where(eq(schema.products.categoryId, id));
     
@@ -151,7 +151,7 @@ export class ProductService {
     }
 
     // Check if category has children
-    const childCount = await db.select({ count: count() })
+    const childCount = await db.select({ count: sql<number>`count(*)` })
       .from(schema.categories)
       .where(eq(schema.categories.parentId, id));
     
@@ -306,7 +306,7 @@ export class ProductService {
     const orderBy = sort.direction === 'desc' ? desc(orderByColumn) : asc(orderByColumn);
     
     // Get total count
-    const totalResult = await db.select({ count: count() })
+    const totalResult = await db.select({ count: sql<number>`count(*)` })
       .from(schema.products)
       .where(whereClause);
     

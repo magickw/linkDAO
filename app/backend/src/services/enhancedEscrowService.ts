@@ -1,21 +1,67 @@
 import { ethers } from 'ethers';
 import { DatabaseService } from './databaseService';
 import { UserProfileService } from './userProfileService';
+import { PaymentValidationService } from './paymentValidationService';
+import { NotificationService } from './notificationService';
 import { MarketplaceEscrow } from '../models/Marketplace';
 
 const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
+const notificationService = new NotificationService();
+
+export interface EscrowCreationRequest {
+  listingId: string;
+  buyerAddress: string;
+  sellerAddress: string;
+  tokenAddress: string;
+  amount: string;
+  escrowDuration?: number; // in days
+  requiresDeliveryConfirmation?: boolean;
+  metadata?: any;
+}
+
+export interface EscrowValidationResult {
+  isValid: boolean;
+  hasSufficientBalance: boolean;
+  errors: string[];
+  warnings: string[];
+  estimatedGasFee?: string;
+  requiredApprovals?: string[];
+}
+
+export interface EscrowStatus {
+  id: string;
+  status: 'created' | 'funded' | 'active' | 'disputed' | 'resolved' | 'cancelled';
+  buyerApproved: boolean;
+  sellerApproved: boolean;
+  disputeOpened: boolean;
+  fundsLocked: boolean;
+  deliveryConfirmed: boolean;
+  createdAt: Date;
+  expiresAt?: Date;
+  resolvedAt?: Date;
+}
+
+export interface EscrowRecoveryOptions {
+  canCancel: boolean;
+  canRefund: boolean;
+  canRetry: boolean;
+  suggestedActions: string[];
+  timeoutActions: string[];
+}
 
 // Enhanced Escrow Service
 export class EnhancedEscrowService {
   private provider: ethers.JsonRpcProvider;
   private enhancedEscrowContract: ethers.Contract | null;
   private marketplaceContract: ethers.Contract | null;
+  private paymentValidationService: PaymentValidationService;
 
   constructor(rpcUrl: string, enhancedEscrowContractAddress: string, marketplaceContractAddress: string) {
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     this.enhancedEscrowContract = null;
     this.marketplaceContract = null;
+    this.paymentValidationService = new PaymentValidationService();
     
     // Initialize contracts if addresses are provided
     if (enhancedEscrowContractAddress && ethers.isAddress(enhancedEscrowContractAddress)) {
@@ -54,13 +100,97 @@ export class EnhancedEscrowService {
   }
 
   /**
-   * Create a new enhanced escrow
-   * @param listingId ID of the listing
-   * @param buyerAddress Address of the buyer
-   * @param sellerAddress Address of the seller
-   * @param tokenAddress Address of the token (address(0) for ETH)
-   * @param amount Amount to escrow
-   * @returns The created escrow ID
+   * Validate escrow creation request
+   */
+  async validateEscrowCreation(request: EscrowCreationRequest): Promise<EscrowValidationResult> {
+    const result: EscrowValidationResult = {
+      isValid: false,
+      hasSufficientBalance: false,
+      errors: [],
+      warnings: [],
+      requiredApprovals: []
+    };
+
+    try {
+      // Basic validation
+      if (!request.listingId || !request.buyerAddress || !request.sellerAddress || !request.tokenAddress || !request.amount) {
+        result.errors.push('Missing required fields for escrow creation');
+        return result;
+      }
+
+      // Validate addresses
+      if (!ethers.isAddress(request.buyerAddress) || !ethers.isAddress(request.sellerAddress) || !ethers.isAddress(request.tokenAddress)) {
+        result.errors.push('Invalid addresses provided');
+        return result;
+      }
+
+      // Validate amount
+      if (parseFloat(request.amount) <= 0) {
+        result.errors.push('Escrow amount must be greater than 0');
+        return result;
+      }
+
+      // Check if buyer has sufficient balance
+      try {
+        const balanceCheck = await this.paymentValidationService.checkCryptoBalance(
+          request.buyerAddress,
+          request.tokenAddress,
+          request.amount,
+          1 // Assuming mainnet for now
+        );
+
+        result.hasSufficientBalance = balanceCheck.hasSufficientBalance;
+
+        if (!balanceCheck.hasSufficientBalance) {
+          result.errors.push(`Insufficient balance. Required: ${request.amount}, Available: ${balanceCheck.balance.balanceFormatted}`);
+        }
+
+        // Check gas balance for ERC-20 tokens
+        if (request.tokenAddress !== '0x0000000000000000000000000000000000000000' && balanceCheck.gasBalance) {
+          const minGasBalance = ethers.parseUnits('0.01', balanceCheck.gasBalance.decimals);
+          if (BigInt(balanceCheck.gasBalance.balance) < minGasBalance) {
+            result.warnings.push(`Low ${balanceCheck.gasBalance.tokenSymbol} balance for gas fees`);
+          }
+        }
+      } catch (error) {
+        result.errors.push('Failed to check buyer balance');
+        return result;
+      }
+
+      // Estimate gas fees
+      try {
+        const gasPrice = await this.provider.getFeeData();
+        if (gasPrice.gasPrice) {
+          const gasLimit = request.tokenAddress === '0x0000000000000000000000000000000000000000' ? 100000 : 150000;
+          const gasCost = gasPrice.gasPrice * BigInt(gasLimit);
+          result.estimatedGasFee = ethers.formatEther(gasCost);
+        }
+      } catch (error) {
+        result.warnings.push('Unable to estimate gas fees');
+      }
+
+      // Check token approvals for ERC-20
+      if (request.tokenAddress !== '0x0000000000000000000000000000000000000000') {
+        result.requiredApprovals.push(`Approve ${request.amount} tokens for escrow contract`);
+      }
+
+      // Validate escrow duration
+      if (request.escrowDuration && (request.escrowDuration < 1 || request.escrowDuration > 30)) {
+        result.errors.push('Escrow duration must be between 1 and 30 days');
+        return result;
+      }
+
+      result.isValid = result.errors.length === 0;
+      return result;
+    } catch (error) {
+      console.error('Error validating escrow creation:', error);
+      result.errors.push('Escrow validation failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      return result;
+    }
+  }
+
+  /**
+   * Create a new enhanced escrow with proper validation
    */
   async createEscrow(
     listingId: string,
@@ -70,27 +200,60 @@ export class EnhancedEscrowService {
     amount: string
   ): Promise<string> {
     try {
+      // Validate escrow creation
+      const validation = await this.validateEscrowCreation({
+        listingId,
+        buyerAddress,
+        sellerAddress,
+        tokenAddress,
+        amount
+      });
+
+      if (!validation.isValid) {
+        throw new Error(`Escrow validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      if (!validation.hasSufficientBalance) {
+        throw new Error('Insufficient balance for escrow creation');
+      }
+
       if (!this.enhancedEscrowContract) {
         throw new Error('Enhanced Escrow contract not initialized');
       }
 
-      // In a real implementation, we would interact with the smart contract
-      // For now, we'll simulate the creation and store in the database
-      console.log(`Creating enhanced escrow for listing ${listingId}`);
-      
-      // Create escrow in database
+      // Create escrow in database first
+      const buyer = await userProfileService.getProfileByAddress(buyerAddress);
+      const seller = await userProfileService.getProfileByAddress(sellerAddress);
+
+      if (!buyer || !seller) {
+        throw new Error('Buyer or seller profile not found');
+      }
+
       const dbEscrow = await databaseService.createEscrow(
         parseInt(listingId),
-        (await userProfileService.getProfileByAddress(buyerAddress))?.id || '',
-        (await userProfileService.getProfileByAddress(sellerAddress))?.id || '',
+        buyer.id,
+        seller.id,
         amount
       );
       
       if (!dbEscrow) {
         throw new Error('Failed to create escrow in database');
       }
-      
-      return dbEscrow.id.toString();
+
+      const escrowId = dbEscrow.id.toString();
+
+      // In a real implementation, interact with smart contract here
+      console.log(`Creating enhanced escrow ${escrowId} for listing ${listingId}`);
+      console.log(`Buyer: ${buyerAddress}, Seller: ${sellerAddress}`);
+      console.log(`Token: ${tokenAddress}, Amount: ${amount}`);
+
+      // Send notifications
+      await Promise.all([
+        notificationService.sendOrderNotification(buyerAddress, 'ESCROW_CREATED', escrowId),
+        notificationService.sendOrderNotification(sellerAddress, 'ESCROW_CREATED', escrowId)
+      ]);
+
+      return escrowId;
     } catch (error) {
       console.error('Error creating enhanced escrow:', error);
       throw error;
@@ -98,10 +261,7 @@ export class EnhancedEscrowService {
   }
 
   /**
-   * Lock funds in escrow
-   * @param escrowId ID of the escrow
-   * @param amount Amount to lock
-   * @param tokenAddress Address of the token (address(0) for ETH)
+   * Lock funds in escrow with enhanced validation
    */
   async lockFunds(escrowId: string, amount: string, tokenAddress: string): Promise<void> {
     try {
@@ -109,15 +269,59 @@ export class EnhancedEscrowService {
         throw new Error('Enhanced Escrow contract not initialized');
       }
 
-      // In a real implementation, we would interact with the smart contract
-      console.log(`Locking funds in escrow ${escrowId}`);
+      // Get escrow details
+      const escrow = await this.getEscrow(escrowId);
+      if (!escrow) {
+        throw new Error('Escrow not found');
+      }
+
+      // Validate that funds haven't already been locked
+      if (escrow.deliveryConfirmed) {
+        throw new Error('Funds already locked in this escrow');
+      }
+
+      // Validate buyer balance before locking
+      const validation = await this.validateEscrowCreation({
+        listingId: escrow.listingId,
+        buyerAddress: escrow.buyerWalletAddress,
+        sellerAddress: escrow.sellerWalletAddress,
+        tokenAddress,
+        amount
+      });
+
+      if (!validation.hasSufficientBalance) {
+        throw new Error(`Insufficient balance to lock funds: ${validation.errors.join(', ')}`);
+      }
+
+      // In a real implementation, interact with smart contract
+      console.log(`Locking ${amount} ${tokenAddress} in escrow ${escrowId}`);
       
       // Update escrow status in database
       await databaseService.updateEscrow(parseInt(escrowId), {
-        // In a real implementation, we would update the status
+        // Mark funds as locked
       });
+
+      // Send notifications
+      await Promise.all([
+        notificationService.sendOrderNotification(escrow.buyerWalletAddress, 'ESCROW_FUNDED', escrowId),
+        notificationService.sendOrderNotification(escrow.sellerWalletAddress, 'ESCROW_FUNDED', escrowId)
+      ]);
+
+      console.log(`Successfully locked funds in escrow ${escrowId}`);
     } catch (error) {
       console.error('Error locking funds in escrow:', error);
+      
+      // Send error notification to buyer
+      const escrow = await this.getEscrow(escrowId);
+      if (escrow) {
+        await notificationService.sendOrderNotification(
+          escrow.buyerWalletAddress, 
+          'ESCROW_FUNDING_FAILED', 
+          escrowId,
+          { error: error instanceof Error ? error.message : 'Unknown error' }
+        );
+      }
+      
       throw error;
     }
   }
@@ -292,6 +496,227 @@ export class EnhancedEscrowService {
     } catch (error) {
       console.error('Error getting user reputation:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Get escrow status with detailed information
+   */
+  async getEscrowStatus(escrowId: string): Promise<EscrowStatus | null> {
+    try {
+      const escrow = await this.getEscrow(escrowId);
+      if (!escrow) return null;
+
+      // Determine status based on escrow state
+      let status: EscrowStatus['status'] = 'created';
+      
+      if (escrow.disputeOpened) {
+        status = 'disputed';
+      } else if (escrow.resolvedAt) {
+        status = 'resolved';
+      } else if (escrow.deliveryConfirmed) {
+        status = 'active';
+      } else if (escrow.buyerApproved && escrow.sellerApproved) {
+        status = 'funded';
+      }
+
+      return {
+        id: escrowId,
+        status,
+        buyerApproved: escrow.buyerApproved,
+        sellerApproved: escrow.sellerApproved,
+        disputeOpened: escrow.disputeOpened,
+        fundsLocked: escrow.deliveryConfirmed, // Using deliveryConfirmed as funds locked indicator
+        deliveryConfirmed: escrow.deliveryConfirmed,
+        createdAt: new Date(escrow.createdAt),
+        expiresAt: escrow.resolvedAt ? undefined : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        resolvedAt: escrow.resolvedAt ? new Date(escrow.resolvedAt) : undefined
+      };
+    } catch (error) {
+      console.error('Error getting escrow status:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get recovery options for failed escrow
+   */
+  async getEscrowRecoveryOptions(escrowId: string): Promise<EscrowRecoveryOptions> {
+    try {
+      const status = await this.getEscrowStatus(escrowId);
+      const escrow = await this.getEscrow(escrowId);
+
+      const options: EscrowRecoveryOptions = {
+        canCancel: false,
+        canRefund: false,
+        canRetry: false,
+        suggestedActions: [],
+        timeoutActions: []
+      };
+
+      if (!status || !escrow) {
+        options.suggestedActions.push('Escrow not found - contact support');
+        return options;
+      }
+
+      // Determine available recovery options based on status
+      switch (status.status) {
+        case 'created':
+          options.canCancel = true;
+          options.canRetry = true;
+          options.suggestedActions.push('Retry funding the escrow');
+          options.suggestedActions.push('Cancel escrow if no longer needed');
+          break;
+
+        case 'funded':
+          options.canRefund = true;
+          options.suggestedActions.push('Wait for seller to ship item');
+          options.suggestedActions.push('Contact seller for updates');
+          options.timeoutActions.push('Auto-refund after 30 days if no delivery');
+          break;
+
+        case 'active':
+          options.suggestedActions.push('Confirm delivery when item received');
+          options.suggestedActions.push('Open dispute if there are issues');
+          break;
+
+        case 'disputed':
+          options.suggestedActions.push('Provide additional evidence');
+          options.suggestedActions.push('Wait for dispute resolution');
+          break;
+
+        case 'resolved':
+          options.suggestedActions.push('Escrow completed successfully');
+          break;
+      }
+
+      // Add balance-specific recovery options
+      const validation = await this.validateEscrowCreation({
+        listingId: escrow.listingId,
+        buyerAddress: escrow.buyerWalletAddress,
+        sellerAddress: escrow.sellerWalletAddress,
+        tokenAddress: '0x0000000000000000000000000000000000000000', // Default to ETH
+        amount: escrow.amount
+      });
+
+      if (!validation.hasSufficientBalance) {
+        options.suggestedActions.unshift('Add funds to wallet before retrying');
+      }
+
+      return options;
+    } catch (error) {
+      console.error('Error getting escrow recovery options:', error);
+      return {
+        canCancel: false,
+        canRefund: false,
+        canRetry: false,
+        suggestedActions: ['Error getting recovery options - contact support'],
+        timeoutActions: []
+      };
+    }
+  }
+
+  /**
+   * Cancel escrow with proper validation
+   */
+  async cancelEscrow(escrowId: string, cancellerAddress: string, reason: string): Promise<void> {
+    try {
+      const escrow = await this.getEscrow(escrowId);
+      if (!escrow) {
+        throw new Error('Escrow not found');
+      }
+
+      const status = await this.getEscrowStatus(escrowId);
+      if (!status) {
+        throw new Error('Unable to get escrow status');
+      }
+
+      // Validate cancellation permissions
+      if (cancellerAddress !== escrow.buyerWalletAddress && cancellerAddress !== escrow.sellerWalletAddress) {
+        throw new Error('Only buyer or seller can cancel escrow');
+      }
+
+      // Check if escrow can be cancelled
+      if (status.status === 'resolved') {
+        throw new Error('Cannot cancel resolved escrow');
+      }
+
+      if (status.status === 'disputed') {
+        throw new Error('Cannot cancel disputed escrow - wait for resolution');
+      }
+
+      // In a real implementation, interact with smart contract
+      console.log(`Cancelling escrow ${escrowId} by ${cancellerAddress}: ${reason}`);
+
+      // Update database
+      await databaseService.updateEscrow(parseInt(escrowId), {
+        // Mark as cancelled
+      });
+
+      // Send notifications
+      const otherParty = cancellerAddress === escrow.buyerWalletAddress ? 
+        escrow.sellerWalletAddress : escrow.buyerWalletAddress;
+
+      await Promise.all([
+        notificationService.sendOrderNotification(cancellerAddress, 'ESCROW_CANCELLED', escrowId, { reason }),
+        notificationService.sendOrderNotification(otherParty, 'ESCROW_CANCELLED', escrowId, { reason, cancelledBy: cancellerAddress })
+      ]);
+
+      console.log(`Successfully cancelled escrow ${escrowId}`);
+    } catch (error) {
+      console.error('Error cancelling escrow:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retry failed escrow operation
+   */
+  async retryEscrowOperation(escrowId: string, operation: 'fund' | 'confirm' | 'resolve'): Promise<void> {
+    try {
+      const escrow = await this.getEscrow(escrowId);
+      if (!escrow) {
+        throw new Error('Escrow not found');
+      }
+
+      const status = await this.getEscrowStatus(escrowId);
+      if (!status) {
+        throw new Error('Unable to get escrow status');
+      }
+
+      console.log(`Retrying ${operation} operation for escrow ${escrowId}`);
+
+      switch (operation) {
+        case 'fund':
+          if (status.status !== 'created') {
+            throw new Error('Escrow is not in created state for funding retry');
+          }
+          await this.lockFunds(escrowId, escrow.amount, '0x0000000000000000000000000000000000000000');
+          break;
+
+        case 'confirm':
+          if (status.status !== 'active') {
+            throw new Error('Escrow is not in active state for confirmation retry');
+          }
+          await this.confirmDelivery(escrowId, 'Retry delivery confirmation');
+          break;
+
+        case 'resolve':
+          if (status.status !== 'disputed') {
+            throw new Error('Escrow is not in disputed state for resolution retry');
+          }
+          // In a real implementation, retry dispute resolution
+          console.log(`Retrying dispute resolution for escrow ${escrowId}`);
+          break;
+
+        default:
+          throw new Error(`Unknown operation: ${operation}`);
+      }
+
+      console.log(`Successfully retried ${operation} for escrow ${escrowId}`);
+    } catch (error) {
+      console.error(`Error retrying ${operation} for escrow ${escrowId}:`, error);
+      throw error;
     }
   }
 

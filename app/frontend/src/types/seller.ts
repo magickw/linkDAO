@@ -22,10 +22,34 @@ export interface SellerProfile {
     description?: string;
     sellerStory?: string;
     location?: string;
+    
+    // ENS Support (optional)
+    ensHandle?: string;
+    ensVerified: boolean;
+    ensLastVerified?: string;
+    
+    // Image Storage with IPFS and CDN support
+    profileImageIpfs?: string;
+    profileImageCdn?: string;
+    coverImageIpfs?: string;
+    coverImageCdn?: string;
+    
+    // Enhanced Social Media Links
+    websiteUrl?: string;
     socialLinks?: {
         twitter?: string;
+        discord?: string;
+        telegram?: string;
         linkedin?: string;
         website?: string;
+    };
+    
+    // Profile Completeness
+    profileCompleteness: {
+        score: number; // 0-100
+        missingFields: string[];
+        recommendations: string[];
+        lastCalculated: string;
     };
     
     // Application Status
@@ -257,5 +281,114 @@ export interface SellerAnalytics {
             negative: number;
         };
         badges: Array<{ badge: string; earnedAt: string }>;
+    };
+}
+
+// ENS Support Types
+export interface ENSValidationResult {
+    isValid: boolean;
+    isAvailable: boolean;
+    isOwned: boolean;
+    resolvedAddress?: string;
+    reverseResolution?: string;
+    errors: string[];
+    suggestions: string[];
+}
+
+export interface ENSVerification {
+    id: string;
+    walletAddress: string;
+    ensHandle: string;
+    verificationMethod: 'signature' | 'transaction' | 'reverse_resolution';
+    verificationData: any;
+    verifiedAt: string;
+    verificationTxHash?: string;
+    expiresAt?: string;
+    isActive: boolean;
+}
+
+// Profile Validation Types
+export interface ProfileValidationRule {
+    field: string;
+    required: boolean;
+    validator?: (value: any) => ValidationResult;
+    weight: number; // For completeness scoring
+}
+
+export interface ValidationResult {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+}
+
+export interface ProfileValidationOptions {
+    ensRequired: boolean;
+    imageRequired: boolean;
+    socialLinksRequired: boolean;
+    strictValidation: boolean;
+}
+
+export interface ProfileCompletenessCalculation {
+    totalFields: number;
+    completedFields: number;
+    score: number;
+    missingFields: Array<{
+        field: string;
+        label: string;
+        weight: number;
+        required: boolean;
+    }>;
+    recommendations: Array<{
+        action: string;
+        description: string;
+        impact: number;
+    }>;
+}
+
+// Enhanced Profile Update Types
+export interface SellerProfileUpdateRequest {
+    displayName?: string;
+    storeName?: string;
+    bio?: string;
+    description?: string;
+    sellerStory?: string;
+    location?: string;
+    ensHandle?: string;
+    websiteUrl?: string;
+    socialLinks?: {
+        twitter?: string;
+        discord?: string;
+        telegram?: string;
+        linkedin?: string;
+    };
+    profileImage?: File;
+    coverImage?: File;
+}
+
+export interface SellerProfileUpdateResponse {
+    success: boolean;
+    profile: SellerProfile;
+    validationResults: ValidationResult;
+    completenessUpdate: ProfileCompletenessCalculation;
+    ensValidation?: ENSValidationResult;
+    imageUploadResults?: {
+        profileImage?: ImageUploadResult;
+        coverImage?: ImageUploadResult;
+    };
+}
+
+export interface ImageUploadResult {
+    ipfsHash: string;
+    cdnUrl: string;
+    thumbnails: {
+        small: string;
+        medium: string;
+        large: string;
+    };
+    metadata: {
+        width: number;
+        height: number;
+        format: string;
+        size: number;
     };
 }
