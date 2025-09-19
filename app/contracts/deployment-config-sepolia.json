@@ -1,0 +1,13 @@
+{
+  "network": "sepolia",
+  "treasury": "0x0000000000000000000000000000000000000000",
+  "multisig": "0x0000000000000000000000000000000000000000",
+  "feeBasisPoints": 250,
+  "feeCollector": "0x0000000000000000000000000000000000000000",
+  "gasPrice": "20000000000",
+  "gasLimit": 6000000,
+  "confirmations": 2,
+  "verifyContracts": true,
+  "rpcUrl": "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
+  "etherscanApiKey": "YOUR_ETHERSCAN_API_KEY"
+}
