@@ -1087,7 +1087,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
                           key={star}
-                          className={`w-5 h-5 ${star <= Math.round(seller.reputationScore / 20) ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
+                          className={`w-5 h-5 ${star <= Math.round(parseFloat(seller.reputationScore.value) / 20) ? 'text-yellow-400 fill-current' : 'text-gray-400'}`}
                         />
                       ))}
                     </div>
