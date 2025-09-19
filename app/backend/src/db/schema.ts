@@ -218,6 +218,16 @@ export const products = pgTable("products", {
   nft: text("nft"), // JSON NFTInfo
   views: integer("views").default(0),
   favorites: integer("favorites").default(0),
+  // Enhanced fields for better listing management
+  listingStatus: varchar("listing_status", { length: 20 }).default("draft"),
+  publishedAt: timestamp("published_at"),
+  searchVector: text("search_vector"), // For full-text search optimization
+  imageIpfsHashes: text("image_ipfs_hashes"), // JSON array of IPFS hashes
+  imageCdnUrls: text("image_cdn_urls"), // JSON object with CDN URLs
+  primaryImageIndex: integer("primary_image_index").default(0),
+  seoTitle: varchar("seo_title", { length: 255 }),
+  seoDescription: text("seo_description"),
+  seoKeywords: text("seo_keywords"), // JSON array of SEO keywords
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
@@ -234,6 +244,8 @@ export const products = pgTable("products", {
   categoryIdx: index("product_category_idx").on(t.categoryId),
   sellerIdx: index("product_seller_idx").on(t.sellerId),
   priceIdx: index("product_price_idx").on(t.priceAmount),
+  listingStatusIdx: index("idx_products_listing_status").on(t.listingStatus),
+  publishedAtIdx: index("idx_products_published_at").on(t.publishedAt),
 }));
 
 // Product Tags - for efficient querying
@@ -268,6 +280,20 @@ export const sellers = pgTable("sellers", {
   isOnline: boolean("is_online").default(false),
   lastSeen: timestamp("last_seen"),
   tier: varchar("tier", { length: 32 }).default("basic"),
+  // ENS support columns (nullable - ENS is optional)
+  ensHandle: varchar("ens_handle", { length: 255 }),
+  ensVerified: boolean("ens_verified").default(false),
+  ensLastVerified: timestamp("ens_last_verified"),
+  // Image storage fields for IPFS hashes and CDN URLs
+  profileImageIpfs: varchar("profile_image_ipfs", { length: 255 }),
+  profileImageCdn: varchar("profile_image_cdn", { length: 500 }),
+  coverImageIpfs: varchar("cover_image_ipfs", { length: 255 }),
+  coverImageCdn: varchar("cover_image_cdn", { length: 500 }),
+  // Enhanced profile fields
+  websiteUrl: varchar("website_url", { length: 500 }),
+  twitterHandle: varchar("twitter_handle", { length: 100 }),
+  discordHandle: varchar("discord_handle", { length: 100 }),
+  telegramHandle: varchar("telegram_handle", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -437,8 +463,31 @@ export const orders = pgTable("orders", {
   amount: numeric("amount").notNull(), // Using numeric for better precision
   paymentToken: varchar("payment_token", { length: 66 }),
   status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'completed', 'disputed', 'refunded'
+  // Enhanced fields for improved order tracking
+  checkoutSessionId: varchar("checkout_session_id", { length: 255 }),
+  paymentMethod: varchar("payment_method", { length: 20 }), // 'crypto', 'fiat', 'escrow'
+  paymentDetails: text("payment_details"), // JSON object with payment-specific data
+  shippingAddress: text("shipping_address"), // JSON object with shipping details
+  billingAddress: text("billing_address"), // JSON object with billing details
+  orderNotes: text("order_notes"),
+  trackingNumber: varchar("tracking_number", { length: 100 }),
+  trackingCarrier: varchar("tracking_carrier", { length: 50 }),
+  estimatedDelivery: timestamp("estimated_delivery"),
+  actualDelivery: timestamp("actual_delivery"),
+  deliveryConfirmation: text("delivery_confirmation"), // JSON object with delivery proof
+  paymentConfirmationHash: varchar("payment_confirmation_hash", { length: 66 }), // Blockchain tx hash
+  escrowContractAddress: varchar("escrow_contract_address", { length: 66 }),
+  totalAmount: numeric("total_amount", { precision: 20, scale: 8 }), // Total including fees, taxes, shipping
+  currency: varchar("currency", { length: 10 }).default("USD"),
+  orderMetadata: text("order_metadata"), // JSON object for additional order data
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => ({
+  checkoutSessionIdx: index("idx_orders_checkout_session_id").on(t.checkoutSessionId),
+  paymentMethodIdx: index("idx_orders_payment_method").on(t.paymentMethod),
+  trackingNumberIdx: index("idx_orders_tracking_number").on(t.trackingNumber),
+  estimatedDeliveryIdx: index("idx_orders_estimated_delivery").on(t.estimatedDelivery),
+  paymentConfirmationIdx: index("idx_orders_payment_confirmation_hash").on(t.paymentConfirmationHash),
+}));
 
 // AI Moderation table for marketplace listings
 export const aiModeration = pgTable("ai_moderation", {
@@ -2018,6 +2067,54 @@ export const alert_configurations = pgTable("alert_configurations", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Image Storage Infrastructure
+export const imageStorage = pgTable("image_storage", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ipfsHash: varchar("ipfs_hash", { length: 255 }).notNull().unique(),
+  cdnUrl: varchar("cdn_url", { length: 500 }),
+  originalFilename: varchar("original_filename", { length: 255 }),
+  contentType: varchar("content_type", { length: 100 }),
+  fileSize: integer("file_size"),
+  width: integer("width"),
+  height: integer("height"),
+  thumbnails: text("thumbnails"), // JSON object with thumbnail URLs
+  ownerId: uuid("owner_id").references(() => users.id, { onDelete: "cascade" }),
+  usageType: varchar("usage_type", { length: 50 }), // 'profile', 'cover', 'listing', 'product'
+  usageReferenceId: varchar("usage_reference_id", { length: 255 }), // ID of the object using this image
+  backupUrls: text("backup_urls"), // JSON array of backup/mirror URLs
+  accessCount: integer("access_count").default(0),
+  lastAccessed: timestamp("last_accessed"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  ipfsHashIdx: index("idx_image_storage_ipfs_hash").on(t.ipfsHash),
+  ownerIdIdx: index("idx_image_storage_owner_id").on(t.ownerId),
+  usageTypeIdx: index("idx_image_storage_usage_type").on(t.usageType),
+  usageReferenceIdx: index("idx_image_storage_usage_reference").on(t.usageReferenceId),
+  createdAtIdx: index("idx_image_storage_created_at").on(t.createdAt),
+}));
+
+// ENS Verifications
+export const ensVerifications = pgTable("ens_verifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  ensHandle: varchar("ens_handle", { length: 255 }).notNull(),
+  verificationMethod: varchar("verification_method", { length: 50 }).notNull(), // 'signature', 'transaction', 'reverse_resolution'
+  verificationData: text("verification_data"), // JSON object with verification details
+  verifiedAt: timestamp("verified_at").defaultNow(),
+  verificationTxHash: varchar("verification_tx_hash", { length: 66 }),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  walletAddressIdx: index("idx_ens_verifications_wallet_address").on(t.walletAddress),
+  ensHandleIdx: index("idx_ens_verifications_ens_handle").on(t.ensHandle),
+  isActiveIdx: index("idx_ens_verifications_is_active").on(t.isActive),
+  expiresAtIdx: index("idx_ens_verifications_expires_at").on(t.expiresAt),
+  uniqueActiveIdx: index("idx_ens_verifications_unique_active").on(t.walletAddress, t.ensHandle),
+}));
 
 // Export all marketplace tables
 export const {

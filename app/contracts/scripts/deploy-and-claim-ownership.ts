@@ -231,14 +231,22 @@ class DeploymentManager {
     try {
       console.log(`🔍 Verifying contract at ${address}...`);
       
+      // Use Etherscan V2 API for verification
       await hre.run('verify:verify', {
         address: address,
         constructorArguments: constructorArgs,
+        // The hardhat-verify plugin will automatically use V2 API if configured
       });
       
-      console.log(`✅ Contract verified on Etherscan`);
+      console.log(`✅ Contract verified on Etherscan V2 API`);
     } catch (error) {
-      console.log(`⚠️  Verification failed (this is normal if already verified):`, error.message);
+      if (error.message.includes('Already Verified')) {
+        console.log(`✅ Contract already verified`);
+      } else {
+        console.log(`⚠️  Verification failed:`, error.message);
+        console.log(`   This might be due to API rate limits or network issues`);
+        console.log(`   You can manually verify later on Etherscan`);
+      }
     }
   }
 

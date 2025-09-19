@@ -79,12 +79,19 @@ const nextConfig = {
   },
   
   webpack: (config, { dev, isServer }) => {
-    config.resolve.fallback = { fs: false, net: false, tls: false };
+    config.resolve.fallback = { 
+      fs: false, 
+      net: false, 
+      tls: false,
+      '@react-native-async-storage/async-storage': false,
+      'react-native': false,
+    };
     
     // Add path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
+      '@react-native-async-storage/async-storage': false,
     };
 
     // Add SVG support
