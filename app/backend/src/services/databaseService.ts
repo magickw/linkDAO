@@ -1420,39 +1420,209 @@ export class DatabaseService {
       throw error;
     }
   }
-}
 
-// Singleton instance
-export const databaseService = new DatabaseService();
+  // Payment Transaction Methods
+
   /**
-
-   * Create a new user profile
+   * Create payment transaction record
    */
-  async createUser(userData: {
-    walletAddress: string;
-    handle: string;
-    email: string;
-    role?: string;
+  async createPaymentTransaction(transactionData: {
+    id: string;
+    orderId: number;
+    paymentMethod: string;
+    transactionHash?: string;
+    paymentIntentId?: string;
+    escrowId?: string;
+    amount: string;
+    currency: string;
+    status: string;
+    processingFee: string;
+    platformFee: string;
+    totalFees: string;
+    receiptUrl?: string;
+    receiptData?: string;
+    failureReason?: string;
+    retryCount: number;
+    metadata?: string;
   }): Promise<any> {
     try {
-      // Mock implementation - in production, insert into actual database
-      const user = {
-        id: `user_${userData.walletAddress.slice(-8)}`,
-        walletAddress: userData.walletAddress,
-        handle: userData.handle,
-        email: userData.email,
-        role: userData.role || 'user',
+      // Mock implementation - in production, insert into actual database table
+      const transaction = {
+        id: transactionData.id,
+        orderId: transactionData.orderId,
+        paymentMethod: transactionData.paymentMethod,
+        transactionHash: transactionData.transactionHash,
+        paymentIntentId: transactionData.paymentIntentId,
+        escrowId: transactionData.escrowId,
+        amount: transactionData.amount,
+        currency: transactionData.currency,
+        status: transactionData.status,
+        processingFee: transactionData.processingFee,
+        platformFee: transactionData.platformFee,
+        totalFees: transactionData.totalFees,
+        receiptUrl: transactionData.receiptUrl,
+        receiptData: transactionData.receiptData,
+        failureReason: transactionData.failureReason,
+        retryCount: transactionData.retryCount,
+        metadata: transactionData.metadata,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        confirmedAt: null
       };
       
-      console.log(`Created user profile for ${userData.walletAddress}`);
-      return user;
+      console.log(`Created payment transaction ${transactionData.id} for order ${transactionData.orderId}`);
+      return transaction;
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('Error creating payment transaction:', error);
       throw error;
     }
   }
+
+  /**
+   * Update payment transaction
+   */
+  async updatePaymentTransaction(transactionId: string, updates: any): Promise<any> {
+    try {
+      // Mock implementation - in production, update actual database record
+      console.log(`Updated payment transaction ${transactionId}:`, updates);
+      return { success: true, transactionId, updates };
+    } catch (error) {
+      console.error('Error updating payment transaction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment transaction by ID
+   */
+  async getPaymentTransactionById(transactionId: string): Promise<any> {
+    try {
+      // Mock implementation - in production, query actual database
+      const mockTransaction = {
+        id: transactionId,
+        orderId: 1,
+        paymentMethod: 'crypto',
+        transactionHash: '0x123...',
+        amount: '100.00',
+        currency: 'USDC',
+        status: 'completed',
+        processingFee: '0.50',
+        platformFee: '0.50',
+        totalFees: '1.00',
+        retryCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        confirmedAt: new Date()
+      };
+      
+      console.log(`Retrieved payment transaction ${transactionId}`);
+      return mockTransaction;
+    } catch (error) {
+      console.error('Error getting payment transaction:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get payment transactions by order ID
+   */
+  async getPaymentTransactionsByOrderId(orderId: number): Promise<any[]> {
+    try {
+      // Mock implementation - in production, query actual database
+      const mockTransactions = [{
+        id: `txn_${orderId}_1`,
+        orderId,
+        paymentMethod: 'crypto',
+        transactionHash: '0x123...',
+        amount: '100.00',
+        currency: 'USDC',
+        status: 'completed',
+        processingFee: '0.50',
+        platformFee: '0.50',
+        totalFees: '1.00',
+        retryCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        confirmedAt: new Date()
+      }];
+      
+      console.log(`Retrieved ${mockTransactions.length} payment transactions for order ${orderId}`);
+      return mockTransactions;
+    } catch (error) {
+      console.error('Error getting payment transactions by order ID:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Create payment receipt record
+   */
+  async createPaymentReceipt(receiptData: {
+    id: string;
+    transactionId: string;
+    orderId: number;
+    receiptNumber: string;
+    paymentMethod: string;
+    amount: string;
+    currency: string;
+    fees: string;
+    transactionDetails: string;
+    receiptUrl: string;
+    metadata?: string;
+  }): Promise<any> {
+    try {
+      // Mock implementation - in production, insert into actual database table
+      const receipt = {
+        id: receiptData.id,
+        transactionId: receiptData.transactionId,
+        orderId: receiptData.orderId,
+        receiptNumber: receiptData.receiptNumber,
+        paymentMethod: receiptData.paymentMethod,
+        amount: receiptData.amount,
+        currency: receiptData.currency,
+        fees: receiptData.fees,
+        transactionDetails: receiptData.transactionDetails,
+        receiptUrl: receiptData.receiptUrl,
+        metadata: receiptData.metadata,
+        createdAt: new Date()
+      };
+      
+      console.log(`Created payment receipt ${receiptData.receiptNumber} for transaction ${receiptData.transactionId}`);
+      return receipt;
+    } catch (error) {
+      console.error('Error creating payment receipt:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment receipts by order ID
+   */
+  async getPaymentReceiptsByOrderId(orderId: number): Promise<any[]> {
+    try {
+      // Mock implementation - in production, query actual database
+      const mockReceipts = [{
+        id: `receipt_${orderId}_1`,
+        transactionId: `txn_${orderId}_1`,
+        orderId,
+        receiptNumber: `RCP-${Date.now()}-ABC123`,
+        paymentMethod: 'crypto',
+        amount: '100.00',
+        currency: 'USDC',
+        fees: '{"processing":"0.50","platform":"0.50","total":"1.00"}',
+        transactionDetails: '{"hash":"0x123...","blockNumber":12345}',
+        receiptUrl: `http://localhost:3000/receipts/RCP-${Date.now()}-ABC123`,
+        createdAt: new Date()
+      }];
+      
+      console.log(`Retrieved ${mockReceipts.length} payment receipts for order ${orderId}`);
+      return mockReceipts;
+    } catch (error) {
+      console.error('Error getting payment receipts by order ID:', error);
+      return [];
+    }
+  }
+
 
   /**
    * Create order tracking entry
@@ -1481,3 +1651,7 @@ export const databaseService = new DatabaseService();
       throw error;
     }
   }
+}
+
+// Singleton instance
+export const databaseService = new DatabaseService();

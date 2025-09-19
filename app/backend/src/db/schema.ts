@@ -2131,3 +2131,77 @@ export const {
   marketplaceAnalytics,
   marketplaceConfig
 } = marketplaceSchema;
+
+// Payment Transaction Tables for Order-Payment Integration
+
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }),
+  escrowId: varchar("escrow_id", { length: 255 }),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  processingFee: numeric("processing_fee", { precision: 20, scale: 8 }).default('0'),
+  platformFee: numeric("platform_fee", { precision: 20, scale: 8 }).default('0'),
+  gasFee: numeric("gas_fee", { precision: 20, scale: 8 }).default('0'),
+  totalFees: numeric("total_fees", { precision: 20, scale: 8 }).default('0'),
+  receiptUrl: varchar("receipt_url", { length: 500 }),
+  receiptData: text("receipt_data"), // JSON
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0),
+  metadata: text("metadata"), // JSON
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  confirmedAt: timestamp("confirmed_at")
+}, (t) => ({
+  orderIdIdx: index("idx_payment_transactions_order_id").on(t.orderId),
+  paymentMethodIdx: index("idx_payment_transactions_payment_method").on(t.paymentMethod),
+  statusIdx: index("idx_payment_transactions_status").on(t.status),
+  transactionHashIdx: index("idx_payment_transactions_transaction_hash").on(t.transactionHash),
+  paymentIntentIdIdx: index("idx_payment_transactions_payment_intent_id").on(t.paymentIntentId),
+  escrowIdIdx: index("idx_payment_transactions_escrow_id").on(t.escrowId),
+  createdAtIdx: index("idx_payment_transactions_created_at").on(t.createdAt),
+  confirmedAtIdx: index("idx_payment_transactions_confirmed_at").on(t.confirmedAt)
+}));
+
+export const paymentReceipts = pgTable("payment_receipts", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  transactionId: varchar("transaction_id", { length: 255 }).references(() => paymentTransactions.id).notNull(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  receiptNumber: varchar("receipt_number", { length: 100 }).notNull().unique(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  fees: text("fees").notNull(), // JSON
+  transactionDetails: text("transaction_details").notNull(), // JSON
+  receiptUrl: varchar("receipt_url", { length: 500 }).notNull(),
+  metadata: text("metadata"), // JSON
+  createdAt: timestamp("created_at").defaultNow()
+}, (t) => ({
+  transactionIdIdx: index("idx_payment_receipts_transaction_id").on(t.transactionId),
+  orderIdIdx: index("idx_payment_receipts_order_id").on(t.orderId),
+  receiptNumberIdx: index("idx_payment_receipts_receipt_number").on(t.receiptNumber),
+  paymentMethodIdx: index("idx_payment_receipts_payment_method").on(t.paymentMethod),
+  createdAtIdx: index("idx_payment_receipts_created_at").on(t.createdAt)
+}));
+
+export const orderPaymentEvents = pgTable("order_payment_events", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  transactionId: varchar("transaction_id", { length: 255 }).references(() => paymentTransactions.id),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  eventDescription: text("event_description").notNull(),
+  paymentStatus: varchar("payment_status", { length: 20 }),
+  orderStatus: varchar("order_status", { length: 20 }),
+  eventData: text("event_data"), // JSON
+  createdAt: timestamp("created_at").defaultNow()
+}, (t) => ({
+  orderIdIdx: index("idx_order_payment_events_order_id").on(t.orderId),
+  transactionIdIdx: index("idx_order_payment_events_transaction_id").on(t.transactionId),
+  eventTypeIdx: index("idx_order_payment_events_event_type").on(t.eventType),
+  paymentStatusIdx: index("idx_order_payment_events_payment_status").on(t.paymentStatus),
+  createdAtIdx: index("idx_order_payment_events_created_at").on(t.createdAt)
+}));
