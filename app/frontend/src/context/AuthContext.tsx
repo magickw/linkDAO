@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
 import { authService, AuthUser, KYCStatus } from '@/services/authService';
+import { UserRole, Permission } from '@/types/auth';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -22,6 +23,12 @@ interface AuthContextType {
   initiateKYC: (tier: 'basic' | 'intermediate' | 'advanced') => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
   refreshKYCStatus: () => Promise<void>;
+  // Role-based access control
+  hasRole: (role: UserRole) => boolean;
+  hasPermission: (permission: Permission) => boolean;
+  isAdmin: boolean;
+  isModerator: boolean;
+  isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -209,6 +216,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await loadKYCStatus();
   };
 
+  // Role hierarchy: super_admin > admin > moderator > user
+  const roleHierarchy: Record<UserRole, number> = {
+    user: 0,
+    moderator: 1,
+    admin: 2,
+    super_admin: 3
+  };
+
+  const hasRole = (requiredRole: UserRole): boolean => {
+    if (!user || !user.role) return false;
+    return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
+  };
+
+  const hasPermission = (permission: Permission): boolean => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(permission as unknown as string);
+  };
+
+  const isAdmin = hasRole('admin');
+  const isModerator = hasRole('moderator');
+  const isSuperAdmin = hasRole('super_admin');
+
   // Auto-refresh token periodically
   useEffect(() => {
     if (!authService.isAuthenticated()) return;
@@ -239,6 +268,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initiateKYC,
     refreshUser,
     refreshKYCStatus,
+    // Role-based access control
+    hasRole,
+    hasPermission,
+    isAdmin,
+    isModerator,
+    isSuperAdmin,
   };
 
   return (
