@@ -5,19 +5,43 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
+// Import security configuration and middleware
+import { validateSecurityConfig } from './config/securityConfig';
+import {
+  corsMiddleware,
+  helmetMiddleware,
+  ddosProtection,
+  requestFingerprinting,
+  inputValidation,
+  threatDetection,
+  securityAuditLogging,
+  fileUploadSecurity,
+  apiRateLimit,
+} from './middleware/securityMiddleware';
+
+// Validate security configuration on startup
+try {
+  validateSecurityConfig();
+} catch (error) {
+  console.error('Security configuration validation failed:', error);
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Very permissive CORS for debugging
-app.use(cors({
-  origin: true, // Allow all origins for now
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['*'],
-  exposedHeaders: ['*']
-}));
-
-app.use(express.json());
+// Security middleware stack
+app.use(helmetMiddleware);
+app.use(corsMiddleware);
+app.use(ddosProtection);
+app.use(requestFingerprinting);
+app.use(apiRateLimit);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(inputValidation);
+app.use(threatDetection);
+app.use(securityAuditLogging);
+app.use(fileUploadSecurity);
 
 // Basic routes
 app.get('/', (req, res) => {
@@ -118,6 +142,9 @@ app.get('/api/posts', (req, res) => {
   });
 });
 
+// Import security routes
+import securityRoutes from './routes/securityRoutes';
+
 // Import marketplace verification routes
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';
 // Import link safety routes
@@ -136,6 +163,9 @@ import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
 import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 // Import advanced analytics routes
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
+
+// Security routes
+app.use('/api/security', securityRoutes);
 
 // Marketplace verification routes
 app.use('/api/marketplace/verification', marketplaceVerificationRoutes);
