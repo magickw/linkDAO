@@ -9,6 +9,11 @@ export interface AuthUser {
   email?: string;
   kycStatus: 'none' | 'pending' | 'basic' | 'intermediate' | 'advanced';
   kycTier?: string;
+  role: 'user' | 'moderator' | 'admin' | 'super_admin';
+  permissions?: string[];
+  isSuspended?: boolean;
+  suspensionReason?: string;
+  suspensionExpiresAt?: string;
   preferences?: {
     notifications?: {
       email?: boolean;

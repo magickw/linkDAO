@@ -27,6 +27,14 @@ export interface SellerProfile {
         linkedin?: string;
         website?: string;
     };
+    
+    // Application Status
+    applicationStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
+    applicationDate: string;
+    approvedDate?: string;
+    rejectionReason?: string;
+    suspensionReason?: string;
+    reviewedBy?: string;
 
     // Verification Data
     email?: string;
