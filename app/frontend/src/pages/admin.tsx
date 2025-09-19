@@ -10,131 +10,116 @@ import {
   FileText,
   MessageSquare
 } from 'lucide-react';
-import { AdminDashboard } from '@/components/Admin/AdminDashboard';
-import { ModerationQueue } from '@/components/Admin/ModerationQueue';
-import { SellerApplications } from '@/components/Admin/SellerApplications';
-import { DisputeResolution } from '@/components/Admin/DisputeResolution';
-import { UserManagement } from '@/components/Admin/UserManagement';
-import { AdminAnalytics } from '@/components/Admin/AdminAnalytics';
-import { RoleGuard } from '@/components/Auth/RoleGuard';
-import { useAuth } from '@/hooks/useAuth';
-import { Button, GlassPanel } from '@/design-system';
-
-type AdminTab = 'dashboard' | 'moderation' | 'sellers' | 'disputes' | 'users' | 'analytics';
 
 const AdminPage: NextPage = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const { user } = useAuth();
-
-  const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, requiredRole: 'moderator' as const },
-    { id: 'moderation', label: 'Moderation', icon: Shield, requiredRole: 'moderator' as const },
-    { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, requiredRole: 'moderator' as const },
-    { id: 'disputes', label: 'Disputes', icon: AlertTriangle, requiredRole: 'moderator' as const },
-    { id: 'users', label: 'User Management', icon: Users, requiredRole: 'admin' as const },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, requiredRole: 'admin' as const },
-  ];
-
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <AdminDashboard />;
-      case 'moderation':
-        return <ModerationQueue />;
-      case 'sellers':
-        return <SellerApplications />;
-      case 'disputes':
-        return <DisputeResolution />;
-      case 'users':
-        return (
-          <RoleGuard requiredRole="admin" fallback={
-            <GlassPanel className="p-8 text-center">
-              <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Access Denied</h3>
-              <p className="text-gray-400">You need admin privileges to access user management.</p>
-            </GlassPanel>
-          }>
-            <UserManagement />
-          </RoleGuard>
-        );
-      case 'analytics':
-        return (
-          <RoleGuard requiredRole="admin" fallback={
-            <GlassPanel className="p-8 text-center">
-              <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Access Denied</h3>
-              <p className="text-gray-400">You need admin privileges to access analytics.</p>
-            </GlassPanel>
-          }>
-            <AdminAnalytics />
-          </RoleGuard>
-        );
-      default:
-        return <AdminDashboard />;
-    }
-  };
-
   return (
-    <RoleGuard 
-      requiredRole="moderator" 
-      fallback={
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
-          <GlassPanel className="p-8 text-center max-w-md">
-            <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
-            <p className="text-gray-400 mb-4">
-              You need moderator or admin privileges to access the admin panel.
-            </p>
-            <Button 
-              onClick={() => window.history.back()} 
-              variant="primary"
-            >
-              Go Back
-            </Button>
-          </GlassPanel>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Shield className="w-8 h-8 text-purple-400" />
+            <h1 className="text-3xl font-bold text-white">Admin Panel</h1>
+          </div>
+          <p className="text-gray-400">
+            Administrative dashboard for LinkDAO platform management.
+          </p>
         </div>
-      }
-    >
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Shield className="w-8 h-8 text-purple-400" />
-              <h1 className="text-3xl font-bold text-white">Admin Panel</h1>
+
+        {/* Simple Admin Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Users Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <Users className="w-8 h-8 text-blue-400" />
+              <h3 className="text-xl font-bold text-white">Users</h3>
             </div>
-            <p className="text-gray-400">
-              Welcome back, {user?.handle}. You have {user?.role.replace('_', ' ')} privileges.
-            </p>
+            <p className="text-gray-300 mb-4">Manage user accounts and permissions</p>
+            <div className="text-2xl font-bold text-white">1,234</div>
+            <p className="text-sm text-gray-400">Total users</p>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="mb-8">
-            <GlassPanel className="p-2">
-              <div className="flex flex-wrap gap-2">
-                {tabs.map((tab) => (
-                  <RoleGuard key={tab.id} requiredRole={tab.requiredRole}>
-                    <Button
-                      variant={activeTab === tab.id ? 'primary' : 'outline'}
-                      onClick={() => setActiveTab(tab.id as AdminTab)}
-                      className="flex items-center gap-2"
-                    >
-                      <tab.icon className="w-4 h-4" />
-                      {tab.label}
-                    </Button>
-                  </RoleGuard>
-                ))}
+          {/* Moderation Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-8 h-8 text-green-400" />
+              <h3 className="text-xl font-bold text-white">Moderation</h3>
+            </div>
+            <p className="text-gray-300 mb-4">Review flagged content and reports</p>
+            <div className="text-2xl font-bold text-white">23</div>
+            <p className="text-sm text-gray-400">Pending reviews</p>
+          </div>
+
+          {/* Sellers Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <ShoppingBag className="w-8 h-8 text-purple-400" />
+              <h3 className="text-xl font-bold text-white">Sellers</h3>
+            </div>
+            <p className="text-gray-300 mb-4">Manage seller applications</p>
+            <div className="text-2xl font-bold text-white">45</div>
+            <p className="text-sm text-gray-400">Active sellers</p>
+          </div>
+
+          {/* Disputes Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle className="w-8 h-8 text-yellow-400" />
+              <h3 className="text-xl font-bold text-white">Disputes</h3>
+            </div>
+            <p className="text-gray-300 mb-4">Handle transaction disputes</p>
+            <div className="text-2xl font-bold text-white">7</div>
+            <p className="text-sm text-gray-400">Open disputes</p>
+          </div>
+
+          {/* Analytics Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <BarChart3 className="w-8 h-8 text-indigo-400" />
+              <h3 className="text-xl font-bold text-white">Analytics</h3>
+            </div>
+            <p className="text-gray-300 mb-4">Platform performance metrics</p>
+            <div className="text-2xl font-bold text-white">98.5%</div>
+            <p className="text-sm text-gray-400">Uptime</p>
+          </div>
+
+          {/* Settings Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <div className="flex items-center gap-3 mb-4">
+              <Settings className="w-8 h-8 text-gray-400" />
+              <h3 className="text-xl font-bold text-white">Settings</h3>
+            </div>
+            <p className="text-gray-300 mb-4">Platform configuration</p>
+            <div className="text-2xl font-bold text-white">12</div>
+            <p className="text-sm text-gray-400">Active configs</p>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="mt-8">
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
+            <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                <Users className="w-5 h-5 text-blue-400" />
+                <span className="text-gray-300">New user registered: alice.eth</span>
+                <span className="text-sm text-gray-400 ml-auto">2 minutes ago</span>
               </div>
-            </GlassPanel>
-          </div>
-
-          {/* Tab Content */}
-          <div className="space-y-6">
-            {renderTabContent()}
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                <ShoppingBag className="w-5 h-5 text-purple-400" />
+                <span className="text-gray-300">Seller application approved: NFT Store</span>
+                <span className="text-sm text-gray-400 ml-auto">15 minutes ago</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                <span className="text-gray-300">Dispute resolved: Order #1234</span>
+                <span className="text-sm text-gray-400 ml-auto">1 hour ago</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </RoleGuard>
+    </div>
   );
 };
 

@@ -38,7 +38,6 @@
     "critters": "^0.0.23",
     "ethers": "^5.7.2",
     "framer-motion": "^11.0.0",
-
     "lucide-react": "^0.542.0",
     "next": "^13.4.12",
     "react": "^18.2.0",
@@ -73,6 +72,7 @@
     "@types/node": "^20.19.11",
     "@types/react": "18.3.24",
     "@types/react-dom": "^18.2.7",
+    "@types/react-native": "^0.72.8",
     "@wagmi/cli": "^2.5.1",
     "autoprefixer": "^10.4.14",
     "eslint": "^8.46.0",
