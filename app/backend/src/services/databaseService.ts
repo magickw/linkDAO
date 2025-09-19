@@ -1424,3 +1424,60 @@ export class DatabaseService {
 
 // Singleton instance
 export const databaseService = new DatabaseService();
+  /**
+
+   * Create a new user profile
+   */
+  async createUser(userData: {
+    walletAddress: string;
+    handle: string;
+    email: string;
+    role?: string;
+  }): Promise<any> {
+    try {
+      // Mock implementation - in production, insert into actual database
+      const user = {
+        id: `user_${userData.walletAddress.slice(-8)}`,
+        walletAddress: userData.walletAddress,
+        handle: userData.handle,
+        email: userData.email,
+        role: userData.role || 'user',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log(`Created user profile for ${userData.walletAddress}`);
+      return user;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create order tracking entry
+   */
+  async createOrderTracking(trackingData: {
+    orderId: number;
+    status: string;
+    message: string;
+    timestamp: Date;
+  }): Promise<any> {
+    try {
+      // Mock implementation - in production, insert into actual database
+      const tracking = {
+        id: Math.floor(Math.random() * 10000),
+        orderId: trackingData.orderId,
+        status: trackingData.status,
+        message: trackingData.message,
+        timestamp: trackingData.timestamp,
+        createdAt: new Date()
+      };
+      
+      console.log(`Created order tracking for order ${trackingData.orderId}: ${trackingData.status}`);
+      return tracking;
+    } catch (error) {
+      console.error('Error creating order tracking:', error);
+      throw error;
+    }
+  }

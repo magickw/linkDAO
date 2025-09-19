@@ -163,6 +163,12 @@ import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
 import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 // Import advanced analytics routes
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
+// Import seller routes
+import sellerRoutes from './routes/sellerRoutes';
+// Import listing routes
+import listingRoutes from './routes/listingRoutes';
+// Import order creation routes
+import orderCreationRoutes from './routes/orderCreationRoutes';
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -193,6 +199,15 @@ app.use('/api/shipping', daoShippingPartnersRouter);
 
 // Advanced analytics routes
 app.use('/api/analytics', advancedAnalyticsRouter);
+
+// Seller routes
+app.use('/api/sellers', sellerRoutes);
+
+// Listing routes
+app.use('/api/listings', listingRoutes);
+
+// Order creation routes
+app.use('/api/orders', orderCreationRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {

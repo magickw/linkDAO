@@ -1,7 +1,40 @@
-import { SellerProfile, SellerDashboardStats, SellerNotification, SellerOrder, SellerListing, SellerAnalytics, OnboardingStep, SellerTier } from '../types/seller';
+import { 
+  SellerProfile, 
+  SellerDashboardStats, 
+  SellerNotification, 
+  SellerOrder, 
+  SellerListing, 
+  SellerAnalytics, 
+  OnboardingStep, 
+  SellerTier,
+  SellerProfileUpdateRequest,
+  SellerProfileUpdateResponse,
+  ENSValidationResult,
+  ProfileCompletenessCalculation,
+  ValidationResult,
+  ProfileValidationRule,
+  ProfileValidationOptions
+} from '../types/seller';
 
 class SellerService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+
+  // Profile validation rules with weights for completeness scoring
+  private validationRules: ProfileValidationRule[] = [
+    { field: 'displayName', required: true, weight: 15 },
+    { field: 'storeName', required: true, weight: 15 },
+    { field: 'bio', required: true, weight: 10 },
+    { field: 'description', required: false, weight: 8 },
+    { field: 'sellerStory', required: false, weight: 8 },
+    { field: 'location', required: false, weight: 5 },
+    { field: 'profileImageCdn', required: false, weight: 10 },
+    { field: 'coverImageCdn', required: false, weight: 8 },
+    { field: 'websiteUrl', required: false, weight: 5 },
+    { field: 'socialLinks.twitter', required: false, weight: 3 },
+    { field: 'socialLinks.discord', required: false, weight: 3 },
+    { field: 'socialLinks.telegram', required: false, weight: 3 },
+    { field: 'ensHandle', required: false, weight: 7 }, // ENS is optional but valuable
+  ];
 
   // Seller Tiers Configuration
   getSellerTiers(): SellerTier[] {
@@ -167,7 +200,21 @@ class SellerService {
       // The backend returns { success: true, data: {...} }
       // We need to return the data object
       if (result.success) {
-        return result.data || null;
+        const profile = result.data || null;
+        
+        if (profile) {
+          // Calculate profile completeness if not already calculated or outdated
+          if (!profile.profileCompleteness || this.isCompletenessOutdated(profile.profileCompleteness.lastCalculated)) {
+            profile.profileCompleteness = this.calculateProfileCompleteness(profile);
+          }
+          
+          // Ensure ENS verification status is properly set
+          if (!profile.ensVerified) {
+            profile.ensVerified = false;
+          }
+        }
+        
+        return profile;
       } else {
         throw new Error(result.message || 'Failed to fetch seller profile');
       }
@@ -221,6 +268,290 @@ class SellerService {
     } else {
       throw new Error(result.message || 'Failed to update seller profile');
     }
+  }
+
+  // Enhanced Profile Update with ENS and Image Support
+  async updateSellerProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
+    try {
+      const formData = new FormData();
+      
+      // Add text fields
+      Object.entries(updates).forEach(([key, value]) => {
+        if (key !== 'profileImage' && key !== 'coverImage' && value !== undefined) {
+          if (typeof value === 'object') {
+            formData.append(key, JSON.stringify(value));
+          } else {
+            formData.append(key, value.toString());
+          }
+        }
+      });
+      
+      // Add image files
+      if (updates.profileImage) {
+        formData.append('profileImage', updates.profileImage);
+      }
+      if (updates.coverImage) {
+        formData.append('coverImage', updates.coverImage);
+      }
+
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}/enhanced`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update seller profile');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to update seller profile');
+      }
+    } catch (error) {
+      console.error('Error updating seller profile:', error);
+      throw error;
+    }
+  }
+
+  // ENS Validation Methods
+  async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ens/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ensHandle }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to validate ENS handle');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to validate ENS handle');
+      }
+    } catch (error) {
+      console.error('Error validating ENS handle:', error);
+      return {
+        isValid: false,
+        isAvailable: false,
+        isOwned: false,
+        errors: ['Failed to validate ENS handle'],
+        suggestions: [],
+      };
+    }
+  }
+
+  async verifyENSOwnership(ensHandle: string, walletAddress: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/ens/verify-ownership`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ensHandle, walletAddress }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const result = await response.json();
+      return result.success && result.data?.isOwned;
+    } catch (error) {
+      console.error('Error verifying ENS ownership:', error);
+      return false;
+    }
+  }
+
+  // Profile Validation and Completeness
+  validateProfile(profile: Partial<SellerProfile>, options: ProfileValidationOptions = {
+    ensRequired: false,
+    imageRequired: false,
+    socialLinksRequired: false,
+    strictValidation: false
+  }): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Validate required fields
+    this.validationRules.forEach(rule => {
+      if (rule.required || (rule.field === 'ensHandle' && options.ensRequired)) {
+        const value = this.getNestedValue(profile, rule.field);
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+          errors.push(`${rule.field} is required`);
+        }
+      }
+    });
+
+    // Validate ENS handle format if provided
+    if (profile.ensHandle && !this.isValidENSFormat(profile.ensHandle)) {
+      errors.push('ENS handle format is invalid');
+    }
+
+    // Validate URLs
+    if (profile.websiteUrl && !this.isValidUrl(profile.websiteUrl)) {
+      errors.push('Website URL is invalid');
+    }
+
+    // Validate social links
+    if (profile.socialLinks) {
+      Object.entries(profile.socialLinks).forEach(([platform, handle]) => {
+        if (handle && !this.isValidSocialHandle(platform, handle)) {
+          warnings.push(`${platform} handle format may be invalid`);
+        }
+      });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+    };
+  }
+
+  calculateProfileCompleteness(profile: Partial<SellerProfile>): ProfileCompletenessCalculation {
+    let totalWeight = 0;
+    let completedWeight = 0;
+    const missingFields: Array<{
+      field: string;
+      label: string;
+      weight: number;
+      required: boolean;
+    }> = [];
+
+    this.validationRules.forEach(rule => {
+      totalWeight += rule.weight;
+      const value = this.getNestedValue(profile, rule.field);
+      const isCompleted = value && (typeof value !== 'string' || value.trim() !== '');
+      
+      if (isCompleted) {
+        completedWeight += rule.weight;
+      } else {
+        missingFields.push({
+          field: rule.field,
+          label: this.getFieldLabel(rule.field),
+          weight: rule.weight,
+          required: rule.required,
+        });
+      }
+    });
+
+    const score = Math.round((completedWeight / totalWeight) * 100);
+    
+    const recommendations = this.generateRecommendations(missingFields, score);
+
+    return {
+      totalFields: this.validationRules.length,
+      completedFields: this.validationRules.length - missingFields.length,
+      score,
+      missingFields,
+      recommendations,
+    };
+  }
+
+  // Helper Methods
+  private getNestedValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
+  }
+
+  private isValidENSFormat(ensHandle: string): boolean {
+    return /^[a-z0-9-]+\.eth$/.test(ensHandle.toLowerCase());
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private isValidSocialHandle(platform: string, handle: string): boolean {
+    const patterns: Record<string, RegExp> = {
+      twitter: /^@?[A-Za-z0-9_]{1,15}$/,
+      discord: /^.{2,32}#[0-9]{4}$|^[A-Za-z0-9_.]{2,32}$/,
+      telegram: /^@?[A-Za-z0-9_]{5,32}$/,
+    };
+    
+    const pattern = patterns[platform];
+    return pattern ? pattern.test(handle) : true;
+  }
+
+  private getFieldLabel(field: string): string {
+    const labels: Record<string, string> = {
+      'displayName': 'Display Name',
+      'storeName': 'Store Name',
+      'bio': 'Bio',
+      'description': 'Description',
+      'sellerStory': 'Seller Story',
+      'location': 'Location',
+      'profileImageCdn': 'Profile Image',
+      'coverImageCdn': 'Cover Image',
+      'websiteUrl': 'Website URL',
+      'socialLinks.twitter': 'Twitter Handle',
+      'socialLinks.discord': 'Discord Handle',
+      'socialLinks.telegram': 'Telegram Handle',
+      'ensHandle': 'ENS Handle',
+    };
+    
+    return labels[field] || field;
+  }
+
+  private generateRecommendations(missingFields: any[], score: number): Array<{
+    action: string;
+    description: string;
+    impact: number;
+  }> {
+    const recommendations: Array<{
+      action: string;
+      description: string;
+      impact: number;
+    }> = [];
+
+    // Sort missing fields by weight (impact)
+    const sortedMissing = missingFields.sort((a, b) => b.weight - a.weight);
+
+    // Add top recommendations
+    sortedMissing.slice(0, 3).forEach(field => {
+      recommendations.push({
+        action: `Add ${field.label}`,
+        description: `Adding your ${field.label.toLowerCase()} will help buyers trust your store`,
+        impact: field.weight,
+      });
+    });
+
+    // Add score-based recommendations
+    if (score < 50) {
+      recommendations.unshift({
+        action: 'Complete Basic Profile',
+        description: 'Fill in your display name, store name, and bio to get started',
+        impact: 40,
+      });
+    } else if (score < 80) {
+      recommendations.push({
+        action: 'Add Visual Elements',
+        description: 'Upload a profile picture and cover image to make your store more appealing',
+        impact: 18,
+      });
+    }
+
+    return recommendations;
+  }
+
+  private isCompletenessOutdated(lastCalculated: string): boolean {
+    const lastCalc = new Date(lastCalculated);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
+    return hoursDiff > 24; // Recalculate if older than 24 hours
   }
 
   // Dashboard Data

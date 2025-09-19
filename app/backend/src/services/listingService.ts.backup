@@ -1,0 +1,941 @@
+import {
+    CreateProductInput,
+    UpdateProductInput,
+    Product,
+    ProductStatus,
+    ProductSearchFilters,
+    ProductSortOptions,
+    PaginationOptions,
+    ProductSearchResult
+} from '../models/Product';
+import { ProductService } from './productService';
+import { MarketplaceService } from './marketplaceService';
+import ImageStorageService from './imageStorageService';
+import { DatabaseService } from './databaseService';
+import { RedisService } from './redisService';
+import { ValidationHelper, ValidationError } from '../models/validation';
+import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
+import * as schema from '../db/schema';
+import { CreateListingInput as BlockchainListingInput, MarketplaceListing } from '../models/Marketplace';
+
+export interface CreateListingInput extends CreateProductInput {
+    // Additional listing-specific fields
+    listingStatus?: ListingStatus;
+    seoTitle?: string;
+    seoDescription?: string;
+    seoKeywords?: string[];
+    primaryImageIndex?: number;
+}
+
+export interface UpdateListingInput extends UpdateProductInput {
+    listingStatus?: ListingStatus;
+    seoTitle?: string;
+    seoDescription?: string;
+    seoKeywords?: string[];
+    primaryImageIndex?: number;
+}
+
+export type ListingStatus = 'draft' | 'active' | 'published' | 'inactive' | 'suspended';
+
+export interface ListingValidationResult {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    completeness: number; // 0-100 percentage
+}
+
+export interface ListingMetadata {
+    searchVector?: string;
+    imageIpfsHashes?: string[];
+    imageCdnUrls?: Record<string, string>;
+    primaryImageIndex?: number;
+    seoTitle?: string;
+    seoDescription?: string;
+    seoKeywords?: string[];
+    publishedAt?: Date;
+    lastIndexed?: Date;
+}
+
+export interface ListingPublicationResult {
+    success: boolean;
+    listingId: string;
+    publishedAt: Date;
+    searchIndexed: boolean;
+    errors?: string[];
+}
+
+export interface ListingSearchIndexUpdate {
+    listingId: string;
+    searchVector: string;
+    keywords: string[];
+    lastIndexed: Date;
+}
+
+export class ListingService {
+    private productService: ProductService;
+    private marketplaceService: MarketplaceService;
+    private imageStorageService: typeof ImageStorageService;
+    private databaseService: DatabaseService;
+    private redisService: RedisService;
+
+    constructor() {
+        this.productService = new ProductService();
+        this.marketplaceService = new MarketplaceService();
+        this.imageStorageService = ImageStorageService;
+        this.databaseService = new DatabaseService();
+        this.redisService = new RedisService();
+    }
+        this.productService = new ProductService();
+        this.imageStorageService = ImageStorageService;
+        this.databaseService = new DatabaseService();
+        this.redisService = new RedisService();
+    }
+
+    /**
+     * Create a new listing with enhanced validation and storage
+     * Requirements: 3.1, 3.2, 3.4
+     */
+    async createListing(input: CreateListingInput): Promise<Product> {
+        // Validate listing input comprehensively
+        const validation = await this.validateListingInput(input);
+        if (!validation.isValid) {
+            throw new ValidationError(`Listing validation failed: ${validation.errors.join(', ')}`, 'listing');
+        }
+
+        const db = this.databaseService.getDatabase();
+
+        try {
+            // Start transaction for atomic listing creation
+            const result = await db.transaction(async (tx) => {
+                // Create the base product using ProductService
+                const product = await this.productService.createProduct(input);
+
+                // Update with listing-specific enhancements
+                const listingUpdates: any = {
+                    listingStatus: input.listingStatus || 'draft',
+                    primaryImageIndex: input.primaryImageIndex || 0,
+                    seoTitle: input.seoTitle,
+                    seoDescription: input.seoDescription,
+                    seoKeywords: input.seoKeywords ? JSON.stringify(input.seoKeywords) : null,
+                    updatedAt: new Date()
+                };
+
+                // Generate search vector for full-text search
+                const searchVector = this.generateSearchVector(input);
+                listingUpdates.searchVector = searchVector;
+
+                // Store image metadata if images provided
+                if (input.images && input.images.length > 0) {
+                    listingUpdates.imageIpfsHashes = JSON.stringify(input.images);
+                    // CDN URLs will be populated by image service integration
+                }
+
+                // Update the product with listing enhancements
+                await tx.update(schema.products)
+                    .set(listingUpdates)
+                    .where(eq(schema.products.id, product.id));
+
+                return product;
+            });
+
+            // Cache the new listing for fast access
+            await this.cacheListingData(result.id, result);
+
+            // Log listing creation activity
+            await this.logListingActivity(result.id, 'created', {
+                sellerId: input.sellerId,
+                status: input.listingStatus || 'draft'
+            });
+
+            return result;
+        } catch (error) {
+            throw new ValidationError(
+                `Failed to create listing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'creation'
+            );
+        }
+    }
+
+    /**
+     * Update listing with comprehensive validation
+     * Requirements: 3.1, 3.4
+     */
+    async updateListing(id: string, input: UpdateListingInput): Promise<Product | null> {
+        const db = this.databaseService.getDatabase();
+
+        try {
+            // Get current listing
+            const currentListing = await this.getListingById(id);
+            if (!currentListing) {
+                return null;
+            }
+
+            // Validate update input
+            const validation = await this.validateListingUpdate(currentListing, input);
+            if (!validation.isValid) {
+                throw new ValidationError(`Listing update validation failed: ${validation.errors.join(', ')}`, 'update');
+            }
+
+            // Start transaction for atomic update
+            const result = await db.transaction(async (tx) => {
+                // Update base product using ProductService
+                const updatedProduct = await this.productService.updateProduct(id, input);
+                if (!updatedProduct) {
+                    throw new Error('Failed to update base product');
+                }
+
+                // Update listing-specific fields
+                const listingUpdates: any = { updatedAt: new Date() };
+
+                if (input.listingStatus !== undefined) {
+                    listingUpdates.listingStatus = input.listingStatus;
+
+                    // Set publishedAt when status changes to published
+                    if (input.listingStatus === 'published') {
+                        listingUpdates.publishedAt = new Date();
+                    }
+                }
+
+                if (input.primaryImageIndex !== undefined) {
+                    listingUpdates.primaryImageIndex = input.primaryImageIndex;
+                }
+
+                if (input.seoTitle !== undefined) {
+                    listingUpdates.seoTitle = input.seoTitle;
+                }
+
+                if (input.seoDescription !== undefined) {
+                    listingUpdates.seoDescription = input.seoDescription;
+                }
+
+                if (input.seoKeywords !== undefined) {
+                    listingUpdates.seoKeywords = JSON.stringify(input.seoKeywords);
+                }
+
+                // Regenerate search vector if content changed
+                if (input.title || input.description || input.tags || input.seoKeywords) {
+                    const searchInput = {
+                        title: input.title || currentListing.title,
+                        description: input.description || currentListing.description,
+                        tags: input.tags || currentListing.tags,
+                        seoKeywords: input.seoKeywords || []
+                    };
+                    listingUpdates.searchVector = this.generateSearchVector(searchInput);
+                }
+
+                // Update image metadata if images changed
+                if (input.images !== undefined) {
+                    listingUpdates.imageIpfsHashes = JSON.stringify(input.images);
+                }
+
+                // Apply listing updates
+                await tx.update(schema.products)
+                    .set(listingUpdates)
+                    .where(eq(schema.products.id, id));
+
+                return updatedProduct;
+            });
+
+            // Invalidate cache
+            await this.invalidateListingCache(id);
+
+            // Log listing update activity
+            await this.logListingActivity(id, 'updated', {
+                changes: Object.keys(input),
+                newStatus: input.listingStatus
+            });
+
+            return result;
+        } catch (error) {
+            throw new ValidationError(
+                `Failed to update listing: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'update'
+            );
+        }
+    }
+
+    /**
+     * Get listing by ID with enhanced metadata
+     * Requirements: 3.2, 3.3
+     */
+    async getListingById(id: string): Promise<Product | null> {
+        // Try cache first
+        const cached = await this.redisService.getCachedProductListing(id);
+        if (cached) {
+            return cached;
+        }
+
+        // Get from database
+        const listing = await this.productService.getProductById(id);
+        if (listing) {
+            // Cache for future requests
+            await this.cacheListingData(id, listing);
+        }
+
+        return listing;
+    }
+
+    /**
+     * Get marketplace listings with real-time visibility
+     * Requirements: 3.2, 3.3
+     */
+    async getMarketplaceListings(
+        filters: ProductSearchFilters = {},
+        sort: ProductSortOptions = { field: 'publishedAt', direction: 'desc' },
+        pagination: PaginationOptions = { page: 1, limit: 20 }
+    ): Promise<ProductSearchResult> {
+        // Ensure we only show published listings in marketplace
+        const marketplaceFilters = {
+            ...filters,
+            status: ['active'] as ProductStatus[],
+            // Add custom filter for published listings
+            listingStatus: 'published'
+        };
+
+        // Try cache for popular queries
+        const cacheKey = this.generateCacheKey('marketplace', marketplaceFilters, sort, pagination);
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        // Get from database with enhanced search
+        const result = await this.searchListingsEnhanced(marketplaceFilters, sort, pagination);
+
+        // Cache popular queries
+        if (pagination.page === 1 && pagination.limit <= 20) {
+            await this.redisService.set(cacheKey, result, 300); // 5 minutes
+        }
+
+        return result;
+    }
+
+    /**
+     * Search listings with enhanced full-text search
+     * Requirements: 3.2, 3.3
+     */
+    async searchListingsEnhanced(
+        filters: ProductSearchFilters & { listingStatus?: string } = {},
+        sort: ProductSortOptions = { field: 'createdAt', direction: 'desc' },
+        pagination: PaginationOptions = { page: 1, limit: 20 }
+    ): Promise<ProductSearchResult> {
+        const db = this.databaseService.getDatabase();
+
+        // Build enhanced where conditions
+        const conditions = [];
+
+        // Full-text search using search vector
+        if (filters.query) {
+            // Use PostgreSQL full-text search if available, otherwise fallback to LIKE
+            conditions.push(
+                or(
+                    like(schema.products.title, `%${filters.query}%`),
+                    like(schema.products.description, `%${filters.query}%`),
+                    like(schema.products.searchVector, `%${filters.query}%`)
+                )
+            );
+        }
+
+        // Standard filters
+        if (filters.categoryId) {
+            conditions.push(eq(schema.products.categoryId, filters.categoryId));
+        }
+
+        if (filters.sellerId) {
+            conditions.push(eq(schema.products.sellerId, filters.sellerId));
+        }
+
+        if (filters.priceMin) {
+            conditions.push(gte(schema.products.priceAmount, filters.priceMin));
+        }
+
+        if (filters.priceMax) {
+            conditions.push(lte(schema.products.priceAmount, filters.priceMax));
+        }
+
+        if (filters.currency) {
+            conditions.push(eq(schema.products.priceCurrency, filters.currency));
+        }
+
+        // Enhanced listing status filter
+        if (filters.listingStatus) {
+            conditions.push(eq(schema.products.listingStatus, filters.listingStatus));
+        }
+
+        if (filters.status && filters.status.length > 0) {
+            conditions.push(inArray(schema.products.status, filters.status));
+        } else {
+            // Default to active products only
+            conditions.push(eq(schema.products.status, 'active'));
+        }
+
+        if (filters.inStock) {
+            conditions.push(gte(schema.products.inventory, 1));
+        }
+
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        // Enhanced sorting options
+        let orderByColumn;
+        switch (sort.field) {
+            case 'price':
+                orderByColumn = schema.products.priceAmount;
+                break;
+            case 'createdAt':
+                orderByColumn = schema.products.createdAt;
+                break;
+            case 'updatedAt':
+                orderByColumn = schema.products.updatedAt;
+                break;
+            case 'publishedAt':
+                orderByColumn = schema.products.publishedAt;
+                break;
+            case 'title':
+                orderByColumn = schema.products.title;
+                break;
+            case 'views':
+                orderByColumn = schema.products.views;
+                break;
+            case 'favorites':
+                orderByColumn = schema.products.favorites;
+                break;
+            default:
+                orderByColumn = schema.products.createdAt;
+        }
+
+        const orderBy = sort.direction === 'desc' ? desc(orderByColumn) : asc(orderByColumn);
+
+        // Get total count
+        const totalResult = await db.select({ count: sql<number>`count(*)` })
+            .from(schema.products)
+            .where(whereClause);
+
+        const total = totalResult[0].count;
+
+        // Get listings with pagination
+        const offset = (pagination.page - 1) * pagination.limit;
+        const result = await db.select()
+            .from(schema.products)
+            .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
+            .where(whereClause)
+            .orderBy(orderBy)
+            .limit(pagination.limit)
+            .offset(offset);
+
+        const products = result.map((row: any) => {
+            const { products: product, categories: category } = row;
+            return this.mapProductFromDb(product, category);
+        });
+
+        return {
+            products,
+            total,
+            page: pagination.page,
+            limit: pagination.limit,
+            totalPages: Math.ceil(total / pagination.limit),
+            filters,
+            sort,
+        };
+    }
+
+    /**
+     * Validate listing input comprehensively
+     * Requirements: 3.1, 3.4
+     */
+    private async validateListingInput(input: CreateListingInput): Promise<ListingValidationResult> {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+        let completeness = 0;
+
+        // Required fields validation
+        if (!input.sellerId) errors.push('Seller ID is required');
+        else completeness += 15;
+
+        if (!input.title || input.title.trim().length === 0) {
+            errors.push('Product title is required');
+        } else {
+            completeness += 20;
+            if (input.title.length < 10) warnings.push('Title is quite short, consider adding more detail');
+            if (input.title.length > 200) warnings.push('Title is very long, consider shortening');
+        }
+
+        if (!input.description || input.description.trim().length === 0) {
+            errors.push('Product description is required');
+        } else {
+            completeness += 20;
+            if (input.description.length < 50) warnings.push('Description is quite short, consider adding more detail');
+        }
+
+        if (!input.price || !input.price.amount || parseFloat(input.price.amount) <= 0) {
+            errors.push('Valid price is required');
+        } else {
+            completeness += 15;
+        }
+
+        if (!input.categoryId) {
+            errors.push('Category is required');
+        } else {
+            completeness += 10;
+        }
+
+        // Optional but recommended fields
+        if (input.images && input.images.length > 0) {
+            completeness += 10;
+            if (input.images.length < 3) warnings.push('Consider adding more images for better visibility');
+        } else {
+            warnings.push('No images provided - listings with images perform better');
+        }
+
+        if (input.tags && input.tags.length > 0) {
+            completeness += 5;
+        } else {
+            warnings.push('No tags provided - tags help with discoverability');
+        }
+
+        if (input.shipping) {
+            completeness += 5;
+        } else {
+            warnings.push('No shipping information provided');
+        }
+
+        // SEO validation
+        if (input.seoTitle) completeness += 2;
+        if (input.seoDescription) completeness += 2;
+        if (input.seoKeywords && input.seoKeywords.length > 0) completeness += 1;
+
+        // Inventory validation
+        if (input.inventory < 0) {
+            errors.push('Inventory cannot be negative');
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+            completeness: Math.min(completeness, 100)
+        };
+    }
+
+    /**
+     * Validate listing update input
+     */
+    private async validateListingUpdate(current: Product, input: UpdateListingInput): Promise<ListingValidationResult> {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+
+        // Validate status transitions
+        if (input.listingStatus) {
+            const validTransitions = this.getValidStatusTransitions(current.status as any);
+            if (!validTransitions.includes(input.listingStatus)) {
+                errors.push(`Invalid status transition from ${current.status} to ${input.listingStatus}`);
+            }
+        }
+
+        // Validate price changes
+        if (input.price && parseFloat(input.price.amount) <= 0) {
+            errors.push('Price must be greater than zero');
+        }
+
+        // Validate image index
+        if (input.primaryImageIndex !== undefined) {
+            const imageCount = input.images?.length || current.images.length;
+            if (input.primaryImageIndex >= imageCount) {
+                errors.push('Primary image index is out of range');
+            }
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+            completeness: 100 // Updates don't affect completeness
+        };
+    }
+
+    /**
+     * Generate search vector for full-text search
+     */
+    private generateSearchVector(input: { title: string; description: string; tags?: string[]; seoKeywords?: string[] }): string {
+        const searchTerms = [
+            input.title,
+            input.description,
+            ...(input.tags || []),
+            ...(input.seoKeywords || [])
+        ];
+
+        return searchTerms
+            .filter(term => term && term.trim().length > 0)
+            .map(term => term.toLowerCase().trim())
+            .join(' ');
+    }
+
+    /**
+     * Get valid status transitions for listing workflow
+     */
+    private getValidStatusTransitions(currentStatus: ListingStatus): ListingStatus[] {
+        const transitions: Record<ListingStatus, ListingStatus[]> = {
+            'draft': ['active', 'published', 'inactive'],
+            'active': ['published', 'inactive', 'suspended'],
+            'published': ['inactive', 'suspended'],
+            'inactive': ['active', 'published'],
+            'suspended': ['inactive']
+        };
+
+        return transitions[currentStatus] || [];
+    }
+
+    /**
+     * Cache listing data for fast access
+     */
+    private async cacheListingData(listingId: string, listing: Product): Promise<void> {
+        await this.redisService.cacheProductListing(listingId, listing, 900); // 15 minutes
+    }
+
+    /**
+     * Invalidate listing cache
+     */
+    private async invalidateListingCache(listingId: string): Promise<void> {
+        await this.redisService.invalidateProductListing(listingId);
+        // Also invalidate marketplace cache
+        await this.redisService.del('marketplace:active_listings');
+    }
+
+    /**
+     * Generate cache key for search queries
+     */
+    private generateCacheKey(prefix: string, filters: any, sort: any, pagination: any): string {
+        const key = `${prefix}:${JSON.stringify({ filters, sort, pagination })}`;
+        return key.replace(/[^a-zA-Z0-9:_-]/g, '_');
+    }
+
+    /**
+     * Log listing activity for audit trail
+     */
+    private async logListingActivity(listingId: string, action: string, metadata: any): Promise<void> {
+        // This would integrate with an activity logging service
+        console.log(`Listing ${listingId}: ${action}`, metadata);
+    }
+
+    /**
+     * Convert product listing to blockchain marketplace listing
+     * Requirements: Integration with blockchain marketplace
+     */
+    async publishToBlockchain(listingId: string, options?: {
+        tokenAddress?: string;
+        itemType?: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+        listingType?: 'FIXED_PRICE' | 'AUCTION';
+        duration?: number;
+    }): Promise<MarketplaceListing | null> {
+        try {
+            // Get the product listing
+            const listing = await this.getListingById(listingId);
+            if (!listing) {
+                throw new ValidationError('Listing not found', 'listingId');
+            }
+
+            // Convert product to blockchain listing format
+            const blockchainListingInput: BlockchainListingInput = {
+                sellerWalletAddress: listing.sellerId, // Assuming sellerId is wallet address
+                tokenAddress: options?.tokenAddress || '0x0000000000000000000000000000000000000000', // Default to ETH
+                price: listing.price.amount,
+                quantity: listing.inventory,
+                itemType: options?.itemType || 'PHYSICAL',
+                listingType: options?.listingType || 'FIXED_PRICE',
+                duration: options?.duration,
+                metadataURI: this.generateMetadataURI(listing),
+                // NFT specific fields (if applicable)
+                nftStandard: listing.nft?.standard as 'ERC721' | 'ERC1155' | undefined,
+                tokenId: listing.nft?.tokenId,
+            };
+
+            // Create blockchain listing
+            const blockchainListing = await this.marketplaceService.createListing(blockchainListingInput);
+
+            // Update product with blockchain listing reference
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    blockchainListingId: blockchainListing.id,
+                    publishedToBlockchain: true,
+                    blockchainPublishedAt: new Date().toISOString()
+                }
+            });
+
+            return blockchainListing;
+        } catch (error) {
+            console.error('Error publishing to blockchain:', error);
+            throw new ValidationError(
+                `Failed to publish to blockchain: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                'blockchain'
+            );
+        }
+    }
+
+    /**
+     * Sync blockchain listing with product listing
+     * Requirements: Keep both systems in sync
+     */
+    async syncWithBlockchain(listingId: string): Promise<{
+        productListing: Product | null;
+        blockchainListing: MarketplaceListing | null;
+        synced: boolean;
+    }> {
+        try {
+            const productListing = await this.getListingById(listingId);
+            if (!productListing) {
+                return { productListing: null, blockchainListing: null, synced: false };
+            }
+
+            const blockchainListingId = productListing.metadata?.blockchainListingId;
+            if (!blockchainListingId) {
+                return { productListing, blockchainListing: null, synced: false };
+            }
+
+            const blockchainListing = await this.marketplaceService.getListingById(blockchainListingId);
+
+            // Check if sync is needed
+            const needsSync = this.checkSyncRequired(productListing, blockchainListing);
+
+            if (needsSync && blockchainListing) {
+                // Update blockchain listing to match product listing
+                await this.marketplaceService.updateListing(blockchainListingId, {
+                    price: productListing.price.amount,
+                    quantity: productListing.inventory
+                });
+            }
+
+            return {
+                productListing,
+                blockchainListing,
+                synced: !needsSync
+            };
+        } catch (error) {
+            console.error('Error syncing with blockchain:', error);
+            return { productListing: null, blockchainListing: null, synced: false };
+        }
+    }
+
+    /**
+     * Get blockchain marketplace data for a listing
+     * Requirements: Access blockchain functionality
+     */
+    async getBlockchainData(listingId: string): Promise<{
+        listing: MarketplaceListing | null;
+        bids: any[];
+        offers: any[];
+        escrow: any | null;
+    }> {
+        try {
+            const productListing = await this.getListingById(listingId);
+            if (!productListing?.metadata?.blockchainListingId) {
+                return { listing: null, bids: [], offers: [], escrow: null };
+            }
+
+            const blockchainListingId = productListing.metadata.blockchainListingId;
+
+            // Get blockchain data in parallel
+            const [listing, bids, offers] = await Promise.all([
+                this.marketplaceService.getListingById(blockchainListingId),
+                this.marketplaceService.getBidsByListing(blockchainListingId),
+                this.marketplaceService.getOffersByListing(blockchainListingId)
+            ]);
+
+            // Get escrow if listing is escrowed
+            let escrow = null;
+            if (listing?.isEscrowed) {
+                // This would require additional logic to find the escrow
+                // For now, we'll leave it as null
+            }
+
+            return { listing, bids, offers, escrow };
+        } catch (error) {
+            console.error('Error getting blockchain data:', error);
+            return { listing: null, bids: [], offers: [], escrow: null };
+        }
+    }
+
+    /**
+     * Handle blockchain events for listings
+     * Requirements: React to blockchain events
+     */
+    async handleBlockchainEvent(event: {
+        type: 'BID_PLACED' | 'OFFER_MADE' | 'LISTING_SOLD' | 'ESCROW_CREATED';
+        listingId: string;
+        data: any;
+    }): Promise<void> {
+        try {
+            // Find product listing by blockchain listing ID
+            const productListing = await this.findByBlockchainListingId(event.listingId);
+            if (!productListing) {
+                console.warn(`No product listing found for blockchain listing ${event.listingId}`);
+                return;
+            }
+
+            switch (event.type) {
+                case 'BID_PLACED':
+                    await this.handleBidPlaced(productListing.id, event.data);
+                    break;
+                case 'OFFER_MADE':
+                    await this.handleOfferMade(productListing.id, event.data);
+                    break;
+                case 'LISTING_SOLD':
+                    await this.handleListingSold(productListing.id, event.data);
+                    break;
+                case 'ESCROW_CREATED':
+                    await this.handleEscrowCreated(productListing.id, event.data);
+                    break;
+            }
+        } catch (error) {
+            console.error('Error handling blockchain event:', error);
+        }
+    }
+
+    /**
+     * Generate metadata URI for blockchain listing
+     */
+    private generateMetadataURI(listing: Product): string {
+        // Create IPFS metadata for the blockchain listing
+        const metadata = {
+            name: listing.title,
+            description: listing.description,
+            image: listing.images[0] || '',
+            attributes: [
+                { trait_type: 'Category', value: listing.category.name },
+                { trait_type: 'Condition', value: listing.metadata.condition },
+                { trait_type: 'Brand', value: listing.metadata.brand || 'Unknown' },
+                { trait_type: 'Inventory', value: listing.inventory.toString() }
+            ],
+            external_url: `https://marketplace.linkdao.io/listing/${listing.id}`,
+            seller: listing.sellerId,
+            created_at: listing.createdAt.toISOString()
+        };
+
+        // In a real implementation, this would upload to IPFS and return the hash
+        // For now, return a mock URI
+        return `ipfs://QmMetadata${listing.id}`;
+    }
+
+    /**
+     * Check if sync is required between product and blockchain listing
+     */
+    private checkSyncRequired(productListing: Product, blockchainListing: MarketplaceListing | null): boolean {
+        if (!blockchainListing) return false;
+
+        return (
+            productListing.price.amount !== blockchainListing.price ||
+            productListing.inventory !== blockchainListing.quantity ||
+            productListing.status !== 'active' && blockchainListing.status === 'ACTIVE'
+        );
+    }
+
+    /**
+     * Find product listing by blockchain listing ID
+     */
+    private async findByBlockchainListingId(blockchainListingId: string): Promise<Product | null> {
+        // This would require a database query to find products with this blockchain listing ID
+        // For now, we'll implement a basic search through metadata
+        const db = this.databaseService.getDatabase();
+
+        try {
+            const result = await db.select()
+                .from(schema.products)
+                .where(like(schema.products.metadata, `%"blockchainListingId":"${blockchainListingId}"%`));
+
+            if (result.length > 0) {
+                return this.productService.getProductById(result[0].id);
+            }
+        } catch (error) {
+            console.error('Error finding by blockchain listing ID:', error);
+        }
+
+        return null;
+    }
+
+    /**
+     * Handle bid placed event
+     */
+    private async handleBidPlaced(listingId: string, bidData: any): Promise<void> {
+        // Update listing metadata with bid information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    lastBidAmount: bidData.amount,
+                    lastBidder: bidData.bidder,
+                    lastBidAt: new Date().toISOString(),
+                    totalBids: (listing.metadata.totalBids || 0) + 1
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle offer made event
+     */
+    private async handleOfferMade(listingId: string, offerData: any): Promise<void> {
+        // Update listing metadata with offer information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    lastOfferAmount: offerData.amount,
+                    lastOfferBy: offerData.buyer,
+                    lastOfferAt: new Date().toISOString(),
+                    totalOffers: (listing.metadata.totalOffers || 0) + 1
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle listing sold event
+     */
+    private async handleListingSold(listingId: string, saleData: any): Promise<void> {
+        // Update listing status and inventory
+        await this.updateListing(listingId, {
+            status: 'sold_out',
+            inventory: 0,
+            metadata: {
+                soldAt: new Date().toISOString(),
+                soldTo: saleData.buyer,
+                soldPrice: saleData.price,
+                soldViaBlockchain: true
+            }
+        });
+    }
+
+    /**
+     * Handle escrow created event
+     */
+    private async handleEscrowCreated(listingId: string, escrowData: any): Promise<void> {
+        // Update listing metadata with escrow information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    escrowId: escrowData.escrowId,
+                    escrowCreatedAt: new Date().toISOString(),
+                    escrowBuyer: escrowData.buyer,
+                    escrowAmount: escrowData.amount
+                }
+            });
+        }
+    }
+
+    /**
+     * Map product from database with enhanced fields
+     */
+    private mapProductFromDb(dbProduct: any, dbCategory?: any): Product {
+        // Use the existing mapping from ProductService but enhance with listing fields
+        const baseProduct = this.productService['mapProductFromDb'](dbProduct, dbCategory);
+
+        // Add listing-specific enhancements
+        return {
+            ...baseProduct,
+            // Add any listing-specific fields that aren't in the base product
+        };
+    }
+}

@@ -53,6 +53,37 @@ export interface ProductMetadata {
   };
   certifications?: string[]; // e.g., ['CE', 'FCC', 'RoHS']
   customAttributes?: Record<string, any>;
+  
+  // Blockchain integration fields
+  blockchainListingId?: string;
+  publishedToBlockchain?: boolean;
+  blockchainPublishedAt?: string;
+  
+  // Listing optimization fields
+  searchVector?: string;
+  imageIpfsHashes?: string[];
+  imageCdnUrls?: Record<string, string>;
+  seoOptimized?: boolean;
+  seoTitle?: string;
+  seoDescription?: string;
+  qualityScore?: number;
+  publishedAt?: Date;
+  lastIndexed?: Date;
+  listingStatus?: 'draft' | 'active' | 'published' | 'inactive' | 'suspended';
+  
+  // Blockchain activity tracking
+  lastBidAmount?: string;
+  totalBids?: number;
+  lastBidAt?: string;
+  lastOfferAmount?: string;
+  totalOffers?: number;
+  lastOfferAt?: string;
+  soldAt?: string;
+  soldPrice?: string;
+  buyer?: string;
+  escrowId?: string;
+  escrowCreatedAt?: string;
+  isEscrowed?: boolean;
 }
 
 export interface ShippingInfo {
@@ -177,7 +208,7 @@ export interface ProductSearchFilters {
 }
 
 export interface ProductSortOptions {
-  field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites' | 'relevance';
+  field: 'price' | 'createdAt' | 'updatedAt' | 'publishedAt' | 'title' | 'views' | 'favorites' | 'relevance';
   direction: 'asc' | 'desc';
 }
 
