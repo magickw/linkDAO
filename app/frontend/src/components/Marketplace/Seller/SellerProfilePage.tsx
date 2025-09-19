@@ -119,7 +119,18 @@ export function SellerProfilePage() {
       
       // Calculate profile completeness
       if (profile.profileCompleteness) {
-        setProfileCompleteness(profile.profileCompleteness);
+        // Transform string recommendations to object format if needed
+        const completeness = {
+          ...profile.profileCompleteness,
+          recommendations: Array.isArray(profile.profileCompleteness.recommendations) 
+            ? profile.profileCompleteness.recommendations.map((rec: any) => 
+                typeof rec === 'string' 
+                  ? { action: rec, description: rec, impact: 1 }
+                  : rec
+              )
+            : []
+        };
+        setProfileCompleteness(completeness);
       }
     }
   }, [profile]);
