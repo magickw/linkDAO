@@ -1,0 +1,15 @@
+{
+  "network": "mainnet",
+  "treasury": "0x0000000000000000000000000000000000000000",
+  "multisig": "0x0000000000000000000000000000000000000000",
+  "feeBasisPoints": 250,
+  "feeCollector": "0x0000000000000000000000000000000000000000",
+  "gasPrice": "30000000000",
+  "gasLimit": 8000000,
+  "confirmations": 5,
+  "verifyContracts": true,
+  "rpcUrl": "https://mainnet.infura.io/v3/YOUR_INFURA_KEY",
+  "etherscanApiKey": "YOUR_ETHERSCAN_API_KEY",
+  "emergencyPause": true,
+  "timelock": 86400
+}

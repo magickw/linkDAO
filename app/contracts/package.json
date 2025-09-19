@@ -7,22 +7,36 @@
     "build": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts",
     "test": "hardhat test",
+    "test:gas": "REPORT_GAS=true hardhat test",
+    "test:unit": "hardhat test test/comprehensive/UnitTests.test.ts",
+    "test:integration": "hardhat test test/comprehensive/IntegrationTests.test.ts",
+    "test:security": "hardhat test test/comprehensive/SecurityTests.test.ts",
+    "test:gas-optimization": "REPORT_GAS=true hardhat test test/comprehensive/GasOptimizationTests.test.ts",
+    "test:comprehensive": "./scripts/run-comprehensive-tests.sh",
+    "test:runner": "ts-node test/comprehensive/TestRunner.ts",
     "coverage": "hardhat coverage",
-    "verify": "hardhat verify",
-    "flatten": "hardhat flatten",
+    "coverage:check": "nyc check-coverage --lines 90 --functions 90 --branches 90 --statements 90",
     "clean": "hardhat clean",
     "node": "hardhat node",
-    "accounts": "hardhat accounts",
-    "balance": "hardhat balance",
-    "send": "hardhat send",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "size": "hardhat size-contracts",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "lint:fix": "solhint 'contracts/**/*.sol' --fix",
+    "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.ts' 'test/**/*.ts'",
+    "analyze": "slither . --json slither-report.json || echo 'Slither not available'",
+    "benchmark": "REPORT_GAS=true hardhat test --grep 'gas'"
   },
   "dependencies": {
-    "ethers": "^5.7.2"
+    "@openzeppelin/contracts": "^4.9.3"
   },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "type": "module"
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.2",
+    "hardhat": "^2.17.1",
+    "hardhat-gas-reporter": "^1.0.9",
+    "hardhat-contract-sizer": "^2.10.0",
+    "solhint": "^3.4.1",
+    "prettier": "^2.8.8",
+    "prettier-plugin-solidity": "^1.1.3",
+    "dotenv": "^16.3.1"
+  }
 }
