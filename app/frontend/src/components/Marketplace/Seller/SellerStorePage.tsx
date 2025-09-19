@@ -25,11 +25,9 @@ import {
   Zap,
   Info,
   User,
-  ShoppingBag,
   Package,
   Search,
   Phone,
-  Video,
   Globe,
   Truck,
   RotateCcw,
@@ -691,21 +689,12 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
 
                   {/* Enhanced CTA Button Group */}
                   <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-                    <button 
-                      onClick={() => setActiveTab('listings')}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-2"
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      Shop Now
-                    </button>
+
                     <button className="px-6 py-3 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all font-medium border border-white/20 flex items-center gap-2">
                       <MessageCircle className="w-4 h-4" />
                       Message
                     </button>
-                    <button className="px-6 py-3 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all font-medium border border-white/20 flex items-center gap-2">
-                      <Video className="w-4 h-4" />
-                      Video Call
-                    </button>
+
                     <button
                       onClick={() => setIsFollowing(!isFollowing)}
                       className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${

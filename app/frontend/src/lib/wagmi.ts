@@ -1,9 +1,24 @@
 import { createConfig, http } from 'wagmi'
 import { base, baseGoerli, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
+import './devConfig' // Import development configuration
 
 // WalletConnect project ID - in production, this should be from environment variables
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'demo-project-id'
+
+// Suppress WalletConnect warnings in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    const message = args.join(' ');
+    if (message.includes('Failed to fetch remote project configuration') || 
+        message.includes('api.web3modal.org') ||
+        message.includes('Reown Config')) {
+      return; // Suppress these specific warnings
+    }
+    originalWarn.apply(console, args);
+  };
+}
 
 const getFrontendUrl = () => {
   if (typeof window !== 'undefined') {
@@ -38,6 +53,8 @@ export const config = createConfig({
         icons: ['https://linkdao.io/icon.png'],
       },
       showQrModal: true,
+      // Disable remote config fetching in development
+      disableProviderPing: process.env.NODE_ENV === 'development',
     }),
     injected({
       target() {

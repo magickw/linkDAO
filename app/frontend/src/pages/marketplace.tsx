@@ -24,7 +24,7 @@ import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
 import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
 import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
-import { SellersDirectory } from '@/components/Marketplace/SellersDirectory';
+
 import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -39,7 +39,7 @@ const MarketplaceContent: React.FC = () => {
   const { profile } = useSeller();
   
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'sellers' | 'my-listings' | 'orders' | 'disputes'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'orders' | 'disputes'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -563,16 +563,7 @@ const MarketplaceContent: React.FC = () => {
               >
                 Browse
               </button>
-              <button
-                onClick={() => { setActiveTab('sellers'); setShowCart(false); setShowCheckout(false); }}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'sellers' && !showCart && !showCheckout
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                🏪 Sellers
-              </button>
+
               <button
                 onClick={() => { setShowCart(true); setShowCheckout(false); setActiveTab('browse'); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
@@ -973,9 +964,7 @@ const MarketplaceContent: React.FC = () => {
               </div>
             )}
             
-            {activeTab === 'sellers' && (
-              <SellersDirectory />
-            )}
+
             
             {activeTab === 'my-listings' && (
               <div>
