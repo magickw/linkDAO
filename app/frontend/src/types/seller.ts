@@ -17,8 +17,16 @@ export interface SellerProfile {
     storeName?: string;
     profilePicture?: string;
     logo?: string;
+    coverImage?: string;
     bio?: string;
     description?: string;
+    sellerStory?: string;
+    location?: string;
+    socialLinks?: {
+        twitter?: string;
+        linkedin?: string;
+        website?: string;
+    };
 
     // Verification Data
     email?: string;
