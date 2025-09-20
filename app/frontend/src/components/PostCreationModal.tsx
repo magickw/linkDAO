@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { CreatePostInput } from '@/models/Post';
+import RichTextEditor from './EnhancedPostComposer/RichTextEditor';
+import ContentTypeTabs from './EnhancedPostComposer/ContentTypeTabs';
+import PollCreator from './EnhancedPostComposer/PollCreator';
+import ProposalCreator from './EnhancedPostComposer/ProposalCreator';
+import { ContentType, PollData, ProposalData } from '@/types/enhancedPost';
 
 interface PostCreationModalProps {
   isOpen: boolean;
@@ -13,6 +18,9 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const [tags, setTags] = useState('');
   const [media, setMedia] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [contentType, setContentType] = useState<ContentType>(ContentType.TEXT);
+  const [poll, setPoll] = useState<PollData | undefined>(undefined);
+  const [proposal, setProposal] = useState<ProposalData | undefined>(undefined);
   const [postType, setPostType] = useState('standard'); // standard, proposal, defi, nft, analysis
   const [nftAddress, setNftAddress] = useState('');
   const [nftTokenId, setNftTokenId] = useState('');
@@ -20,13 +28,37 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!content.trim()) {
+    // Validate based on content type
+    let isValid = false;
+    let finalContent = '';
+    
+    switch (contentType) {
+      case ContentType.TEXT:
+      case ContentType.MEDIA:
+      case ContentType.LINK:
+        isValid = content.trim().length > 0;
+        finalContent = content;
+        break;
+      case ContentType.POLL:
+        isValid = !!(poll && poll.question.trim().length > 0 && poll.options.filter(opt => opt.text.trim()).length >= 2);
+        finalContent = poll ? `Poll: ${poll.question}` : '';
+        break;
+      case ContentType.PROPOSAL:
+        isValid = !!(proposal && proposal.title.trim().length > 0 && proposal.description.trim().length > 0);
+        finalContent = proposal ? `Proposal: ${proposal.title}` : '';
+        break;
+    }
+    
+    if (!isValid) {
       return;
     }
     
     try {
       // Extract tags from input (comma separated)
       const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      
+      // Add content type as a tag
+      tagArray.push(contentType.toLowerCase());
       
       // Add post type as a tag
       if (postType !== 'standard') {
@@ -35,9 +67,16 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
       
       const postData: CreatePostInput = {
         author: '', // This will be filled by the parent component
-        content,
+        content: finalContent,
         tags: tagArray,
       };
+      
+      // Add type-specific data
+      if (contentType === ContentType.POLL && poll) {
+        postData.poll = poll;
+      } else if (contentType === ContentType.PROPOSAL && proposal) {
+        postData.proposal = proposal;
+      }
       
       if (media) {
         // In a real implementation, we would upload the media to IPFS and store the CID
@@ -64,6 +103,9 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
     setTags('');
     setMedia(null);
     setPreview(null);
+    setContentType(ContentType.TEXT);
+    setPoll(undefined);
+    setProposal(undefined);
     setPostType('standard');
     setNftAddress('');
     setNftTokenId('');
@@ -104,34 +146,22 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
-          {/* Post Type Selection */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Post Type
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {[
-                { id: 'standard', label: 'Standard', icon: '📝' },
-                { id: 'proposal', label: 'Proposal', icon: '🏛️' },
-                { id: 'defi', label: 'DeFi', icon: '💱' },
-                { id: 'nft', label: 'NFT', icon: '🎨' },
-                { id: 'analysis', label: 'Analysis', icon: '📊' }
-              ].map((type) => (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => setPostType(type.id)}
-                  className={`flex flex-col items-center justify-center p-2 rounded-md border ${
-                    postType === type.id
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <span className="text-lg">{type.icon}</span>
-                  <span className="text-xs mt-1">{type.label}</span>
-                </button>
-              ))}
-            </div>
+          {/* Content Type Tabs */}
+          <div className="mb-6">
+            <ContentTypeTabs
+              activeType={contentType}
+              onTypeChange={(type) => {
+                setContentType(type);
+                // Reset content when switching types
+                if (type === ContentType.POLL) {
+                  setPoll(poll || { question: '', options: [{ id: 'opt1', text: '', votes: 0, tokenVotes: 0 }, { id: 'opt2', text: '', votes: 0, tokenVotes: 0 }], allowMultiple: false, tokenWeighted: true, minTokens: 1 });
+                } else if (type === ContentType.PROPOSAL) {
+                  setProposal(proposal || { title: '', description: '', type: 'governance', votingPeriod: 7, quorum: 10, threshold: 50 });
+                }
+              }}
+              context="feed"
+              disabled={isLoading}
+            />
           </div>
           
           {/* NFT Fields (only show for NFT post type) */}
@@ -168,32 +198,59 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
             </div>
           )}
           
-          <div className="mb-4">
-            <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Content
-            </label>
-            <textarea
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={postType === 'proposal' 
-                ? "Describe your governance proposal..." 
-                : postType === 'defi' 
-                ? "Share your DeFi strategy or insights..." 
-                : postType === 'nft' 
-                ? "Showcase your NFT collection..." 
-                : postType === 'analysis' 
-                ? "Provide your market analysis..." 
-                : "What's happening in Web3?"}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-              rows={4}
-              required
-              disabled={isLoading}
-            />
-            <div className="text-right text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {280 - content.length} characters remaining
+          {/* Content Editor based on type */}
+          {contentType === ContentType.TEXT && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Content
+              </label>
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder="What's happening in Web3? Share your thoughts, insights, or updates..."
+                disabled={isLoading}
+                showPreview={false}
+                className="min-h-[200px]"
+              />
             </div>
-          </div>
+          )}
+
+          {contentType === ContentType.POLL && (
+            <PollCreator
+              poll={poll}
+              onPollChange={setPoll}
+              disabled={isLoading}
+              className="mb-6"
+            />
+          )}
+
+          {contentType === ContentType.PROPOSAL && (
+            <ProposalCreator
+              proposal={proposal}
+              onProposalChange={setProposal}
+              disabled={isLoading}
+              className="mb-6"
+            />
+          )}
+
+          {(contentType === ContentType.MEDIA || contentType === ContentType.LINK) && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {contentType === ContentType.MEDIA ? 'Media Post' : 'Link Post'}
+              </label>
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                placeholder={contentType === ContentType.MEDIA 
+                  ? "Add a caption or description for your media..."
+                  : "Share a link and add your thoughts about it..."
+                }
+                disabled={isLoading}
+                showPreview={false}
+                className="min-h-[150px]"
+              />
+            </div>
+          )}
           
           {preview && (
             <div className="mb-4">
@@ -250,7 +307,15 @@ export default function PostCreationModal({ isOpen, onClose, onSubmit, isLoading
             </button>
             <button
               type="submit"
-              disabled={content.trim() === '' || isLoading || (postType === 'nft' && (!nftAddress || !nftTokenId))}
+              disabled={
+                isLoading || 
+                (contentType === ContentType.TEXT && content.trim() === '') ||
+                (contentType === ContentType.MEDIA && content.trim() === '') ||
+                (contentType === ContentType.LINK && content.trim() === '') ||
+                (contentType === ContentType.POLL && (!poll || !poll.question.trim() || poll.options.filter(opt => opt.text.trim()).length < 2)) ||
+                (contentType === ContentType.PROPOSAL && (!proposal || !proposal.title.trim() || !proposal.description.trim())) ||
+                (postType === 'nft' && (!nftAddress || !nftTokenId))
+              }
               className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 dark:focus:ring-offset-gray-800"
             >
               {isLoading ? 'Posting...' : 'Post'}

@@ -11,7 +11,7 @@ import { useFeed, useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { CreatePostInput } from '@/models/Post';
-import PostCreationModal from '@/components/PostCreationModal';
+import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
 import BottomSheet from '@/components/BottomSheet';
 import Link from 'next/link';
 import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucide-react';
@@ -104,7 +104,7 @@ export default function Home() {
   const [posts, setPosts] = useState(mockPosts);
   const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPostLoading, setIsPostLoading] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
 
   useEffect(() => {
@@ -113,6 +113,20 @@ export default function Home() {
 
   // Use real feed data if available, otherwise fall back to mock data
   const displayPosts = feed && feed.length > 0 ? feed : posts;
+
+  // Handle post creation
+  const handlePostSubmit = async (postData: CreatePostInput) => {
+    setIsPostLoading(true);
+    try {
+      await createPost({ ...postData, author: address || '' });
+      addToast('Post created successfully!', 'success');
+    } catch (error) {
+      console.error('Error creating post:', error);
+      addToast('Failed to create post', 'error');
+    } finally {
+      setIsPostLoading(false);
+    }
+  };
 
   // Handle tipping
   const handleTip = async (postId: string, amount: string, token: string) => {
@@ -545,19 +559,19 @@ export default function Home() {
               {/* Quick Actions */}
               <div className="flex space-x-4">
                 <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Post
-                </button>
-                <button
                   onClick={() => setIsWalletSheetOpen(true)}
                   className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   Send Tokens
                 </button>
+                <Link
+                  href="/communities"
+                  className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Advanced Post
+                </Link>
                 <Link
                   href="/governance"
                   className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
@@ -574,20 +588,13 @@ export default function Home() {
             {/* Center Feed */}
             <div className="flex-1 overflow-y-auto">
               <div className="max-w-2xl mx-auto py-6 px-4">
-                {/* Post Composer */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                      {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                    </div>
-                    <button
-                      onClick={() => setIsModalOpen(true)}
-                      className="flex-1 text-left px-4 py-3 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      What's on your mind?
-                    </button>
-                  </div>
-                </div>
+                {/* Facebook-style Post Composer */}
+                <FacebookStylePostComposer
+                  onSubmit={handlePostSubmit}
+                  isLoading={isPostLoading}
+                  userName={(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                  className="mb-6"
+                />
 
                 {/* Feed Tabs */}
                 <div className="flex space-x-1 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
@@ -751,22 +758,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Modals */}
-      <PostCreationModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={async (postData: CreatePostInput) => {
-          try {
-            await createPost(postData);
-            setIsModalOpen(false);
-            addToast('Post created successfully!', 'success');
-          } catch (error) {
-            console.error('Error creating post:', error);
-            addToast('Failed to create post', 'error');
-          }
-        }}
-        isLoading={isCreatingPost}
-      />
+      {/* Wallet Sheet Modal */}
 
       <BottomSheet
         isOpen={isWalletSheetOpen}
