@@ -8,21 +8,7 @@ export { default as CommunityEventNotifications } from './CommunityEventNotifica
 export { default as OfflineNotificationQueue } from './OfflineNotificationQueue';
 
 // Re-export types
-export type {
-  RealTimeNotification,
-  NotificationCategory,
-  NotificationPriority,
-  NotificationUrgency,
-  MentionNotification,
-  TipNotification,
-  GovernanceNotification,
-  CommunityNotification,
-  ReactionNotification,
-  NotificationQueue,
-  NotificationSettings,
-  LiveUpdateIndicator,
-  NotificationState
-} from '../../types/realTimeNotifications';
+export * from '../../types/realTimeNotifications';
 
 // Re-export hook
 export { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';

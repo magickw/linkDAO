@@ -17,8 +17,20 @@ interface ImmediateNotificationSystemProps {
   autoHideDelay?: number;
 }
 
-interface ToastNotification extends RealTimeNotification {
+interface ToastNotification {
   id: string;
+  userId: string;
+  category: NotificationCategory;
+  priority: NotificationPriority;
+  urgency: NotificationUrgency;
+  title: string;
+  message: string;
+  timestamp: Date;
+  read: boolean;
+  dismissed: boolean;
+  actionUrl?: string;
+  metadata: Record<string, any>;
+  expiresAt?: Date;
   isVisible: boolean;
   isExiting: boolean;
   showTime: number;
@@ -281,7 +293,19 @@ const ImmediateNotificationSystem: React.FC<ImmediateNotificationSystemProps> = 
 
   const addNotification = useCallback((notification: RealTimeNotification) => {
     const toastNotification: ToastNotification = {
-      ...notification,
+      id: notification.id,
+      userId: notification.userId,
+      category: notification.category,
+      priority: notification.priority,
+      urgency: notification.urgency,
+      title: notification.title,
+      message: notification.message,
+      timestamp: notification.timestamp,
+      read: notification.read,
+      dismissed: notification.dismissed,
+      actionUrl: notification.actionUrl,
+      metadata: notification.metadata,
+      expiresAt: notification.expiresAt,
       isVisible: false,
       isExiting: false,
       showTime: Date.now()
