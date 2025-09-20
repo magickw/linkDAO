@@ -118,7 +118,19 @@ export default function Home() {
   const handlePostSubmit = async (postData: CreatePostInput) => {
     setIsPostLoading(true);
     try {
-      await createPost({ ...postData, author: address || '' });
+      const createdPost = await createPost({ ...postData, author: address || '' });
+      
+      // Add to local posts state for immediate UI update
+      const newPost = {
+        ...createdPost,
+        title: postData.content.split('\n')[0] || 'New Post',
+        dao: 'general',
+        commentCount: 0,
+        stakedValue: 0,
+        reputationScore: (profile as any)?.reputationScore || 0
+      };
+      
+      setPosts(prev => [newPost, ...prev]);
       addToast('Post created successfully!', 'success');
     } catch (error) {
       console.error('Error creating post:', error);
@@ -513,76 +525,6 @@ export default function Home() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top User Overview Section */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-            <div className="max-w-4xl mx-auto">
-              {/* User Profile Summary */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-semibold">
-                      {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                      Welcome back, {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                    </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {balance} ETH • Reputation: {(profile as any)?.reputationScore || 0}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Quick Stats */}
-                <div className="flex space-x-6 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">42</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Posts</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">128</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Following</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">89</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Followers</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">12</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">NFTs</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => setIsWalletSheetOpen(true)}
-                  className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Tokens
-                </button>
-                <Link
-                  href="/communities"
-                  className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Advanced Post
-                </Link>
-                <Link
-                  href="/governance"
-                  className="flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-                >
-                  <Vote className="w-4 h-4 mr-2" />
-                  Create Proposal
-                </Link>
-              </div>
-            </div>
-          </div>
-
           {/* Main Feed Content */}
           <div className="flex-1 flex overflow-hidden">
             {/* Center Feed */}
