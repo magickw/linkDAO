@@ -5,6 +5,7 @@ import { mockCommunities } from '@/mocks/communityMockData';
 import WalletSnapshotEmbed from './WalletSnapshotEmbed';
 import DeFiChartEmbed from './DeFiChartEmbed';
 import DAOGovernanceEmbed from './DAOGovernanceEmbed';
+import { SmartRightSidebar } from './SmartRightSidebar';
 
 // Mock DAO data
 const trendingDAOs = [
@@ -107,6 +108,13 @@ export default function DashboardRightSidebar() {
 
   return (
     <div className="space-y-6">
+      {/* Enhanced Smart Right Sidebar */}
+      <SmartRightSidebar 
+        context={activeView === 'community' ? 'community' : 'feed'}
+        communityId={activeCommunity || undefined}
+      />
+
+      {/* Legacy widgets - keeping for backward compatibility */}
       {/* Community Info Widget - Only show when viewing a community */}
       {contextualContent.showCommunityInfo && currentCommunity && (
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
