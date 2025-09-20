@@ -58,10 +58,9 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Navigation items with icons
+  // Navigation items with icons - Home now serves as the main Feed/Dashboard
   const navItems = [
     { name: 'Home', href: '/', icon: '🏠' },
-    { name: 'Feed', href: '/social', icon: '📰' },
     { name: 'Communities', href: '/dao/ethereum-builders', icon: '👥' },
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
@@ -243,7 +242,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
               <ul className="space-y-2">
                 <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
-                <li><Link href="/social" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Social Feed</Link></li>
+                <li><Link href="/dao/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
                 <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
                 <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
               </ul>

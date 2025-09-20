@@ -67,61 +67,21 @@ const MarketplaceContent: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch from our backend API - try multiple endpoints
-      console.log('Fetching listings for Browse tab...');
-      let response;
-      let data;
+      // Use the enhanced marketplace service
+      console.log('Fetching listings using enhanced marketplace service...');
       
-      // Try the working endpoint first
-      try {
-        response = await fetch('http://localhost:3002/marketplace/listings?limit=50&sortBy=createdAt&sortOrder=desc');
-        if (response.ok) {
-          data = await response.json();
-          console.log('Response from /marketplace/listings:', data);
-        }
-      } catch (error) {
-        console.error('Error with /marketplace/listings:', error);
-      }
+      const enhancedMarketplaceService = (await import('@/services/enhancedMarketplaceService')).enhancedMarketplaceService;
+      const data = await enhancedMarketplaceService.getMarketplaceListings({
+        limit: 50,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
       
-      // If the first endpoint didn't work or returned empty, try getting from seller endpoints
-      if (!data || !data.success || !data.data || data.data.length === 0) {
-        console.log('No data from marketplace/listings, trying to aggregate from all sellers...');
-        try {
-          // Get listings from known seller addresses
-          const testAddresses = [
-            '0x1234567890123456789012345678901234567890',
-            '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
-          ];
-          
-          let allListings = [];
-          for (const address of testAddresses) {
-            try {
-              const sellerResponse = await fetch(`http://localhost:3002/marketplace/seller/listings/${address}`);
-              if (sellerResponse.ok) {
-                const sellerData = await sellerResponse.json();
-                if (sellerData.success && sellerData.data) {
-                  allListings.push(...sellerData.data);
-                }
-              }
-            } catch (err) {
-              console.error(`Error fetching listings for ${address}:`, err);
-            }
-          }
-          
-          if (allListings.length > 0) {
-            data = { success: true, data: allListings };
-            console.log('Aggregated listings from sellers:', allListings.length);
-          }
-        } catch (error) {
-          console.error('Error aggregating seller listings:', error);
-        }
-      }
-      
-      if (data && data.success && Array.isArray(data.data)) {
-        console.log('Processing listings data:', data.data.length, 'items');
+      if (Array.isArray(data) && data.length > 0) {
+        console.log('Processing listings data:', data.length, 'items');
         
         // Transform backend data to frontend format
-        const transformedListings = data.data.map((listing: any) => {
+        const transformedListings = data.map((listing: any) => {
           // Parse enhanced metadata if available
           let enhancedData: {
             title?: string;
@@ -132,6 +92,7 @@ const MarketplaceContent: React.FC = () => {
             condition?: string;
             escrowEnabled?: boolean;
           } = {};
+          
           try {
             if (listing.enhancedData) {
               enhancedData = listing.enhancedData;
@@ -215,13 +176,10 @@ const MarketplaceContent: React.FC = () => {
         console.log('Transformed listings:', transformedListings);
         setListings(transformedListings);
         
-        if (transformedListings.length > 0) {
-          addToast(`Loaded ${transformedListings.length} listings from marketplace`, 'success');
-        } else {
-          addToast('No listings found in marketplace', 'info');
-        }
+        addToast(`Loaded ${transformedListings.length} listings from marketplace`, 'success');
       } else {
-        throw new Error('Invalid response format');
+        console.log('No listings returned from enhanced service, using fallback data');
+        throw new Error('No listings available');
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
@@ -984,12 +942,15 @@ const MarketplaceContent: React.FC = () => {
                   <div>
                     <div className="text-center mb-8">
                       <h2 className="text-4xl font-bold text-white mb-4">Order Management</h2>
-                      <p className="text-xl text-white/80">Track your orders and manage deliveries</p>
+                      <p className="text-xl text-white/80">Track your orders and manage deliveries with enhanced features</p>
                     </div>
-                    <OrderTrackingDashboard
-                      userType={profile ? 'seller' : 'buyer'}
-                      className="text-white"
-                    />
+                    {React.createElement(
+                      React.lazy(() => import('@/components/Marketplace/OrderTracking/EnhancedOrderTracking')),
+                      { 
+                        userType: profile ? 'seller' : 'buyer',
+                        className: 'text-white'
+                      }
+                    )}
                   </div>
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">

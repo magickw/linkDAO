@@ -38,7 +38,7 @@ export class OrderService {
       }
 
       const response = await fetch(
-        `${this.baseUrl}/api/marketplace/orders/user/${userAddress}?${params.toString()}`
+        `${this.baseUrl}/api/orders/user/${userAddress}?${params.toString()}`
       );
 
       if (!response.ok) {
@@ -69,7 +69,7 @@ export class OrderService {
    */
   async getOrderById(orderId: string): Promise<Order | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}`);
+      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}`);
       
       if (!response.ok) {
         if (response.status === 404) return null;

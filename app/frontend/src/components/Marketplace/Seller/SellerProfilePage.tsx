@@ -184,39 +184,18 @@ export function SellerProfilePage() {
     setEnsValidation(prev => ({ ...prev, isValidating: true }));
 
     try {
-      // Call ENS validation service
-      const response = await fetch('/api/sellers/ens/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ensHandle }),
+      // Use the enhanced marketplace service for ENS validation
+      const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
+      const result = await enhancedMarketplaceService.validateENSHandle(ensHandle);
+      
+      setEnsValidation({
+        isValidating: false,
+        isValid: result.isValid,
+        isAvailable: result.isAvailable,
+        isOwned: result.isOwned,
+        errors: result.errors || [],
+        suggestions: result.suggestions || [],
       });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          setEnsValidation({
-            isValidating: false,
-            isValid: result.data.isValid,
-            isAvailable: result.data.isAvailable,
-            isOwned: result.data.isOwned,
-            errors: result.data.errors || [],
-            suggestions: result.data.suggestions || [],
-          });
-        } else {
-          setEnsValidation({
-            isValidating: false,
-            isValid: false,
-            isAvailable: false,
-            isOwned: false,
-            errors: [result.message || 'ENS validation failed'],
-            suggestions: [],
-          });
-        }
-      } else {
-        throw new Error('ENS validation request failed');
-      }
     } catch (error) {
       console.error('ENS validation error:', error);
       setEnsValidation({
@@ -308,23 +287,24 @@ export function SellerProfilePage() {
           formDataWithImages.append('coverImage', imageUpload.coverImage);
         }
         
-        // Call enhanced update endpoint
-        const response = await fetch(`/api/sellers/profile/${walletAddress}/enhanced`, {
-          method: 'PUT',
-          body: formDataWithImages,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to update profile');
+        // Use enhanced marketplace service for profile update with images
+        if (!walletAddress) {
+          throw new Error('Wallet not connected');
         }
         
-        const result = await response.json();
+        const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
+        const profileUpdateData = {
+          ...formData,
+          profileImage: imageUpload.profileImage,
+          coverImage: imageUpload.coverImage
+        };
+        
+        const result = await enhancedMarketplaceService.updateSellerProfileEnhanced(walletAddress, profileUpdateData);
         console.log('Profile updated successfully:', result);
         
         // Update profile completeness if returned
-        if (result.data.completenessUpdate) {
-          setProfileCompleteness(result.data.completenessUpdate);
+        if (result.completenessUpdate) {
+          setProfileCompleteness(result.completenessUpdate);
         }
       } else {
         // Use regular update method
