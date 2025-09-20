@@ -149,11 +149,11 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
           <button
             onClick={() => setShowAllBadges(true)}
             className={`
-              ${sizeStyles.container}
+              ${getSizeStyles(size).container}
               bg-gray-100 border-2 border-gray-300 rounded-full
               flex items-center justify-center text-gray-600
               hover:bg-gray-200 transition-colors duration-200
-              ${sizeStyles.icon}
+              ${getSizeStyles(size).icon}
             `}
           >
             +{remainingCount}
@@ -165,11 +165,11 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
           <button
             onClick={() => setShowAllBadges(false)}
             className={`
-              ${sizeStyles.container}
+              ${getSizeStyles(size).container}
               bg-gray-100 border-2 border-gray-300 rounded-full
               flex items-center justify-center text-gray-600
               hover:bg-gray-200 transition-colors duration-200
-              ${sizeStyles.icon}
+              ${getSizeStyles(size).icon}
             `}
           >
             −

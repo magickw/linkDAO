@@ -73,7 +73,7 @@ const ReputationBreakdown: React.FC<ReputationBreakdownProps> = ({
   };
 
   const calculateCategoryPercentage = (categoryScore: number) => {
-    return reputation.total > 0 ? (categoryScore / reputation.total) * 100 : 0;
+    return reputation.totalScore > 0 ? (categoryScore / reputation.totalScore) * 100 : 0;
   };
 
   const getProjectedTimeToNextLevel = () => {

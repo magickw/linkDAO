@@ -11,7 +11,7 @@ export enum FeedSortType {
 // Feed filter options
 export interface FeedFilter {
   sortBy: FeedSortType;
-  timeRange?: 'hour' | 'day' | 'week' | 'month' | 'year' | 'all';
+  timeRange?: string;
   communityId?: string;
   tags?: string[];
   author?: string;
@@ -65,82 +65,28 @@ export interface TipActivity {
   timestamp: Date;
 }
 
-// Social proof data
-export interface SocialProofData {
-  followedUsersWhoEngaged: UserProfile[];
-  totalEngagementFromFollowed: number;
-  communityLeadersWhoEngaged: UserProfile[];
-  verifiedUsersWhoEngaged: UserProfile[];
-}
+// Re-export existing social proof types
+export type { 
+  SocialProofData,
+  UserProfile
+} from '../components/SocialProof/SocialProofIndicator';
 
-export interface UserProfile {
-  address: string;
-  username?: string;
-  displayName?: string;
-  avatar?: string;
-  verified: boolean;
-  reputation?: number;
-}
+// Import for use in interfaces
+import type { SocialProofData, UserProfile } from '../components/SocialProof/SocialProofIndicator';
+import type { TrendingLevel } from '../components/TrendingBadge/TrendingBadge';
+import type { ContentPreview } from '../components/InlinePreviews/InlinePreviewRenderer';
 
-// Trending levels
-export enum TrendingLevel {
-  NONE = 'none',
-  RISING = 'rising',
-  HOT = 'hot',
-  VIRAL = 'viral'
-}
+// Re-export existing trending level type
+export type { TrendingLevel } from '../components/TrendingBadge/TrendingBadge';
 
-// Content preview types
-export interface ContentPreview {
-  type: 'nft' | 'link' | 'proposal' | 'token';
-  data: NFTPreview | LinkPreview | ProposalPreview | TokenPreview;
-  thumbnail?: string;
-  metadata: Record<string, any>;
-}
-
-export interface NFTPreview {
-  contractAddress: string;
-  tokenId: string;
-  name: string;
-  description: string;
-  image: string;
-  collection: string;
-  owner: string;
-  price?: TokenAmount;
-  rarity?: number;
-}
-
-export interface LinkPreview {
-  url: string;
-  title: string;
-  description: string;
-  image: string;
-  siteName: string;
-  type: 'article' | 'video' | 'product' | 'website';
-  metadata: Record<string, any>;
-}
-
-export interface ProposalPreview {
-  id: string;
-  title: string;
-  description: string;
-  status: ProposalStatus;
-  votingEnds: Date;
-  yesVotes: number;
-  noVotes: number;
-  quorum: number;
-  proposer: string;
-}
-
-export interface TokenPreview {
-  symbol: string;
-  name: string;
-  amount: number;
-  usdValue: number;
-  change24h: number;
-  logo: string;
-  contractAddress: string;
-}
+// Re-export existing content preview types
+export type { 
+  ContentPreview,
+  NFTPreviewData as NFTPreview,
+  LinkPreviewData as LinkPreview,
+  ProposalPreviewData as ProposalPreview,
+  TokenPreviewData as TokenPreview
+} from '../components/InlinePreviews/InlinePreviewRenderer';
 
 export interface TokenAmount {
   amount: number;
@@ -148,13 +94,7 @@ export interface TokenAmount {
   usdValue?: number;
 }
 
-export enum ProposalStatus {
-  ACTIVE = 'active',
-  PASSED = 'passed',
-  FAILED = 'failed',
-  EXECUTED = 'executed',
-  CANCELLED = 'cancelled'
-}
+
 
 // Feed preferences
 export interface FeedPreferences {
