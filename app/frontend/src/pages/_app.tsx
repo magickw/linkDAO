@@ -9,12 +9,14 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 import { ThemeProvider } from '@/components/ui/EnhancedTheme';
+import { EnhancedThemeProvider } from '@/components/VisualPolish';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
 import '../styles/globals.css';
+import '../styles/enhanced-glassmorphism.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient();
@@ -267,13 +269,13 @@ export default function App({ Component, pageProps, router }: AppProps) {
                   {/* Automatic wallet login bridge with toast notifications */}
                   <WalletLoginBridgeWithToast />
                   <NavigationProvider>
-                    <ThemeProvider defaultTheme="system">
+                    <EnhancedThemeProvider defaultTheme="system">
                       <AppContent
                         Component={Component}
                         pageProps={pageProps}
                         router={router}
                       />
-                    </ThemeProvider>
+                    </EnhancedThemeProvider>
                   </NavigationProvider>
                 </ToastProvider>
               </AuthProvider>

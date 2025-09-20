@@ -8,6 +8,7 @@ import TrendingBadge, { TrendingLevel, calculateTrendingLevel } from '../Trendin
 import OptimizedImage from '../OptimizedImage';
 import PostInteractionBar from '../PostInteractionBar';
 import GestureHandler from '../GestureHandler';
+import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../VisualPolish';
 
 export interface EnhancedPost {
   id: string;
@@ -166,10 +167,13 @@ export default function EnhancedPostCard({
   };
 
   return (
-    <GestureHandler
-      onDoubleTap={handleDoubleTap}
-      className={`bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-2xl border border-white/30 dark:border-gray-700/50 overflow-hidden transition-all duration-300 hover:-translate-y-1 ${getContentHierarchy()} ${getCategoryStyle()} ${className}`}
-    >
+    <RippleEffect className="rounded-2xl">
+      <EnhancedPostCardGlass
+        trending={trendingLevel !== null}
+        pinned={post.pinnedUntil && new Date(post.pinnedUntil) > new Date()}
+        onClick={onExpand}
+        className={`${getCategoryStyle()} ${className}`}
+      >
       {/* Header with improved visual hierarchy */}
       <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="flex items-start justify-between">
@@ -349,6 +353,7 @@ export default function EnhancedPostCard({
           }}
         />
       </div>
-    </GestureHandler>
+      </EnhancedPostCardGlass>
+    </RippleEffect>
   );
 }
