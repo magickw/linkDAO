@@ -13,9 +13,14 @@ import {
   ContentValidation
 } from '../../types/enhancedPost';
 import { DraftService } from '../../services/draftService';
+import { contentValidationService } from '../../services/contentValidationService';
+import { mediaProcessingService } from '../../services/mediaProcessingService';
 import ContentTypeTabs from './ContentTypeTabs';
-import MediaUploadZone from './MediaUploadZone';
+import EnhancedMediaUploadZone from './EnhancedMediaUploadZone';
 import HashtagMentionInput from './HashtagMentionInput';
+import PollCreator from './PollCreator';
+import ProposalCreator from './ProposalCreator';
+import RichTextEditor from './RichTextEditor';
 
 export default function EnhancedPostComposer({
   context,
@@ -114,88 +119,54 @@ export default function EnhancedPostComposer({
     setDraftLastSaved(draft.updatedAt);
   }, []);
 
-  // Validate form content
+  // Validate form content using the validation service
   const validateContent = useCallback((): ContentValidation => {
-    const errors = [];
-    const warnings = [];
-    const suggestions = [];
+    // Create a rich post input for validation
+    const richPostInput: RichPostInput = {
+      author: address || '',
+      content,
+      contentType,
+      title: title.trim() || undefined,
+      media: media.filter(m => m.uploadStatus === 'completed'),
+      links,
+      poll,
+      proposal,
+      hashtags,
+      mentions,
+      communityId,
+      scheduledAt,
+      tags: [...hashtags, contentType]
+    };
 
-    // Basic content validation
-    if (!content.trim()) {
-      errors.push({
-        field: 'content',
-        message: 'Content is required',
-        code: 'CONTENT_REQUIRED'
-      });
-    }
-
-    // Content type specific validation
-    switch (contentType) {
-      case ContentType.MEDIA:
-        if (media.length === 0) {
-          errors.push({
-            field: 'media',
-            message: 'At least one media file is required for media posts',
-            code: 'MEDIA_REQUIRED'
-          });
-        }
-        break;
-      
-      case ContentType.POLL:
-        if (!poll || poll.options.length < 2) {
-          errors.push({
-            field: 'poll',
-            message: 'Poll must have at least 2 options',
-            code: 'POLL_OPTIONS_REQUIRED'
-          });
-        }
-        break;
-      
-      case ContentType.PROPOSAL:
-        if (!proposal || !proposal.title.trim()) {
-          errors.push({
-            field: 'proposal',
-            message: 'Proposal title is required',
-            code: 'PROPOSAL_TITLE_REQUIRED'
-          });
-        }
-        break;
-    }
-
-    // Wallet connection validation
+    // Use the validation service
+    const validationResult = contentValidationService.validatePost(richPostInput);
+    
+    // Add wallet connection validation
     if (!isConnected || !address) {
-      errors.push({
+      validationResult.errors.push({
         field: 'wallet',
         message: 'Please connect your wallet to post',
         code: 'WALLET_NOT_CONNECTED'
       });
+      validationResult.isValid = false;
     }
 
-    // Content length warnings
-    if (content.length > 2000) {
-      warnings.push({
-        field: 'content',
-        message: 'Long posts may have reduced visibility',
-        code: 'CONTENT_TOO_LONG'
-      });
-    }
-
-    // Suggestions
+    // Convert to the expected format
+    const suggestions: string[] = [];
     if (hashtags.length === 0) {
       suggestions.push('Add hashtags to increase discoverability');
     }
-
     if (contentType === ContentType.TEXT && content.length < 50) {
       suggestions.push('Consider adding more detail to your post');
     }
 
     return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
+      isValid: validationResult.isValid,
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
       suggestions
     };
-  }, [content, contentType, media, poll, proposal, isConnected, address, hashtags]);
+  }, [content, contentType, title, media, links, poll, proposal, hashtags, mentions, communityId, scheduledAt, isConnected, address]);
 
   // Handle content type change
   const handleContentTypeChange = useCallback((newType: ContentType) => {
@@ -415,28 +386,54 @@ export default function EnhancedPostComposer({
           <label htmlFor="content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Content
           </label>
-          <HashtagMentionInput
-            value={content}
-            onChange={setContent}
-            onHashtagsChange={setHashtags}
-            onMentionsChange={setMentions}
-            placeholder={getPlaceholder()}
-            disabled={isLoading}
-          />
+          {contentType === ContentType.TEXT || contentType === ContentType.LINK ? (
+            <RichTextEditor
+              value={content}
+              onChange={setContent}
+              placeholder={getPlaceholder()}
+              disabled={isLoading}
+              showPreview={false}
+            />
+          ) : (
+            <HashtagMentionInput
+              value={content}
+              onChange={setContent}
+              onHashtagsChange={setHashtags}
+              onMentionsChange={setMentions}
+              placeholder={getPlaceholder()}
+              disabled={isLoading}
+            />
+          )}
         </div>
         
-        {/* Media Upload (for media content type) */}
+        {/* Content Type Specific Components */}
         {contentType === ContentType.MEDIA && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Media Files
             </label>
-            <MediaUploadZone
+            <EnhancedMediaUploadZone
               files={media}
               onFilesChange={setMedia}
               disabled={isLoading}
             />
           </div>
+        )}
+
+        {contentType === ContentType.POLL && (
+          <PollCreator
+            poll={poll}
+            onPollChange={setPoll}
+            disabled={isLoading}
+          />
+        )}
+
+        {contentType === ContentType.PROPOSAL && (
+          <ProposalCreator
+            proposal={proposal}
+            onProposalChange={setProposal}
+            disabled={isLoading}
+          />
         )}
         
         {/* Validation Messages */}

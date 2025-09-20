@@ -96,12 +96,20 @@ class RequestManager {
         return await this.executeRequest<T>(url, options, timeout);
       } catch (error) {
         lastError = error as Error;
-        
+
         // Don't retry on client errors (4xx) except 429 (rate limit)
         if (error instanceof Response && error.status >= 400 && error.status < 500 && error.status !== 429) {
           throw error;
         }
 
+        // Specific handling for 503 Service Unavailable
+        if ((error as any).isServiceUnavailable) {
+          const serviceUnavailableDelay = 5000 * Math.pow(2, attempt); // Longer delay for 503
+          console.log(`Backend service unavailable. Retrying in ${serviceUnavailableDelay}ms (attempt ${attempt + 1}/${retries + 1}):`, url);
+          await this.sleep(serviceUnavailableDelay);
+          continue; // Continue to the next retry attempt
+        }
+        
         // Don't retry on the last attempt
         if (attempt === retries) {
           break;
@@ -133,18 +141,12 @@ class RequestManager {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        // Handle 503 Service Unavailable specifically
-        if (response.status === 503) {
-          const error = new Error('Backend service is temporarily unavailable. Please try again later.');
-          (error as any).status = response.status;
-          (error as any).response = response;
-          (error as any).isServiceUnavailable = true;
-          throw error;
-        }
-        
         const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
         (error as any).status = response.status;
         (error as any).response = response;
+        if (response.status === 503) {
+          (error as any).isServiceUnavailable = true;
+        }
         throw error;
       }
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
-import { EnhancedPostComposer } from '../components/EnhancedPostComposer';
-import { RichPostInput, PostDraft } from '../types/enhancedPost';
+import EnhancedPostComposer from '../components/EnhancedPostComposer/EnhancedPostComposer';
+import { RichPostInput, PostDraft, ContentType } from '../types/enhancedPost';
 import { DraftService } from '../services/draftService';
 
 export default function TestEnhancedComposer() {
@@ -40,17 +40,21 @@ export default function TestEnhancedComposer() {
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Enhanced Post Composer Test
+                Rich Content Creation Features Test
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
-                Testing the new enhanced post composer with rich content support
+                Testing all the new rich content creation features: polls, proposals, rich text editor, media processing, and content validation
               </p>
             </div>
 
-            {/* Enhanced Post Composer */}
+            {/* Rich Text Editor Test */}
             <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                📝 Rich Text Editor with Markdown Support
+              </h2>
               <EnhancedPostComposer
                 context="feed"
+                initialContentType={ContentType.TEXT}
                 onSubmit={handleSubmit}
                 onDraftSave={handleDraftSave}
                 onDraftLoad={handleDraftLoad}
@@ -59,20 +63,132 @@ export default function TestEnhancedComposer() {
               />
             </div>
 
-            {/* Community Context Example */}
+            {/* Enhanced Media Upload Test */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Community Context Example
+                📸 Enhanced Media Upload with Processing & Editing
               </h2>
               <EnhancedPostComposer
                 context="community"
                 communityId="test-community"
+                initialContentType={ContentType.MEDIA}
                 onSubmit={handleSubmit}
                 onDraftSave={handleDraftSave}
                 onDraftLoad={handleDraftLoad}
                 isLoading={isLoading}
                 className="mb-6"
               />
+            </div>
+
+            {/* Poll Creator Test */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                📊 Token-Weighted Poll Creator
+              </h2>
+              <EnhancedPostComposer
+                context="feed"
+                initialContentType={ContentType.POLL}
+                onSubmit={handleSubmit}
+                onDraftSave={handleDraftSave}
+                onDraftLoad={handleDraftLoad}
+                isLoading={isLoading}
+                className="mb-6"
+              />
+            </div>
+
+            {/* Proposal Creator Test */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                🏛️ Governance Proposal Creator with Templates
+              </h2>
+              <EnhancedPostComposer
+                context="feed"
+                initialContentType={ContentType.PROPOSAL}
+                onSubmit={handleSubmit}
+                onDraftSave={handleDraftSave}
+                onDraftLoad={handleDraftLoad}
+                isLoading={isLoading}
+                className="mb-6"
+              />
+            </div>
+
+            {/* Link Posts with Rich Editor */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                🔗 Link Posts with Rich Text Editor
+              </h2>
+              <EnhancedPostComposer
+                context="feed"
+                initialContentType={ContentType.LINK}
+                onSubmit={handleSubmit}
+                onDraftSave={handleDraftSave}
+                onDraftLoad={handleDraftLoad}
+                isLoading={isLoading}
+                className="mb-6"
+              />
+            </div>
+
+            {/* Features Summary */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                ✅ Rich Content Creation Features Implemented
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">📊 Poll Creator</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• Token-weighted voting options</li>
+                    <li>• Multiple choice support</li>
+                    <li>• Customizable voting periods</li>
+                    <li>• Real-time validation & preview</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">🏛️ Proposal Creator</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• Governance proposal templates</li>
+                    <li>• Funding request templates</li>
+                    <li>• Parameter change templates</li>
+                    <li>• Markdown preview support</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">📝 Rich Text Editor</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• Markdown support with live preview</li>
+                    <li>• Formatting toolbar</li>
+                    <li>• Keyboard shortcuts</li>
+                    <li>• Link & image insertion</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">📸 Media Processing</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• Automatic image optimization</li>
+                    <li>• Image editing tools</li>
+                    <li>• Thumbnail generation</li>
+                    <li>• Compression with ratio display</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">🛡️ Content Validation</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• XSS pattern detection</li>
+                    <li>• Content sanitization</li>
+                    <li>• Spam detection algorithms</li>
+                    <li>• URL validation</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2">✨ Enhanced UX</h3>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <li>• Drag & drop file upload</li>
+                    <li>• Real-time autocomplete</li>
+                    <li>• Draft auto-save & recovery</li>
+                    <li>• Content type switching</li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
             {/* Draft Statistics */}
