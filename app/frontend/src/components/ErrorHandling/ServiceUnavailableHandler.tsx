@@ -187,7 +187,7 @@ export function useServiceUnavailableHandler() {
     handleDismiss,
     ServiceUnavailableHandler: () => (
       <ServiceUnavailableHandler
-        error={isVisible ? error : undefined}
+        error={isVisible ? error || undefined : undefined}
         onRetry={handleRetry}
         onDismiss={handleDismiss}
       />
