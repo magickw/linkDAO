@@ -3,15 +3,34 @@
  * Full-page experience for Web3 messaging
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import { useAccount } from 'wagmi';
 import DashboardLayout from '@/components/DashboardLayout';
-import { MessagingInterface } from '@/components/Messaging';
 import { GlassPanel } from '@/design-system';
+import SimpleMessagingInterface from '@/components/Messaging/SimpleMessagingInterface';
+
+// Dynamically import the advanced messaging interface with error handling
+const AdvancedMessagingInterface = dynamic(
+  () => import('@/components/Messaging/MessagingInterface').catch(() => {
+    console.warn('Advanced messaging interface not available, using simple interface');
+    return { default: SimpleMessagingInterface };
+  }),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    ),
+    ssr: false
+  }
+);
 
 export default function MessagingPage() {
   const { isConnected } = useAccount();
+  const [useAdvancedInterface, setUseAdvancedInterface] = useState(false);
+  const [interfaceError, setInterfaceError] = useState(false);
 
   if (!isConnected) {
     return (
@@ -49,17 +68,51 @@ export default function MessagingPage() {
       >
         <div className="h-full">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Wallet-to-Wallet Messages
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Secure, encrypted messaging between Web3 addresses across multiple chains
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Wallet-to-Wallet Messages
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Secure, encrypted messaging between Web3 addresses across multiple chains
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">Interface:</span>
+                <button
+                  onClick={() => setUseAdvancedInterface(!useAdvancedInterface)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                    useAdvancedInterface 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {useAdvancedInterface ? 'Advanced' : 'Simple'}
+                </button>
+              </div>
+            </div>
           </div>
           
           <div className="bg-gray-900 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
-            <MessagingInterface className="h-full" />
+            {useAdvancedInterface && !interfaceError ? (
+              <AdvancedMessagingInterface className="h-full" />
+            ) : (
+              <SimpleMessagingInterface className="h-full" />
+            )}
           </div>
+          
+          {interfaceError && (
+            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Advanced messaging features are temporarily unavailable. Using simplified interface.
+                </p>
+              </div>
+            </div>
+          )}
           
           {/* Feature Highlights */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">

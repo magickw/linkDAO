@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CreatePostInput } from '@/models/Post';
-import { Camera, Image, Link as LinkIcon, Smile, MapPin, Tag } from 'lucide-react';
+import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X } from 'lucide-react';
 
 interface FacebookStylePostComposerProps {
   onSubmit: (postData: CreatePostInput) => Promise<void>;
@@ -21,9 +21,15 @@ export default function FacebookStylePostComposer({
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [tags, setTags] = useState('');
+  const [feeling, setFeeling] = useState('');
+  const [location, setLocation] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [showFeelingInput, setShowFeelingInput] = useState(false);
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -37,29 +43,48 @@ export default function FacebookStylePostComposer({
     setIsExpanded(true);
   };
 
+  // Extract hashtags from content
+  const extractHashtags = (text: string): string[] => {
+    const hashtagRegex = /#[\w]+/g;
+    const matches = text.match(hashtagRegex);
+    return matches ? matches.map(tag => tag.substring(1)) : [];
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!content.trim()) return;
 
     try {
-      const tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      
+      // Extract hashtags from content
+      const tagArray = extractHashtags(content);
+
+      // Build content with additional info
+      let finalContent = content.trim();
+      if (feeling) finalContent += ` — feeling ${feeling}`;
+      if (location) finalContent += ` at ${location}`;
+      if (linkUrl) finalContent += ` ${linkUrl}`;
+
       const postData: CreatePostInput = {
         author: '',
-        content: content.trim(),
+        content: finalContent,
         tags: tagArray,
         media: selectedFiles.length > 0 ? ['https://placehold.co/300'] : undefined
       };
 
       await onSubmit(postData);
-      
+
       // Reset form
       setContent('');
-      setTags('');
+      setFeeling('');
+      setLocation('');
+      setLinkUrl('');
       setSelectedFiles([]);
       setPreviews([]);
       setIsExpanded(false);
+      setShowFeelingInput(false);
+      setShowLocationInput(false);
+      setShowLinkInput(false);
     } catch (error) {
       console.error('Error submitting post:', error);
     }
@@ -70,8 +95,26 @@ export default function FacebookStylePostComposer({
     if (files.length === 0) return;
 
     setSelectedFiles(prev => [...prev, ...files]);
-    
+
     // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setPreviews(prev => [...prev, event.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setSelectedFiles(prev => [...prev, ...files]);
+
+    // Create previews for videos
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -90,10 +133,15 @@ export default function FacebookStylePostComposer({
 
   const handleCancel = () => {
     setContent('');
-    setTags('');
+    setFeeling('');
+    setLocation('');
+    setLinkUrl('');
     setSelectedFiles([]);
     setPreviews([]);
     setIsExpanded(false);
+    setShowFeelingInput(false);
+    setShowLocationInput(false);
+    setShowLinkInput(false);
   };
 
   return (
@@ -124,46 +172,139 @@ export default function FacebookStylePostComposer({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={handleFocus}
-                placeholder="What's happening in Web3?"
+                placeholder="What's happening in Web3? Use # to add hashtags..."
                 className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
                 rows={isExpanded ? 3 : 1}
                 disabled={isLoading}
                 style={{ minHeight: isExpanded ? '80px' : '40px' }}
               />
 
-              {/* File previews */}
-              {previews.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {previews.map((preview, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70"
-                      >
-                        ×
-                      </button>
-                    </div>
+              {/* Hashtag preview */}
+              {isExpanded && extractHashtags(content).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {extractHashtags(content).map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200"
+                    >
+                      #{tag}
+                    </span>
                   ))}
                 </div>
               )}
 
-              {/* Tags input (when expanded) */}
+              {/* File previews */}
+              {previews.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {previews.map((preview, index) => {
+                    const file = selectedFiles[index];
+                    const isVideo = file?.type.startsWith('video/');
+
+                    return (
+                      <div key={index} className="relative">
+                        {isVideo ? (
+                          <video
+                            src={preview}
+                            className="w-full h-32 object-cover rounded-lg"
+                            controls
+                          />
+                        ) : (
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Additional inputs when expanded */}
               {isExpanded && (
-                <div className="mt-3">
-                  <input
-                    type="text"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                    placeholder="Add tags (comma separated)"
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    disabled={isLoading}
-                  />
+                <div className="mt-3 space-y-2">
+                  {/* Feeling input */}
+                  {showFeelingInput && (
+                    <div className="flex items-center space-x-2">
+                      <Smile className="w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        value={feeling}
+                        onChange={(e) => setFeeling(e.target.value)}
+                        placeholder="How are you feeling?"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowFeelingInput(false);
+                          setFeeling('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Location input */}
+                  {showLocationInput && (
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Where are you?"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowLocationInput(false);
+                          setLocation('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Link input */}
+                  {showLinkInput && (
+                    <div className="flex items-center space-x-2">
+                      <LinkIcon className="w-4 h-4 text-gray-500" />
+                      <input
+                        type="url"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        placeholder="Add a link..."
+                        className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        disabled={isLoading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowLinkInput(false);
+                          setLinkUrl('');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -185,50 +326,54 @@ export default function FacebookStylePostComposer({
                   <Image className="w-5 h-5" />
                   <span className="text-sm font-medium">Photo</span>
                 </button>
-                
+
                 <button
                   type="button"
+                  onClick={() => videoInputRef.current?.click()}
                   className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
                   disabled={isLoading}
                 >
-                  <Camera className="w-5 h-5" />
+                  <Video className="w-5 h-5" />
                   <span className="text-sm font-medium">Video</span>
                 </button>
-                
+
                 <button
                   type="button"
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                  onClick={() => setShowLinkInput(!showLinkInput)}
+                  className={`flex items-center space-x-2 transition-colors ${showLinkInput
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                    }`}
                   disabled={isLoading}
                 >
                   <LinkIcon className="w-5 h-5" />
                   <span className="text-sm font-medium">Link</span>
                 </button>
-                
+
                 <button
                   type="button"
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                  onClick={() => setShowFeelingInput(!showFeelingInput)}
+                  className={`flex items-center space-x-2 transition-colors ${showFeelingInput
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                    }`}
                   disabled={isLoading}
                 >
                   <Smile className="w-5 h-5" />
                   <span className="text-sm font-medium">Feeling</span>
                 </button>
-                
+
                 <button
                   type="button"
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                  onClick={() => setShowLocationInput(!showLocationInput)}
+                  className={`flex items-center space-x-2 transition-colors ${showLocationInput
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400'
+                    }`}
                   disabled={isLoading}
                 >
                   <MapPin className="w-5 h-5" />
                   <span className="text-sm font-medium">Location</span>
-                </button>
-                
-                <button
-                  type="button"
-                  className="flex items-center space-x-2 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
-                  disabled={isLoading}
-                >
-                  <Tag className="w-5 h-5" />
-                  <span className="text-sm font-medium">Tag</span>
                 </button>
               </div>
 
@@ -266,13 +411,21 @@ export default function FacebookStylePostComposer({
         )}
       </form>
 
-      {/* Hidden file input */}
+      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*"
         multiple
         onChange={handleFileSelect}
+        className="hidden"
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/*"
+        multiple
+        onChange={handleVideoSelect}
         className="hidden"
       />
     </div>
