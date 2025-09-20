@@ -21,7 +21,7 @@ interface SharePostModalProps {
     dao?: string;
     communityId?: string;
   };
-  postType: 'feed' | 'community';
+  postType: 'feed' | 'community' | 'enhanced';
   onShare?: (postId: string, shareType: string, message?: string) => Promise<void>;
 }
 

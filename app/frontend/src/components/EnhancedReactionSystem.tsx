@@ -15,7 +15,7 @@ interface Reaction {
 
 interface EnhancedReactionSystemProps {
   postId: string;
-  postType: 'feed' | 'community';
+  postType: 'feed' | 'community' | 'enhanced';
   initialReactions?: Reaction[];
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   className?: string;
@@ -150,7 +150,7 @@ export default function EnhancedReactionSystem({
   const getTopReactions = () => {
     return reactions
       .filter(r => (postType === 'community' ? r.totalStaked > 0 : r.count > 0))
-      .sort((a, b) => (postType === 'community' ? b.totalStaked - a.totalStaked : b.count - a.count))
+      .sort((a, b) => (postType === 'community' || postType === 'enhanced' ? b.totalStaked - a.totalStaked : b.count - a.count))
       .slice(0, 5);
   };
 
@@ -165,16 +165,16 @@ export default function EnhancedReactionSystem({
             key={reaction.type}
             onClick={() => handleReactionClick(reaction.type)}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
-              (postType === 'community' ? reaction.userStaked > 0 : reaction.userStaked > 0)
+              (postType === 'community' || postType === 'enhanced' ? reaction.userStaked > 0 : reaction.userStaked > 0)
                 ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md animate-pulse'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             <span className="text-lg">{reaction.emoji}</span>
             <span>
-              {postType === 'community' ? reaction.totalStaked : reaction.count}
+              {postType === 'community' || postType === 'enhanced' ? reaction.totalStaked : reaction.count}
             </span>
-            {postType === 'community' && reaction.userStaked > 0 && (
+            {(postType === 'community' || postType === 'enhanced') && reaction.userStaked > 0 && (
               <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
                 +{reaction.userStaked}
               </span>

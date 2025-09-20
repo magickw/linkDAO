@@ -169,6 +169,8 @@ import sellerRoutes from './routes/sellerRoutes';
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
 import orderCreationRoutes from './routes/orderCreationRoutes';
+// Import token reaction routes
+import tokenReactionRoutes from './routes/tokenReactionRoutes';
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -208,6 +210,9 @@ app.use('/api/listings', listingRoutes);
 
 // Order creation routes
 app.use('/api/orders', orderCreationRoutes);
+
+// Token reaction routes
+app.use('/api/reactions', tokenReactionRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {

@@ -34,6 +34,7 @@ export interface MediaFile {
   uploadStatus: 'pending' | 'uploading' | 'completed' | 'error';
   error?: string;
   cid?: string; // IPFS CID after upload
+  metadata?: Record<string, any>; // Additional metadata from processing
 }
 
 // Link preview data

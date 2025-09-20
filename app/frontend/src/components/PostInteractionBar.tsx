@@ -16,7 +16,7 @@ interface PostInteractionBarProps {
     commentCount?: number;
     stakedValue?: number;
   };
-  postType: 'feed' | 'community';
+  postType: 'feed' | 'community' | 'enhanced';
   userMembership?: any;
   onComment?: () => void;
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
@@ -183,7 +183,7 @@ export default function PostInteractionBar({
       </div>
 
       {/* Quick Tip Input */}
-      {showTipInput && postType === 'feed' && (
+      {showTipInput && (postType === 'feed' || postType === 'enhanced') && (
         <form onSubmit={handleQuickTip} className="flex items-center space-x-2 animate-fadeIn">
           <input
             type="number"
