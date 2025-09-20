@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import PostCreationModal from '@/components/PostCreationModal';
+import { CreatePostInput } from '@/models/Post';
 import {
   TrendingUp,
   Clock,
@@ -160,6 +162,8 @@ const CommunitiesPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>(['ethereum-builders', 'defi-traders']);
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   useEffect(() => {
     // Set default community if none selected
@@ -190,6 +194,39 @@ const CommunitiesPage: React.FC = () => {
     }));
   };
 
+  const handleCreatePost = async (postData: CreatePostInput) => {
+    setIsCreatingPost(true);
+    try {
+      // Add community context to the post
+      const newPost = {
+        id: Date.now().toString(),
+        communityId: selectedCommunity?.id || '',
+        title: postData.content.split('\n')[0] || 'Untitled Post',
+        author: '0x1234567890123456789012345678901234567890',
+        authorName: 'current_user',
+        content: postData.content,
+        type: 'discussion' as const,
+        upvotes: 0,
+        downvotes: 0,
+        commentCount: 0,
+        createdAt: new Date(),
+        tags: postData.tags || [],
+        stakedTokens: 0,
+        isStaked: false
+      };
+      
+      setPosts(prev => [newPost, ...prev]);
+      setIsPostModalOpen(false);
+      
+      // In a real app, this would make an API call
+      console.log('Creating post:', postData);
+    } catch (error) {
+      console.error('Error creating post:', error);
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
+
   const filteredPosts = selectedCommunity
     ? posts.filter(post => post.communityId === selectedCommunity.id)
     : posts;
@@ -210,7 +247,11 @@ const CommunitiesPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white">Communities</h3>
-                  <button className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                  <button 
+                    onClick={() => setIsPostModalOpen(true)}
+                    className="p-1 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                    title="Create Advanced Post"
+                  >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
@@ -224,8 +265,8 @@ const CommunitiesPage: React.FC = () => {
                         key={community.id}
                         onClick={() => setSelectedCommunity(community)}
                         className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded text-sm transition-colors ${selectedCommunity?.id === community.id
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                           }`}
                       >
                         <span className="text-lg">{community.avatar}</span>
@@ -244,8 +285,8 @@ const CommunitiesPage: React.FC = () => {
                         key={community.id}
                         onClick={() => setSelectedCommunity(community)}
                         className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded text-sm transition-colors ${selectedCommunity?.id === community.id
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                            : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                           }`}
                       >
                         <span className="text-lg">{community.avatar}</span>
@@ -265,8 +306,8 @@ const CommunitiesPage: React.FC = () => {
                       key={filter}
                       onClick={() => setSortBy(filter)}
                       className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded text-sm transition-colors ${sortBy === filter
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                         }`}
                     >
                       {filter === 'hot' && <Flame className="w-4 h-4" />}
@@ -319,8 +360,8 @@ const CommunitiesPage: React.FC = () => {
                       <button
                         onClick={() => handleJoinCommunity(selectedCommunity.id)}
                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${joinedCommunities.includes(selectedCommunity.id)
-                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                            : 'bg-primary-600 text-white hover:bg-primary-700'
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                          : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                       >
                         {joinedCommunities.includes(selectedCommunity.id) ? 'Joined' : 'Join'}
@@ -329,8 +370,21 @@ const CommunitiesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Sorting Tabs */}
+                {/* Create Post Button & Sorting Tabs */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {selectedCommunity.displayName} Posts
+                    </h2>
+                    <button
+                      onClick={() => setIsPostModalOpen(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Post</span>
+                    </button>
+                  </div>
+                  
                   <div className="flex items-center justify-between">
                     <div className="flex space-x-1">
                       {(['hot', 'new', 'top', 'rising'] as const).map(tab => (
@@ -338,8 +392,8 @@ const CommunitiesPage: React.FC = () => {
                           key={tab}
                           onClick={() => setSortBy(tab)}
                           className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${sortBy === tab
-                              ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                              : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                            : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                             }`}
                         >
                           <span className="capitalize">{tab}</span>
@@ -546,6 +600,14 @@ const CommunitiesPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Advanced Post Creation Modal */}
+      <PostCreationModal
+        isOpen={isPostModalOpen}
+        onClose={() => setIsPostModalOpen(false)}
+        onSubmit={handleCreatePost}
+        isLoading={isCreatingPost}
+      />
     </div>
   );
 };
