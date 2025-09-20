@@ -395,7 +395,7 @@ export default function Home() {
                               {/* Post Content */}
                               <div className="mb-4">
                                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                                  {post.title}
+                                  {(post as any).title || 'Untitled Post'}
                                 </h3>
                                 <p className="text-gray-700 dark:text-gray-300">
                                   {post.contentCid}
@@ -439,7 +439,7 @@ export default function Home() {
                                   </button>
                                   <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors">
                                     <MessageCircle className="w-4 h-4" />
-                                    <span className="text-sm">{post.commentCount}</span>
+                                    <span className="text-sm">{(post as any).commentCount || 0}</span>
                                   </button>
                                   <button 
                                     onClick={() => handleTip(post.id, '0.01', 'ETH')}
@@ -450,7 +450,7 @@ export default function Home() {
                                   </button>
                                 </div>
                                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {post.stakedValue} tokens staked
+                                  {(post as any).stakedValue || 0} tokens staked
                                 </div>
                               </div>
                             </div>
