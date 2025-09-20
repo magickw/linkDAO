@@ -6,6 +6,9 @@ const nextConfig = {
   swcMinify: true,
   trailingSlash: false,
   output: 'standalone',
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
   
   // Performance optimizations
   experimental: {
