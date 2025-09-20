@@ -61,7 +61,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
   // Navigation items with icons - Home now serves as the main Feed/Dashboard
   const navItems = [
     { name: 'Home', href: '/', icon: '🏠' },
-    { name: 'Communities', href: '/dao/ethereum-builders', icon: '👥' },
+    { name: 'Communities', href: '/communities', icon: '👥' },
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
