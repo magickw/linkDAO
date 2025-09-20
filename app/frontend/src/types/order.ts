@@ -37,9 +37,9 @@ export interface BillingAddress {
 }
 
 export interface TrackingInfo {
-  trackingNumber: string;
-  carrier: string;
-  status: string;
+  trackingNumber?: string;
+  carrier?: string;
+  status?: string;
   estimatedDelivery?: string;
   actualDelivery?: string;
   events: TrackingEvent[];

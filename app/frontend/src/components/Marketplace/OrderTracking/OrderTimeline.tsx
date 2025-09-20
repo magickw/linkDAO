@@ -13,7 +13,7 @@ import {
   AlertTriangle, 
   CreditCard,
   User,
-  System,
+  Settings,
   RefreshCw,
   MessageSquare,
   FileText,
@@ -56,7 +56,7 @@ const OrderTimeline: React.FC<OrderTimelineProps> = ({
       'NOTE_ADDED': MessageSquare,
       'DOCUMENT_UPLOADED': FileText,
       'ADDRESS_UPDATED': MapPin,
-      'SYSTEM_UPDATE': System,
+      'SYSTEM_UPDATE': Settings,
       'USER_ACTION': User
     };
 

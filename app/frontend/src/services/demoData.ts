@@ -63,6 +63,13 @@ export const demoSellerApplications: SellerProfile[] = [
     bio: 'Premium electronics and gadgets retailer',
     description: 'We specialize in cutting-edge technology products',
     location: 'San Francisco, CA',
+    ensVerified: false,
+    profileCompleteness: {
+      score: 85,
+      missingFields: ['ensHandle', 'sellerStory'],
+      recommendations: ['Add ENS handle for better discoverability', 'Complete your seller story'],
+      lastCalculated: '2024-09-18T10:00:00Z'
+    },
     socialLinks: {
       twitter: '@techgadgetspro',
       website: 'https://techgadgetspro.com'
@@ -136,6 +143,13 @@ export const demoSellerApplications: SellerProfile[] = [
     bio: 'Unique handcrafted items and artwork',
     description: 'Supporting local artisans and creators',
     location: 'Portland, OR',
+    ensVerified: false,
+    profileCompleteness: {
+      score: 70,
+      missingFields: ['phone', 'kycStatus', 'sellerStory'],
+      recommendations: ['Complete phone verification', 'Submit KYC documents', 'Add your seller story'],
+      lastCalculated: '2024-09-18T10:00:00Z'
+    },
     socialLinks: {
       website: 'https://artisancrafts.shop'
     },
@@ -204,6 +218,13 @@ export const demoSellerApplications: SellerProfile[] = [
     bio: 'Professional mining equipment and services',
     description: 'High-performance mining rigs and consultation',
     location: 'Austin, TX',
+    ensVerified: false,
+    profileCompleteness: {
+      score: 60,
+      missingFields: ['emailVerified', 'kycStatus', 'sellerStory'],
+      recommendations: ['Verify your email address', 'Complete KYC verification', 'Add detailed seller story'],
+      lastCalculated: '2024-09-18T10:00:00Z'
+    },
     socialLinks: {
       twitter: '@minermax',
       website: 'https://minermax.io'

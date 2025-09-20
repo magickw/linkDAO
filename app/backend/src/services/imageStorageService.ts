@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { createHash } from 'crypto';
+import { performance } from 'perf_hooks';
 import { db } from '../db/index';
 import { imageStorage } from '../db/schema';
 import ipfsService from './ipfsService';
@@ -172,23 +173,47 @@ class ImageStorageService {
   }
 
   /**
-   * Optimize image for web delivery
+   * Optimize image for web delivery with enhanced performance
    */
   async optimizeImage(buffer: Buffer, options: {
     quality?: number;
     format?: 'jpeg' | 'png' | 'webp';
     progressive?: boolean;
     stripMetadata?: boolean;
+    maxWidth?: number;
+    maxHeight?: number;
   } = {}): Promise<Buffer> {
+    const startTime = performance.now();
+    
     try {
       const {
         quality = 85,
         format = 'jpeg',
         progressive = true,
-        stripMetadata = true
+        stripMetadata = true,
+        maxWidth = 2048,
+        maxHeight = 2048
       } = options;
 
-      let pipeline = sharp(buffer);
+      let pipeline = sharp(buffer, {
+        // Performance optimizations
+        sequentialRead: true,
+        limitInputPixels: 268402689, // ~16k x 16k limit
+      });
+
+      // Get metadata for optimization decisions
+      const metadata = await pipeline.metadata();
+      
+      // Resize if image is too large
+      if (metadata.width && metadata.height) {
+        if (metadata.width > maxWidth || metadata.height > maxHeight) {
+          pipeline = pipeline.resize(maxWidth, maxHeight, {
+            fit: 'inside',
+            withoutEnlargement: true,
+            kernel: sharp.kernel.lanczos3 // High quality resampling
+          });
+        }
+      }
 
       // Strip metadata for privacy and size reduction
       if (stripMetadata) {
@@ -201,7 +226,10 @@ class ImageStorageService {
           pipeline = pipeline.jpeg({
             quality,
             progressive,
-            mozjpeg: true // Use mozjpeg encoder for better compression
+            mozjpeg: true, // Use mozjpeg encoder for better compression
+            trellisQuantisation: true,
+            overshootDeringing: true,
+            optimizeScans: true
           });
           break;
         case 'png':
@@ -209,18 +237,26 @@ class ImageStorageService {
             quality,
             progressive,
             compressionLevel: 9,
-            adaptiveFiltering: true
+            adaptiveFiltering: true,
+            palette: true // Use palette when possible
           });
           break;
         case 'webp':
           pipeline = pipeline.webp({
             quality,
-            effort: 6 // Maximum compression effort
+            effort: 6, // Maximum compression effort
+            smartSubsample: true,
+            nearLossless: quality > 90
           });
           break;
       }
 
-      return await pipeline.toBuffer();
+      const result = await pipeline.toBuffer();
+      
+      const duration = performance.now() - startTime;
+      console.log(`Image optimization completed in ${duration.toFixed(2)}ms, size reduced from ${buffer.length} to ${result.length} bytes`);
+      
+      return result;
     } catch (error) {
       console.error('Image optimization error:', error);
       throw new Error('Failed to optimize image');
@@ -228,30 +264,46 @@ class ImageStorageService {
   }
 
   /**
-   * Generate thumbnails in multiple sizes
+   * Generate thumbnails in multiple sizes with parallel processing
    */
   async generateThumbnails(buffer: Buffer): Promise<ThumbnailResult[]> {
+    const startTime = performance.now();
+    
     try {
-      const thumbnails: ThumbnailResult[] = [];
-
-      for (const size of THUMBNAIL_SIZES) {
-        const thumbnailBuffer = await sharp(buffer)
+      // Process thumbnails in parallel for better performance
+      const thumbnailPromises = THUMBNAIL_SIZES.map(async (size) => {
+        const thumbnailBuffer = await sharp(buffer, {
+          sequentialRead: true,
+          limitInputPixels: 268402689
+        })
           .resize(size.width, size.height, {
             fit: 'cover',
-            position: 'center'
+            position: 'center',
+            kernel: sharp.kernel.lanczos3
           })
-          .jpeg({ quality: size.quality, progressive: true })
+          .jpeg({ 
+            quality: size.quality, 
+            progressive: true,
+            mozjpeg: true,
+            trellisQuantisation: true,
+            optimizeScans: true
+          })
           .toBuffer();
 
-        thumbnails.push({
+        return {
           name: size.name,
           buffer: thumbnailBuffer,
           width: size.width,
           height: size.height,
           size: thumbnailBuffer.length
-        });
-      }
+        };
+      });
 
+      const thumbnails = await Promise.all(thumbnailPromises);
+      
+      const duration = performance.now() - startTime;
+      console.log(`Generated ${thumbnails.length} thumbnails in ${duration.toFixed(2)}ms`);
+      
       return thumbnails;
     } catch (error) {
       console.error('Thumbnail generation error:', error);

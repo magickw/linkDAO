@@ -65,7 +65,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       // Load tracking info if available
       if (order.trackingNumber) {
         const tracking = await orderService.getTrackingInfo(order.id);
-        setTrackingInfo(tracking);
+        // Ensure tracking info has required fields
+        if (tracking && tracking.trackingNumber && tracking.carrier) {
+          setTrackingInfo(tracking);
+        }
       }
     } catch (error) {
       console.error('Error loading order details:', error);
