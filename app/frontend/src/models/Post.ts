@@ -16,6 +16,8 @@ export interface CreatePostInput {
   media?: string[]; // Media files would be uploaded to IPFS and CIDs stored
   tags?: string[];
   onchainRef?: string;
+  poll?: any; // Poll data for poll posts
+  proposal?: any; // Proposal data for governance posts
 }
 
 export interface UpdatePostInput {
