@@ -11,7 +11,11 @@
     "database": "node src/index.database.js",
     "migrate": "ts-node src/scripts/migrate.ts",
     "health": "curl -f http://localhost:${PORT:-10000}/health || exit 1",
-    "test": "jest"
+    "test": "jest",
+    "test:marketplace": "ts-node src/tests/marketplaceEnhancements/testRunner.ts",
+    "test:marketplace:unit": "ts-node src/tests/marketplaceEnhancements/testRunner.ts --unit",
+    "test:marketplace:integration": "ts-node src/tests/marketplaceEnhancements/testRunner.ts --integration",
+    "test:marketplace:e2e": "ts-node src/tests/marketplaceEnhancements/testRunner.ts --e2e"
   },
   "dependencies": {
     "compression": "^1.7.4",

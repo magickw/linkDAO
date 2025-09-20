@@ -441,12 +441,17 @@ export class UnifiedCheckoutService {
     description: string;
     status: 'completed' | 'pending' | 'failed';
   }> {
-    const timeline = [
+    const timeline: Array<{
+      timestamp: Date;
+      event: string;
+      description: string;
+      status: 'completed' | 'pending' | 'failed';
+    }> = [
       {
         timestamp: new Date(),
         event: 'Order Created',
         description: `Order created with ${orderData.paymentPath} payment`,
-        status: 'completed' as const
+        status: 'completed'
       }
     ];
 
@@ -456,7 +461,7 @@ export class UnifiedCheckoutService {
           timestamp: new Date(Date.now() - 60000),
           event: 'Escrow Funded',
           description: 'Funds locked in smart contract escrow',
-          status: 'completed' as const
+          status: 'completed'
         });
       }
     } else if (orderData.paymentPath === 'fiat' && orderData.stripeStatus) {
@@ -464,7 +469,7 @@ export class UnifiedCheckoutService {
         timestamp: new Date(Date.now() - 30000),
         event: 'Payment Processed',
         description: 'Fiat payment processed and held in escrow',
-        status: 'completed' as const
+        status: 'completed'
       });
     }
 
@@ -474,7 +479,7 @@ export class UnifiedCheckoutService {
         timestamp: new Date(Date.now() + 3600000), // 1 hour from now
         event: 'Awaiting Shipment',
         description: 'Waiting for seller to ship item',
-        status: 'pending' as const
+        status: 'pending'
       });
     }
 

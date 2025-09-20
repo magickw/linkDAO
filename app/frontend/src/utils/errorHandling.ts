@@ -1,3 +1,4 @@
+import React from 'react';
 import { toast } from 'react-hot-toast';
 
 // Error types that match backend
@@ -346,7 +347,7 @@ export const createErrorBoundary = (FallbackComponent: React.ComponentType<any>)
 
     render() {
       if (this.state.hasError) {
-        return <FallbackComponent error={this.state.error} />;
+        return React.createElement(FallbackComponent, { error: this.state.error });
       }
 
       return this.props.children;
