@@ -92,12 +92,15 @@ export interface ReactionNotification extends BaseNotification {
   category: NotificationCategory.REACTION;
   metadata: {
     postId: string;
+    commentId?: string;
     reactionType: string;
     reactionEmoji: string;
     reactorAddress: string;
     reactorUsername: string;
     reactorAvatar?: string;
     tokenAmount?: number;
+    count?: number;
+    userReacted?: boolean;
   };
 }
 

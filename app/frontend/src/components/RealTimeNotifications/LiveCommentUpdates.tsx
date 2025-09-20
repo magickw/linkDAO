@@ -119,11 +119,11 @@ const LiveCommentUpdates: React.FC<LiveCommentUpdatesProps> = ({
         notification.metadata?.commentId) {
       
       const reactionUpdate: ReactionUpdate = {
-        commentId: notification.metadata.commentId,
+        commentId: notification.metadata.commentId as string,
         reactionType: notification.metadata.reactionType,
         emoji: notification.metadata.reactionEmoji,
-        count: notification.metadata.count,
-        userReacted: notification.metadata.userReacted,
+        count: notification.metadata.count || 1,
+        userReacted: notification.metadata.userReacted || false,
         tokenAmount: notification.metadata.tokenAmount
       };
 
