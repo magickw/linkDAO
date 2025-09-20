@@ -61,6 +61,15 @@ const PriorityNotificationModal: React.FC<PriorityNotificationModalProps> = ({
     return () => clearInterval(interval);
   }, [notification.metadata.votingDeadline]);
 
+  const getProgressBarColor = () => {
+    switch (urgencyLevel) {
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      default: return 'bg-blue-500';
+    }
+  };
+
   const getUrgencyStyles = () => {
     switch (urgencyLevel) {
       case 'critical':
@@ -253,11 +262,7 @@ const PriorityNotificationModal: React.FC<PriorityNotificationModalProps> = ({
         {notification.metadata.votingDeadline && urgencyLevel !== 'critical' && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
             <div 
-              className={`h-full transition-all duration-1000 ease-linear ${
-                urgencyLevel === 'critical' ? 'bg-red-500' :
-                urgencyLevel === 'high' ? 'bg-orange-500' :
-                urgencyLevel === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
-              }`}
+              className={`h-full transition-all duration-1000 ease-linear ${getProgressBarColor()}`}
               style={{ 
                 width: `${Math.max(0, Math.min(100, 
                   (new Date(notification.metadata.votingDeadline).getTime() - Date.now()) / 

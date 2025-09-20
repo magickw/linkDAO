@@ -75,7 +75,7 @@ export const useRealTimeNotifications = (
       console.error('Failed to connect to notification service:', error);
       if (mountedRef.current) {
         setIsConnected(false);
-        setState(prev => ({ ...prev, connectionStatus: 'error' }));
+        setState(prev => ({ ...prev, connectionStatus: 'disconnected' }));
       }
     }
   }, [userId, token]);
@@ -233,7 +233,11 @@ export const useRealTimeNotifications = (
 
     const handleConnection = (data: { status: string; attempt?: number; error?: any }) => {
       if (mountedRef.current) {
-        setState(prev => ({ ...prev, connectionStatus: data.status }));
+        const validStatuses = ['connected', 'disconnected', 'reconnecting'];
+        const connectionStatus = validStatuses.includes(data.status) 
+          ? data.status as 'connected' | 'disconnected' | 'reconnecting'
+          : 'disconnected';
+        setState(prev => ({ ...prev, connectionStatus }));
         setIsConnected(data.status === 'connected');
       }
     };

@@ -4,6 +4,7 @@ import {
   RealTimeNotification, 
   NotificationCategory, 
   NotificationPriority,
+  NotificationUrgency,
   MentionNotification,
   TipNotification,
   ReactionNotification
@@ -65,14 +66,11 @@ const ImmediateNotificationToast: React.FC<{
   const getNotificationIcon = () => {
     switch (notification.category) {
       case NotificationCategory.MENTION:
-        const mentionNotif = notification as MentionNotification;
-        return mentionNotif.metadata.mentionedByAvatar || '/default-avatar.png';
+        return notification.metadata.mentionedByAvatar || '/default-avatar.png';
       case NotificationCategory.TIP:
-        const tipNotif = notification as TipNotification;
-        return tipNotif.metadata.tipperAvatar || '/default-avatar.png';
+        return notification.metadata.tipperAvatar || '/default-avatar.png';
       case NotificationCategory.REACTION:
-        const reactionNotif = notification as ReactionNotification;
-        return reactionNotif.metadata.reactorAvatar || '/default-avatar.png';
+        return notification.metadata.reactorAvatar || '/default-avatar.png';
       default:
         return '/icons/notification-default.png';
     }
@@ -110,7 +108,6 @@ const ImmediateNotificationToast: React.FC<{
   const renderNotificationContent = () => {
     switch (notification.category) {
       case NotificationCategory.MENTION:
-        const mentionNotif = notification as MentionNotification;
         return (
           <div className="flex items-start space-x-3">
             <img 
@@ -120,17 +117,16 @@ const ImmediateNotificationToast: React.FC<{
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">
-                {mentionNotif.metadata.mentionedByUsername} mentioned you
+                {notification.metadata.mentionedByUsername} mentioned you
               </p>
               <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                {mentionNotif.metadata.context}
+                {notification.metadata.context}
               </p>
             </div>
           </div>
         );
 
       case NotificationCategory.TIP:
-        const tipNotif = notification as TipNotification;
         return (
           <div className="flex items-start space-x-3">
             <img 
@@ -140,14 +136,14 @@ const ImmediateNotificationToast: React.FC<{
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">
-                {tipNotif.metadata.tipperUsername} tipped you
+                {notification.metadata.tipperUsername} tipped you
               </p>
               <p className="text-sm font-bold text-green-600">
-                {tipNotif.metadata.tipAmount} {tipNotif.metadata.tokenSymbol}
+                {notification.metadata.tipAmount} {notification.metadata.tokenSymbol}
               </p>
-              {tipNotif.metadata.message && (
+              {notification.metadata.message && (
                 <p className="text-xs text-gray-600 mt-1 line-clamp-1">
-                  "{tipNotif.metadata.message}"
+                  "{notification.metadata.message}"
                 </p>
               )}
             </div>
@@ -155,7 +151,6 @@ const ImmediateNotificationToast: React.FC<{
         );
 
       case NotificationCategory.REACTION:
-        const reactionNotif = notification as ReactionNotification;
         return (
           <div className="flex items-start space-x-3">
             <img 
@@ -165,11 +160,11 @@ const ImmediateNotificationToast: React.FC<{
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">
-                {reactionNotif.metadata.reactorUsername} reacted {reactionNotif.metadata.reactionEmoji}
+                {notification.metadata.reactorUsername} reacted {notification.metadata.reactionEmoji}
               </p>
-              {reactionNotif.metadata.tokenAmount && (
+              {notification.metadata.tokenAmount && (
                 <p className="text-xs text-green-600 font-medium">
-                  {reactionNotif.metadata.tokenAmount} tokens staked
+                  {notification.metadata.tokenAmount} tokens staked
                 </p>
               )}
             </div>

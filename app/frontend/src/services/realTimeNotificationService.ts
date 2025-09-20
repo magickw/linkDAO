@@ -381,6 +381,9 @@ class RealTimeNotificationService {
   }
 
   private saveQueueToStorage(): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
     try {
       localStorage.setItem('notification_queue', JSON.stringify(this.notificationQueue));
     } catch (error) {
@@ -389,6 +392,9 @@ class RealTimeNotificationService {
   }
 
   private loadQueueFromStorage(): void {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return;
+    }
     try {
       const stored = localStorage.getItem('notification_queue');
       if (stored) {
@@ -401,6 +407,9 @@ class RealTimeNotificationService {
 
   // Settings Management
   getSettings(): NotificationSettings {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      return this.defaultSettings;
+    }
     try {
       const stored = localStorage.getItem('notification_settings');
       if (stored) {
@@ -415,6 +424,11 @@ class RealTimeNotificationService {
   updateSettings(settings: Partial<NotificationSettings>): void {
     const currentSettings = this.getSettings();
     const newSettings = { ...currentSettings, ...settings };
+    
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      this.emit('settings_updated', newSettings);
+      return;
+    }
     
     try {
       localStorage.setItem('notification_settings', JSON.stringify(newSettings));
@@ -480,6 +494,10 @@ class RealTimeNotificationService {
 
   // Utility Methods
   private setupEventListeners(): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     // Handle page visibility changes
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {

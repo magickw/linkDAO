@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RealTimeNotificationSystem } from '../components/RealTimeNotifications';
+import RealTimeNotificationSystem from '../components/RealTimeNotifications/RealTimeNotificationSystem';
 import { 
   RealTimeNotification, 
   NotificationCategory, 
