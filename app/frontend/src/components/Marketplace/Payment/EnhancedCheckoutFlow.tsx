@@ -116,10 +116,43 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const setupEscrow = async () => {
     setIsProcessing(true);
     try {
+      // Import the enhanced marketplace service
+      const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
+      
+      // Validate payment method first
+      const validationResult = await enhancedMarketplaceService.validatePaymentMethod({
+        paymentMethod: 'escrow',
+        amount: total,
+        currency: 'ETH',
+        userAddress: address || '',
+        paymentDetails: {
+          escrowEnabled: true,
+          items: cartItems
+        }
+      });
+
+      if (!validationResult.isValid) {
+        throw new Error(validationResult.errors.join(', '));
+      }
+
+      if (!validationResult.hasSufficientBalance) {
+        // Show alternative payment methods
+        if (validationResult.suggestedAlternatives && validationResult.suggestedAlternatives.length > 0) {
+          const alternatives = validationResult.suggestedAlternatives
+            .map(alt => `${alt.method} (${alt.description})`)
+            .join(', ');
+          throw new Error(`Insufficient balance for escrow. Try: ${alternatives}`);
+        } else {
+          throw new Error('Insufficient balance for escrow payment');
+        }
+      }
+
+      // Setup escrow if validation passes
       await new Promise(resolve => setTimeout(resolve, 2000));
       setEscrowSetup(true);
     } catch (error) {
-      setErrors({ escrow: 'Failed to setup escrow' });
+      console.error('Escrow setup error:', error);
+      setErrors({ escrow: error instanceof Error ? error.message : 'Failed to setup escrow' });
     } finally {
       setIsProcessing(false);
     }
@@ -128,19 +161,33 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const processPayment = async () => {
     setIsProcessing(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Import the enhanced marketplace service
+      const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
+      
+      const checkoutData = {
+        items: cartItems,
+        shippingAddress: hasPhysicalItems ? shippingAddress : null,
+        paymentMethod: 'escrow',
+        totals: { subtotal, shippingCost, escrowFee, total },
+        userAddress: address,
+        escrowEnabled: escrowSetup
+      };
+
+      const result = await enhancedMarketplaceService.processEnhancedCheckout(checkoutData);
       
       const orderData = {
-        id: `ORDER_${Date.now()}`,
+        id: result.orderId || `ORDER_${Date.now()}`,
         items: cartItems,
         shippingAddress: hasPhysicalItems ? shippingAddress : null,
         totals: { subtotal, shippingCost, escrowFee, total },
-        timestamp: new Date()
+        timestamp: new Date(),
+        paymentResult: result
       };
       
       onComplete(orderData);
     } catch (error) {
-      setErrors({ payment: 'Payment failed' });
+      console.error('Payment processing error:', error);
+      setErrors({ payment: error instanceof Error ? error.message : 'Payment failed' });
     } finally {
       setIsProcessing(false);
     }

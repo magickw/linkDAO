@@ -5,22 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   HomeIcon, 
-  MagnifyingGlassIcon, 
-  PlusIcon, 
-  WalletIcon, 
-  UserIcon,
+  UserGroupIcon, 
+  ChatBubbleLeftRightIcon, 
+  ClipboardDocumentListIcon, 
   ShoppingBagIcon,
-  HeartIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
-  MagnifyingGlassIcon as MagnifyingGlassIconSolid,
-  PlusIcon as PlusIconSolid,
-  WalletIcon as WalletIconSolid,
-  UserIcon as UserIconSolid,
+  UserGroupIcon as UserGroupIconSolid,
+  ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
+  ClipboardDocumentListIcon as ClipboardDocumentListIconSolid,
   ShoppingBagIcon as ShoppingBagIconSolid,
-  HeartIcon as HeartIconSolid,
   Cog6ToothIcon as Cog6ToothIconSolid
 } from '@heroicons/react/24/solid';
 
@@ -57,33 +53,33 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       path: '/'
     },
     {
-      id: 'search',
-      label: 'Search',
-      icon: MagnifyingGlassIcon,
-      iconSolid: MagnifyingGlassIconSolid,
-      path: '/search'
+      id: 'communities',
+      label: 'Communities',
+      icon: UserGroupIcon,
+      iconSolid: UserGroupIconSolid,
+      path: '/dao/ethereum-builders'
     },
     {
-      id: 'sell',
-      label: 'Sell',
-      icon: PlusIcon,
-      iconSolid: PlusIconSolid,
-      path: '/sell'
+      id: 'messages',
+      label: 'Messages',
+      icon: ChatBubbleLeftRightIcon,
+      iconSolid: ChatBubbleLeftRightIconSolid,
+      path: '/messaging',
+      badge: 3
     },
     {
-      id: 'orders',
-      label: 'Orders',
+      id: 'governance',
+      label: 'Governance',
+      icon: ClipboardDocumentListIcon,
+      iconSolid: ClipboardDocumentListIconSolid,
+      path: '/governance'
+    },
+    {
+      id: 'marketplace',
+      label: 'Marketplace',
       icon: ShoppingBagIcon,
       iconSolid: ShoppingBagIconSolid,
-      path: '/orders',
-      badge: 2
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: UserIcon,
-      iconSolid: UserIconSolid,
-      path: '/profile'
+      path: '/marketplace'
     }
   ];
 

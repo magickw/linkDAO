@@ -319,7 +319,7 @@ class SellerService {
   // ENS Validation Methods
   async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/ens/validate`, {
+      const response = await fetch(`${this.baseUrl}/api/sellers/ens/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ class SellerService {
 
   async verifyENSOwnership(ensHandle: string, walletAddress: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/ens/verify-ownership`, {
+      const response = await fetch(`${this.baseUrl}/api/sellers/ens/verify-ownership`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
