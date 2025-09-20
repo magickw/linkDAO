@@ -57,7 +57,7 @@
   - Add `ReputationBreakdown` for detailed reputation analytics
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-- [-] 8. Advanced Feed Features and Sorting
+- [x] 8. Advanced Feed Features and Sorting
   - Implement dynamic sorting tabs (Hot, New, Top, Rising) with real-time updates
   - Create infinite scroll system replacing pagination for smoother UX
   - Build "liked by" modal system showing who tipped or reacted to posts
