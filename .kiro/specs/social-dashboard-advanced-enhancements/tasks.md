@@ -40,7 +40,7 @@
   - Create `ActivityIndicators` for real-time notifications and updates
   - _Requirements: 4.1, 4.2, 4.6, 4.7_
 
-- [ ] 6. Smart Right Sidebar with Wallet Integration
+- [x] 6. Smart Right Sidebar with Wallet Integration
   - Build `WalletDashboard` component with portfolio overview and real-time updates
   - Create `TransactionMiniFeed` showing recent blockchain transactions
   - Implement `QuickActionButtons` for one-click send/receive ETH/USDC operations
@@ -48,7 +48,7 @@
   - Add `TrendingContentWidget` with context-aware recommendations
   - _Requirements: 4.3, 4.4, 4.5, 4.6, 4.7_
 
-- [ ] 7. Reputation and Badge System
+- [x] 7. Reputation and Badge System
   - Create `UserReputation` data model with scoring and level system
   - Implement `BadgeCollection` component with rarity indicators and tooltips
   - Build `ProgressIndicator` with animated progress bars for reputation categories
@@ -57,7 +57,7 @@
   - Add `ReputationBreakdown` for detailed reputation analytics
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7_
 
-- [ ] 8. Advanced Feed Features and Sorting
+- [-] 8. Advanced Feed Features and Sorting
   - Implement dynamic sorting tabs (Hot, New, Top, Rising) with real-time updates
   - Create infinite scroll system replacing pagination for smoother UX
   - Build "liked by" modal system showing who tipped or reacted to posts

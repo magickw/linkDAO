@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import EnhancedPostComposer from '../components/EnhancedPostComposer/EnhancedPostComposer';
+import dynamic from 'next/dynamic';
 import { RichPostInput, PostDraft, ContentType } from '../types/enhancedPost';
-import { DraftService } from '../services/draftService';
+
+// Dynamically import components that use browser APIs
+const EnhancedPostComposer = dynamic(
+  () => import('../components/EnhancedPostComposer/EnhancedPostComposer'),
+  { ssr: false }
+);
 
 export default function TestEnhancedComposer() {
   const [isLoading, setIsLoading] = useState(false);
@@ -268,22 +273,36 @@ export default function TestEnhancedComposer() {
 
 // Draft Statistics Component
 function DraftStats() {
-  const [stats, setStats] = useState(DraftService.getDraftStats());
-  const [drafts, setDrafts] = useState(DraftService.getAllDrafts());
+  const [stats, setStats] = useState({ total: 0, byContentType: { text: 0, media: 0, poll: 0, proposal: 0, link: 0 } });
+  const [drafts, setDrafts] = useState<PostDraft[]>([]);
+  const [DraftService, setDraftService] = useState<any>(null);
+
+  useEffect(() => {
+    // Import DraftService only on client side
+    import('../services/draftService').then(({ DraftService: DS }) => {
+      setDraftService(DS);
+      setStats(DS.getDraftStats());
+      setDrafts(DS.getAllDrafts());
+    });
+  }, []);
 
   const refreshStats = () => {
-    setStats(DraftService.getDraftStats());
-    setDrafts(DraftService.getAllDrafts());
+    if (DraftService) {
+      setStats(DraftService.getDraftStats());
+      setDrafts(DraftService.getAllDrafts());
+    }
   };
 
   const clearAllDrafts = () => {
-    drafts.forEach(draft => {
-      DraftService.deleteDraft(
-        draft.communityId ? 'community' : 'feed',
-        draft.communityId
-      );
-    });
-    refreshStats();
+    if (DraftService) {
+      drafts.forEach(draft => {
+        DraftService.deleteDraft(
+          draft.communityId ? 'community' : 'feed',
+          draft.communityId
+        );
+      });
+      refreshStats();
+    }
   };
 
   return (
