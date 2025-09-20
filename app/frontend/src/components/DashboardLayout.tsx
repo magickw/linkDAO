@@ -13,7 +13,7 @@ import { Web3ErrorBoundary } from '@/components/ErrorBoundaries';
 import { LoadingState } from '@/components/FallbackStates';
 import { performanceMonitor } from '@/utils/performanceMonitor';
 import { PageTransition, ViewTransition } from '@/components/animations/TransitionComponents';
-import { ThemeToggle } from '@/components/ui/EnhancedTheme';
+import { EnhancedThemeToggle } from '@/components/VisualPolish';
 import { LoadingSpinner } from '@/components/animations/LoadingSkeletons';
 import { MessagingWidget } from '@/components/Messaging';
 
@@ -193,7 +193,7 @@ export default function DashboardLayout({
               </button>
 
               {/* Theme toggle */}
-              <ThemeToggle size="md" />
+              <EnhancedThemeToggle />
 
               {/* Notifications button */}
               <button className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-primary-500 relative transition-all duration-200 hover:scale-110 active:scale-95 group">
