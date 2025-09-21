@@ -1,0 +1,487 @@
+import { 
+  Proposal, 
+  ProposalStatus, 
+  ProposalCategory, 
+  VoteChoice,
+  VotingMetrics,
+  ParticipationMetrics 
+} from '../types/governance';
+import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
+
+export class GovernanceService {
+  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+  /**
+   * Get governance proposals for a community
+   */
+  async getCommunityProposals(communityId: string): Promise<Proposal[]> {
+    try {
+      // First try to get from backend API
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${communityId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return this.transformProposals(data.proposals);
+      }
+      
+      // Fallback to Web3 service for mock data
+      const web3Proposals = await communityWeb3Service.getCommunityProposals(communityId);
+      return this.transformWeb3Proposals(web3Proposals);
+    } catch (error) {
+      console.error('Error fetching community proposals:', error);
+      
+      // Return mock data for development
+      return this.getMockProposals(communityId);
+    }
+  }
+
+  /**
+   * Get active governance proposals for a community
+   */
+  async getActiveProposals(communityId: string): Promise<Proposal[]> {
+    const allProposals = await this.getCommunityProposals(communityId);
+    return allProposals.filter(proposal => proposal.status === ProposalStatus.ACTIVE);
+  }
+
+  /**
+   * Vote on a governance proposal
+   */
+  async voteOnProposal(
+    proposalId: string, 
+    choice: VoteChoice, 
+    votingPower?: number
+  ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+    try {
+      // Try backend API first
+      const response = await fetch(`${this.baseUrl}/api/governance/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          proposalId,
+          choice,
+          votingPower
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return { success: true, transactionHash: data.transactionHash };
+      }
+
+      // Fallback to Web3 service
+      const support = choice === VoteChoice.FOR;
+      const txHash = await communityWeb3Service.voteOnProposal(
+        proposalId, 
+        support, 
+        votingPower?.toString()
+      );
+
+      return { success: true, transactionHash: txHash };
+    } catch (error) {
+      console.error('Error voting on proposal:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Get user's voting power for a community
+   */
+  async getUserVotingPower(communityId: string, userAddress: string): Promise<number> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/voting-power/${communityId}/${userAddress}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.votingPower;
+      }
+
+      // Fallback to Web3 service
+      const votingPower = await communityWeb3Service.getVotingPower(communityId, userAddress);
+      return parseFloat(votingPower);
+    } catch (error) {
+      console.error('Error getting voting power:', error);
+      // Return mock voting power for development
+      return Math.random() * 1000 + 100;
+    }
+  }
+
+  /**
+   * Get community participation rate
+   */
+  async getCommunityParticipationRate(communityId: string): Promise<number> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/participation/${communityId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.participationRate;
+      }
+
+      // Mock participation rate for development
+      return Math.random() * 40 + 60; // 60-100%
+    } catch (error) {
+      console.error('Error getting participation rate:', error);
+      return 75.5; // Default mock value
+    }
+  }
+
+  /**
+   * Get voting metrics for a specific proposal
+   */
+  async getProposalVotingMetrics(proposalId: string): Promise<VotingMetrics> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/metrics/${proposalId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.metrics;
+      }
+
+      // Return mock metrics for development
+      return this.getMockVotingMetrics();
+    } catch (error) {
+      console.error('Error getting voting metrics:', error);
+      return this.getMockVotingMetrics();
+    }
+  }
+
+  /**
+   * Check if user can vote on a proposal
+   */
+  async canUserVote(proposalId: string, userAddress: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/can-vote/${proposalId}/${userAddress}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.canVote;
+      }
+
+      // Mock check for development
+      return Math.random() > 0.2; // 80% chance user can vote
+    } catch (error) {
+      console.error('Error checking vote eligibility:', error);
+      return true; // Default to allowing votes in development
+    }
+  }
+
+  /**
+   * Get detailed participation metrics for a community
+   */
+  async getParticipationMetrics(communityId: string, userAddress?: string): Promise<ParticipationMetrics> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/participation-metrics/${communityId}${userAddress ? `?userAddress=${userAddress}` : ''}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.metrics;
+      }
+
+      // Return mock metrics for development
+      return this.getMockParticipationMetrics(userAddress);
+    } catch (error) {
+      console.error('Error getting participation metrics:', error);
+      return this.getMockParticipationMetrics(userAddress);
+    }
+  }
+
+  /**
+   * Get historical participation data for a community
+   */
+  async getHistoricalParticipation(communityId: string, timeframe: 'week' | 'month' | 'quarter' = 'month'): Promise<{
+    periods: Array<{
+      period: string;
+      participationRate: number;
+      totalProposals: number;
+      avgVotingPower: number;
+    }>;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/historical-participation/${communityId}?timeframe=${timeframe}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+
+      // Return mock historical data for development
+      return this.getMockHistoricalParticipation(timeframe);
+    } catch (error) {
+      console.error('Error getting historical participation:', error);
+      return this.getMockHistoricalParticipation(timeframe);
+    }
+  }
+
+  /**
+   * Get user's voting weight as percentage of total voting power
+   */
+  async getUserVotingWeight(communityId: string, userAddress: string): Promise<{
+    votingPower: number;
+    percentage: number;
+    rank: number;
+    totalVoters: number;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/voting-weight/${communityId}/${userAddress}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+
+      // Return mock voting weight for development
+      const votingPower = Math.random() * 1000 + 100;
+      const totalVotingPower = 50000;
+      const percentage = (votingPower / totalVotingPower) * 100;
+      
+      return {
+        votingPower,
+        percentage,
+        rank: Math.floor(Math.random() * 500) + 1,
+        totalVoters: 1250
+      };
+    } catch (error) {
+      console.error('Error getting voting weight:', error);
+      return {
+        votingPower: 250,
+        percentage: 0.5,
+        rank: 125,
+        totalVoters: 1000
+      };
+    }
+  }
+
+  /**
+   * Transform Web3 service proposals to our Proposal type
+   */
+  private transformWeb3Proposals(web3Proposals: CommunityGovernanceProposal[]): Proposal[] {
+    return web3Proposals.map(proposal => ({
+      id: proposal.id,
+      title: proposal.title,
+      description: proposal.description,
+      proposer: proposal.proposer,
+      proposerReputation: Math.floor(Math.random() * 1000 + 500),
+      communityId: proposal.communityId,
+      startTime: proposal.startTime,
+      endTime: proposal.endTime,
+      forVotes: proposal.forVotes,
+      againstVotes: proposal.againstVotes,
+      abstainVotes: '0',
+      quorum: proposal.quorum,
+      status: this.mapWeb3Status(proposal.status),
+      actions: proposal.actions,
+      category: ProposalCategory.GOVERNANCE,
+      executionDelay: 172800, // 2 days
+      requiredMajority: 60,
+      participationRate: Math.random() * 40 + 60,
+      canVote: proposal.status === 'active'
+    }));
+  }
+
+  /**
+   * Transform backend proposals to our Proposal type
+   */
+  private transformProposals(backendProposals: any[]): Proposal[] {
+    return backendProposals.map(proposal => ({
+      id: proposal.id,
+      title: proposal.title,
+      description: proposal.description,
+      proposer: proposal.proposer,
+      proposerReputation: proposal.proposerReputation,
+      communityId: proposal.communityId,
+      startTime: new Date(proposal.startTime),
+      endTime: new Date(proposal.endTime),
+      forVotes: proposal.forVotes.toString(),
+      againstVotes: proposal.againstVotes.toString(),
+      abstainVotes: proposal.abstainVotes?.toString() || '0',
+      quorum: proposal.quorum.toString(),
+      status: proposal.status as ProposalStatus,
+      actions: proposal.actions || [],
+      category: proposal.category as ProposalCategory,
+      executionDelay: proposal.executionDelay,
+      requiredMajority: proposal.requiredMajority,
+      participationRate: proposal.participationRate,
+      userVote: proposal.userVote as VoteChoice | undefined,
+      canVote: proposal.canVote
+    }));
+  }
+
+  /**
+   * Map Web3 service status to our ProposalStatus enum
+   */
+  private mapWeb3Status(web3Status: string): ProposalStatus {
+    switch (web3Status) {
+      case 'pending':
+        return ProposalStatus.PENDING;
+      case 'active':
+        return ProposalStatus.ACTIVE;
+      case 'passed':
+        return ProposalStatus.SUCCEEDED;
+      case 'failed':
+        return ProposalStatus.DEFEATED;
+      case 'executed':
+        return ProposalStatus.EXECUTED;
+      default:
+        return ProposalStatus.DRAFT;
+    }
+  }
+
+  /**
+   * Get mock proposals for development
+   */
+  private getMockProposals(communityId: string): Proposal[] {
+    return [
+      {
+        id: 'prop_1',
+        title: 'Increase Community Staking Rewards',
+        description: 'This proposal aims to increase the staking rewards for active community members by 25% to encourage more participation in governance and community activities. The increase will be funded from the community treasury surplus.',
+        proposer: '0x1234567890123456789012345678901234567890',
+        proposerReputation: 850,
+        communityId,
+        startTime: new Date(Date.now() - 86400000), // 1 day ago
+        endTime: new Date(Date.now() + 6 * 86400000), // 6 days from now
+        forVotes: '1250.5',
+        againstVotes: '340.2',
+        abstainVotes: '50.0',
+        quorum: '1000.0',
+        status: ProposalStatus.ACTIVE,
+        actions: [],
+        category: ProposalCategory.GOVERNANCE,
+        executionDelay: 172800,
+        requiredMajority: 60,
+        participationRate: 75.5,
+        canVote: true
+      },
+      {
+        id: 'prop_2',
+        title: 'Community Treasury Allocation for Development',
+        description: 'Proposal to allocate 100,000 LDAO tokens from the community treasury to fund development of new features and improvements to the platform.',
+        proposer: '0x2345678901234567890123456789012345678901',
+        proposerReputation: 920,
+        communityId,
+        startTime: new Date(Date.now() - 2 * 86400000), // 2 days ago
+        endTime: new Date(Date.now() + 5 * 86400000), // 5 days from now
+        forVotes: '2100.8',
+        againstVotes: '150.3',
+        abstainVotes: '75.2',
+        quorum: '1500.0',
+        status: ProposalStatus.ACTIVE,
+        actions: [],
+        category: ProposalCategory.FUNDING,
+        executionDelay: 259200, // 3 days
+        requiredMajority: 65,
+        participationRate: 82.1,
+        canVote: true
+      },
+      {
+        id: 'prop_3',
+        title: 'Update Community Moderation Guidelines',
+        description: 'Proposal to update the community moderation guidelines to better reflect current community standards and improve the moderation process.',
+        proposer: '0x3456789012345678901234567890123456789012',
+        proposerReputation: 780,
+        communityId,
+        startTime: new Date(Date.now() - 7 * 86400000), // 7 days ago
+        endTime: new Date(Date.now() - 86400000), // 1 day ago (ended)
+        forVotes: '1850.3',
+        againstVotes: '120.7',
+        abstainVotes: '30.0',
+        quorum: '1200.0',
+        status: ProposalStatus.SUCCEEDED,
+        actions: [],
+        category: ProposalCategory.COMMUNITY,
+        executionDelay: 172800,
+        requiredMajority: 60,
+        participationRate: 88.5,
+        canVote: false
+      }
+    ];
+  }
+
+  /**
+   * Get mock voting metrics for development
+   */
+  private getMockVotingMetrics(): VotingMetrics {
+    return {
+      totalVotingPower: '5000.0',
+      participationRate: 75.5,
+      quorumReached: true,
+      timeRemaining: 5 * 24 * 60 * 60, // 5 days in seconds
+      userVotingPower: '125.5',
+      userHasVoted: false
+    };
+  }
+
+  /**
+   * Get mock participation metrics for development
+   */
+  private getMockParticipationMetrics(userAddress?: string): ParticipationMetrics {
+    const eligibleVoters = 1250;
+    const totalVoters = Math.floor(eligibleVoters * (0.6 + Math.random() * 0.3)); // 60-90% participation
+    const currentParticipationRate = (totalVoters / eligibleVoters) * 100;
+    const userVotingWeight = userAddress ? Math.random() * 500 + 50 : 0;
+    const totalVotingPower = 50000;
+    
+    return {
+      currentParticipationRate,
+      eligibleVoters,
+      totalVoters,
+      userVotingWeight,
+      userVotingWeightPercentage: (userVotingWeight / totalVotingPower) * 100,
+      historicalParticipationRate: currentParticipationRate + (Math.random() - 0.5) * 10,
+      participationTrend: Math.random() > 0.5 ? 'increasing' : Math.random() > 0.5 ? 'decreasing' : 'stable',
+      quorumProgress: Math.min(currentParticipationRate * 1.2, 100),
+      averageParticipationRate: 72.3
+    };
+  }
+
+  /**
+   * Get mock historical participation data for development
+   */
+  private getMockHistoricalParticipation(timeframe: string): {
+    periods: Array<{
+      period: string;
+      participationRate: number;
+      totalProposals: number;
+      avgVotingPower: number;
+    }>;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  } {
+    const periods = [];
+    const numPeriods = timeframe === 'week' ? 8 : timeframe === 'month' ? 6 : 4;
+    let baseRate = 65;
+    
+    for (let i = numPeriods - 1; i >= 0; i--) {
+      const variation = (Math.random() - 0.5) * 10;
+      const rate = Math.max(40, Math.min(95, baseRate + variation));
+      
+      periods.push({
+        period: timeframe === 'week' 
+          ? `Week ${i + 1}` 
+          : timeframe === 'month' 
+            ? `Month ${i + 1}` 
+            : `Q${i + 1}`,
+        participationRate: rate,
+        totalProposals: Math.floor(Math.random() * 5) + 2,
+        avgVotingPower: Math.random() * 200 + 100
+      });
+      
+      baseRate = rate;
+    }
+    
+    const trend = periods[0].participationRate > periods[periods.length - 1].participationRate 
+      ? 'increasing' 
+      : periods[0].participationRate < periods[periods.length - 1].participationRate 
+        ? 'decreasing' 
+        : 'stable';
+    
+    return { periods, trend };
+  }
+}
+
+export const governanceService = new GovernanceService();
