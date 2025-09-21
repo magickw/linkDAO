@@ -61,7 +61,14 @@
   - Write tests for header rendering and moderator permissions
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 4. Implement pinned posts functionality
+- [x] 4. Implement pinned posts functionality
+
+
+
+
+
+
+
   - Create PinnedPostsSection component with distinctive styling
   - Add moderator controls for pinning and unpinning posts
   - Implement ordering system for multiple pinned posts

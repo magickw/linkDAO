@@ -452,6 +452,158 @@ export class CommunityPostService {
   }
 
   /**
+   * Pin a community post
+   * @param postId - Post ID to pin
+   * @param sortOrder - Optional sort order for the pinned post
+   * @returns The updated post
+   */
+  static async pinPost(postId: string, sortOrder?: number): Promise<CommunityPost> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sortOrder }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to pin post');
+      }
+      
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Unpin a community post
+   * @param postId - Post ID to unpin
+   * @returns The updated post
+   */
+  static async unpinPost(postId: string): Promise<CommunityPost> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/unpin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to unpin post');
+      }
+      
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Reorder pinned posts
+   * @param communityId - Community ID
+   * @param postIds - Array of post IDs in desired order
+   * @returns Success status
+   */
+  static async reorderPinnedPosts(communityId: string, postIds: string[]): Promise<boolean> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder-pinned`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ postIds }),
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reorder pinned posts');
+      }
+      
+      return true;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Get pinned posts for a community
+   * @param communityId - Community ID
+   * @returns Array of pinned posts
+   */
+  static async getPinnedPosts(communityId: string): Promise<CommunityPost[]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/pinned`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch pinned posts');
+      }
+      
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
    * Get community post statistics
    * @param communityId - Community ID
    * @returns Post statistics
