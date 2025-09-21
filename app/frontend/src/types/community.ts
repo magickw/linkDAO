@@ -1,7 +1,7 @@
 import { Community } from '../models/Community';
 
 // Re-export Community type for convenience
-export { Community };
+export type { Community };
 
 export interface CommunityStats {
   memberCount: number;

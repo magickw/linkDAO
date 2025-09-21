@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 
 // Feature flag configuration
 export interface FeatureFlags {
@@ -308,10 +308,10 @@ export const FeatureFlagProvider: React.FC<{
     return variants[hash % variants.length];
   };
 
-  return (
-    <FeatureFlagContext.Provider value={{ flags, updateFlag, isEnabled, getVariant }}>
-      {children}
-    </FeatureFlagContext.Provider>
+  return React.createElement(
+    FeatureFlagContext.Provider,
+    { value: { flags, updateFlag, isEnabled, getVariant } },
+    children
   );
 };
 
@@ -343,7 +343,7 @@ export const FeatureFlag: React.FC<{
   fallback?: React.ReactNode;
 }> = ({ flag, children, fallback = null }) => {
   const isEnabled = useFeatureFlag(flag);
-  return isEnabled ? <>{children}</> : <>{fallback}</>;
+  return isEnabled ? children : fallback;
 };
 
 // A/B test component wrapper
@@ -353,7 +353,7 @@ export const ABTest: React.FC<{
   fallback?: React.ReactNode;
 }> = ({ testName, variants, fallback = null }) => {
   const variant = useABTest(testName);
-  return <>{variants[variant] || fallback}</>;
+  return variants[variant] || fallback;
 };
 
 // Gradual rollout configuration
@@ -404,8 +404,8 @@ export const useGradualRollout = (
 
 // Feature flag analytics
 export const trackFeatureUsage = (featureKey: keyof FeatureFlags, action: string) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'feature_usage', {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'feature_usage', {
       feature_name: featureKey,
       action: action,
       timestamp: new Date().toISOString(),
@@ -421,8 +421,8 @@ export const trackFeaturePerformance = (
 ) => {
   const duration = endTime - startTime;
   
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', 'feature_performance', {
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    (window as any).gtag('event', 'feature_performance', {
       feature_name: featureKey,
       duration: duration,
       timestamp: new Date().toISOString(),

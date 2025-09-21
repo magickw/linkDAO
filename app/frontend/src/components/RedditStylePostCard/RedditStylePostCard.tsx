@@ -7,6 +7,7 @@ import MediaPreview from './MediaPreview';
 import PostMetadata from './PostMetadata';
 import PostFlair, { FlairConfig } from './PostFlair';
 import ReportModal from './ReportModal';
+import { getViewModeClasses, shouldShowThumbnail, getThumbnailSize } from '@/hooks/useViewMode';
 
 interface RedditStylePostCardProps {
   post: CommunityPost;
@@ -199,15 +200,147 @@ export default function RedditStylePostCard({
     }
   }, [post.id, post.author, post.contentCid, isProcessingAction, onShare]);
 
+  // Get view mode specific classes
+  const viewModeClasses = getViewModeClasses(viewMode);
+  const showThumbnailForMode = shouldShowThumbnail(viewMode, !!(post.mediaCids && post.mediaCids.length > 0));
+  const thumbnailSize = getThumbnailSize(viewMode);
+
+  // Render compact view
+  if (viewMode === 'compact') {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`${viewModeClasses.postCard} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${className}`}
+      >
+        <div className={viewModeClasses.content}>
+          {/* Compact Voting Section */}
+          <div className={viewModeClasses.voting}>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleVote('up')}
+              disabled={isVoting}
+              className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('up')}`}
+              aria-label="Upvote"
+            >
+              <ChevronUp className="w-3 h-3" />
+            </motion.button>
+            <div className={`text-xs font-bold text-center ${getVoteScoreStyle()}`}>
+              {voteScore > 0 ? '+' : ''}{voteScore}
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleVote('down')}
+              disabled={isVoting}
+              className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('down')}`}
+              aria-label="Downvote"
+            >
+              <ChevronDown className="w-3 h-3" />
+            </motion.button>
+          </div>
+
+          {/* Thumbnail (if available) */}
+          {showThumbnailForMode && post.mediaCids && post.mediaCids.length > 0 && (
+            <div className="flex-shrink-0">
+              <img
+                src={post.mediaCids[0]}
+                alt=""
+                className={viewModeClasses.thumbnail}
+                loading="lazy"
+              />
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className={viewModeClasses.main}>
+            {/* Title and Metadata */}
+            <div className="mb-1">
+              <h3 className={viewModeClasses.title}>
+                {post.contentCid}
+              </h3>
+              <div className={viewModeClasses.metadata}>
+                <PostMetadata
+                  author={post.author}
+                  createdAt={post.createdAt}
+                  community={community}
+                  flair={post.flair}
+                  commentCount={post.comments?.length || 0}
+                  isPinned={isPinned || post.isPinned}
+                  isLocked={post.isLocked}
+                  compact={true}
+                />
+              </div>
+            </div>
+
+            {/* Compact Actions */}
+            <div className={viewModeClasses.actions}>
+              <button
+                onClick={() => onComment?.(post.id)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              >
+                {post.comments?.length || 0} comments
+              </button>
+              <button
+                onClick={handleShare}
+                disabled={isProcessingAction}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+              >
+                share
+              </button>
+              {onSave && (
+                <button
+                  onClick={handleSave}
+                  disabled={isProcessingAction}
+                  className={`transition-colors disabled:opacity-50 ${
+                    isSaved 
+                      ? 'text-yellow-600 hover:text-yellow-700' 
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {isSaved ? 'saved' : 'save'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Save Confirmation */}
+        <AnimatePresence>
+          {showSaveConfirmation && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-3 py-1 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border-t border-green-200 dark:border-green-800"
+            >
+              {isSaved ? 'Post saved!' : 'Post unsaved!'}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Report Modal */}
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          onSubmit={handleReport}
+          isLoading={isProcessingAction}
+          postId={post.id}
+          postAuthor={post.author}
+        />
+      </motion.div>
+    );
+  }
+
+  // Render card view (existing layout)
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 ${className}`}
+      className={`${viewModeClasses.postCard} hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 ${className}`}
     >
-      <div className="flex">
+      <div className={viewModeClasses.content}>
         {/* Left Voting Section */}
-        <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-600 min-w-[48px]">
+        <div className={viewModeClasses.voting}>
           {/* Upvote Button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -243,7 +376,7 @@ export default function RedditStylePostCard({
 
         {/* Main Content */}
         <div 
-          className="flex-1 p-4 relative"
+          className={`${viewModeClasses.main} relative`}
           onMouseEnter={() => setShowQuickActions(true)}
           onMouseLeave={() => setShowQuickActions(false)}
         >

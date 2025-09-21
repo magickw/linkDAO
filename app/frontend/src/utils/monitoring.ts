@@ -1,3 +1,4 @@
+import React from 'react';
 import { FeatureFlags } from './featureFlags';
 
 // Performance monitoring interface
@@ -236,8 +237,8 @@ class MonitoringService {
     this.metricsBuffer.push(fullMetrics);
 
     // Also send to analytics if available
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'feature_adoption', {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'feature_adoption', {
         feature_name: metrics.featureName,
         action: metrics.action,
         user_id: metrics.userId,
@@ -259,8 +260,8 @@ class MonitoringService {
   }
 
   public trackPerformanceMetric(metric: Record<string, any>) {
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', 'performance_metric', {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'performance_metric', {
         metric_name: metric.name,
         metric_value: metric.value,
         session_id: this.sessionId,
@@ -281,8 +282,8 @@ class MonitoringService {
     };
 
     // Send to analytics
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('event', event, {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', event, {
         ...properties,
         session_id: this.sessionId,
         user_id: this.userId,
@@ -454,7 +455,7 @@ export const withFeatureTracking = <P extends object>(
       markFeatureInteraction(featureName, { component: WrappedComponent.name });
     }, []);
 
-    return <WrappedComponent {...props} />;
+    return React.createElement(WrappedComponent, props);
   };
 
   TrackedComponent.displayName = `withFeatureTracking(${WrappedComponent.displayName || WrappedComponent.name})`;

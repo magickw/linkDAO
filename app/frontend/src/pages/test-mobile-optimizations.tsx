@@ -16,7 +16,7 @@ import { EnhancedPost, RichPostInput } from '@/types/enhancedPost';
 import { ReactionType } from '@/types/tokenReaction';
 
 // Mock data
-const mockPosts: EnhancedPost[] = [
+const mockPosts = [
   {
     id: '1',
     author: 'alice_crypto',
@@ -143,7 +143,7 @@ const TestMobileOptimizations: NextPage = () => {
     accessibilityClasses
   } = useMobileAccessibility();
 
-  const [posts, setPosts] = useState<EnhancedPost[]>(mockPosts);
+  const [posts, setPosts] = useState<EnhancedPost[]>(mockPosts as any);
   const [showComposer, setShowComposer] = useState(false);
   const [showNavigation, setShowNavigation] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -157,7 +157,7 @@ const TestMobileOptimizations: NextPage = () => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const newPost: EnhancedPost = {
+    const newPost = {
       id: Date.now().toString(),
       author: mockUser.username,
       content: post,
@@ -181,7 +181,7 @@ const TestMobileOptimizations: NextPage = () => {
       }
     };
 
-    setPosts(prev => [newPost, ...prev]);
+    setPosts(prev => [newPost as any, ...prev]);
     setLoading(false);
   };
 
@@ -190,13 +190,13 @@ const TestMobileOptimizations: NextPage = () => {
     
     setPosts(prev => prev.map(post => {
       if (post.id === postId) {
-        const existingReaction = post.reactions.find(r => r.type === type.emoji);
+        const existingReaction = post.reactions.find(r => r.type === type);
         if (existingReaction) {
           existingReaction.amount += amount;
         } else {
           post.reactions.push({
             id: `reaction-${Date.now()}`,
-            type: type.emoji,
+            type: type,
             postId: postId,
             userId: 'current-user',
             user: { id: 'current-user', walletAddress: 'current-user' },
