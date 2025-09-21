@@ -34,6 +34,7 @@ interface PostMetadataProps {
   className?: string;
   showCommunity?: boolean;
   showFullTimestamp?: boolean;
+  compact?: boolean;
   onFlairClick?: (flair: FlairConfig | string) => void;
   onAuthorClick?: (author: string) => void;
   onCommunityClick?: (community: string) => void;
@@ -54,6 +55,7 @@ export default function PostMetadata({
   className = '',
   showCommunity = true,
   showFullTimestamp = false,
+  compact = false,
   onFlairClick,
   onAuthorClick,
   onCommunityClick
@@ -100,6 +102,71 @@ export default function PostMetadata({
     }
   };
 
+  // Compact mode - show only essential info
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 ${className}`}>
+        {/* Community (if shown) */}
+        {showCommunity && community && (
+          <>
+            <button
+              onClick={handleCommunityClick}
+              className="font-medium text-gray-700 dark:text-gray-300 hover:underline transition-colors"
+            >
+              r/{community.displayName || community.name}
+            </button>
+            <span>•</span>
+          </>
+        )}
+
+        {/* Author */}
+        <button
+          onClick={handleAuthorClick}
+          className="hover:underline transition-colors"
+        >
+          {formatAuthor(author)}
+        </button>
+
+        <span>•</span>
+
+        {/* Time */}
+        <span title={new Date(createdAt).toLocaleString()}>
+          {formatTimeAgo(createdAt)}
+        </span>
+
+        {/* Essential status indicators only */}
+        {isPinned && (
+          <>
+            <span>•</span>
+            <Pin className="w-3 h-3 text-green-600 dark:text-green-400" />
+          </>
+        )}
+
+        {isLocked && (
+          <>
+            <span>•</span>
+            <Lock className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+          </>
+        )}
+
+        {/* Flair (compact) */}
+        {flair && (
+          <>
+            <span>•</span>
+            <PostFlair
+              flair={flair}
+              size="xs"
+              variant="subtle"
+              clickable={!!onFlairClick}
+              onClick={onFlairClick}
+            />
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Full mode - show all metadata
   return (
     <div className={`flex items-center flex-wrap gap-2 text-sm text-gray-500 dark:text-gray-400 ${className}`}>
       {/* Community */}

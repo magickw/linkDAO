@@ -23,7 +23,7 @@ export interface OfflineState {
 export class OfflineManager {
   private static instance: OfflineManager;
   private state: OfflineState = {
-    isOnline: navigator.onLine,
+    isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
     queuedActions: [],
     syncInProgress: false
   };
@@ -31,9 +31,11 @@ export class OfflineManager {
   private syncInterval?: NodeJS.Timeout;
 
   private constructor() {
-    this.initializeEventListeners();
-    this.loadQueueFromStorage();
-    this.startPeriodicSync();
+    if (typeof window !== 'undefined') {
+      this.initializeEventListeners();
+      this.loadQueueFromStorage();
+      this.startPeriodicSync();
+    }
   }
 
   static getInstance(): OfflineManager {
@@ -47,8 +49,10 @@ export class OfflineManager {
    * Initialize online/offline event listeners
    */
   private initializeEventListeners(): void {
-    window.addEventListener('online', this.handleOnline.bind(this));
-    window.addEventListener('offline', this.handleOffline.bind(this));
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.handleOnline.bind(this));
+      window.addEventListener('offline', this.handleOffline.bind(this));
+    }
   }
 
   /**
@@ -289,10 +293,12 @@ export class OfflineManager {
    * Save queue to localStorage
    */
   private saveQueueToStorage(): void {
-    try {
-      localStorage.setItem('offlineQueue', JSON.stringify(this.state.queuedActions));
-    } catch (error) {
-      console.error('Failed to save queue to storage:', error);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('offlineQueue', JSON.stringify(this.state.queuedActions));
+      } catch (error) {
+        console.error('Failed to save queue to storage:', error);
+      }
     }
   }
 
@@ -300,17 +306,19 @@ export class OfflineManager {
    * Load queue from localStorage
    */
   private loadQueueFromStorage(): void {
-    try {
-      const stored = localStorage.getItem('offlineQueue');
-      if (stored) {
-        const actions = JSON.parse(stored);
-        this.state.queuedActions = actions.map((action: any) => ({
-          ...action,
-          timestamp: new Date(action.timestamp)
-        }));
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('offlineQueue');
+        if (stored) {
+          const actions = JSON.parse(stored);
+          this.state.queuedActions = actions.map((action: any) => ({
+            ...action,
+            timestamp: new Date(action.timestamp)
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to load queue from storage:', error);
       }
-    } catch (error) {
-      console.error('Failed to load queue from storage:', error);
     }
   }
 

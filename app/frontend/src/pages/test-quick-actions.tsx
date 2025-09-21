@@ -14,23 +14,36 @@ const mockPost = {
     { id: '2', content: 'Thanks for sharing', author: '0xuser2' }
   ],
   tags: ['demo', 'quick-actions'],
-  flair: {
-    id: 'discussion',
-    name: 'Discussion',
-    color: '#6b7280',
-    backgroundColor: '#f3f4f6',
-    textColor: '#374151',
-    moderatorOnly: false
-  },
+  flair: 'discussion',
   mediaCids: [],
   isPinned: false,
-  isLocked: false
+  isLocked: false,
+  communityId: 'test-community',
+  parentId: null,
+  depth: 0,
+  sortOrder: 0,
+  onchainRef: '0x1234567890abcdef'
 };
 
 const mockCommunity = {
   id: 'test-community',
   name: 'testcommunity',
-  displayName: 'Test Community'
+  displayName: 'Test Community',
+  description: 'A test community for demonstrating quick actions',
+  rules: ['Be respectful', 'No spam'],
+  memberCount: 1234,
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01'),
+  category: 'General',
+  tags: ['test', 'demo'],
+  isPublic: true,
+  moderators: ['0x1234567890123456789012345678901234567890'],
+  settings: {
+    allowedPostTypes: [],
+    requireApproval: false,
+    minimumReputation: 0,
+    stakingRequirements: []
+  }
 };
 
 export default function TestQuickActions() {
@@ -109,7 +122,7 @@ export default function TestQuickActions() {
         {/* Post Card */}
         <div className="space-y-6">
           <RedditStylePostCard
-            post={mockPost}
+            post={mockPost as any}
             community={mockCommunity}
             viewMode="card"
             showThumbnail={true}
@@ -130,8 +143,9 @@ export default function TestQuickActions() {
               contentCid: 'Another test post to demonstrate multiple posts with quick actions. This one has different content but the same functionality.',
               upvotes: 8,
               downvotes: 1,
-              isPinned: true
-            }}
+              isPinned: true,
+              onchainRef: '0xabcdef1234567890'
+            } as any}
             community={mockCommunity}
             viewMode="card"
             showThumbnail={true}
