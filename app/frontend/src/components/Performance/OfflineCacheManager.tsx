@@ -73,7 +73,7 @@ export function OfflineCacheManager({
   syncInterval = 30000 // 30 seconds
 }: OfflineCacheManagerProps) {
   const [state, setState] = useState<OfflineCacheState>({
-    isOnline: navigator.onLine,
+    isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
     cacheSize: 0,
     maxCacheSize,
     pendingActions: [],

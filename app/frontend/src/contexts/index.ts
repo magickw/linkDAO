@@ -15,18 +15,19 @@ export {
   stateManager
 } from './EnhancedStateProvider';
 
-// Types
-export type * from './types';
-
-// Re-export specific types for convenience
+// Types - export all enums
 export {
   ContentType,
   ReactionType,
   AchievementCategory,
-  ActionType,
   NotificationType,
   NotificationPriority,
   BadgeRarity,
-  ProposalType,
-  UpdateType
+  ProposalType
 } from './types';
+
+// Export all other types
+export type * from './types';
+
+// Export type aliases that are used as values
+export type { ActionType, UpdateType } from './types';

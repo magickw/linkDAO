@@ -26,7 +26,7 @@ type OfflineSyncAction =
 
 // Initial State
 const initialState: OfflineSyncState = {
-  isOnline: navigator.onLine,
+  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   queuedActions: [],
   syncStatus: {
     isActive: false,
