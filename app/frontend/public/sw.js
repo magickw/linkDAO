@@ -1,7 +1,8 @@
-const CACHE_NAME = 'web3-social-v1';
-const STATIC_CACHE = 'static-v1';
-const DYNAMIC_CACHE = 'dynamic-v1';
-const IMAGE_CACHE = 'images-v1';
+const CACHE_NAME = 'web3-social-v2';
+const STATIC_CACHE = 'static-v2';
+const DYNAMIC_CACHE = 'dynamic-v2';
+const IMAGE_CACHE = 'images-v2';
+const PERFORMANCE_CACHE = 'performance-v1';
 
 // Enhanced request deduplication and rate limiting
 const pendingRequests = new Map();
@@ -17,7 +18,14 @@ const STATIC_ASSETS = [
   '/',
   '/dashboard',
   '/manifest.json',
+  '/test-performance-optimization',
   // Add other critical static assets
+];
+
+// Performance optimization assets
+const PERFORMANCE_ASSETS = [
+  '/api/performance/metrics',
+  '/api/performance/optimize'
 ];
 
 // API endpoints to cache
