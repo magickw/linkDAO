@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useId } from 'react';
 import { Button } from '../ui/Button';
 import { cn } from '../../lib/utils';
 import { 
@@ -8,6 +8,7 @@ import {
   CheckIcon,
   XMarkIcon 
 } from '@heroicons/react/24/outline';
+import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
 
 // Types based on design document
 interface Community {
@@ -43,6 +44,11 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Accessibility hooks
+  const { announceToScreenReader, generateId } = useAccessibilityContext();
+  const headerId = useId();
+  const bannerUploadId = generateId('banner-upload');
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -50,21 +56,27 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
+      announceToScreenReader('Error: Please select an image file', 'assertive');
       alert('Please select an image file');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
+      announceToScreenReader('Error: Image must be smaller than 5MB', 'assertive');
       alert('Image must be smaller than 5MB');
       return;
     }
 
     setIsUploading(true);
+    announceToScreenReader('Uploading banner image...');
+    
     try {
       await onBannerUpload(file);
+      announceToScreenReader('Banner uploaded successfully');
     } catch (error) {
       console.error('Banner upload failed:', error);
+      announceToScreenReader('Banner upload failed. Please try again.', 'assertive');
       alert('Failed to upload banner. Please try again.');
     } finally {
       setIsUploading(false);
@@ -102,9 +114,18 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
   };
 
   return (
-    <div className="relative w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+    <header 
+      id={headerId}
+      className="relative w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
+      role="banner"
+      aria-labelledby={`${headerId}-title`}
+    >
       {/* Banner Section */}
-      <div className="relative h-32 sm:h-40 md:h-48 overflow-hidden">
+      <div 
+        className="relative h-32 sm:h-40 md:h-48 overflow-hidden"
+        role="img"
+        aria-label={community.bannerImage ? `${community.displayName} community banner` : `${community.displayName} community gradient background`}
+      >
         {community.bannerImage ? (
           <img
             src={community.bannerImage}
@@ -115,6 +136,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
           <div
             className="w-full h-full"
             style={{ background: generateGradientBackground(community.name) }}
+            aria-hidden="true"
           />
         )}
         
@@ -127,16 +149,20 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
               onClick={triggerBannerUpload}
               disabled={isUploading}
               className="bg-black/50 hover:bg-black/70 text-white border-0"
+              aria-describedby={bannerUploadId}
+              aria-label={isUploading ? 'Uploading banner image' : 'Change community banner image'}
             >
-              <PhotoIcon className="w-4 h-4 mr-2" />
+              <PhotoIcon className="w-4 h-4 mr-2" aria-hidden="true" />
               {isUploading ? 'Uploading...' : 'Change Banner'}
             </Button>
             <input
               ref={fileInputRef}
+              id={bannerUploadId}
               type="file"
               accept="image/*"
               onChange={handleBannerUpload}
-              className="hidden"
+              className="sr-only"
+              aria-label="Upload banner image file"
             />
           </div>
         )}
@@ -149,7 +175,11 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
           <div className="flex items-end gap-4">
             {/* Community Avatar */}
             <div className="relative -mt-8 sm:-mt-12">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-white dark:border-gray-900 bg-gray-200 dark:bg-gray-700 overflow-hidden">
+              <div 
+                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-white dark:border-gray-900 bg-gray-200 dark:bg-gray-700 overflow-hidden"
+                role="img"
+                aria-label={community.avatarImage ? `${community.displayName} community avatar` : `${community.displayName} default avatar`}
+              >
                 {community.avatarImage ? (
                   <img
                     src={community.avatarImage}
@@ -158,7 +188,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                    <UserGroupIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+                    <UserGroupIcon className="w-8 h-8 sm:w-10 sm:h-10" aria-hidden="true" />
                   </div>
                 )}
               </div>
@@ -166,7 +196,10 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
 
             {/* Community Details */}
             <div className="flex-1 min-w-0 pt-2">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">
+              <h1 
+                id={`${headerId}-title`}
+                className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate"
+              >
                 {community.displayName}
               </h1>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -174,14 +207,27 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
               </p>
               
               {/* Member Stats */}
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <div 
+                className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400"
+                role="group"
+                aria-label="Community statistics"
+              >
                 <div className="flex items-center gap-1">
-                  <UserGroupIcon className="w-4 h-4" />
-                  <span>{formatMemberCount(community.memberCount)} members</span>
+                  <UserGroupIcon className="w-4 h-4" aria-hidden="true" />
+                  <span aria-label={`${community.memberCount} total members`}>
+                    {formatMemberCount(community.memberCount)} members
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>{formatMemberCount(community.onlineCount)} online</span>
+                  <div 
+                    className="w-2 h-2 bg-green-500 rounded-full" 
+                    aria-hidden="true"
+                    role="img"
+                    aria-label="Online indicator"
+                  ></div>
+                  <span aria-label={`${community.onlineCount} members currently online`}>
+                    {formatMemberCount(community.onlineCount)} online
+                  </span>
                 </div>
               </div>
             </div>
@@ -190,7 +236,14 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
           {/* Right Side - Join Button */}
           <div className="flex-shrink-0">
             <Button
-              onClick={onJoinToggle}
+              onClick={() => {
+                onJoinToggle();
+                announceToScreenReader(
+                  isJoined 
+                    ? `Left ${community.displayName} community` 
+                    : `Joined ${community.displayName} community`
+                );
+              }}
               disabled={loading}
               variant={isJoined ? "outline" : "default"}
               size="lg"
@@ -200,20 +253,31 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                   ? "hover:bg-red-50 hover:border-red-300 hover:text-red-700 dark:hover:bg-red-900/20 dark:hover:border-red-700 dark:hover:text-red-400" 
                   : "bg-blue-600 hover:bg-blue-700 text-white"
               )}
+              aria-pressed={isJoined}
+              aria-label={
+                loading 
+                  ? 'Processing membership change' 
+                  : isJoined 
+                    ? `Leave ${community.displayName} community` 
+                    : `Join ${community.displayName} community`
+              }
             >
               {loading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <div 
+                    className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" 
+                    aria-hidden="true"
+                  />
                   <span>Loading...</span>
                 </div>
               ) : isJoined ? (
                 <div className="flex items-center gap-2">
-                  <CheckIcon className="w-4 h-4" />
+                  <CheckIcon className="w-4 h-4" aria-hidden="true" />
                   <span>Joined</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <UserGroupIcon className="w-4 h-4" />
+                  <UserGroupIcon className="w-4 h-4" aria-hidden="true" />
                   <span>Join</span>
                 </div>
               )}
@@ -224,13 +288,16 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
         {/* Community Description */}
         {community.description && (
           <div className="mt-4 max-w-3xl">
-            <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">
+            <p 
+              className="text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed"
+              aria-label="Community description"
+            >
               {community.description}
             </p>
           </div>
         )}
       </div>
-    </div>
+    </header>
   );
 };
 

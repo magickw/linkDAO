@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback, ReactNode } from 'react';
+import React, { useState, useRef, useEffect, useCallback, ReactNode, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIntersectionObserver } from './IntersectionObserverManager';
 
 interface LazyLoadConfig {
   rootMargin: string;
@@ -35,7 +36,7 @@ const DEFAULT_CONFIG: LazyLoadConfig = {
   enableIntersectionOptimization: true
 };
 
-export function IntelligentLazyLoader({
+export const IntelligentLazyLoader = memo(function IntelligentLazyLoader({
   children,
   fallback,
   skeleton,
@@ -48,17 +49,30 @@ export function IntelligentLazyLoader({
   priority = 'normal',
   enablePreloading = true
 }: IntelligentLazyLoaderProps) {
-  const finalConfig = { ...DEFAULT_CONFIG, ...config };
+  const finalConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
   
-  const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   
-  const elementRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout>();
+
+  const divRef = useRef<HTMLDivElement>(null);
+
+  // Use optimized intersection observer
+  const { ref: elementRef, isIntersecting } = useIntersectionObserver({
+    rootMargin: finalConfig.rootMargin,
+    threshold: finalConfig.threshold,
+    triggerOnce: finalConfig.enableIntersectionOptimization,
+    skip: priority === 'high' || hasLoaded
+  });
+
+  useEffect(() => {
+    if (divRef.current) {
+      (elementRef as React.MutableRefObject<Element | null>).current = divRef.current;
+    }
+  }, [elementRef]);
 
   // Preload based on priority
   useEffect(() => {
@@ -67,43 +81,13 @@ export function IntelligentLazyLoader({
     }
   }, [priority]);
 
-  // Set up intersection observer
+  // Load content when visible
   useEffect(() => {
-    if (!elementRef.current || hasLoaded || priority === 'high') return;
-
-    const observerOptions: IntersectionObserverInit = {
-      rootMargin: finalConfig.rootMargin,
-      threshold: finalConfig.threshold
-    };
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !hasLoaded) {
-            setIsVisible(true);
-            onVisible?.();
-            
-            if (finalConfig.enableIntersectionOptimization) {
-              // Disconnect observer after first intersection for performance
-              observerRef.current?.disconnect();
-            }
-            
-            loadContent();
-          }
-        });
-      },
-      observerOptions
-    );
-
-    observerRef.current.observe(elementRef.current);
-
-    return () => {
-      observerRef.current?.disconnect();
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, [hasLoaded, priority, finalConfig, onVisible]);
+    if (isIntersecting && !hasLoaded && priority !== 'high') {
+      onVisible?.();
+      loadContent();
+    }
+  }, [isIntersecting, hasLoaded, priority, onVisible]);
 
   const loadContent = useCallback(async () => {
     if (hasLoaded || isLoading) return;
@@ -112,13 +96,13 @@ export function IntelligentLazyLoader({
     setError(null);
 
     try {
-      // Simulate content loading with realistic delay
+      // Simulate content loading with realistic delay based on priority
       await new Promise((resolve, reject) => {
         const loadTime = priority === 'high' ? 100 : 
                         priority === 'normal' ? 300 : 500;
         
         setTimeout(() => {
-          // Simulate occasional failures for testing
+          // Simulate occasional failures for testing retry logic
           if (Math.random() < 0.05 && retryCount === 0) {
             reject(new Error('Simulated loading failure'));
           } else {
@@ -151,6 +135,15 @@ export function IntelligentLazyLoader({
     }
   }, [hasLoaded, isLoading, retryCount, priority, finalConfig, onLoad, onError]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const renderContent = () => {
     if (error && retryCount >= finalConfig.retryAttempts) {
       return <ErrorFallback error={error} onRetry={() => {
@@ -164,7 +157,7 @@ export function IntelligentLazyLoader({
       return children;
     }
 
-    if (isLoading || isVisible) {
+    if (isLoading || isIntersecting) {
       return skeleton || fallback || <DefaultSkeleton />;
     }
 
@@ -172,7 +165,7 @@ export function IntelligentLazyLoader({
   };
 
   return (
-    <div ref={elementRef} className={`intelligent-lazy-loader ${className}`}>
+    <div ref={divRef} className={`intelligent-lazy-loader ${className}`}>
       <AnimatePresence mode="wait">
         <motion.div
           key={hasLoaded ? 'loaded' : 'loading'}
@@ -215,9 +208,9 @@ export function IntelligentLazyLoader({
       )}
     </div>
   );
-}
+});
 
-// Enhanced lazy image with blur-to-sharp transition
+// Enhanced lazy image with progressive loading and format detection
 interface IntelligentLazyImageProps {
   src: string;
   alt: string;
@@ -235,7 +228,7 @@ interface IntelligentLazyImageProps {
   sizes?: string;
 }
 
-export function IntelligentLazyImage({
+export const IntelligentLazyImage = memo(function IntelligentLazyImage({
   src,
   alt,
   lowQualitySrc,
@@ -265,22 +258,24 @@ export function IntelligentLazyImage({
     avif: boolean;
   }>({ webp: false, avif: false });
 
-  // Check format support
+  // Check format support on mount
   useEffect(() => {
     checkFormatSupport();
   }, []);
 
-  const checkFormatSupport = async () => {
-    const webpSupport = await checkImageFormatSupport('webp');
-    const avifSupport = await checkImageFormatSupport('avif');
+  const checkFormatSupport = useCallback(async () => {
+    const [webpSupport, avifSupport] = await Promise.all([
+      checkImageFormatSupport('webp'),
+      checkImageFormatSupport('avif')
+    ]);
     
     setSupportedFormats({
       webp: webpSupport,
       avif: avifSupport
     });
-  };
+  }, []);
 
-  const checkImageFormatSupport = (format: string): Promise<boolean> => {
+  const checkImageFormatSupport = useCallback((format: string): Promise<boolean> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => resolve(img.width > 0 && img.height > 0);
@@ -293,17 +288,17 @@ export function IntelligentLazyImage({
       
       img.src = testImages[format as keyof typeof testImages];
     });
-  };
+  }, []);
 
   const getOptimizedSrc = useCallback((originalSrc: string, isLowQuality = false): string => {
     if (!originalSrc || originalSrc.startsWith('data:') || originalSrc.startsWith('blob:')) {
       return originalSrc;
     }
 
-    // Generate optimized URL based on supported formats
-    let optimizedSrc = originalSrc;
+    // In a real implementation, you'd construct optimized URLs for your CDN
+    // For now, we'll simulate the optimization
     const params = new URLSearchParams();
-
+    
     // Add quality parameter
     params.set('q', isLowQuality ? '30' : quality.toString());
 
@@ -318,8 +313,7 @@ export function IntelligentLazyImage({
       params.set('f', 'webp');
     }
 
-    // In a real implementation, you'd construct the URL for your image optimization service
-    // For now, we'll just return the original URL
+    // Return original URL for now (in real app, would return optimized URL)
     return originalSrc;
   }, [quality, width, height, enableWebP, enableAVIF, supportedFormats]);
 
@@ -350,7 +344,7 @@ export function IntelligentLazyImage({
         reject();
       };
 
-      // Add loading progress simulation
+      // Simulate loading progress
       let progress = phase === 'lowQuality' ? 0 : 50;
       const progressInterval = setInterval(() => {
         progress += Math.random() * 10;
@@ -384,13 +378,13 @@ export function IntelligentLazyImage({
     }
   }, [src, lowQualitySrc, loadingState.phase, loadImage]);
 
-  const imageClasses = [
+  const imageClasses = useMemo(() => [
     className,
     'transition-all duration-500 ease-out',
     loadingState.phase === 'lowQuality' ? 'blur-sm scale-105' : '',
     loadingState.phase === 'highQuality' ? 'blur-0 scale-100' : '',
     'object-cover w-full h-full'
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean).join(' '), [className, loadingState.phase]);
 
   return (
     <IntelligentLazyLoader
@@ -440,10 +434,10 @@ export function IntelligentLazyImage({
       )}
     </IntelligentLazyLoader>
   );
-}
+});
 
 // Default components
-function DefaultSkeleton() {
+const DefaultSkeleton = memo(function DefaultSkeleton() {
   return (
     <div className="animate-pulse space-y-4 p-4">
       <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -452,17 +446,17 @@ function DefaultSkeleton() {
       <div className="h-32 bg-gray-200 rounded"></div>
     </div>
   );
-}
+});
 
-function PlaceholderContent({ placeholder }: { placeholder?: string }) {
+const PlaceholderContent = memo(function PlaceholderContent({ placeholder }: { placeholder?: string }) {
   return (
     <div className="flex items-center justify-center h-32 bg-gray-100 text-gray-500">
       <span>{placeholder || 'Content will load when visible'}</span>
     </div>
   );
-}
+});
 
-function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }) {
+const ErrorFallback = memo(function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <div className="w-16 h-16 mb-4 text-red-500">
@@ -487,64 +481,6 @@ function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }
       </button>
     </div>
   );
-}
-
-// Hook for managing lazy loading with preloading
-export function useLazyLoading(
-  threshold = 0.1, 
-  rootMargin = '50px',
-  enablePreloading = true
-) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [isPreloading, setIsPreloading] = useState(false);
-  const elementRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (!elementRef.current) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasLoaded) {
-          setIsVisible(true);
-          
-          // Start preloading nearby content
-          if (enablePreloading && !isPreloading) {
-            setIsPreloading(true);
-            preloadNearbyContent(entry.target);
-          }
-        }
-      },
-      { threshold, rootMargin }
-    );
-
-    observer.observe(elementRef.current);
-
-    return () => observer.disconnect();
-  }, [threshold, rootMargin, hasLoaded, enablePreloading, isPreloading]);
-
-  const preloadNearbyContent = (element: Element) => {
-    // Find nearby lazy-loadable elements and trigger their loading
-    const nearbyElements = element.parentElement?.querySelectorAll('[data-lazy-preload]');
-    
-    nearbyElements?.forEach((el, index) => {
-      // Stagger preloading to avoid overwhelming the browser
-      setTimeout(() => {
-        el.dispatchEvent(new CustomEvent('preload'));
-      }, index * 100);
-    });
-  };
-
-  const markAsLoaded = useCallback(() => {
-    setHasLoaded(true);
-  }, []);
-
-  return {
-    elementRef,
-    isVisible,
-    hasLoaded,
-    markAsLoaded
-  };
-}
+});
 
 export default IntelligentLazyLoader;

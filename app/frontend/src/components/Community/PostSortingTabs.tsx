@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
+import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
+import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useAccessibility';
 
 // Reddit-style sorting options
 export enum PostSortOption {
@@ -100,11 +102,26 @@ export default function PostSortingTabs({
   className = ''
 }: PostSortingTabsProps) {
   const [isChanging, setIsChanging] = useState(false);
+  
+  // Accessibility hooks
+  const { announceToScreenReader, generateId, prefersReducedMotion } = useAccessibilityContext();
+  const { createKeyboardHandler } = useKeyboardNavigation();
+  const { focusedIndex, setFocusedIndex, handleArrowNavigation } = useFocusManagement(SORT_TABS.length);
+  
+  // Generate unique IDs
+  const tabsId = useId();
+  const timeFilterId = generateId('time-filter');
 
   const handleSortChange = async (newSort: PostSortOption) => {
     if (newSort === sortBy || isChanging) return;
 
     setIsChanging(true);
+    
+    // Announce the change to screen readers
+    const selectedTab = SORT_TABS.find(tab => tab.type === newSort);
+    if (selectedTab) {
+      announceToScreenReader(`Sorting posts by ${selectedTab.label}. ${selectedTab.description}`);
+    }
     
     // Add a small delay for smooth transition
     setTimeout(() => {
@@ -115,15 +132,47 @@ export default function PostSortingTabs({
 
   const handleTimeFilterChange = (newFilter: TimeFilter) => {
     if (newFilter === timeFilter) return;
+    
+    // Announce the change to screen readers
+    const selectedOption = TIME_FILTER_OPTIONS.find(option => option.value === newFilter);
+    if (selectedOption) {
+      announceToScreenReader(`Time filter changed to ${selectedOption.label}`);
+    }
+    
     onTimeFilterChange(newFilter);
   };
 
+  // Keyboard navigation for tabs
+  const handleTabKeyDown = createKeyboardHandler({
+    'ArrowLeft': () => {
+      const currentIndex = SORT_TABS.findIndex(tab => tab.type === sortBy);
+      const newIndex = currentIndex > 0 ? currentIndex - 1 : SORT_TABS.length - 1;
+      handleSortChange(SORT_TABS[newIndex].type);
+    },
+    'ArrowRight': () => {
+      const currentIndex = SORT_TABS.findIndex(tab => tab.type === sortBy);
+      const newIndex = currentIndex < SORT_TABS.length - 1 ? currentIndex + 1 : 0;
+      handleSortChange(SORT_TABS[newIndex].type);
+    },
+    'Home': () => handleSortChange(SORT_TABS[0].type),
+    'End': () => handleSortChange(SORT_TABS[SORT_TABS.length - 1].type)
+  });
+
   return (
-    <div className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <nav 
+      className={`bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 ${className}`}
+      role="navigation"
+      aria-label="Post sorting options"
+    >
       <div className="flex items-center justify-between px-4 py-3">
         {/* Sorting tabs */}
-        <div className="flex items-center space-x-1">
-          {SORT_TABS.map((tab) => {
+        <div 
+          className="flex items-center space-x-1"
+          role="tablist"
+          aria-label="Sort posts by"
+          onKeyDown={handleTabKeyDown}
+        >
+          {SORT_TABS.map((tab, index) => {
             const isActive = tab.type === sortBy;
             
             return (
@@ -131,6 +180,10 @@ export default function PostSortingTabs({
                 key={tab.type}
                 onClick={() => handleSortChange(tab.type)}
                 disabled={isChanging}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`${tabsId}-panel`}
+                tabIndex={isActive ? 0 : -1}
                 className={`
                   relative flex items-center space-x-2 px-3 py-2 rounded-md font-medium text-sm
                   transition-all duration-200 ease-in-out
@@ -140,17 +193,26 @@ export default function PostSortingTabs({
                   }
                   ${isChanging ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   disabled:opacity-50 disabled:cursor-not-allowed
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                 `}
                 title={tab.description}
+                aria-label={`Sort by ${tab.label}. ${tab.description}`}
               >
-                <span className={`text-sm ${isActive ? tab.color : ''}`}>
+                <span 
+                  className={`text-sm ${isActive ? tab.color : ''}`}
+                  role="img"
+                  aria-label={tab.label}
+                >
                   {tab.icon}
                 </span>
                 <span>{tab.label}</span>
                 
                 {/* Active indicator */}
                 {isActive && (
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-blue-500 rounded-full" />
+                  <div 
+                    className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-6 h-0.5 bg-blue-500 rounded-full" 
+                    aria-hidden="true"
+                  />
                 )}
               </button>
             );
@@ -162,11 +224,14 @@ export default function PostSortingTabs({
           {/* Time filter dropdown for Top sorting */}
           {sortBy === PostSortOption.TOP && (
             <div className="flex items-center space-x-2">
-              <label htmlFor="time-filter" className="text-sm text-gray-500 dark:text-gray-400">
+              <label 
+                htmlFor={timeFilterId} 
+                className="text-sm text-gray-500 dark:text-gray-400"
+              >
                 Time:
               </label>
               <select
-                id="time-filter"
+                id={timeFilterId}
                 value={timeFilter}
                 onChange={(e) => handleTimeFilterChange(e.target.value as TimeFilter)}
                 className="
@@ -175,6 +240,7 @@ export default function PostSortingTabs({
                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
                   transition-colors duration-200
                 "
+                aria-label="Select time period for top posts"
               >
                 {TIME_FILTER_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -187,21 +253,44 @@ export default function PostSortingTabs({
 
           {/* Post count indicator */}
           {postCount !== undefined && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+            <div 
+              className="text-sm text-gray-500 dark:text-gray-400"
+              aria-label={`${postCount.toLocaleString()} posts found`}
+              role="status"
+            >
               {postCount.toLocaleString()} posts
             </div>
           )}
 
           {/* Loading indicator */}
           {isChanging && (
-            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500" />
+            <div 
+              className="flex items-center space-x-2 text-gray-500 dark:text-gray-400"
+              role="status"
+              aria-live="polite"
+              aria-label="Loading posts"
+            >
+              <div 
+                className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-500" 
+                aria-hidden="true"
+              />
               <span className="text-xs">Loading...</span>
             </div>
           )}
         </div>
       </div>
-    </div>
+      
+      {/* Tab panel for screen readers */}
+      <div 
+        id={`${tabsId}-panel`}
+        role="tabpanel"
+        aria-labelledby={`tab-${sortBy}`}
+        className="sr-only"
+      >
+        Posts sorted by {SORT_TABS.find(tab => tab.type === sortBy)?.label}
+        {sortBy === PostSortOption.TOP && ` for ${TIME_FILTER_OPTIONS.find(opt => opt.value === timeFilter)?.label}`}
+      </div>
+    </nav>
   );
 }
 

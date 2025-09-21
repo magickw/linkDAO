@@ -1,8 +1,3 @@
-/**
- * Error Handling Components Index
- * Exports all error handling components and utilities
- */
-
 // Core error handling
 export { ErrorManager, errorManager } from '../../utils/errorHandling/ErrorManager';
 export { ErrorCategory, ErrorSeverity } from '../../utils/errorHandling/ErrorManager';
@@ -30,17 +25,7 @@ export {
 } from './ErrorFallbackUI';
 
 // Graceful degradation
-export {
-  GracefulDegradation,
-  EnhancedPostComposerWithFallback,
-  TokenReactionsWithFallback,
-  WalletDashboardWithFallback,
-  NotificationsWithFallback,
-  SearchWithFallback,
-  VirtualScrollWithFallback,
-  ReputationWithFallback,
-  ContentPreviewsWithFallback
-} from './GracefulDegradation';
+export { default as GracefulDegradation } from './GracefulDegradation';
 
 // Fallback content
 export {
@@ -70,3 +55,33 @@ export {
   useOfflineProfileUpdate,
   useOfflineCommunityActions
 } from '../../hooks/useOfflineSupport';
+
+// Legacy exports
+export { PostCardErrorBoundary } from './PostCardErrorBoundary';
+export { SidebarErrorBoundary } from './SidebarErrorBoundary';
+export { default as RetryHandler } from './RetryHandler';
+
+// Loading Skeletons
+export { PostCardSkeleton } from '../LoadingSkeletons/PostCardSkeleton';
+export { SidebarWidgetSkeleton } from '../LoadingSkeletons/SidebarWidgetSkeleton';
+export { CommunityHeaderSkeleton } from '../LoadingSkeletons/CommunityHeaderSkeleton';
+export { PostListSkeleton } from '../LoadingSkeletons/PostListSkeleton';
+
+// Types
+export interface ErrorHandlingProps {
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  fallback?: React.ReactNode;
+}
+
+export interface RetryableError {
+  message: string;
+  retryable: boolean;
+  retryCount?: number;
+  maxRetries?: number;
+}
+
+export interface LoadingState {
+  isLoading: boolean;
+  error: Error | null;
+  retryCount: number;
+}
