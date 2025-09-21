@@ -5,9 +5,10 @@ export { default as ProposalPreview } from './ProposalPreview';
 export { default as TokenPreview } from './TokenPreview';
 
 export type {
-  ContentPreview,
   NFTPreviewData,
   LinkPreviewData,
   ProposalPreviewData,
   TokenPreviewData
 } from './InlinePreviewRenderer';
+
+export type { ContentPreview } from '../../types/contentPreview';
