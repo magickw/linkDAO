@@ -74,7 +74,7 @@ export type {
 // Import for use in interfaces
 import type { SocialProofData, UserProfile } from '../components/SocialProof/SocialProofIndicator';
 import type { TrendingLevel } from '../components/TrendingBadge/TrendingBadge';
-import type { ContentPreview } from '../components/InlinePreviews/InlinePreviewRenderer';
+import type { ContentPreview } from './contentPreview';
 
 // Re-export existing trending level type
 export type { TrendingLevel } from '../components/TrendingBadge/TrendingBadge';
@@ -82,11 +82,11 @@ export type { TrendingLevel } from '../components/TrendingBadge/TrendingBadge';
 // Re-export existing content preview types
 export type { 
   ContentPreview,
-  NFTPreviewData as NFTPreview,
-  LinkPreviewData as LinkPreview,
-  ProposalPreviewData as ProposalPreview,
-  TokenPreviewData as TokenPreview
-} from '../components/InlinePreviews/InlinePreviewRenderer';
+  NFTPreview,
+  LinkPreview,
+  ProposalPreview,
+  TokenPreview
+} from './contentPreview';
 
 export interface TokenAmount {
   amount: number;
