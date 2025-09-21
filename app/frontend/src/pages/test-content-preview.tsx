@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import InlinePreviewRenderer from '../components/InlinePreviews/InlinePreviewRenderer';
+import { InlinePreviewRenderer } from '../components/InlinePreviews/InlinePreviewRenderer';
 import contentPreviewService from '../services/contentPreviewService';
 import { ContentPreview } from '../types/contentPreview';
 
@@ -205,8 +205,7 @@ export default function TestContentPreview() {
 
               {/* Rendered Preview */}
               <InlinePreviewRenderer 
-                enhancedPreviews={[preview]}
-                enableSecurity={true}
+                preview={preview as any}
                 className="border border-gray-200 dark:border-gray-600 rounded-md p-4"
               />
             </div>
@@ -217,9 +216,7 @@ export default function TestContentPreview() {
                 Compact Preview
               </h2>
               <InlinePreviewRenderer 
-                enhancedPreviews={[preview]}
-                compact={true}
-                enableSecurity={true}
+                preview={preview as any}
                 className="border border-gray-200 dark:border-gray-600 rounded-md p-4"
               />
             </div>
@@ -241,12 +238,20 @@ export default function TestContentPreview() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             Multiple URL Preview Test
           </h2>
-          <InlinePreviewRenderer 
-            urls={sampleUrls.slice(0, 3)}
-            enableSecurity={true}
-            maxPreviews={3}
-            className="space-y-4"
-          />
+          <div className="space-y-4">
+            {sampleUrls.slice(0, 3).map((url, index) => (
+              <InlinePreviewRenderer 
+                key={index}
+                preview={{
+                  url,
+                  title: `Sample Preview ${index + 1}`,
+                  description: `This is a sample preview for ${url}`,
+                  type: 'link',
+                  siteName: new URL(url).hostname
+                } as any}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

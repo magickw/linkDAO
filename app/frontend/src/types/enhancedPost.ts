@@ -1,4 +1,45 @@
 import { Post, CreatePostInput } from '../models/Post';
+import { TokenReaction, ReactionType } from './tokenReaction';
+
+// Enhanced post interface extending the base Post
+export interface EnhancedPost extends Post {
+  contentType?: ContentType;
+  communityId?: string;
+  media?: MediaFile[];
+  previews?: LinkPreview[];
+  poll?: PollData;
+  proposal?: ProposalData;
+  hashtags: string[];
+  mentions: string[];
+  reactions: TokenReaction[];
+  tips: any[];
+  comments: any[];
+  shares: any[];
+  views: number;
+  engagementScore: number;
+  socialProof?: SocialProof;
+  trendingStatus?: 'hot' | 'rising' | 'trending';
+}
+
+// Social proof interface
+export interface SocialProof {
+  followedUsersWhoEngaged: UserProfile[];
+  totalEngagementFromFollowed: number;
+  communityLeadersWhoEngaged: UserProfile[];
+  verifiedUsersWhoEngaged: UserProfile[];
+}
+
+// User profile interface for social proof
+export interface UserProfile {
+  id: string;
+  address: string;
+  username?: string;
+  displayName?: string;
+  avatar?: string;
+  verified: boolean;
+  reputation?: number;
+  badges?: string[];
+}
 
 // Enhanced content types for the new post composer
 export enum ContentType {

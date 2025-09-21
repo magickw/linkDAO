@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, ChevronDown, MessageCircle, Share2, Bookmark, MoreHorizontal, Eye } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageCircle, Share2, Bookmark, MoreHorizontal, Eye, Flag, Check, X, Undo2 } from 'lucide-react';
 import { CommunityPost } from '@/models/CommunityPost';
 import { Community } from '@/models/Community';
 import MediaPreview from './MediaPreview';
 import PostMetadata from './PostMetadata';
 import PostFlair, { FlairConfig } from './PostFlair';
+import ReportModal from './ReportModal';
 
 interface RedditStylePostCardProps {
   post: CommunityPost;
@@ -15,7 +16,8 @@ interface RedditStylePostCardProps {
   onVote: (postId: string, direction: 'up' | 'down') => void;
   onSave?: (postId: string) => void;
   onHide?: (postId: string) => void;
-  onReport?: (postId: string) => void;
+  onReport?: (postId: string, reason: string, details?: string) => void;
+  onShare?: (postId: string) => void;
   onComment?: (postId: string) => void;
   isPinned?: boolean;
   className?: string;
@@ -30,6 +32,7 @@ export default function RedditStylePostCard({
   onSave,
   onHide,
   onReport,
+  onShare,
   onComment,
   isPinned = false,
   className = ''
@@ -37,6 +40,13 @@ export default function RedditStylePostCard({
   const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [showHideUndo, setShowHideUndo] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
 
   // Calculate vote score
   const voteScore = post.upvotes - post.downvotes;
@@ -98,6 +108,97 @@ export default function RedditStylePostCard({
     return 'text-gray-500 dark:text-gray-400';
   };
 
+  // Handle save action with visual confirmation
+  const handleSave = useCallback(async () => {
+    if (isProcessingAction || !onSave) return;
+    
+    setIsProcessingAction(true);
+    try {
+      await onSave(post.id);
+      setIsSaved(!isSaved);
+      setShowSaveConfirmation(true);
+      
+      // Hide confirmation after 2 seconds
+      setTimeout(() => {
+        setShowSaveConfirmation(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Save failed:', error);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  }, [post.id, isSaved, isProcessingAction, onSave]);
+
+  // Handle hide action with undo option
+  const handleHide = useCallback(async () => {
+    if (isProcessingAction || !onHide) return;
+    
+    setIsProcessingAction(true);
+    try {
+      await onHide(post.id);
+      setIsHidden(true);
+      setShowHideUndo(true);
+      
+      // Auto-hide undo option after 5 seconds
+      setTimeout(() => {
+        setShowHideUndo(false);
+      }, 5000);
+    } catch (error) {
+      console.error('Hide failed:', error);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  }, [post.id, isProcessingAction, onHide]);
+
+  // Handle undo hide action
+  const handleUndoHide = useCallback(() => {
+    setIsHidden(false);
+    setShowHideUndo(false);
+  }, []);
+
+  // Handle report submission
+  const handleReport = useCallback(async (reason: string, details?: string) => {
+    if (isProcessingAction || !onReport) return;
+    
+    setIsProcessingAction(true);
+    try {
+      await onReport(post.id, reason, details);
+      setShowReportModal(false);
+    } catch (error) {
+      console.error('Report failed:', error);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  }, [post.id, isProcessingAction, onReport]);
+
+  // Handle share action
+  const handleShare = useCallback(async () => {
+    if (isProcessingAction) return;
+    
+    setIsProcessingAction(true);
+    try {
+      if (onShare) {
+        await onShare(post.id);
+      } else {
+        // Fallback to native share or copy to clipboard
+        if (navigator.share) {
+          await navigator.share({
+            title: `Post by ${post.author}`,
+            text: post.contentCid,
+            url: window.location.href
+          });
+        } else {
+          await navigator.clipboard.writeText(window.location.href);
+          // Could show a toast notification here
+        }
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    } finally {
+      setIsProcessingAction(false);
+    }
+  }, [post.id, post.author, post.contentCid, isProcessingAction, onShare]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -141,7 +242,11 @@ export default function RedditStylePostCard({
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-4">
+        <div 
+          className="flex-1 p-4 relative"
+          onMouseEnter={() => setShowQuickActions(true)}
+          onMouseLeave={() => setShowQuickActions(false)}
+        >
           {/* Post Header */}
           <div className="flex items-center justify-between mb-2">
             <PostMetadata
@@ -155,7 +260,77 @@ export default function RedditStylePostCard({
               className="flex-1"
             />
 
-            {/* Menu Button */}
+            {/* Quick Actions Bar - Hover Revealed */}
+            <AnimatePresence>
+              {showQuickActions && (
+                <motion.div
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="flex items-center space-x-1 mr-2"
+                >
+                  {/* Save Button */}
+                  {onSave && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleSave}
+                      disabled={isProcessingAction}
+                      className={`p-2 rounded-md transition-all duration-200 ${
+                        isSaved 
+                          ? 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' 
+                          : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+                      }`}
+                      aria-label={isSaved ? 'Unsave post' : 'Save post'}
+                      title={isSaved ? 'Unsave' : 'Save'}
+                    >
+                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                    </motion.button>
+                  )}
+
+                  {/* Share Button */}
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={handleShare}
+                    disabled={isProcessingAction}
+                    className="p-2 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                    aria-label="Share post"
+                    title="Share"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </motion.button>
+
+                  {/* Hide Button */}
+                  {onHide && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={handleHide}
+                      disabled={isProcessingAction}
+                      className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+                      aria-label="Hide post"
+                      title="Hide"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </motion.button>
+                  )}
+
+                  {/* Report Button */}
+                  {onReport && (
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setShowReportModal(true)}
+                      disabled={isProcessingAction}
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                      aria-label="Report post"
+                      title="Report"
+                    >
+                      <Flag className="w-4 h-4" />
+                    </motion.button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Menu Button (fallback for mobile/accessibility) */}
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -176,22 +351,35 @@ export default function RedditStylePostCard({
                     {onSave && (
                       <button
                         onClick={() => {
-                          onSave(post.id);
+                          handleSave();
                           setShowMenu(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                        disabled={isProcessingAction}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
                       >
-                        <Bookmark className="w-4 h-4" />
-                        <span>Save</span>
+                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current text-yellow-600' : ''}`} />
+                        <span>{isSaved ? 'Unsave' : 'Save'}</span>
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        handleShare();
+                        setShowMenu(false);
+                      }}
+                      disabled={isProcessingAction}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span>Share</span>
+                    </button>
                     {onHide && (
                       <button
                         onClick={() => {
-                          onHide(post.id);
+                          handleHide();
                           setShowMenu(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                        disabled={isProcessingAction}
+                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
                       >
                         <Eye className="w-4 h-4" />
                         <span>Hide</span>
@@ -200,12 +388,13 @@ export default function RedditStylePostCard({
                     {onReport && (
                       <button
                         onClick={() => {
-                          onReport(post.id);
+                          setShowReportModal(true);
                           setShowMenu(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+                        disabled={isProcessingAction}
+                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2 disabled:opacity-50"
                       >
-                        <span>⚠️</span>
+                        <Flag className="w-4 h-4" />
                         <span>Report</span>
                       </button>
                     )}
@@ -271,7 +460,11 @@ export default function RedditStylePostCard({
             </button>
 
             {/* Share */}
-            <button className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
+            <button 
+              onClick={handleShare}
+              disabled={isProcessingAction}
+              className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+            >
               <Share2 className="w-4 h-4" />
               <span>Share</span>
             </button>
@@ -282,8 +475,71 @@ export default function RedditStylePostCard({
               <span>Award</span>
             </button>
           </div>
+
+          {/* Save Confirmation */}
+          <AnimatePresence>
+            {showSaveConfirmation && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-3 flex items-center space-x-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-md"
+              >
+                <Check className="w-4 h-4" />
+                <span>{isSaved ? 'Post saved!' : 'Post unsaved!'}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Hide Undo */}
+          <AnimatePresence>
+            {showHideUndo && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-3 flex items-center justify-between text-sm text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-3 py-2 rounded-md"
+              >
+                <span>Post hidden from your feed</span>
+                <button
+                  onClick={handleUndoHide}
+                  className="flex items-center space-x-1 text-orange-700 dark:text-orange-300 hover:text-orange-800 dark:hover:text-orange-200 font-medium"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  <span>Undo</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
+      {/* Hidden State Overlay */}
+      <AnimatePresence>
+        {isHidden && !showHideUndo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-gray-100 dark:bg-gray-800 bg-opacity-90 flex items-center justify-center rounded-lg"
+          >
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Post hidden</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        onSubmit={handleReport}
+        isLoading={isProcessingAction}
+        postId={post.id}
+        postAuthor={post.author}
+      />
     </motion.div>
   );
 }

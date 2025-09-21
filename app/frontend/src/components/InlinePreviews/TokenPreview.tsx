@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TokenPreviewData } from './InlinePreviewRenderer';
+import { TokenPreview as TokenPreviewData } from '@/types/contentPreview';
 
 interface TokenPreviewProps {
   data: TokenPreviewData;

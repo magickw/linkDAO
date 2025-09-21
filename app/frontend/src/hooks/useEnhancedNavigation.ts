@@ -48,7 +48,7 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   const { address } = useAccount();
   
   // State
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(defaultQuickFilters);
+  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>(defaultQuickFilters as any);
   const [communities, setCommunities] = useState<CommunityWithIcons[]>([]);
   const [showAllCommunities, setShowAllCommunities] = useState(false);
   const [enhancedUser, setEnhancedUser] = useState<EnhancedUserProfile | null>(null);
@@ -199,13 +199,13 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   // Mock activity indicators - replace with real data
   useEffect(() => {
     const indicators = [
-      createActivityIndicator('notifications', 'notification', 5, 'medium'),
-      createActivityIndicator('transactions', 'transaction', 2, 'low'),
-      createActivityIndicator('community', 'community', 8, 'low'),
-      createActivityIndicator('governance', 'governance', 1, 'high')
+      createActivityIndicator('notifications', 5, 'bg-blue-500'),
+      createActivityIndicator('transactions', 2, 'bg-green-500'),
+      createActivityIndicator('community', 8, 'bg-purple-500'),
+      createActivityIndicator('governance', 1, 'bg-red-500')
     ];
     
-    setActivityIndicators(indicators);
+    setActivityIndicators(indicators as any);
   }, []);
 
   // Update filter counts based on mock data

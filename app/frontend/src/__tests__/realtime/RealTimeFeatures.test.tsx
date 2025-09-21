@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { RealTimeNotificationSystem } from '@/components/RealTimeNotifications/RealTimeNotificationSystem';
 import { LiveUpdateIndicators } from '@/components/RealTimeNotifications/LiveUpdateIndicators';
 import { OfflineNotificationQueue } from '@/components/RealTimeNotifications/OfflineNotificationQueue';
-import { EnhancedStateProvider } from '@/contexts/EnhancedStateProvider';
+import { RealTimeUpdateProvider } from '@/contexts/RealTimeUpdateContext';
+import { OfflineSyncProvider } from '@/contexts/OfflineSyncContext';
+import * as realTimeNotificationService from '@/services/realTimeNotificationService';
 
 // Mock WebSocket
 class MockWebSocket {
@@ -23,7 +25,7 @@ class MockWebSocket {
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN;
       this.onopen?.(new Event('open'));
-    }, 100);
+    }, 10);
   }
 
   send(data: string) {
@@ -43,723 +45,753 @@ class MockWebSocket {
   }
 }
 
-global.WebSocket = MockWebSocket as any;
+// Mock global WebSocket
+(global as any).WebSocket = MockWebSocket;
 
-// Mock real-time services
-jest.mock('@/services/realTimeNotificationService', () => ({
-  realTimeNotificationService: {
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    subscribe: jest.fn(),
-    unsubscribe: jest.fn(),
-    sendMessage: jest.fn(),
-    getConnectionStatus: jest.fn(() => 'connected'),
+// Mock services
+jest.mock('@/services/realTimeNotificationService');
+const mockRealTimeService = realTimeNotificationService as jest.Mocked<typeof realTimeNotificationService>;
+
+// Mock notification API
+Object.defineProperty(window, 'Notification', {
+  value: class MockNotification {
+    static permission = 'granted';
+    static requestPermission = jest.fn().mockResolvedValue('granted');
+    
+    constructor(public title: string, public options?: NotificationOptions) {}
+    
+    close() {}
   },
-}));
+});
 
-jest.mock('@/services/onlineOfflineSyncService', () => ({
-  onlineOfflineSyncService: {
-    isOnline: jest.fn(() => true),
-    queueAction: jest.fn(),
-    syncQueuedActions: jest.fn(),
-    getQueuedActions: jest.fn(() => []),
-    clearQueue: jest.fn(),
+// Mock service worker
+Object.defineProperty(navigator, 'serviceWorker', {
+  value: {
+    register: jest.fn().mockResolvedValue({
+      active: { postMessage: jest.fn() },
+      addEventListener: jest.fn(),
+    }),
+    ready: Promise.resolve({
+      active: { postMessage: jest.fn() },
+      addEventListener: jest.fn(),
+    }),
   },
-}));
+});
 
-const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <EnhancedStateProvider>
-    {children}
-  </EnhancedStateProvider>
-);
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <RealTimeUpdateProvider>
+      <OfflineSyncProvider>
+        {component}
+      </OfflineSyncProvider>
+    </RealTimeUpdateProvider>
+  );
+};
 
 describe('Real-Time Features Tests', () => {
   let mockWebSocket: MockWebSocket;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Mock navigator.onLine
-    Object.defineProperty(navigator, 'onLine', {
-      writable: true,
-      value: true,
+    mockRealTimeService.connect.mockImplementation(() => {
+      mockWebSocket = new MockWebSocket('ws://localhost:3001');
+      return Promise.resolve(mockWebSocket as any);
     });
-
-    // Create fresh WebSocket mock for each test
-    mockWebSocket = new MockWebSocket('ws://localhost:3001');
   });
 
   afterEach(() => {
     mockWebSocket?.close();
   });
 
-  describe('Real-Time Notifications', () => {
-    it('should establish WebSocket connection', async () => {
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+  describe('WebSocket Connection Management', () => {
+    it('should establish WebSocket connection on mount', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
       );
 
       await waitFor(() => {
-        expect(require('@/services/realTimeNotificationService').realTimeNotificationService.connect).toHaveBeenCalled();
+        expect(mockRealTimeService.connect).toHaveBeenCalledWith('user-1');
       });
 
-      // Should show connected status
-      expect(screen.getByTestId('connection-status')).toHaveTextContent('connected');
+      expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
     });
 
-    it('should receive and display real-time notifications', async () => {
-      const mockOnMarkAsRead = jest.fn();
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={mockOnMarkAsRead}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+    it('should handle connection failures gracefully', async () => {
+      mockRealTimeService.connect.mockRejectedValue(new Error('Connection failed'));
+
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
       );
 
-      // Wait for connection
       await waitFor(() => {
-        expect(screen.getByTestId('connection-status')).toHaveTextContent('connected');
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Disconnected');
+        expect(screen.getByText(/connection failed/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should attempt reconnection on connection loss', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
       });
 
-      // Simulate receiving a notification
+      // Simulate connection loss
+      act(() => {
+        mockWebSocket.close();
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Reconnecting');
+      });
+
+      // Should attempt reconnection
+      await waitFor(() => {
+        expect(mockRealTimeService.connect).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it('should implement exponential backoff for reconnection', async () => {
+      jest.useFakeTimers();
+      
+      mockRealTimeService.connect
+        .mockRejectedValueOnce(new Error('Connection failed'))
+        .mockRejectedValueOnce(new Error('Connection failed'))
+        .mockResolvedValueOnce(new MockWebSocket('ws://localhost:3001') as any);
+
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      // First connection attempt fails
+      await waitFor(() => {
+        expect(mockRealTimeService.connect).toHaveBeenCalledTimes(1);
+      });
+
+      // Wait for first retry (1 second)
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      await waitFor(() => {
+        expect(mockRealTimeService.connect).toHaveBeenCalledTimes(2);
+      });
+
+      // Wait for second retry (2 seconds)
+      act(() => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() => {
+        expect(mockRealTimeService.connect).toHaveBeenCalledTimes(3);
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('Real-Time Notifications', () => {
+    it('should receive and display mention notifications', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Simulate mention notification
       act(() => {
         mockWebSocket.simulateMessage({
-          type: 'notification',
+          type: 'mention',
           data: {
             id: 'notif-1',
-            type: 'mention',
-            title: 'New mention',
             message: 'You were mentioned in a post',
+            postId: 'post-123',
+            from: 'user-2',
             timestamp: new Date().toISOString(),
-            read: false,
           },
         });
       });
 
-      // Should display the notification
       await waitFor(() => {
-        expect(screen.getByText('New mention')).toBeInTheDocument();
+        expect(screen.getByTestId('notification-mention')).toBeInTheDocument();
         expect(screen.getByText('You were mentioned in a post')).toBeInTheDocument();
       });
     });
 
     it('should categorize notifications by type', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Send different types of notifications
       const notifications = [
-        {
-          id: '1',
-          type: 'mention',
-          title: 'Mention notification',
-          message: 'You were mentioned',
-          timestamp: new Date(),
-          read: false,
-        },
-        {
-          id: '2',
-          type: 'tip',
-          title: 'Tip notification',
-          message: 'You received a tip',
-          timestamp: new Date(),
-          read: false,
-        },
-        {
-          id: '3',
-          type: 'governance',
-          title: 'Governance notification',
-          message: 'New proposal to vote on',
-          timestamp: new Date(),
-          read: false,
-        },
+        { type: 'mention', data: { message: 'Mention notification' } },
+        { type: 'tip', data: { message: 'Tip notification' } },
+        { type: 'governance', data: { message: 'Governance notification' } },
+        { type: 'community', data: { message: 'Community notification' } },
       ];
 
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={notifications}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
-      );
+      notifications.forEach((notif, index) => {
+        act(() => {
+          mockWebSocket.simulateMessage({
+            ...notif,
+            data: { ...notif.data, id: `notif-${index}` },
+          });
+        });
+      });
 
-      // Should show category filters
-      expect(screen.getByRole('button', { name: /mentions/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /tips/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /governance/i })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByTestId('notification-mention')).toBeInTheDocument();
+        expect(screen.getByTestId('notification-tip')).toBeInTheDocument();
+        expect(screen.getByTestId('notification-governance')).toBeInTheDocument();
+        expect(screen.getByTestId('notification-community')).toBeInTheDocument();
+      });
 
-      // Filter by mentions
-      const user = userEvent.setup();
-      await user.click(screen.getByRole('button', { name: /mentions/i }));
-
-      // Should only show mention notifications
-      expect(screen.getByText('Mention notification')).toBeInTheDocument();
-      expect(screen.queryByText('Tip notification')).not.toBeInTheDocument();
+      // Check categorization
+      expect(screen.getByTestId('notification-category-mention')).toHaveClass('category-mention');
+      expect(screen.getByTestId('notification-category-tip')).toHaveClass('category-tip');
     });
 
-    it('should handle priority notifications', async () => {
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+    it('should handle priority notifications differently', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
       );
 
-      // Simulate high priority notification
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Send priority notification
       act(() => {
         mockWebSocket.simulateMessage({
-          type: 'notification',
+          type: 'governance',
+          priority: 'high',
           data: {
-            id: 'urgent-1',
-            type: 'governance',
-            title: 'Urgent: Voting deadline',
-            message: 'Proposal voting ends in 1 hour',
-            priority: 'high',
-            timestamp: new Date().toISOString(),
-            read: false,
+            id: 'priority-notif',
+            message: 'Urgent: Voting deadline in 1 hour',
+            deadline: new Date(Date.now() + 3600000).toISOString(),
           },
         });
       });
 
-      // Should show priority indicator
       await waitFor(() => {
-        expect(screen.getByTestId('priority-notification')).toBeInTheDocument();
-        expect(screen.getByTestId('priority-indicator')).toHaveClass('high-priority');
+        const priorityNotif = screen.getByTestId('notification-priority');
+        expect(priorityNotif).toBeInTheDocument();
+        expect(priorityNotif).toHaveClass('priority-high');
+        expect(screen.getByText(/urgent/i)).toBeInTheDocument();
       });
     });
 
-    it('should handle connection failures gracefully', async () => {
-      // Mock connection failure
-      require('@/services/realTimeNotificationService').realTimeNotificationService.getConnectionStatus.mockReturnValue('disconnected');
+    it('should show browser notifications for important updates', async () => {
+      const mockNotification = jest.fn();
+      (window as any).Notification = mockNotification;
 
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" enableBrowserNotifications={true} />
       );
 
-      // Should show disconnected status
-      expect(screen.getByTestId('connection-status')).toHaveTextContent('disconnected');
-      
-      // Should show reconnection attempt
-      expect(screen.getByText(/reconnecting/i)).toBeInTheDocument();
-    });
-
-    it('should implement exponential backoff for reconnection', async () => {
-      const connectSpy = jest.spyOn(require('@/services/realTimeNotificationService').realTimeNotificationService, 'connect');
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Simulate connection failures
-      connectSpy.mockRejectedValueOnce(new Error('Connection failed'));
-      connectSpy.mockRejectedValueOnce(new Error('Connection failed'));
-      connectSpy.mockResolvedValueOnce(undefined);
-
-      // Should retry with increasing delays
       await waitFor(() => {
-        expect(connectSpy).toHaveBeenCalledTimes(3);
-      }, { timeout: 10000 });
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Send high priority notification
+      act(() => {
+        mockWebSocket.simulateMessage({
+          type: 'mention',
+          priority: 'high',
+          data: {
+            id: 'browser-notif',
+            message: 'You were mentioned by a verified user',
+            from: 'verified-user',
+          },
+        });
+      });
+
+      await waitFor(() => {
+        expect(mockNotification).toHaveBeenCalledWith(
+          'You were mentioned by a verified user',
+          expect.objectContaining({
+            icon: expect.any(String),
+            tag: 'mention',
+          })
+        );
+      });
     });
   });
 
   describe('Live Update Indicators', () => {
     it('should show live update indicators without disrupting view', async () => {
-      render(
-        <TestWrapper>
-          <LiveUpdateIndicators 
-            hasUpdates={false}
-            updateCount={0}
-            onViewUpdates={jest.fn()}
-          />
-        </TestWrapper>
+      renderWithProviders(
+        <LiveUpdateIndicators />
       );
 
-      // Should not show indicator initially
-      expect(screen.queryByTestId('live-update-indicator')).not.toBeInTheDocument();
+      // Simulate new content available
+      act(() => {
+        fireEvent(window, new CustomEvent('newContentAvailable', {
+          detail: { count: 3, type: 'posts' },
+        }));
+      });
 
-      // Simulate new updates
-      const { rerender } = render(
-        <TestWrapper>
-          <LiveUpdateIndicators 
-            hasUpdates={true}
-            updateCount={3}
-            onViewUpdates={jest.fn()}
-          />
-        </TestWrapper>
-      );
+      await waitFor(() => {
+        const indicator = screen.getByTestId('live-update-indicator');
+        expect(indicator).toBeInTheDocument();
+        expect(indicator).toHaveTextContent('3 new posts');
+      });
 
-      // Should show update indicator
-      expect(screen.getByTestId('live-update-indicator')).toBeInTheDocument();
-      expect(screen.getByText('3 new updates')).toBeInTheDocument();
+      // Should not auto-scroll or disrupt current view
+      expect(window.scrollY).toBe(0);
     });
 
-    it('should handle live comment updates', async () => {
-      const mockOnNewComment = jest.fn();
-      
-      render(
-        <TestWrapper>
-          <LiveUpdateIndicators 
-            hasUpdates={false}
-            updateCount={0}
-            onViewUpdates={jest.fn()}
-            onNewComment={mockOnNewComment}
-          />
-        </TestWrapper>
+    it('should allow manual refresh of content', async () => {
+      const user = userEvent.setup();
+      const mockRefresh = jest.fn();
+
+      renderWithProviders(
+        <LiveUpdateIndicators onRefresh={mockRefresh} />
       );
 
-      // Simulate new comment via WebSocket
+      // Show update indicator
       act(() => {
-        mockWebSocket.simulateMessage({
-          type: 'comment',
-          data: {
+        fireEvent(window, new CustomEvent('newContentAvailable', {
+          detail: { count: 5, type: 'posts' },
+        }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-update-indicator')).toBeInTheDocument();
+      });
+
+      // Click to refresh
+      const refreshButton = screen.getByRole('button', { name: /refresh/i });
+      await user.click(refreshButton);
+
+      expect(mockRefresh).toHaveBeenCalledWith({ count: 5, type: 'posts' });
+    });
+
+    it('should batch multiple updates', async () => {
+      jest.useFakeTimers();
+
+      renderWithProviders(
+        <LiveUpdateIndicators />
+      );
+
+      // Send multiple rapid updates
+      act(() => {
+        fireEvent(window, new CustomEvent('newContentAvailable', {
+          detail: { count: 1, type: 'posts' },
+        }));
+        fireEvent(window, new CustomEvent('newContentAvailable', {
+          detail: { count: 2, type: 'posts' },
+        }));
+        fireEvent(window, new CustomEvent('newContentAvailable', {
+          detail: { count: 3, type: 'posts' },
+        }));
+      });
+
+      // Should batch updates
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+
+      await waitFor(() => {
+        const indicator = screen.getByTestId('live-update-indicator');
+        expect(indicator).toHaveTextContent('3 new posts'); // Latest count
+      });
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('Live Comment Updates', () => {
+    it('should show live comment updates', async () => {
+      renderWithProviders(
+        <div data-testid="post-container">
+          <div data-testid="comment-section" />
+        </div>
+      );
+
+      // Simulate live comment
+      act(() => {
+        fireEvent(window, new CustomEvent('liveComment', {
+          detail: {
             postId: 'post-123',
             comment: {
-              id: 'comment-456',
-              author: 'User123',
-              content: 'New comment content',
+              id: 'comment-1',
+              content: 'Live comment content',
+              author: 'user-2',
               timestamp: new Date().toISOString(),
             },
           },
-        });
+        }));
       });
 
       await waitFor(() => {
-        expect(mockOnNewComment).toHaveBeenCalledWith(
-          expect.objectContaining({
-            postId: 'post-123',
-            comment: expect.objectContaining({
-              id: 'comment-456',
-              content: 'New comment content',
-            }),
-          })
-        );
+        expect(screen.getByTestId('live-comment-indicator')).toBeInTheDocument();
+        expect(screen.getByText(/new comment/i)).toBeInTheDocument();
       });
     });
 
-    it('should handle live reaction updates', async () => {
-      const mockOnReactionUpdate = jest.fn();
-      
-      render(
-        <TestWrapper>
-          <LiveUpdateIndicators 
-            hasUpdates={false}
-            updateCount={0}
-            onViewUpdates={jest.fn()}
-            onReactionUpdate={mockOnReactionUpdate}
-          />
-        </TestWrapper>
+    it('should show typing indicators', async () => {
+      renderWithProviders(
+        <div data-testid="post-container">
+          <div data-testid="comment-section" />
+        </div>
       );
 
-      // Simulate reaction update
+      // Simulate user typing
       act(() => {
-        mockWebSocket.simulateMessage({
-          type: 'reaction',
-          data: {
+        fireEvent(window, new CustomEvent('userTyping', {
+          detail: {
             postId: 'post-123',
-            reactionType: '🔥',
-            newCount: 15,
-            user: 'User456',
+            user: 'user-2',
+            isTyping: true,
           },
-        });
+        }));
       });
 
       await waitFor(() => {
-        expect(mockOnReactionUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
+        expect(screen.getByTestId('typing-indicator')).toBeInTheDocument();
+        expect(screen.getByText(/user-2 is typing/i)).toBeInTheDocument();
+      });
+
+      // Stop typing
+      act(() => {
+        fireEvent(window, new CustomEvent('userTyping', {
+          detail: {
+            postId: 'post-123',
+            user: 'user-2',
+            isTyping: false,
+          },
+        }));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('typing-indicator')).not.toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Live Reaction Updates', () => {
+    it('should show live reaction animations', async () => {
+      renderWithProviders(
+        <div data-testid="post-container">
+          <div data-testid="reaction-section" />
+        </div>
+      );
+
+      // Simulate live reaction
+      act(() => {
+        fireEvent(window, new CustomEvent('liveReaction', {
+          detail: {
             postId: 'post-123',
             reactionType: '🔥',
-            newCount: 15,
-          })
-        );
+            user: { username: 'user-2' },
+            amount: 5,
+          },
+        }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('live-reaction-animation')).toBeInTheDocument();
+        expect(screen.getByText(/user-2 reacted/i)).toBeInTheDocument();
+      });
+
+      // Animation should disappear after timeout
+      await waitFor(() => {
+        expect(screen.queryByTestId('live-reaction-animation')).not.toBeInTheDocument();
+      }, { timeout: 3000 });
+    });
+
+    it('should update reaction counts in real-time', async () => {
+      renderWithProviders(
+        <div data-testid="post-container">
+          <div data-testid="reaction-count-🔥">5</div>
+        </div>
+      );
+
+      // Simulate reaction count update
+      act(() => {
+        fireEvent(window, new CustomEvent('reactionUpdate', {
+          detail: {
+            postId: 'post-123',
+            reactionType: '🔥',
+            newCount: 6,
+          },
+        }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('reaction-count-🔥')).toHaveTextContent('6');
       });
     });
   });
 
   describe('Offline Functionality', () => {
-    beforeEach(() => {
-      // Mock offline state
+    it('should detect offline state', async () => {
+      renderWithProviders(
+        <OfflineNotificationQueue />
+      );
+
+      // Go offline
       Object.defineProperty(navigator, 'onLine', {
         writable: true,
         value: false,
       });
-    });
 
-    it('should detect offline state', () => {
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={[]}
-            onSync={jest.fn()}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Should show offline indicator
-      expect(screen.getByTestId('offline-indicator')).toBeInTheDocument();
-      expect(screen.getByText(/offline/i)).toBeInTheDocument();
-    });
-
-    it('should queue actions when offline', async () => {
-      const mockQueueAction = require('@/services/onlineOfflineSyncService').onlineOfflineSyncService.queueAction;
-      
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={[]}
-            onSync={jest.fn()}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Simulate user action while offline
-      const actionButton = screen.getByRole('button', { name: /queue action/i });
-      await userEvent.click(actionButton);
-
-      expect(mockQueueAction).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'user_action',
-          timestamp: expect.any(Date),
-        })
-      );
-    });
-
-    it('should show queued actions count', () => {
-      const queuedActions = [
-        { id: '1', type: 'post', data: { content: 'Offline post 1' }, timestamp: new Date() },
-        { id: '2', type: 'reaction', data: { postId: 'post-123', type: '🔥' }, timestamp: new Date() },
-        { id: '3', type: 'comment', data: { postId: 'post-456', content: 'Offline comment' }, timestamp: new Date() },
-      ];
-
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={queuedActions}
-            onSync={jest.fn()}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Should show queue count
-      expect(screen.getByText('3 actions queued')).toBeInTheDocument();
-      
-      // Should show action types
-      expect(screen.getByText(/post/i)).toBeInTheDocument();
-      expect(screen.getByText(/reaction/i)).toBeInTheDocument();
-      expect(screen.getByText(/comment/i)).toBeInTheDocument();
-    });
-
-    it('should sync queued actions when back online', async () => {
-      const mockSyncQueuedActions = require('@/services/onlineOfflineSyncService').onlineOfflineSyncService.syncQueuedActions;
-      const mockOnSync = jest.fn();
-      
-      const queuedActions = [
-        { id: '1', type: 'post', data: { content: 'Offline post' }, timestamp: new Date() },
-      ];
-
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={queuedActions}
-            onSync={mockOnSync}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Simulate going back online
-      Object.defineProperty(navigator, 'onLine', {
-        writable: true,
-        value: true,
-      });
-
-      // Trigger online event
       act(() => {
-        window.dispatchEvent(new Event('online'));
+        fireEvent(window, new Event('offline'));
       });
 
       await waitFor(() => {
-        expect(mockSyncQueuedActions).toHaveBeenCalled();
-        expect(mockOnSync).toHaveBeenCalled();
+        expect(screen.getByTestId('offline-indicator')).toBeInTheDocument();
+        expect(screen.getByText(/you are offline/i)).toBeInTheDocument();
       });
-
-      // Should show sync success message
-      expect(screen.getByText(/synced successfully/i)).toBeInTheDocument();
     });
 
-    it('should handle sync failures gracefully', async () => {
-      const mockSyncQueuedActions = require('@/services/onlineOfflineSyncService').onlineOfflineSyncService.syncQueuedActions;
-      mockSyncQueuedActions.mockRejectedValue(new Error('Sync failed'));
-      
-      const queuedActions = [
-        { id: '1', type: 'post', data: { content: 'Offline post' }, timestamp: new Date() },
-      ];
-
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={queuedActions}
-            onSync={jest.fn()}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
+    it('should queue notifications when offline', async () => {
+      renderWithProviders(
+        <OfflineNotificationQueue />
       );
 
-      // Go back online
+      // Go offline
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: false,
+      });
+
+      act(() => {
+        fireEvent(window, new Event('offline'));
+      });
+
+      // Try to send notification while offline
+      act(() => {
+        fireEvent(window, new CustomEvent('queueNotification', {
+          detail: {
+            type: 'mention',
+            message: 'Offline notification',
+            timestamp: new Date().toISOString(),
+          },
+        }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('queued-notifications')).toBeInTheDocument();
+        expect(screen.getByText(/1 notification queued/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should sync queued notifications when back online', async () => {
+      const mockSync = jest.fn();
+      mockRealTimeService.syncOfflineNotifications = mockSync;
+
+      renderWithProviders(
+        <OfflineNotificationQueue />
+      );
+
+      // Go offline and queue notifications
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: false,
+      });
+
+      act(() => {
+        fireEvent(window, new Event('offline'));
+      });
+
+      act(() => {
+        fireEvent(window, new CustomEvent('queueNotification', {
+          detail: { type: 'mention', message: 'Queued notification' },
+        }));
+      });
+
+      // Come back online
       Object.defineProperty(navigator, 'onLine', {
         writable: true,
         value: true,
       });
 
       act(() => {
-        window.dispatchEvent(new Event('online'));
+        fireEvent(window, new Event('online'));
       });
 
       await waitFor(() => {
-        expect(screen.getByText(/sync failed/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+        expect(mockSync).toHaveBeenCalled();
+        expect(screen.getByTestId('sync-indicator')).toBeInTheDocument();
       });
     });
 
-    it('should preserve action order during sync', async () => {
-      const mockSyncQueuedActions = require('@/services/onlineOfflineSyncService').onlineOfflineSyncService.syncQueuedActions;
-      
-      const queuedActions = [
-        { id: '1', type: 'post', data: { content: 'First post' }, timestamp: new Date(Date.now() - 3000) },
-        { id: '2', type: 'reaction', data: { postId: 'post-123' }, timestamp: new Date(Date.now() - 2000) },
-        { id: '3', type: 'comment', data: { postId: 'post-123' }, timestamp: new Date(Date.now() - 1000) },
-      ];
-
-      render(
-        <TestWrapper>
-          <OfflineNotificationQueue 
-            queuedActions={queuedActions}
-            onSync={jest.fn()}
-            onClearQueue={jest.fn()}
-          />
-        </TestWrapper>
+    it('should show sync progress', async () => {
+      renderWithProviders(
+        <OfflineNotificationQueue />
       );
 
-      // Go back online
-      Object.defineProperty(navigator, 'onLine', {
-        writable: true,
-        value: true,
-      });
-
+      // Simulate sync in progress
       act(() => {
-        window.dispatchEvent(new Event('online'));
+        fireEvent(window, new CustomEvent('syncProgress', {
+          detail: { synced: 3, total: 5 },
+        }));
       });
 
       await waitFor(() => {
-        expect(mockSyncQueuedActions).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ id: '1', type: 'post' }),
-            expect.objectContaining({ id: '2', type: 'reaction' }),
-            expect.objectContaining({ id: '3', type: 'comment' }),
-          ])
-        );
+        const syncProgress = screen.getByTestId('sync-progress');
+        expect(syncProgress).toBeInTheDocument();
+        expect(syncProgress).toHaveTextContent('3 of 5 synced');
       });
     });
   });
 
-  describe('WebSocket Connection Management', () => {
-    it('should handle connection drops and reconnect', async () => {
-      const connectSpy = jest.spyOn(require('@/services/realTimeNotificationService').realTimeNotificationService, 'connect');
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+  describe('Performance Optimization', () => {
+    it('should throttle high-frequency updates', async () => {
+      jest.useFakeTimers();
+      const updateHandler = jest.fn();
+
+      renderWithProviders(
+        <LiveUpdateIndicators onUpdate={updateHandler} />
       );
 
-      // Simulate connection drop
+      // Send many rapid updates
+      for (let i = 0; i < 10; i++) {
+        act(() => {
+          fireEvent(window, new CustomEvent('newContentAvailable', {
+            detail: { count: i + 1, type: 'posts' },
+          }));
+        });
+      }
+
+      // Should throttle updates
       act(() => {
-        mockWebSocket.close();
+        jest.advanceTimersByTime(100);
       });
 
-      // Should attempt to reconnect
+      expect(updateHandler).toHaveBeenCalledTimes(1);
+
+      jest.useRealTimers();
+    });
+
+    it('should clean up event listeners on unmount', () => {
+      const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+
+      const { unmount } = renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      unmount();
+
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('online', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('offline', expect.any(Function));
+
+      removeEventListenerSpy.mockRestore();
+    });
+
+    it('should limit notification history to prevent memory leaks', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" maxNotifications={5} />
+      );
+
       await waitFor(() => {
-        expect(connectSpy).toHaveBeenCalledTimes(2); // Initial + reconnect
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Send more notifications than the limit
+      for (let i = 0; i < 10; i++) {
+        act(() => {
+          mockWebSocket.simulateMessage({
+            type: 'mention',
+            data: {
+              id: `notif-${i}`,
+              message: `Notification ${i}`,
+            },
+          });
+        });
+      }
+
+      await waitFor(() => {
+        const notifications = screen.getAllByTestId(/^notification-/);
+        expect(notifications.length).toBeLessThanOrEqual(5);
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle WebSocket errors gracefully', async () => {
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
+
+      // Simulate WebSocket error
+      act(() => {
+        mockWebSocket.onerror?.(new Event('error'));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Error');
+        expect(screen.getByText(/connection error/i)).toBeInTheDocument();
       });
     });
 
-    it('should handle message parsing errors', async () => {
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+    it('should handle malformed messages', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
       );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
 
       // Send malformed message
       act(() => {
         mockWebSocket.onmessage?.(new MessageEvent('message', { data: 'invalid json' }));
       });
 
-      // Should handle error gracefully without crashing
-      expect(screen.getByTestId('connection-status')).toBeInTheDocument();
-    });
-
-    it('should implement heartbeat mechanism', async () => {
-      const sendSpy = jest.spyOn(mockWebSocket, 'send');
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to parse message'),
+        expect.any(Error)
       );
 
-      // Wait for heartbeat
+      consoleSpy.mockRestore();
+    });
+
+    it('should recover from temporary failures', async () => {
+      jest.useFakeTimers();
+
+      mockRealTimeService.connect
+        .mockRejectedValueOnce(new Error('Temporary failure'))
+        .mockResolvedValueOnce(new MockWebSocket('ws://localhost:3001') as any);
+
+      renderWithProviders(
+        <RealTimeNotificationSystem userId="user-1" />
+      );
+
+      // Initial connection fails
       await waitFor(() => {
-        expect(sendSpy).toHaveBeenCalledWith(
-          JSON.stringify({ type: 'ping' })
-        );
-      }, { timeout: 35000 }); // Heartbeat typically every 30 seconds
-    });
-
-    it('should handle multiple concurrent connections', async () => {
-      // Render multiple components that use WebSocket
-      render(
-        <TestWrapper>
-          <div>
-            <RealTimeNotificationSystem 
-              notifications={[]}
-              onMarkAsRead={jest.fn()}
-              onClearAll={jest.fn()}
-            />
-            <LiveUpdateIndicators 
-              hasUpdates={false}
-              updateCount={0}
-              onViewUpdates={jest.fn()}
-            />
-          </div>
-        </TestWrapper>
-      );
-
-      // Should reuse the same connection
-      expect(require('@/services/realTimeNotificationService').realTimeNotificationService.connect).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('Performance Under Load', () => {
-    it('should handle high frequency updates efficiently', async () => {
-      const mockOnMarkAsRead = jest.fn();
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={mockOnMarkAsRead}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
-      );
-
-      // Send many updates rapidly
-      const startTime = performance.now();
-      
-      for (let i = 0; i < 100; i++) {
-        act(() => {
-          mockWebSocket.simulateMessage({
-            type: 'notification',
-            data: {
-              id: `notif-${i}`,
-              type: 'mention',
-              title: `Notification ${i}`,
-              message: `Message ${i}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            },
-          });
-        });
-      }
-
-      const endTime = performance.now();
-      
-      // Should handle updates efficiently
-      expect(endTime - startTime).toBeLessThan(1000); // Under 1 second
-      
-      // Should batch updates to prevent UI thrashing
-      await waitFor(() => {
-        const notifications = screen.getAllByTestId(/notification-item/);
-        expect(notifications.length).toBeLessThanOrEqual(50); // Should limit displayed notifications
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Disconnected');
       });
-    });
 
-    it('should throttle WebSocket message processing', async () => {
-      const processingTimes: number[] = [];
-      
-      render(
-        <TestWrapper>
-          <RealTimeNotificationSystem 
-            notifications={[]}
-            onMarkAsRead={jest.fn()}
-            onClearAll={jest.fn()}
-          />
-        </TestWrapper>
-      );
+      // Should retry and succeed
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
 
-      // Send messages rapidly and measure processing time
-      for (let i = 0; i < 10; i++) {
-        const start = performance.now();
-        
-        act(() => {
-          mockWebSocket.simulateMessage({
-            type: 'notification',
-            data: {
-              id: `notif-${i}`,
-              type: 'mention',
-              title: `Notification ${i}`,
-              message: `Message ${i}`,
-              timestamp: new Date().toISOString(),
-              read: false,
-            },
-          });
-        });
-        
-        const end = performance.now();
-        processingTimes.push(end - start);
-      }
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+      });
 
-      // Processing times should be consistent (throttled)
-      const avgProcessingTime = processingTimes.reduce((a, b) => a + b) / processingTimes.length;
-      expect(avgProcessingTime).toBeLessThan(50); // Under 50ms average
+      jest.useRealTimers();
     });
   });
 });

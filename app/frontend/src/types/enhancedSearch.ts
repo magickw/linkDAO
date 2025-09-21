@@ -126,7 +126,7 @@ export interface SocialProof {
 
 export interface UserReputation {
   totalScore: number;
-  level: number;
+  level: number | { name: string; level: number; minScore: number; maxScore: number; privileges: string[]; color: string; icon: string };
   breakdown: {
     posting: number;
     governance: number;

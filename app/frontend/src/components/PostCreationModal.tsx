@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { CreatePostInput } from '@/models/Post';
 import RichTextEditor from './EnhancedPostComposer/RichTextEditor';
-import ContentTypeTabs from './EnhancedPostComposer/ContentTypeTabs';
-import PollCreator from './EnhancedPostComposer/PollCreator';
-import ProposalCreator from './EnhancedPostComposer/ProposalCreator';
+import { ContentTypeTabs } from './EnhancedPostComposer/ContentTypeTabs';
+import { PollCreator } from './EnhancedPostComposer/PollCreator';
+import { ProposalCreator } from './EnhancedPostComposer/ProposalCreator';
 import { ContentType, PollData, ProposalData } from '@/types/enhancedPost';
 
 interface PostCreationModalProps {

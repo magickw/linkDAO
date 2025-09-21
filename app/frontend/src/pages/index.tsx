@@ -580,108 +580,65 @@ export default function Home() {
                           avatarCid: 'https://placehold.co/40' 
                         };
                         
+                        // Convert post to EnhancedPost format
+                        const enhancedPost = {
+                          id: post.id,
+                          title: (post as any).title || 'Untitled Post',
+                          content: post.contentCid,
+                          author: post.author,
+                          authorProfile: {
+                            handle: authorProfile.handle,
+                            verified: authorProfile.verified || false,
+                            reputationTier: authorProfile.reputationTier || 'Member',
+                            avatar: authorProfile.avatarCid
+                          },
+                          createdAt: post.createdAt,
+                          updatedAt: post.createdAt,
+                          contentType: 'text' as const,
+                          media: post.mediaCids || [],
+                          previews: [],
+                          hashtags: post.tags || [],
+                          mentions: [],
+                          reactions: [
+                            {
+                              type: 'hot' as const,
+                              emoji: '🔥',
+                              label: 'Hot',
+                              totalStaked: (post as any).stakedValue || 0,
+                              userStaked: 0,
+                              contributors: [],
+                              rewardsEarned: 0
+                            }
+                          ],
+                          tips: [],
+                          comments: (post as any).commentCount || 0,
+                          shares: 0,
+                          views: 0,
+                          engagementScore: authorProfile.reputationScore || 0,
+                          socialProof: {
+                            followedUsersWhoEngaged: [],
+                            totalEngagementFromFollowed: 0,
+                            communityLeadersWhoEngaged: [],
+                            verifiedUsersWhoEngaged: []
+                          },
+                          communityId: (post as any).dao || 'general',
+                          tags: post.tags || []
+                        };
+                        
                         return (
-                          <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                            <div className="p-6">
-                              {/* Post Header */}
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                                    {authorProfile.handle.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-semibold text-gray-900 dark:text-white">
-                                        {authorProfile.handle}
-                                      </span>
-                                      {authorProfile.verified && (
-                                        <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                                          <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                          </svg>
-                                        </div>
-                                      )}
-                                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        {authorProfile.ens}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                                      <span>{(post as any).dao || 'general'}</span>
-                                      <span>•</span>
-                                      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                                    Rep: {authorProfile.reputationScore}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Post Content */}
-                              <div className="mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                                  {(post as any).title || 'Untitled Post'}
-                                </h3>
-                                <p className="text-gray-700 dark:text-gray-300">
-                                  {post.contentCid}
-                                </p>
-                                
-                                {/* Media */}
-                                {post.mediaCids && post.mediaCids.length > 0 && (
-                                  <div className="mt-4">
-                                    <img 
-                                      src={post.mediaCids[0]} 
-                                      alt="Post media" 
-                                      className="rounded-lg max-w-full h-auto"
-                                    />
-                                  </div>
-                                )}
-
-                                {/* Tags */}
-                                {post.tags && post.tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-2 mt-3">
-                                    {post.tags.map((tag, index) => (
-                                      <span 
-                                        key={index}
-                                        className="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 text-xs rounded-full"
-                                      >
-                                        #{tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Post Actions */}
-                              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <div className="flex items-center space-x-6">
-                                  <button 
-                                    onClick={() => handleVote(post.id, 'up', 1)}
-                                    className="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-colors"
-                                  >
-                                    <TrendingUp className="w-4 h-4" />
-                                    <span className="text-sm">Upvote</span>
-                                  </button>
-                                  <button className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors">
-                                    <MessageCircle className="w-4 h-4" />
-                                    <span className="text-sm">{(post as any).commentCount || 0}</span>
-                                  </button>
-                                  <button 
-                                    onClick={() => handleTip(post.id, '0.01', 'ETH')}
-                                    className="flex items-center space-x-2 text-gray-500 hover:text-yellow-600 transition-colors"
-                                  >
-                                    <Heart className="w-4 h-4" />
-                                    <span className="text-sm">Tip</span>
-                                  </button>
-                                </div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {(post as any).stakedValue || 0} tokens staked
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                          <Web3SocialPostCard
+                            key={post.id}
+                            post={enhancedPost}
+                            profile={authorProfile}
+                            onReaction={async (postId, reactionType, amount) => {
+                              console.log('Reaction:', postId, reactionType, amount);
+                              addToast(`Reacted with ${reactionType}!`, 'success');
+                            }}
+                            onTip={handleTip}
+                            onExpand={() => {
+                              console.log('Expanding post:', post.id);
+                            }}
+                          />
                         );
                       })
                     )}

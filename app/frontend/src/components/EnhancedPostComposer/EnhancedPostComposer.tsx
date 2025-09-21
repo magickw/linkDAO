@@ -15,11 +15,11 @@ import {
 import { DraftService } from '../../services/draftService';
 import { contentValidationService } from '../../services/contentValidationService';
 import { mediaProcessingService } from '../../services/mediaProcessingService';
-import ContentTypeTabs from './ContentTypeTabs';
+import { ContentTypeTabs } from './ContentTypeTabs';
 import EnhancedMediaUploadZone from './EnhancedMediaUploadZone';
-import HashtagMentionInput from './HashtagMentionInput';
-import PollCreator from './PollCreator';
-import ProposalCreator from './ProposalCreator';
+import { HashtagMentionInput } from './HashtagMentionInput';
+import { PollCreator } from './PollCreator';
+import { ProposalCreator } from './ProposalCreator';
 import RichTextEditor from './RichTextEditor';
 
 export default function EnhancedPostComposer({

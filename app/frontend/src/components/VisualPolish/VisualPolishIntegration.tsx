@@ -385,3 +385,6 @@ export function useVisualPolishNotifications() {
     NotificationSystem: VisualPolishNotificationSystem
   };
 }
+
+// Default export for lazy loading
+export default VisualPolishDashboard;

@@ -1,7 +1,7 @@
 export { default as EnhancedPostComposer } from './EnhancedPostComposer';
-export { default as ContentTypeTabs } from './ContentTypeTabs';
-export { default as MediaUploadZone } from './MediaUploadZone';
-export { default as HashtagMentionInput } from './HashtagMentionInput';
+export { ContentTypeTabs } from './ContentTypeTabs';
+export { MediaUploadZone } from './MediaUploadZone';
+export { HashtagMentionInput } from './HashtagMentionInput';
 
 // Re-export types for convenience
 export type {

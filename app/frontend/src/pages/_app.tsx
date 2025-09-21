@@ -17,6 +17,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { WalletLoginBridgeWithToast } from '@/components/Auth/WalletLoginBridgeWithToast';
 import '../styles/globals.css';
 import '../styles/enhanced-glassmorphism.css';
+import '../styles/mobile-optimizations.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient();
