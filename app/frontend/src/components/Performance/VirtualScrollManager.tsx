@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface VirtualScrollConfig {
@@ -37,7 +37,7 @@ const DEFAULT_CONFIG: VirtualScrollConfig = {
   targetFPS: 60
 };
 
-export function VirtualScrollManager<T>({
+export const VirtualScrollManager = memo(function VirtualScrollManager<T>({
   items,
   containerHeight,
   renderItem,
@@ -372,7 +372,7 @@ export function VirtualScrollManager<T>({
       </div>
     </div>
   );
-}
+}) as <T>(props: VirtualScrollManagerProps<T>) => JSX.Element;
 
 // Hook for managing virtual scroll state
 export function useVirtualScroll<T>(

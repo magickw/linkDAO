@@ -169,8 +169,8 @@
   - Write tests for poll creation, voting, and result display
   - _Requirements: 19.1, 19.2, 19.3, 19.4_
 
-- [ ] 12. Implement mobile optimizations
-  - [ ] 12.1 Add mobile swipe gestures
+- [x] 12. Implement mobile optimizations
+  - [x] 12.1 Add mobile swipe gestures
     - Implement left swipe for upvote/downvote actions
     - Add right swipe for save/share actions
     - Include haptic feedback and visual confirmation for swipe actions
@@ -178,14 +178,14 @@
     - Write tests for swipe gesture recognition and fallback behavior
     - _Requirements: 21.1, 21.2, 21.3, 21.4_
 
-  - [ ] 12.2 Create mobile sidebar management
+  - [x] 12.2 Create mobile sidebar management
     - Implement collapsible sidebar overlays for mobile
     - Add toggle buttons for expanding mobile sidebars
     - Create proper focus management when opening/closing sidebars
     - Write tests for mobile sidebar behavior and accessibility
     - _Requirements: 20.1, 20.2, 20.3, 20.4_
 
-- [ ] 13. Add performance optimizations
+- [x] 13. Add performance optimizations
   - Implement virtual scrolling for large post lists
   - Add image lazy loading with progressive enhancement
   - Create intersection observer for efficient infinite scroll
@@ -193,7 +193,7 @@
   - Write performance tests for large datasets and mobile devices
   - _Requirements: Performance considerations from design document_
 
-- [ ] 14. Implement accessibility features
+- [x] 14. Implement accessibility features
   - Add proper ARIA labels and roles for all interactive elements
   - Ensure keyboard navigation works for all functionality
   - Implement screen reader support with descriptive text
@@ -201,7 +201,7 @@
   - Write accessibility tests and ensure WCAG 2.1 AA compliance
   - _Requirements: Accessibility requirements from design document_
 
-- [ ] 15. Create error handling and loading states
+- [x] 15. Create error handling and loading states
   - Implement error boundaries for post cards and sidebar widgets
   - Create skeleton loading components for all major sections
   - Add retry functionality for failed network requests
@@ -209,7 +209,7 @@
   - Write tests for error scenarios and recovery mechanisms
   - _Requirements: Error handling from design document_
 
-- [ ] 16. Integration testing and final polish
+- [x] 16. Integration testing and final polish
   - Create comprehensive integration tests for complete user workflows
   - Test cross-browser compatibility and responsive behavior
   - Implement final visual polish and animation refinements

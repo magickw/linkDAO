@@ -1,12 +1,21 @@
 // Performance Optimization Components
-export { default as VirtualScrollManager, useVirtualScroll } from './VirtualScrollManager';
+export { VirtualScrollManager, useVirtualScroll } from './VirtualScrollManager';
 export { default as ProgressiveLoader, ProgressiveImage, useProgressiveLoading } from './ProgressiveLoader';
 export { default as OfflineCacheManager, useOfflineCache, useCachedAPI } from './OfflineCacheManager';
-export { default as IntelligentLazyLoader, IntelligentLazyImage, useLazyLoading } from './IntelligentLazyLoader';
+export { IntelligentLazyLoader, IntelligentLazyImage } from './IntelligentLazyLoader';
 export { default as ContentPreloader, usePreloadedContent, useHoverPreload, PreloadResource } from './ContentPreloader';
-export { default as PerformanceOptimizer, usePerformanceOptimization } from './PerformanceOptimizer';
+export { PerformanceOptimizer, usePerformanceOptimization } from './PerformanceOptimizer';
 export { default as OfflineSyncManager, useOfflineSync, useOfflineAction } from './OfflineSyncManager';
 export { default as PerformanceProvider } from './PerformanceProvider';
+
+// Intersection Observer utilities
+export { 
+  useIntersectionObserver, 
+  useInfiniteScroll, 
+  usePreloadOnApproach, 
+  useVisibilityTracking,
+  BatchIntersectionObserver 
+} from './IntersectionObserverManager';
 
 // Performance optimization configuration
 export interface PerformanceConfig {

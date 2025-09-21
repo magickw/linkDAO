@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useId } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, MessageCircle, Share2, Bookmark, MoreHorizontal, Eye, Flag, Check, X, Undo2 } from 'lucide-react';
 import { CommunityPost } from '@/models/CommunityPost';
@@ -8,6 +8,8 @@ import PostMetadata from './PostMetadata';
 import PostFlair, { FlairConfig } from './PostFlair';
 import ReportModal from './ReportModal';
 import { getViewModeClasses, shouldShowThumbnail, getThumbnailSize } from '@/hooks/useViewMode';
+import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
+import { useKeyboardNavigation } from '@/hooks/useAccessibility';
 
 interface RedditStylePostCardProps {
   post: CommunityPost;
@@ -49,6 +51,24 @@ export default function RedditStylePostCard({
   const [showReportModal, setShowReportModal] = useState(false);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
 
+  // Accessibility hooks and refs
+  const { 
+    announceToScreenReader, 
+    generateId, 
+    keyboardNavigation, 
+    prefersReducedMotion,
+    isScreenReaderActive 
+  } = useAccessibilityContext();
+  const { createKeyboardHandler } = useKeyboardNavigation();
+  const postCardRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // Generate unique IDs for ARIA relationships
+  const postId = useId();
+  const menuId = generateId('post-menu');
+  const voteGroupId = generateId('vote-group');
+  const actionsId = generateId('post-actions');
+
   // Calculate vote score
   const voteScore = post.upvotes - post.downvotes;
 
@@ -67,7 +87,7 @@ export default function RedditStylePostCard({
     return new Date(date).toLocaleDateString();
   };
 
-  // Handle voting with optimistic updates
+  // Handle voting with optimistic updates and accessibility announcements
   const handleVote = useCallback(async (direction: 'up' | 'down') => {
     if (isVoting) return;
 
@@ -75,20 +95,28 @@ export default function RedditStylePostCard({
     
     // Determine final vote (toggle if same direction)
     const finalVote = userVote === direction ? null : direction;
+    const wasToggled = userVote === direction;
     
     // Optimistic update
     setUserVote(finalVote);
+    
+    // Announce to screen readers
+    const voteAction = wasToggled 
+      ? `Removed ${direction}vote` 
+      : `${direction === 'up' ? 'Upvoted' : 'Downvoted'} post`;
+    announceToScreenReader(`${voteAction}. Current score: ${voteScore + (finalVote === 'up' ? 1 : finalVote === 'down' ? -1 : 0)}`);
     
     try {
       await onVote(post.id, direction);
     } catch (error) {
       // Revert on error
       setUserVote(userVote);
+      announceToScreenReader('Vote failed. Please try again.');
       console.error('Vote failed:', error);
     } finally {
       setIsVoting(false);
     }
-  }, [post.id, userVote, isVoting, onVote]);
+  }, [post.id, userVote, isVoting, onVote, announceToScreenReader, voteScore]);
 
   // Get vote button styling
   const getVoteButtonStyle = (direction: 'up' | 'down') => {
@@ -109,28 +137,34 @@ export default function RedditStylePostCard({
     return 'text-gray-500 dark:text-gray-400';
   };
 
-  // Handle save action with visual confirmation
+  // Handle save action with visual confirmation and accessibility announcements
   const handleSave = useCallback(async () => {
     if (isProcessingAction || !onSave) return;
     
     setIsProcessingAction(true);
+    const newSavedState = !isSaved;
+    
     try {
       await onSave(post.id);
-      setIsSaved(!isSaved);
+      setIsSaved(newSavedState);
       setShowSaveConfirmation(true);
+      
+      // Announce to screen readers
+      announceToScreenReader(newSavedState ? 'Post saved' : 'Post unsaved');
       
       // Hide confirmation after 2 seconds
       setTimeout(() => {
         setShowSaveConfirmation(false);
       }, 2000);
     } catch (error) {
+      announceToScreenReader('Save failed. Please try again.');
       console.error('Save failed:', error);
     } finally {
       setIsProcessingAction(false);
     }
-  }, [post.id, isSaved, isProcessingAction, onSave]);
+  }, [post.id, isSaved, isProcessingAction, onSave, announceToScreenReader]);
 
-  // Handle hide action with undo option
+  // Handle hide action with undo option and accessibility announcements
   const handleHide = useCallback(async () => {
     if (isProcessingAction || !onHide) return;
     
@@ -140,22 +174,27 @@ export default function RedditStylePostCard({
       setIsHidden(true);
       setShowHideUndo(true);
       
+      // Announce to screen readers
+      announceToScreenReader('Post hidden. Undo option available for 5 seconds.');
+      
       // Auto-hide undo option after 5 seconds
       setTimeout(() => {
         setShowHideUndo(false);
       }, 5000);
     } catch (error) {
+      announceToScreenReader('Hide failed. Please try again.');
       console.error('Hide failed:', error);
     } finally {
       setIsProcessingAction(false);
     }
-  }, [post.id, isProcessingAction, onHide]);
+  }, [post.id, isProcessingAction, onHide, announceToScreenReader]);
 
-  // Handle undo hide action
+  // Handle undo hide action with accessibility announcement
   const handleUndoHide = useCallback(() => {
     setIsHidden(false);
     setShowHideUndo(false);
-  }, []);
+    announceToScreenReader('Post unhidden and restored to feed.');
+  }, [announceToScreenReader]);
 
   // Handle report submission
   const handleReport = useCallback(async (reason: string, details?: string) => {
@@ -200,6 +239,21 @@ export default function RedditStylePostCard({
     }
   }, [post.id, post.author, post.contentCid, isProcessingAction, onShare]);
 
+  // Keyboard navigation handlers
+  const handleKeyDown = createKeyboardHandler({
+    'Enter': () => onComment?.(post.id),
+    ' ': () => onComment?.(post.id),
+    'u': () => handleVote('up'),
+    'd': () => handleVote('down'),
+    's': () => handleSave(),
+    'h': () => handleHide(),
+    'r': () => setShowReportModal(true),
+    'Escape': () => {
+      setShowMenu(false);
+      setShowReportModal(false);
+    }
+  });
+
   // Get view mode specific classes
   const viewModeClasses = getViewModeClasses(viewMode);
   const showThumbnailForMode = shouldShowThumbnail(viewMode, !!(post.mediaCids && post.mediaCids.length > 0));
@@ -208,34 +262,56 @@ export default function RedditStylePostCard({
   // Render compact view
   if (viewMode === 'compact') {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+      <motion.article
+        ref={postCardRef}
+        initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
+        animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
         className={`${viewModeClasses.postCard} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${className}`}
+        role="article"
+        aria-labelledby={`${postId}-title`}
+        aria-describedby={`${postId}-metadata ${postId}-actions`}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
       >
         <div className={viewModeClasses.content}>
           {/* Compact Voting Section */}
-          <div className={viewModeClasses.voting}>
+          <div 
+            className={viewModeClasses.voting}
+            role="group"
+            aria-labelledby={`${voteGroupId}-label`}
+            aria-describedby={`${voteGroupId}-score`}
+          >
+            <span id={`${voteGroupId}-label`} className="sr-only">
+              Post voting controls
+            </span>
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
               onClick={() => handleVote('up')}
               disabled={isVoting}
               className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('up')}`}
-              aria-label="Upvote"
+              aria-label={`${userVote === 'up' ? 'Remove upvote' : 'Upvote post'}`}
+              aria-pressed={userVote === 'up'}
+              title="Upvote (U key)"
             >
-              <ChevronUp className="w-3 h-3" />
+              <ChevronUp className="w-3 h-3" aria-hidden="true" />
             </motion.button>
-            <div className={`text-xs font-bold text-center ${getVoteScoreStyle()}`}>
+            <div 
+              id={`${voteGroupId}-score`}
+              className={`text-xs font-bold text-center ${getVoteScoreStyle()}`}
+              aria-label={`Current score: ${voteScore > 0 ? '+' : ''}${voteScore} points`}
+            >
               {voteScore > 0 ? '+' : ''}{voteScore}
             </div>
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
               onClick={() => handleVote('down')}
               disabled={isVoting}
               className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('down')}`}
-              aria-label="Downvote"
+              aria-label={`${userVote === 'down' ? 'Remove downvote' : 'Downvote post'}`}
+              aria-pressed={userVote === 'down'}
+              title="Downvote (D key)"
             >
-              <ChevronDown className="w-3 h-3" />
+              <ChevronDown className="w-3 h-3" aria-hidden="true" />
             </motion.button>
           </div>
 
@@ -244,7 +320,7 @@ export default function RedditStylePostCard({
             <div className="flex-shrink-0">
               <img
                 src={post.mediaCids[0]}
-                alt=""
+                alt={`Thumbnail for post: ${post.contentCid.substring(0, 50)}...`}
                 className={viewModeClasses.thumbnail}
                 loading="lazy"
               />
@@ -255,10 +331,16 @@ export default function RedditStylePostCard({
           <div className={viewModeClasses.main}>
             {/* Title and Metadata */}
             <div className="mb-1">
-              <h3 className={viewModeClasses.title}>
+              <h3 
+                id={`${postId}-title`}
+                className={viewModeClasses.title}
+              >
                 {post.contentCid}
               </h3>
-              <div className={viewModeClasses.metadata}>
+              <div 
+                id={`${postId}-metadata`}
+                className={viewModeClasses.metadata}
+              >
                 <PostMetadata
                   author={post.author}
                   createdAt={post.createdAt}
@@ -273,18 +355,29 @@ export default function RedditStylePostCard({
             </div>
 
             {/* Compact Actions */}
-            <div className={viewModeClasses.actions}>
+            <div 
+              id={`${postId}-actions`}
+              className={viewModeClasses.actions}
+              role="group"
+              aria-label="Post actions"
+            >
               <button
                 onClick={() => onComment?.(post.id)}
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                aria-label={`View ${post.comments?.length || 0} comments`}
+                title="View comments (Enter key)"
               >
+                <MessageCircle className="w-4 h-4 inline mr-1" aria-hidden="true" />
                 {post.comments?.length || 0} comments
               </button>
               <button
                 onClick={handleShare}
                 disabled={isProcessingAction}
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+                aria-label="Share post"
+                title="Share post"
               >
+                <Share2 className="w-4 h-4 inline mr-1" aria-hidden="true" />
                 share
               </button>
               {onSave && (
@@ -296,7 +389,11 @@ export default function RedditStylePostCard({
                       ? 'text-yellow-600 hover:text-yellow-700' 
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}
+                  aria-label={isSaved ? 'Unsave post' : 'Save post'}
+                  aria-pressed={isSaved}
+                  title={`${isSaved ? 'Unsave' : 'Save'} post (S key)`}
                 >
+                  <Bookmark className={`w-4 h-4 inline mr-1 ${isSaved ? 'fill-current' : ''}`} aria-hidden="true" />
                   {isSaved ? 'saved' : 'save'}
                 </button>
               )}
@@ -327,50 +424,73 @@ export default function RedditStylePostCard({
           postId={post.id}
           postAuthor={post.author}
         />
-      </motion.div>
+      </motion.article>
     );
   }
 
   // Render card view (existing layout)
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <motion.article
+      ref={postCardRef}
+      initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
+      animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
       className={`${viewModeClasses.postCard} hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 ${className}`}
+      role="article"
+      aria-labelledby={`${postId}-title`}
+      aria-describedby={`${postId}-metadata ${postId}-content ${postId}-actions`}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
       <div className={viewModeClasses.content}>
         {/* Left Voting Section */}
-        <div className={viewModeClasses.voting}>
+        <div 
+          className={viewModeClasses.voting}
+          role="group"
+          aria-labelledby={`${voteGroupId}-label`}
+          aria-describedby={`${voteGroupId}-score`}
+        >
+          <span id={`${voteGroupId}-label`} className="sr-only">
+            Post voting controls
+          </span>
+          
           {/* Upvote Button */}
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
             onClick={() => handleVote('up')}
             disabled={isVoting}
             className={getVoteButtonStyle('up')}
-            aria-label="Upvote"
+            aria-label={`${userVote === 'up' ? 'Remove upvote' : 'Upvote post'}`}
+            aria-pressed={userVote === 'up'}
+            title="Upvote (U key)"
           >
-            <ChevronUp className="w-5 h-5" />
+            <ChevronUp className="w-5 h-5" aria-hidden="true" />
           </motion.button>
 
           {/* Vote Score */}
           <motion.div
             key={voteScore}
-            initial={{ scale: 1.2 }}
-            animate={{ scale: 1 }}
+            initial={prefersReducedMotion ? {} : { scale: 1.2 }}
+            animate={prefersReducedMotion ? {} : { scale: 1 }}
+            id={`${voteGroupId}-score`}
             className={`text-sm font-bold py-1 min-w-[24px] text-center ${getVoteScoreStyle()}`}
+            aria-label={`Current score: ${voteScore > 0 ? '+' : ''}${voteScore} points`}
+            role="status"
+            aria-live="polite"
           >
             {voteScore > 0 ? '+' : ''}{voteScore}
           </motion.div>
 
           {/* Downvote Button */}
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
             onClick={() => handleVote('down')}
             disabled={isVoting}
             className={getVoteButtonStyle('down')}
-            aria-label="Downvote"
+            aria-label={`${userVote === 'down' ? 'Remove downvote' : 'Downvote post'}`}
+            aria-pressed={userVote === 'down'}
+            title="Downvote (D key)"
           >
-            <ChevronDown className="w-5 h-5" />
+            <ChevronDown className="w-5 h-5" aria-hidden="true" />
           </motion.button>
         </div>
 
@@ -382,16 +502,18 @@ export default function RedditStylePostCard({
         >
           {/* Post Header */}
           <div className="flex items-center justify-between mb-2">
-            <PostMetadata
-              author={post.author}
-              createdAt={post.createdAt}
-              community={community}
-              flair={post.flair}
-              commentCount={post.comments?.length || 0}
-              isPinned={isPinned || post.isPinned}
-              isLocked={post.isLocked}
-              className="flex-1"
-            />
+            <div id={`${postId}-metadata`} className="flex-1">
+              <PostMetadata
+                author={post.author}
+                createdAt={post.createdAt}
+                community={community}
+                flair={post.flair}
+                commentCount={post.comments?.length || 0}
+                isPinned={isPinned || post.isPinned}
+                isLocked={post.isLocked}
+                className="flex-1"
+              />
+            </div>
 
             {/* Quick Actions Bar - Hover Revealed */}
             <AnimatePresence>
@@ -405,7 +527,7 @@ export default function RedditStylePostCard({
                   {/* Save Button */}
                   {onSave && (
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
                       onClick={handleSave}
                       disabled={isProcessingAction}
                       className={`p-2 rounded-md transition-all duration-200 ${
@@ -414,49 +536,50 @@ export default function RedditStylePostCard({
                           : 'text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
                       }`}
                       aria-label={isSaved ? 'Unsave post' : 'Save post'}
-                      title={isSaved ? 'Unsave' : 'Save'}
+                      aria-pressed={isSaved}
+                      title={`${isSaved ? 'Unsave' : 'Save'} post (S key)`}
                     >
-                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
+                      <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} aria-hidden="true" />
                     </motion.button>
                   )}
 
                   {/* Share Button */}
                   <motion.button
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
                     onClick={handleShare}
                     disabled={isProcessingAction}
-                    className="p-2 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200"
+                    className="p-2 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 disabled:opacity-50"
                     aria-label="Share post"
-                    title="Share"
+                    title="Share post"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-4 h-4" aria-hidden="true" />
                   </motion.button>
 
                   {/* Hide Button */}
                   {onHide && (
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
                       onClick={handleHide}
                       disabled={isProcessingAction}
-                      className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+                      className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50"
                       aria-label="Hide post"
-                      title="Hide"
+                      title="Hide post (H key)"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-4 h-4" aria-hidden="true" />
                     </motion.button>
                   )}
 
                   {/* Report Button */}
                   {onReport && (
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
                       onClick={() => setShowReportModal(true)}
                       disabled={isProcessingAction}
-                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+                      className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 disabled:opacity-50"
                       aria-label="Report post"
-                      title="Report"
+                      title="Report post (R key)"
                     >
-                      <Flag className="w-4 h-4" />
+                      <Flag className="w-4 h-4" aria-hidden="true" />
                     </motion.button>
                   )}
                 </motion.div>
@@ -466,20 +589,34 @@ export default function RedditStylePostCard({
             {/* Menu Button (fallback for mobile/accessibility) */}
             <div className="relative">
               <button
+                ref={menuButtonRef}
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 aria-label="More options"
+                aria-expanded={showMenu}
+                aria-haspopup="menu"
+                aria-controls={menuId}
+                title="More options menu"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
               </button>
 
               <AnimatePresence>
                 {showMenu && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
+                    animate={prefersReducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
+                    exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
+                    id={menuId}
+                    role="menu"
+                    aria-labelledby={menuButtonRef.current?.id}
                     className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setShowMenu(false);
+                        menuButtonRef.current?.focus();
+                      }
+                    }}
                   >
                     {onSave && (
                       <button
@@ -488,9 +625,11 @@ export default function RedditStylePostCard({
                           setShowMenu(false);
                         }}
                         disabled={isProcessingAction}
+                        role="menuitem"
                         className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
+                        aria-pressed={isSaved}
                       >
-                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current text-yellow-600' : ''}`} />
+                        <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current text-yellow-600' : ''}`} aria-hidden="true" />
                         <span>{isSaved ? 'Unsave' : 'Save'}</span>
                       </button>
                     )}
@@ -500,9 +639,10 @@ export default function RedditStylePostCard({
                         setShowMenu(false);
                       }}
                       disabled={isProcessingAction}
+                      role="menuitem"
                       className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
                     >
-                      <Share2 className="w-4 h-4" />
+                      <Share2 className="w-4 h-4" aria-hidden="true" />
                       <span>Share</span>
                     </button>
                     {onHide && (
@@ -512,9 +652,10 @@ export default function RedditStylePostCard({
                           setShowMenu(false);
                         }}
                         disabled={isProcessingAction}
+                        role="menuitem"
                         className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 disabled:opacity-50"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4" aria-hidden="true" />
                         <span>Hide</span>
                       </button>
                     )}
@@ -525,9 +666,10 @@ export default function RedditStylePostCard({
                           setShowMenu(false);
                         }}
                         disabled={isProcessingAction}
+                        role="menuitem"
                         className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2 disabled:opacity-50"
                       >
-                        <Flag className="w-4 h-4" />
+                        <Flag className="w-4 h-4" aria-hidden="true" />
                         <span>Report</span>
                       </button>
                     )}
@@ -538,7 +680,13 @@ export default function RedditStylePostCard({
           </div>
 
           {/* Post Content */}
-          <div className="mb-3">
+          <div id={`${postId}-content`} className="mb-3">
+            <h2 
+              id={`${postId}-title`}
+              className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
+            >
+              {post.contentCid.split('\n')[0] || 'Untitled Post'}
+            </h2>
             <div className="text-gray-900 dark:text-white whitespace-pre-wrap break-words leading-relaxed">
               {post.contentCid}
             </div>
@@ -582,13 +730,20 @@ export default function RedditStylePostCard({
           </div>
 
           {/* Action Bar */}
-          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
+          <div 
+            id={`${postId}-actions`}
+            className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400"
+            role="group"
+            aria-label="Post actions"
+          >
             {/* Comments */}
             <button
               onClick={() => onComment?.(post.id)}
               className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              aria-label={`View ${post.comments?.length || 0} comments`}
+              title="View comments (Enter key)"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="w-4 h-4" aria-hidden="true" />
               <span>{post.comments?.length || 0} comments</span>
             </button>
 
@@ -597,14 +752,20 @@ export default function RedditStylePostCard({
               onClick={handleShare}
               disabled={isProcessingAction}
               className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+              aria-label="Share post"
+              title="Share post"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-4 h-4" aria-hidden="true" />
               <span>Share</span>
             </button>
 
             {/* Award (placeholder) */}
-            <button className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
-              <span>🏆</span>
+            <button 
+              className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+              aria-label="Give award to post"
+              title="Give award"
+            >
+              <span role="img" aria-label="trophy">🏆</span>
               <span>Award</span>
             </button>
           </div>
@@ -673,6 +834,6 @@ export default function RedditStylePostCard({
         postId={post.id}
         postAuthor={post.author}
       />
-    </motion.div>
+    </motion.article>
   );
 }

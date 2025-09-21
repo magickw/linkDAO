@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PerformanceMetrics {
@@ -41,13 +41,13 @@ const DEFAULT_CONFIG: OptimizationConfig = {
   adaptiveOptimization: true
 };
 
-export function PerformanceOptimizer({
+export const PerformanceOptimizer = memo(function PerformanceOptimizer({
   config = {},
   onMetricsUpdate,
   onOptimizationApplied,
   children
 }: PerformanceOptimizerProps) {
-  const finalConfig = { ...DEFAULT_CONFIG, ...config };
+  const finalConfig = useMemo(() => ({ ...DEFAULT_CONFIG, ...config }), [config]);
   
   const [metrics, setMetrics] = useState<PerformanceMetrics>({
     fps: 60,
@@ -463,6 +463,32 @@ export function PerformanceOptimizer({
     });
   }, []);
 
+  const optimizationNotification = useMemo(() => {
+    if (optimizations.length === 0) return null;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 50 }}
+        className="fixed bottom-4 right-4 z-50 bg-green-600 text-white p-3 rounded-lg shadow-lg max-w-sm"
+      >
+        <div className="flex items-center space-x-2 mb-2">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium">Performance Optimized</span>
+        </div>
+        <div className="text-xs opacity-90">
+          {optimizations.slice(-3).map((opt, index) => (
+            <div key={index}>• {opt}</div>
+          ))}
+          {optimizations.length > 3 && (
+            <div>• +{optimizations.length - 3} more optimizations</div>
+          )}
+        </div>
+      </motion.div>
+    );
+  }, [optimizations]);
+
   return (
     <>
       {children}
@@ -478,34 +504,14 @@ export function PerformanceOptimizer({
       
       {/* Optimization Notifications */}
       <AnimatePresence>
-        {optimizations.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-4 right-4 z-50 bg-green-600 text-white p-3 rounded-lg shadow-lg max-w-sm"
-          >
-            <div className="flex items-center space-x-2 mb-2">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span className="text-sm font-medium">Performance Optimized</span>
-            </div>
-            <div className="text-xs opacity-90">
-              {optimizations.slice(-3).map((opt, index) => (
-                <div key={index}>• {opt}</div>
-              ))}
-              {optimizations.length > 3 && (
-                <div>• +{optimizations.length - 3} more optimizations</div>
-              )}
-            </div>
-          </motion.div>
-        )}
+        {optimizationNotification}
       </AnimatePresence>
     </>
   );
-}
+});
 
 // Performance Monitor Component (Development)
-function PerformanceMonitor({ 
+const PerformanceMonitor = memo(function PerformanceMonitor({ 
   metrics, 
   optimizations, 
   onReset 
@@ -515,6 +521,45 @@ function PerformanceMonitor({
   onReset: () => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const fpsIndicatorColor = useMemo(() => {
+    return metrics.fps >= 55 ? 'bg-green-500' : 
+           metrics.fps >= 30 ? 'bg-yellow-500' : 'bg-red-500';
+  }, [metrics.fps]);
+
+  const metricsGrid = useMemo(() => (
+    <div className="grid grid-cols-2 gap-2">
+      <div>FPS: {metrics.fps}</div>
+      <div>Memory: {metrics.memoryUsage}MB</div>
+      <div>Bundle: {metrics.bundleSize}KB</div>
+      <div>Load: {metrics.loadTime}ms</div>
+      <div>Render: {metrics.renderTime.toFixed(1)}ms</div>
+      <div>Cache: {metrics.cacheHitRate.toFixed(1)}%</div>
+    </div>
+  ), [metrics]);
+
+  const optimizationsList = useMemo(() => {
+    if (optimizations.length === 0) return null;
+    
+    return (
+      <div className="border-t border-gray-700 pt-2">
+        <div className="text-green-400 mb-1">
+          Optimizations ({optimizations.length}):
+        </div>
+        <div className="max-h-20 overflow-y-auto space-y-1">
+          {optimizations.slice(-5).map((opt, index) => (
+            <div key={index} className="text-gray-300">• {opt}</div>
+          ))}
+        </div>
+        <button
+          onClick={onReset}
+          className="mt-2 px-2 py-1 bg-red-600 rounded text-xs hover:bg-red-700"
+        >
+          Reset
+        </button>
+      </div>
+    );
+  }, [optimizations, onReset]);
 
   return (
     <motion.div
@@ -528,10 +573,7 @@ function PerformanceMonitor({
       >
         <span className="text-sm font-medium">Performance</span>
         <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${
-            metrics.fps >= 55 ? 'bg-green-500' : 
-            metrics.fps >= 30 ? 'bg-yellow-500' : 'bg-red-500'
-          }`}></div>
+          <div className={`w-2 h-2 rounded-full ${fpsIndicatorColor}`}></div>
           <span className="text-xs">{metrics.fps} FPS</span>
         </div>
       </div>
@@ -545,40 +587,15 @@ function PerformanceMonitor({
             className="border-t border-gray-700"
           >
             <div className="p-3 space-y-2 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div>FPS: {metrics.fps}</div>
-                <div>Memory: {metrics.memoryUsage}MB</div>
-                <div>Bundle: {metrics.bundleSize}KB</div>
-                <div>Load: {metrics.loadTime}ms</div>
-                <div>Render: {metrics.renderTime.toFixed(1)}ms</div>
-                <div>Cache: {metrics.cacheHitRate.toFixed(1)}%</div>
-              </div>
-              
-              {optimizations.length > 0 && (
-                <div className="border-t border-gray-700 pt-2">
-                  <div className="text-green-400 mb-1">
-                    Optimizations ({optimizations.length}):
-                  </div>
-                  <div className="max-h-20 overflow-y-auto space-y-1">
-                    {optimizations.slice(-5).map((opt, index) => (
-                      <div key={index} className="text-gray-300">• {opt}</div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={onReset}
-                    className="mt-2 px-2 py-1 bg-red-600 rounded text-xs hover:bg-red-700"
-                  >
-                    Reset
-                  </button>
-                </div>
-              )}
+              {metricsGrid}
+              {optimizationsList}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
   );
-}
+});
 
 // Hook for manual performance optimization
 export function usePerformanceOptimization() {
