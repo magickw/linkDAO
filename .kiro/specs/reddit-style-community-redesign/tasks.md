@@ -145,7 +145,7 @@
   - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
 - [ ] 10. Implement Web3 governance integration
-  - [-] 10.1 Create governance proposal highlighting
+  - [x] 10.1 Create governance proposal highlighting
     - Build GovernanceWidget with distinctive proposal styling
     - Add voting status, deadline, and participation metrics display
     - Implement prominent "Vote Now" buttons for active proposals
@@ -153,7 +153,7 @@
     - Write tests for proposal display and voting interface
     - _Requirements: 17.1, 17.2, 17.3, 17.4_
 
-  - [ ] 10.2 Add voting participation metrics
+  - [x] 10.2 Add voting participation metrics
     - Display current participation rates for active proposals
     - Show user's voting weight based on token holdings
     - Add percentage display of eligible voters who have participated
