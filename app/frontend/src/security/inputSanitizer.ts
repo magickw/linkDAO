@@ -54,10 +54,10 @@ export class InputSanitizer {
   /**
    * Sanitize rich text content with comprehensive XSS prevention
    */
-  static sanitizeRichContent(
+  static async sanitizeRichContent(
     content: string,
     config: SanitizationConfig = {}
-  ): SanitizedContent {
+  ): Promise<SanitizedContent> {
     const warnings: string[] = [];
     const blocked: string[] = [];
     const original = content;
@@ -76,7 +76,7 @@ export class InputSanitizer {
       let processedContent = content;
       if (config.allowMarkdown) {
         try {
-          processedContent = marked(content, {
+          processedContent = await marked(content, {
             breaks: true,
             gfm: true
           });

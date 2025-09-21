@@ -116,7 +116,7 @@ export class SecurityManager {
   ): Promise<SecurityValidationResult> {
     try {
       const finalConfig = { ...this.config.inputSanitization, ...config };
-      const result = InputSanitizer.sanitizeRichContent(content, finalConfig);
+      const result = await InputSanitizer.sanitizeRichContent(content, finalConfig);
 
       // Additional validation
       const structureValidation = InputSanitizer.validateContentStructure(content, 'post');
