@@ -1,2 +1,2 @@
-export { default as EnhancedPostCard } from './EnhancedPostCard';
+export { default } from './EnhancedPostCard';
 export type { EnhancedPost } from './EnhancedPostCard';

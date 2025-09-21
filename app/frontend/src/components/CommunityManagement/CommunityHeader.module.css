@@ -1,0 +1,355 @@
+/* Community Header Styles */
+.communityHeader {
+  position: relative;
+  width: 100%;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .communityHeader {
+  background-color: #111827;
+  border-bottom-color: #374151;
+}
+
+/* Banner Section */
+.bannerSection {
+  position: relative;
+  height: 8rem;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .bannerSection {
+    height: 10rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .bannerSection {
+    height: 12rem;
+  }
+}
+
+.bannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.bannerImage:hover {
+  transform: scale(1.02);
+}
+
+.gradientBanner {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Upload Button */
+.uploadButton {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.uploadButton:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: translateY(-1px);
+}
+
+.uploadButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Community Info */
+.communityInfo {
+  position: relative;
+  padding: 0 1rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .communityInfo {
+    padding: 0 1.5rem 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .communityInfo {
+    padding: 0 2rem 1rem;
+  }
+}
+
+.infoContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .infoContainer {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+}
+
+/* Avatar */
+.avatarContainer {
+  position: relative;
+  margin-top: -2rem;
+}
+
+@media (min-width: 640px) {
+  .avatarContainer {
+    margin-top: -3rem;
+  }
+}
+
+.avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  border: 4px solid white;
+  background-color: #f3f4f6;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+@media (min-width: 640px) {
+  .avatar {
+    width: 5rem;
+    height: 5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .avatar {
+    width: 6rem;
+    height: 6rem;
+  }
+}
+
+.dark .avatar {
+  border-color: #111827;
+  background-color: #374151;
+}
+
+.avatar:hover {
+  transform: scale(1.05);
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.dark .avatarPlaceholder {
+  color: #9ca3af;
+}
+
+/* Community Details */
+.communityDetails {
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.5rem;
+}
+
+.communityName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .communityName {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .communityName {
+    font-size: 1.875rem;
+  }
+}
+
+.dark .communityName {
+  color: white;
+}
+
+.communitySubname {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.dark .communitySubname {
+  color: #9ca3af;
+}
+
+/* Stats */
+.statsContainer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.dark .statsContainer {
+  color: #9ca3af;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.onlineIndicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #10b981;
+  border-radius: 50%;
+}
+
+/* Join Button */
+.joinButtonContainer {
+  flex-shrink: 0;
+}
+
+.joinButton {
+  min-width: 7.5rem;
+  transition: all 0.2s ease;
+}
+
+.joinButton.joined {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.joinButton.joined:hover {
+  background-color: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.dark .joinButton.joined {
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
+.dark .joinButton.joined:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+  border-color: #b91c1c;
+  color: #f87171;
+}
+
+.joinButton.notJoined {
+  background-color: #2563eb;
+  color: white;
+}
+
+.joinButton.notJoined:hover {
+  background-color: #1d4ed8;
+}
+
+/* Description */
+.description {
+  margin-top: 1rem;
+  max-width: 48rem;
+}
+
+.descriptionText {
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.625;
+}
+
+@media (min-width: 640px) {
+  .descriptionText {
+    font-size: 1rem;
+  }
+}
+
+.dark .descriptionText {
+  color: #d1d5db;
+}
+
+/* Loading States */
+.loadingSpinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Accessibility */
+.focusVisible:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .communityHeader {
+    border-bottom-width: 2px;
+  }
+  
+  .avatar {
+    border-width: 3px;
+  }
+  
+  .joinButton {
+    border-width: 2px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .bannerImage,
+  .avatar,
+  .uploadButton,
+  .joinButton {
+    transition: none;
+  }
+  
+  .loadingSpinner {
+    animation: none;
+  }
+  
+  .bannerImage:hover,
+  .avatar:hover,
+  .uploadButton:hover {
+    transform: none;
+  }
+}
