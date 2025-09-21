@@ -10,6 +10,31 @@ import {
   VoteChoice,
   ParticipationMetrics 
 } from '../../../types/governance';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { describe } from 'node:test';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
 
 // Mock the governance service
 jest.mock('../../../services/governanceService', () => ({

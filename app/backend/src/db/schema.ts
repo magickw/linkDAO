@@ -49,6 +49,7 @@ export const posts = pgTable("posts", {
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
   reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
   dao: varchar("dao", { length: 64 }), // DAO community this post belongs to
+  pollId: uuid("poll_id"), // Reference to poll if this is a poll post
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   authorFk: foreignKey({
@@ -2204,4 +2205,44 @@ export const orderPaymentEvents = pgTable("order_payment_events", {
   eventTypeIdx: index("idx_order_payment_events_event_type").on(t.eventType),
   paymentStatusIdx: index("idx_order_payment_events_payment_status").on(t.paymentStatus),
   createdAtIdx: index("idx_order_payment_events_created_at").on(t.createdAt)
+}));
+// Qui
+ck Polling System Tables
+export const polls = pgTable("polls", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
+  question: text("question").notNull(),
+  allowMultiple: boolean("allow_multiple").default(false),
+  tokenWeighted: boolean("token_weighted").default(false),
+  minTokens: numeric("min_tokens").default("0"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  postIdIdx: index("idx_polls_post_id").on(t.postId),
+  expiresAtIdx: index("idx_polls_expires_at").on(t.expiresAt),
+}));
+
+export const pollOptions = pgTable("poll_options", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  pollId: uuid("poll_id").references(() => polls.id, { onDelete: "cascade" }).notNull(),
+  text: text("text").notNull(),
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  pollIdIdx: index("idx_poll_options_poll_id").on(t.pollId),
+}));
+
+export const pollVotes = pgTable("poll_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  pollId: uuid("poll_id").references(() => polls.id, { onDelete: "cascade" }).notNull(),
+  optionId: uuid("option_id").references(() => pollOptions.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  tokenAmount: numeric("token_amount").default("1"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  pollIdIdx: index("idx_poll_votes_poll_id").on(t.pollId),
+  userIdIdx: index("idx_poll_votes_user_id").on(t.userId),
+  optionIdIdx: index("idx_poll_votes_option_id").on(t.optionId),
+  uniqueVote: index("idx_poll_votes_unique").on(t.pollId, t.userId, t.optionId),
 }));
