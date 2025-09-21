@@ -492,6 +492,78 @@ export function PostFeedSkeleton({ count = 5, className = '' }: { count?: number
   );
 }
 
+// Discovery Dashboard Skeleton
+export function DiscoveryDashboardSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div className={`space-y-8 ${className}`}>
+      {/* Header */}
+      <div className="animate-pulse">
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 animate-pulse">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-10 w-24 rounded-md" />
+        ))}
+      </div>
+
+      {/* Content Sections */}
+      <div className="space-y-8">
+        {/* Trending Posts */}
+        <div>
+          <div className="flex items-center space-x-2 mb-6 animate-pulse">
+            <Skeleton className="h-6 w-6" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }, (_, i) => (
+              <PostCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+
+        {/* Trending Communities */}
+        <div>
+          <div className="flex items-center space-x-2 mb-6 animate-pulse">
+            <Skeleton className="h-6 w-6" />
+            <Skeleton className="h-6 w-40" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-full mb-4" />
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <Skeleton className="h-3 w-16 mb-1" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-3 w-20 mb-1" />
+                    <Skeleton className="h-4 w-8" />
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <Skeleton className="h-8 flex-1" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Export all skeletons as a namespace for easier importing
 export const LoadingSkeletons = {
   PostCard: PostCardSkeleton,
@@ -507,5 +579,6 @@ export const LoadingSkeletons = {
   SearchResults: SearchResultsSkeleton,
   TrendingContent: TrendingContentSkeleton,
   RecommendationCards: RecommendationCardsSkeleton,
-  PostFeed: PostFeedSkeleton
+  PostFeed: PostFeedSkeleton,
+  DiscoveryDashboard: DiscoveryDashboardSkeleton
 };

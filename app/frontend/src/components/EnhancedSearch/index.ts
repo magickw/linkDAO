@@ -1,0 +1,13 @@
+export { EnhancedSearchInterface } from './EnhancedSearchInterface';
+export { SearchSuggestions } from './SearchSuggestions';
+export { SearchFilters } from './SearchFilters';
+export { SearchResultsView } from './SearchResultsView';
+export { PostResultCard } from './PostResultCard';
+export { CommunityResultCard } from './CommunityResultCard';
+export { UserResultCard } from './UserResultCard';
+export { HashtagResultCard } from './HashtagResultCard';
+export { TopicResultCard } from './TopicResultCard';
+export { DiscoveryDashboard } from './DiscoveryDashboard';
+export { CommunityRecommendationCard } from './CommunityRecommendationCard';
+export { UserRecommendationCard } from './UserRecommendationCard';
+export { TrendingSection } from './TrendingSection';

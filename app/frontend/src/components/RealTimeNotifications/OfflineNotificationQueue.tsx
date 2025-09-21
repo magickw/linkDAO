@@ -36,7 +36,7 @@ const OfflineNotificationQueue: React.FC<OfflineNotificationQueueProps> = ({
   });
   
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [autoSync, setAutoSync] = useState(true);
   const [retryAttempts, setRetryAttempts] = useState<Map<string, number>>(new Map());
 
