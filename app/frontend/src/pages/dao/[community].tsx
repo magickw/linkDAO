@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+import Layout from '@/components/Layout';
 import { 
   ArrowLeft,
   Users,
@@ -279,42 +280,42 @@ export default function CommunityPage() {
 
   if (!communityData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Community Not Found</h1>
-          <Link href="/communities" className="text-primary-600 hover:text-primary-700">
-            ← Back to Communities
-          </Link>
+      <Layout title="Community Not Found - LinkDAO">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Community Not Found</h1>
+            <Link href="/communities" className="text-primary-600 hover:text-primary-700">
+              ← Back to Communities
+            </Link>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <Layout title={`${communityData.displayName} - LinkDAO`}>
       <Head>
-        <title>{communityData.displayName} - LinkDAO</title>
         <meta name="description" content={communityData.description} />
       </Head>
+      {/* Back Navigation */}
+      <div className="mb-4">
+        <Link 
+          href="/communities"
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to Communities</span>
+        </Link>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Back Navigation */}
-        <div className="mb-4">
-          <Link 
-            href="/communities"
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Communities</span>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-12 gap-6">
-          {/* Left Sidebar - Community Navigation */}
+      {/* Reddit-Style Three-Column Layout */}
+      <div className="grid grid-cols-12 gap-6 max-w-7xl mx-auto">
+          {/* Left Sidebar - Reddit-Style Navigation */}
           <div className="col-span-12 lg:col-span-3">
             <div className="sticky top-6 space-y-4">
               {/* Community Info Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="text-2xl">{communityData.avatar}</div>
                   <div>
@@ -335,7 +336,7 @@ export default function CommunityPage() {
               </div>
 
               {/* Quick Actions */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Quick Actions</h4>
                 <div className="space-y-2">
                   <button 
@@ -358,10 +359,10 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* Center Column - Community Feed */}
+          {/* Center Column - Reddit-Style Community Feed */}
           <div className="col-span-12 lg:col-span-6">
-            {/* Community Header */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 overflow-hidden">
+            {/* Reddit-Style Community Header */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
               <div 
                 className="h-32 bg-gradient-to-r from-primary-500 to-purple-600"
                 style={{
@@ -406,8 +407,8 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            {/* Sorting Tabs */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-4">
+            {/* Reddit-Style Sorting Tabs */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex space-x-1">
                   {(['hot', 'new', 'top', 'rising'] as const).map(tab => (
@@ -443,9 +444,9 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            {/* Create Post Prompt */}
+            {/* Reddit-Style Create Post Prompt */}
             {isConnected && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
                 <div 
                   onClick={() => setIsCreatePostOpen(true)}
                   className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
@@ -465,7 +466,7 @@ export default function CommunityPage() {
             {/* Posts Feed */}
             <div className="space-y-4">
               {communityPosts.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 text-center">
                   <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No posts yet</h3>
                   <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -482,7 +483,7 @@ export default function CommunityPage() {
                 </div>
               ) : (
                 communityPosts.map(post => (
-                  <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                  <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                     <div className="p-6">
                       {/* Post Header */}
                       <div className="flex items-start space-x-3 mb-4">
@@ -573,11 +574,11 @@ export default function CommunityPage() {
             </div>
           </div>
 
-          {/* Right Sidebar - Community Info */}
+          {/* Right Sidebar - Reddit-Style Community Info */}
           <div className="col-span-12 lg:col-span-3">
             <div className="sticky top-6 space-y-4">
               {/* Community Rules */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
                   <Shield className="w-4 h-4" />
                   <span>Community Rules</span>
@@ -593,7 +594,7 @@ export default function CommunityPage() {
 
               {/* Governance */}
               {communityData.proposals.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
                     <Vote className="w-4 h-4" />
                     <span>Governance</span>
@@ -618,7 +619,7 @@ export default function CommunityPage() {
               )}
 
               {/* Treasury */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
                   <Coins className="w-4 h-4" />
                   <span>Treasury</span>
@@ -640,7 +641,7 @@ export default function CommunityPage() {
               </div>
 
               {/* Moderators */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Moderators</h3>
                 <div className="space-y-2">
                   {communityData.moderators.map((mod: string, index: number) => (
@@ -656,7 +657,7 @@ export default function CommunityPage() {
 
               {/* Your Stats */}
               {isConnected && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center space-x-2">
                     <Trophy className="w-4 h-4" />
                     <span>Your Stats</span>
@@ -680,7 +681,6 @@ export default function CommunityPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </Layout>
   );
 }
