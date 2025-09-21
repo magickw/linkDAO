@@ -1,9 +1,8 @@
 import React from 'react';
-import { ProposalPreviewData } from './InlinePreviewRenderer';
-import { ProposalPreview as ProposalPreviewType, ProposalStatus } from '../../types/contentPreview';
+import { ProposalPreview as ProposalPreviewData, ProposalStatus } from '@/types/contentPreview';
 
 interface ProposalPreviewProps {
-  data: ProposalPreviewData | ProposalPreviewType;
+  data: ProposalPreviewData;
   className?: string;
   compact?: boolean;
   onClick?: () => void;

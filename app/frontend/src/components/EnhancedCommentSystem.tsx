@@ -8,7 +8,7 @@ import CommentThread from './CommentThread';
 
 interface EnhancedCommentSystemProps {
   postId: string;
-  postType: 'feed' | 'community';
+  postType: 'feed' | 'community' | 'enhanced';
   initialComments?: Comment[];
   userMembership?: CommunityMembership | null;
   isLocked?: boolean;

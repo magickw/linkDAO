@@ -1,404 +1,550 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TokenReactionFlow } from '../TokenReactionFlow';
-import { EnhancedStateProvider } from '@/contexts/EnhancedStateProvider';
+import { TokenReactionSystem } from '@/components/TokenReactionSystem/TokenReactionSystem';
+import { EnhancedPostCard } from '@/components/EnhancedPostCard/EnhancedPostCard';
+import { EngagementProvider } from '@/contexts/EngagementContext';
+import { ReputationProvider } from '@/contexts/ReputationContext';
+import * as tokenReactionService from '@/services/tokenReactionService';
+import * as reputationService from '@/services/reputationService';
 
 // Mock services
-jest.mock('@/services/tokenReactionService', () => ({
-  tokenReactionService: {
-    reactToPost: jest.fn(),
-    getReactions: jest.fn(),
-    getReactors: jest.fn(),
-    calculateReactionCost: jest.fn(),
-    validateReaction: jest.fn(),
-  },
-}));
+jest.mock('@/services/tokenReactionService');
+jest.mock('@/services/reputationService');
+jest.mock('@/services/walletService');
 
-jest.mock('@/services/walletSecurityService', () => ({
-  walletSecurityService: {
-    validateTransaction: jest.fn(),
-    checkBalance: jest.fn(),
-    estimateGas: jest.fn(),
-  },
-}));
+const mockTokenReactionService = tokenReactionService as jest.Mocked<typeof tokenReactionService>;
+const mockReputationService = reputationService as jest.Mocked<typeof reputationService>;
 
-jest.mock('@/services/auditLoggingService', () => ({
-  auditLoggingService: {
-    logReaction: jest.fn(),
-    logError: jest.fn(),
+const mockPost = {
+  id: 'post-1',
+  author: {
+    id: 'author-1',
+    username: 'testauthor',
+    displayName: 'Test Author',
+    avatar: '/avatar.jpg',
+    walletAddress: '0xauthor',
+    reputation: {
+      totalScore: 500,
+      level: { name: 'Contributor', level: 3 },
+      badges: [],
+      progress: [],
+      breakdown: {},
+      history: [],
+    },
   },
-}));
-
-// Mock Web3 provider
-const mockWeb3Provider = {
-  request: jest.fn(),
-  on: jest.fn(),
-  removeListener: jest.fn(),
+  content: {
+    type: 'text',
+    body: 'This is a test post for token reactions',
+    formatting: {},
+  },
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  reactions: [],
+  tips: [],
+  comments: [],
+  shares: [],
+  views: 100,
+  engagementScore: 50,
+  previews: [],
+  hashtags: ['test'],
+  mentions: [],
+  media: [],
+  socialProof: {
+    followedUsersWhoEngaged: [],
+    totalEngagementFromFollowed: 0,
+    communityLeadersWhoEngaged: [],
+    verifiedUsersWhoEngaged: [],
+  },
+  moderationStatus: 'approved',
 };
 
-Object.defineProperty(window, 'ethereum', {
-  value: mockWeb3Provider,
-  writable: true,
-});
-
-const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <EnhancedStateProvider>
-    {children}
-  </EnhancedStateProvider>
-);
+const renderIntegrationTest = () => {
+  return render(
+    <EngagementProvider>
+      <ReputationProvider>
+        <EnhancedPostCard
+          post={mockPost}
+          context="feed"
+          onReaction={jest.fn()}
+          onTip={jest.fn()}
+          onShare={jest.fn()}
+          showSocialProof={true}
+        />
+      </ReputationProvider>
+    </EngagementProvider>
+  );
+};
 
 describe('Token Reaction Flow Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Setup default mocks
-    require('@/services/tokenReactionService').tokenReactionService.calculateReactionCost.mockReturnValue(5);
-    require('@/services/walletSecurityService').walletSecurityService.checkBalance.mockResolvedValue(true);
-    require('@/services/walletSecurityService').walletSecurityService.validateTransaction.mockResolvedValue(true);
-    require('@/services/tokenReactionService').tokenReactionService.validateReaction.mockResolvedValue(true);
-  });
-
-  it('completes full reaction flow successfully', async () => {
-    const user = userEvent.setup();
+    // Mock wallet connection
+    mockTokenReactionService.checkWalletConnection.mockResolvedValue({
+      connected: true,
+      address: '0xuser123',
+      balance: 100,
+    });
     
-    // Mock successful reaction
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockResolvedValue({
+    // Mock token reaction service
+    mockTokenReactionService.addReaction.mockResolvedValue({
       success: true,
-      transactionHash: '0xabc123',
-      newTotal: 15,
-      milestone: false,
+      transactionHash: '0xtxhash',
+      newReactionCount: 1,
     });
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    // Click on fire reaction
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
-
-    // Should show loading state
-    expect(screen.getByTestId('reaction-loading')).toBeInTheDocument();
-
-    // Wait for reaction to complete
-    await waitFor(() => {
-      expect(screen.queryByTestId('reaction-loading')).not.toBeInTheDocument();
+    
+    // Mock reputation service
+    mockReputationService.updateReputationForReaction.mockResolvedValue({
+      pointsEarned: 5,
+      newTotalScore: 505,
     });
-
-    // Verify services were called in correct order
-    expect(require('@/services/walletSecurityService').walletSecurityService.checkBalance).toHaveBeenCalled();
-    expect(require('@/services/tokenReactionService').tokenReactionService.validateReaction).toHaveBeenCalled();
-    expect(require('@/services/tokenReactionService').tokenReactionService.reactToPost).toHaveBeenCalledWith(
-      'test-post-1',
-      '🔥',
-      5,
-      '0x1234567890abcdef'
-    );
-    expect(require('@/services/auditLoggingService').auditLoggingService.logReaction).toHaveBeenCalled();
-
-    // Should show success feedback
-    expect(screen.getByText(/reaction added/i)).toBeInTheDocument();
   });
 
-  it('handles insufficient balance gracefully', async () => {
-    const user = userEvent.setup();
-    
-    // Mock insufficient balance
-    require('@/services/walletSecurityService').walletSecurityService.checkBalance.mockResolvedValue(false);
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const diamondButton = screen.getByRole('button', { name: /diamond|💎/i });
-    await user.click(diamondButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/insufficient balance/i)).toBeInTheDocument();
-    });
-
-    // Should not proceed with reaction
-    expect(require('@/services/tokenReactionService').tokenReactionService.reactToPost).not.toHaveBeenCalled();
-    
-    // Should log the error
-    expect(require('@/services/auditLoggingService').auditLoggingService.logError).toHaveBeenCalled();
-  });
-
-  it('handles transaction failure with retry', async () => {
-    const user = userEvent.setup();
-    
-    // Mock transaction failure then success
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost
-      .mockRejectedValueOnce(new Error('Transaction failed'))
-      .mockResolvedValueOnce({
-        success: true,
-        transactionHash: '0xdef456',
-        newTotal: 8,
-        milestone: false,
+  describe('Complete Reaction Flow', () => {
+    it('should complete full reaction flow from click to reputation update', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      // Step 1: Click reaction button
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      // Step 2: Verify wallet connection check
+      await waitFor(() => {
+        expect(mockTokenReactionService.checkWalletConnection).toHaveBeenCalled();
       });
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
-
-    // Should show error message
-    await waitFor(() => {
-      expect(screen.getByText(/transaction failed/i)).toBeInTheDocument();
+      
+      // Step 3: Verify reaction is added
+      await waitFor(() => {
+        expect(mockTokenReactionService.addReaction).toHaveBeenCalledWith({
+          postId: 'post-1',
+          reactionType: '🔥',
+          amount: 1,
+          userAddress: '0xuser123',
+        });
+      });
+      
+      // Step 4: Verify reputation update
+      await waitFor(() => {
+        expect(mockReputationService.updateReputationForReaction).toHaveBeenCalledWith({
+          userId: '0xuser123',
+          action: 'reaction_given',
+          reactionType: '🔥',
+          amount: 1,
+        });
+      });
+      
+      // Step 5: Verify UI updates
+      await waitFor(() => {
+        expect(screen.getByText('1')).toBeInTheDocument(); // reaction count
+        expect(screen.getByTestId('reaction-success-animation')).toBeInTheDocument();
+      });
     });
 
-    // Click retry button
-    const retryButton = screen.getByRole('button', { name: /retry/i });
-    await user.click(retryButton);
-
-    // Should succeed on retry
-    await waitFor(() => {
-      expect(screen.getByText(/reaction added/i)).toBeInTheDocument();
+    it('should handle expensive reaction with stake modal', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      // Click diamond reaction (expensive)
+      const diamondButton = screen.getByTestId('reaction-button-💎');
+      await user.click(diamondButton);
+      
+      // Stake modal should appear
+      await waitFor(() => {
+        expect(screen.getByTestId('reaction-stake-modal')).toBeInTheDocument();
+      });
+      
+      // Set custom amount
+      const amountInput = screen.getByLabelText(/stake amount/i);
+      await user.clear(amountInput);
+      await user.type(amountInput, '10');
+      
+      // Confirm stake
+      const confirmButton = screen.getByRole('button', { name: /confirm stake/i });
+      await user.click(confirmButton);
+      
+      // Verify reaction with custom amount
+      await waitFor(() => {
+        expect(mockTokenReactionService.addReaction).toHaveBeenCalledWith({
+          postId: 'post-1',
+          reactionType: '💎',
+          amount: 10,
+          userAddress: '0xuser123',
+        });
+      });
     });
 
-    expect(require('@/services/tokenReactionService').tokenReactionService.reactToPost).toHaveBeenCalledTimes(2);
+    it('should handle reaction with insufficient balance', async () => {
+      const user = userEvent.setup();
+      
+      // Mock insufficient balance
+      mockTokenReactionService.checkWalletConnection.mockResolvedValue({
+        connected: true,
+        address: '0xuser123',
+        balance: 1, // Insufficient for diamond reaction
+      });
+      
+      renderIntegrationTest();
+      
+      const diamondButton = screen.getByTestId('reaction-button-💎');
+      await user.click(diamondButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/insufficient balance/i)).toBeInTheDocument();
+      });
+      
+      expect(mockTokenReactionService.addReaction).not.toHaveBeenCalled();
+    });
+
+    it('should handle reaction failure and retry', async () => {
+      const user = userEvent.setup();
+      
+      // Mock initial failure then success
+      mockTokenReactionService.addReaction
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockResolvedValueOnce({
+          success: true,
+          transactionHash: '0xtxhash',
+          newReactionCount: 1,
+        });
+      
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      // Error should be shown
+      await waitFor(() => {
+        expect(screen.getByText(/failed to add reaction/i)).toBeInTheDocument();
+      });
+      
+      // Retry button should appear
+      const retryButton = screen.getByRole('button', { name: /retry/i });
+      await user.click(retryButton);
+      
+      // Should succeed on retry
+      await waitFor(() => {
+        expect(mockTokenReactionService.addReaction).toHaveBeenCalledTimes(2);
+        expect(screen.getByTestId('reaction-success-animation')).toBeInTheDocument();
+      });
+    });
   });
 
-  it('handles milestone celebrations', async () => {
-    const user = userEvent.setup();
-    
-    // Mock milestone reaction
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockResolvedValue({
-      success: true,
-      transactionHash: '0xghi789',
-      newTotal: 100,
-      milestone: true,
-      milestoneType: 'century',
+  describe('Social Proof Integration', () => {
+    it('should update social proof when followed users react', async () => {
+      const user = userEvent.setup();
+      
+      // Mock followed users
+      const postWithSocialProof = {
+        ...mockPost,
+        socialProof: {
+          followedUsersWhoEngaged: [
+            { id: 'friend-1', username: 'friend1', displayName: 'Friend One' },
+          ],
+          totalEngagementFromFollowed: 1,
+          communityLeadersWhoEngaged: [],
+          verifiedUsersWhoEngaged: [],
+        },
+      };
+      
+      render(
+        <EngagementProvider>
+          <ReputationProvider>
+            <EnhancedPostCard
+              post={postWithSocialProof}
+              context="feed"
+              onReaction={jest.fn()}
+              onTip={jest.fn()}
+              onShare={jest.fn()}
+              showSocialProof={true}
+            />
+          </ReputationProvider>
+        </EngagementProvider>
+      );
+      
+      // Social proof should be visible
+      expect(screen.getByText(/friend1 and others reacted/i)).toBeInTheDocument();
+      
+      // Add own reaction
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      // Social proof should update
+      await waitFor(() => {
+        expect(screen.getByText(/you and friend1 reacted/i)).toBeInTheDocument();
+      });
     });
 
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const rocketButton = screen.getByRole('button', { name: /rocket|🚀/i });
-    await user.click(rocketButton);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('celebration-animation')).toBeInTheDocument();
-      expect(screen.getByText(/milestone reached/i)).toBeInTheDocument();
+    it('should highlight verified user reactions', async () => {
+      const postWithVerifiedReactions = {
+        ...mockPost,
+        socialProof: {
+          followedUsersWhoEngaged: [],
+          totalEngagementFromFollowed: 0,
+          communityLeadersWhoEngaged: [],
+          verifiedUsersWhoEngaged: [
+            { id: 'verified-1', username: 'verified1', displayName: 'Verified User' },
+          ],
+        },
+      };
+      
+      render(
+        <EngagementProvider>
+          <ReputationProvider>
+            <EnhancedPostCard
+              post={postWithVerifiedReactions}
+              context="feed"
+              onReaction={jest.fn()}
+              onTip={jest.fn()}
+              onShare={jest.fn()}
+              showSocialProof={true}
+            />
+          </ReputationProvider>
+        </EngagementProvider>
+      );
+      
+      expect(screen.getByTestId('verified-reaction-indicator')).toBeInTheDocument();
     });
   });
 
-  it('handles network connectivity issues', async () => {
-    const user = userEvent.setup();
-    
-    // Mock network error
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockRejectedValue(
-      new Error('Network error')
-    );
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/network error/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
-    });
-  });
-
-  it('validates reaction permissions', async () => {
-    const user = userEvent.setup();
-    
-    // Mock validation failure
-    require('@/services/tokenReactionService').tokenReactionService.validateReaction.mockResolvedValue(false);
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/not authorized/i)).toBeInTheDocument();
-    });
-
-    expect(require('@/services/tokenReactionService').tokenReactionService.reactToPost).not.toHaveBeenCalled();
-  });
-
-  it('handles concurrent reactions', async () => {
-    const user = userEvent.setup();
-    
-    // Mock delayed reaction
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({
+  describe('Milestone Celebrations', () => {
+    it('should trigger celebration when reaction milestone is reached', async () => {
+      const user = userEvent.setup();
+      
+      // Mock milestone reached
+      mockTokenReactionService.addReaction.mockResolvedValue({
         success: true,
-        transactionHash: '0xjkl012',
-        newTotal: 12,
-        milestone: false,
-      }), 1000))
-    );
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    const rocketButton = screen.getByRole('button', { name: /rocket|🚀/i });
-
-    // Try to click multiple reactions quickly
-    await user.click(fireButton);
-    await user.click(rocketButton);
-
-    // Should only process one reaction at a time
-    expect(screen.getAllByTestId('reaction-loading')).toHaveLength(1);
-    
-    // Second button should be disabled
-    expect(rocketButton).toBeDisabled();
-  });
-
-  it('updates UI with real-time reaction changes', async () => {
-    const user = userEvent.setup();
-    
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockResolvedValue({
-      success: true,
-      transactionHash: '0xmno345',
-      newTotal: 25,
-      milestone: false,
+        transactionHash: '0xtxhash',
+        newReactionCount: 100, // Milestone number
+        milestoneReached: {
+          type: 'reaction_count',
+          value: 100,
+          reward: 'Popular Post Badge',
+        },
+      });
+      
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('milestone-celebration')).toBeInTheDocument();
+        expect(screen.getByText(/100 reactions milestone/i)).toBeInTheDocument();
+      });
     });
 
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-          initialReactions={[
-            { type: '🔥', totalAmount: 20, users: [], tokenType: 'LDAO' }
-          ]}
-        />
-      </TestWrapper>
-    );
-
-    // Initial count should be 20
-    expect(screen.getByText('20')).toBeInTheDocument();
-
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
-
-    // Should update to new total
-    await waitFor(() => {
-      expect(screen.getByText('25')).toBeInTheDocument();
+    it('should award reputation bonus for milestones', async () => {
+      const user = userEvent.setup();
+      
+      // Mock milestone with bonus
+      mockTokenReactionService.addReaction.mockResolvedValue({
+        success: true,
+        transactionHash: '0xtxhash',
+        newReactionCount: 50,
+        milestoneReached: {
+          type: 'reaction_count',
+          value: 50,
+          reward: 'Engagement Badge',
+        },
+      });
+      
+      mockReputationService.updateReputationForReaction.mockResolvedValue({
+        pointsEarned: 25, // Bonus points for milestone
+        newTotalScore: 525,
+        milestoneBonus: true,
+      });
+      
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      await waitFor(() => {
+        expect(mockReputationService.updateReputationForReaction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            milestoneReached: true,
+          })
+        );
+      });
     });
   });
 
-  it('handles gas estimation and optimization', async () => {
-    const user = userEvent.setup();
-    
-    require('@/services/walletSecurityService').walletSecurityService.estimateGas.mockResolvedValue({
-      gasLimit: '21000',
-      gasPrice: '20000000000',
-      estimatedCost: '0.00042',
+  describe('Real-time Updates', () => {
+    it('should update reaction counts in real-time', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      // Simulate real-time update from another user
+      fireEvent(window, new CustomEvent('reactionUpdate', {
+        detail: {
+          postId: 'post-1',
+          reactionType: '🚀',
+          newCount: 5,
+          user: { username: 'otheruser' },
+        },
+      }));
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('reaction-count-🚀')).toHaveTextContent('5');
+      });
     });
 
-    require('@/services/tokenReactionService').tokenReactionService.reactToPost.mockResolvedValue({
-      success: true,
-      transactionHash: '0xpqr678',
-      newTotal: 18,
-      milestone: false,
-      gasUsed: '19500',
-    });
-
-    render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
-
-    const diamondButton = screen.getByRole('button', { name: /diamond|💎/i });
-    await user.click(diamondButton);
-
-    // Should show gas estimation in confirmation modal
-    await waitFor(() => {
-      expect(screen.getByText(/estimated gas/i)).toBeInTheDocument();
-      expect(screen.getByText(/0.00042/)).toBeInTheDocument();
-    });
-
-    // Confirm transaction
-    const confirmButton = screen.getByRole('button', { name: /confirm/i });
-    await user.click(confirmButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/reaction added/i)).toBeInTheDocument();
+    it('should show live reaction animations from other users', async () => {
+      renderIntegrationTest();
+      
+      // Simulate live reaction from another user
+      fireEvent(window, new CustomEvent('liveReaction', {
+        detail: {
+          postId: 'post-1',
+          reactionType: '🔥',
+          user: { username: 'liveuser' },
+        },
+      }));
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('live-reaction-animation')).toBeInTheDocument();
+      });
     });
   });
 
-  it('maintains reaction state across component updates', async () => {
-    const user = userEvent.setup();
-    
-    const { rerender } = render(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-        />
-      </TestWrapper>
-    );
+  describe('Performance Optimization', () => {
+    it('should debounce rapid reaction clicks', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      
+      // Click rapidly
+      await user.click(fireButton);
+      await user.click(fireButton);
+      await user.click(fireButton);
+      
+      // Should only make one API call due to debouncing
+      await waitFor(() => {
+        expect(mockTokenReactionService.addReaction).toHaveBeenCalledTimes(1);
+      });
+    });
 
-    const fireButton = screen.getByRole('button', { name: /fire|🔥/i });
-    await user.click(fireButton);
+    it('should cache reaction states for performance', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      // Verify caching service is called
+      await waitFor(() => {
+        expect(mockTokenReactionService.cacheReactionState).toHaveBeenCalledWith({
+          postId: 'post-1',
+          userAddress: '0xuser123',
+          reactions: expect.any(Array),
+        });
+      });
+    });
+  });
 
-    // Rerender with new props
-    rerender(
-      <TestWrapper>
-        <TokenReactionFlow 
-          postId="test-post-1"
-          userWallet="0x1234567890abcdef"
-          theme="dark"
-        />
-      </TestWrapper>
-    );
+  describe('Error Recovery', () => {
+    it('should handle network failures gracefully', async () => {
+      const user = userEvent.setup();
+      
+      // Mock network failure
+      mockTokenReactionService.addReaction.mockRejectedValue(
+        new Error('Network unavailable')
+      );
+      
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/network error/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+      });
+    });
 
-    // Loading state should persist
-    expect(screen.getByTestId('reaction-loading')).toBeInTheDocument();
+    it('should queue reactions when offline', async () => {
+      const user = userEvent.setup();
+      
+      // Mock offline state
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: false,
+      });
+      
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/queued for when online/i)).toBeInTheDocument();
+        expect(mockTokenReactionService.queueOfflineReaction).toHaveBeenCalled();
+      });
+    });
+
+    it('should sync queued reactions when back online', async () => {
+      renderIntegrationTest();
+      
+      // Simulate coming back online
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: true,
+      });
+      
+      fireEvent(window, new Event('online'));
+      
+      await waitFor(() => {
+        expect(mockTokenReactionService.syncOfflineReactions).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Accessibility Integration', () => {
+    it('should announce reaction changes to screen readers', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      await user.click(fireButton);
+      
+      await waitFor(() => {
+        const announcement = screen.getByRole('status');
+        expect(announcement).toHaveTextContent(/fire reaction added/i);
+      });
+    });
+
+    it('should support keyboard navigation through reactions', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      const fireButton = screen.getByTestId('reaction-button-🔥');
+      fireButton.focus();
+      
+      await user.keyboard('{Tab}');
+      expect(screen.getByTestId('reaction-button-🚀')).toHaveFocus();
+      
+      await user.keyboard('{Tab}');
+      expect(screen.getByTestId('reaction-button-💎')).toHaveFocus();
+    });
+
+    it('should provide proper focus management in modals', async () => {
+      const user = userEvent.setup();
+      renderIntegrationTest();
+      
+      const diamondButton = screen.getByTestId('reaction-button-💎');
+      await user.click(diamondButton);
+      
+      await waitFor(() => {
+        const modal = screen.getByTestId('reaction-stake-modal');
+        expect(modal).toBeInTheDocument();
+        
+        // Focus should be trapped in modal
+        const firstFocusable = screen.getByLabelText(/stake amount/i);
+        expect(firstFocusable).toHaveFocus();
+      });
+    });
   });
 });

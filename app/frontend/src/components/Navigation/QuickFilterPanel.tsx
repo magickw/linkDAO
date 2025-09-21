@@ -1,78 +1,56 @@
 import React from 'react';
-import { QuickFilter } from '@/types/navigation';
-import { GlassSidebarLink } from '@/components/VisualPolish';
+
+interface Filter {
+  id: string;
+  label: string;
+  active: boolean;
+}
 
 interface QuickFilterPanelProps {
-  filters: QuickFilter[];
-  onFilterChange: (filterId: string) => void;
+  activeFilters: any[];
+  onFilterChange: (filters: any[]) => void;
   className?: string;
 }
 
-export default function QuickFilterPanel({ 
-  filters, 
-  onFilterChange, 
-  className = '' 
-}: QuickFilterPanelProps) {
+export const defaultQuickFilters = [
+  { id: 'trending', label: 'Trending', active: false },
+  { id: 'following', label: 'Following', active: false },
+  { id: 'recent', label: 'Recent', active: false },
+  { id: 'popular', label: 'Popular', active: false },
+];
+
+export const QuickFilterPanel: React.FC<QuickFilterPanelProps> = ({
+  activeFilters = [],
+  onFilterChange,
+  className = ''
+}) => {
+  const filters: Filter[] = defaultQuickFilters;
+
+  const toggleFilter = (filterId: string) => {
+    const currentFilters = activeFilters || [];
+    const newFilters = currentFilters.includes(filterId)
+      ? currentFilters.filter(id => id !== filterId)
+      : [...currentFilters, filterId];
+    onFilterChange(newFilters);
+  };
+
   return (
-    <div className={`space-y-1 ${className}`}>
-      <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-        Quick Filters
-      </div>
-      
+    <div className={`space-y-2 ${className}`}>
       {filters.map((filter) => (
-        <GlassSidebarLink
+        <button
           key={filter.id}
-          onClick={() => onFilterChange(filter.id)}
-          active={filter.active}
-          icon={<span className="text-lg">{filter.icon}</span>}
-          badge={filter.count}
+          onClick={() => toggleFilter(filter.id)}
+          className={`
+            w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors
+            ${(activeFilters || []).includes(filter.id)
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }
+          `}
         >
           {filter.label}
-        </GlassSidebarLink>
+        </button>
       ))}
     </div>
   );
-}
-
-// Default filters configuration
-export const defaultQuickFilters: QuickFilter[] = [
-  {
-    id: 'my-posts',
-    label: 'My Posts',
-    icon: '📝',
-    count: 0,
-    active: false,
-    query: {
-      type: 'my-posts',
-      hasReactions: false,
-      hasTips: false,
-      isGovernance: false
-    }
-  },
-  {
-    id: 'tipped-posts',
-    label: 'Tipped Posts',
-    icon: '💰',
-    count: 0,
-    active: false,
-    query: {
-      type: 'tipped-posts',
-      hasTips: true,
-      hasReactions: false,
-      isGovernance: false
-    }
-  },
-  {
-    id: 'governance-posts',
-    label: 'Governance Posts',
-    icon: '🏛️',
-    count: 0,
-    active: false,
-    query: {
-      type: 'governance-posts',
-      isGovernance: true,
-      hasReactions: false,
-      hasTips: false
-    }
-  }
-];
+};

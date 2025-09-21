@@ -10,6 +10,7 @@ import GestureHandler from '@/components/GestureHandler';
 // import QuickActionsMenu from '@/components/QuickActionsMenu';
 import PostInteractionBar from '@/components/PostInteractionBar';
 import OptimizedImage from '@/components/OptimizedImage';
+import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -506,6 +507,21 @@ export default function Web3SocialPostCard({
               addToast(`Post shared via ${shareType}!`, 'success');
             }}
           />
+
+          {/* Comment System - Show when expanded */}
+          {expanded && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <EnhancedCommentSystem
+                postId={post.id}
+                postType="feed"
+                onCommentAdded={(comment) => {
+                  console.log('New comment added:', comment);
+                  addToast('Comment posted!', 'success');
+                }}
+                className="mt-4"
+              />
+            </div>
+          )}
         </div>
       </GestureHandler>
 

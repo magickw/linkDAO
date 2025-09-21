@@ -117,10 +117,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         {enhancedUser ? (
           <EnhancedUserCard
-            user={enhancedUser}
-            balance={balance}
-            isCollapsed={navigationState.sidebarCollapsed}
-            onProfileClick={() => {/* Handle profile click */}}
+            user={enhancedUser as any}
+            onClick={() => {/* Handle profile click */}}
           />
         ) : (
           /* Fallback to original profile display */
@@ -170,10 +168,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Activity
             </span>
-            <ActivityIndicators 
-              indicators={activityIndicators}
-              onIndicatorClick={handleActivityIndicatorClick}
-            />
+            <ActivityIndicators />
           </div>
         </div>
       )}
@@ -185,8 +180,14 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             <>
               {/* Quick Filters Panel */}
               <QuickFilterPanel 
-                filters={quickFilters}
-                onFilterChange={handleFilterChange}
+                activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
+                onFilterChange={(filters) => {
+                  quickFilters.forEach(filter => {
+                    if (filters.includes(filter.id) !== filter.active) {
+                      handleFilterChange(filter.id);
+                    }
+                  });
+                }}
                 className="mb-6"
               />
 
@@ -282,12 +283,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </div>
                 
                 <CommunityIconList
-                  communities={communities}
-                  activeCommunityId={navigationState.activeCommunity}
+                  communities={communities as any}
                   onCommunitySelect={handleCommunitySelectWithContext}
-                  onCommunityToggle={handleCommunityToggle}
-                  showAllCommunities={showAllCommunities}
-                  onToggleShowAll={toggleShowAllCommunities}
                 />
               </div>
             </>

@@ -66,7 +66,7 @@ export default function FacebookStylePostComposer({
       if (linkUrl) finalContent += ` ${linkUrl}`;
 
       const postData: CreatePostInput = {
-        author: '',
+        author: '', // This will be overridden by the parent component
         content: finalContent,
         tags: tagArray,
         media: selectedFiles.length > 0 ? ['https://placehold.co/300'] : undefined

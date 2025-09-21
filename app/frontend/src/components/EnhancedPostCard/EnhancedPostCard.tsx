@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import InlinePreviewRenderer from '../InlinePreviews/InlinePreviewRenderer';
+import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import { ContentPreview } from '../../types/contentPreview';
 import SocialProofIndicator, { SocialProofData } from '../SocialProof/SocialProofIndicator';
 import TrendingBadge, { TrendingLevel, calculateTrendingLevel } from '../TrendingBadge/TrendingBadge';
@@ -10,6 +10,7 @@ import OptimizedImage from '../OptimizedImage';
 import PostInteractionBar from '../PostInteractionBar';
 import GestureHandler from '../GestureHandler';
 import { EnhancedPostCardGlass, RippleEffect, VisualPolishClasses } from '../VisualPolish';
+import EnhancedCommentSystem from '../EnhancedCommentSystem';
 
 export interface EnhancedPost {
   id: string;
@@ -294,12 +295,29 @@ export default function EnhancedPostCard({
         {/* Inline Previews */}
         {showPreviews && post.previews.length > 0 && (
           <div className="mb-4">
-            <InlinePreviewRenderer
-              enhancedPreviews={post.previews}
-              maxPreviews={showAllPreviews ? undefined : 2}
-              showAll={showAllPreviews}
-            />
-            
+            {post.previews.slice(0, showAllPreviews ? undefined : 2).map((contentPreview, index) => {
+              // Extract LinkPreview from ContentPreview
+              if (contentPreview.type === 'link' && contentPreview.data) {
+                const linkPreview = contentPreview.data as any;
+                const preview = {
+                  url: linkPreview.url || contentPreview.url,
+                  title: linkPreview.title,
+                  description: linkPreview.description,
+                  image: linkPreview.image,
+                  siteName: linkPreview.siteName,
+                  type: linkPreview.type || 'website'
+                };
+                return (
+                  <InlinePreviewRenderer
+                    key={index}
+                    preview={preview}
+                    className="mb-2"
+                  />
+                );
+              }
+              return null;
+            })}
+
             {post.previews.length > 2 && !showAllPreviews && (
               <button
                 onClick={() => setShowAllPreviews(true)}
@@ -353,6 +371,21 @@ export default function EnhancedPostCard({
             addToast(`Post shared via ${shareType}!`, 'success');
           }}
         />
+
+        {/* Comment System - Show when expanded */}
+        {expanded && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <EnhancedCommentSystem
+              postId={post.id}
+              postType="enhanced"
+              onCommentAdded={(comment) => {
+                console.log('New comment added:', comment);
+                addToast('Comment posted!', 'success');
+              }}
+              className="mt-4"
+            />
+          </div>
+        )}
       </div>
       </EnhancedPostCardGlass>
     </RippleEffect>

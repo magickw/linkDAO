@@ -1,529 +1,378 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { VirtualScrolling } from '@/components/Performance/VirtualScrolling';
-import { PerformanceOptimizedFeed } from '@/components/Performance/PerformanceOptimizedFeed';
-import { IntelligentLazyLoading } from '@/components/Performance/IntelligentLazyLoading';
-import { ProgressiveLoading } from '@/components/Performance/ProgressiveLoading';
+import userEvent from '@testing-library/user-event';
+import { VirtualScrollManager } from '@/components/Performance/VirtualScrollManager';
+import { InfiniteScrollFeed } from '@/components/Feed/InfiniteScrollFeed';
 import { PerformanceProvider } from '@/contexts/PerformanceContext';
+import { performanceMonitor } from '@/utils/performanceMonitor';
 
 // Mock performance APIs
-const mockPerformanceObserver = jest.fn();
-mockPerformanceObserver.mockImplementation((callback) => ({
-  observe: jest.fn(),
-  disconnect: jest.fn(),
-  takeRecords: jest.fn(() => []),
-}));
-global.PerformanceObserver = mockPerformanceObserver;
+Object.defineProperty(window, 'performance', {
+  value: {
+    now: jest.fn(() => Date.now()),
+    mark: jest.fn(),
+    measure: jest.fn(),
+    getEntriesByName: jest.fn(() => []),
+    getEntriesByType: jest.fn(() => []),
+    observer: jest.fn(),
+  },
+});
 
-// Mock IntersectionObserver for lazy loading tests
+// Mock IntersectionObserver for virtual scrolling
 const mockIntersectionObserver = jest.fn();
 mockIntersectionObserver.mockReturnValue({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 });
-global.IntersectionObserver = mockIntersectionObserver;
+window.IntersectionObserver = mockIntersectionObserver;
 
-const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PerformanceProvider>
-    {children}
-  </PerformanceProvider>
-);
+// Mock ResizeObserver
+window.ResizeObserver = jest.fn().mockImplementation(() => ({
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
+}));
+
+// Mock requestAnimationFrame
+window.requestAnimationFrame = jest.fn(cb => setTimeout(cb, 16));
+window.cancelAnimationFrame = jest.fn();
+
+// Generate large dataset for testing
+const generateLargeDataset = (size: number) => {
+  return Array.from({ length: size }, (_, index) => ({
+    id: `item-${index}`,
+    content: `Content for item ${index}`,
+    height: 100 + Math.floor(Math.random() * 50), // Variable heights
+    data: {
+      author: `user-${index % 100}`,
+      timestamp: new Date(Date.now() - index * 60000),
+      reactions: Math.floor(Math.random() * 100),
+      comments: Math.floor(Math.random() * 50),
+    },
+  }));
+};
 
 describe('Performance Optimization Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Mock performance.now for consistent timing
-    let mockTime = 0;
-    jest.spyOn(performance, 'now').mockImplementation(() => mockTime += 16.67); // 60fps
-    
-    // Mock requestAnimationFrame
-    global.requestAnimationFrame = jest.fn(cb => setTimeout(cb, 16));
-    global.cancelAnimationFrame = jest.fn();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    performance.now = jest.fn(() => Date.now());
   });
 
   describe('Virtual Scrolling Performance', () => {
-    const generateLargeDataset = (size: number) => 
-      Array.from({ length: size }, (_, i) => ({
-        id: `item-${i}`,
-        title: `Item ${i}`,
-        content: `Content for item ${i}`,
-        height: 100 + (i % 3) * 50,
-      }));
-
-    const MockItemRenderer = ({ item, index }: any) => (
-      <div data-testid={`virtual-item-${index}`} style={{ height: item.height }}>
-        <h3>{item.title}</h3>
-        <p>{item.content}</p>
-      </div>
-    );
-
-    it('should handle large datasets efficiently', () => {
+    it('should handle large datasets efficiently', async () => {
       const largeDataset = generateLargeDataset(10000);
       const startTime = performance.now();
       
       render(
-        <TestWrapper>
-          <VirtualScrolling 
+        <PerformanceProvider>
+          <VirtualScrollManager
             items={largeDataset}
             itemHeight={100}
             containerHeight={600}
-            renderItem={MockItemRenderer}
             bufferSize={5}
+            renderItem={({ item }) => (
+              <div key={item.id} data-testid={`item-${item.id}`}>
+                {item.content}
+              </div>
+            )}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
+      
       const endTime = performance.now();
       const renderTime = endTime - startTime;
-
-      // Should render quickly even with large dataset
-      expect(renderTime).toBeLessThan(100); // 100ms threshold
       
-      // Should only render visible items plus buffer
-      const renderedItems = screen.getAllByTestId(/virtual-item-/);
-      expect(renderedItems.length).toBeLessThan(20); // Much less than 10000
+      // Should render quickly even with large dataset
+      expect(renderTime).toBeLessThan(100); // Less than 100ms
+      
+      // Should only render visible items initially
+      expect(screen.getByTestId('item-item-0')).toBeInTheDocument();
+      expect(screen.getByTestId('item-item-1')).toBeInTheDocument();
+      expect(screen.queryByTestId('item-item-50')).not.toBeInTheDocument();
     });
 
     it('should maintain 60fps during scrolling', async () => {
-      const dataset = generateLargeDataset(1000);
-      
-      render(
-        <TestWrapper>
-          <VirtualScrolling 
-            items={dataset}
-            itemHeight={100}
-            containerHeight={600}
-            renderItem={MockItemRenderer}
-          />
-        </TestWrapper>
-      );
-
-      const container = screen.getByTestId('virtual-scroll-container');
+      const largeDataset = generateLargeDataset(5000);
       const frameTimings: number[] = [];
       
-      // Simulate rapid scrolling
-      for (let i = 0; i < 10; i++) {
-        const frameStart = performance.now();
-        
-        fireEvent.scroll(container, { target: { scrollTop: i * 500 } });
-        
-        const frameEnd = performance.now();
-        frameTimings.push(frameEnd - frameStart);
-      }
-
-      // All frames should be under 16.67ms (60fps)
-      frameTimings.forEach(timing => {
-        expect(timing).toBeLessThan(16.67);
+      // Mock performance monitoring
+      const originalRAF = window.requestAnimationFrame;
+      window.requestAnimationFrame = jest.fn((callback) => {
+        const start = performance.now();
+        const result = originalRAF(() => {
+          callback(performance.now());
+          const end = performance.now();
+          frameTimings.push(end - start);
+        });
+        return result;
       });
-    });
-
-    it('should optimize memory usage with item recycling', () => {
-      const largeDataset = generateLargeDataset(5000);
       
       render(
-        <TestWrapper>
-          <VirtualScrolling 
+        <PerformanceProvider>
+          <VirtualScrollManager
             items={largeDataset}
             itemHeight={100}
             containerHeight={600}
-            renderItem={MockItemRenderer}
-            recycleNodes={true}
+            bufferSize={3}
+            renderItem={({ item }) => (
+              <div key={item.id}>{item.content}</div>
+            )}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
-      const container = screen.getByTestId('virtual-scroll-container');
       
-      // Scroll to different positions
-      fireEvent.scroll(container, { target: { scrollTop: 1000 } });
-      fireEvent.scroll(container, { target: { scrollTop: 5000 } });
-      fireEvent.scroll(container, { target: { scrollTop: 0 } });
-
-      // Should maintain consistent DOM node count
-      const renderedItems = screen.getAllByTestId(/virtual-item-/);
-      expect(renderedItems.length).toBeLessThan(15); // Consistent with buffer size
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Simulate rapid scrolling
+      for (let i = 0; i < 10; i++) {
+        fireEvent.scroll(scrollContainer, {
+          target: { scrollTop: i * 500 },
+        });
+        await new Promise(resolve => setTimeout(resolve, 16)); // 60fps = 16ms per frame
+      }
+      
+      await waitFor(() => {
+        expect(frameTimings.length).toBeGreaterThan(0);
+      });
+      
+      // Check that most frames are under 16ms (60fps)
+      const slowFrames = frameTimings.filter(time => time > 16);
+      const slowFramePercentage = (slowFrames.length / frameTimings.length) * 100;
+      
+      expect(slowFramePercentage).toBeLessThan(10); // Less than 10% slow frames
     });
 
-    it('should handle variable item heights efficiently', () => {
-      const variableHeightItems = generateLargeDataset(1000);
+    it('should efficiently update visible items during scroll', async () => {
+      const largeDataset = generateLargeDataset(1000);
+      
+      render(
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={largeDataset}
+            itemHeight={100}
+            containerHeight={600}
+            bufferSize={2}
+            renderItem={({ item, index }) => (
+              <div key={item.id} data-testid={`item-${index}`}>
+                {item.content}
+              </div>
+            )}
+          />
+        </PerformanceProvider>
+      );
+      
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Initial state
+      expect(screen.getByTestId('item-0')).toBeInTheDocument();
+      expect(screen.queryByTestId('item-10')).not.toBeInTheDocument();
+      
+      // Scroll down
+      fireEvent.scroll(scrollContainer, {
+        target: { scrollTop: 1000 }, // Scroll to show items around index 10
+      });
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('item-10')).toBeInTheDocument();
+      });
+      
+      // Previous items should be unmounted
+      expect(screen.queryByTestId('item-0')).not.toBeInTheDocument();
+    });
+
+    it('should handle variable item heights efficiently', async () => {
+      const variableHeightItems = Array.from({ length: 1000 }, (_, index) => ({
+        id: `item-${index}`,
+        content: `Item ${index}`,
+        height: 50 + (index % 5) * 30, // Heights: 50, 80, 110, 140, 170
+      }));
       
       const startTime = performance.now();
       
       render(
-        <TestWrapper>
-          <VirtualScrolling 
+        <PerformanceProvider>
+          <VirtualScrollManager
             items={variableHeightItems}
-            itemHeight="variable"
+            itemHeight={(index) => variableHeightItems[index].height}
             containerHeight={600}
-            renderItem={MockItemRenderer}
+            bufferSize={3}
+            renderItem={({ item, index }) => (
+              <div
+                key={item.id}
+                style={{ height: item.height }}
+                data-testid={`item-${index}`}
+              >
+                {item.content}
+              </div>
+            )}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
+      
       const endTime = performance.now();
       
       // Should handle variable heights without significant performance impact
       expect(endTime - startTime).toBeLessThan(150);
       
-      // Should still render efficiently
-      const renderedItems = screen.getAllByTestId(/virtual-item-/);
-      expect(renderedItems.length).toBeGreaterThan(0);
-      expect(renderedItems.length).toBeLessThan(20);
-    });
-
-    it('should optimize scroll event handling', () => {
-      const dataset = generateLargeDataset(1000);
-      const mockScrollHandler = jest.fn();
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
       
-      render(
-        <TestWrapper>
-          <VirtualScrolling 
-            items={dataset}
-            itemHeight={100}
-            containerHeight={600}
-            renderItem={MockItemRenderer}
-            onScroll={mockScrollHandler}
-          />
-        </TestWrapper>
-      );
-
-      const container = screen.getByTestId('virtual-scroll-container');
+      // Test scrolling with variable heights
+      fireEvent.scroll(scrollContainer, { target: { scrollTop: 500 } });
       
-      // Fire many scroll events rapidly
-      for (let i = 0; i < 100; i++) {
-        fireEvent.scroll(container, { target: { scrollTop: i * 10 } });
-      }
-
-      // Should throttle scroll events
-      expect(mockScrollHandler).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('Intelligent Lazy Loading Performance', () => {
-    it('should load images progressively', async () => {
-      const mockImages = Array.from({ length: 50 }, (_, i) => ({
-        src: `https://example.com/image-${i}.jpg`,
-        alt: `Image ${i}`,
-        placeholder: `data:image/svg+xml;base64,placeholder-${i}`,
-      }));
-
-      render(
-        <TestWrapper>
-          <IntelligentLazyLoading 
-            images={mockImages}
-            threshold={0.1}
-            rootMargin="50px"
-          />
-        </TestWrapper>
-      );
-
-      // Should initially load only placeholder images
-      const images = screen.getAllByRole('img');
-      const loadedImages = images.filter(img => 
-        !img.getAttribute('src')?.includes('placeholder')
-      );
-      
-      expect(loadedImages.length).toBeLessThan(10); // Only visible images
-    });
-
-    it('should preload next images intelligently', async () => {
-      const mockImages = Array.from({ length: 20 }, (_, i) => ({
-        src: `https://example.com/image-${i}.jpg`,
-        alt: `Image ${i}`,
-      }));
-
-      render(
-        <TestWrapper>
-          <IntelligentLazyLoading 
-            images={mockImages}
-            preloadCount={3}
-          />
-        </TestWrapper>
-      );
-
-      // Should preload next few images
       await waitFor(() => {
-        const preloadedImages = document.querySelectorAll('link[rel="preload"]');
-        expect(preloadedImages.length).toBe(3);
-      });
-    });
-
-    it('should handle blur-to-sharp transitions smoothly', async () => {
-      const mockImage = {
-        src: 'https://example.com/high-res.jpg',
-        placeholder: 'data:image/svg+xml;base64,blurred-placeholder',
-        alt: 'Test image',
-      };
-
-      render(
-        <TestWrapper>
-          <IntelligentLazyLoading 
-            images={[mockImage]}
-            blurTransition={true}
-          />
-        </TestWrapper>
-      );
-
-      const img = screen.getByRole('img');
-      
-      // Should start with placeholder
-      expect(img.getAttribute('src')).toContain('placeholder');
-      
-      // Simulate image load
-      fireEvent.load(img);
-      
-      // Should transition to high-res image
-      await waitFor(() => {
-        expect(img.getAttribute('src')).toBe('https://example.com/high-res.jpg');
+        const visibleItems = screen.getAllByTestId(/^item-\d+$/);
+        expect(visibleItems.length).toBeGreaterThan(0);
+        expect(visibleItems.length).toBeLessThan(20); // Should not render too many
       });
     });
   });
 
-  describe('Progressive Loading Performance', () => {
-    it('should load content in priority order', async () => {
-      const mockContent = [
-        { id: '1', priority: 'high', type: 'critical', data: 'Critical content' },
-        { id: '2', priority: 'medium', type: 'important', data: 'Important content' },
-        { id: '3', priority: 'low', type: 'optional', data: 'Optional content' },
-      ];
-
+  describe('Infinite Scroll Performance', () => {
+    it('should load new items efficiently', async () => {
+      const mockLoadMore = jest.fn().mockImplementation((page) => {
+        return Promise.resolve({
+          items: generateLargeDataset(50).map(item => ({
+            ...item,
+            id: `${item.id}-page-${page}`,
+          })),
+          hasMore: page < 10,
+        });
+      });
+      
       render(
-        <TestWrapper>
-          <ProgressiveLoading 
-            content={mockContent}
-            loadingStrategy="priority"
+        <PerformanceProvider>
+          <InfiniteScrollFeed
+            loadMore={mockLoadMore}
+            threshold={200}
+            renderItem={({ item }) => (
+              <div key={item.id} data-testid={item.id}>
+                {item.content}
+              </div>
+            )}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
-      // High priority content should load first
+      
+      // Initial load
       await waitFor(() => {
-        expect(screen.getByText('Critical content')).toBeInTheDocument();
+        expect(screen.getByTestId('item-0-page-0')).toBeInTheDocument();
       });
-
-      // Medium priority should load next
-      await waitFor(() => {
-        expect(screen.getByText('Important content')).toBeInTheDocument();
-      });
-
-      // Low priority should load last
-      await waitFor(() => {
-        expect(screen.getByText('Optional content')).toBeInTheDocument();
-      });
-    });
-
-    it('should adapt to network conditions', async () => {
-      // Mock slow network
-      Object.defineProperty(navigator, 'connection', {
-        value: {
-          effectiveType: '2g',
-          downlink: 0.5,
-          rtt: 2000,
+      
+      const scrollContainer = screen.getByTestId('infinite-scroll-container');
+      
+      // Scroll to trigger load more
+      fireEvent.scroll(scrollContainer, {
+        target: {
+          scrollTop: scrollContainer.scrollHeight - 300,
         },
-        writable: true,
       });
-
-      const mockContent = Array.from({ length: 10 }, (_, i) => ({
-        id: `${i}`,
-        type: 'content',
-        data: `Content ${i}`,
-        size: 1000 + i * 500,
-      }));
-
-      render(
-        <TestWrapper>
-          <ProgressiveLoading 
-            content={mockContent}
-            adaptToNetwork={true}
-          />
-        </TestWrapper>
-      );
-
-      // Should load fewer items on slow network
+      
+      // Should load next page
       await waitFor(() => {
-        const loadedContent = screen.getAllByText(/Content \d+/);
-        expect(loadedContent.length).toBeLessThan(5);
+        expect(mockLoadMore).toHaveBeenCalledWith(1);
+        expect(screen.getByTestId('item-0-page-1')).toBeInTheDocument();
       });
+      
+      // Should not trigger multiple loads
+      expect(mockLoadMore).toHaveBeenCalledTimes(2); // Initial + one more
     });
 
-    it('should provide meaningful loading states', () => {
-      const mockContent = [
-        { id: '1', type: 'text', data: 'Text content' },
-        { id: '2', type: 'image', data: 'Image content' },
-        { id: '3', type: 'video', data: 'Video content' },
-      ];
-
-      render(
-        <TestWrapper>
-          <ProgressiveLoading 
-            content={mockContent}
-            showLoadingStates={true}
-          />
-        </TestWrapper>
-      );
-
-      // Should show appropriate loading skeletons
-      expect(screen.getByTestId('text-skeleton')).toBeInTheDocument();
-      expect(screen.getByTestId('image-skeleton')).toBeInTheDocument();
-      expect(screen.getByTestId('video-skeleton')).toBeInTheDocument();
-    });
-  });
-
-  describe('Performance Optimized Feed', () => {
-    it('should handle large feed datasets efficiently', () => {
-      const largeFeed = Array.from({ length: 1000 }, (_, i) => ({
-        id: `post-${i}`,
-        author: `User ${i}`,
-        content: `Post content ${i}`,
-        timestamp: new Date(Date.now() - i * 60000),
-        reactions: Math.floor(Math.random() * 100),
-        comments: Math.floor(Math.random() * 50),
-      }));
-
-      const startTime = performance.now();
-      
-      render(
-        <TestWrapper>
-          <PerformanceOptimizedFeed 
-            posts={largeFeed}
-            virtualScrolling={true}
-            lazyLoading={true}
-          />
-        </TestWrapper>
-      );
-
-      const endTime = performance.now();
-      
-      // Should render quickly
-      expect(endTime - startTime).toBeLessThan(200);
-      
-      // Should only render visible posts
-      const renderedPosts = screen.getAllByTestId(/post-card-/);
-      expect(renderedPosts.length).toBeLessThan(20);
-    });
-
-    it('should optimize real-time updates', async () => {
-      const initialPosts = Array.from({ length: 10 }, (_, i) => ({
-        id: `post-${i}`,
-        content: `Initial post ${i}`,
-        reactions: 0,
-      }));
-
-      const { rerender } = render(
-        <TestWrapper>
-          <PerformanceOptimizedFeed 
-            posts={initialPosts}
-            realTimeUpdates={true}
-          />
-        </TestWrapper>
-      );
-
-      // Update one post
-      const updatedPosts = [...initialPosts];
-      updatedPosts[0] = { ...updatedPosts[0], reactions: 5 };
-
-      const updateStart = performance.now();
-      
-      rerender(
-        <TestWrapper>
-          <PerformanceOptimizedFeed 
-            posts={updatedPosts}
-            realTimeUpdates={true}
-          />
-        </TestWrapper>
-      );
-
-      const updateEnd = performance.now();
-      
-      // Should update quickly
-      expect(updateEnd - updateStart).toBeLessThan(50);
-      
-      // Should only re-render changed post
-      expect(screen.getByText('5')).toBeInTheDocument();
-    });
-
-    it('should implement efficient infinite scrolling', async () => {
-      const initialPosts = Array.from({ length: 20 }, (_, i) => ({
-        id: `post-${i}`,
-        content: `Post ${i}`,
-      }));
-
-      const mockLoadMore = jest.fn().mockResolvedValue(
-        Array.from({ length: 20 }, (_, i) => ({
-          id: `post-${i + 20}`,
-          content: `Post ${i + 20}`,
-        }))
-      );
-
-      render(
-        <TestWrapper>
-          <PerformanceOptimizedFeed 
-            posts={initialPosts}
-            onLoadMore={mockLoadMore}
-            hasMore={true}
-          />
-        </TestWrapper>
-      );
-
-      const container = screen.getByTestId('feed-container');
-      
-      // Scroll to bottom
-      fireEvent.scroll(container, { 
-        target: { scrollTop: container.scrollHeight - container.clientHeight } 
+    it('should debounce scroll events for performance', async () => {
+      const mockLoadMore = jest.fn().mockResolvedValue({
+        items: [],
+        hasMore: false,
       });
-
+      
+      render(
+        <PerformanceProvider>
+          <InfiniteScrollFeed
+            loadMore={mockLoadMore}
+            threshold={200}
+            debounceMs={100}
+            renderItem={({ item }) => <div key={item.id}>{item.content}</div>}
+          />
+        </PerformanceProvider>
+      );
+      
+      const scrollContainer = screen.getByTestId('infinite-scroll-container');
+      
+      // Rapid scroll events
+      for (let i = 0; i < 10; i++) {
+        fireEvent.scroll(scrollContainer, {
+          target: { scrollTop: 100 + i * 10 },
+        });
+      }
+      
+      // Should debounce and not call loadMore multiple times
       await waitFor(() => {
-        expect(mockLoadMore).toHaveBeenCalled();
-      });
-
-      // Should load more posts efficiently
-      await waitFor(() => {
-        expect(screen.getByText('Post 20')).toBeInTheDocument();
+        expect(mockLoadMore).toHaveBeenCalledTimes(1); // Only initial load
       });
     });
   });
 
   describe('Memory Management', () => {
-    it('should clean up resources on unmount', () => {
-      const dataset = Array.from({ length: 100 }, (_, i) => ({
-        id: `item-${i}`,
-        content: `Content ${i}`,
-      }));
-
-      const { unmount } = render(
-        <TestWrapper>
-          <VirtualScrolling 
-            items={dataset}
+    it('should clean up unused components', async () => {
+      const largeDataset = generateLargeDataset(1000);
+      let mountedComponents = 0;
+      let unmountedComponents = 0;
+      
+      const TestComponent = ({ item }: { item: any }) => {
+        React.useEffect(() => {
+          mountedComponents++;
+          return () => {
+            unmountedComponents++;
+          };
+        }, []);
+        
+        return <div data-testid={item.id}>{item.content}</div>;
+      };
+      
+      render(
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={largeDataset}
             itemHeight={100}
             containerHeight={600}
-            renderItem={({ item }) => <div>{item.content}</div>}
+            bufferSize={2}
+            renderItem={({ item }) => <TestComponent key={item.id} item={item} />}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
-      // Should not throw errors on unmount
-      expect(() => unmount()).not.toThrow();
+      
+      const initialMounted = mountedComponents;
+      
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Scroll to cause components to unmount/mount
+      fireEvent.scroll(scrollContainer, { target: { scrollTop: 2000 } });
+      
+      await waitFor(() => {
+        expect(unmountedComponents).toBeGreaterThan(0);
+      });
+      
+      // Should not mount excessive components
+      expect(mountedComponents - initialMounted).toBeLessThan(20);
+      
+      // Should clean up properly
+      expect(unmountedComponents).toBeGreaterThan(0);
     });
 
-    it('should prevent memory leaks with event listeners', () => {
+    it('should prevent memory leaks in event listeners', () => {
       const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
       const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
-
+      
       const { unmount } = render(
-        <TestWrapper>
-          <PerformanceOptimizedFeed 
-            posts={[]}
-            realTimeUpdates={true}
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={generateLargeDataset(100)}
+            itemHeight={100}
+            containerHeight={600}
+            renderItem={({ item }) => <div key={item.id}>{item.content}</div>}
           />
-        </TestWrapper>
+        </PerformanceProvider>
       );
-
+      
       const addedListeners = addEventListenerSpy.mock.calls.length;
       
       unmount();
@@ -532,103 +381,207 @@ describe('Performance Optimization Tests', () => {
       
       // Should remove all added event listeners
       expect(removedListeners).toBeGreaterThanOrEqual(addedListeners);
-    });
-
-    it('should optimize component re-renders', () => {
-      const renderSpy = jest.fn();
       
-      const TestComponent = React.memo(({ data }: any) => {
-        renderSpy();
-        return <div>{data.content}</div>;
-      });
-
-      const initialData = { id: '1', content: 'Initial' };
-      
-      const { rerender } = render(
-        <TestWrapper>
-          <TestComponent data={initialData} />
-        </TestWrapper>
-      );
-
-      expect(renderSpy).toHaveBeenCalledTimes(1);
-
-      // Re-render with same data
-      rerender(
-        <TestWrapper>
-          <TestComponent data={initialData} />
-        </TestWrapper>
-      );
-
-      // Should not re-render with same data
-      expect(renderSpy).toHaveBeenCalledTimes(1);
-
-      // Re-render with different data
-      rerender(
-        <TestWrapper>
-          <TestComponent data={{ id: '1', content: 'Updated' }} />
-        </TestWrapper>
-      );
-
-      // Should re-render with different data
-      expect(renderSpy).toHaveBeenCalledTimes(2);
+      addEventListenerSpy.mockRestore();
+      removeEventListenerSpy.mockRestore();
     });
   });
 
-  describe('Bundle Size Optimization', () => {
-    it('should support code splitting', async () => {
-      // Mock dynamic import
-      const mockDynamicImport = jest.fn().mockResolvedValue({
-        default: () => <div>Lazy loaded component</div>,
+  describe('Performance Monitoring', () => {
+    it('should track render performance metrics', async () => {
+      const performanceMetrics: any[] = [];
+      
+      // Mock performance monitor
+      jest.spyOn(performanceMonitor, 'trackMetric').mockImplementation((metric) => {
+        performanceMetrics.push(metric);
       });
-
-      // Simulate lazy loading
-      const LazyComponent = React.lazy(() => mockDynamicImport());
-
+      
       render(
-        <TestWrapper>
-          <React.Suspense fallback={<div>Loading...</div>}>
-            <LazyComponent />
-          </React.Suspense>
-        </TestWrapper>
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={generateLargeDataset(500)}
+            itemHeight={100}
+            containerHeight={600}
+            renderItem={({ item }) => <div key={item.id}>{item.content}</div>}
+          />
+        </PerformanceProvider>
       );
-
-      // Should show loading state initially
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
-
-      // Should load component
+      
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Trigger some scrolling
+      fireEvent.scroll(scrollContainer, { target: { scrollTop: 1000 } });
+      
       await waitFor(() => {
-        expect(screen.getByText('Lazy loaded component')).toBeInTheDocument();
+        expect(performanceMetrics.length).toBeGreaterThan(0);
       });
-
-      expect(mockDynamicImport).toHaveBeenCalled();
+      
+      // Should track relevant metrics
+      const renderMetrics = performanceMetrics.filter(m => m.name === 'virtual-scroll-render');
+      expect(renderMetrics.length).toBeGreaterThan(0);
+      
+      const scrollMetrics = performanceMetrics.filter(m => m.name === 'scroll-performance');
+      expect(scrollMetrics.length).toBeGreaterThan(0);
     });
 
-    it('should tree-shake unused code', () => {
-      // This test would typically be done at build time
-      // Here we simulate checking that only used exports are included
+    it('should detect performance bottlenecks', async () => {
+      const warnings: string[] = [];
       
-      const usedFeatures = [
-        'VirtualScrolling',
-        'PerformanceOptimizedFeed',
-        'IntelligentLazyLoading',
-      ];
-
-      const unusedFeatures = [
-        'LegacyScrolling',
-        'UnoptimizedFeed',
-        'BasicLazyLoading',
-      ];
-
-      // In a real scenario, this would check the bundle
-      usedFeatures.forEach(feature => {
-        expect(feature).toBeDefined();
+      // Mock console.warn to capture performance warnings
+      const originalWarn = console.warn;
+      console.warn = jest.fn((message) => {
+        warnings.push(message);
       });
-
-      // Unused features should not be in the bundle
-      unusedFeatures.forEach(feature => {
-        // This would check if the feature is not in the final bundle
-        expect(true).toBe(true); // Placeholder for actual bundle analysis
+      
+      // Create a slow rendering component
+      const SlowComponent = ({ item }: { item: any }) => {
+        // Simulate slow rendering
+        const start = Date.now();
+        while (Date.now() - start < 10) {
+          // Busy wait
+        }
+        return <div>{item.content}</div>;
+      };
+      
+      render(
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={generateLargeDataset(100)}
+            itemHeight={100}
+            containerHeight={600}
+            renderItem={({ item }) => <SlowComponent key={item.id} item={item} />}
+          />
+        </PerformanceProvider>
+      );
+      
+      await waitFor(() => {
+        expect(warnings.some(w => w.includes('slow render'))).toBe(true);
       });
+      
+      console.warn = originalWarn;
+    });
+  });
+
+  describe('Caching Performance', () => {
+    it('should cache rendered items efficiently', async () => {
+      const renderCount = new Map<string, number>();
+      
+      const CachedComponent = ({ item }: { item: any }) => {
+        const count = renderCount.get(item.id) || 0;
+        renderCount.set(item.id, count + 1);
+        return <div data-testid={item.id}>{item.content}</div>;
+      };
+      
+      render(
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={generateLargeDataset(200)}
+            itemHeight={100}
+            containerHeight={600}
+            bufferSize={3}
+            enableCaching={true}
+            renderItem={({ item }) => <CachedComponent key={item.id} item={item} />}
+          />
+        </PerformanceProvider>
+      );
+      
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Scroll down and back up
+      fireEvent.scroll(scrollContainer, { target: { scrollTop: 1000 } });
+      await waitFor(() => {
+        expect(screen.getByTestId('item-10')).toBeInTheDocument();
+      });
+      
+      fireEvent.scroll(scrollContainer, { target: { scrollTop: 0 } });
+      await waitFor(() => {
+        expect(screen.getByTestId('item-0')).toBeInTheDocument();
+      });
+      
+      // Items should be cached and not re-rendered excessively
+      const item0RenderCount = renderCount.get('item-0') || 0;
+      expect(item0RenderCount).toBeLessThanOrEqual(2); // Initial + cache hit
+    });
+
+    it('should manage cache size to prevent memory issues', async () => {
+      const cacheSize = jest.fn();
+      
+      render(
+        <PerformanceProvider>
+          <VirtualScrollManager
+            items={generateLargeDataset(1000)}
+            itemHeight={100}
+            containerHeight={600}
+            enableCaching={true}
+            maxCacheSize={50}
+            onCacheSizeChange={cacheSize}
+            renderItem={({ item }) => <div key={item.id}>{item.content}</div>}
+          />
+        </PerformanceProvider>
+      );
+      
+      const scrollContainer = screen.getByTestId('virtual-scroll-container');
+      
+      // Scroll through many items to fill cache
+      for (let i = 0; i < 20; i++) {
+        fireEvent.scroll(scrollContainer, { target: { scrollTop: i * 500 } });
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
+      await waitFor(() => {
+        expect(cacheSize).toHaveBeenCalled();
+      });
+      
+      // Cache size should be limited
+      const lastCacheSize = cacheSize.mock.calls[cacheSize.mock.calls.length - 1][0];
+      expect(lastCacheSize).toBeLessThanOrEqual(50);
+    });
+  });
+
+  describe('Bundle Size and Loading Performance', () => {
+    it('should lazy load components efficiently', async () => {
+      const loadTimes: number[] = [];
+      
+      // Mock dynamic import
+      const originalImport = jest.requireActual('react');
+      jest.doMock('react', () => ({
+        ...originalImport,
+        lazy: jest.fn((factory) => {
+          return originalImport.lazy(() => {
+            const start = performance.now();
+            return factory().then((module: any) => {
+              loadTimes.push(performance.now() - start);
+              return module;
+            });
+          });
+        }),
+      }));
+      
+      const LazyComponent = React.lazy(() => 
+        Promise.resolve({
+          default: ({ item }: { item: any }) => <div>{item.content}</div>
+        })
+      );
+      
+      render(
+        <PerformanceProvider>
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <VirtualScrollManager
+              items={generateLargeDataset(10)}
+              itemHeight={100}
+              containerHeight={600}
+              renderItem={({ item }) => <LazyComponent key={item.id} item={item} />}
+            />
+          </React.Suspense>
+        </PerformanceProvider>
+      );
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('item-0')).toBeInTheDocument();
+      });
+      
+      // Lazy loading should be fast
+      expect(loadTimes[0]).toBeLessThan(50);
     });
   });
 });

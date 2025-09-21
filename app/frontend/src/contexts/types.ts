@@ -343,12 +343,14 @@ export interface ProgressMilestone {
 }
 
 export interface ReputationLevel {
+  id: number;
   level: number;
   name: string;
   minScore: number;
   maxScore: number;
   privileges: string[];
   color: string;
+  icon: string;
 }
 
 export interface ReputationEvent {

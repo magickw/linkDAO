@@ -1,534 +1,658 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ContentCreationWorkflow } from '../ContentCreationWorkflow';
-import { EnhancedStateProvider } from '@/contexts/EnhancedStateProvider';
+import { EnhancedPostComposer } from '@/components/EnhancedPostComposer/EnhancedPostComposer';
+import { ContentCreationProvider } from '@/contexts/ContentCreationContext';
+import { ReputationProvider } from '@/contexts/ReputationContext';
+import * as draftService from '@/services/draftService';
+import * as mediaProcessingService from '@/services/mediaProcessingService';
+import * as contentValidationService from '@/services/contentValidationService';
+import * as postService from '@/services/postService';
 
 // Mock services
-jest.mock('@/services/draftService', () => ({
-  draftService: {
-    saveDraft: jest.fn(),
-    loadDraft: jest.fn(),
-    deleteDraft: jest.fn(),
-    listDrafts: jest.fn(),
-  },
-}));
+jest.mock('@/services/draftService');
+jest.mock('@/services/mediaProcessingService');
+jest.mock('@/services/contentValidationService');
+jest.mock('@/services/postService');
 
-jest.mock('@/services/mediaProcessingService', () => ({
-  mediaProcessingService: {
-    uploadMedia: jest.fn(),
-    processImage: jest.fn(),
-    generateThumbnail: jest.fn(),
-    validateFile: jest.fn(),
-  },
-}));
+const mockDraftService = draftService as jest.Mocked<typeof draftService>;
+const mockMediaProcessingService = mediaProcessingService as jest.Mocked<typeof mediaProcessingService>;
+const mockContentValidationService = contentValidationService as jest.Mocked<typeof contentValidationService>;
+const mockPostService = postService as jest.Mocked<typeof postService>;
 
-jest.mock('@/services/contentValidationService', () => ({
-  contentValidationService: {
-    validateContent: jest.fn(),
-    sanitizeContent: jest.fn(),
-    checkForSpam: jest.fn(),
-    validateHashtags: jest.fn(),
-  },
-}));
+const mockOnSubmit = jest.fn();
+const mockOnDraftSave = jest.fn();
 
-jest.mock('@/services/securityService', () => ({
-  securityService: {
-    scanContent: jest.fn(),
-    validateLinks: jest.fn(),
-    checkPermissions: jest.fn(),
-  },
-}));
+const renderContentCreationWorkflow = (props = {}) => {
+  const defaultProps = {
+    context: 'feed' as const,
+    onSubmit: mockOnSubmit,
+    onDraftSave: mockOnDraftSave,
+    ...props,
+  };
 
-const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <EnhancedStateProvider>
-    {children}
-  </EnhancedStateProvider>
-);
+  return render(
+    <ContentCreationProvider>
+      <ReputationProvider>
+        <EnhancedPostComposer {...defaultProps} />
+      </ReputationProvider>
+    </ContentCreationProvider>
+  );
+};
 
 describe('Content Creation Workflow Integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    // Setup default mocks
-    require('@/services/contentValidationService').contentValidationService.validateContent.mockResolvedValue({
-      valid: true,
+    // Mock successful validation by default
+    mockContentValidationService.validateContent.mockResolvedValue({
+      isValid: true,
       errors: [],
+      warnings: [],
     });
-    require('@/services/contentValidationService').contentValidationService.sanitizeContent.mockImplementation(
-      (content) => content
-    );
-    require('@/services/securityService').securityService.scanContent.mockResolvedValue({
-      safe: true,
-      issues: [],
+    
+    // Mock successful post creation
+    mockPostService.createPost.mockResolvedValue({
+      id: 'new-post-1',
+      success: true,
     });
-    require('@/services/draftService').draftService.saveDraft.mockResolvedValue({
-      id: 'draft-123',
-      savedAt: new Date(),
+    
+    // Mock draft service
+    mockDraftService.saveDraft.mockResolvedValue({ id: 'draft-1' });
+    mockDraftService.getDraft.mockResolvedValue(null);
+  });
+
+  describe('Text Post Creation Workflow', () => {
+    it('should complete full text post creation workflow', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      // Step 1: Enter content
+      const textArea = screen.getByRole('textbox', { name: /post content/i });
+      await user.type(textArea, 'This is a test post with #hashtag and @mention');
+      
+      // Step 2: Verify hashtag suggestions appear
+      await waitFor(() => {
+        expect(screen.getByTestId('hashtag-suggestions')).toBeInTheDocument();
+      });
+      
+      // Step 3: Select hashtag suggestion
+      const hashtagSuggestion = screen.getByText('#hashtag');
+      await user.click(hashtagSuggestion);
+      
+      // Step 4: Verify mention suggestions appear
+      await waitFor(() => {
+        expect(screen.getByTestId('mention-suggestions')).toBeInTheDocument();
+      });
+      
+      // Step 5: Select mention suggestion
+      const mentionSuggestion = screen.getByText('@mention');
+      await user.click(mentionSuggestion);
+      
+      // Step 6: Submit post
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      // Step 7: Verify validation is called
+      await waitFor(() => {
+        expect(mockContentValidationService.validateContent).toHaveBeenCalledWith({
+          content: expect.stringContaining('This is a test post'),
+          contentType: 'text',
+          hashtags: ['hashtag'],
+          mentions: ['mention'],
+        });
+      });
+      
+      // Step 8: Verify post creation
+      await waitFor(() => {
+        expect(mockPostService.createPost).toHaveBeenCalledWith({
+          contentType: 'text',
+          content: expect.stringContaining('This is a test post'),
+          hashtags: ['hashtag'],
+          mentions: ['mention'],
+        });
+      });
+      
+      // Step 9: Verify success callback
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        id: 'new-post-1',
+        success: true,
+      });
+    });
+
+    it('should handle content validation errors', async () => {
+      const user = userEvent.setup();
+      
+      // Mock validation failure
+      mockContentValidationService.validateContent.mockResolvedValue({
+        isValid: false,
+        errors: ['Content contains inappropriate language'],
+        warnings: [],
+      });
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Inappropriate content');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/inappropriate language/i)).toBeInTheDocument();
+      });
+      
+      // Post should not be created
+      expect(mockPostService.createPost).not.toHaveBeenCalled();
+    });
+
+    it('should show validation warnings but allow submission', async () => {
+      const user = userEvent.setup();
+      
+      // Mock validation with warnings
+      mockContentValidationService.validateContent.mockResolvedValue({
+        isValid: true,
+        errors: [],
+        warnings: ['Post may be too short for optimal engagement'],
+      });
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Short');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/may be too short/i)).toBeInTheDocument();
+      });
+      
+      // Should still allow submission
+      const proceedButton = screen.getByRole('button', { name: /post anyway/i });
+      await user.click(proceedButton);
+      
+      expect(mockPostService.createPost).toHaveBeenCalled();
     });
   });
 
-  it('completes full text post creation workflow', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn().mockResolvedValue({ success: true, postId: 'post-123' });
-    
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    // Type content
-    const textInput = screen.getByRole('textbox');
-    await user.type(textInput, 'This is a test post with #hashtag and @mention');
-
-    // Submit post
-    const submitButton = screen.getByRole('button', { name: /post|submit/i });
-    await user.click(submitButton);
-
-    // Should show loading state
-    expect(screen.getByTestId('submission-loading')).toBeInTheDocument();
-
-    // Wait for submission to complete
-    await waitFor(() => {
-      expect(screen.queryByTestId('submission-loading')).not.toBeInTheDocument();
-    });
-
-    // Verify workflow steps
-    expect(require('@/services/contentValidationService').contentValidationService.validateContent).toHaveBeenCalled();
-    expect(require('@/services/contentValidationService').contentValidationService.sanitizeContent).toHaveBeenCalled();
-    expect(require('@/services/securityService').securityService.scanContent).toHaveBeenCalled();
-    expect(mockOnSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        contentType: 'text',
-        content: 'This is a test post with #hashtag and @mention',
-        hashtags: ['hashtag'],
-        mentions: ['mention'],
-      })
-    );
-
-    // Should show success message
-    expect(screen.getByText(/post created successfully/i)).toBeInTheDocument();
-  });
-
-  it('handles media upload workflow', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn().mockResolvedValue({ success: true, postId: 'post-456' });
-    
-    // Mock media processing
-    require('@/services/mediaProcessingService').mediaProcessingService.validateFile.mockResolvedValue({
-      valid: true,
-      type: 'image/jpeg',
-      size: 1024000,
-    });
-    require('@/services/mediaProcessingService').mediaProcessingService.uploadMedia.mockResolvedValue({
-      url: 'https://example.com/image.jpg',
-      thumbnailUrl: 'https://example.com/thumb.jpg',
-      metadata: { width: 1920, height: 1080 },
-    });
-
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    // Switch to media tab
-    const mediaTab = screen.getByRole('tab', { name: /media/i });
-    await user.click(mediaTab);
-
-    // Upload file
-    const fileInput = screen.getByTestId('file-input');
-    const file = new File(['test image'], 'test.jpg', { type: 'image/jpeg' });
-    await user.upload(fileInput, file);
-
-    // Should show upload progress
-    expect(screen.getByTestId('upload-progress')).toBeInTheDocument();
-
-    // Wait for upload to complete
-    await waitFor(() => {
-      expect(screen.getByTestId('media-preview')).toBeInTheDocument();
-    });
-
-    // Add caption
-    const captionInput = screen.getByPlaceholderText(/caption/i);
-    await user.type(captionInput, 'Test image caption');
-
-    // Submit post
-    const submitButton = screen.getByRole('button', { name: /post|submit/i });
-    await user.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
+  describe('Media Post Creation Workflow', () => {
+    it('should complete media upload and processing workflow', async () => {
+      const user = userEvent.setup();
+      
+      // Mock media processing
+      mockMediaProcessingService.processImage.mockResolvedValue({
+        processedUrl: '/processed-image.jpg',
+        thumbnail: '/thumbnail.jpg',
+        metadata: { width: 800, height: 600 },
+      });
+      
+      renderContentCreationWorkflow();
+      
+      // Step 1: Switch to media tab
+      const mediaTab = screen.getByRole('tab', { name: /media/i });
+      await user.click(mediaTab);
+      
+      // Step 2: Upload file
+      const dropZone = screen.getByTestId('media-upload-zone');
+      const file = new File(['test image'], 'test.jpg', { type: 'image/jpeg' });
+      
+      fireEvent.drop(dropZone, {
+        dataTransfer: { files: [file] },
+      });
+      
+      // Step 3: Verify upload progress
+      await waitFor(() => {
+        expect(screen.getByRole('progressbar')).toBeInTheDocument();
+      });
+      
+      // Step 4: Verify media processing
+      await waitFor(() => {
+        expect(mockMediaProcessingService.processImage).toHaveBeenCalledWith(file, {
+          optimize: true,
+          generateThumbnail: true,
+          maxWidth: 1200,
+        });
+      });
+      
+      // Step 5: Verify processed image preview
+      await waitFor(() => {
+        expect(screen.getByTestId('processed-image-preview')).toBeInTheDocument();
+      });
+      
+      // Step 6: Add caption
+      const captionInput = screen.getByLabelText(/caption/i);
+      await user.type(captionInput, 'Test image caption');
+      
+      // Step 7: Submit post
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      // Step 8: Verify post creation with media
+      await waitFor(() => {
+        expect(mockPostService.createPost).toHaveBeenCalledWith({
           contentType: 'media',
           content: 'Test image caption',
-          media: expect.arrayContaining([
-            expect.objectContaining({
-              url: 'https://example.com/image.jpg',
-              type: 'image/jpeg',
-            })
-          ]),
-        })
+          media: [{
+            url: '/processed-image.jpg',
+            thumbnail: '/thumbnail.jpg',
+            type: 'image',
+            metadata: { width: 800, height: 600 },
+          }],
+          hashtags: [],
+          mentions: [],
+        });
+      });
+    });
+
+    it('should handle media processing failures', async () => {
+      const user = userEvent.setup();
+      
+      // Mock processing failure
+      mockMediaProcessingService.processImage.mockRejectedValue(
+        new Error('Processing failed')
       );
+      
+      renderContentCreationWorkflow();
+      
+      const mediaTab = screen.getByRole('tab', { name: /media/i });
+      await user.click(mediaTab);
+      
+      const dropZone = screen.getByTestId('media-upload-zone');
+      const file = new File(['test image'], 'test.jpg', { type: 'image/jpeg' });
+      
+      fireEvent.drop(dropZone, {
+        dataTransfer: { files: [file] },
+      });
+      
+      await waitFor(() => {
+        expect(screen.getByText(/processing failed/i)).toBeInTheDocument();
+      });
+      
+      // Should show retry option
+      expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    });
+
+    it('should provide image editing tools', async () => {
+      const user = userEvent.setup();
+      
+      mockMediaProcessingService.processImage.mockResolvedValue({
+        processedUrl: '/processed-image.jpg',
+        thumbnail: '/thumbnail.jpg',
+        metadata: { width: 800, height: 600 },
+      });
+      
+      renderContentCreationWorkflow();
+      
+      const mediaTab = screen.getByRole('tab', { name: /media/i });
+      await user.click(mediaTab);
+      
+      const dropZone = screen.getByTestId('media-upload-zone');
+      const file = new File(['test image'], 'test.jpg', { type: 'image/jpeg' });
+      
+      fireEvent.drop(dropZone, {
+        dataTransfer: { files: [file] },
+      });
+      
+      await waitFor(() => {
+        expect(screen.getByTestId('image-editor')).toBeInTheDocument();
+      });
+      
+      // Test crop tool
+      const cropButton = screen.getByRole('button', { name: /crop/i });
+      await user.click(cropButton);
+      
+      expect(screen.getByTestId('crop-tool')).toBeInTheDocument();
+      
+      // Test filter tool
+      const filterButton = screen.getByRole('button', { name: /filter/i });
+      await user.click(filterButton);
+      
+      expect(screen.getByTestId('filter-tool')).toBeInTheDocument();
     });
   });
 
-  it('handles poll creation workflow', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn().mockResolvedValue({ success: true, postId: 'post-789' });
-    
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    // Switch to poll tab
-    const pollTab = screen.getByRole('tab', { name: /poll/i });
-    await user.click(pollTab);
-
-    // Create poll
-    const questionInput = screen.getByPlaceholderText(/poll question/i);
-    await user.type(questionInput, 'What is your favorite color?');
-
-    const option1Input = screen.getByPlaceholderText(/option 1/i);
-    await user.type(option1Input, 'Red');
-
-    const option2Input = screen.getByPlaceholderText(/option 2/i);
-    await user.type(option2Input, 'Blue');
-
-    // Add third option
-    const addOptionButton = screen.getByRole('button', { name: /add option/i });
-    await user.click(addOptionButton);
-
-    const option3Input = screen.getByPlaceholderText(/option 3/i);
-    await user.type(option3Input, 'Green');
-
-    // Set poll duration
-    const durationSelect = screen.getByRole('combobox', { name: /duration/i });
-    await user.selectOptions(durationSelect, '7');
-
-    // Enable token weighting
-    const tokenWeightingCheckbox = screen.getByRole('checkbox', { name: /token weighting/i });
-    await user.click(tokenWeightingCheckbox);
-
-    // Submit poll
-    const submitButton = screen.getByRole('button', { name: /create poll/i });
-    await user.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
+  describe('Poll Creation Workflow', () => {
+    it('should complete poll creation workflow', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      // Step 1: Switch to poll tab
+      const pollTab = screen.getByRole('tab', { name: /poll/i });
+      await user.click(pollTab);
+      
+      // Step 2: Enter poll question
+      const questionInput = screen.getByLabelText(/poll question/i);
+      await user.type(questionInput, 'What is your favorite feature?');
+      
+      // Step 3: Add poll options
+      const option1Input = screen.getByTestId('poll-option-0');
+      await user.type(option1Input, 'Token Reactions');
+      
+      const option2Input = screen.getByTestId('poll-option-1');
+      await user.type(option2Input, 'Enhanced Composer');
+      
+      // Step 4: Add more options
+      const addOptionButton = screen.getByRole('button', { name: /add option/i });
+      await user.click(addOptionButton);
+      
+      const option3Input = screen.getByTestId('poll-option-2');
+      await user.type(option3Input, 'Reputation System');
+      
+      // Step 5: Configure token weighting
+      const tokenWeightToggle = screen.getByRole('checkbox', { name: /token-weighted/i });
+      await user.click(tokenWeightToggle);
+      
+      // Step 6: Set poll duration
+      const durationSelect = screen.getByLabelText(/poll duration/i);
+      await user.selectOptions(durationSelect, '7');
+      
+      // Step 7: Submit poll
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      // Step 8: Verify poll creation
+      await waitFor(() => {
+        expect(mockPostService.createPost).toHaveBeenCalledWith({
           contentType: 'poll',
-          poll: expect.objectContaining({
-            question: 'What is your favorite color?',
-            options: ['Red', 'Blue', 'Green'],
-            duration: 7,
+          content: 'What is your favorite feature?',
+          poll: {
+            question: 'What is your favorite feature?',
+            options: [
+              { id: expect.any(String), text: 'Token Reactions', votes: 0 },
+              { id: expect.any(String), text: 'Enhanced Composer', votes: 0 },
+              { id: expect.any(String), text: 'Reputation System', votes: 0 },
+            ],
             tokenWeighted: true,
-          }),
-        })
+            duration: 7,
+            endsAt: expect.any(Date),
+          },
+          hashtags: [],
+          mentions: [],
+        });
+      });
+    });
+
+    it('should validate poll options', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      const pollTab = screen.getByRole('tab', { name: /poll/i });
+      await user.click(pollTab);
+      
+      const questionInput = screen.getByLabelText(/poll question/i);
+      await user.type(questionInput, 'Test poll?');
+      
+      // Leave options empty
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/at least 2 options required/i)).toBeInTheDocument();
+      });
+      
+      expect(mockPostService.createPost).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Draft Management Workflow', () => {
+    it('should auto-save drafts during composition', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'This is a draft');
+      
+      // Wait for auto-save debounce
+      await waitFor(() => {
+        expect(mockDraftService.saveDraft).toHaveBeenCalledWith({
+          contentType: 'text',
+          content: 'This is a draft',
+          hashtags: [],
+          mentions: [],
+          createdAt: expect.any(Date),
+        });
+      }, { timeout: 3000 });
+    });
+
+    it('should recover drafts on component mount', async () => {
+      const mockDraft = {
+        id: 'draft-1',
+        contentType: 'text',
+        content: 'Recovered draft content',
+        hashtags: ['recovered'],
+        mentions: [],
+        createdAt: new Date(),
+      };
+      
+      mockDraftService.getDraft.mockResolvedValue(mockDraft);
+      
+      renderContentCreationWorkflow();
+      
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Recovered draft content')).toBeInTheDocument();
+      });
+      
+      // Should show recovery notification
+      expect(screen.getByText(/draft recovered/i)).toBeInTheDocument();
+    });
+
+    it('should handle draft conflicts', async () => {
+      const user = userEvent.setup();
+      
+      const conflictingDraft = {
+        id: 'draft-1',
+        contentType: 'text',
+        content: 'Conflicting draft',
+        hashtags: [],
+        mentions: [],
+        createdAt: new Date(Date.now() - 60000), // 1 minute ago
+      };
+      
+      mockDraftService.getDraft.mockResolvedValue(conflictingDraft);
+      
+      renderContentCreationWorkflow();
+      
+      // User starts typing new content
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'New content');
+      
+      // Should show conflict resolution dialog
+      await waitFor(() => {
+        expect(screen.getByText(/draft conflict/i)).toBeInTheDocument();
+      });
+      
+      // User chooses to keep new content
+      const keepNewButton = screen.getByRole('button', { name: /keep new/i });
+      await user.click(keepNewButton);
+      
+      expect(textArea).toHaveValue('New content');
+    });
+
+    it('should delete draft after successful post', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Content to post');
+      
+      // Wait for auto-save
+      await waitFor(() => {
+        expect(mockDraftService.saveDraft).toHaveBeenCalled();
+      }, { timeout: 3000 });
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(mockPostService.createPost).toHaveBeenCalled();
+      });
+      
+      // Should delete draft after successful post
+      expect(mockDraftService.deleteDraft).toHaveBeenCalled();
+    });
+  });
+
+  describe('Error Handling and Recovery', () => {
+    it('should handle post creation failures', async () => {
+      const user = userEvent.setup();
+      
+      mockPostService.createPost.mockRejectedValue(
+        new Error('Server error')
       );
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Test content');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/failed to create post/i)).toBeInTheDocument();
+      });
+      
+      // Should show retry option
+      const retryButton = screen.getByRole('button', { name: /retry/i });
+      expect(retryButton).toBeInTheDocument();
+      
+      // Content should be preserved
+      expect(textArea).toHaveValue('Test content');
     });
-  });
 
-  it('handles proposal creation workflow', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn().mockResolvedValue({ success: true, postId: 'post-012' });
-    
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="community"
-          communityId="dao-community"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    // Switch to proposal tab
-    const proposalTab = screen.getByRole('tab', { name: /proposal/i });
-    await user.click(proposalTab);
-
-    // Fill proposal details
-    const titleInput = screen.getByPlaceholderText(/proposal title/i);
-    await user.type(titleInput, 'Increase community rewards');
-
-    const descriptionInput = screen.getByPlaceholderText(/description/i);
-    await user.type(descriptionInput, 'This proposal suggests increasing the community reward pool by 20%');
-
-    // Select proposal type
-    const typeSelect = screen.getByRole('combobox', { name: /proposal type/i });
-    await user.selectOptions(typeSelect, 'funding');
-
-    // Set voting parameters
-    const votingDurationInput = screen.getByLabelText(/voting duration/i);
-    await user.clear(votingDurationInput);
-    await user.type(votingDurationInput, '14');
-
-    const quorumInput = screen.getByLabelText(/quorum/i);
-    await user.clear(quorumInput);
-    await user.type(quorumInput, '25');
-
-    // Submit proposal
-    const submitButton = screen.getByRole('button', { name: /create proposal/i });
-    await user.click(submitButton);
-
-    await waitFor(() => {
-      expect(mockOnSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          contentType: 'proposal',
-          proposal: expect.objectContaining({
-            title: 'Increase community rewards',
-            description: 'This proposal suggests increasing the community reward pool by 20%',
-            type: 'funding',
-            votingDuration: 14,
-            quorum: 25,
-          }),
-          communityId: 'dao-community',
-        })
+    it('should handle network failures gracefully', async () => {
+      const user = userEvent.setup();
+      
+      // Mock network failure
+      mockPostService.createPost.mockRejectedValue(
+        new Error('Network unavailable')
       );
-    });
-  });
-
-  it('handles draft auto-save and recovery', async () => {
-    const user = userEvent.setup();
-    
-    // Mock existing draft
-    require('@/services/draftService').draftService.loadDraft.mockResolvedValue({
-      id: 'draft-456',
-      content: 'Previously saved content',
-      contentType: 'text',
-      savedAt: new Date(Date.now() - 300000), // 5 minutes ago
-    });
-
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={jest.fn()}
-        />
-      </TestWrapper>
-    );
-
-    // Should show draft recovery option
-    await waitFor(() => {
-      expect(screen.getByText(/recover draft/i)).toBeInTheDocument();
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Network test');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/network error/i)).toBeInTheDocument();
+      });
+      
+      // Should offer to save as draft
+      const saveDraftButton = screen.getByRole('button', { name: /save as draft/i });
+      await user.click(saveDraftButton);
+      
+      expect(mockDraftService.saveDraft).toHaveBeenCalled();
     });
 
-    // Recover draft
-    const recoverButton = screen.getByRole('button', { name: /recover/i });
-    await user.click(recoverButton);
-
-    // Should load draft content
-    expect(screen.getByDisplayValue('Previously saved content')).toBeInTheDocument();
-
-    // Type new content
-    const textInput = screen.getByRole('textbox');
-    await user.clear(textInput);
-    await user.type(textInput, 'Updated draft content');
-
-    // Wait for auto-save
-    await waitFor(() => {
-      expect(require('@/services/draftService').draftService.saveDraft).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: 'Updated draft content',
-        })
+    it('should preserve content during errors', async () => {
+      const user = userEvent.setup();
+      
+      mockContentValidationService.validateContent.mockRejectedValue(
+        new Error('Validation service unavailable')
       );
-    }, { timeout: 3000 });
-  });
-
-  it('handles content validation errors', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn();
-    
-    // Mock validation failure
-    require('@/services/contentValidationService').contentValidationService.validateContent.mockResolvedValue({
-      valid: false,
-      errors: [
-        { field: 'content', message: 'Content contains prohibited words' },
-        { field: 'hashtags', message: 'Too many hashtags' },
-      ],
-    });
-
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    const textInput = screen.getByRole('textbox');
-    await user.type(textInput, 'Invalid content with #too #many #hashtags #here #and #more');
-
-    const submitButton = screen.getByRole('button', { name: /post|submit/i });
-    await user.click(submitButton);
-
-    // Should show validation errors
-    await waitFor(() => {
-      expect(screen.getByText(/prohibited words/i)).toBeInTheDocument();
-      expect(screen.getByText(/too many hashtags/i)).toBeInTheDocument();
-    });
-
-    // Should not submit
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
-
-  it('handles security scan failures', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn();
-    
-    // Mock security scan failure
-    require('@/services/securityService').securityService.scanContent.mockResolvedValue({
-      safe: false,
-      issues: [
-        { type: 'malicious_link', severity: 'high', message: 'Suspicious link detected' },
-      ],
-    });
-
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    const textInput = screen.getByRole('textbox');
-    await user.type(textInput, 'Check out this link: https://suspicious-site.com');
-
-    const submitButton = screen.getByRole('button', { name: /post|submit/i });
-    await user.click(submitButton);
-
-    // Should show security warning
-    await waitFor(() => {
-      expect(screen.getByText(/suspicious link detected/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /review and edit/i })).toBeInTheDocument();
-    });
-
-    // Should not submit
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
-
-  it('handles network errors with retry', async () => {
-    const user = userEvent.setup();
-    const mockOnSubmit = jest.fn()
-      .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValueOnce({ success: true, postId: 'post-345' });
-    
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={mockOnSubmit}
-        />
-      </TestWrapper>
-    );
-
-    const textInput = screen.getByRole('textbox');
-    await user.type(textInput, 'Test post content');
-
-    const submitButton = screen.getByRole('button', { name: /post|submit/i });
-    await user.click(submitButton);
-
-    // Should show error message
-    await waitFor(() => {
-      expect(screen.getByText(/network error/i)).toBeInTheDocument();
-    });
-
-    // Retry submission
-    const retryButton = screen.getByRole('button', { name: /retry/i });
-    await user.click(retryButton);
-
-    // Should succeed on retry
-    await waitFor(() => {
-      expect(screen.getByText(/post created successfully/i)).toBeInTheDocument();
-    });
-
-    expect(mockOnSubmit).toHaveBeenCalledTimes(2);
-  });
-
-  it('handles file upload errors', async () => {
-    const user = userEvent.setup();
-    
-    // Mock file validation failure
-    require('@/services/mediaProcessingService').mediaProcessingService.validateFile.mockResolvedValue({
-      valid: false,
-      errors: ['File too large', 'Unsupported format'],
-    });
-
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={jest.fn()}
-        />
-      </TestWrapper>
-    );
-
-    // Switch to media tab
-    const mediaTab = screen.getByRole('tab', { name: /media/i });
-    await user.click(mediaTab);
-
-    // Try to upload invalid file
-    const fileInput = screen.getByTestId('file-input');
-    const file = new File(['large file'], 'large.exe', { type: 'application/exe' });
-    await user.upload(fileInput, file);
-
-    // Should show validation errors
-    await waitFor(() => {
-      expect(screen.getByText(/file too large/i)).toBeInTheDocument();
-      expect(screen.getByText(/unsupported format/i)).toBeInTheDocument();
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Content to preserve');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/validation failed/i)).toBeInTheDocument();
+      });
+      
+      // Content should still be there
+      expect(textArea).toHaveValue('Content to preserve');
     });
   });
 
-  it('maintains state across tab switches', async () => {
-    const user = userEvent.setup();
-    
-    render(
-      <TestWrapper>
-        <ContentCreationWorkflow 
-          context="feed"
-          onSubmit={jest.fn()}
-        />
-      </TestWrapper>
-    );
+  describe('Performance and UX', () => {
+    it('should show loading states during submission', async () => {
+      const user = userEvent.setup();
+      
+      // Mock slow post creation
+      mockPostService.createPost.mockImplementation(
+        () => new Promise(resolve => setTimeout(resolve, 2000))
+      );
+      
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      await user.type(textArea, 'Loading test');
+      
+      const submitButton = screen.getByRole('button', { name: /post/i });
+      await user.click(submitButton);
+      
+      // Should show loading state
+      expect(screen.getByTestId('post-loading')).toBeInTheDocument();
+      expect(submitButton).toBeDisabled();
+    });
 
-    // Type content in text tab
-    const textInput = screen.getByRole('textbox');
-    await user.type(textInput, 'Text content');
+    it('should provide progress feedback for media uploads', async () => {
+      const user = userEvent.setup();
+      
+      // Mock upload progress
+      mockMediaProcessingService.processImage.mockImplementation(
+        (file, options, onProgress) => {
+          // Simulate progress updates
+          setTimeout(() => onProgress?.(25), 100);
+          setTimeout(() => onProgress?.(50), 200);
+          setTimeout(() => onProgress?.(75), 300);
+          setTimeout(() => onProgress?.(100), 400);
+          
+          return Promise.resolve({
+            processedUrl: '/processed.jpg',
+            thumbnail: '/thumb.jpg',
+            metadata: {},
+          });
+        }
+      );
+      
+      renderContentCreationWorkflow();
+      
+      const mediaTab = screen.getByRole('tab', { name: /media/i });
+      await user.click(mediaTab);
+      
+      const dropZone = screen.getByTestId('media-upload-zone');
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+      
+      fireEvent.drop(dropZone, {
+        dataTransfer: { files: [file] },
+      });
+      
+      // Should show progress updates
+      await waitFor(() => {
+        expect(screen.getByText('25%')).toBeInTheDocument();
+      });
+      
+      await waitFor(() => {
+        expect(screen.getByText('100%')).toBeInTheDocument();
+      });
+    });
 
-    // Switch to poll tab
-    const pollTab = screen.getByRole('tab', { name: /poll/i });
-    await user.click(pollTab);
-
-    // Add poll question
-    const questionInput = screen.getByPlaceholderText(/poll question/i);
-    await user.type(questionInput, 'Poll question');
-
-    // Switch back to text tab
-    const textTab = screen.getByRole('tab', { name: /text/i });
-    await user.click(textTab);
-
-    // Content should be preserved
-    expect(screen.getByDisplayValue('Text content')).toBeInTheDocument();
-
-    // Switch back to poll tab
-    await user.click(pollTab);
-
-    // Poll content should be preserved
-    expect(screen.getByDisplayValue('Poll question')).toBeInTheDocument();
+    it('should debounce auto-save to prevent excessive API calls', async () => {
+      const user = userEvent.setup();
+      renderContentCreationWorkflow();
+      
+      const textArea = screen.getByRole('textbox');
+      
+      // Type rapidly
+      await user.type(textArea, 'a');
+      await user.type(textArea, 'b');
+      await user.type(textArea, 'c');
+      await user.type(textArea, 'd');
+      await user.type(textArea, 'e');
+      
+      // Should only save once after debounce period
+      await waitFor(() => {
+        expect(mockDraftService.saveDraft).toHaveBeenCalledTimes(1);
+      }, { timeout: 3000 });
+    });
   });
 });

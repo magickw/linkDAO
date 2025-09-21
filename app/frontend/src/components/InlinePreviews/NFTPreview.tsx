@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { NFTPreviewData } from './InlinePreviewRenderer';
-import { NFTPreview as NFTPreviewType } from '../../types/contentPreview';
+import { NFTPreview as NFTPreviewData } from '@/types/contentPreview';
 
 interface NFTPreviewProps {
-  data: NFTPreviewData | NFTPreviewType;
+  data: NFTPreviewData;
   className?: string;
   compact?: boolean;
   onClick?: () => void;

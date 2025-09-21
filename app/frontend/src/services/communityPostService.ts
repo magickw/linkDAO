@@ -639,4 +639,43 @@ export class CommunityPostService {
       throw error;
     }
   }
+
+  /**
+   * Get statistics for a specific post
+   * @param postId - Post ID
+   * @returns Post statistics including comment count
+   */
+  static async getPostStats(postId: string): Promise<{ commentCount: number; upvotes: number; downvotes: number }> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch post stats');
+      }
+      
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      
+      // Return fallback stats if API fails
+      console.warn('Failed to fetch post stats, using fallback:', error);
+      return { commentCount: 0, upvotes: 0, downvotes: 0 };
+    }
+  }
 }

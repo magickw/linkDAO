@@ -77,14 +77,14 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
 - [ ] 5. Create post sorting and filtering system
-  - [ ] 5.1 Build sorting tabs component
+  - [x] 5.1 Build sorting tabs component
     - Implement PostSortingTabs with Reddit-style options (Best, Hot, New, Top, Rising, Controversial)
     - Add time filter dropdown for Top sorting (Hour, Day, Week, Month, Year, All Time)
     - Create immediate post list updates without page reload
     - Write tests for all sorting options and time filters
     - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-  - [ ] 5.2 Implement advanced filtering panel
+  - [x] 5.2 Implement advanced filtering panel
     - Create FilterPanel component with flair, author, and time period filters
     - Add filter combination logic for multiple simultaneous filters
     - Implement filter state persistence across page visits
@@ -92,21 +92,21 @@
     - _Requirements: 16.1, 16.2, 16.3, 16.4_
 
 - [ ] 6. Build sidebar widgets system
-  - [ ] 6.1 Create About Community widget
+  - [x] 6.1 Create About Community widget
     - Build AboutCommunityWidget with description, creation date, and member info
     - Implement expandable/collapsible rules section
     - Add edit functionality for moderators
     - Write tests for widget display and moderator edit permissions
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
 
-  - [ ] 6.2 Implement community statistics widget
+  - [-] 6.2 Implement community statistics widget
     - Create real-time member count and online status display
     - Add weekly post count and activity metrics
     - Implement fallback display for unavailable statistics
     - Write tests for statistics display and real-time updates
     - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 6.3 Build moderator list widget
+  - [x] 6.3 Build moderator list widget
     - Create ModeratorListWidget with usernames, roles, and tenure
     - Add special badges for different moderator roles
     - Display last active time for offline moderators
@@ -114,14 +114,14 @@
     - _Requirements: 12.1, 12.2, 12.3, 12.4_
 
 - [ ] 7. Implement enhanced post interactions
-  - [ ] 7.1 Add comment preview system
+  - [x] 7.1 Add comment preview system
     - Create comment preview display with top comment snippets
     - Implement 100-character limit with ellipsis for previews
     - Add expand/collapse functionality for full comment threads
     - Write tests for comment preview display and expansion
     - _Requirements: 13.1, 13.2, 13.3, 13.4_
 
-  - [ ] 7.2 Build quick action buttons
+  - [x] 7.2 Build quick action buttons
     - Implement hover-revealed quick actions (save, hide, report, share)
     - Add save functionality with visual confirmation
     - Create hide functionality with undo option

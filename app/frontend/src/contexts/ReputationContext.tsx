@@ -31,12 +31,12 @@ type ReputationAction =
 
 // Reputation Levels Configuration
 const REPUTATION_LEVELS: ReputationLevel[] = [
-  { level: 1, name: 'Newcomer', minScore: 0, maxScore: 99, privileges: ['post', 'comment'], color: '#94a3b8' },
-  { level: 2, name: 'Member', minScore: 100, maxScore: 499, privileges: ['post', 'comment', 'react'], color: '#22c55e' },
-  { level: 3, name: 'Contributor', minScore: 500, maxScore: 1499, privileges: ['post', 'comment', 'react', 'tip'], color: '#3b82f6' },
-  { level: 4, name: 'Expert', minScore: 1500, maxScore: 4999, privileges: ['post', 'comment', 'react', 'tip', 'moderate'], color: '#8b5cf6' },
-  { level: 5, name: 'Leader', minScore: 5000, maxScore: 14999, privileges: ['post', 'comment', 'react', 'tip', 'moderate', 'govern'], color: '#f59e0b' },
-  { level: 6, name: 'Legend', minScore: 15000, maxScore: Infinity, privileges: ['post', 'comment', 'react', 'tip', 'moderate', 'govern', 'mentor'], color: '#ef4444' },
+  { id: 1, level: 1, name: 'Newcomer', minScore: 0, maxScore: 99, privileges: ['post', 'comment'], color: '#94a3b8', icon: '🌱' },
+  { id: 2, level: 2, name: 'Member', minScore: 100, maxScore: 499, privileges: ['post', 'comment', 'react'], color: '#22c55e', icon: '🌿' },
+  { id: 3, level: 3, name: 'Contributor', minScore: 500, maxScore: 1499, privileges: ['post', 'comment', 'react', 'tip'], color: '#3b82f6', icon: '⭐' },
+  { id: 4, level: 4, name: 'Expert', minScore: 1500, maxScore: 4999, privileges: ['post', 'comment', 'react', 'tip', 'moderate'], color: '#8b5cf6', icon: '💎' },
+  { id: 5, level: 5, name: 'Leader', minScore: 5000, maxScore: 14999, privileges: ['post', 'comment', 'react', 'tip', 'moderate', 'govern'], color: '#f59e0b', icon: '👑' },
+  { id: 6, level: 6, name: 'Legend', minScore: 15000, maxScore: Infinity, privileges: ['post', 'comment', 'react', 'tip', 'moderate', 'govern', 'mentor'], color: '#ef4444', icon: '🏆' },
 ];
 
 // Initial State

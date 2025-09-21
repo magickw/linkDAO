@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LinkPreviewData } from './InlinePreviewRenderer';
+import { LinkPreview as LinkPreviewData } from '@/types/contentPreview';
 
 interface LinkPreviewProps {
   data: LinkPreviewData;

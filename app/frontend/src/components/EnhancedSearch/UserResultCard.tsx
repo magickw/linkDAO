@@ -120,7 +120,11 @@ export function UserResultCard({
           </p>
           
           <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
-            <span>Level {user.reputation.level}</span>
+            <span>Level {typeof user.reputation.level === 'string'
+              ? user.reputation.level
+              : (typeof user.reputation.level === 'object' && user.reputation.level !== null && 'name' in user.reputation.level
+                ? user.reputation.level.name
+                : user.reputation.level)}</span>
             <span>•</span>
             <span>Last active {formatTimeAgo(user.lastActive)}</span>
           </div>
