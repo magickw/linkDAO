@@ -26,7 +26,32 @@ import {
   Bell,
   Bookmark
 } from 'lucide-react';
-import { useInView } from 'react-intersection-observer';
+// Simple useInView hook replacement
+const useInView = (options: { threshold: number; triggerOnce: boolean }) => {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+      },
+      { threshold: options.threshold }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => {
+      if (ref.current) {
+        observer.unobserve(ref.current);
+      }
+    };
+  }, [options.threshold]);
+
+  return { ref, inView };
+};
 import FacebookStylePostComposer from './FacebookStylePostComposer';
 import { GlassPanel } from '@/design-system';
 import { CreatePostInput } from '@/models/Post';

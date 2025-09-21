@@ -1,5 +1,6 @@
 import React from 'react';
-import { EnhancedPostCard, EnhancedPost } from '@/components/EnhancedPostCard';
+import EnhancedPostCard from '@/components/EnhancedPostCard';
+import type { EnhancedPost } from '@/components/EnhancedPostCard/EnhancedPostCard';
 import { ContentPreview } from '@/components/InlinePreviews';
 import { SocialProofData } from '@/components/SocialProof';
 import { TrendingLevel } from '@/components/TrendingBadge';
