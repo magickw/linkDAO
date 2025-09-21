@@ -171,6 +171,8 @@ import listingRoutes from './routes/listingRoutes';
 import orderCreationRoutes from './routes/orderCreationRoutes';
 // Import token reaction routes
 import tokenReactionRoutes from './routes/tokenReactionRoutes';
+// Import enhanced search routes
+import enhancedSearchRoutes from './routes/enhancedSearchRoutes';
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -213,6 +215,9 @@ app.use('/api/orders', orderCreationRoutes);
 
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
+
+// Enhanced search routes
+app.use('/api/search', enhancedSearchRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {
