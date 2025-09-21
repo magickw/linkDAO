@@ -5,9 +5,9 @@ import {
   ContentType,
   ReactionType,
   AchievementCategory,
-  ActionType,
   stateManager
 } from '../contexts';
+import type { ActionType } from '../contexts';
 
 /**
  * Test page for Enhanced State Management System
@@ -111,7 +111,7 @@ function ContentCreationDemo() {
           <div className="bg-red-50 border border-red-200 rounded p-3">
             <h4 className="text-red-800 font-medium">Validation Errors:</h4>
             <ul className="text-red-700 text-sm mt-1">
-              {contentCreation.state.validationErrors.map((error, index) => (
+              {contentCreation.state.validationErrors.map((error: any, index: number) => (
                 <li key={index}>• {error.message}</li>
               ))}
             </ul>
@@ -211,7 +211,7 @@ function EngagementDemo() {
 }
 
 function ReputationDemo() {
-  const { reputation } = useReputation();
+  const { reputation } = useEnhancedState();
 
   const handleAddReputation = (category: AchievementCategory, points: number) => {
     reputation.updateReputationScore(points, category, `Earned ${points} points in ${category}`);
@@ -296,7 +296,7 @@ function ReputationDemo() {
 }
 
 function PerformanceDemo() {
-  const { performance } = usePerformance();
+  const { performance } = useEnhancedState();
   const [itemCount, setItemCount] = useState(1000);
 
   const handleUpdateVirtualScroll = () => {
@@ -375,10 +375,15 @@ function PerformanceDemo() {
 }
 
 function OfflineSyncDemo() {
-  const { offlineSync } = useOfflineSync();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { offlineSync } = useEnhancedState();
+  const [isOnline, setIsOnline] = useState(true); // Default to true for SSR
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Set client-side flag and initial online status
+    setIsClient(true);
+    setIsOnline(navigator.onLine);
+
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
@@ -393,7 +398,7 @@ function OfflineSyncDemo() {
 
   const handleQueueAction = (priority: 'low' | 'medium' | 'high') => {
     offlineSync.queueAction(
-      ActionType.CREATE_POST,
+      'CREATE_POST' as ActionType,
       { title: 'Offline Post', content: 'Created while testing' },
       priority
     );
@@ -418,7 +423,7 @@ function OfflineSyncDemo() {
       <div className="space-y-4">
         <div className={`p-3 rounded ${isOnline ? 'bg-green-50' : 'bg-red-50'}`}>
           <p className={`font-medium ${isOnline ? 'text-green-800' : 'text-red-800'}`}>
-            Status: {isOnline ? 'Online' : 'Offline'}
+            Status: {!isClient ? 'Loading...' : (isOnline ? 'Online' : 'Offline')}
           </p>
         </div>
 
@@ -475,7 +480,7 @@ function OfflineSyncDemo() {
 }
 
 function RealTimeDemo() {
-  const { realTimeUpdate } = useRealTimeUpdate();
+  const { realTimeUpdate } = useEnhancedState();
   const [connectionId, setConnectionId] = useState<string>('');
 
   const handleConnect = async () => {

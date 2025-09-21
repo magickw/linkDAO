@@ -220,7 +220,7 @@ function contentCreationReducer(
         const savedDrafts = localStorage.getItem('contentCreation_drafts');
         if (savedDrafts) {
           const draftsArray = JSON.parse(savedDrafts);
-          const draftsMap = new Map(draftsArray.map(([key, value]: [string, any]) => [
+          const draftsMap = new Map<string, PostDraft>(draftsArray.map(([key, value]: [string, any]) => [
             key,
             {
               ...value,
