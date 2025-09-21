@@ -136,7 +136,7 @@
   - Write tests for view mode switching and preference storage
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 9. Build related communities discovery
+- [x] 9. Build related communities discovery
   - Create RelatedCommunitiesWidget with recommendation algorithm
   - Implement community recommendations based on shared members and topics
   - Add join buttons for related communities
@@ -145,7 +145,7 @@
   - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
 - [ ] 10. Implement Web3 governance integration
-  - [ ] 10.1 Create governance proposal highlighting
+  - [-] 10.1 Create governance proposal highlighting
     - Build GovernanceWidget with distinctive proposal styling
     - Add voting status, deadline, and participation metrics display
     - Implement prominent "Vote Now" buttons for active proposals
