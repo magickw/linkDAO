@@ -31,7 +31,7 @@ export function PWAProvider({
   enablePerformanceMonitoring = true,
   showInstallPrompt = true
 }: PWAProviderProps) {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isInstalled, setIsInstalled] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

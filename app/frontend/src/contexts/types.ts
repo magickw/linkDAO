@@ -89,10 +89,10 @@ export interface UserReputation {
 
 export interface ReputationBreakdown {
   posting: number;
-  governance: number;
+  engagement: number;
   community: number;
+  governance: number;
   trading: number;
-  moderation: number;
 }
 
 // Performance Types
@@ -121,6 +121,14 @@ export interface CacheState {
   size: number;
   maxSize: number;
   hitRate: number;
+}
+
+export interface PreloaderState {
+  isActive: boolean;
+  queue: string[];
+  currentlyLoading: string[];
+  maxConcurrent: number;
+  strategy: 'predictive' | 'lazy' | 'aggressive';
 }
 
 // Offline Sync Types
