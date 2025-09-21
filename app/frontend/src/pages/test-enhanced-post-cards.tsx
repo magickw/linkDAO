@@ -1,6 +1,7 @@
 import React from 'react';
-import { EnhancedPostCard, EnhancedPost } from '@/components/EnhancedPostCard';
+import EnhancedPostCard, { EnhancedPost } from '@/components/EnhancedPostCard/EnhancedPostCard';
 import { ContentPreview } from '@/components/InlinePreviews';
+import { ProposalStatus } from '@/types/contentPreview';
 import { SocialProofData } from '@/components/SocialProof';
 import { TrendingLevel } from '@/components/TrendingBadge';
 
@@ -50,8 +51,14 @@ export default function TestEnhancedPostCards() {
 
   const mockPreviews: ContentPreview[] = [
     {
+      id: 'nft-1',
       type: 'nft',
+      url: 'https://example.com/nft/1',
+      cached: false,
+      securityStatus: 'safe',
+      metadata: {},
       data: {
+        network: 'mainnet',
         contractAddress: '0x1234567890123456789012345678901234567890',
         tokenId: '1234',
         name: 'Cool NFT #1234',
@@ -59,13 +66,19 @@ export default function TestEnhancedPostCards() {
         image: 'https://placehold.co/300x300/6366f1/white?text=NFT',
         collection: 'Cool Collection',
         owner: '0x1234567890123456789012345678901234567890',
-        price: { amount: 2.5, token: 'ETH' },
+        price: { amount: '2.5', symbol: 'ETH', network: 'mainnet' },
         rarity: 85
       }
     },
     {
+      id: 'link-1',
       type: 'link',
+      url: 'https://example.com/article',
+      cached: false,
+      securityStatus: 'safe',
+      metadata: {},
       data: {
+        securityScore: 100,
         url: 'https://example.com/article',
         title: 'The Future of Web3 Social Networks',
         description: 'An in-depth look at how blockchain technology is revolutionizing social media platforms and user interactions.',
@@ -76,17 +89,26 @@ export default function TestEnhancedPostCards() {
       }
     },
     {
+      id: 'proposal-1',
       type: 'proposal',
+      url: 'https://example.com/proposal/1',
+      cached: false,
+      securityStatus: 'safe',
+      metadata: {},
       data: {
         id: 'prop-123',
         title: 'Increase Community Rewards Pool',
         description: 'Proposal to increase the community rewards pool by 25% to incentivize more participation.',
-        status: 'active',
+        status: ProposalStatus.ACTIVE,
         votingEnds: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+        votingStarts: new Date(),
         yesVotes: 1250,
         noVotes: 350,
+        abstainVotes: 100,
         quorum: 1000,
-        proposer: '0x1234567890123456789012345678901234567890'
+        proposer: '0x1234567890123456789012345678901234567890',
+        category: 'rewards',
+        requiredMajority: 66,
       }
     }
   ];

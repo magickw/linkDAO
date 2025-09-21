@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import InlinePreviewRenderer, { ContentPreview } from '../InlinePreviews/InlinePreviewRenderer';
+import InlinePreviewRenderer from '../InlinePreviews/InlinePreviewRenderer';
+import { ContentPreview } from '../../types/contentPreview';
 import SocialProofIndicator, { SocialProofData } from '../SocialProof/SocialProofIndicator';
 import TrendingBadge, { TrendingLevel, calculateTrendingLevel } from '../TrendingBadge/TrendingBadge';
 import OptimizedImage from '../OptimizedImage';
@@ -294,7 +295,7 @@ export default function EnhancedPostCard({
         {showPreviews && post.previews.length > 0 && (
           <div className="mb-4">
             <InlinePreviewRenderer
-              previews={post.previews}
+              enhancedPreviews={post.previews}
               maxPreviews={showAllPreviews ? undefined : 2}
               showAll={showAllPreviews}
             />
