@@ -1,0 +1,177 @@
+/* Community Layout Styles */
+.communityLayout {
+  display: grid;
+  gap: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  min-height: 100vh;
+}
+
+/* Mobile First - Single Column */
+.communityLayout {
+  grid-template-columns: 1fr;
+}
+
+/* Tablet - Two Columns */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .communityLayout {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
+/* Desktop - Three Columns */
+@media (min-width: 1024px) {
+  .communityLayout {
+    grid-template-columns: 250px 1fr 300px;
+  }
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: sticky;
+  top: 1rem;
+  height: fit-content;
+}
+
+.sidebarOverlay {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  width: 320px;
+  max-width: 90vw;
+  z-index: 50;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.sidebarOverlay.open {
+  transform: translateX(0);
+}
+
+.sidebarOverlay.right {
+  right: 0;
+  transform: translateX(100%);
+}
+
+.sidebarOverlay.right.open {
+  transform: translateX(0);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.backdrop.open {
+  opacity: 1;
+}
+
+/* Main Content */
+.mainContent {
+  min-height: 100vh;
+}
+
+/* Mobile Toggle Buttons */
+.mobileToggle {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+/* Responsive Grid Utilities */
+.responsiveGrid {
+  display: grid;
+  width: 100%;
+}
+
+.autoFitGrid {
+  display: grid;
+  width: 100%;
+}
+
+.autoFillGrid {
+  display: grid;
+  width: 100%;
+}
+
+/* Animation Classes */
+.fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slideInLeft {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Focus Management */
+.focusVisible:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .sidebar {
+    border: 2px solid;
+  }
+  
+  .backdrop {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .sidebarOverlay,
+  .backdrop {
+    transition: none;
+  }
+  
+  .fadeIn,
+  .slideInLeft,
+  .slideInRight {
+    animation: none;
+  }
+}
