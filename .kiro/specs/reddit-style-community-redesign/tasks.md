@@ -161,7 +161,7 @@
     - Write tests for participation metrics and voting weight calculations
     - _Requirements: 18.1, 18.2, 18.3, 18.4_
 
-- [ ] 11. Create quick polling system
+- [x] 11. Create quick polling system
   - Implement poll creation option in post composer
   - Build poll display with real-time voting results
   - Add one-vote-per-user restriction with immediate result updates

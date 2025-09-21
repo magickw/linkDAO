@@ -177,6 +177,8 @@ import enhancedSearchRoutes from './routes/enhancedSearchRoutes';
 import contentPreviewRoutes from './routes/contentPreviewRoutes';
 // Import engagement analytics routes
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
+// Import poll routes
+import pollRoutes from './routes/pollRoutes';
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -228,6 +230,9 @@ app.use('/api/preview', contentPreviewRoutes);
 
 // Engagement analytics routes
 app.use('/api/analytics', engagementAnalyticsRoutes);
+
+// Poll routes
+app.use('/api/polls', pollRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {
