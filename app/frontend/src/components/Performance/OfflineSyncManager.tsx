@@ -54,7 +54,7 @@ export function OfflineSyncManager({
   enableBackgroundSync = true,
   enableConflictResolution = true
 }: OfflineSyncManagerProps) {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [syncStats, setSyncStats] = useState<SyncStats>({
     totalActions: 0,
     pendingActions: 0,

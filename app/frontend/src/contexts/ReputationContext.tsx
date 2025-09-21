@@ -46,10 +46,10 @@ const initialState: ReputationState = {
     level: REPUTATION_LEVELS[0],
     breakdown: {
       posting: 0,
-      governance: 0,
+      engagement: 0,
       community: 0,
+      governance: 0,
       trading: 0,
-      moderation: 0,
     },
     history: [],
     nextMilestone: {
