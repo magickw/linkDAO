@@ -1,4 +1,5 @@
 import { TokenBalance } from '../types/wallet';
+import { networkService } from './networkService';
 
 export interface CryptoPriceData {
   id: string;
@@ -23,8 +24,15 @@ class CryptoPriceService {
   private subscriptions = new Set<PriceUpdateSubscription>();
   private updateInterval: NodeJS.Timeout | null = null;
   private lastUpdateTime = 0;
-  private readonly CACHE_DURATION = 30000; // 30 seconds
-  private readonly UPDATE_INTERVAL = 30000; // 30 seconds
+  private lastApiCallTime = 0;
+  private readonly CACHE_DURATION = 300000; // 5 minutes
+  private readonly UPDATE_INTERVAL = 300000; // 5 minutes
+  private readonly MIN_API_INTERVAL = 60000; // 1 minute minimum between API calls
+  private readonly MAX_RETRIES = 3;
+  private retryCount = 0;
+  private circuitBreakerOpen = false;
+  private circuitBreakerOpenTime = 0;
+  private readonly CIRCUIT_BREAKER_TIMEOUT = 600000; // 10 minutes
 
   // Common token mappings to CoinGecko IDs
   private tokenIdMap = new Map<string, string>([
@@ -72,7 +80,37 @@ class CryptoPriceService {
   ]);
 
   constructor() {
+    // Initialize with some default prices to avoid empty state
+    this.initializeDefaultPrices();
     this.startPriceUpdates();
+  }
+
+  /**
+   * Initialize with default/fallback prices
+   */
+  private initializeDefaultPrices(): void {
+    const defaultPrices = [
+      { symbol: 'ETH', price: 2000, change: 2.5 },
+      { symbol: 'BTC', price: 43000, change: 1.8 },
+      { symbol: 'USDC', price: 1.00, change: 0.1 },
+      { symbol: 'USDT', price: 1.00, change: 0.0 },
+      { symbol: 'LINK', price: 14.50, change: -1.2 },
+      { symbol: 'UNI', price: 7.20, change: 3.1 },
+      { symbol: 'AAVE', price: 95.00, change: -0.8 }
+    ];
+
+    defaultPrices.forEach(({ symbol, price, change }) => {
+      this.priceCache.set(symbol, {
+        id: this.tokenIdMap.get(symbol) || symbol.toLowerCase(),
+        symbol,
+        name: symbol,
+        current_price: price,
+        price_change_percentage_24h: change,
+        market_cap: 0,
+        total_volume: 0,
+        last_updated: new Date().toISOString()
+      });
+    });
   }
 
   /**
@@ -83,7 +121,7 @@ class CryptoPriceService {
     const cachedPrices = new Map<string, CryptoPriceData>();
     const tokensToFetch: string[] = [];
 
-    // Check cache first
+    // Check cache first - use longer cache duration
     for (const symbol of symbols) {
       const cached = this.priceCache.get(symbol.toUpperCase());
       if (cached && (now - this.lastUpdateTime) < this.CACHE_DURATION) {
@@ -93,8 +131,8 @@ class CryptoPriceService {
       }
     }
 
-    // Fetch missing prices
-    if (tokensToFetch.length > 0) {
+    // Only fetch if we have tokens to fetch AND enough time has passed since last API call
+    if (tokensToFetch.length > 0 && (now - this.lastApiCallTime) >= this.MIN_API_INTERVAL) {
       try {
         const freshPrices = await this.fetchPricesFromAPI(tokensToFetch);
         freshPrices.forEach((price, symbol) => {
@@ -102,14 +140,27 @@ class CryptoPriceService {
           cachedPrices.set(symbol, price);
         });
         this.lastUpdateTime = now;
+        this.lastApiCallTime = now;
+        this.retryCount = 0; // Reset retry count on success
+        this.circuitBreakerOpen = false; // Close circuit breaker on success
       } catch (error) {
         console.error('Failed to fetch crypto prices:', error);
+        this.retryCount++;
+        
         // Return cached prices even if stale
         for (const symbol of tokensToFetch) {
           const cached = this.priceCache.get(symbol.toUpperCase());
           if (cached) {
             cachedPrices.set(symbol.toUpperCase(), cached);
           }
+        }
+      }
+    } else if (tokensToFetch.length > 0) {
+      // Return stale cached data if we can't make API call yet
+      for (const symbol of tokensToFetch) {
+        const cached = this.priceCache.get(symbol.toUpperCase());
+        if (cached) {
+          cachedPrices.set(symbol.toUpperCase(), cached);
         }
       }
     }
@@ -131,10 +182,15 @@ class CryptoPriceService {
   subscribe(subscription: PriceUpdateSubscription): () => void {
     this.subscriptions.add(subscription);
     
-    // Immediately fetch prices for new subscription
-    this.getPrices(subscription.tokens).then(prices => {
-      subscription.callback(prices);
-    });
+    // Only fetch prices immediately if we have cached data or enough time has passed
+    const now = Date.now();
+    if (this.priceCache.size > 0 || (now - this.lastApiCallTime) >= this.MIN_API_INTERVAL) {
+      this.getPrices(subscription.tokens).then(prices => {
+        subscription.callback(prices);
+      }).catch(error => {
+        console.error('Failed to fetch prices for new subscription:', error);
+      });
+    }
 
     // Return unsubscribe function
     return () => {
@@ -188,9 +244,37 @@ class CryptoPriceService {
   }
 
   /**
-   * Fetch prices from CoinGecko API
+   * Fetch prices from CoinGecko API with rate limiting
    */
   private async fetchPricesFromAPI(symbols: string[]): Promise<Map<string, CryptoPriceData>> {
+    // Circuit breaker pattern - if too many failures, stop trying for a while
+    if (this.circuitBreakerOpen) {
+      const now = Date.now();
+      if (now - this.circuitBreakerOpenTime < this.CIRCUIT_BREAKER_TIMEOUT) {
+        console.log('Circuit breaker open, using cached data only');
+        return new Map();
+      } else {
+        // Try to close circuit breaker
+        console.log('Attempting to close circuit breaker');
+        this.circuitBreakerOpen = false;
+        this.retryCount = 0;
+      }
+    }
+
+    // Check if we're being rate limited
+    if (this.retryCount >= this.MAX_RETRIES) {
+      console.warn('Max retries reached, opening circuit breaker');
+      this.circuitBreakerOpen = true;
+      this.circuitBreakerOpenTime = Date.now();
+      return new Map();
+    }
+
+    // Check network connectivity
+    if (!networkService.getOnlineStatus()) {
+      console.log('Network is offline, using cached prices');
+      return new Map();
+    }
+
     const coinIds = symbols
       .map(symbol => this.tokenIdMap.get(symbol.toUpperCase()))
       .filter(Boolean);
@@ -201,33 +285,47 @@ class CryptoPriceService {
 
     const url = `${this.baseUrl}/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true`;
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`CoinGecko API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const priceMap = new Map<string, CryptoPriceData>();
-
-    // Map response back to symbols
-    symbols.forEach(symbol => {
-      const coinId = this.tokenIdMap.get(symbol.toUpperCase());
-      if (coinId && data[coinId]) {
-        const coinData = data[coinId];
-        priceMap.set(symbol.toUpperCase(), {
-          id: coinId,
-          symbol: symbol.toUpperCase(),
-          name: symbol, // We could fetch full names separately if needed
-          current_price: coinData.usd || 0,
-          price_change_percentage_24h: coinData.usd_24h_change || 0,
-          market_cap: coinData.usd_market_cap || 0,
-          total_volume: coinData.usd_24h_vol || 0,
-          last_updated: new Date().toISOString()
-        });
+    try {
+      const response = await fetch(url);
+      
+      if (response.status === 429) {
+        // Rate limited - exponentially increase wait time
+        const backoffTime = this.MIN_API_INTERVAL * Math.pow(2, this.retryCount);
+        console.warn(`CoinGecko API rate limit hit, backing off for ${backoffTime}ms`);
+        this.lastApiCallTime = Date.now() + backoffTime;
+        throw new Error('Rate limit exceeded');
       }
-    });
+      
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.status}`);
+      }
 
-    return priceMap;
+      const data = await response.json();
+      const priceMap = new Map<string, CryptoPriceData>();
+
+      // Map response back to symbols
+      symbols.forEach(symbol => {
+        const coinId = this.tokenIdMap.get(symbol.toUpperCase());
+        if (coinId && data[coinId]) {
+          const coinData = data[coinId];
+          priceMap.set(symbol.toUpperCase(), {
+            id: coinId,
+            symbol: symbol.toUpperCase(),
+            name: symbol, // We could fetch full names separately if needed
+            current_price: coinData.usd || 0,
+            price_change_percentage_24h: coinData.usd_24h_change || 0,
+            market_cap: coinData.usd_market_cap || 0,
+            total_volume: coinData.usd_24h_vol || 0,
+            last_updated: new Date().toISOString()
+          });
+        }
+      });
+
+      return priceMap;
+    } catch (error) {
+      console.error('CoinGecko API fetch failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -241,6 +339,13 @@ class CryptoPriceService {
     this.updateInterval = setInterval(async () => {
       if (this.subscriptions.size === 0) return;
 
+      const now = Date.now();
+      
+      // Only update if enough time has passed since last API call
+      if ((now - this.lastApiCallTime) < this.MIN_API_INTERVAL) {
+        return;
+      }
+
       // Collect all unique tokens from subscriptions
       const allTokens = new Set<string>();
       this.subscriptions.forEach(sub => {
@@ -251,17 +356,21 @@ class CryptoPriceService {
         try {
           const prices = await this.getPrices(Array.from(allTokens));
           
-          // Notify all subscribers
-          this.subscriptions.forEach(subscription => {
-            const relevantPrices = new Map<string, CryptoPriceData>();
-            subscription.tokens.forEach(token => {
-              const price = prices.get(token.toUpperCase());
-              if (price) {
-                relevantPrices.set(token.toUpperCase(), price);
+          // Only notify subscribers if we have price data
+          if (prices.size > 0) {
+            this.subscriptions.forEach(subscription => {
+              const relevantPrices = new Map<string, CryptoPriceData>();
+              subscription.tokens.forEach(token => {
+                const price = prices.get(token.toUpperCase());
+                if (price) {
+                  relevantPrices.set(token.toUpperCase(), price);
+                }
+              });
+              if (relevantPrices.size > 0) {
+                subscription.callback(relevantPrices);
               }
             });
-            subscription.callback(relevantPrices);
-          });
+          }
         } catch (error) {
           console.error('Failed to update prices:', error);
         }

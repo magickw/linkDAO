@@ -115,7 +115,12 @@ async function cacheFirst(request, cacheName) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+      try {
+        const responseToCache = networkResponse.clone();
+        await cache.put(request, responseToCache);
+      } catch (cacheError) {
+        console.warn('Failed to cache static asset:', cacheError);
+      }
     }
     
     return networkResponse;
@@ -183,12 +188,21 @@ async function performNetworkRequest(request, cacheName, requestKey) {
     clearTimeout(timeoutId);
     
     if (networkResponse.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
-      // Clear failed request record on success
-      failedRequests.delete(requestKey);
-      // Reset rate limit counter on success
-      requestCounts.delete(requestKey);
+      // Clone response before consuming it
+      let responseToCache;
+      try {
+        responseToCache = networkResponse.clone();
+        const cache = await caches.open(cacheName);
+        await cache.put(request, responseToCache);
+        
+        // Clear failed request record on success
+        failedRequests.delete(requestKey);
+        // Reset rate limit counter on success
+        requestCounts.delete(requestKey);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError);
+        // Continue even if caching fails
+      }
     } else {
       // Track failure with exponential backoff
       const failureInfo = failedRequests.get(requestKey) || { attempts: 0, lastFailure: 0 };
@@ -214,23 +228,27 @@ async function performNetworkRequest(request, cacheName, requestKey) {
 }
 
 async function getCachedResponse(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cachedResponse = await cache.match(request);
-  
-  if (cachedResponse) {
-    // Add offline indicator to response
-    const response = cachedResponse.clone();
-    response.headers.set('X-Served-From', 'cache');
-    return response;
+  try {
+    const cache = await caches.open(cacheName);
+    const cachedResponse = await cache.match(request);
+    
+    if (cachedResponse) {
+      // Return cached response directly without modifying headers
+      // to avoid response body locked errors
+      return cachedResponse;
+    }
+    
+    // Return offline page for navigation requests
+    if (isNavigation(request)) {
+      return caches.match('/offline.html') || 
+             new Response('You are offline', { status: 503 });
+    }
+    
+    return new Response('Content not available offline', { status: 503 });
+  } catch (error) {
+    console.error('Failed to get cached response:', error);
+    return new Response('Cache error', { status: 503 });
   }
-  
-  // Return offline page for navigation requests
-  if (isNavigation(request)) {
-    return caches.match('/offline.html') || 
-           new Response('You are offline', { status: 503 });
-  }
-  
-  return new Response('Content not available offline', { status: 503 });
 }
 
 // Navigation handler - for page requests

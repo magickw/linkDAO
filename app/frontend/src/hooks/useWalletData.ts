@@ -43,7 +43,7 @@ interface UseWalletDataReturn {
 
 export function useWalletData({
   address,
-  refreshInterval = 60000, // 1 minute
+  refreshInterval = 300000, // 5 minutes
   autoRefresh = true,
   enableTransactionHistory = false,
   maxTransactions = 10

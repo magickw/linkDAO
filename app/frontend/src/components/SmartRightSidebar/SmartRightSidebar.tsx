@@ -26,7 +26,7 @@ export default function SmartRightSidebar({
     isLoading
   } = useWalletData({
     autoRefresh: true,
-    refreshInterval: 60000 // Refresh every minute
+    refreshInterval: 300000 // Refresh every 5 minutes
   });
 
 

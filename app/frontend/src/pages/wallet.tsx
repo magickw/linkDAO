@@ -30,7 +30,7 @@ export default function Wallet() {
     clearError
   } = useWalletData({
     autoRefresh: true,
-    refreshInterval: 30000,
+    refreshInterval: 300000, // 5 minutes
     enableTransactionHistory: true,
     maxTransactions: 20
   });

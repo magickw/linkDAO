@@ -89,20 +89,19 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
           <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400">
             LinkDAO
           </Link>
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <nav>
               <ul className="flex space-x-1">
                 {allNavItems.map((item) => (
                   <li key={item.name}>
-                    <Link 
+                    <Link
                       href={item.href}
-                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        router.pathname === item.href
+                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${router.pathname === item.href
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400'
-                      }`}
+                        }`}
                     >
                       <span className="mr-1">{item.icon}</span>
                       {item.name}
@@ -111,13 +110,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                 ))}
                 {isAdmin && (
                   <li>
-                    <Link 
+                    <Link
                       href="/admin"
-                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        router.pathname === '/admin'
+                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${router.pathname === '/admin'
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400'
-                      }`}
+                        }`}
                     >
                       <span className="mr-1">🔒</span>
                       Admin
@@ -126,7 +124,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                 )}
               </ul>
             </nav>
-            
+
             <div className="flex items-center space-x-2">
               {/* Dark mode toggle */}
               <button
@@ -144,11 +142,11 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                   </svg>
                 )}
               </button>
-              
+
               <ConnectButton />
             </div>
           </div>
-          
+
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-2">
             {/* Dark mode toggle */}
@@ -167,11 +165,11 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                 </svg>
               )}
             </button>
-            
+
             <ConnectButton />
-            
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)} 
+
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,7 +182,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
             </button>
           </div>
         </div>
-        
+
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
@@ -192,13 +190,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
               <ul className="space-y-1">
                 {allNavItems.map((item) => (
                   <li key={item.name}>
-                    <Link 
+                    <Link
                       href={item.href}
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                        router.pathname === item.href
+                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                      }`}
+                        }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <span className="mr-2">{item.icon}</span>
@@ -208,13 +205,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                 ))}
                 {isAdmin && (
                   <li>
-                    <Link 
+                    <Link
                       href="/admin"
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                        router.pathname === '/admin'
+                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === '/admin'
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                      }`}
+                        }`}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <span className="mr-2">🔒</span>
@@ -270,12 +266,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
 
             {/* Newsletter Subscription */}
             <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
-                <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
-                <form className="flex flex-col sm:flex-row">
-                    <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
-                    <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
-                </form>
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
+              <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
+              <form className="flex flex-col sm:flex-row">
+                <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
+                <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
+              </form>
             </div>
           </div>
 
@@ -283,7 +279,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
             <p className="text-base text-gray-500 dark:text-gray-400 text-center">
               © {new Date().getFullYear()} LinkDAO. All rights reserved.
             </p>
-                        <p>
+            <p>
               Designed and powered by{" "}
               <a
                 href="https://bytestitch.us/"
@@ -296,11 +292,11 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
             </p>
           </div>
         </div>
-        <Analytics/>
+        <Analytics />
       </footer>
 
       {/* {isConnected && <NotificationSystem />} */}
-      
+
       {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
       {isConnected && <MessagingWidget />}
 
