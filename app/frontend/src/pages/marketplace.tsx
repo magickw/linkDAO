@@ -373,10 +373,7 @@ const MarketplaceContent: React.FC = () => {
         {/* Category Grid */}
         <CategoryGrid />
 
-        {/* Seller Quick Access Panel */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <SellerQuickAccessPanel />
-        </div>
+
 
         {/* Featured Sellers Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -497,26 +494,7 @@ const MarketplaceContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Want to Start Selling Banner - Show for non-sellers */}
-        {isConnected && !profile && (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <GlassPanel variant="secondary" className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Want to start selling?</h3>
-                  <p className="text-white/80">Join our marketplace and start earning with your products and services.</p>
-                </div>
-                <Button
-                  variant="primary"
-                  onClick={() => router.push('/marketplace/seller/onboarding')}
-                  className="ml-6 whitespace-nowrap"
-                >
-                  Become a Seller
-                </Button>
-              </div>
-            </GlassPanel>
-          </div>
-        )}
+
 
 
 
