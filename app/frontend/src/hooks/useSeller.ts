@@ -12,13 +12,16 @@ export function useSeller() {
   const fetchProfile = useCallback(async () => {
     if (!address) return;
     
+    console.log('useSeller: Fetching profile for address:', address);
     setLoading(true);
     setError(null);
     
     try {
       const sellerProfile = await sellerService.getSellerProfile(address);
+      console.log('useSeller: Received profile:', sellerProfile);
       setProfile(sellerProfile);
     } catch (err) {
+      console.log('useSeller: Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch seller profile');
       setProfile(null); // Ensure we don't show mock data
     } finally {

@@ -23,7 +23,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onBrowseMarketplace,
 }) => {
   const { isConnected } = useAccount();
-  const { profile } = useSeller();
+  const { profile, loading, error } = useSeller();
+  
+  // Debug logging
+  console.log('HeroSection - profile:', profile);
+  console.log('HeroSection - loading:', loading);
+  console.log('HeroSection - error:', error);
   const router = useRouter();
   
   const handleSellerDashboard = () => {
@@ -204,6 +209,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               >
                 <span className="mr-2">📋</span> My Listings
               </Button>
+              
+              {profile && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="large"
+                    onClick={() => router.push('/marketplace/seller/dashboard')}
+                    className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="mr-2">📊</span> Dashboard
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    size="large"
+                    onClick={() => router.push('/marketplace/seller/profile')}
+                    className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="mr-2">👤</span> Profile
+                  </Button>
+                </>
+              )}
               
               {/* Seller Dashboard Button */}
               <Button

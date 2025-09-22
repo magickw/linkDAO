@@ -1,6 +1,45 @@
 const express = require('express');
 const cors = require('cors');
+const { Pool } = require('pg');
 require('dotenv').config();
+
+// Initialize PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+
+// Create tables if they don't exist
+pool.query(`
+  CREATE TABLE IF NOT EXISTS sellers (
+    wallet_address VARCHAR(42) PRIMARY KEY,
+    id VARCHAR(255),
+    display_name VARCHAR(255),
+    store_name VARCHAR(255),
+    bio TEXT,
+    description TEXT,
+    tier VARCHAR(50) DEFAULT 'basic',
+    verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+  )
+`).catch(console.error);
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS listings (
+    id VARCHAR(255) PRIMARY KEY,
+    seller_wallet_address VARCHAR(42),
+    title VARCHAR(255),
+    description TEXT,
+    price DECIMAL(18,8),
+    quantity INTEGER,
+    category VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'ACTIVE',
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    FOREIGN KEY (seller_wallet_address) REFERENCES sellers (wallet_address)
+  )
+`).catch(console.error);
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -233,6 +272,364 @@ app.get('/api/communities', (req, res) => {
       total: 50,
       pages: 5
     }
+  });
+});
+
+// Seller CRUD routes
+app.get('/api/sellers/profile/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid wallet address'
+    });
+  }
+  
+  pool.query('SELECT * FROM sellers WHERE wallet_address = $1', [walletAddress])
+    .then(result => {
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Seller profile not found'
+        });
+      }
+      
+      const row = result.rows[0];
+      const seller = {
+        id: row.id,
+        walletAddress: row.wallet_address,
+        displayName: row.display_name,
+        storeName: row.store_name,
+        bio: row.bio,
+        description: row.description,
+        tier: row.tier,
+        verified: row.verified,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+      
+      res.json({
+        success: true,
+        data: seller
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    });
+});
+
+app.post('/api/sellers/profile', (req, res) => {
+  const { walletAddress, displayName, storeName, bio, description } = req.body;
+  
+  if (!walletAddress || !displayName || !storeName) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: walletAddress, displayName, storeName'
+    });
+  }
+  
+  const seller = {
+    id: `seller-${Date.now()}`,
+    walletAddress,
+    displayName,
+    storeName,
+    bio: bio || '',
+    description: description || '',
+    tier: 'basic',
+    verified: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  pool.query(
+    'INSERT INTO sellers (wallet_address, id, display_name, store_name, bio, description, tier, verified, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+    [seller.walletAddress, seller.id, seller.displayName, seller.storeName, seller.bio, seller.description, seller.tier, seller.verified, seller.createdAt, seller.updatedAt]
+  )
+    .then(() => {
+      res.status(201).json({
+        success: true,
+        data: seller
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    });
+});
+
+app.put('/api/sellers/profile/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  const { displayName, storeName, bio, description, tier, verified } = req.body;
+  const updatedAt = new Date().toISOString();
+  
+  db.run(
+    'UPDATE sellers SET display_name = ?, store_name = ?, bio = ?, description = ?, tier = ?, verified = ?, updated_at = ? WHERE wallet_address = ?',
+    [displayName, storeName, bio, description, tier, verified ? 1 : 0, updatedAt, walletAddress],
+    function(err) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
+        });
+      }
+      
+      if (this.changes === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Seller profile not found'
+        });
+      }
+      
+      // Return updated seller
+      db.get('SELECT * FROM sellers WHERE wallet_address = ?', [walletAddress], (err, row) => {
+        if (err || !row) {
+          return res.status(500).json({
+            success: false,
+            message: 'Error retrieving updated seller'
+          });
+        }
+        
+        const seller = {
+          id: row.id,
+          walletAddress: row.wallet_address,
+          displayName: row.display_name,
+          storeName: row.store_name,
+          bio: row.bio,
+          description: row.description,
+          tier: row.tier,
+          verified: Boolean(row.verified),
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        
+        res.json({
+          success: true,
+          data: seller
+        });
+      });
+    }
+  );
+});
+
+app.delete('/api/sellers/profile/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  db.run('DELETE FROM sellers WHERE wallet_address = ?', [walletAddress], function(err) {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Seller profile not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Seller profile deleted'
+    });
+  });
+});
+
+// Listing CRUD routes
+app.get('/api/listings', (req, res) => {
+  db.all('SELECT * FROM listings ORDER BY created_at DESC', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    }
+    
+    const listings = rows.map(row => ({
+      id: row.id,
+      sellerWalletAddress: row.seller_wallet_address,
+      title: row.title,
+      description: row.description,
+      price: row.price,
+      quantity: row.quantity,
+      category: row.category,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+    
+    res.json({
+      success: true,
+      data: listings
+    });
+  });
+});
+
+app.get('/api/listings/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.get('SELECT * FROM listings WHERE id = ?', [id], (err, row) => {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    }
+    
+    if (!row) {
+      return res.status(404).json({
+        success: false,
+        message: 'Listing not found'
+      });
+    }
+    
+    const listing = {
+      id: row.id,
+      sellerWalletAddress: row.seller_wallet_address,
+      title: row.title,
+      description: row.description,
+      price: row.price,
+      quantity: row.quantity,
+      category: row.category,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+    
+    res.json({
+      success: true,
+      data: listing
+    });
+  });
+});
+
+app.post('/api/listings', (req, res) => {
+  const { sellerWalletAddress, title, description, price, quantity, category } = req.body;
+  
+  if (!sellerWalletAddress || !title || !price) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: sellerWalletAddress, title, price'
+    });
+  }
+  
+  const listing = {
+    id: `listing-${Date.now()}`,
+    sellerWalletAddress,
+    title,
+    description: description || '',
+    price: parseFloat(price),
+    quantity: parseInt(quantity) || 1,
+    category: category || 'general',
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  db.run(
+    'INSERT INTO listings (id, seller_wallet_address, title, description, price, quantity, category, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [listing.id, listing.sellerWalletAddress, listing.title, listing.description, listing.price, listing.quantity, listing.category, listing.status, listing.createdAt, listing.updatedAt],
+    function(err) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
+        });
+      }
+      
+      res.status(201).json({
+        success: true,
+        data: listing
+      });
+    }
+  );
+});
+
+app.put('/api/listings/:id', (req, res) => {
+  const { id } = req.params;
+  const { title, description, price, quantity, category, status } = req.body;
+  const updatedAt = new Date().toISOString();
+  
+  db.run(
+    'UPDATE listings SET title = ?, description = ?, price = ?, quantity = ?, category = ?, status = ?, updated_at = ? WHERE id = ?',
+    [title, description, price, quantity, category, status, updatedAt, id],
+    function(err) {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Database error'
+        });
+      }
+      
+      if (this.changes === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Listing not found'
+        });
+      }
+      
+      // Return updated listing
+      db.get('SELECT * FROM listings WHERE id = ?', [id], (err, row) => {
+        if (err || !row) {
+          return res.status(500).json({
+            success: false,
+            message: 'Error retrieving updated listing'
+          });
+        }
+        
+        const listing = {
+          id: row.id,
+          sellerWalletAddress: row.seller_wallet_address,
+          title: row.title,
+          description: row.description,
+          price: row.price,
+          quantity: row.quantity,
+          category: row.category,
+          status: row.status,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        
+        res.json({
+          success: true,
+          data: listing
+        });
+      });
+    }
+  );
+});
+
+app.delete('/api/listings/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.run('DELETE FROM listings WHERE id = ?', [id], function(err) {
+    if (err) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database error'
+      });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Listing not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Listing deleted'
+    });
   });
 });
 

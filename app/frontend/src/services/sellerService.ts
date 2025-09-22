@@ -17,7 +17,7 @@ import {
 } from '../types/seller';
 
 class SellerService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
   // Profile validation rules with weights for completeness scoring
   private validationRules: ProfileValidationRule[] = [
@@ -190,7 +190,7 @@ class SellerService {
   // Seller Profile Management
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}`);
+      const response = await fetch(`${this.baseUrl}/api/sellers/profile/${walletAddress}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error(`Failed to fetch seller profile: ${response.status} ${response.statusText}`);
