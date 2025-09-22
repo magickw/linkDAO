@@ -12,7 +12,7 @@ const requestCounts = new Map();
 const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
 
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 50 : 5; // More lenient in development
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 200 : 20; // Much more lenient in development
 const BACKOFF_MULTIPLIER = 2;
 const MAX_BACKOFF_TIME = 300000; // 5 minutes max backoff
 
@@ -516,6 +516,11 @@ self.addEventListener('notificationclick', (event) => {
 
 // Rate limiting helper function
 function checkRateLimit(requestKey, now) {
+  // Skip rate limiting in development mode
+  if (isDevelopment) {
+    return true;
+  }
+  
   const endpoint = requestKey.split(':')[1].split('?')[0]; // Extract endpoint without query params
   const countKey = `rate_limit:${endpoint}`;
   
