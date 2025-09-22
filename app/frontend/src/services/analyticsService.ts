@@ -94,36 +94,79 @@ class AnalyticsService {
    * Get overview metrics including GMV, user acquisition, and transaction success rates
    */
   async getOverviewMetrics(startDate?: Date, endDate?: Date): Promise<AnalyticsMetrics> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate.toISOString());
-    if (endDate) params.append('endDate', endDate.toISOString());
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await requestManager.request<{data: AnalyticsMetrics}>(`${this.baseUrl}/overview?${params}`);
-    return response.data;
+      const response = await requestManager.request<{data: AnalyticsMetrics}>(`${this.baseUrl}/overview?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching overview metrics:', error);
+      // Return default metrics when backend is unavailable
+      return {
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        averageOrderValue: 0,
+        conversionRate: 0,
+        gmv: 0,
+        userAcquisitionRate: 0,
+        transactionSuccessRate: 0,
+        activeUsers: { daily: 0, weekly: 0, monthly: 0 }
+      };
+    }
   }
 
   /**
    * Get user behavior analytics including page views, session data, and user journey
    */
   async getUserBehaviorAnalytics(startDate?: Date, endDate?: Date): Promise<UserBehaviorData> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate.toISOString());
-    if (endDate) params.append('endDate', endDate.toISOString());
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await requestManager.request<{data: UserBehaviorData}>(`${this.baseUrl}/user-behavior?${params}`);
-    return response.data;
+      const response = await requestManager.request<{data: UserBehaviorData}>(`${this.baseUrl}/user-behavior?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user behavior analytics:', error);
+      // Return default user behavior data when backend is unavailable
+      return {
+        pageViews: 0,
+        sessionDuration: 0,
+        bounceRate: 0,
+        topPages: [],
+        userJourney: [],
+        deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
+        geographicDistribution: []
+      };
+    }
   }
 
   /**
    * Get sales analytics including daily sales, top products, and revenue breakdown
    */
   async getSalesAnalytics(startDate?: Date, endDate?: Date): Promise<SalesAnalytics> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate.toISOString());
-    if (endDate) params.append('endDate', endDate.toISOString());
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await requestManager.request<{data: SalesAnalytics}>(`${this.baseUrl}/sales?${params}`);
-    return response.data;
+      const response = await requestManager.request<{data: SalesAnalytics}>(`${this.baseUrl}/sales?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching sales analytics:', error);
+      // Return default sales analytics when backend is unavailable
+      return {
+        dailySales: [],
+        topProducts: [],
+        topCategories: [],
+        revenueByPaymentMethod: [],
+        customerSegments: []
+      };
+    }
   }
 
   /**
@@ -134,12 +177,37 @@ class AnalyticsService {
     startDate?: Date,
     endDate?: Date
   ): Promise<SellerAnalytics> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate.toISOString());
-    if (endDate) params.append('endDate', endDate.toISOString());
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate.toISOString());
+      if (endDate) params.append('endDate', endDate.toISOString());
 
-    const response = await requestManager.request<{data: SellerAnalytics}>(`${this.baseUrl}/seller/${sellerId}?${params}`);
-    return response.data;
+      const response = await requestManager.request<{data: SellerAnalytics}>(`${this.baseUrl}/seller/${sellerId}?${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching seller analytics:', error);
+      // Return default seller analytics when backend is unavailable
+      return {
+        sellerId,
+        totalSales: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        conversionRate: 0,
+        customerSatisfaction: 0,
+        returnRate: 0,
+        disputeRate: 0,
+        responseTime: 0,
+        shippingTime: 0,
+        repeatCustomerRate: 0,
+        revenueGrowth: 0,
+        topProducts: [],
+        customerInsights: {
+          demographics: {},
+          preferences: {},
+          behavior: {}
+        }
+      };
+    }
   }
 
   /**
@@ -191,30 +259,35 @@ class AnalyticsService {
       referrer?: string;
     }
   ): Promise<void> {
-    // Get user and session info from context/storage
-    const userId = this.getCurrentUserId();
-    const sessionId = this.getSessionId();
+    try {
+      // Get user and session info from context/storage
+      const userId = this.getCurrentUserId();
+      const sessionId = this.getSessionId();
 
-    await requestManager.request(`${this.baseUrl}/track/event`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId,
-        sessionId,
-        eventType,
-        eventData,
-        metadata: {
-          pageUrl: window.location.href,
-          userAgent: navigator.userAgent,
-          referrer: document.referrer,
-          deviceType: this.getDeviceType(),
-          browser: this.getBrowserName(),
-          ...metadata
-        }
-      })
-    });
+      await requestManager.request(`${this.baseUrl}/track/event`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          sessionId,
+          eventType,
+          eventData,
+          metadata: {
+            pageUrl: window.location.href,
+            userAgent: navigator.userAgent,
+            referrer: document.referrer,
+            deviceType: this.getDeviceType(),
+            browser: this.getBrowserName(),
+            ...metadata
+          }
+        })
+      });
+    } catch (error) {
+      // Silently fail for tracking events to avoid disrupting user experience
+      console.warn('Failed to track user event:', eventType, error);
+    }
   }
 
   /**
@@ -235,13 +308,18 @@ class AnalyticsService {
     processingTime?: number;
     errorMessage?: string;
   }): Promise<void> {
-    await requestManager.request(`${this.baseUrl}/track/transaction`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transactionData)
-    });
+    try {
+      await requestManager.request(`${this.baseUrl}/track/transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transactionData)
+      });
+    } catch (error) {
+      // Silently fail for tracking events to avoid disrupting user experience
+      console.warn('Failed to track transaction:', transactionData.transactionId, error);
+    }
   }
 
   /**
@@ -321,11 +399,15 @@ class AnalyticsService {
    * Automatically track page views
    */
   trackPageView(pageName?: string): void {
-    this.trackUserEvent('page_view', {
-      page: pageName || window.location.pathname,
-      title: document.title,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      this.trackUserEvent('page_view', {
+        page: pageName || window.location.pathname,
+        title: document.title,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.warn('Failed to track page view:', error);
+    }
   }
 
   /**
