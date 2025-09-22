@@ -133,6 +133,7 @@ export function useRealTimePrices({
 // Hook specifically for wallet dashboard
 export function useWalletPrices(walletData: EnhancedWalletData | null) {
   const tokens = walletData?.balances.map(balance => balance.symbol) || [];
+  const tokensKey = tokens.sort().join(','); // Stable key for tokens array
   
   const {
     prices,
@@ -143,20 +144,46 @@ export function useWalletPrices(walletData: EnhancedWalletData | null) {
     updateWalletData
   } = useRealTimePrices({
     tokens,
-    enabled: !!walletData && tokens.length > 0
+    enabled: !!walletData && tokens.length > 0,
+    updateInterval: 300000 // 5 minutes - prevent too frequent updates
   });
 
   const [enhancedWalletData, setEnhancedWalletData] = useState<EnhancedWalletData | null>(null);
+  const [lastPricesUpdate, setLastPricesUpdate] = useState<number>(0);
 
-  // Update wallet data when prices change
+  // Update wallet data when prices change, but throttle updates
   useEffect(() => {
-    if (!walletData || prices.size === 0) {
+    if (!walletData) {
+      setEnhancedWalletData(null);
+      return;
+    }
+
+    // If no prices available, use original wallet data
+    if (prices.size === 0) {
       setEnhancedWalletData(walletData);
       return;
     }
 
-    updateWalletData(walletData).then(setEnhancedWalletData);
-  }, [walletData, prices, updateWalletData]);
+    // Throttle price updates to prevent rapid re-renders
+    const now = Date.now();
+    const pricesTimestamp = Array.from(prices.values())[0]?.last_updated 
+      ? new Date(Array.from(prices.values())[0].last_updated).getTime() 
+      : now;
+
+    // Only update if prices are actually newer (prevent unnecessary re-renders)
+    if (pricesTimestamp <= lastPricesUpdate) {
+      return;
+    }
+
+    setLastPricesUpdate(pricesTimestamp);
+    
+    // Debounce the wallet data update
+    const timeoutId = setTimeout(() => {
+      updateWalletData(walletData).then(setEnhancedWalletData);
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [walletData, prices, updateWalletData, lastPricesUpdate, tokensKey]);
 
   return {
     walletData: enhancedWalletData,

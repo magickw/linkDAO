@@ -279,7 +279,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
             <p className="text-base text-gray-500 dark:text-gray-400 text-center">
               © {new Date().getFullYear()} LinkDAO. All rights reserved.
             </p>
-            <p>
+            <p className="text-base text-gray-500 dark:text-gray-400 text-center">
               Designed and powered by{" "}
               <a
                 href="https://bytestitch.us/"
