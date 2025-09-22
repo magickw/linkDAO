@@ -126,10 +126,10 @@ class GlobalRequestManager {
 
       const data = await response.json();
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
       
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
       

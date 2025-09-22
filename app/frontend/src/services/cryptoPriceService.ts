@@ -288,7 +288,7 @@ class CryptoPriceService {
 
     try {
       // Use global request manager with aggressive caching
-      const data = await cachedFetch(url, {}, `coingecko_prices_${coinIds.join(',')}`);
+      const data = await cachedFetch<Record<string, any>>(url, {}, `coingecko_prices_${coinIds.join(',')}`);
       
       if (!data) {
         throw new Error('No data received from CoinGecko API');
