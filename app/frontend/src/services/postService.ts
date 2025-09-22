@@ -317,9 +317,15 @@ export class PostService {
       });
     } catch (error: any) {
       console.error(`Error fetching feed:`, error);
+      console.log('Error properties:', { 
+        isServiceUnavailable: error.isServiceUnavailable, 
+        status: error.status, 
+        message: error.message,
+        name: error.name
+      });
       
       // If backend is unavailable, return mock data
-      if (error.isServiceUnavailable || error.status === 503) {
+      if (error.isServiceUnavailable || error.status === 503 || error.message?.includes('Service temporarily unavailable')) {
         console.log('Backend unavailable, returning mock feed data');
         return [
           {

@@ -76,7 +76,20 @@ class RequestManager {
       });
     }
 
-    return requestPromise;
+    try {
+      return await requestPromise;
+    } catch (error: unknown) {
+      // Ensure 503 errors have the proper properties for service handling
+      if (error instanceof Error) {
+        const errorWithStatus = error as any;
+        if (errorWithStatus.status === 503 || error.message.includes('HTTP 503') || error.message.includes('Service temporarily unavailable')) {
+          errorWithStatus.isServiceUnavailable = true;
+          errorWithStatus.status = 503;
+          console.log('Request manager caught 503 error, properly formatted for service layer:', error.message);
+        }
+      }
+      throw error;
+    }
   }
 
   /**
@@ -89,7 +102,7 @@ class RequestManager {
     retryDelay: number,
     timeout: number
   ): Promise<T> {
-    let lastError: Error;
+    let lastError: Error | undefined;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -103,7 +116,7 @@ class RequestManager {
         }
 
         // Specific handling for 503 Service Unavailable
-        if ((error as any).isServiceUnavailable) {
+        if ((error as any).isServiceUnavailable || (error as any).status === 503) {
           const serviceUnavailableDelay = 5000 * Math.pow(2, attempt); // Longer delay for 503
           console.log(`Backend service unavailable. Retrying in ${serviceUnavailableDelay}ms (attempt ${attempt + 1}/${retries + 1}):`, url);
           await this.sleep(serviceUnavailableDelay);
@@ -122,7 +135,21 @@ class RequestManager {
       }
     }
 
-    throw lastError!;
+    // Handle service unavailable errors more gracefully
+    if (lastError && ((lastError as any)?.isServiceUnavailable || (lastError as any)?.status === 503)) {
+      console.warn('Service unavailable after all retries, throwing service unavailable error');
+      const serviceError = new Error('Service temporarily unavailable. Please try again later.');
+      (serviceError as any).isServiceUnavailable = true;
+      (serviceError as any).status = 503;
+      throw serviceError;
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
+    // This should never happen, but TypeScript requires it
+    throw new Error('Request failed with unknown error');
   }
 
   /**
