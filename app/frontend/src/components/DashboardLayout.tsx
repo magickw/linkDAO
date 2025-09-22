@@ -3,7 +3,11 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { useNavigation } from '@/context/NavigationContext';
-import { Analytics } from "@vercel/analytics/next";
+import dynamic from 'next/dynamic';
+
+const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
+  ssr: false
+});
 import NotificationSystem from '@/components/NotificationSystem';
 import RealTimeNotifications from '@/components/RealTimeNotifications';
 import NavigationSidebar from '@/components/NavigationSidebar';

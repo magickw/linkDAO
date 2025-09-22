@@ -395,6 +395,13 @@ export class PreviewContentCache {
   }
 
   /**
+   * Cleanup expired entries
+   */
+  cleanup(): number {
+    return this.cache.cleanup();
+  }
+
+  /**
    * Get cache statistics
    */
   getStats(): CacheStats {
@@ -548,6 +555,15 @@ export class UserProfileCache {
       const updated = { ...cached, ...updates };
       this.cache.set(userId, updated);
     }
+  }
+
+  /**
+   * Cleanup expired entries in both caches
+   */
+  cleanup(): number {
+    const profilesCleaned = this.cache.cleanup();
+    const mutualConnectionsCleaned = this.mutualConnectionsCache.cleanup();
+    return profilesCleaned + mutualConnectionsCleaned;
   }
 
   /**

@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
-import { Analytics } from "@vercel/analytics/next"
+import dynamic from 'next/dynamic';
+
+const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
+  ssr: false
+});
 import NotificationSystem from '@/components/NotificationSystem';
 import MobileNavigation from './MobileNavigation';
 import { MessagingWidget } from '@/components/Messaging';
