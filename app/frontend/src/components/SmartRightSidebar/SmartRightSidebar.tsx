@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import WalletDashboard from './WalletDashboard';
 import TransactionMiniFeed from './TransactionMiniFeed';
 import QuickActionButtons from './QuickActionButtons';
@@ -33,7 +33,7 @@ export default function SmartRightSidebar({
 
 
 
-  const handleQuickAction = async (action: QuickAction) => {
+  const handleQuickAction = useCallback(async (action: QuickAction) => {
     try {
       await action.action();
       // Handle success (show toast, update UI, etc.)
@@ -41,16 +41,16 @@ export default function SmartRightSidebar({
       console.error('Quick action failed:', error);
       // Handle error (show error toast, etc.)
     }
-  };
+  }, []);
 
-  const handleTransactionClick = (transaction: Transaction) => {
+  const handleTransactionClick = useCallback((transaction: Transaction) => {
     // Navigate to transaction details or open transaction modal
     console.log('Transaction clicked:', transaction);
-  };
+  }, []);
 
-  const handlePortfolioClick = () => {
+  const handlePortfolioClick = useCallback(() => {
     setIsPortfolioModalOpen(true);
-  };
+  }, []);
 
   if (isLoading) {
     return (

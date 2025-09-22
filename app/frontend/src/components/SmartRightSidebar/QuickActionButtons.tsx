@@ -7,7 +7,7 @@ interface QuickActionButtonsProps {
   className?: string;
 }
 
-export default function QuickActionButtons({ 
+const QuickActionButtons = React.memo(function QuickActionButtons({ 
   actions, 
   onActionClick,
   className = '' 
@@ -174,4 +174,6 @@ export default function QuickActionButtons({
       </div>
     </div>
   );
-}
+});
+
+export default QuickActionButtons;

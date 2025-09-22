@@ -73,9 +73,11 @@ export default function Web3SocialPostCard({
     }
   };
 
-  const timestamp = post.createdAt instanceof Date ?
-    formatTimestamp(post.createdAt) :
-    'Unknown time';
+  const timestamp = post?.createdAt ? (
+    post.createdAt instanceof Date ?
+      formatTimestamp(post.createdAt) :
+      formatTimestamp(new Date(post.createdAt))
+  ) : 'Unknown time';
 
   // Handle reaction (staking tokens)
   const handleReaction = async (reactionType: string, amount: number) => {
@@ -298,7 +300,8 @@ export default function Web3SocialPostCard({
   };
 
   // Truncate content for preview
-  const truncateContent = (content: string, maxLength: number = 200) => {
+  const truncateContent = (content: string | undefined | null, maxLength: number = 200) => {
+    if (!content || typeof content !== 'string') return '';
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
   };
@@ -351,7 +354,7 @@ export default function Web3SocialPostCard({
             </div>
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900/30 dark:to-indigo-900/30 dark:text-blue-200 animate-pulse">
-                {post.reputationScore} REP
+                {post?.reputationScore || 0} REP
               </span>
             </div>
           </div>
@@ -365,14 +368,14 @@ export default function Web3SocialPostCard({
               <div className="flex items-center">
                 <span className="text-lg mr-2">{getCategoryIcon()}</span>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white leading-tight transition-colors duration-200 hover:text-primary-600 dark:hover:text-primary-400">
-                  {post.title}
+                  {post?.title || 'Untitled Post'}
                 </h2>
               </div>
             </div>
             <p className="text-gray-700 dark:text-gray-300 text-base leading-relaxed mb-4 transition-colors duration-200 hover:text-gray-900 dark:hover:text-gray-200">
-              {expanded ? post.contentCid : truncateContent(post.contentCid)}
+              {expanded ? (post?.contentCid || '') : truncateContent(post?.contentCid)}
             </p>
-            {!expanded && post.contentCid.length > 200 && (
+            {!expanded && post.contentCid && post.contentCid.length > 200 && (
               <button
                 onClick={toggleExpand}
                 className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-semibold mt-1 transition-all duration-200 hover:text-primary-800 dark:hover:text-primary-300 transform hover:scale-105"
@@ -383,7 +386,7 @@ export default function Web3SocialPostCard({
           </div>
 
           {/* Media or embeds */}
-          {post.mediaCids && post.mediaCids.length > 0 && (
+          {post?.mediaCids && post.mediaCids.length > 0 && (
             <div className="mb-5 rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
               <OptimizedImage
                 src={post.mediaCids[0]}
@@ -489,13 +492,13 @@ export default function Web3SocialPostCard({
           {/* Enhanced Post Interactions */}
           <PostInteractionBar
             post={{
-              id: post.id,
-              title: post.title,
-              contentCid: post.contentCid,
-              author: post.author,
-              dao: post.dao,
-              commentCount: post.commentCount,
-              stakedValue: post.stakedValue
+              id: post?.id || '',
+              title: post?.title || 'Untitled Post',
+              contentCid: post?.contentCid || '',
+              author: post?.author || 'Unknown Author',
+              dao: post?.dao || '',
+              commentCount: post?.commentCount || 0,
+              stakedValue: post?.stakedValue || 0
             }}
             postType="feed"
             onComment={toggleExpand}

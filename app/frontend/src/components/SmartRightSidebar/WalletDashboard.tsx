@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { EnhancedWalletData, TokenBalance, Transaction, QuickAction } from '../../types/wallet';
-import { useWalletPrices } from '../../hooks/useRealTimePrices';
 
 interface WalletDashboardProps {
   walletData: EnhancedWalletData;
@@ -9,7 +8,7 @@ interface WalletDashboardProps {
   className?: string;
 }
 
-export default function WalletDashboard({ 
+const WalletDashboard = React.memo(function WalletDashboard({ 
   walletData, 
   onQuickAction, 
   onPortfolioClick,
@@ -18,25 +17,27 @@ export default function WalletDashboard({
   const [isLoading, setIsLoading] = useState(false);
   const [animateChange, setAnimateChange] = useState(false);
   
-  // Use real-time prices
-  const {
-    walletData: enhancedWalletData,
-    prices,
-    isLoading: pricesLoading,
-    error: pricesError,
-    lastUpdated,
-    updatePrices
-  } = useWalletPrices(walletData);
+  // Temporarily disable real-time prices to fix refresh issue
+  // Use wallet data directly without price updates
+  const displayWalletData = walletData;
+  const pricesLoading = false;
+  const pricesError = null;
+  const lastUpdated = new Date();
 
-  // Use enhanced wallet data if available, fallback to original
-  const displayWalletData = enhancedWalletData || walletData;
-
-  // Animate portfolio value changes
+  // Animate portfolio value changes - but throttle to prevent excessive animations
+  const [lastPortfolioValue, setLastPortfolioValue] = useState(displayWalletData.portfolioValue);
+  
   useEffect(() => {
-    setAnimateChange(true);
-    const timer = setTimeout(() => setAnimateChange(false), 500);
-    return () => clearTimeout(timer);
-  }, [displayWalletData.portfolioValue]);
+    const currentValue = displayWalletData.portfolioValue;
+    const valueChanged = Math.abs(currentValue - lastPortfolioValue) > 0.01; // Only animate if change > $0.01
+    
+    if (valueChanged) {
+      setAnimateChange(true);
+      setLastPortfolioValue(currentValue);
+      const timer = setTimeout(() => setAnimateChange(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [displayWalletData.portfolioValue, lastPortfolioValue]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -62,7 +63,7 @@ export default function WalletDashboard({
   };
 
   const isPositive = displayWalletData.portfolioChange >= 0;
-  const isPriceDataStale = lastUpdated && (Date.now() - lastUpdated.getTime()) > 60000; // 1 minute
+  // Removed price data stale check since we're using static data
 
   return (
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
@@ -198,14 +199,8 @@ export default function WalletDashboard({
       <div className="px-4 pb-4">
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center">
-            <div className={`w-2 h-2 rounded-full mr-2 ${
-              pricesError ? 'bg-red-500' : 
-              isPriceDataStale ? 'bg-yellow-500' : 
-              'bg-green-500 animate-pulse'
-            }`} />
-            {pricesError ? 'Price update failed' :
-             isPriceDataStale ? 'Price data stale' :
-             'Real-time prices active'}
+            <div className="w-2 h-2 rounded-full mr-2 bg-blue-500" />
+            Static wallet data (refresh disabled)
           </div>
           
           {lastUpdated && (
@@ -216,21 +211,16 @@ export default function WalletDashboard({
                   minute: '2-digit' 
                 })}
               </span>
-              <button
-                onClick={updatePrices}
-                disabled={pricesLoading}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                title="Refresh prices"
-              >
+              <div className="p-1">
                 <svg 
-                  className={`w-3 h-3 ${pricesLoading ? 'animate-spin' : ''}`} 
+                  className="w-3 h-3 text-green-500" 
                   fill="none" 
                   viewBox="0 0 24 24" 
                   stroke="currentColor"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -243,4 +233,6 @@ export default function WalletDashboard({
       </div>
     </div>
   );
-}
+});
+
+export default WalletDashboard;

@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { EnhancedWalletData } from '../types/wallet';
 import { walletDataService } from '../services/walletDataService';
-import { useWalletPrices } from './useRealTimePrices';
+import { staticWalletService } from '../services/staticWalletService';
+// Temporarily disable real-time prices to fix refresh issue
+// import { useWalletPrices } from './useRealTimePrices';
 
 interface UseWalletDataOptions {
   address?: string;
@@ -53,20 +55,26 @@ export function useWalletData({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Use real-time prices for the wallet data
-  const {
-    walletData: enhancedWalletData,
-    isLoading: pricesLoading,
-    error: pricesError
-  } = useWalletPrices(walletData);
+  // Temporarily disable real-time prices to fix refresh issue
+  // const {
+  //   walletData: enhancedWalletData,
+  //   isLoading: pricesLoading,
+  //   error: pricesError
+  // } = useWalletPrices(walletData);
+  
+  // Use static data instead
+  const enhancedWalletData = walletData;
+  const pricesLoading = false;
+  const pricesError = null;
 
-  // Fetch wallet data
+  // Fetch wallet data - use static service to prevent API spam
   const fetchWalletData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const data = await walletDataService.getWalletData(address);
+      // Use static wallet service to prevent rapid API calls
+      const data = staticWalletService.getWalletDataWithMinorUpdates();
       setWalletData(data);
       setLastUpdated(new Date());
     } catch (err) {
@@ -103,18 +111,22 @@ export function useWalletData({
     fetchWalletData();
   }, [fetchWalletData]);
 
-  // Auto-refresh interval
-  useEffect(() => {
-    if (!autoRefresh || refreshInterval <= 0) return;
+  // Disable auto-refresh to prevent API spam
+  // useEffect(() => {
+  //   if (!autoRefresh || refreshInterval <= 0) return;
 
-    const interval = setInterval(() => {
-      if (!isLoading && !pricesLoading) {
-        refreshWalletData();
-      }
-    }, refreshInterval);
+  //   const interval = setInterval(() => {
+  //     // Only refresh if not currently loading and enough time has passed since last update
+  //     const now = Date.now();
+  //     const timeSinceLastUpdate = lastUpdated ? now - lastUpdated.getTime() : Infinity;
+      
+  //     if (!isLoading && !pricesLoading && timeSinceLastUpdate >= refreshInterval) {
+  //       refreshWalletData();
+  //     }
+  //   }, refreshInterval);
 
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, isLoading, pricesLoading, refreshWalletData]);
+  //   return () => clearInterval(interval);
+  // }, [autoRefresh, refreshInterval, isLoading, pricesLoading, lastUpdated]);
 
   // Combine wallet data error with prices error
   const combinedError = error || pricesError;

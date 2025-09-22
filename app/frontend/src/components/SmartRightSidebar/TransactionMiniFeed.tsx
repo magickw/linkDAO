@@ -7,7 +7,7 @@ interface TransactionMiniFeedProps {
   className?: string;
 }
 
-export default function TransactionMiniFeed({ 
+const TransactionMiniFeed = React.memo(function TransactionMiniFeed({ 
   transactions, 
   onTransactionClick,
   className = '' 
@@ -15,20 +15,23 @@ export default function TransactionMiniFeed({
   const [visibleTransactions, setVisibleTransactions] = useState(5);
   const [newTransactionIds, setNewTransactionIds] = useState<Set<string>>(new Set());
 
-  // Detect new transactions for animation
+  // Detect new transactions for animation - use stable reference
+  const [previousTransactionIds, setPreviousTransactionIds] = useState<Set<string>>(new Set());
+  
   useEffect(() => {
     const currentIds = new Set(transactions.map(tx => tx.id));
-    const previousIds = new Set(newTransactionIds);
-    const newIds = new Set([...currentIds].filter(id => !previousIds.has(id)));
+    const newIds = new Set([...currentIds].filter(id => !previousTransactionIds.has(id)));
     
-    if (newIds.size > 0) {
+    if (newIds.size > 0 && previousTransactionIds.size > 0) { // Don't animate on initial load
       setNewTransactionIds(newIds);
       // Clear the new transaction indicators after animation
       setTimeout(() => {
         setNewTransactionIds(new Set());
       }, 2000);
     }
-  }, [transactions]);
+    
+    setPreviousTransactionIds(currentIds);
+  }, [transactions.length, transactions.map(tx => tx.id).join(',')]); // Use stable dependencies
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -293,4 +296,6 @@ export default function TransactionMiniFeed({
       </div>
     </div>
   );
-}
+});
+
+export default TransactionMiniFeed;

@@ -9,7 +9,7 @@ const pendingRequests = new Map();
 const failedRequests = new Map();
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = 10; // Max 10 requests per endpoint per minute
+const MAX_REQUESTS_PER_MINUTE = 5; // Max 5 requests per endpoint per minute
 const BACKOFF_MULTIPLIER = 2;
 const MAX_BACKOFF_TIME = 300000; // 5 minutes max backoff
 
@@ -18,6 +18,7 @@ const STATIC_ASSETS = [
   '/',
   '/dashboard',
   '/manifest.json',
+  '/offline.html',
   '/test-performance-optimization',
   // Add other critical static assets
 ];
@@ -158,7 +159,14 @@ async function networkFirst(request, cacheName) {
   // Check if request is already pending
   if (pendingRequests.has(requestKey)) {
     console.log('Request already pending, waiting for result:', requestKey);
-    return await pendingRequests.get(requestKey);
+    try {
+      const sharedResponse = await pendingRequests.get(requestKey);
+      // Clone the response for this caller to avoid body locked errors
+      return sharedResponse.clone();
+    } catch (error) {
+      console.warn('Failed to clone shared response, falling back to cache:', error);
+      return await getCachedResponse(request, cacheName);
+    }
   }
   
   // Create promise for this request
@@ -213,7 +221,13 @@ async function performNetworkRequest(request, cacheName, requestKey) {
       console.warn(`Request failed with status ${networkResponse.status}:`, requestKey);
     }
     
-    return networkResponse;
+    // Return a clone to ensure the original can be used by other callers
+    try {
+      return networkResponse.clone();
+    } catch (cloneError) {
+      console.warn('Failed to clone network response:', cloneError);
+      return networkResponse;
+    }
   } catch (error) {
     console.log('Network failed, trying cache:', error);
     

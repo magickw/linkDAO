@@ -1,5 +1,6 @@
 import { TokenBalance } from '../types/wallet';
 import { networkService } from './networkService';
+import { cachedFetch } from './globalRequestManager';
 
 export interface CryptoPriceData {
   id: string;
@@ -286,21 +287,12 @@ class CryptoPriceService {
     const url = `${this.baseUrl}/simple/price?ids=${coinIds.join(',')}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true&include_last_updated_at=true`;
 
     try {
-      const response = await fetch(url);
+      // Use global request manager with aggressive caching
+      const data = await cachedFetch(url, {}, `coingecko_prices_${coinIds.join(',')}`);
       
-      if (response.status === 429) {
-        // Rate limited - exponentially increase wait time
-        const backoffTime = this.MIN_API_INTERVAL * Math.pow(2, this.retryCount);
-        console.warn(`CoinGecko API rate limit hit, backing off for ${backoffTime}ms`);
-        this.lastApiCallTime = Date.now() + backoffTime;
-        throw new Error('Rate limit exceeded');
+      if (!data) {
+        throw new Error('No data received from CoinGecko API');
       }
-      
-      if (!response.ok) {
-        throw new Error(`CoinGecko API error: ${response.status}`);
-      }
-
-      const data = await response.json();
       const priceMap = new Map<string, CryptoPriceData>();
 
       // Map response back to symbols
@@ -341,8 +333,11 @@ class CryptoPriceService {
 
       const now = Date.now();
       
-      // Only update if enough time has passed since last API call
-      if ((now - this.lastApiCallTime) < this.MIN_API_INTERVAL) {
+      // Only update if enough time has passed since last API call AND last update
+      const timeSinceLastApiCall = now - this.lastApiCallTime;
+      const timeSinceLastUpdate = now - this.lastUpdateTime;
+      
+      if (timeSinceLastApiCall < this.MIN_API_INTERVAL || timeSinceLastUpdate < this.UPDATE_INTERVAL) {
         return;
       }
 
@@ -356,20 +351,34 @@ class CryptoPriceService {
         try {
           const prices = await this.getPrices(Array.from(allTokens));
           
-          // Only notify subscribers if we have price data
+          // Only notify subscribers if we have price data AND prices have actually changed
           if (prices.size > 0) {
-            this.subscriptions.forEach(subscription => {
-              const relevantPrices = new Map<string, CryptoPriceData>();
-              subscription.tokens.forEach(token => {
-                const price = prices.get(token.toUpperCase());
-                if (price) {
-                  relevantPrices.set(token.toUpperCase(), price);
+            let hasSignificantChange = false;
+            
+            // Check if any price has changed significantly (>0.1%)
+            for (const [symbol, newPrice] of prices) {
+              const oldPrice = this.priceCache.get(symbol);
+              if (!oldPrice || Math.abs(newPrice.current_price - oldPrice.current_price) / oldPrice.current_price > 0.001) {
+                hasSignificantChange = true;
+                break;
+              }
+            }
+            
+            // Only notify if there's a significant change
+            if (hasSignificantChange) {
+              this.subscriptions.forEach(subscription => {
+                const relevantPrices = new Map<string, CryptoPriceData>();
+                subscription.tokens.forEach(token => {
+                  const price = prices.get(token.toUpperCase());
+                  if (price) {
+                    relevantPrices.set(token.toUpperCase(), price);
+                  }
+                });
+                if (relevantPrices.size > 0) {
+                  subscription.callback(relevantPrices);
                 }
               });
-              if (relevantPrices.size > 0) {
-                subscription.callback(relevantPrices);
-              }
-            });
+            }
           }
         } catch (error) {
           console.error('Failed to update prices:', error);
