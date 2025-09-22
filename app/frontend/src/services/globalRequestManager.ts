@@ -22,7 +22,7 @@ class GlobalRequestManager {
   // Configuration
   private readonly CACHE_DURATION = 300000; // 5 minutes default cache
   private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
-  private readonly MAX_REQUESTS_PER_MINUTE = 3; // Very aggressive rate limiting
+  private readonly MAX_REQUESTS_PER_MINUTE = process.env.NODE_ENV === 'development' ? 30 : 10; // More lenient in dev
   private readonly REQUEST_TIMEOUT = 10000; // 10 seconds
   
   // Special cache durations for different endpoints

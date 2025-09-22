@@ -8,8 +8,11 @@ const PERFORMANCE_CACHE = 'performance-v1';
 const pendingRequests = new Map();
 const failedRequests = new Map();
 const requestCounts = new Map();
+// Development mode detection
+const isDevelopment = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_MINUTE = 5; // Max 5 requests per endpoint per minute
+const MAX_REQUESTS_PER_MINUTE = isDevelopment ? 50 : 5; // More lenient in development
 const BACKOFF_MULTIPLIER = 2;
 const MAX_BACKOFF_TIME = 300000; // 5 minutes max backoff
 
@@ -161,6 +164,11 @@ async function networkFirst(request, cacheName) {
     console.log('Request already pending, waiting for result:', requestKey);
     try {
       const sharedResponse = await pendingRequests.get(requestKey);
+      // Check if response body is already consumed
+      if (sharedResponse.bodyUsed) {
+        console.warn('Shared response body already consumed, falling back to cache');
+        return await getCachedResponse(request, cacheName);
+      }
       // Clone the response for this caller to avoid body locked errors
       return sharedResponse.clone();
     } catch (error) {
@@ -196,10 +204,12 @@ async function performNetworkRequest(request, cacheName, requestKey) {
     clearTimeout(timeoutId);
     
     if (networkResponse.ok) {
-      // Clone response before consuming it
+      // Clone response before consuming it for caching
       let responseToCache;
+      let responseToReturn;
       try {
         responseToCache = networkResponse.clone();
+        responseToReturn = networkResponse.clone();
         const cache = await caches.open(cacheName);
         await cache.put(request, responseToCache);
         
@@ -207,9 +217,12 @@ async function performNetworkRequest(request, cacheName, requestKey) {
         failedRequests.delete(requestKey);
         // Reset rate limit counter on success
         requestCounts.delete(requestKey);
+        
+        return responseToReturn;
       } catch (cacheError) {
         console.warn('Failed to cache response:', cacheError);
-        // Continue even if caching fails
+        // Return original response if cloning fails
+        return networkResponse;
       }
     } else {
       // Track failure with exponential backoff
@@ -219,6 +232,12 @@ async function performNetworkRequest(request, cacheName, requestKey) {
       failedRequests.set(requestKey, failureInfo);
       
       console.warn(`Request failed with status ${networkResponse.status}:`, requestKey);
+      
+      // In development, don't aggressively cache 503 errors
+      if (isDevelopment && networkResponse.status === 503) {
+        // Don't track 503 errors as aggressively in development
+        return networkResponse;
+      }
     }
     
     // Return a clone to ensure the original can be used by other callers
