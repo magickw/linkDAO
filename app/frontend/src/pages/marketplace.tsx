@@ -57,13 +57,23 @@ const MarketplaceContent: React.FC = () => {
   const marketplaceService = new MarketplaceService();
 
   useEffect(() => {
-    fetchListings();
-    if (address) {
-      fetchReputation(address);
-    }
+    let mounted = true;
+    const fetchData = async () => {
+      if (mounted) {
+        await fetchListings();
+        if (address && mounted) {
+          await fetchReputation(address);
+        }
+      }
+    };
+    fetchData();
+    return () => { mounted = false; };
   }, [address]);
 
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
+    // Prevent multiple simultaneous requests
+    if (loading) return;
+    
     try {
       setLoading(true);
       
@@ -281,10 +291,15 @@ const MarketplaceContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading]);
 
-  const fetchReputation = async (userAddress: string) => {
+
+  const fetchReputation = useCallback(async (userAddress: string) => {
+    // Skip if already loading or if we already have reputation data
+    if (reputation?.walletAddress === userAddress) return;
+    
     try {
+      console.log('Making request to:', `http://localhost:3002/marketplace/reputation/${userAddress}`);
       const userReputation = await marketplaceService.getUserReputation(userAddress);
       setReputation(userReputation);
     } catch (error) {
@@ -296,7 +311,7 @@ const MarketplaceContent: React.FC = () => {
         daoApproved: true
       });
     }
-  };
+  }, [reputation]);
 
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;

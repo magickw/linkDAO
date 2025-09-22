@@ -3,8 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
-import PostCreationModal from '@/components/PostCreationModal';
-import { CreatePostInput } from '@/models/Post';
+
 import {
   TrendingUp,
   Clock,
@@ -162,8 +161,7 @@ const CommunitiesPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>(['ethereum-builders', 'defi-traders']);
-  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
-  const [isCreatingPost, setIsCreatingPost] = useState(false);
+
 
   const handleJoinCommunity = (communityId: string) => {
     if (joinedCommunities.includes(communityId)) {
@@ -187,36 +185,7 @@ const CommunitiesPage: React.FC = () => {
     }));
   };
 
-  const handleCreatePost = async (postData: CreatePostInput) => {
-    setIsCreatingPost(true);
-    try {
-      const newPost = {
-        id: Date.now().toString(),
-        communityId: joinedCommunities[0] || 'ethereum-builders',
-        title: postData.content.split('\n')[0] || 'Untitled Post',
-        author: '0x1234567890123456789012345678901234567890',
-        authorName: 'current_user',
-        content: postData.content,
-        type: 'discussion' as const,
-        upvotes: 0,
-        downvotes: 0,
-        commentCount: 0,
-        createdAt: new Date(),
-        tags: postData.tags || [],
-        stakedTokens: 0,
-        isStaked: false
-      };
-      
-      setPosts(prev => [newPost, ...prev]);
-      setIsPostModalOpen(false);
-      
-      console.log('Creating post:', postData);
-    } catch (error) {
-      console.error('Error creating post:', error);
-    } finally {
-      setIsCreatingPost(false);
-    }
-  };
+
 
   // Show posts from followed communities and suggested posts for home feed
   const filteredPosts = posts.filter(post => 
@@ -235,15 +204,8 @@ const CommunitiesPage: React.FC = () => {
         <div className="col-span-12 lg:col-span-3">
           <div className="sticky top-6 space-y-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Communities</h3>
-                <button 
-                  onClick={() => setIsPostModalOpen(true)}
-                  className="p-1 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
-                  title="Create Advanced Post"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
               </div>
 
               <div className="mb-4">
@@ -308,62 +270,21 @@ const CommunitiesPage: React.FC = () => {
         </div>
 
         <div className="col-span-12 lg:col-span-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setIsPostModalOpen(true)}
-                className="w-full flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-left"
-              >
-                <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                  <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                </div>
-                <span className="text-gray-500 dark:text-gray-400">Create a post</span>
-              </button>
-            </div>
-                
-            <div className="flex items-center justify-between p-4">
-              <div className="flex space-x-1">
-                {(['hot', 'new', 'top', 'rising'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setSortBy(tab)}
-                    className={`flex items-center space-x-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${sortBy === tab
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                      }`}
-                  >
-                    {tab === 'hot' && <Flame className="w-4 h-4" />}
-                    {tab === 'new' && <Clock className="w-4 h-4" />}
-                    {tab === 'top' && <TrendingUp className="w-4 h-4" />}
-                    {tab === 'rising' && <Star className="w-4 h-4" />}
-                    <span className="capitalize">{tab}</span>
-                  </button>
-                ))}
-              </div>
-              {sortBy === 'top' && (
-                <select
-                  value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value as any)}
-                  className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="hour">Past Hour</option>
-                  <option value="day">Past Day</option>
-                  <option value="week">Past Week</option>
-                  <option value="month">Past Month</option>
-                  <option value="year">Past Year</option>
-                  <option value="all">All Time</option>
-                </select>
-              )}
-            </div>
-          </div>
 
           <div className="space-y-2">
             {filteredPosts.map(post => (
-              <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+              <div 
+                key={post.id} 
+                onClick={() => router.push(`/dao/${communities.find(c => c.id === post.communityId)?.name || post.communityId}/posts/${post.id}`)}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer"
+              >
                 <div className="flex">
                   <div className="flex flex-col items-center p-2 bg-gray-50 dark:bg-gray-700/50 rounded-l-lg">
                     <button
-                      onClick={() => handleVote(post.id, 'up', 1)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVote(post.id, 'up', 1);
+                      }}
                       className="p-1 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded transition-colors"
                     >
                       <ArrowUp className="w-5 h-5" />
@@ -372,7 +293,10 @@ const CommunitiesPage: React.FC = () => {
                       {post.upvotes - post.downvotes}
                     </span>
                     <button
-                      onClick={() => handleVote(post.id, 'down', 1)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVote(post.id, 'down', 1);
+                      }}
                       className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
                     >
                       <ArrowDown className="w-5 h-5" />
@@ -399,7 +323,7 @@ const CommunitiesPage: React.FC = () => {
                       )}
                     </div>
 
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                       {post.title}
                     </h3>
 
@@ -419,15 +343,24 @@ const CommunitiesPage: React.FC = () => {
                     </div>
 
                     <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                      >
                         <MessageCircle className="w-4 h-4" />
                         <span>{post.commentCount} Comments</span>
                       </button>
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                      >
                         <Share className="w-4 h-4" />
                         <span>Share</span>
                       </button>
-                      <button className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                      >
                         <Bookmark className="w-4 h-4" />
                         <span>Save</span>
                       </button>
@@ -521,12 +454,7 @@ const CommunitiesPage: React.FC = () => {
         </div>
       </div>
 
-      <PostCreationModal
-        isOpen={isPostModalOpen}
-        onClose={() => setIsPostModalOpen(false)}
-        onSubmit={handleCreatePost}
-        isLoading={isCreatingPost}
-      />
+
     </Layout>
   );
 };
