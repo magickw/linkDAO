@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
 // Get the backend URL from environment variables
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 class WebSocketService {
   private socket: Socket | null = null;

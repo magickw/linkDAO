@@ -64,7 +64,7 @@ export interface PaymentAlternative {
 }
 
 export class EnhancedMarketplaceService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
   // ENS Integration Methods
   async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {

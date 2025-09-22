@@ -15,7 +15,7 @@ export default function BackendDebug() {
   const [backendUrl, setBackendUrl] = useState('');
 
   useEffect(() => {
-    setBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002');
+    setBackendUrl(process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000');
   }, []);
 
   const addResult = (result: DebugResult) => {

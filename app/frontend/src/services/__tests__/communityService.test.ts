@@ -47,7 +47,7 @@ describe('CommunityService', () => {
       const result = await CommunityService.createCommunity(createInput);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities',
+        'http://localhost:10000/api/communities',
         expect.objectContaining({
           method: 'POST',
           headers: {
@@ -109,7 +109,7 @@ describe('CommunityService', () => {
       const result = await CommunityService.getCommunityById('1');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities/1',
+        'http://localhost:10000/api/communities/1',
         expect.objectContaining({
           method: 'GET',
           headers: {
@@ -166,7 +166,7 @@ describe('CommunityService', () => {
       const result = await CommunityService.getAllCommunities();
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities',
+        'http://localhost:10000/api/communities',
         expect.objectContaining({
           method: 'GET',
           headers: {
@@ -194,7 +194,7 @@ describe('CommunityService', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('http://localhost:3002/api/communities?'),
+        expect.stringContaining('http://localhost:10000/api/communities?'),
         expect.objectContaining({
           method: 'GET',
         })
@@ -222,7 +222,7 @@ describe('CommunityService', () => {
       await CommunityService.searchCommunities('defi', 5);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities/search?q=defi&limit=5',
+        'http://localhost:10000/api/communities/search?q=defi&limit=5',
         expect.objectContaining({
           method: 'GET',
         })

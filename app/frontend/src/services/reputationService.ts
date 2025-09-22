@@ -9,7 +9,7 @@ import {
 } from '../types/reputation';
 
 class ReputationService {
-  private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
   async getUserReputation(userId: string): Promise<UserReputation> {
     try {

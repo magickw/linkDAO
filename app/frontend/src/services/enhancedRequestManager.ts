@@ -279,7 +279,7 @@ export const apiRequest = <T>(
   options?: RequestInit,
   config?: RequestConfig
 ): Promise<T> => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
   const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
   return enhancedRequestManager.request<T>(url, options, config);
 };

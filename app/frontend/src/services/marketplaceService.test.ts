@@ -5,7 +5,7 @@ global.fetch = jest.fn();
 
 describe('MarketplaceService', () => {
   let marketplaceService: MarketplaceService;
-  const mockApiUrl = 'http://localhost:3002/api';
+  const mockApiUrl = 'http://localhost:10000/api';
 
   beforeEach(() => {
     marketplaceService = new MarketplaceService();

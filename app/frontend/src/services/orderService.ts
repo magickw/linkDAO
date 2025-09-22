@@ -6,7 +6,7 @@
 import { Order, OrderStatus, OrderEvent, OrderFilters, OrderSearchQuery, PaginatedOrders } from '../types/order';
 
 export class OrderService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
   /**
    * Get order history for a user (buyer or seller)
