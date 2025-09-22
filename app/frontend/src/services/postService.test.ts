@@ -35,7 +35,7 @@ describe('PostService', () => {
       const result = await PostService.createPost(mockPostInput);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts',
+        'http://localhost:10000/api/posts',
         {
           method: 'POST',
           headers: {
@@ -69,7 +69,7 @@ describe('PostService', () => {
       const result = await PostService.getPostById('1');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/1',
+        'http://localhost:10000/api/posts/1',
         {
           method: 'GET',
           headers: {
@@ -117,7 +117,7 @@ describe('PostService', () => {
       );
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/author/0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/posts/author/0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {
@@ -152,7 +152,7 @@ describe('PostService', () => {
       const result = await PostService.getPostsByTag('test');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/tag/test',
+        'http://localhost:10000/api/posts/tag/test',
         {
           method: 'GET',
           headers: {
@@ -190,7 +190,7 @@ describe('PostService', () => {
       const result = await PostService.updatePost('1', updateData);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/1',
+        'http://localhost:10000/api/posts/1',
         {
           method: 'PUT',
           headers: {
@@ -229,7 +229,7 @@ describe('PostService', () => {
       const result = await PostService.deletePost('1');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/1',
+        'http://localhost:10000/api/posts/1',
         {
           method: 'DELETE',
           headers: {
@@ -262,7 +262,7 @@ describe('PostService', () => {
       const result = await PostService.getAllPosts();
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts',
+        'http://localhost:10000/api/posts',
         {
           method: 'GET',
           headers: {
@@ -297,7 +297,7 @@ describe('PostService', () => {
       );
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/feed?forUser=0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/posts/feed?forUser=0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {
@@ -317,7 +317,7 @@ describe('PostService', () => {
       const result = await PostService.getFeed();
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/posts/feed',
+        'http://localhost:10000/api/posts/feed',
         {
           method: 'GET',
           headers: {

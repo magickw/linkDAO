@@ -14,7 +14,7 @@ import {
   SearchAnalytics
 } from '../types/enhancedSearch';
 
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 /**
  * Enhanced Search and Discovery Service

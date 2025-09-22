@@ -1,5 +1,5 @@
 // Marketplace service for interacting with the backend API
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 export interface CreateListingInput {
   sellerWalletAddress: string;

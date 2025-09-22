@@ -21,7 +21,7 @@ describe('FollowService', () => {
       const result = await FollowService.follow(mockFollower, mockFollowing);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/follow',
+        'http://localhost:10000/api/follow/follow',
         {
           method: 'POST',
           headers: {
@@ -55,7 +55,7 @@ describe('FollowService', () => {
       const result = await FollowService.unfollow(mockFollower, mockFollowing);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/unfollow',
+        'http://localhost:10000/api/follow/unfollow',
         {
           method: 'POST',
           headers: {
@@ -90,7 +90,7 @@ describe('FollowService', () => {
       const result = await FollowService.getFollowers(mockFollower);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/followers/0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/follow/followers/0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {
@@ -124,7 +124,7 @@ describe('FollowService', () => {
       const result = await FollowService.getFollowing(mockFollower);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/following/0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/follow/following/0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {
@@ -157,7 +157,7 @@ describe('FollowService', () => {
       const result = await FollowService.isFollowing(mockFollower, mockFollowing);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/is-following/0x1234567890123456789012345678901234567890/0xabcdef1234567890abcdef1234567890abcdef12',
+        'http://localhost:10000/api/follow/is-following/0x1234567890123456789012345678901234567890/0xabcdef1234567890abcdef1234567890abcdef12',
         {
           method: 'GET',
           headers: {
@@ -191,7 +191,7 @@ describe('FollowService', () => {
       const result = await FollowService.getFollowCount(mockFollower);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/follow/count/0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/follow/count/0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {

@@ -36,7 +36,7 @@ describe('CommunityMembershipService', () => {
       const result = await CommunityMembershipService.joinCommunity(joinInput);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities/1/members',
+        'http://localhost:10000/api/communities/1/members',
         expect.objectContaining({
           method: 'POST',
           headers: {
@@ -59,7 +59,7 @@ describe('CommunityMembershipService', () => {
       const result = await CommunityMembershipService.leaveCommunity('1', '0x123');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities/1/members/0x123',
+        'http://localhost:10000/api/communities/1/members/0x123',
         expect.objectContaining({
           method: 'DELETE',
           headers: {
@@ -105,7 +105,7 @@ describe('CommunityMembershipService', () => {
       const result = await CommunityMembershipService.getMembership('1', '0x123');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/communities/1/members/0x123',
+        'http://localhost:10000/api/communities/1/members/0x123',
         expect.objectContaining({
           method: 'GET',
         })

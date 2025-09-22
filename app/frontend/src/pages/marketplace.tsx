@@ -299,7 +299,7 @@ const MarketplaceContent: React.FC = () => {
     if (reputation?.walletAddress === userAddress) return;
     
     try {
-      console.log('Making request to:', `http://localhost:3002/marketplace/reputation/${userAddress}`);
+      console.log('Making request to:', `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/marketplace/reputation/${userAddress}`);
       const userReputation = await marketplaceService.getUserReputation(userAddress);
       setReputation(userReputation);
     } catch (error) {

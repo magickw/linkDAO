@@ -41,7 +41,7 @@ class EnvironmentManager {
         apiUrl = 'https://staging-api.linkdao.com'; // Replace with your staging API
       } else {
         // Development fallback
-        apiUrl = 'http://localhost:3002';
+        apiUrl = 'http://localhost:10000';
       }
     }
 

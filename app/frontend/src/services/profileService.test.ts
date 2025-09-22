@@ -37,7 +37,7 @@ describe('ProfileService', () => {
       const result = await ProfileService.createProfile(mockProfileInput);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/profiles',
+        'http://localhost:10000/api/profiles',
         {
           method: 'POST',
           headers: {
@@ -71,7 +71,7 @@ describe('ProfileService', () => {
       const result = await ProfileService.getProfileById('1');
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/profiles/1',
+        'http://localhost:10000/api/profiles/1',
         {
           method: 'GET',
           headers: {
@@ -107,7 +107,7 @@ describe('ProfileService', () => {
       );
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/profiles/address/0x1234567890123456789012345678901234567890',
+        'http://localhost:10000/api/profiles/address/0x1234567890123456789012345678901234567890',
         {
           method: 'GET',
           headers: {
@@ -150,7 +150,7 @@ describe('ProfileService', () => {
       const result = await ProfileService.updateProfile('1', updateData);
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:3002/api/profiles/1',
+        'http://localhost:10000/api/profiles/1',
         {
           method: 'PUT',
           headers: {

@@ -28,7 +28,7 @@ describe('WebSocketService', () => {
       webSocketService.connect();
       
       expect(require('socket.io-client').io).toHaveBeenCalledWith(
-        'http://localhost:3002',
+        'http://localhost:10000',
         { transports: ['websocket'] }
       );
     });

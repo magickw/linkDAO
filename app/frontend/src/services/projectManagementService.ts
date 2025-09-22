@@ -19,7 +19,7 @@ import {
   UploadProjectFileRequest
 } from '../types/service';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 class ProjectManagementService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
