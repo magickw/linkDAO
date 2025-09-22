@@ -346,3 +346,22 @@ export interface CacheConfig {
   ttl: number; // Time to live in milliseconds
   strategy: 'lru' | 'fifo' | 'lfu';
 }
+
+// Connection Status
+export interface ConnectionStatus {
+  isConnected: boolean;
+  isOnline: boolean;
+  quality: 'excellent' | 'good' | 'poor' | 'offline';
+  reconnectAttempts: number;
+  lastHeartbeat: Date | null;
+  queuedUpdates: number;
+}
+
+// Live Update Indicator
+export interface LiveUpdateIndicator {
+  type: 'new_posts' | 'new_comments' | 'new_reactions' | 'live_discussion';
+  count: number;
+  lastUpdate: Date;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  contextId: string; // postId, discussionId, etc.
+}
