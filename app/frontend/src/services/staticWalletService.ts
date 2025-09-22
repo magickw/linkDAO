@@ -103,7 +103,7 @@ class StaticWalletService {
       },
       {
         id: '4',
-        type: TransactionType.PENDING,
+        type: TransactionType.SEND,
         status: TransactionStatus.PENDING,
         amount: 0.1,
         token: 'ETH',
@@ -123,6 +123,7 @@ class StaticWalletService {
         label: 'Send',
         icon: '📤',
         action: async () => {
+          // This will be handled by the parent component
           console.log('Send action triggered');
         },
         tooltip: 'Send tokens to another address'
@@ -132,6 +133,7 @@ class StaticWalletService {
         label: 'Receive',
         icon: '📥',
         action: async () => {
+          // This will be handled by the parent component
           console.log('Receive action triggered');
         },
         tooltip: 'Show receive address and QR code'
@@ -141,6 +143,7 @@ class StaticWalletService {
         label: 'Swap',
         icon: '🔄',
         action: async () => {
+          // This will be handled by the parent component
           console.log('Swap action triggered');
         },
         tooltip: 'Swap tokens on DEX'
@@ -150,6 +153,7 @@ class StaticWalletService {
         label: 'Stake',
         icon: '🏦',
         action: async () => {
+          // This will be handled by the parent component
           console.log('Stake action triggered');
         },
         tooltip: 'Stake tokens to earn rewards'

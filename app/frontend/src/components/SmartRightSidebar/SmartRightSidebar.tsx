@@ -4,6 +4,7 @@ import TransactionMiniFeed from './TransactionMiniFeed';
 import QuickActionButtons from './QuickActionButtons';
 import PortfolioModal from './PortfolioModal';
 import TrendingContentWidget from './TrendingContentWidget';
+import { SendTokenModal, ReceiveTokenModal, SwapTokenModal, StakeTokenModal } from '../WalletActions';
 import { QuickAction, Transaction } from '../../types/wallet';
 import { useWalletData } from '../../hooks/useWalletData';
 
@@ -19,6 +20,10 @@ export default function SmartRightSidebar({
   className = '' 
 }: SmartRightSidebarProps) {
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   
   // Use real wallet data with live prices
   const {
@@ -35,8 +40,23 @@ export default function SmartRightSidebar({
 
   const handleQuickAction = useCallback(async (action: QuickAction) => {
     try {
-      await action.action();
-      // Handle success (show toast, update UI, etc.)
+      // Handle different quick actions
+      switch (action.id) {
+        case 'send':
+          setIsSendModalOpen(true);
+          break;
+        case 'receive':
+          setIsReceiveModalOpen(true);
+          break;
+        case 'swap':
+          setIsSwapModalOpen(true);
+          break;
+        case 'stake':
+          setIsStakeModalOpen(true);
+          break;
+        default:
+          await action.action();
+      }
     } catch (error) {
       console.error('Quick action failed:', error);
       // Handle error (show error toast, etc.)
@@ -50,6 +70,28 @@ export default function SmartRightSidebar({
 
   const handlePortfolioClick = useCallback(() => {
     setIsPortfolioModalOpen(true);
+  }, []);
+
+  // Wallet action handlers
+  const handleSendToken = useCallback(async (token: string, amount: number, recipient: string) => {
+    console.log('Sending', amount, token, 'to', recipient);
+    // Simulate transaction
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    alert(`Successfully sent ${amount} ${token} to ${recipient}`);
+  }, []);
+
+  const handleSwapToken = useCallback(async (fromToken: string, toToken: string, amount: number) => {
+    console.log('Swapping', amount, fromToken, 'for', toToken);
+    // Simulate swap
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    alert(`Successfully swapped ${amount} ${fromToken} for ${toToken}`);
+  }, []);
+
+  const handleStakeToken = useCallback(async (poolId: string, token: string, amount: number) => {
+    console.log('Staking', amount, token, 'in pool', poolId);
+    // Simulate staking
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    alert(`Successfully staked ${amount} ${token} in ${poolId}`);
   }, []);
 
   if (isLoading) {
@@ -134,6 +176,38 @@ export default function SmartRightSidebar({
         onClose={() => setIsPortfolioModalOpen(false)}
         walletData={walletData}
       />
+
+      {/* Wallet Action Modals */}
+      {walletData && (
+        <>
+          <SendTokenModal
+            isOpen={isSendModalOpen}
+            onClose={() => setIsSendModalOpen(false)}
+            tokens={walletData.balances}
+            onSend={handleSendToken}
+          />
+
+          <ReceiveTokenModal
+            isOpen={isReceiveModalOpen}
+            onClose={() => setIsReceiveModalOpen(false)}
+            walletAddress={walletData.address}
+          />
+
+          <SwapTokenModal
+            isOpen={isSwapModalOpen}
+            onClose={() => setIsSwapModalOpen(false)}
+            tokens={walletData.balances}
+            onSwap={handleSwapToken}
+          />
+
+          <StakeTokenModal
+            isOpen={isStakeModalOpen}
+            onClose={() => setIsStakeModalOpen(false)}
+            tokens={walletData.balances}
+            onStake={handleStakeToken}
+          />
+        </>
+      )}
     </>
   );
 }
