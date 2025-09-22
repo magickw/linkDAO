@@ -19,7 +19,7 @@ interface UseRealTimePricesReturn {
 
 export function useRealTimePrices({
   tokens,
-  updateInterval = 30000,
+  updateInterval = 300000, // 5 minutes
   enabled = true
 }: UseRealTimePricesOptions): UseRealTimePricesReturn {
   const [prices, setPrices] = useState<Map<string, CryptoPriceData>>(new Map());
