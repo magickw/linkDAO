@@ -1,325 +1,208 @@
-/**
- * useWalletData - Custom hook for managing wallet data and state
- * Features: Token balances, transaction history, portfolio tracking, auto-refresh
- */
+import { useState, useEffect, useCallback } from 'react';
+import { EnhancedWalletData } from '../types/wallet';
+import { walletDataService } from '../services/walletDataService';
+import { useWalletPrices } from './useRealTimePrices';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccount, useChainId } from 'wagmi';
-import { walletService, WalletData, TokenBalance, Transaction, PortfolioSummary } from '@/services/walletService';
-import { Address } from 'viem';
-
-export interface UseWalletDataReturn {
-  // Data
-  walletData: WalletData | null;
-  portfolio: PortfolioSummary | null;
-  tokens: TokenBalance[];
-  transactions: Transaction[];
-  
-  // State
-  isLoading: boolean;
-  isRefreshing: boolean;
-  error: string | null;
-  lastUpdated: Date | null;
-  
-  // Actions
-  refresh: () => Promise<void>;
-  refreshTokens: () => Promise<void>;
-  refreshTransactions: () => Promise<void>;
-  clearError: () => void;
-  
-  // Configuration
-  autoRefreshEnabled: boolean;
-  setAutoRefreshEnabled: (enabled: boolean) => void;
-}
-
-export interface UseWalletDataOptions {
+interface UseWalletDataOptions {
+  address?: string;
+  refreshInterval?: number;
   autoRefresh?: boolean;
-  refreshInterval?: number; // in milliseconds
   enableTransactionHistory?: boolean;
   maxTransactions?: number;
 }
 
-export const useWalletData = (options: UseWalletDataOptions = {}): UseWalletDataReturn => {
-  const {
-    autoRefresh = true,
-    refreshInterval = 30000, // 30 seconds
-    enableTransactionHistory = true,
-    maxTransactions = 20
-  } = options;
+interface UseWalletDataReturn {
+  walletData: EnhancedWalletData | null;
+  portfolio: {
+    totalValueUSD: number;
+    change24hPercent: number;
+  } | null;
+  tokens: Array<{
+    symbol: string;
+    balanceFormatted: string;
+    valueUSD: number;
+    change24h: number;
+  }>;
+  transactions: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    token: { symbol: string };
+    valueUSD: string;
+    timestamp: string;
+    status: string;
+    hash: string;
+  }>;
+  isLoading: boolean;
+  isRefreshing: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+  refresh: () => Promise<void>;
+  clearError: () => void;
+}
 
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-
-  const [walletData, setWalletData] = useState<WalletData | null>(null);
+export function useWalletData({
+  address,
+  refreshInterval = 60000, // 1 minute
+  autoRefresh = true,
+  enableTransactionHistory = false,
+  maxTransactions = 10
+}: UseWalletDataOptions = {}): UseWalletDataReturn {
+  const [walletData, setWalletData] = useState<EnhancedWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(autoRefresh);
 
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentServiceRef = useRef(walletService);
+  // Use real-time prices for the wallet data
+  const {
+    walletData: enhancedWalletData,
+    isLoading: pricesLoading,
+    error: pricesError
+  } = useWalletPrices(walletData);
 
-  // Update service when chain changes
-  useEffect(() => {
-    if (chainId) {
-      currentServiceRef.current = new (walletService.constructor as any)(chainId);
-    }
-  }, [chainId]);
-
-  /**
-   * Fetch complete wallet data
-   */
-  const fetchWalletData = useCallback(async (isRefresh = false): Promise<void> => {
-    if (!address || !isConnected) {
-      setWalletData(null);
-      setError(null);
-      return;
-    }
+  // Fetch wallet data
+  const fetchWalletData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      if (isRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-      setError(null);
-
-      const data = await currentServiceRef.current.getWalletData(address as Address);
-      
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setWalletData(data);
-        setLastUpdated(new Date());
-      }
+      const data = await walletDataService.getWalletData(address);
+      setWalletData(data);
+      setLastUpdated(new Date());
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch wallet data';
       setError(errorMessage);
-      console.error('Error fetching wallet data:', err);
+      console.error('Wallet data fetch error:', err);
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
-  }, [address, isConnected]);
+  }, [address]);
 
-  /**
-   * Refresh only token balances
-   */
-  const refreshTokens = useCallback(async (): Promise<void> => {
-    if (!address || !isConnected) return;
-
-    try {
-      setIsRefreshing(true);
-      setError(null);
-
-      const tokens = await currentServiceRef.current.getTokenBalances(address as Address);
-      
-      if (walletData) {
-        const portfolio = currentServiceRef.current['calculatePortfolioSummary'](tokens);
-        setWalletData(prev => prev ? {
-          ...prev,
-          portfolio,
-          tokens
-        } : null);
+  // Refresh wallet data manually
+  const refreshWalletData = useCallback(async () => {
+    if (walletData) {
+      setIsLoading(true);
+      try {
+        const refreshedData = await walletDataService.refreshWalletData(walletData);
+        setWalletData(refreshedData);
         setLastUpdated(new Date());
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to refresh wallet data';
+        setError(errorMessage);
+        console.error('Wallet data refresh error:', err);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh token balances';
-      setError(errorMessage);
-      console.error('Error refreshing tokens:', err);
-    } finally {
-      setIsRefreshing(false);
+    } else {
+      await fetchWalletData();
     }
-  }, [address, isConnected, walletData]);
+  }, [walletData, fetchWalletData]);
 
-  /**
-   * Refresh only transaction history
-   */
-  const refreshTransactions = useCallback(async (): Promise<void> => {
-    if (!address || !isConnected || !enableTransactionHistory) return;
-
-    try {
-      setIsRefreshing(true);
-      setError(null);
-
-      const transactions = await currentServiceRef.current.getTransactionHistory(
-        address as Address, 
-        maxTransactions
-      );
-      
-      if (walletData) {
-        setWalletData(prev => prev ? {
-          ...prev,
-          transactions
-        } : null);
-        setLastUpdated(new Date());
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh transactions';
-      setError(errorMessage);
-      console.error('Error refreshing transactions:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [address, isConnected, enableTransactionHistory, maxTransactions, walletData]);
-
-  /**
-   * Manual refresh function
-   */
-  const refresh = useCallback(async (): Promise<void> => {
-    await fetchWalletData(true);
+  // Initial fetch
+  useEffect(() => {
+    fetchWalletData();
   }, [fetchWalletData]);
 
-  /**
-   * Clear error state
-   */
-  const clearError = useCallback((): void => {
+  // Auto-refresh interval
+  useEffect(() => {
+    if (!autoRefresh || refreshInterval <= 0) return;
+
+    const interval = setInterval(() => {
+      if (!isLoading && !pricesLoading) {
+        refreshWalletData();
+      }
+    }, refreshInterval);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshInterval, isLoading, pricesLoading, refreshWalletData]);
+
+  // Combine wallet data error with prices error
+  const combinedError = error || pricesError;
+  const finalWalletData = enhancedWalletData || walletData;
+
+  // Transform data for the wallet page
+  const portfolio = finalWalletData ? {
+    totalValueUSD: finalWalletData.portfolioValue,
+    change24hPercent: finalWalletData.portfolioChange
+  } : null;
+
+  const tokens = finalWalletData?.balances.map(balance => ({
+    symbol: balance.symbol,
+    balanceFormatted: `${balance.balance.toFixed(4)} ${balance.symbol}`,
+    valueUSD: balance.valueUSD,
+    change24h: balance.change24h
+  })) || [];
+
+  const transactions = finalWalletData?.recentTransactions.map(tx => ({
+    id: tx.id,
+    type: tx.type,
+    amount: tx.amount,
+    token: { symbol: tx.token },
+    valueUSD: tx.valueUSD?.toString() || '0',
+    timestamp: tx.timestamp.toISOString(),
+    status: tx.status,
+    hash: tx.hash
+  })) || [];
+
+  const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // Initial data fetch when address changes
-  useEffect(() => {
-    if (address && isConnected) {
-      fetchWalletData(false);
-    } else {
-      setWalletData(null);
-      setError(null);
-      setLastUpdated(null);
-    }
-  }, [address, isConnected, fetchWalletData]);
-
-  // Auto-refresh mechanism
-  useEffect(() => {
-    if (!autoRefreshEnabled || !address || !isConnected) {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
-      return;
-    }
-
-    const scheduleRefresh = () => {
-      refreshTimeoutRef.current = setTimeout(async () => {
-        try {
-          await refresh();
-        } catch (err) {
-          console.error('Auto-refresh failed:', err);
-        }
-        scheduleRefresh(); // Schedule next refresh
-      }, refreshInterval);
-    };
-
-    scheduleRefresh();
-
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
-    };
-  }, [autoRefreshEnabled, address, isConnected, refresh, refreshInterval]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return {
-    // Data
-    walletData,
-    portfolio: walletData?.portfolio || null,
-    tokens: walletData?.tokens || [],
-    transactions: walletData?.transactions || [],
-    
-    // State
-    isLoading,
-    isRefreshing,
-    error,
+    walletData: finalWalletData,
+    portfolio,
+    tokens,
+    transactions,
+    isLoading: isLoading || pricesLoading,
+    isRefreshing: isLoading,
+    error: combinedError,
     lastUpdated,
-    
-    // Actions
-    refresh,
-    refreshTokens,
-    refreshTransactions,
-    clearError,
-    
-    // Configuration
-    autoRefreshEnabled,
-    setAutoRefreshEnabled
+    refresh: refreshWalletData,
+    clearError
   };
-};
-
-// Hook for portfolio performance data
-export interface UsePortfolioPerformanceReturn {
-  data: { labels: string[]; values: number[] } | null;
-  isLoading: boolean;
-  error: string | null;
-  refresh: () => Promise<void>;
 }
 
-export const usePortfolioPerformance = (
-  timeframe: '1d' | '1w' | '1m' | '1y' = '1d'
-): UsePortfolioPerformanceReturn => {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  
-  const [data, setData] = useState<{ labels: string[]; values: number[] } | null>(null);
+// Portfolio performance hook
+export function usePortfolioPerformance(timeframe: '1d' | '1w' | '1m' | '1y') {
+  const [data, setData] = useState<{
+    values: number[];
+    timestamps: string[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const serviceRef = useRef(walletService);
-
-  // Update service when chain changes
   useEffect(() => {
-    if (chainId) {
-      serviceRef.current = new (walletService.constructor as any)(chainId);
-    }
-  }, [chainId]);
+    setIsLoading(true);
+    
+    // Simulate API call for portfolio performance data
+    setTimeout(() => {
+      const now = Date.now();
+      const intervals = {
+        '1d': { count: 24, step: 60 * 60 * 1000 }, // hourly for 1 day
+        '1w': { count: 7, step: 24 * 60 * 60 * 1000 }, // daily for 1 week
+        '1m': { count: 30, step: 24 * 60 * 60 * 1000 }, // daily for 1 month
+        '1y': { count: 12, step: 30 * 24 * 60 * 60 * 1000 } // monthly for 1 year
+      };
 
-  const fetchPerformanceData = useCallback(async (): Promise<void> => {
-    if (!address || !isConnected) {
-      setData(null);
-      return;
-    }
+      const { count, step } = intervals[timeframe];
+      const baseValue = 5000;
+      const values: number[] = [];
+      const timestamps: string[] = [];
 
-    try {
-      setIsLoading(true);
-      setError(null);
+      for (let i = 0; i < count; i++) {
+        const timestamp = new Date(now - (count - i - 1) * step);
+        const randomVariation = (Math.random() - 0.5) * 0.1; // ±5% variation
+        const value = baseValue * (1 + randomVariation + (i * 0.01)); // slight upward trend
+        
+        values.push(value);
+        timestamps.push(timestamp.toISOString());
+      }
 
-      const performanceData = await serviceRef.current.getPortfolioPerformance(
-        address as Address, 
-        timeframe
-      );
-      
-      setData(performanceData);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch performance data';
-      setError(errorMessage);
-      console.error('Error fetching portfolio performance:', err);
-    } finally {
+      setData({ values, timestamps });
       setIsLoading(false);
-    }
-  }, [address, isConnected, timeframe]);
+    }, 500);
+  }, [timeframe]);
 
-  const refresh = useCallback(async (): Promise<void> => {
-    await fetchPerformanceData();
-  }, [fetchPerformanceData]);
-
-  useEffect(() => {
-    fetchPerformanceData();
-  }, [fetchPerformanceData]);
-
-  return {
-    data,
-    isLoading,
-    error,
-    refresh
-  };
-};
+  return { data, isLoading };
+}
 
 export default useWalletData;
