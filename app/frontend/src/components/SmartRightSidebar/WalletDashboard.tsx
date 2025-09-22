@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { EnhancedWalletData, TokenBalance, Transaction, QuickAction } from '../../types/wallet';
+import { useWalletPrices } from '../../hooks/useRealTimePrices';
 
 interface WalletDashboardProps {
   walletData: EnhancedWalletData;
@@ -16,13 +17,26 @@ export default function WalletDashboard({
 }: WalletDashboardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [animateChange, setAnimateChange] = useState(false);
+  
+  // Use real-time prices
+  const {
+    walletData: enhancedWalletData,
+    prices,
+    isLoading: pricesLoading,
+    error: pricesError,
+    lastUpdated,
+    updatePrices
+  } = useWalletPrices(walletData);
+
+  // Use enhanced wallet data if available, fallback to original
+  const displayWalletData = enhancedWalletData || walletData;
 
   // Animate portfolio value changes
   useEffect(() => {
     setAnimateChange(true);
     const timer = setTimeout(() => setAnimateChange(false), 500);
     return () => clearTimeout(timer);
-  }, [walletData.portfolioValue]);
+  }, [displayWalletData.portfolioValue]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -47,7 +61,8 @@ export default function WalletDashboard({
     return `${address.substring(0, 6)}...${address.substring(38)}`;
   };
 
-  const isPositive = walletData.portfolioChange >= 0;
+  const isPositive = displayWalletData.portfolioChange >= 0;
+  const isPriceDataStale = lastUpdated && (Date.now() - lastUpdated.getTime()) > 60000; // 1 minute
 
   return (
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
@@ -62,14 +77,17 @@ export default function WalletDashboard({
               Wallet Dashboard
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {formatAddress(walletData.address)}
+              {formatAddress(displayWalletData.address)}
             </p>
           </div>
           <div className="text-right">
             <p className={`font-semibold text-gray-900 dark:text-white transition-all duration-500 ${
               animateChange ? 'scale-110 text-primary-600 dark:text-primary-400' : ''
             }`}>
-              {formatCurrency(walletData.portfolioValue)}
+              {formatCurrency(displayWalletData.portfolioValue)}
+              {pricesLoading && (
+                <span className="ml-2 inline-block w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              )}
             </p>
             <p className={`text-sm flex items-center justify-end ${
               isPositive ? 'text-green-500' : 'text-red-500'
@@ -83,7 +101,7 @@ export default function WalletDashboard({
               >
                 <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
-              {isPositive ? '+' : ''}{walletData.portfolioChange.toFixed(2)}%
+              {isPositive ? '+' : ''}{displayWalletData.portfolioChange.toFixed(2)}%
             </p>
           </div>
         </div>
@@ -97,8 +115,8 @@ export default function WalletDashboard({
             Top Holdings
           </h4>
           <div className="space-y-2">
-            {walletData.balances.slice(0, 3).map((token, index) => {
-              const percentage = (token.valueUSD / walletData.portfolioValue) * 100;
+            {displayWalletData.balances.slice(0, 3).map((token, index) => {
+              const percentage = (token.valueUSD / displayWalletData.portfolioValue) * 100;
               const tokenIsPositive = token.change24h >= 0;
               
               return (
@@ -144,7 +162,7 @@ export default function WalletDashboard({
             Quick Actions
           </h4>
           <div className="grid grid-cols-2 gap-2">
-            {walletData.quickActions.map((action, index) => (
+            {displayWalletData.quickActions.map((action, index) => (
               <button
                 key={action.id}
                 onClick={() => onQuickAction(action)}
@@ -178,10 +196,50 @@ export default function WalletDashboard({
 
       {/* Real-time Status Indicator */}
       <div className="px-4 pb-4">
-        <div className="flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
-          <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
-          Real-time updates active
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center">
+            <div className={`w-2 h-2 rounded-full mr-2 ${
+              pricesError ? 'bg-red-500' : 
+              isPriceDataStale ? 'bg-yellow-500' : 
+              'bg-green-500 animate-pulse'
+            }`} />
+            {pricesError ? 'Price update failed' :
+             isPriceDataStale ? 'Price data stale' :
+             'Real-time prices active'}
+          </div>
+          
+          {lastUpdated && (
+            <div className="flex items-center space-x-2">
+              <span>
+                Updated {new Date(lastUpdated).toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </span>
+              <button
+                onClick={updatePrices}
+                disabled={pricesLoading}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                title="Refresh prices"
+              >
+                <svg 
+                  className={`w-3 h-3 ${pricesLoading ? 'animate-spin' : ''}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
+        
+        {pricesError && (
+          <div className="mt-2 text-xs text-red-500 dark:text-red-400">
+            {pricesError}
+          </div>
+        )}
       </div>
     </div>
   );
