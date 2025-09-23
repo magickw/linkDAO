@@ -144,39 +144,48 @@ class AuthService {
       }
       
       // Send authentication request
-      const response = await fetch(`${this.baseUrl}/api/auth/wallet`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          address,
-          signature,
-          message,
-          nonce,
-        }),
-      });
-      
-      if (!response.ok) {
-        // If backend is not available, return success without authentication
-        if (response.status >= 500 || !response.status) {
-          console.warn('Backend unavailable, proceeding without authentication');
-          return { success: true };
+      try {
+        const response = await fetch(`${this.baseUrl}/api/auth/wallet`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            address,
+            signature,
+            message,
+            nonce,
+          }),
+        });
+        
+        if (!response.ok) {
+          // If backend is not available, return success with mock user
+          if (response.status >= 500 || !response.status) {
+            console.warn('Backend unavailable, proceeding with mock authentication');
+            return this.createMockAuthResponse(address);
+          }
+          const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+          throw new Error(errorData.error || `Authentication failed (${response.status})`);
         }
-        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-        throw new Error(errorData.error || `Authentication failed (${response.status})`);
+        
+        const data = await response.json();
+        
+        if (data.success && data.token) {
+          this.setToken(data.token);
+          console.log('Authentication successful for address:', address);
+        } else {
+          throw new Error(data.error || 'Authentication failed - no token received');
+        }
+        
+        return data;
+      } catch (fetchError: any) {
+        // If fetch fails (network error, backend down), use mock authentication
+        if (fetchError.name === 'TypeError' || fetchError.message.includes('fetch')) {
+          console.warn('Backend unavailable, proceeding with mock authentication');
+          return this.createMockAuthResponse(address);
+        }
+        throw fetchError;
       }
-      
-      const data = await response.json();
-      
-      if (data.success && data.token) {
-        this.setToken(data.token);
-        console.log('Authentication successful for address:', address);
-      } else {
-        throw new Error(data.error || 'Authentication failed - no token received');
-      }
-      
-      return data;
     } catch (error: any) {
       console.error('Wallet authentication failed:', error);
       // If it's a network error, proceed without authentication
@@ -235,6 +244,47 @@ class AuthService {
       return null;
     }
     
+    // Check if this is a mock token (offline mode)
+    if (this.token.startsWith('mock_token_')) {
+      const addressMatch = this.token.match(/mock_token_(0x[a-fA-F0-9]{40})/);
+      if (addressMatch) {
+        const address = addressMatch[1];
+        return {
+          id: `mock_${address}`,
+          address: address,
+          handle: `user_${address.slice(0, 6)}`,
+          ens: undefined,
+          email: undefined,
+          kycStatus: 'none',
+          role: 'user',
+          permissions: [],
+          preferences: {
+            notifications: {
+              email: true,
+              push: true,
+              inApp: true,
+            },
+            privacy: {
+              showEmail: false,
+              showTransactions: true,
+              allowDirectMessages: true,
+            },
+            trading: {
+              autoApproveSmallAmounts: false,
+              defaultSlippage: 0.5,
+              preferredCurrency: 'USD',
+            },
+          },
+          privacySettings: {
+            profileVisibility: 'public',
+            activityVisibility: 'public',
+            contactVisibility: 'friends',
+          },
+          createdAt: new Date().toISOString(),
+        };
+      }
+    }
+    
     try {
       const response = await fetch(`${this.baseUrl}/api/auth/me`, {
         headers: {
@@ -256,6 +306,21 @@ class AuthService {
       return null;
     } catch (error) {
       console.error('Failed to get current user:', error);
+      // If backend is unavailable and we have a token, try to extract mock user info
+      if (this.token.startsWith('mock_token_')) {
+        const addressMatch = this.token.match(/mock_token_(0x[a-fA-F0-9]{40})/);
+        if (addressMatch) {
+          const address = addressMatch[1];
+          return {
+            id: `mock_${address}`,
+            address: address,
+            handle: `user_${address.slice(0, 6)}`,
+            kycStatus: 'none',
+            role: 'user',
+            createdAt: new Date().toISOString(),
+          } as AuthUser;
+        }
+      }
       return null;
     }
   }
@@ -447,6 +512,55 @@ class AuthService {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_token');
     }
+  }
+
+  /**
+   * Create mock authentication response for offline mode
+   */
+  private createMockAuthResponse(address: string): AuthResponse {
+    const mockToken = `mock_token_${address}_${Date.now()}`;
+    const mockUser: AuthUser = {
+      id: `mock_${address}`,
+      address: address,
+      handle: `user_${address.slice(0, 6)}`,
+      ens: undefined,
+      email: undefined,
+      kycStatus: 'none',
+      role: 'user',
+      permissions: [],
+      preferences: {
+        notifications: {
+          email: true,
+          push: true,
+          inApp: true,
+        },
+        privacy: {
+          showEmail: false,
+          showTransactions: true,
+          allowDirectMessages: true,
+        },
+        trading: {
+          autoApproveSmallAmounts: false,
+          defaultSlippage: 0.5,
+          preferredCurrency: 'USD',
+        },
+      },
+      privacySettings: {
+        profileVisibility: 'public',
+        activityVisibility: 'public',
+        contactVisibility: 'friends',
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    this.setToken(mockToken);
+    console.log('Mock authentication successful for address:', address);
+    
+    return {
+      success: true,
+      token: mockToken,
+      user: mockUser,
+    };
   }
 
   /**

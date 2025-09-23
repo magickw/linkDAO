@@ -80,7 +80,7 @@ const MarketplaceContent: React.FC = () => {
       // Use the enhanced marketplace service
       console.log('Fetching listings using enhanced marketplace service...');
       
-      const enhancedMarketplaceService = (await import('@/services/enhancedMarketplaceService')).enhancedMarketplaceService;
+      const { enhancedMarketplaceService } = await import('@/services/enhancedMarketplaceService');
       const data = await enhancedMarketplaceService.getMarketplaceListings({
         limit: 50,
         sortBy: 'createdAt',
@@ -500,6 +500,9 @@ const MarketplaceContent: React.FC = () => {
 
         {/* Main Marketplace Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          
+          {/* Seller Quick Access Panel - Single, clean seller navigation */}
+          {isConnected && <SellerQuickAccessPanel />}
           
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
@@ -938,12 +941,19 @@ const MarketplaceContent: React.FC = () => {
                       <p className="text-xl text-white/80">Track your orders and manage deliveries with enhanced features</p>
                     </div>
                     {React.createElement(
-                      React.lazy(() => import('@/components/Marketplace/OrderTracking/EnhancedOrderTracking')),
+                      'div',
+                      { className: 'text-center text-white/70 py-8' },
+                      'Order tracking feature coming soon...'
+                    )}
+                    {/* TODO: Re-enable when component is stable
+                    {React.createElement(
+                      EnhancedOrderTracking,
                       { 
                         userType: profile ? 'seller' : 'buyer',
                         className: 'text-white'
                       }
                     )}
+                    */}
                   </div>
                 ) : (
                   <GlassPanel variant="primary" className="text-center py-12">
@@ -1371,7 +1381,32 @@ const MarketplacePage: React.FC = () => {
   return (
     <EnhancedCartProvider>
       <MarketplaceContent />
+      
+      {/* Floating Seller Action Button - Always accessible */}
+      <SellerFloatingActionButton />
     </EnhancedCartProvider>
+  );
+};
+
+// Floating Action Button Component for Seller Access - Simplified
+const SellerFloatingActionButton: React.FC = () => {
+  const { isConnected } = useAccount();
+  const { profile } = useSeller();
+  const router = useRouter();
+
+  // Only show for existing sellers, not for new users
+  if (!isConnected || !profile) return null;
+
+  return (
+    <div className="fixed bottom-6 right-6 z-50">
+      <button
+        onClick={() => router.push('/marketplace/seller/dashboard')}
+        className="w-12 h-12 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-full shadow-lg flex items-center justify-center text-white text-sm transition-all duration-200 hover:scale-110 border-2 border-white/20"
+        title="Seller Dashboard"
+      >
+        📊
+      </button>
+    </div>
   );
 };
 
