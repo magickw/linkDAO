@@ -1,3 +1,7 @@
+// LinkDAO Backend - Production Entry Point
+// Updated to include marketplace seller endpoints
+// Last updated: 2025-09-23
+
 const express = require('express');
 const cors = require('cors');
 const compression = require('compression');
