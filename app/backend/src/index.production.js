@@ -66,6 +66,7 @@ async function createOrUpdateUser(walletAddress, handle = null, profileData = {}
     return { rows: [user] };
   }
   
+  
   const query = `
     INSERT INTO users (wallet_address, handle, profile_cid, created_at)
     VALUES ($1, $2, $3, NOW())
@@ -288,6 +289,172 @@ app.get('/api/profiles/address/:address', async (req, res) => {
   }
 });
 
+// Add marketplace seller endpoints
+// Seller profile endpoints
+app.post('/marketplace/seller/profile', async (req, res) => {
+  try {
+    const profileData = req.body;
+    const { walletAddress, displayName, storeName, bio, description, profilePicture, logo } = profileData;
+    
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Wallet address is required'
+      });
+    }
+    
+    // Create or update user with seller profile data
+    const result = await createOrUpdateUser(walletAddress, displayName || storeName, {
+      profileCid: JSON.stringify({
+        displayName,
+        storeName,
+        bio,
+        description,
+        profilePicture,
+        logo
+      })
+    });
+    
+    const user = result.rows[0];
+    const newProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      displayName: displayName || '',
+      storeName: storeName || '',
+      bio: bio || '',
+      description: description || '',
+      profilePicture: profilePicture || '',
+      logo: logo || '',
+      createdAt: user.created_at,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log(`Seller profile created/updated for ${walletAddress}:`, newProfile);
+    
+    res.json({
+      success: true,
+      message: 'Seller profile created successfully',
+      data: newProfile
+    });
+  } catch (error) {
+    console.error('Error creating seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.put('/marketplace/seller/profile/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const updateData = req.body;
+    const { displayName, storeName, bio, description, profilePicture, logo } = updateData;
+    
+    // Update user with new seller profile data
+    const result = await createOrUpdateUser(walletAddress, displayName || storeName, {
+      profileCid: JSON.stringify({
+        displayName,
+        storeName,
+        bio,
+        description,
+        profilePicture,
+        logo
+      })
+    });
+    
+    const user = result.rows[0];
+    const updatedProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      displayName: displayName || '',
+      storeName: storeName || '',
+      bio: bio || '',
+      description: description || '',
+      profilePicture: profilePicture || '',
+      logo: logo || '',
+      createdAt: user.created_at,
+      updatedAt: new Date().toISOString()
+    };
+    
+    res.json({
+      success: true,
+      message: 'Seller profile updated successfully',
+      data: updatedProfile
+    });
+  } catch (error) {
+    console.error('Error updating seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Seller onboarding endpoints
+app.get('/marketplace/seller/onboarding/:walletAddress', (req, res) => {
+  const { walletAddress } = req.params;
+  
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 'wallet-connect',
+        title: 'Connect Wallet',
+        description: 'Connect your Web3 wallet to get started',
+        component: 'WalletConnect',
+        required: true,
+        completed: true
+      },
+      {
+        id: 'profile-setup',
+        title: 'Profile Setup',
+        description: 'Set up your seller profile and store information',
+        component: 'ProfileSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'verification',
+        title: 'Verification',
+        description: 'Verify your email and phone for enhanced features',
+        component: 'Verification',
+        required: false,
+        completed: false
+      },
+      {
+        id: 'payout-setup',
+        title: 'Payout Setup',
+        description: 'Configure your payment preferences',
+        component: 'PayoutSetup',
+        required: true,
+        completed: false
+      },
+      {
+        id: 'first-listing',
+        title: 'Create First Listing',
+        description: 'Create your first product listing',
+        component: 'FirstListing',
+        required: true,
+        completed: false
+      }
+    ]
+  });
+});
+
+app.put('/marketplace/seller/onboarding/:walletAddress/:stepId', (req, res) => {
+  const { walletAddress, stepId } = req.params;
+  const data = req.body;
+  
+  console.log(`Onboarding step ${stepId} updated for ${walletAddress}:`, data);
+  
+  res.json({
+    success: true,
+    message: `Onboarding step ${stepId} updated successfully`,
+    data
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
@@ -307,7 +474,11 @@ app.use('*', (req, res) => {
       'GET /',
       'GET /health',
       'GET /ping',
-      'GET /api/profiles/address/:address'
+      'GET /api/profiles/address/:address',
+      'POST /marketplace/seller/profile',
+      'PUT /marketplace/seller/profile/:walletAddress',
+      'GET /marketplace/seller/onboarding/:walletAddress',
+      'PUT /marketplace/seller/onboarding/:walletAddress/:stepId'
     ]
   });
 });
@@ -324,6 +495,10 @@ initializeDatabase().then(() => {
     console.log(`   GET  /                                    - API info`);
     console.log(`   GET  /health                              - Health check`);
     console.log(`   GET  /api/profiles/address/:address       - User profile`);
+    console.log(`   POST /marketplace/seller/profile          - Create seller profile`);
+    console.log(`   PUT  /marketplace/seller/profile/:walletAddress - Update seller profile`);
+    console.log(`   GET  /marketplace/seller/onboarding/:walletAddress - Get onboarding steps`);
+    console.log(`   PUT  /marketplace/seller/onboarding/:walletAddress/:stepId - Update onboarding step`);
     console.log(`\n✅ Server ready for requests\n`);
   });
 });
