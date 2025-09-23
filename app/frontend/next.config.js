@@ -167,7 +167,20 @@ const nextConfig = {
   },
   
   async rewrites() {
-    return [];
+    return [
+      // Proxy marketplace requests to the backend service, but exclude Next.js API routes
+      {
+        source: '/marketplace/:path*',
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/marketplace/:path*`,
+        has: [
+          {
+            type: 'header',
+            key: 'accept',
+            value: 'application/json',
+          },
+        ],
+      },
+    ];
   },
 }
 

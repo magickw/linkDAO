@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { SellerProfile } from '../../../../types/seller';
 import { Button } from '../../../../design-system';
+import { useToast } from '../../../../context/ToastContext';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;
@@ -191,6 +192,8 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { addToast } = useToast();
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -249,11 +252,16 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
     }
 
     setIsSubmitting(true);
+    setSubmitError(null);
     
     try {
       await onComplete(formData);
+      addToast('Profile saved successfully!', 'success');
     } catch (error) {
       console.error('Failed to save profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save profile. Please try again.';
+      setSubmitError(errorMessage);
+      addToast(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -397,6 +405,22 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
           </p>
         </div>
       </div>
+
+      {/* Error Message */}
+      {submitError && (
+        <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h4 className="text-red-300 font-medium">Error</h4>
+          </div>
+          <p className="text-red-200 text-sm mt-2">{submitError}</p>
+          <p className="text-red-200 text-sm mt-2">
+            It seems there might be an issue with the backend service. Please try again later or contact support if the problem persists.
+          </p>
+        </div>
+      )}
 
       {/* Tips */}
       <div className="bg-blue-900 bg-opacity-50 rounded-lg p-4">
