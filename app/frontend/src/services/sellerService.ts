@@ -19,6 +19,19 @@ import {
 class SellerService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+  // Helper method to determine the correct base URL based on context
+  private getApiBaseUrl(): string {
+    // When running in browser, use relative URLs which will be handled by Next.js rewrites
+    // When running in Node.js (API routes), use the full backend URL
+    if (typeof window === 'undefined') {
+      // Server-side (API routes) - use backend URL directly
+      return this.baseUrl;
+    } else {
+      // Client-side (browser) - use relative URLs for proxying
+      return '';
+    }
+  }
+
   // Profile validation rules with weights for completeness scoring
   private validationRules: ProfileValidationRule[] = [
     { field: 'displayName', required: true, weight: 15 },
@@ -106,12 +119,20 @@ class SellerService {
   // Onboarding Flow
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/onboarding/${walletAddress}`);
+      const baseUrl = this.getApiBaseUrl();
+      // Use the correct backend endpoint
+      const endpoint = typeof window === 'undefined' 
+        ? `${baseUrl}/marketplace/seller/onboarding/${walletAddress}`  // Server-side direct call
+        : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}`;  // Client-side through proxy
+      console.log(`Making GET request to: ${endpoint}`);
+      const response = await fetch(endpoint);
+      console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch onboarding steps: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
+      console.log(`Response data:`, result);
       // The backend returns { success: true, data: [...] }
       // We need to return the data array
       if (result.success) {
@@ -168,7 +189,13 @@ class SellerService {
   }
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/onboarding/${walletAddress}/${stepId}`, {
+    const baseUrl = this.getApiBaseUrl();
+    // Use the correct backend endpoint
+    const endpoint = typeof window === 'undefined' 
+      ? `${baseUrl}/marketplace/seller/onboarding/${walletAddress}/${stepId}`  // Server-side direct call
+      : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}/${stepId}`;  // Client-side through proxy
+    console.log(`Making PUT request to: ${endpoint}`, data);
+    const response = await fetch(endpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -176,12 +203,14 @@ class SellerService {
       body: JSON.stringify(data),
     });
     
+    console.log(`Response status: ${response.status}`);
     if (!response.ok) {
       throw new Error(`Failed to update onboarding step: ${response.status} ${response.statusText}`);
     }
     
     // Parse the response to ensure it's successful
     const result = await response.json();
+    console.log(`Response data:`, result);
     if (!result.success) {
       throw new Error(result.message || 'Failed to update onboarding step');
     }
@@ -190,13 +219,21 @@ class SellerService {
   // Seller Profile Management
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/sellers/profile/${walletAddress}`);
+      const baseUrl = this.getApiBaseUrl();
+      // Use the correct backend endpoint
+      const endpoint = typeof window === 'undefined' 
+        ? `${baseUrl}/marketplace/seller/profile/${walletAddress}`  // Server-side direct call
+        : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
+      console.log(`Making GET request to: ${endpoint}`);
+      const response = await fetch(endpoint);
+      console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error(`Failed to fetch seller profile: ${response.status} ${response.statusText}`);
       }
       
       const result = await response.json();
+      console.log(`Response data:`, result);
       // The backend returns { success: true, data: {...} }
       // We need to return the data object
       if (result.success) {
@@ -225,7 +262,13 @@ class SellerService {
   }
 
   async createSellerProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/profile`, {
+    const baseUrl = this.getApiBaseUrl();
+    // Use the correct backend endpoint
+    const endpoint = typeof window === 'undefined' 
+      ? `${baseUrl}/marketplace/seller/profile`  // Server-side direct call
+      : `${baseUrl}/api/marketplace/seller/profile`;  // Client-side through proxy
+    console.log(`Making POST request to: ${endpoint}`, profileData);
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -233,11 +276,13 @@ class SellerService {
       body: JSON.stringify(profileData),
     });
     
+    console.log(`Response status: ${response.status}`);
     if (!response.ok) {
       throw new Error(`Failed to create seller profile: ${response.status} ${response.statusText}`);
     }
     
     const result = await response.json();
+    console.log(`Response data:`, result);
     // The backend returns { success: true, data: {...} }
     // We need to return the data object
     if (result.success) {
@@ -248,7 +293,13 @@ class SellerService {
   }
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}`, {
+    const baseUrl = this.getApiBaseUrl();
+    // Use the correct backend endpoint
+    const endpoint = typeof window === 'undefined' 
+      ? `${baseUrl}/marketplace/seller/profile/${walletAddress}`  // Server-side direct call
+      : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
+    console.log(`Making PUT request to: ${endpoint}`, updates);
+    const response = await fetch(endpoint, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -256,11 +307,13 @@ class SellerService {
       body: JSON.stringify(updates),
     });
     
+    console.log(`Response status: ${response.status}`);
     if (!response.ok) {
       throw new Error(`Failed to update seller profile: ${response.status} ${response.statusText}`);
     }
     
     const result = await response.json();
+    console.log(`Response data:`, result);
     // The backend returns { success: true, data: {...} }
     // We need to return the data object
     if (result.success) {
@@ -273,6 +326,12 @@ class SellerService {
   // Enhanced Profile Update with ENS and Image Support
   async updateSellerProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
     try {
+      const baseUrl = this.getApiBaseUrl();
+      const endpoint = typeof window === 'undefined' 
+        ? `${baseUrl}/marketplace/seller/profile/${walletAddress}/enhanced`  // Server-side direct call
+        : `${baseUrl}/api/marketplace/seller/${walletAddress}/enhanced`;     // Client-side through proxy
+      console.log(`Making PUT request to: ${endpoint}`);
+
       const formData = new FormData();
       
       // Add text fields
@@ -294,17 +353,20 @@ class SellerService {
         formData.append('coverImage', updates.coverImage);
       }
 
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/profile/${walletAddress}/enhanced`, {
+      // Use the correct backend endpoint
+      const response = await fetch(endpoint, {
         method: 'PUT',
         body: formData,
       });
 
+      console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update seller profile');
       }
 
       const result = await response.json();
+      console.log(`Response data:`, result);
       if (result.success) {
         return result.data;
       } else {
@@ -319,7 +381,13 @@ class SellerService {
   // ENS Validation Methods
   async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/sellers/ens/validate`, {
+      const baseUrl = this.getApiBaseUrl();
+      // Use the correct backend endpoint
+      const endpoint = typeof window === 'undefined' 
+        ? `${baseUrl}/marketplace/seller/ens/validate`  // Server-side direct call
+        : `${baseUrl}/api/marketplace/seller/ens/validate`;  // Client-side through proxy
+      console.log(`Making POST request to: ${endpoint}`, { ensHandle });
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,11 +395,13 @@ class SellerService {
         body: JSON.stringify({ ensHandle }),
       });
 
+      console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         throw new Error('Failed to validate ENS handle');
       }
 
       const result = await response.json();
+      console.log(`Response data:`, result);
       if (result.success) {
         return result.data;
       } else {
@@ -351,7 +421,13 @@ class SellerService {
 
   async verifyENSOwnership(ensHandle: string, walletAddress: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/sellers/ens/verify-ownership`, {
+      const baseUrl = this.getApiBaseUrl();
+      // Use the correct backend endpoint
+      const endpoint = typeof window === 'undefined' 
+        ? `${baseUrl}/marketplace/seller/ens/verify-ownership`  // Server-side direct call
+        : `${baseUrl}/api/marketplace/seller/ens/verify-ownership`;  // Client-side through proxy
+      console.log(`Making POST request to: ${endpoint}`, { ensHandle, walletAddress });
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -359,11 +435,13 @@ class SellerService {
         body: JSON.stringify({ ensHandle, walletAddress }),
       });
 
+      console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         return false;
       }
 
       const result = await response.json();
+      console.log(`Response data:`, result);
       return result.success && result.data?.isOwned;
     } catch (error) {
       console.error('Error verifying ENS ownership:', error);
