@@ -39,7 +39,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
           displayName: 'Sample Seller',
           storeName: 'Sample Store',
           tier: 'pro',
-          profilePicture: null,
+          coverImage: null,
           stats: {
             reputationScore: 95,
             averageRating: 4.8,
@@ -184,9 +184,9 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center mb-4 md:mb-0">
-            {effectiveProfile?.profilePicture ? (
+            {effectiveProfile?.coverImage ? (
               <img
-                src={effectiveProfile.profilePicture}
+                src={effectiveProfile.coverImage}
                 alt={effectiveProfile.displayName}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
               />
