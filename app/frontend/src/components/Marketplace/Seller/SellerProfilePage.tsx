@@ -446,9 +446,9 @@ export function SellerProfilePage() {
           {/* Profile Card */}
           <GlassPanel className="p-6">
             <div className="text-center">
-              {profile.profilePicture ? (
+              {profile.coverImage ? (
                 <img
-                  src={profile.profilePicture}
+                  src={profile.coverImage}
                   alt={profile.displayName}
                   className="w-24 h-24 rounded-full object-cover border-2 border-purple-500 mx-auto mb-4"
                 />

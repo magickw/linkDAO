@@ -45,9 +45,9 @@ export const SellerQuickAccessPanel: React.FC<SellerQuickAccessPanelProps> = ({
           <div className="flex items-center space-x-2">
             {profile ? (
               <>
-                {profile.profilePicture ? (
+                {profile.coverImage ? (
                   <img
-                    src={profile.profilePicture}
+                    src={profile.coverImage}
                     alt={profile.displayName}
                     className="w-10 h-10 rounded-full object-cover"
                   />
