@@ -191,26 +191,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               <GradientButton
                 size="large"
                 gradient="primary"
-                onClick={onStartSelling}
+                onClick={onBrowseMarketplace}
                 className="text-lg px-8 py-4 font-semibold shadow-2xl"
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <span className="mr-2">➕</span> Create Listing
+                <span className="mr-2">🛍️</span> Browse Marketplace
               </GradientButton>
 
-              <Button
-                variant="outline"
-                size="large"
-                onClick={onBrowseMarketplace}
-                className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span className="mr-2">📋</span> My Listings
-              </Button>
-              
-              {profile && (
+              {profile ? (
                 <>
                   <Button
                     variant="secondary"
@@ -220,34 +209,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <span className="mr-2">📊</span> Dashboard
+                    <span className="mr-2">📊</span> Seller Dashboard
                   </Button>
                   
                   <Button
                     variant="outline"
                     size="large"
-                    onClick={() => router.push('/marketplace/seller/profile')}
+                    onClick={() => router.push('/marketplace/seller/listings/create')}
                     className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <span className="mr-2">👤</span> Profile
+                    <span className="mr-2">➕</span> Create Listing
                   </Button>
                 </>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="large"
+                  onClick={onStartSelling}
+                  className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="mr-2">🏪</span> Become a Seller
+                </Button>
               )}
-              
-              {/* Seller Dashboard Button */}
-              <Button
-                variant="secondary"
-                size="large"
-                onClick={onStartSelling}
-                className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span className="mr-2">📊</span> 
-                {profile ? 'Seller Dashboard' : 'Become a Seller'}
-              </Button>
             </div>
           </motion.div>
 
