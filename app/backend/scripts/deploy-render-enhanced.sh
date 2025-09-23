@@ -19,8 +19,112 @@ echo "🧹 Cleaning previous builds..."
 rm -rf dist
 mkdir -p dist
 
-# Function to create emergency fallback server
-create_emergency_server() {
+# Function to copy the production JavaScript file directly
+copy_production_file() {
+    echo "📋 Copying production entry point..."
+    if [ -f "src/index.production.js" ]; then
+        cp src/index.production.js dist/index.js
+        echo "✅ Production entry point copied successfully"
+        return 0
+    else
+        echo "❌ Production entry point not found"
+        return 1
+    fi
+}
+
+# Strategy 1: Try to copy the production file directly
+echo "🔨 Strategy 1: Copying production entry point..."
+if copy_production_file; then
+    echo "🎉 Primary deployment strategy succeeded!"
+    exit 0
+fi
+
+# Strategy 2: Try full TypeScript compilation
+echo "🔨 Strategy 2: Attempting full TypeScript compilation..."
+if [ -f "tsconfig.prod.json" ]; then
+    if npx tsc --project tsconfig.prod.json --noEmitOnError false 2>&1; then
+        echo "✅ Full TypeScript compilation successful"
+        if [ -f "dist/index.js" ]; then
+            echo "🎉 Primary deployment strategy succeeded!"
+            exit 0
+        fi
+    else
+        echo "⚠️  Full TypeScript compilation failed"
+    fi
+else
+    echo "⚠️  tsconfig.prod.json not found"
+fi
+
+# Strategy 3: Try minimal compilation
+echo "🔨 Strategy 3: Attempting minimal TypeScript compilation..."
+if [ -f "src/index.ts" ]; then
+    # Create minimal tsconfig
+    cat > tsconfig.emergency.json << 'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmitOnError": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "src/index.ts"
+  ],
+  "exclude": [
+    "src/tests/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
+EOF
+
+    if npx tsc --project tsconfig.emergency.json 2>&1; then
+        echo "✅ Minimal TypeScript compilation successful"
+        if [ -f "dist/index.js" ]; then
+            echo "🎉 Fallback deployment strategy succeeded!"
+            rm -f tsconfig.emergency.json
+            exit 0
+        fi
+    else
+        echo "⚠️  Minimal TypeScript compilation failed"
+    fi
+    rm -f tsconfig.emergency.json
+fi
+
+# Strategy 4: Copy and convert manually
+echo "🔨 Strategy 4: Manual file processing..."
+if [ -d "src" ]; then
+    # Copy essential files that might work as-is
+    find src -name "*.js" -exec cp {} dist/ \; 2>/dev/null || true
+    
+    # Try to find any working entry point
+    if [ -f "src/simpleServer.ts" ]; then
+        echo "📋 Found simpleServer.ts, trying to compile it..."
+        npx tsc src/simpleServer.ts --outDir dist --target ES2020 --module commonjs --skipLibCheck --allowJs 2>/dev/null || true
+        if [ -f "dist/simpleServer.js" ]; then
+            mv dist/simpleServer.js dist/index.js
+            echo "✅ Simple server compilation successful"
+            echo "🎉 Manual processing strategy succeeded!"
+            exit 0
+        fi
+    fi
+fi
+
+# Strategy 5: Emergency fallback - but try to use our production file first
+echo "🚨 Strategy 5: Emergency fallback server deployment..."
+if [ -f "src/index.production.js" ]; then
+    echo "📋 Using our production entry point for emergency deployment..."
+    cp src/index.production.js dist/index.js
+    echo "✅ Production entry point copied for emergency deployment"
+else
+    # Create emergency fallback server only if our production file doesn't exist
     echo "🚨 Creating emergency fallback server..."
     cat > dist/index.js << 'EOF'
 const express = require('express');
@@ -67,13 +171,21 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Mock user profile endpoint
-app.get('/api/users/:address', (req, res) => {
+// Mock user profile endpoint with correct structure
+app.get('/api/profiles/address/:address', (req, res) => {
+  const { address } = req.params;
   res.json({
-    address: req.params.address,
-    displayName: 'User',
-    bio: 'Emergency mode - full functionality coming soon',
-    createdAt: new Date().toISOString()
+    success: true,
+    data: {
+      id: `profile-${address.slice(-8)}`,
+      walletAddress: address,
+      handle: `user_${address.slice(-6)}`,
+      ens: '',
+      avatarCid: `https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`,
+      bioCid: 'LinkDAO community member',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
   });
 });
 
@@ -133,90 +245,8 @@ app.listen(PORT, '0.0.0.0', () => {
 
 module.exports = app;
 EOF
-    echo "✅ Emergency server created"
-}
-
-# Strategy 1: Try full TypeScript compilation
-echo "🔨 Strategy 1: Attempting full TypeScript compilation..."
-if [ -f "tsconfig.prod.json" ]; then
-    if npx tsc --project tsconfig.prod.json --noEmitOnError false 2>&1; then
-        echo "✅ Full TypeScript compilation successful"
-        if [ -f "dist/index.js" ]; then
-            echo "🎉 Primary deployment strategy succeeded!"
-            exit 0
-        fi
-    else
-        echo "⚠️  Full TypeScript compilation failed"
-    fi
-else
-    echo "⚠️  tsconfig.prod.json not found"
 fi
-
-# Strategy 2: Try minimal compilation
-echo "🔨 Strategy 2: Attempting minimal TypeScript compilation..."
-if [ -f "src/index.ts" ]; then
-    # Create minimal tsconfig
-    cat > tsconfig.emergency.json << 'EOF'
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "skipLibCheck": true,
-    "allowJs": true,
-    "checkJs": false,
-    "strict": false,
-    "noImplicitAny": false,
-    "noEmitOnError": false,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": [
-    "src/index.ts"
-  ],
-  "exclude": [
-    "src/tests/**/*",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
-}
-EOF
-
-    if npx tsc --project tsconfig.emergency.json 2>&1; then
-        echo "✅ Minimal TypeScript compilation successful"
-        if [ -f "dist/index.js" ]; then
-            echo "🎉 Fallback deployment strategy succeeded!"
-            rm -f tsconfig.emergency.json
-            exit 0
-        fi
-    else
-        echo "⚠️  Minimal TypeScript compilation failed"
-    fi
-    rm -f tsconfig.emergency.json
-fi
-
-# Strategy 3: Copy and convert manually
-echo "🔨 Strategy 3: Manual file processing..."
-if [ -d "src" ]; then
-    # Copy essential files that might work as-is
-    find src -name "*.js" -exec cp {} dist/ \; 2>/dev/null || true
-    
-    # Try to find any working entry point
-    if [ -f "src/simpleServer.ts" ]; then
-        echo "📋 Found simpleServer.ts, trying to compile it..."
-        npx tsc src/simpleServer.ts --outDir dist --target ES2020 --module commonjs --skipLibCheck --allowJs 2>/dev/null || true
-        if [ -f "dist/simpleServer.js" ]; then
-            mv dist/simpleServer.js dist/index.js
-            echo "✅ Simple server compilation successful"
-            echo "🎉 Manual processing strategy succeeded!"
-            exit 0
-        fi
-    fi
-fi
-
-# Strategy 4: Emergency fallback
-echo "🚨 Strategy 4: Emergency fallback server deployment..."
-create_emergency_server
+echo "✅ Emergency server created"
 
 # Verify emergency server was created
 if [ -f "dist/index.js" ]; then

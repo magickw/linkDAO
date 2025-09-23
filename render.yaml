@@ -5,7 +5,7 @@ services:
     plan: starter
     rootDir: app/backend
     buildCommand: bash scripts/prebuild.sh && npm install --no-audit --prefer-offline && bash scripts/verify-deps.sh && bash scripts/deploy-render-enhanced.sh
-    startCommand: node dist/index.js
+    startCommand: node src/index.production.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
