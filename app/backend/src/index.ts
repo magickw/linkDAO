@@ -19,6 +19,9 @@ import {
   apiRateLimit,
 } from './middleware/securityMiddleware';
 
+// Import proxy routes
+import proxyRoutes from './routes/proxyRoutes';
+
 // Validate security configuration on startup
 try {
   validateSecurityConfig();
@@ -67,6 +70,9 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// Proxy routes
+app.use('/', proxyRoutes);
 
 // Post routes - simplified to avoid compilation errors
 app.get('/api/posts/feed', (req, res) => {
