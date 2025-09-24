@@ -24,6 +24,7 @@ import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
 import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
 import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
+import { useDebounce } from '@/hooks/useDebounce';
 
 import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
@@ -43,6 +44,7 @@ const MarketplaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
@@ -189,7 +191,99 @@ const MarketplaceContent: React.FC = () => {
         addToast(`Loaded ${transformedListings.length} listings from marketplace`, 'success');
       } else {
         console.log('No listings returned from enhanced service, using fallback data');
-        throw new Error('No listings available');
+        // Enhanced fallback data that matches our backend structure
+        setListings([
+          {
+            id: 'prod_001',
+            sellerWalletAddress: '0x1234567890123456789012345678901234567890',
+            tokenAddress: '0x0000000000000000000000000000000000000000',
+            price: '0.1245',
+            quantity: 15,
+            itemType: 'DIGITAL',
+            listingType: 'FIXED_PRICE',
+            status: 'ACTIVE',
+            startTime: new Date().toISOString(),
+            metadataURI: 'Premium Wireless Headphones',
+            isEscrowed: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            enhancedData: {
+              title: 'Premium Wireless Headphones',
+              description: 'High-quality noise-canceling wireless headphones with 30-hour battery life and premium sound quality.',
+              images: [],
+              price: {
+                crypto: '0.1245',
+                cryptoSymbol: 'ETH',
+                fiat: '299.99',
+                fiatSymbol: 'USD'
+              },
+              seller: {
+                id: 'seller_001',
+                name: 'TechGear Pro',
+                rating: 4.8,
+                verified: true,
+                daoApproved: true,
+                walletAddress: '0x1234567890123456789012345678901234567890'
+              },
+              trust: {
+                verified: true,
+                escrowProtected: true,
+                onChainCertified: true,
+                safetyScore: 98
+              },
+              category: 'electronics',
+              tags: ['electronics', 'audio', 'wireless', 'premium'],
+              views: 1247,
+              favorites: 89
+            }
+          },
+          {
+            id: 'prod_002',
+            sellerWalletAddress: '0x2345678901234567890123456789012345678901',
+            tokenAddress: '0x0000000000000000000000000000000000000000',
+            price: '2.5000',
+            quantity: 1,
+            itemType: 'NFT',
+            listingType: 'AUCTION',
+            status: 'ACTIVE',
+            startTime: new Date().toISOString(),
+            endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+            highestBid: '2.1000',
+            metadataURI: 'Rare Digital Art NFT Collection',
+            isEscrowed: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            enhancedData: {
+              title: 'Rare Digital Art NFT Collection',
+              description: 'Exclusive digital artwork from renowned crypto artist. Limited edition with utility benefits.',
+              images: [],
+              price: {
+                crypto: '2.5000',
+                cryptoSymbol: 'ETH',
+                fiat: '6000.00',
+                fiatSymbol: 'USD'
+              },
+              seller: {
+                id: 'seller_002',
+                name: 'CryptoArtist',
+                rating: 4.9,
+                verified: true,
+                daoApproved: true,
+                walletAddress: '0x2345678901234567890123456789012345678901'
+              },
+              trust: {
+                verified: true,
+                escrowProtected: true,
+                onChainCertified: true,
+                safetyScore: 96
+              },
+              category: 'nft',
+              tags: ['nft', 'art', 'digital', 'exclusive'],
+              views: 892,
+              favorites: 156
+            }
+          }
+        ]);
       }
     } catch (error) {
       console.error('Error fetching listings:', error);
@@ -291,8 +385,7 @@ const MarketplaceContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loading]);
-
+  }, []);
 
   const fetchReputation = useCallback(async (userAddress: string) => {
     // Skip if already loading or if we already have reputation data
@@ -322,19 +415,19 @@ const MarketplaceContent: React.FC = () => {
   };
 
   const formatImageUrl = useCallback((url: string | undefined, width: number, height: number) => {
-    if (!url) return '';
+    if (!url) return getFallbackImage('product');
     // If it's already a full URL or data URL, return as is
     if (url.startsWith('http') || url.startsWith('data:image')) return url;
     // For local paths, ensure they're properly formatted
     if (url.startsWith('/')) return url;
     // For other cases, use our fallback
-    return '';
+    return getFallbackImage('product');
   }, []);
 
   // Filter listings based on search term and category
   const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
-    const matchesSearch = listing.metadataURI?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.sellerWalletAddress?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = listing.metadataURI?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      listing.sellerWalletAddress?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
     
     const matchesCategory = selectedCategory === 'all' || listing.itemType === selectedCategory.toUpperCase();
     
@@ -1019,7 +1112,9 @@ const MarketplaceContent: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <h3 className="font-medium text-white">{item.title}</h3>
-                            <p className="text-white/70 text-sm">{item.seller.name}</p>
+                            <p className="text-sm text-white/70 mt-1 line-clamp-2">
+                              {item.seller.name}
+                            </p>
                             <div className="flex items-center gap-4 mt-2">
                               <span className="text-white font-medium">
                                 {item.price.crypto} {item.price.cryptoSymbol}
@@ -1193,12 +1288,14 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   const marketplaceService = new MarketplaceService();
 
   useEffect(() => {
+    let mounted = true;
     if (address) {
-      fetchMyListings();
+      fetchMyListings(mounted);
     }
+    return () => { mounted = false; };
   }, [address]);
 
-  const fetchMyListings = async () => {
+  const fetchMyListings = async (mounted = true) => {
     try {
       setLoading(true);
       console.log('Fetching listings for wallet address:', address);
@@ -1221,8 +1318,10 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
               ...listing,
               sellerWalletAddress: address!
             }));
-            setListings(updatedDemoListings);
-            addToast('Displaying demo listings for development purposes', 'info');
+            if (mounted) {
+              setListings(updatedDemoListings);
+              addToast('Displaying demo listings for development purposes', 'info');
+            }
             return;
           }
         } catch (demoError) {
@@ -1230,13 +1329,19 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
         }
       }
       
-      setListings(validListings);
+      if (mounted) {
+        setListings(validListings);
+      }
     } catch (error) {
       console.error('Error fetching listings:', error);
-      addToast('Failed to fetch your listings. Please try again.', 'error');
-      setListings([]);
+      if (mounted) {
+        addToast('Failed to fetch your listings. Please try again.', 'error');
+        setListings([]);
+      }
     } finally {
-      setLoading(false);
+      if (mounted) {
+        setLoading(false);
+      }
     }
   };
 

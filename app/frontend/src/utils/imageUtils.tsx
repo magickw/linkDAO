@@ -35,9 +35,18 @@ export const getImageWithFallback = async (
     return src;
   }
 
-  // Check if the image loads successfully
+  // Check if the image loads successfully with a timeout
   try {
-    const response = await fetch(src, { method: 'HEAD' });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(src, { 
+      method: 'HEAD',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (response.ok) {
       return src;
     }
