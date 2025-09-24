@@ -29,6 +29,8 @@ interface Product {
     verified: boolean;
     reputation: number;
     daoApproved: boolean;
+    tier?: 'basic' | 'premium' | 'enterprise';
+    onlineStatus?: 'online' | 'offline' | 'away';
   };
   trust: {
     verified: boolean;
@@ -39,6 +41,26 @@ interface Product {
   isNFT?: boolean;
   inventory?: number;
   createdAt: Date;
+  views?: number;
+  favorites?: number;
+  condition?: 'new' | 'used' | 'refurbished';
+  brand?: string;
+  hasWarranty?: boolean;
+  shipping?: {
+    freeShipping?: boolean;
+    handlingTime?: number;
+    shipsFrom?: {
+      country?: string;
+      state?: string;
+      city?: string;
+    };
+  };
+  discount?: {
+    percentage?: number;
+    active?: boolean;
+  };
+  isFeatured?: boolean;
+  isPublished?: boolean;
 }
 
 interface FilterOptions {
@@ -49,10 +71,52 @@ interface FilterOptions {
   onChainCertified?: boolean;
   daoApproved?: boolean;
   inStock?: boolean;
+  freeShipping?: boolean;
+  // New filters
+  minRating?: number;
+  maxRating?: number;
+  sellerReputation?: 'low' | 'medium' | 'high' | 'verified';
+  hasReviews?: boolean;
+  recentlyAdded?: boolean;
+  trending?: boolean;
+  onSale?: boolean;
+  fastShipping?: boolean;
+  minReputationScore?: number;
+  maxReputationScore?: number;
+  minSalesCount?: number;
+  maxSalesCount?: number;
+  minViews?: number;
+  maxViews?: number;
+  minFavorites?: number;
+  maxFavorites?: number;
+  productCondition?: 'new' | 'used' | 'refurbished';
+  brand?: string;
+  hasWarranty?: boolean;
+  isNFT?: boolean;
+  isEscrowProtected?: boolean;
+  shippingMethods?: string[];
+  minHandlingTime?: number;
+  maxHandlingTime?: number;
+  shipsToCountry?: string;
+  shipsToState?: string;
+  shipsToCity?: string;
+  sellerVerification?: 'unverified' | 'basic' | 'verified' | 'dao_approved';
+  sellerTier?: 'basic' | 'premium' | 'enterprise';
+  sellerOnlineStatus?: 'online' | 'offline' | 'away';
+  priceCurrency?: string;
+  hasDiscount?: boolean;
+  discountPercentage?: number;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  hasStock?: boolean;
+  stockRange?: [number, number];
+  tagsInclude?: string[];
+  tagsExclude?: string[];
+  categoryPath?: string[];
 }
 
 interface SortOption {
-  field: 'price' | 'title' | 'createdAt' | 'reputation';
+  field: 'price' | 'title' | 'createdAt' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
   direction: 'asc' | 'desc';
 }
 
@@ -117,6 +181,74 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         </select>
       </div>
 
+      {/* Price Range Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Price Range</label>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            placeholder="Min"
+            value={filters.priceRange?.[0] || ''}
+            onChange={(e) => handleFilterChange('priceRange', [e.target.value ? parseFloat(e.target.value) : undefined, filters.priceRange?.[1]])}
+            className="w-full p-2 rounded text-white"
+            style={{
+              background: designTokens.glassmorphism.secondary.background,
+              border: designTokens.glassmorphism.secondary.border,
+              backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+            }}
+          />
+          <input
+            type="number"
+            placeholder="Max"
+            value={filters.priceRange?.[1] || ''}
+            onChange={(e) => handleFilterChange('priceRange', [filters.priceRange?.[0], e.target.value ? parseFloat(e.target.value) : undefined])}
+            className="w-full p-2 rounded text-white"
+            style={{
+              background: designTokens.glassmorphism.secondary.background,
+              border: designTokens.glassmorphism.secondary.border,
+              backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Product Condition Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Condition</label>
+        <select
+          value={filters.productCondition || ''}
+          onChange={(e) => handleFilterChange('productCondition', e.target.value || undefined)}
+          className="w-full p-2 rounded text-white"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            border: designTokens.glassmorphism.secondary.border,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        >
+          <option value="" className="bg-gray-800">Any Condition</option>
+          <option value="new" className="bg-gray-800">New</option>
+          <option value="used" className="bg-gray-800">Used</option>
+          <option value="refurbished" className="bg-gray-800">Refurbished</option>
+        </select>
+      </div>
+
+      {/* Brand Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Brand</label>
+        <input
+          type="text"
+          placeholder="Brand"
+          value={filters.brand || ''}
+          onChange={(e) => handleFilterChange('brand', e.target.value || undefined)}
+          className="w-full p-2 rounded text-white"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            border: designTokens.glassmorphism.secondary.border,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        />
+      </div>
+
       {/* Trust Filters */}
       <div>
         <label className="block text-sm font-medium text-white mb-2">Trust & Verification</label>
@@ -126,6 +258,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
             { key: 'escrowProtected', label: 'Escrow Protected', icon: '🔒' },
             { key: 'onChainCertified', label: 'On-Chain Certified', icon: '⛓️' },
             { key: 'daoApproved', label: 'DAO Approved', icon: '🏛️' },
+            { key: 'hasWarranty', label: 'Has Warranty', icon: '🔧' },
           ].map(({ key, label, icon }) => (
             <label key={key} className="flex items-center gap-2 text-sm text-white cursor-pointer">
               <input
@@ -138,6 +271,122 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               <span>{label}</span>
             </label>
           ))}
+        </div>
+      </div>
+
+      {/* Seller Verification Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Seller Verification</label>
+        <select
+          value={filters.sellerVerification || ''}
+          onChange={(e) => handleFilterChange('sellerVerification', e.target.value || undefined)}
+          className="w-full p-2 rounded text-white"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            border: designTokens.glassmorphism.secondary.border,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        >
+          <option value="" className="bg-gray-800">Any Verification</option>
+          <option value="unverified" className="bg-gray-800">Unverified</option>
+          <option value="basic" className="bg-gray-800">Basic</option>
+          <option value="verified" className="bg-gray-800">Verified</option>
+          <option value="dao_approved" className="bg-gray-800">DAO Approved</option>
+        </select>
+      </div>
+
+      {/* Seller Tier Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Seller Tier</label>
+        <select
+          value={filters.sellerTier || ''}
+          onChange={(e) => handleFilterChange('sellerTier', e.target.value || undefined)}
+          className="w-full p-2 rounded text-white"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            border: designTokens.glassmorphism.secondary.border,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        >
+          <option value="" className="bg-gray-800">Any Tier</option>
+          <option value="basic" className="bg-gray-800">Basic</option>
+          <option value="premium" className="bg-gray-800">Premium</option>
+          <option value="enterprise" className="bg-gray-800">Enterprise</option>
+        </select>
+      </div>
+
+      {/* Seller Online Status Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Seller Status</label>
+        <select
+          value={filters.sellerOnlineStatus || ''}
+          onChange={(e) => handleFilterChange('sellerOnlineStatus', e.target.value || undefined)}
+          className="w-full p-2 rounded text-white"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            border: designTokens.glassmorphism.secondary.border,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        >
+          <option value="" className="bg-gray-800">Any Status</option>
+          <option value="online" className="bg-gray-800">Online</option>
+          <option value="offline" className="bg-gray-800">Offline</option>
+          <option value="away" className="bg-gray-800">Away</option>
+        </select>
+      </div>
+
+      {/* Shipping Filters */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Shipping</label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.fastShipping || false}
+              onChange={(e) => handleFilterChange('fastShipping', e.target.checked)}
+              className="rounded"
+            />
+            <span>Fast Shipping (1-2 days)</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.freeShipping || false}
+              onChange={(e) => handleFilterChange('freeShipping', e.target.checked)}
+              className="rounded"
+            />
+            <span>Free Shipping</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Discount Filter */}
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">Discount</label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.hasDiscount || false}
+              onChange={(e) => handleFilterChange('hasDiscount', e.target.checked)}
+              className="rounded"
+            />
+            <span>On Sale</span>
+          </label>
+          {filters.hasDiscount && (
+            <input
+              type="number"
+              placeholder="Min Discount %"
+              value={filters.discountPercentage || ''}
+              onChange={(e) => handleFilterChange('discountPercentage', e.target.value ? parseFloat(e.target.value) : undefined)}
+              className="w-full p-2 rounded text-white"
+              style={{
+                background: designTokens.glassmorphism.secondary.background,
+                border: designTokens.glassmorphism.secondary.border,
+                backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -195,6 +444,7 @@ const SortControls: React.FC<SortControlsProps> = ({
           backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
         }}
       >
+        <option value="relevance-desc" className="bg-gray-800">Best Match</option>
         <option value="createdAt-desc" className="bg-gray-800">Newest First</option>
         <option value="createdAt-asc" className="bg-gray-800">Oldest First</option>
         <option value="price-asc" className="bg-gray-800">Price: Low to High</option>
@@ -202,6 +452,11 @@ const SortControls: React.FC<SortControlsProps> = ({
         <option value="title-asc" className="bg-gray-800">Name: A to Z</option>
         <option value="title-desc" className="bg-gray-800">Name: Z to A</option>
         <option value="reputation-desc" className="bg-gray-800">Best Rated</option>
+        <option value="sales-desc" className="bg-gray-800">Most Popular</option>
+        <option value="rating-desc" className="bg-gray-800">Highest Rating</option>
+        <option value="inventory-desc" className="bg-gray-800">Most Available</option>
+        <option value="discount-desc" className="bg-gray-800">Highest Discount</option>
+        <option value="handlingTime-asc" className="bg-gray-800">Fastest Shipping</option>
       </select>
     </div>
 
@@ -337,12 +592,81 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   // Apply filters and sorting
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = products.filter(product => {
+      // Category filter
       if (filters.category && product.category !== filters.category) return false;
+      
+      // Price range filter
+      if (filters.priceRange) {
+        const [minPrice, maxPrice] = filters.priceRange;
+        const price = parseFloat(product.price.fiat);
+        if (minPrice !== undefined && price < minPrice) return false;
+        if (maxPrice !== undefined && price > maxPrice) return false;
+      }
+      
+      // Trust filters
       if (filters.verified && !product.trust.verified) return false;
       if (filters.escrowProtected && !product.trust.escrowProtected) return false;
       if (filters.onChainCertified && !product.trust.onChainCertified) return false;
       if (filters.daoApproved && !product.seller.daoApproved) return false;
-      if (filters.inStock && product.inventory !== undefined && product.inventory <= 0) return false;
+      
+      // Product condition filter
+      if (filters.productCondition && product.condition !== filters.productCondition) return false;
+      
+      // Brand filter
+      if (filters.brand && product.brand !== filters.brand) return false;
+      
+      // Warranty filter
+      if (filters.hasWarranty !== undefined && product.hasWarranty !== filters.hasWarranty) return false;
+      
+      // NFT filter
+      if (filters.isNFT !== undefined && product.isNFT !== filters.isNFT) return false;
+      
+      // Escrow protection filter
+      if (filters.isEscrowProtected !== undefined && product.trust.escrowProtected !== filters.isEscrowProtected) return false;
+      
+      // Shipping filters
+      if (filters.fastShipping !== undefined && product.shipping?.handlingTime !== undefined) {
+        if (filters.fastShipping && product.shipping.handlingTime > 2) return false;
+        if (!filters.fastShipping && product.shipping.handlingTime <= 2) return false;
+      }
+      
+      if (filters.freeShipping !== undefined && product.shipping?.freeShipping !== filters.freeShipping) return false;
+      
+      // Seller verification filter
+      if (filters.sellerVerification) {
+        // This would require mapping seller verification to the filter value
+        // For now, we'll skip this filter in the frontend
+      }
+      
+      // Seller tier filter
+      if (filters.sellerTier && product.seller.tier !== filters.sellerTier) return false;
+      
+      // Seller online status filter
+      if (filters.sellerOnlineStatus && product.seller.onlineStatus !== filters.sellerOnlineStatus) return false;
+      
+      // Discount filter
+      if (filters.hasDiscount !== undefined) {
+        if (filters.hasDiscount && (!product.discount?.active)) return false;
+        if (!filters.hasDiscount && product.discount?.active) return false;
+      }
+      
+      if (filters.discountPercentage !== undefined && product.discount?.percentage !== undefined) {
+        if (product.discount.percentage < filters.discountPercentage) return false;
+      }
+      
+      // Stock filter
+      if (filters.inStock !== undefined) {
+        if (filters.inStock && (product.inventory === undefined || product.inventory <= 0)) return false;
+        if (!filters.inStock && product.inventory !== undefined && product.inventory > 0) return false;
+      }
+      
+      if (filters.stockRange) {
+        const [minStock, maxStock] = filters.stockRange;
+        if (minStock !== undefined && (product.inventory === undefined || product.inventory < minStock)) return false;
+        if (maxStock !== undefined && product.inventory !== undefined && product.inventory > maxStock) return false;
+      }
+      
+      // Additional filters would go here
       
       return true;
     });
@@ -368,8 +692,31 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           aValue = a.seller.reputation;
           bValue = b.seller.reputation;
           break;
+        case 'sales':
+          aValue = a.favorites || 0;
+          bValue = b.favorites || 0;
+          break;
+        case 'rating':
+          aValue = a.views || 0;
+          bValue = b.views || 0;
+          break;
+        case 'inventory':
+          aValue = a.inventory || 0;
+          bValue = b.inventory || 0;
+          break;
+        case 'discount':
+          aValue = a.discount?.percentage || 0;
+          bValue = b.discount?.percentage || 0;
+          break;
+        case 'handlingTime':
+          aValue = a.shipping?.handlingTime || Number.MAX_VALUE;
+          bValue = b.shipping?.handlingTime || Number.MAX_VALUE;
+          break;
         default:
-          return 0;
+          // Relevance sorting would be handled on the backend
+          aValue = a.createdAt.getTime();
+          bValue = b.createdAt.getTime();
+          break;
       }
 
       if (sortBy.direction === 'asc') {

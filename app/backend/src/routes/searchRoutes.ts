@@ -21,6 +21,7 @@ router.get('/topics/:topic', SearchController.getTopicContent);
 
 // Search suggestions
 router.get('/suggestions', SearchController.getSearchSuggestions);
+router.get('/suggestions/enhanced', SearchController.getEnhancedSearchSuggestions);
 
 // Recommendations
 router.get('/recommendations/communities', SearchController.getRecommendedCommunities);

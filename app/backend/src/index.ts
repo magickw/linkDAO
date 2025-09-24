@@ -179,6 +179,10 @@ import contentPreviewRoutes from './routes/contentPreviewRoutes';
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
 // Import poll routes
 import pollRoutes from './routes/pollRoutes';
+// Import marketplace search routes
+import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
+// Import price oracle routes
+import priceOracleRoutes from './routes/priceOracleRoutes';
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -233,6 +237,12 @@ app.use('/api/analytics', engagementAnalyticsRoutes);
 
 // Poll routes
 app.use('/api/polls', pollRoutes);
+
+// Marketplace search routes
+app.use('/api/marketplace/search', marketplaceSearchRoutes);
+
+// Price oracle routes
+app.use('/api/price-oracle', priceOracleRoutes);
 
 // Marketplace fallback
 app.get('/api/marketplace/listings', (req, res) => {

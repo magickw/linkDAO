@@ -7,7 +7,8 @@ import {
 } from '../models/Product';
 import { DatabaseService } from './databaseService';
 import { RedisService } from './redisService';
-import { eq, and, or, like, gte, lte, inArray, desc, asc, count, sql, isNull } from 'drizzle-orm';
+import { priceOracleService } from './priceOracleService';
+import { eq, and, or, like, gte, lte, inArray, desc, asc, sql, isNull } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export interface AdvancedSearchFilters extends ProductSearchFilters {
@@ -29,6 +30,41 @@ export interface AdvancedSearchFilters extends ProductSearchFilters {
       lng: number;
     };
   };
+  // New filters for enhanced search
+  minReputationScore?: number;
+  maxReputationScore?: number;
+  minSalesCount?: number;
+  maxSalesCount?: number;
+  minViews?: number;
+  maxViews?: number;
+  minFavorites?: number;
+  maxFavorites?: number;
+  productCondition?: 'new' | 'used' | 'refurbished';
+  brand?: string;
+  hasWarranty?: boolean;
+  isNFT?: boolean;
+  isEscrowProtected?: boolean;
+  shippingMethods?: string[]; // e.g., ['standard', 'express', 'overnight']
+  minHandlingTime?: number;
+  maxHandlingTime?: number;
+  shipsToCountry?: string;
+  shipsToState?: string;
+  shipsToCity?: string;
+  sellerVerification?: 'unverified' | 'basic' | 'verified' | 'dao_approved';
+  sellerTier?: 'basic' | 'premium' | 'enterprise';
+  sellerOnlineStatus?: 'online' | 'offline' | 'away';
+  priceRange?: [number, number]; // [min, max] in USD equivalent
+  priceCurrency?: string; // Filter by specific cryptocurrency
+  hasDiscount?: boolean;
+  discountPercentage?: number;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  hasStock?: boolean;
+  stockRange?: [number, number]; // [min, max] inventory
+  tagsInclude?: string[]; // Must include all these tags
+  tagsExclude?: string[]; // Must not include any of these tags
+  categoryPath?: string[]; // Full category path
+  customAttributes?: Record<string, any>; // Custom product attributes
 }
 
 export interface SearchRankingFactors {
@@ -114,12 +150,12 @@ export class SearchService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     
     // Get total count
-    const totalResult = await db.select({ count: count() })
+    const totalResult = await db.select({ count: sql`count(*)` })
       .from(schema.products)
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .where(whereClause);
     
-    const total = totalResult[0].count;
+    const total = parseInt(totalResult[0].count);
     
     // Build order by with ranking
     const orderBy = await this.buildOrderBy(sort, filters);
@@ -140,7 +176,7 @@ export class SearchService {
     // Map results and calculate ranking scores
     const products = await Promise.all(
       result.map(async (row: any) => {
-        const product = this.mapProductFromDb(row.product, row.category);
+        const product = await this.mapProductFromDb(row.product, row.category);
         
         // Calculate ranking factors for analytics
         if (filters.query || sort.field === 'relevance') {
@@ -248,7 +284,7 @@ export class SearchService {
       .leftJoin(schema.categories, eq(schema.products.categoryId, schema.categories.id))
       .where(inArray(schema.products.id, productIds));
     
-    const products = result.map((row: any) => this.mapProductFromDb(row.product, row.category));
+    const products = await Promise.all(result.map(async (row: any) => await this.mapProductFromDb(row.product, row.category)));
     
     if (products.length !== productIds.length) {
       throw new Error('One or more products not found');
@@ -273,7 +309,7 @@ export class SearchService {
   }
 
   /**
-   * Get search suggestions and autocomplete
+   * Get search suggestions and autocomplete with enhanced functionality
    */
   async getSearchSuggestions(query: string, limit: number = 10): Promise<string[]> {
     const cacheKey = `suggestions:${query.toLowerCase()}:${limit}`;
@@ -319,11 +355,26 @@ export class SearchService {
       .groupBy(schema.productTags.tag)
       .limit(limit / 2);
     
+    // Get seller suggestions (new)
+    const sellerSuggestions = await db.select({
+      displayName: schema.sellers.displayName,
+      storeName: schema.sellers.storeName,
+    })
+      .from(schema.sellers)
+      .where(
+        or(
+          like(schema.sellers.displayName, `%${query}%`),
+          like(schema.sellers.storeName, `%${query}%`)
+        )
+      )
+      .limit(limit / 3);
+    
     // Combine and deduplicate suggestions
     const suggestions = [
       ...titleSuggestions.map((s: any) => s.title),
       ...categorySuggestions.map((s: any) => s.name),
       ...tagSuggestions.map((s: any) => s.tag),
+      ...sellerSuggestions.map((s: any) => s.displayName || s.storeName),
     ];
     
     const uniqueSuggestions = [...new Set(suggestions)]
@@ -619,6 +670,249 @@ export class SearchService {
       conditions.push(or(...tagConditions));
     }
     
+    // Enhanced filters
+    
+    // Reputation score filters
+    if (filters.minReputationScore !== undefined) {
+      conditions.push(sql`COALESCE(${schema.products.favorites}, 0) >= ${filters.minReputationScore}`);
+    }
+    if (filters.maxReputationScore !== undefined) {
+      conditions.push(sql`COALESCE(${schema.products.favorites}, 0) <= ${filters.maxReputationScore}`);
+    }
+    
+    // Sales count filters (using favorites as proxy for sales)
+    if (filters.minSalesCount !== undefined) {
+      conditions.push(sql`COALESCE(${schema.products.favorites}, 0) >= ${filters.minSalesCount}`);
+    }
+    if (filters.maxSalesCount !== undefined) {
+      conditions.push(sql`COALESCE(${schema.products.favorites}, 0) <= ${filters.maxSalesCount}`);
+    }
+    
+    // Views filters
+    if (filters.minViews !== undefined) {
+      conditions.push(gte(schema.products.views, filters.minViews));
+    }
+    if (filters.maxViews !== undefined) {
+      conditions.push(lte(schema.products.views, filters.maxViews));
+    }
+    
+    // Favorites filters
+    if (filters.minFavorites !== undefined) {
+      conditions.push(gte(schema.products.favorites, filters.minFavorites));
+    }
+    if (filters.maxFavorites !== undefined) {
+      conditions.push(lte(schema.products.favorites, filters.maxFavorites));
+    }
+    
+    // Product condition filter
+    if (filters.productCondition) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.condition') = ${filters.productCondition}`);
+    }
+    
+    // Brand filter
+    if (filters.brand) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.brand') = ${filters.brand}`);
+    }
+    
+    // Warranty filter
+    if (filters.hasWarranty !== undefined) {
+      if (filters.hasWarranty) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.warranty') IS NOT NULL`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.warranty') IS NULL`);
+      }
+    }
+    
+    // NFT filter
+    if (filters.isNFT !== undefined) {
+      if (filters.isNFT) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.nft') IS NOT NULL`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.nft') IS NULL`);
+      }
+    }
+    
+    // Escrow protection filter
+    if (filters.isEscrowProtected !== undefined) {
+      if (filters.isEscrowProtected) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.isEscrowed') = true`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.isEscrowed') = false`);
+      }
+    }
+    
+    // Shipping methods filter
+    if (filters.shippingMethods && filters.shippingMethods.length > 0) {
+      const shippingMethodConditions = filters.shippingMethods.map(method =>
+        sql`JSON_EXTRACT(${schema.products.shipping}, '$.shippingMethods') LIKE ${`%${method}%`}`
+      );
+      conditions.push(or(...shippingMethodConditions));
+    }
+    
+    // Handling time filters
+    if (filters.minHandlingTime !== undefined) {
+      conditions.push(gte(sql`JSON_EXTRACT(${schema.products.shipping}, '$.handlingTime')`, filters.minHandlingTime));
+    }
+    if (filters.maxHandlingTime !== undefined) {
+      conditions.push(lte(sql`JSON_EXTRACT(${schema.products.shipping}, '$.handlingTime')`, filters.maxHandlingTime));
+    }
+    
+    // Ships to location filters
+    if (filters.shipsToCountry) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.shipping}, '$.shipsFrom.country') = ${filters.shipsToCountry}`);
+    }
+    if (filters.shipsToState) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.shipping}, '$.shipsFrom.state') = ${filters.shipsToState}`);
+    }
+    if (filters.shipsToCity) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.shipping}, '$.shipsFrom.city') = ${filters.shipsToCity}`);
+    }
+    
+    // Seller verification filter
+    if (filters.sellerVerification) {
+      switch (filters.sellerVerification) {
+        case 'unverified':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.tier = 'basic')`);
+          break;
+        case 'basic':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.tier = 'basic')`);
+          break;
+        case 'verified':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.tier = 'premium')`);
+          break;
+        case 'dao_approved':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.tier = 'enterprise')`);
+          break;
+      }
+    }
+    
+    // Seller tier filter
+    if (filters.sellerTier) {
+      conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.tier = ${filters.sellerTier})`);
+    }
+    
+    // Seller online status filter
+    if (filters.sellerOnlineStatus) {
+      switch (filters.sellerOnlineStatus) {
+        case 'online':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.is_online = true)`);
+          break;
+        case 'offline':
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.is_online = false)`);
+          break;
+        case 'away':
+          // For "away" status, we could check last seen time
+          const oneHourAgo = new Date();
+          oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+          conditions.push(sql`EXISTS (SELECT 1 FROM ${schema.sellers} s WHERE s.wallet_address = ${schema.products.sellerId} AND s.is_online = false AND s.last_seen > ${oneHourAgo.toISOString()})`);
+          break;
+      }
+    }
+    
+    // Price range in USD equivalent
+    if (filters.priceRange) {
+      const [minPrice, maxPrice] = filters.priceRange;
+      if (minPrice !== undefined) {
+        conditions.push(gte(sql`CAST(${schema.products.priceAmount} AS DECIMAL)`, minPrice));
+      }
+      if (maxPrice !== undefined) {
+        conditions.push(lte(sql`CAST(${schema.products.priceAmount} AS DECIMAL)`, maxPrice));
+      }
+    }
+    
+    // Price currency filter
+    if (filters.priceCurrency) {
+      conditions.push(eq(schema.products.priceCurrency, filters.priceCurrency));
+    }
+    
+    // Discount filter
+    if (filters.hasDiscount !== undefined) {
+      if (filters.hasDiscount) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.discount') IS NOT NULL`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.discount') IS NULL`);
+      }
+    }
+    
+    // Discount percentage filter
+    if (filters.discountPercentage !== undefined) {
+      conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.discountPercentage') >= ${filters.discountPercentage}`);
+    }
+    
+    // Featured products filter
+    if (filters.isFeatured !== undefined) {
+      if (filters.isFeatured) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.isFeatured') = true`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.isFeatured') = false`);
+      }
+    }
+    
+    // Published products filter
+    if (filters.isPublished !== undefined) {
+      if (filters.isPublished) {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.listingStatus') = 'published'`);
+      } else {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.listingStatus') != 'published'`);
+      }
+    }
+    
+    // Stock availability filter
+    if (filters.hasStock !== undefined) {
+      if (filters.hasStock) {
+        conditions.push(gte(schema.products.inventory, 1));
+      } else {
+        conditions.push(eq(schema.products.inventory, 0));
+      }
+    }
+    
+    // Stock range filter
+    if (filters.stockRange) {
+      const [minStock, maxStock] = filters.stockRange;
+      if (minStock !== undefined) {
+        conditions.push(gte(schema.products.inventory, minStock));
+      }
+      if (maxStock !== undefined) {
+        conditions.push(lte(schema.products.inventory, maxStock));
+      }
+    }
+    
+    // Tags include filter (must include all specified tags)
+    if (filters.tagsInclude && filters.tagsInclude.length > 0) {
+      const tagIncludeConditions = filters.tagsInclude.map(tag =>
+        sql`EXISTS (
+          SELECT 1 FROM ${schema.productTags} pt 
+          WHERE pt.product_id = ${schema.products.id} 
+          AND pt.tag = ${tag.toLowerCase()}
+        )`
+      );
+      conditions.push(and(...tagIncludeConditions));
+    }
+    
+    // Tags exclude filter (must not include any of the specified tags)
+    if (filters.tagsExclude && filters.tagsExclude.length > 0) {
+      const tagExcludeConditions = filters.tagsExclude.map(tag =>
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${schema.productTags} pt 
+          WHERE pt.product_id = ${schema.products.id} 
+          AND pt.tag = ${tag.toLowerCase()}
+        )`
+      );
+      conditions.push(and(...tagExcludeConditions));
+    }
+    
+    // Category path filter
+    if (filters.categoryPath && filters.categoryPath.length > 0) {
+      conditions.push(sql`JSON_EXTRACT(${schema.categories.path}, '$') LIKE ${`%${filters.categoryPath[filters.categoryPath.length - 1]}%`}`);
+    }
+    
+    // Custom attributes filter
+    if (filters.customAttributes) {
+      Object.entries(filters.customAttributes).forEach(([key, value]) => {
+        conditions.push(sql`JSON_EXTRACT(${schema.products.metadata}, '$.customAttributes.${key}') = ${value}`);
+      });
+    }
+    
     return conditions;
   }
 
@@ -681,6 +975,25 @@ export class SearchService {
           break;
         case 'favorites':
           orderByColumn = schema.products.favorites;
+          break;
+        // New sorting options
+        case 'reputation':
+          orderByColumn = schema.products.favorites; // Using favorites as proxy for reputation
+          break;
+        case 'sales':
+          orderByColumn = schema.products.favorites; // Using favorites as proxy for sales count
+          break;
+        case 'rating':
+          orderByColumn = schema.products.views; // Using views as proxy for rating
+          break;
+        case 'inventory':
+          orderByColumn = schema.products.inventory;
+          break;
+        case 'discount':
+          orderByColumn = sql`JSON_EXTRACT(${schema.products.metadata}, '$.discountPercentage')`;
+          break;
+        case 'handlingTime':
+          orderByColumn = sql`JSON_EXTRACT(${schema.products.shipping}, '$.handlingTime')`;
           break;
         default:
           orderByColumn = schema.products.createdAt;
@@ -841,9 +1154,43 @@ export class SearchService {
     return `search:${JSON.stringify({ filters, sort, pagination })}`;
   }
 
-  private mapProductFromDb(product: any, category: any): Product {
+  private async mapProductFromDb(product: any, category: any): Promise<Product> {
+    // Parse price metadata if it exists
+    let priceData = product.price;
+    if (typeof product.price === 'string') {
+      try {
+        priceData = JSON.parse(product.price);
+      } catch (e) {
+        // If parsing fails, keep as string
+        priceData = { amount: product.price, currency: 'ETH' };
+      }
+    }
+    
+    // If we don't have fiat equivalents, try to generate them
+    if (priceData && (!priceData.usdEquivalent || !priceData.eurEquivalent)) {
+      try {
+        // Convert to multiple fiat currencies
+        const fiatEquivalents = await priceOracleService.convertProductPrice(
+          priceData.amount,
+          priceData.currency
+        );
+        
+        priceData = {
+          ...priceData,
+          usdEquivalent: fiatEquivalents.USD,
+          eurEquivalent: fiatEquivalents.EUR,
+          gbpEquivalent: fiatEquivalents.GBP,
+          lastUpdated: new Date()
+        };
+      } catch (error) {
+        console.error('Failed to convert product price:', error);
+        // Continue with original price data
+      }
+    }
+    
     return {
       ...product,
+      price: priceData,
       category: category?.name || 'Uncategorized'
     } as Product;
   }

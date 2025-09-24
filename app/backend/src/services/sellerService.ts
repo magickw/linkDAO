@@ -3,7 +3,28 @@ import { db } from '../db/connection';
 import { sellers, users, imageStorage, ensVerifications } from '../db/schema';
 import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
-// import { imageStorageService } from './imageStorageService';
+import { reputationService } from './reputationService';
+import { Request } from 'express';
+import multer from 'multer';
+import { UploadedFile } from 'express-fileupload';
+
+export interface ProfileCompletenessScore {
+  score: number;
+  missingFields: string[];
+  recommendations: Array<{
+    action: string;
+    description: string;
+    impact: number;
+  }>;
+  lastCalculated: string;
+}
+
+export interface ValidationRule {
+  field: string;
+  required: boolean;
+  weight: number;
+  validator?: (value: any) => boolean;
+}
 
 export interface SellerProfileData {
   walletAddress: string;
@@ -24,24 +45,22 @@ export interface SellerProfileData {
   profileImageCdn?: string;
   coverImageIpfs?: string;
   coverImageCdn?: string;
-}
-
-export interface ProfileCompletenessScore {
-  score: number;
-  missingFields: string[];
-  recommendations: Array<{
-    action: string;
-    description: string;
-    impact: number;
-  }>;
-  lastCalculated: string;
-}
-
-export interface ValidationRule {
-  field: string;
-  required: boolean;
-  weight: number;
-  validator?: (value: any) => boolean;
+  // Add reputation metrics
+  reputation?: {
+    overallScore: number;
+    moderationScore: number;
+    reportingScore: number;
+    juryScore: number;
+    violationCount: number;
+    helpfulReportsCount: number;
+    falseReportsCount: number;
+    successfulAppealsCount: number;
+    juryDecisionsCount: number;
+    juryAccuracyRate: number;
+    reputationTier: string;
+    lastViolationAt?: Date;
+  };
+  profileCompleteness?: ProfileCompletenessScore;
 }
 
 class SellerService {
@@ -76,11 +95,38 @@ class SellerService {
 
       const sellerData = seller[0];
       
+      // Get user ID from wallet address
+      const user = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress))
+        .limit(1);
+      
+      let reputation = null;
+      if (user.length > 0) {
+        // Get reputation data
+        reputation = await reputationService.getUserReputation(user[0].id);
+      }
+      
       // Calculate profile completeness
       const completeness = this.calculateProfileCompleteness(sellerData);
       
       return {
         ...sellerData,
+        reputation: reputation ? {
+          overallScore: reputation.overallScore,
+          moderationScore: reputation.moderationScore,
+          reportingScore: reputation.reportingScore,
+          juryScore: reputation.juryScore,
+          violationCount: reputation.violationCount,
+          helpfulReportsCount: reputation.helpfulReportsCount,
+          falseReportsCount: reputation.falseReportsCount,
+          successfulAppealsCount: reputation.successfulAppealsCount,
+          juryDecisionsCount: reputation.juryDecisionsCount,
+          juryAccuracyRate: reputation.juryAccuracyRate,
+          reputationTier: reputation.reputationTier,
+          lastViolationAt: reputation.lastViolationAt
+        } : undefined,
         profileCompleteness: completeness,
       } as any;
     } catch (error) {
@@ -233,8 +279,8 @@ class SellerService {
   async updateSellerProfileWithImages(
     walletAddress: string,
     updates: Partial<SellerProfileData>,
-    profileImage?: Express.Multer.File,
-    coverImage?: Express.Multer.File
+    profileImage?: UploadedFile,
+    coverImage?: UploadedFile
   ): Promise<{
     profile: SellerProfileData;
     imageUploadResults?: {

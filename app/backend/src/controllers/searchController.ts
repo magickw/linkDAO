@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { SearchService } from '../services/searchService';
 import { RedisService } from '../services/redisService';
+import { eq, and, or } from 'drizzle-orm';
+import * as schema from '../db/schema';
 
 export class SearchController {
   private static searchService = new SearchService();
@@ -376,5 +378,72 @@ export class SearchController {
       console.error('User recommendations error:', error);
       return res.status(500).json({ error: 'Failed to fetch user recommendations' });
     }
+  }
+
+  /**
+   * Get enhanced search suggestions with categorization
+   */
+  static async getEnhancedSearchSuggestions(req: Request, res: Response) {
+    try {
+      const {
+        q: query,
+        limit = '10'
+      } = req.query;
+
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ error: 'Search query is required' });
+      }
+
+      const limitNum = parseInt(limit as string, 10);
+
+      // Get suggestions from search service
+      const suggestions = await SearchController.searchService.getSearchSuggestions(
+        query,
+        limitNum
+      );
+
+      // Categorize suggestions
+      const categorizedSuggestions = await SearchController.categorizeSuggestions(query, suggestions);
+
+      return res.json({
+        query,
+        suggestions: categorizedSuggestions,
+        total: suggestions.length
+      });
+    } catch (error) {
+      console.error('Enhanced search suggestions error:', error);
+      return res.status(500).json({ error: 'Failed to fetch search suggestions' });
+    }
+  }
+
+  /**
+   * Categorize search suggestions for better UX
+   */
+  private static async categorizeSuggestions(query: string, suggestions: string[]) {
+    // Simplified categorization - in a real implementation, this would query the database
+    // to determine what each suggestion represents
+    const categorized = {
+      products: [] as string[],
+      categories: [] as string[],
+      tags: [] as string[],
+      sellers: [] as string[],
+    };
+
+    // For now, we'll do a simple categorization based on common patterns
+    // In a real implementation, this would query the database to check what each suggestion represents
+    for (const suggestion of suggestions) {
+      // Simple heuristics for categorization
+      if (suggestion.includes(' ')) {
+        categorized.products.push(suggestion);
+      } else if (suggestion.length > 3 && suggestion.toLowerCase() === suggestion) {
+        categorized.tags.push(suggestion);
+      } else if (suggestion.length > 10) {
+        categorized.sellers.push(suggestion);
+      } else {
+        categorized.categories.push(suggestion);
+      }
+    }
+
+    return categorized;
   }
 }
