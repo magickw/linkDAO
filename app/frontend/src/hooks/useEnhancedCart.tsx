@@ -3,7 +3,7 @@
  * Features: Persistent storage, multi-seller support, escrow grouping, wallet integration
  */
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 
 interface CartProduct {
@@ -486,7 +486,7 @@ export const EnhancedCartProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [address, isConnected]);
 
-  // Persist state changes
+  // Persist state changes with debounce
   useEffect(() => {
     const persistState = () => {
       try {
@@ -500,69 +500,71 @@ export const EnhancedCartProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     };
 
-    persistState();
+    // Debounce persistence to avoid excessive localStorage writes
+    const timeoutId = setTimeout(persistState, 100);
+    return () => clearTimeout(timeoutId);
   }, [state]);
 
   // Cart actions
-  const addItem = (product: CartProduct, quantity = 1, options = {}) => {
+  const addItem = useCallback((product: CartProduct, quantity = 1, options = {}) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, quantity, options } });
-  };
+  }, []);
 
-  const removeItem = (productId: string) => {
+  const removeItem = useCallback((productId: string) => {
     dispatch({ type: 'REMOVE_ITEM', payload: { productId } });
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     dispatch({ type: 'CLEAR_CART' });
-  };
+  }, []);
 
-  const moveToSaved = (productId: string) => {
+  const moveToSaved = useCallback((productId: string) => {
     dispatch({ type: 'MOVE_TO_SAVED', payload: { productId } });
-  };
+  }, []);
 
-  const restoreFromSaved = (productId: string) => {
+  const restoreFromSaved = useCallback((productId: string) => {
     dispatch({ type: 'RESTORE_FROM_SAVED', payload: { productId } });
-  };
+  }, []);
 
-  const addToWishlist = (productId: string) => {
+  const addToWishlist = useCallback((productId: string) => {
     dispatch({ type: 'ADD_TO_WISHLIST', payload: { productId } });
-  };
+  }, []);
 
-  const removeFromWishlist = (productId: string) => {
+  const removeFromWishlist = useCallback((productId: string) => {
     dispatch({ type: 'REMOVE_FROM_WISHLIST', payload: { productId } });
-  };
+  }, []);
 
-  const addToRecentlyViewed = (productId: string) => {
+  const addToRecentlyViewed = useCallback((productId: string) => {
     dispatch({ type: 'ADD_TO_RECENTLY_VIEWED', payload: { productId } });
-  };
+  }, []);
 
-  const setCurrency = (currency: 'crypto' | 'fiat') => {
+  const setCurrency = useCallback((currency: 'crypto' | 'fiat') => {
     dispatch({ type: 'SET_CURRENCY', payload: { currency } });
-  };
+  }, []);
 
   // Helper functions
-  const isInCart = (productId: string): boolean => {
+  const isInCart = useCallback((productId: string): boolean => {
     return state.items.some(item => item.id === productId);
-  };
+  }, [state.items]);
 
-  const isInWishlist = (productId: string): boolean => {
+  const isInWishlist = useCallback((productId: string): boolean => {
     return state.wishlist.includes(productId);
-  };
+  }, [state.wishlist]);
 
-  const getItemQuantity = (productId: string): number => {
+  const getItemQuantity = useCallback((productId: string): number => {
     const item = state.items.find(item => item.id === productId);
     return item?.quantity || 0;
-  };
+  }, [state.items]);
 
-  const getSellerGroups = (): CartGroup[] => {
+  const getSellerGroups = useCallback((): CartGroup[] => {
     return state.groups;
-  };
+  }, [state.groups]);
 
-  const contextValue: CartContextType = {
+  const contextValue: CartContextType = useMemo(() => ({
     state,
     addItem,
     removeItem,
@@ -578,7 +580,23 @@ export const EnhancedCartProvider: React.FC<{ children: React.ReactNode }> = ({ 
     isInWishlist,
     getItemQuantity,
     getSellerGroups,
-  };
+  }), [
+    state,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    moveToSaved,
+    restoreFromSaved,
+    addToWishlist,
+    removeFromWishlist,
+    addToRecentlyViewed,
+    setCurrency,
+    isInCart,
+    isInWishlist,
+    getItemQuantity,
+    getSellerGroups,
+  ]);
 
   return (
     <CartContext.Provider value={contextValue}>
