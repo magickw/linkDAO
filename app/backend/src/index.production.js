@@ -932,6 +932,173 @@ app.get('/marketplace/reputation/:address', (req, res) => {
   });
 });
 
+// Add missing follow endpoints
+// Follow endpoints
+app.post('/api/follow/follow', async (req, res) => {
+  try {
+    const { follower, following } = req.body;
+    
+    if (!follower || !following) {
+      return res.status(400).json({
+        success: false,
+        error: 'Both follower and following addresses are required'
+      });
+    }
+    
+    // In a real implementation, you would store this in a database
+    // For now, we'll just return a success response
+    console.log(`User ${follower} followed user ${following}`);
+    
+    res.json({
+      success: true,
+      message: 'Followed successfully'
+    });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/follow/unfollow', async (req, res) => {
+  try {
+    const { follower, following } = req.body;
+    
+    if (!follower || !following) {
+      return res.status(400).json({
+        success: false,
+        error: 'Both follower and following addresses are required'
+      });
+    }
+    
+    // In a real implementation, you would remove this from a database
+    // For now, we'll just return a success response
+    console.log(`User ${follower} unfollowed user ${following}`);
+    
+    res.json({
+      success: true,
+      message: 'Unfollowed successfully'
+    });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/follow/followers/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Address is required'
+      });
+    }
+    
+    // In a real implementation, you would fetch this from a database
+    // For now, we'll return mock data
+    const followers = [
+      '0x1234567890123456789012345678901234567890',
+      '0xabcdef123456789012345678901234567890abcd'
+    ];
+    
+    res.json(followers);
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/follow/following/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Address is required'
+      });
+    }
+    
+    // In a real implementation, you would fetch this from a database
+    // For now, we'll return mock data
+    const following = [
+      '0x1234567890123456789012345678901234567890',
+      '0xabcdef123456789012345678901234567890abcd'
+    ];
+    
+    res.json(following);
+  } catch (error) {
+    console.error('Error fetching following:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/follow/is-following/:follower/:following', async (req, res) => {
+  try {
+    const { follower, following } = req.params;
+    
+    if (!follower || !following) {
+      return res.status(400).json({
+        success: false,
+        error: 'Both follower and following addresses are required'
+      });
+    }
+    
+    // In a real implementation, you would check this in a database
+    // For now, we'll return mock data
+    const isFollowing = follower === '0x1234567890123456789012345678901234567890';
+    
+    res.json(isFollowing);
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/follow/count/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'Address is required'
+      });
+    }
+    
+    // In a real implementation, you would fetch this from a database
+    // For now, we'll return mock data
+    const followCount = {
+      followers: Math.floor(Math.random() * 1000),
+      following: Math.floor(Math.random() * 500)
+    };
+    
+    res.json(followCount);
+  } catch (error) {
+    console.error('Error fetching follow count:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);

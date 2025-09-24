@@ -74,7 +74,13 @@ export class ProfileService {
         throw new Error(error.error || 'Failed to fetch profile');
       }
       
-      return response.json();
+      const profile = await response.json();
+      // Convert string dates to Date objects
+      return {
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -131,7 +137,16 @@ export class ProfileService {
       }
       
       try {
-        return await response.json();
+        const profile = await response.json();
+        // Convert string dates to Date objects
+        if (profile && profile.data) {
+          return {
+            ...profile.data,
+            createdAt: new Date(profile.data.createdAt),
+            updatedAt: new Date(profile.data.updatedAt)
+          };
+        }
+        return null;
       } catch (jsonError) {
         console.error(`Failed to parse JSON response for address ${address}:`, jsonError);
         throw new Error('Backend returned invalid JSON response');
@@ -185,7 +200,13 @@ export class ProfileService {
         throw new Error(error.error || 'Failed to update profile');
       }
       
-      return response.json();
+      const profile = await response.json();
+      // Convert string dates to Date objects
+      return {
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -261,7 +282,13 @@ export class ProfileService {
         throw new Error(error.error || 'Failed to fetch profiles');
       }
       
-      return response.json();
+      const profiles = await response.json();
+      // Convert string dates to Date objects for all profiles
+      return profiles.map((profile: any) => ({
+        ...profile,
+        createdAt: new Date(profile.createdAt),
+        updatedAt: new Date(profile.updatedAt)
+      }));
     } catch (error) {
       clearTimeout(timeoutId);
       
