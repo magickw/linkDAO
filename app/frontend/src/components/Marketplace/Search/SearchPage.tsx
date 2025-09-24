@@ -79,7 +79,7 @@ interface Product {
   };
   isFeatured?: boolean;
   isPublished?: boolean;
-  createdAt?: Date;
+  createdAt: Date;
   // Enhanced metadata
   metadata?: {
     weight?: number;
@@ -155,9 +155,17 @@ interface AdvancedSearchFilters {
   customAttributes?: Record<string, any>;
 }
 
-interface SortOption {
+// SortOption interface without label for ProductGrid compatibility
+interface ProductGridSortOption {
+  field: 'price' | 'title' | 'createdAt' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
+  direction: 'asc' | 'desc';
+}
+
+// SortOption interface with label for SearchFilters compatibility
+interface SearchFiltersSortOption {
   field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites' | 'relevance' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
   direction: 'asc' | 'desc';
+  label: string;
 }
 
 interface SearchPageProps {
@@ -167,7 +175,7 @@ interface SearchPageProps {
 const SearchPage: React.FC<SearchPageProps> = ({ className = '' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<AdvancedSearchFilters>({});
-  const [sortBy, setSortBy] = useState<SortOption>({ field: 'relevance', direction: 'desc' });
+  const [sortBy, setSortBy] = useState<SearchFiltersSortOption>({ field: 'relevance', direction: 'desc', label: 'Best Match' });
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -309,10 +317,35 @@ const SearchPage: React.FC<SearchPageProps> = ({ className = '' }) => {
   };
 
   // Handle sort changes
-  const handleSortChange = (newSort: SortOption) => {
+  const handleSortChange = (newSort: SearchFiltersSortOption) => {
     setSortBy(newSort);
     // In a real implementation, this would call the search API with sort options
     console.log('Sort changed:', newSort);
+  };
+
+  // Convert SearchFiltersSortOption to ProductGridSortOption
+  const convertSortOption = (option: SearchFiltersSortOption): ProductGridSortOption => {
+    // Map compatible fields, default to 'createdAt' if not compatible
+    const compatibleFields: Record<string, ProductGridSortOption['field']> = {
+      'price': 'price',
+      'title': 'title',
+      'createdAt': 'createdAt',
+      'reputation': 'reputation',
+      'sales': 'sales',
+      'rating': 'rating',
+      'inventory': 'inventory',
+      'discount': 'discount',
+      'handlingTime': 'handlingTime',
+      'relevance': 'createdAt', // Map relevance to createdAt as default
+      'updatedAt': 'createdAt', // Map updatedAt to createdAt
+      'views': 'rating', // Map views to rating
+      'favorites': 'sales', // Map favorites to sales
+    };
+    
+    return {
+      field: compatibleFields[option.field] || 'createdAt',
+      direction: option.direction
+    };
   };
 
   // Handle product actions
@@ -391,13 +424,13 @@ const SearchPage: React.FC<SearchPageProps> = ({ className = '' }) => {
               loading={loading}
               error={error || undefined}
               filters={filters}
-              sortBy={sortBy}
+              sortBy={convertSortOption(sortBy)}
               onProductClick={handleProductClick}
               onSellerClick={handleSellerClick}
               onAddToCart={handleAddToCart}
               onAddToWishlist={handleAddToWishlist}
               onFiltersChange={handleFiltersChange}
-              onSortChange={handleSortChange}
+              onSortChange={(sort) => handleSortChange({...sort, label: sortBy.label})}
               showFilters={false} // We're using our custom filters
               showSorting={false} // We're using our custom sorting
             />

@@ -130,6 +130,31 @@ contract Marketplace is ReentrancyGuard, Ownable {
     // Mapping of escrow ID to Escrow
     mapping(uint256 => Escrow) public escrows;
     
+    // New mapping for seller sales metrics
+    mapping(address => SellerMetrics) public sellerMetrics;
+    
+    // New mapping for product listing metrics
+    mapping(uint256 => ListingMetrics) public listingMetrics;
+    
+    // Struct for seller metrics
+    struct SellerMetrics {
+        uint256 totalSales;
+        uint256 totalRevenue;
+        uint256 successfulTransactions;
+        uint256 averageRating;
+        uint256 totalReviews;
+        uint256 responseTime; // Average response time in seconds
+        uint256 lastUpdated;
+    }
+    
+    // Struct for listing metrics
+    struct ListingMetrics {
+        uint256 viewCount;
+        uint256 favoriteCount;
+        uint256 shareCount;
+        uint256 lastUpdated;
+    }
+    
     // Mapping of user address to reputation score
     mapping(address => uint256) public reputationScores;
     
@@ -275,6 +300,41 @@ contract Marketplace is ReentrancyGuard, Ownable {
     event OrderStatusUpdated(
         uint256 indexed orderId,
         OrderStatus status
+    );
+    
+    // New events for enhanced sales metrics
+    event SalesMetricsUpdated(
+        address indexed seller,
+        uint256 totalSales,
+        uint256 totalRevenue,
+        uint256 successfulTransactions,
+        uint256 timestamp
+    );
+    
+    event SellerPerformanceUpdated(
+        address indexed seller,
+        uint256 averageRating,
+        uint256 totalReviews,
+        uint256 responseTime,
+        uint256 timestamp
+    );
+    
+    // Additional events for comprehensive tracking
+    event SellerRankingUpdated(
+        address indexed seller,
+        uint256 rankingScore,
+        uint256 totalSales,
+        uint256 totalRevenue,
+        uint256 reputationScore,
+        uint256 timestamp
+    );
+    
+    event ProductListingMetricsUpdated(
+        uint256 indexed listingId,
+        uint256 viewCount,
+        uint256 favoriteCount,
+        uint256 shareCount,
+        uint256 timestamp
     );
     
     event DisputeCreated(
@@ -669,6 +729,30 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         emit ItemSold(listingId, msg.sender, listing.tokenAddress, totalPrice, quantity);
         emit OrderCreated(orderId, listingId, msg.sender, listing.seller, totalPrice);
+        
+        // Update seller metrics
+        _updateSellerMetrics(listing.seller, totalPrice);
+    }
+    
+    /**
+     * @notice Update seller metrics after a sale
+     * @param seller Address of the seller
+     * @param saleAmount Amount of the sale
+     */
+    function _updateSellerMetrics(address seller, uint256 saleAmount) internal {
+        SellerMetrics storage metrics = sellerMetrics[seller];
+        metrics.totalSales += 1;
+        metrics.totalRevenue += saleAmount;
+        metrics.successfulTransactions += 1;
+        metrics.lastUpdated = block.timestamp;
+        
+        emit SalesMetricsUpdated(
+            seller,
+            metrics.totalSales,
+            metrics.totalRevenue,
+            metrics.successfulTransactions,
+            block.timestamp
+        );
     }
     
     /**
@@ -771,6 +855,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         emit BidAccepted(listingId, listing.seller, listing.highestBidder, listing.highestBid);
         emit OrderCreated(orderId, listingId, listing.highestBidder, listing.seller, listing.highestBid);
+        
+        // Update seller metrics
+        _updateSellerMetrics(listing.seller, listing.highestBid);
     }
     
     /**
@@ -890,6 +977,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         emit OfferAccepted(offerId, listingId, msg.sender, offer.buyer, offer.amount);
         emit OrderCreated(orderId, listingId, offer.buyer, listing.seller, offer.amount);
+        
+        // Update seller metrics
+        _updateSellerMetrics(listing.seller, offer.amount);
     }
     
     /**
@@ -1067,6 +1157,210 @@ contract Marketplace is ReentrancyGuard, Ownable {
         
         // Update listing status
         listings[escrow.listingId].status = ListingStatus.SOLD;
+    }
+    
+    /**
+     * @notice Update user reputation score
+     * @param user Address of the user
+     * @param score New reputation score
+     */
+    function updateReputationScore(address user, uint256 score) external onlyDAO {
+        reputationScores[user] = score;
+        emit ReputationUpdated(user, score);
+    }
+    
+    /**
+     * @notice Approve or revoke DAO vendor status
+     * @param vendor Address of the vendor
+     * @param approved Whether to approve or revoke
+     */
+    function setDAOApprovedVendor(address vendor, bool approved) external onlyDAO {
+        daoApprovedVendors[vendor] = approved;
+        emit VendorApproved(vendor, approved);
+    }
+    
+    /**
+     * @notice Set platform fee
+     * @param newFee New platform fee in basis points
+     */
+    function setPlatformFee(uint256 newFee) external onlyDAO {
+        require(newFee <= 1000, "Fee too high (max 10%)"); // Max 10%
+        platformFee = newFee;
+    }
+    
+    /**
+     * @notice Set minimum reputation score
+     * @param newScore New minimum reputation score
+     */
+    function setMinReputationScore(uint256 newScore) external onlyDAO {
+        minReputationScore = newScore;
+    }
+    
+    /**
+     * @notice Set auction extension time
+     * @param newTime New auction extension time in seconds
+     */
+    function setAuctionExtensionTime(uint256 newTime) external onlyDAO {
+        auctionExtensionTime = newTime;
+    }
+    
+    /**
+     * @notice Get bids for an auction listing
+     * @param listingId ID of the listing
+     * @return Array of bids
+     */
+    function getBids(uint256 listingId) external view returns (Bid[] memory) {
+        return bids[listingId];
+    }
+    
+    /**
+     * @notice Get offers for a listing
+     * @param listingId ID of the listing
+     * @return Array of offers
+     */
+    function getOffers(uint256 listingId) external view returns (Offer[] memory) {
+        return offers[listingId];
+    }
+    
+    /**
+     * @notice Get active listings with pagination
+     * @param start Start index
+     * @param count Number of listings to return
+     * @return Array of active listings
+     */
+    function getActiveListings(uint256 start, uint256 count) external view returns (Listing[] memory) {
+        // In a real implementation, this would be more efficient
+        // For now, we'll just return a simple array
+        Listing[] memory result = new Listing[](count);
+        uint256 resultIndex = 0;
+        
+        for (uint256 i = start; i < start + count && i < nextListingId; i++) {
+            if (listings[i].status == ListingStatus.ACTIVE) {
+                result[resultIndex] = listings[i];
+                resultIndex++;
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * @notice Get order by ID
+     * @param orderId ID of the order
+     * @return Order information
+     */
+    function getOrder(uint256 orderId) external view returns (Order memory) {
+        return orders[orderId];
+    }
+    
+    /**
+     * @notice Get dispute by ID
+     * @param disputeId ID of the dispute
+     * @return Dispute information
+     */
+    function getDispute(uint256 disputeId) external view returns (Dispute memory) {
+        return disputes[disputeId];
+    }
+    
+    /**
+     * @notice Update seller performance metrics
+     * @param seller Address of the seller
+     * @param averageRating Average rating of the seller
+     * @param totalReviews Total number of reviews
+     * @param responseTime Average response time in seconds
+     */
+    function updateSellerPerformance(
+        address seller,
+        uint256 averageRating,
+        uint256 totalReviews,
+        uint256 responseTime
+    ) external {
+        // In a real implementation, this would be called by the reputation system
+        // For now, we'll allow the contract owner to update
+        require(msg.sender == owner(), "Not authorized");
+        
+        SellerMetrics storage metrics = sellerMetrics[seller];
+        metrics.averageRating = averageRating;
+        metrics.totalReviews = totalReviews;
+        metrics.responseTime = responseTime;
+        metrics.lastUpdated = block.timestamp;
+        
+        emit SellerPerformanceUpdated(
+            seller,
+            averageRating,
+            totalReviews,
+            responseTime,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Get seller metrics
+     * @param seller Address of the seller
+     * @return Seller metrics
+     */
+    function getSellerMetrics(address seller) external view returns (SellerMetrics memory) {
+        return sellerMetrics[seller];
+    }
+    
+    /**
+     * @notice Update listing view count
+     * @param listingId ID of the listing
+     */
+    function updateListingViewCount(uint256 listingId) external {
+        listingMetrics[listingId].viewCount += 1;
+        listingMetrics[listingId].lastUpdated = block.timestamp;
+        
+        emit ProductListingMetricsUpdated(
+            listingId,
+            listingMetrics[listingId].viewCount,
+            listingMetrics[listingId].favoriteCount,
+            listingMetrics[listingId].shareCount,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Update listing favorite count
+     * @param listingId ID of the listing
+     */
+    function updateListingFavoriteCount(uint256 listingId) external {
+        listingMetrics[listingId].favoriteCount += 1;
+        listingMetrics[listingId].lastUpdated = block.timestamp;
+        
+        emit ProductListingMetricsUpdated(
+            listingId,
+            listingMetrics[listingId].viewCount,
+            listingMetrics[listingId].favoriteCount,
+            listingMetrics[listingId].shareCount,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Update listing share count
+     * @param listingId ID of the listing
+     */
+    function updateListingShareCount(uint256 listingId) external {
+        listingMetrics[listingId].shareCount += 1;
+        listingMetrics[listingId].lastUpdated = block.timestamp;
+        
+        emit ProductListingMetricsUpdated(
+            listingId,
+            listingMetrics[listingId].viewCount,
+            listingMetrics[listingId].favoriteCount,
+            listingMetrics[listingId].shareCount,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Get listing metrics
+     * @param listingId ID of the listing
+     * @return Listing metrics
+     */
+    function getListingMetrics(uint256 listingId) external view returns (ListingMetrics memory) {
+        return listingMetrics[listingId];
     }
     
     /**

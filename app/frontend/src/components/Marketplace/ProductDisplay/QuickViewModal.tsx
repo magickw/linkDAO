@@ -12,6 +12,13 @@ import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
 import { 
+  AnimatedProductBadge, 
+  AnimatedSellerBadge, 
+  AnimatedEngagementMetrics, 
+  AnimatedTrustIndicator,
+  AnimatedPriceDisplay
+} from '../../../components/VisualPolish/MarketplaceAnimations';
+import { 
   Heart, Share2, ZoomIn, ZoomOut, 
   ChevronLeft, ChevronRight, 
   Star, Shield, CheckCircle, Vote,
@@ -199,30 +206,15 @@ const SellerInfo: React.FC<{
           </span>
           {seller.verified && <span className="text-sm">✅</span>}
           {seller.daoApproved && (
-            <div 
-              className="px-1.5 py-0.5 rounded text-xs font-medium"
-              style={{
-                background: designTokens.colors.trust.dao + '20',
-                color: designTokens.colors.trust.dao,
-                border: `1px solid ${designTokens.colors.trust.dao}40`,
-              }}
-            >
+            <AnimatedProductBadge variant="info" size="sm">
               DAO
-            </div>
+            </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <div 
-              className="px-1.5 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-              style={{
-                background: getReputationTierColor(seller.reputationMetrics.reputationTier) + '20',
-                color: getReputationTierColor(seller.reputationMetrics.reputationTier),
-                border: `1px solid ${getReputationTierColor(seller.reputationMetrics.reputationTier)}40`,
-              }}
-            >
-              <span>⭐</span>
-              <span>{formatReputationScore(seller.reputationMetrics.overallScore)}</span>
-            </div>
+            <AnimatedProductBadge variant="warning" size="sm">
+              ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
+            </AnimatedProductBadge>
           )}
         </div>
         <div className="flex items-center gap-2 text-sm text-white/60">
@@ -400,27 +392,14 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                     {/* Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-1">
                       {product.isNFT && (
-                        <div 
-                          className="px-2 py-1 rounded text-xs font-medium"
-                          style={{
-                            background: designTokens.gradients.nftRainbow,
-                            color: 'white',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                          }}
-                        >
+                        <AnimatedProductBadge variant="secondary" size="sm">
                           NFT
-                        </div>
+                        </AnimatedProductBadge>
                       )}
                       {product.discount?.active && product.discount.percentage && (
-                        <div 
-                          className="px-2 py-1 rounded text-xs font-medium"
-                          style={{
-                            background: designTokens.colors.status.error + 'dd',
-                            color: 'white',
-                          }}
-                        >
+                        <AnimatedProductBadge variant="error" size="sm">
                           {product.discount.percentage}% OFF
-                        </div>
+                        </AnimatedProductBadge>
                       )}
                     </div>
                   </div>
@@ -476,14 +455,11 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-2">{product.title}</h2>
                     <div className="mb-4">
-                      <DualPricing
+                      <AnimatedPriceDisplay
                         cryptoPrice={product.price.crypto}
                         cryptoSymbol={product.price.cryptoSymbol}
                         fiatPrice={product.price.fiat}
                         fiatSymbol={product.price.fiatSymbol}
-                        size="large"
-                        layout="vertical"
-                        realTimeConversion
                       />
                     </div>
                   </div>
@@ -494,12 +470,20 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                   {/* Trust indicators */}
                   <div>
                     <h3 className="text-sm font-medium text-white/80 mb-2">Trust & Protection</h3>
-                    <TrustIndicators
-                      {...product.trust}
-                      daoApproved={product.seller.daoApproved}
-                      layout="inline"
-                      size="medium"
-                    />
+                    <div className="flex flex-wrap gap-2">
+                      {product.trust.verified && (
+                        <AnimatedTrustIndicator type="verified" label="Verified" />
+                      )}
+                      {product.trust.escrowProtected && (
+                        <AnimatedTrustIndicator type="escrow" label="Escrow" />
+                      )}
+                      {product.trust.onChainCertified && (
+                        <AnimatedTrustIndicator type="onchain" label="On-Chain" />
+                      )}
+                      {product.seller.daoApproved && (
+                        <AnimatedTrustIndicator type="dao" label="DAO" />
+                      )}
+                    </div>
                   </div>
 
                   {/* Product metadata */}
@@ -606,12 +590,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                             <div className="text-white/60">Certifications</div>
                             <div className="flex flex-wrap gap-1">
                               {product.metadata.certifications.map((cert, index) => (
-                                <span 
-                                  key={index}
-                                  className="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-300"
-                                >
+                                <AnimatedProductBadge key={index} variant="info" size="sm">
                                   {cert}
-                                </span>
+                                </AnimatedProductBadge>
                               ))}
                             </div>
                           </div>
@@ -654,12 +635,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
                       <h3 className="text-sm font-medium text-white/80 mb-2">Tags</h3>
                       <div className="flex flex-wrap gap-2">
                         {product.tags.map((tag, index) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-1 rounded text-xs bg-purple-500/20 text-purple-300"
-                          >
+                          <AnimatedProductBadge key={index} variant="secondary" size="sm">
                             {tag}
-                          </span>
+                          </AnimatedProductBadge>
                         ))}
                       </div>
                     </div>

@@ -10,10 +10,9 @@ const sampleProducts = [
     description: 'Sustainable wooden watch with metal accents',
     images: ['/images/sample-product-1.jpg'],
     price: {
-      crypto: '45.99',
-      cryptoSymbol: 'USDC',
-      fiat: '45.99',
-      fiatSymbol: '$'
+      amount: '45.99',
+      currency: 'USDC',
+      usdEquivalent: '45.99'
     },
     seller: {
       id: 'seller-1',
@@ -36,10 +35,9 @@ const sampleProducts = [
     description: 'Limited edition NFT collection',
     images: ['/images/sample-product-2.jpg'],
     price: {
-      crypto: '0.25',
-      cryptoSymbol: 'ETH',
-      fiat: '425.00',
-      fiatSymbol: '$'
+      amount: '0.25',
+      currency: 'ETH',
+      usdEquivalent: '425.00'
     },
     seller: {
       id: 'seller-2',
@@ -63,10 +61,9 @@ const sampleProducts = [
     description: 'Professional website design and development',
     images: ['/images/sample-product-3.jpg'],
     price: {
-      crypto: '750.00',
-      cryptoSymbol: 'USDC',
-      fiat: '750.00',
-      fiatSymbol: '$'
+      amount: '750.00',
+      currency: 'USDC',
+      usdEquivalent: '750.00'
     },
     seller: {
       id: 'seller-3',
@@ -89,10 +86,9 @@ const sampleProducts = [
     description: 'Monthly delivery of specialty coffee beans',
     images: ['/images/sample-product-4.jpg'],
     price: {
-      crypto: '29.99',
-      cryptoSymbol: 'USDC',
-      fiat: '29.99',
-      fiatSymbol: '$'
+      amount: '29.99',
+      currency: 'USDC',
+      usdEquivalent: '29.99'
     },
     seller: {
       id: 'seller-4',
@@ -115,10 +111,9 @@ const sampleProducts = [
     description: 'Noise-cancelling headphones with 30hr battery',
     images: ['/images/sample-product-5.jpg'],
     price: {
-      crypto: '89.99',
-      cryptoSymbol: 'USDC',
-      fiat: '89.99',
-      fiatSymbol: '$'
+      amount: '89.99',
+      currency: 'USDC',
+      usdEquivalent: '89.99'
     },
     seller: {
       id: 'seller-5',
@@ -141,10 +136,9 @@ const sampleProducts = [
     description: '1080p HD indoor security camera with night vision',
     images: ['/images/sample-product-6.jpg'],
     price: {
-      crypto: '39.99',
-      cryptoSymbol: 'USDC',
-      fiat: '39.99',
-      fiatSymbol: '$'
+      amount: '39.99',
+      currency: 'USDC',
+      usdEquivalent: '39.99'
     },
     seller: {
       id: 'seller-6',

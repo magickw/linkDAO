@@ -13,6 +13,10 @@ import {
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
+import { 
+  AnimatedFilterToggle, 
+  filterPanelAnimations 
+} from '../../../components/VisualPolish/MarketplaceAnimations';
 
 // Define filter types based on backend capabilities
 interface AdvancedSearchFilters {
@@ -687,9 +691,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            {...filterPanelAnimations.expand}
             className="overflow-hidden"
           >
             <GlassPanel variant="secondary" className="p-4">

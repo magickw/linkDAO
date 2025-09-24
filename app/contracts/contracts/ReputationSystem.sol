@@ -80,6 +80,12 @@ contract ReputationSystem is ReentrancyGuard, Ownable {
     mapping(address => bool) public verifiedModerators;
     mapping(address => uint256) public moderatorReputationThreshold;
 
+    // New mappings for enhanced reputation tracking
+    mapping(address => uint256) public successfulTransactions;
+    mapping(address => uint256) public totalSales;
+    mapping(address => uint256) public totalRevenue;
+    mapping(address => uint256) public responseTime; // Average response time in seconds
+    
     // Counters
     uint256 public nextReviewId = 1;
     uint256 public totalReviews = 0;
@@ -146,6 +152,49 @@ contract ReputationSystem is ReentrancyGuard, Ownable {
         uint256 count
     );
 
+    // New events for enhanced reputation tracking
+    event ReputationScoreDetailsUpdated(
+        address indexed user,
+        uint256 totalPoints,
+        uint256 reviewCount,
+        uint256 averageRating,
+        uint256 weightedScore,
+        uint256 successfulTransactions,
+        uint256 timestamp
+    );
+    
+    event SellerMetricsUpdated(
+        address indexed seller,
+        uint256 totalSales,
+        uint256 totalRevenue,
+        uint256 averageRating,
+        uint256 responseTime,
+        uint256 timestamp
+    );
+    
+    // Additional events for comprehensive reputation tracking
+    event ReputationDecayApplied(
+        address indexed user,
+        uint256 decayAmount,
+        uint256 newScore,
+        uint256 timestamp
+    );
+    
+    event ReputationBoostApplied(
+        address indexed user,
+        uint256 boostAmount,
+        string reason,
+        uint256 timestamp
+    );
+    
+    event CommunityModerationAction(
+        address indexed moderator,
+        address indexed target,
+        string action,
+        string reason,
+        uint256 timestamp
+    );
+    
     // Modifiers
     modifier onlyModerator() {
         require(verifiedModerators[msg.sender] || msg.sender == owner(), "Not a moderator");
@@ -509,6 +558,66 @@ contract ReputationSystem is ReentrancyGuard, Ownable {
         score.weightedScore = this.calculateWeightedScore(user);
         
         emit ReputationUpdated(user, oldScore, score.totalPoints, oldTier, newTier);
+        
+        // Emit detailed reputation score event
+        emit ReputationScoreDetailsUpdated(
+            user,
+            score.totalPoints,
+            score.reviewCount,
+            score.averageRating,
+            score.weightedScore,
+            successfulTransactions[user],
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Update seller metrics
+     * @param seller Address of the seller
+     * @param salesCount Number of sales
+     * @param revenue Total revenue
+     * @param avgRating Average rating
+     * @param avgResponseTime Average response time in seconds
+     */
+    function updateSellerMetrics(
+        address seller,
+        uint256 salesCount,
+        uint256 revenue,
+        uint256 avgRating,
+        uint256 avgResponseTime
+    ) external onlyOwner {
+        totalSales[seller] = salesCount;
+        totalRevenue[seller] = revenue;
+        successfulTransactions[seller] = salesCount;
+        responseTime[seller] = avgResponseTime;
+        
+        emit SellerMetricsUpdated(
+            seller,
+            salesCount,
+            revenue,
+            avgRating,
+            avgResponseTime,
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Get seller metrics
+     * @param seller Address of the seller
+     * @return Total sales, total revenue, average rating, average response time in seconds
+     */
+    function getSellerMetrics(address seller) external view returns (
+        uint256,
+        uint256,
+        uint256,
+        uint256
+    ) {
+        return (
+            totalSales[seller],
+            totalRevenue[seller],
+            this.calculateWeightedScore(seller),
+            responseTime[seller]
+        );
     }
 
     /**
@@ -590,5 +699,83 @@ contract ReputationSystem is ReentrancyGuard, Ownable {
 
     function setReviewVerificationReward(uint256 newReward) external onlyOwner {
         reviewVerificationReward = newReward;
+    }
+    
+    /**
+     * @notice Apply reputation decay for inactive users
+     * @param user Address of the user
+     * @param decayAmount Amount to decay
+     */
+    function applyReputationDecay(address user, uint256 decayAmount) external onlyOwner {
+        ReputationScore storage score = reputationScores[user];
+        
+        if (score.totalPoints > decayAmount) {
+            score.totalPoints -= decayAmount;
+        } else {
+            score.totalPoints = 0;
+        }
+        
+        score.lastUpdated = block.timestamp;
+        
+        emit ReputationDecayApplied(user, decayAmount, score.totalPoints, block.timestamp);
+        
+        // Emit detailed reputation score event
+        emit ReputationScoreDetailsUpdated(
+            user,
+            score.totalPoints,
+            score.reviewCount,
+            score.averageRating,
+            score.weightedScore,
+            successfulTransactions[user],
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Apply reputation boost for positive actions
+     * @param user Address of the user
+     * @param boostAmount Amount to boost
+     * @param reason Reason for the boost
+     */
+    function applyReputationBoost(address user, uint256 boostAmount, string calldata reason) external onlyOwner {
+        ReputationScore storage score = reputationScores[user];
+        score.totalPoints += boostAmount;
+        score.lastUpdated = block.timestamp;
+        
+        emit ReputationBoostApplied(user, boostAmount, reason, block.timestamp);
+        
+        // Emit detailed reputation score event
+        emit ReputationScoreDetailsUpdated(
+            user,
+            score.totalPoints,
+            score.reviewCount,
+            score.averageRating,
+            score.weightedScore,
+            successfulTransactions[user],
+            block.timestamp
+        );
+    }
+    
+    /**
+     * @notice Record community moderation action
+     * @param target Address of the user being moderated
+     * @param action Type of action taken
+     * @param reason Reason for the action
+     */
+    function recordCommunityModerationAction(
+        address target,
+        string calldata action,
+        string calldata reason
+    ) external onlyModerator {
+        emit CommunityModerationAction(msg.sender, target, action, reason, block.timestamp);
+    }
+    
+    /**
+     * @notice Get reputation score details
+     * @param user Address of the user
+     * @return ReputationScore structure
+     */
+    function getReputationScoreDetails(address user) external view returns (ReputationScore memory) {
+        return reputationScores[user];
     }
 }

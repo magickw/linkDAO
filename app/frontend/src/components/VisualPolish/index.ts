@@ -24,6 +24,24 @@ export {
   RippleEffect
 } from './SmoothAnimations';
 
+// Marketplace Animations
+export {
+  productCardAnimations,
+  searchBarAnimations,
+  filterPanelAnimations,
+  badgeAnimations,
+  notificationAnimations,
+  AnimatedProductBadge,
+  AnimatedSellerBadge,
+  AnimatedEngagementMetrics,
+  AnimatedPriceDisplay,
+  AnimatedTrustIndicator,
+  AnimatedLoadingSkeleton,
+  AnimatedSearchResultItem,
+  AnimatedFilterToggle,
+  AnimatedCategoryCard
+} from './MarketplaceAnimations';
+
 // Enhanced Theme System
 export {
   useEnhancedTheme,

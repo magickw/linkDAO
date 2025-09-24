@@ -13,6 +13,13 @@ import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
 import { useResponsive } from '../../../design-system/components/ResponsiveContainer';
 import { 
+  AnimatedProductBadge, 
+  AnimatedSellerBadge, 
+  AnimatedEngagementMetrics, 
+  AnimatedTrustIndicator,
+  productCardAnimations
+} from '../../../components/VisualPolish/MarketplaceAnimations';
+import { 
   Heart, ShoppingCart, Eye, 
   Star, CheckCircle, Shield, Vote,
   Truck, Award, Wrench
@@ -206,7 +213,10 @@ const SellerBadge: React.FC<{
   return (
     <motion.div
       className="flex items-center gap-2 cursor-pointer group"
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
@@ -224,30 +234,15 @@ const SellerBadge: React.FC<{
           </span>
           {seller.verified && <CheckCircle size={12} className="text-green-400" />}
           {seller.daoApproved && (
-            <div 
-              className={`px-1 py-0.5 rounded font-medium ${classes.badge}`}
-              style={{
-                background: designTokens.colors.trust.dao + '20',
-                color: designTokens.colors.trust.dao,
-                border: `1px solid ${designTokens.colors.trust.dao}40`,
-              }}
-            >
+            <AnimatedProductBadge variant="info" size="sm">
               DAO
-            </div>
+            </AnimatedProductBadge>
           )}
           {/* Reputation Score Badge */}
           {seller.reputationMetrics && (
-            <div 
-              className={`px-1 py-0.5 rounded font-medium flex items-center gap-1 ${classes.badge}`}
-              style={{
-                background: getReputationTierColor(seller.reputationMetrics.reputationTier) + '20',
-                color: getReputationTierColor(seller.reputationMetrics.reputationTier),
-                border: `1px solid ${getReputationTierColor(seller.reputationMetrics.reputationTier)}40`,
-              }}
-            >
-              <Star size={10} />
-              <span>{formatReputationScore(seller.reputationMetrics.overallScore)}</span>
-            </div>
+            <AnimatedProductBadge variant="warning" size="sm">
+              ⭐ {formatReputationScore(seller.reputationMetrics.overallScore)}
+            </AnimatedProductBadge>
           )}
         </div>
         <div className={`flex items-center gap-1 ${classes.text} text-white/60`}>
@@ -275,8 +270,7 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
     onProductClick?.(product.id);
   };
 
-  const handleSellerClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleSellerClick = () => {
     onSellerClick?.(product.seller.id);
   };
 
@@ -326,8 +320,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
       <motion.div
         className={`cursor-pointer ${className}`}
         onClick={handleProductClick}
-        whileHover={{ y: -4 }}
-        whileTap={{ scale: 0.98 }}
+        {...productCardAnimations.hover}
+        {...productCardAnimations.tap}
       >
         <GlassPanel 
           variant="secondary" 
@@ -374,12 +368,20 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
 
               {/* Trust indicators */}
               <div className="mb-2">
-                <TrustIndicators
-                  {...product.trust}
-                  daoApproved={product.seller.daoApproved}
-                  layout="compact"
-                  size="small"
-                />
+                <div className="flex gap-1">
+                  {product.trust.verified && (
+                    <AnimatedTrustIndicator type="verified" label="" />
+                  )}
+                  {product.trust.escrowProtected && (
+                    <AnimatedTrustIndicator type="escrow" label="" />
+                  )}
+                  {product.trust.onChainCertified && (
+                    <AnimatedTrustIndicator type="onchain" label="" />
+                  )}
+                  {product.seller.daoApproved && (
+                    <AnimatedTrustIndicator type="dao" label="" />
+                  )}
+                </div>
               </div>
 
               {/* Action buttons */}
@@ -414,8 +416,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
       <motion.div
         className={`cursor-pointer ${className}`}
         onClick={handleProductClick}
-        whileHover={{ y: -4 }}
-        whileTap={{ scale: 0.98 }}
+        {...productCardAnimations.hover}
+        {...productCardAnimations.tap}
       >
         <GlassPanel 
           variant="secondary" 
@@ -447,27 +449,14 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
             {/* Badges */}
             <div className="absolute top-2 left-2 flex flex-col gap-1">
               {product.isNFT && (
-                <div 
-                  className="px-2 py-1 rounded text-xs font-medium"
-                  style={{
-                    background: designTokens.gradients.nftRainbow,
-                    color: 'white',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                  }}
-                >
+                <AnimatedProductBadge variant="secondary" size="sm">
                   NFT
-                </div>
+                </AnimatedProductBadge>
               )}
               {product.discount?.active && product.discount.percentage && (
-                <div 
-                  className="px-2 py-1 rounded text-xs font-medium"
-                  style={{
-                    background: designTokens.colors.status.error + 'dd',
-                    color: 'white',
-                  }}
-                >
+                <AnimatedProductBadge variant="error" size="sm">
                   {product.discount.percentage}% OFF
-                </div>
+                </AnimatedProductBadge>
               )}
             </div>
           </div>
@@ -480,12 +469,20 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
                 onClick={handleSellerClick}
                 size="md"
               />
-              <TrustIndicators
-                {...product.trust}
-                daoApproved={product.seller.daoApproved}
-                layout="compact"
-                size="small"
-              />
+              <div className="flex gap-1">
+                {product.trust.verified && (
+                  <AnimatedTrustIndicator type="verified" label="" />
+                )}
+                {product.trust.escrowProtected && (
+                  <AnimatedTrustIndicator type="escrow" label="" />
+                )}
+                {product.trust.onChainCertified && (
+                  <AnimatedTrustIndicator type="onchain" label="" />
+                )}
+                {product.seller.daoApproved && (
+                  <AnimatedTrustIndicator type="dao" label="" />
+                )}
+              </div>
             </div>
 
             {/* Title */}
@@ -550,8 +547,8 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
     <motion.div
       className={`cursor-pointer ${className}`}
       onClick={handleProductClick}
-      whileHover={{ y: -8 }}
-      whileTap={{ scale: 0.98 }}
+      {...productCardAnimations.hover}
+      {...productCardAnimations.tap}
     >
       <GlassPanel 
         variant="secondary" 
@@ -584,76 +581,47 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
             {product.isNFT && (
-              <div 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: designTokens.gradients.nftRainbow,
-                  color: 'white',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                }}
-              >
+              <AnimatedProductBadge variant="secondary" size="sm">
                 NFT
-              </div>
+              </AnimatedProductBadge>
             )}
             {product.discount?.active && product.discount.percentage && (
-              <div 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: designTokens.colors.status.error + 'dd',
-                  color: 'white',
-                }}
-              >
+              <AnimatedProductBadge variant="error" size="sm">
                 {product.discount.percentage}% OFF
-              </div>
+              </AnimatedProductBadge>
             )}
             {product.isFeatured && (
-              <div 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: designTokens.colors.status.warning + 'dd',
-                  color: 'white',
-                }}
-              >
+              <AnimatedProductBadge variant="warning" size="sm">
                 Featured
-              </div>
+              </AnimatedProductBadge>
             )}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-              <div 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: designTokens.colors.status.success + 'dd',
-                  color: 'white',
-                }}
-              >
+              <AnimatedProductBadge variant="success" size="sm">
                 High Quality
-              </div>
+              </AnimatedProductBadge>
             )}
           </div>
 
           {/* Low stock indicator */}
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
-            <div 
-              className="absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-medium"
-              style={{
-                background: designTokens.colors.status.warning + 'dd',
-                color: 'white',
-              }}
+            <AnimatedProductBadge 
+              variant="warning" 
+              size="sm"
+              className="absolute bottom-3 left-3"
             >
               Only {product.inventory} left
-            </div>
+            </AnimatedProductBadge>
           )}
 
           {/* Out of stock indicator */}
           {product.inventory !== undefined && product.inventory === 0 && (
-            <div 
-              className="absolute bottom-3 left-3 px-2 py-1 rounded text-xs font-medium"
-              style={{
-                background: designTokens.colors.status.error + 'dd',
-                color: 'white',
-              }}
+            <AnimatedProductBadge 
+              variant="error" 
+              size="sm"
+              className="absolute bottom-3 left-3"
             >
               Out of Stock
-            </div>
+            </AnimatedProductBadge>
           )}
         </div>
 
@@ -666,12 +634,20 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
               onClick={handleSellerClick}
               size="md"
             />
-            <TrustIndicators
-              {...product.trust}
-              daoApproved={product.seller.daoApproved}
-              layout="compact"
-              size="small"
-            />
+            <div className="flex gap-1">
+              {product.trust.verified && (
+                <AnimatedTrustIndicator type="verified" label="" />
+              )}
+              {product.trust.escrowProtected && (
+                <AnimatedTrustIndicator type="escrow" label="" />
+              )}
+              {product.trust.onChainCertified && (
+                <AnimatedTrustIndicator type="onchain" label="" />
+              )}
+              {product.seller.daoApproved && (
+                <AnimatedTrustIndicator type="dao" label="" />
+              )}
+            </div>
           </div>
 
           {/* Title */}
@@ -682,24 +658,24 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           {/* Product metadata */}
           <div className="flex flex-wrap gap-2 mb-3">
             {product.condition && (
-              <span className="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-300">
+              <AnimatedProductBadge variant="primary" size="sm">
                 {product.condition}
-              </span>
+              </AnimatedProductBadge>
             )}
             {product.brand && (
-              <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300">
+              <AnimatedProductBadge variant="secondary" size="sm">
                 {product.brand}
-              </span>
+              </AnimatedProductBadge>
             )}
             {product.hasWarranty && (
-              <span className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-300">
+              <AnimatedProductBadge variant="success" size="sm">
                 Warranty
-              </span>
+              </AnimatedProductBadge>
             )}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <span className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-300">
+              <AnimatedProductBadge variant="info" size="sm">
                 Certified
-              </span>
+              </AnimatedProductBadge>
             )}
           </div>
 
@@ -729,22 +705,11 @@ export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
           </div>
 
           {/* Engagement metrics */}
-          <div className="flex items-center justify-between mb-5 text-xs text-white/60">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <Eye size={14} />
-                {product.views || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                <Heart size={14} />
-                {product.favorites || 0}
-              </span>
-            </div>
-            {product.metadata?.publishedAt && (
-              <span>
-                {new Date(product.metadata.publishedAt).toLocaleDateString()}
-              </span>
-            )}
+          <div className="mb-5">
+            <AnimatedEngagementMetrics 
+              views={product.views || 0} 
+              favorites={product.favorites || 0} 
+            />
           </div>
 
           {/* Action Buttons */}
