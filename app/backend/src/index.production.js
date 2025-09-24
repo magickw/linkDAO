@@ -449,13 +449,486 @@ app.get('/marketplace/seller/onboarding/:walletAddress', (req, res) => {
 app.put('/marketplace/seller/onboarding/:walletAddress/:stepId', (req, res) => {
   const { walletAddress, stepId } = req.params;
   const data = req.body;
-  
+
   console.log(`Onboarding step ${stepId} updated for ${walletAddress}:`, data);
-  
+
   res.json({
     success: true,
     message: `Onboarding step ${stepId} updated successfully`,
     data
+  });
+});
+
+// Add missing seller profile GET endpoint that frontend expects
+app.get('/marketplace/seller/profile/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const result = await getUserByAddress(walletAddress);
+
+    if (result.rows.length === 0) {
+      // Return default profile instead of 404
+      const defaultProfile = {
+        id: `seller_${Date.now()}`,
+        walletAddress,
+        tier: 'basic',
+        displayName: '',
+        storeName: '',
+        bio: '',
+        description: '',
+        profilePicture: '',
+        logo: '',
+        email: '',
+        emailVerified: false,
+        phone: '',
+        phoneVerified: false,
+        kycStatus: 'none',
+        payoutPreferences: {
+          defaultCrypto: 'USDC',
+          cryptoAddresses: { USDC: walletAddress, ETH: walletAddress },
+          fiatEnabled: false
+        },
+        stats: {
+          totalSales: 0,
+          activeListings: 0,
+          completedOrders: 0,
+          averageRating: 0,
+          totalReviews: 0,
+          reputationScore: 100,
+          joinDate: new Date().toISOString(),
+          lastActive: new Date().toISOString()
+        },
+        badges: [],
+        onboardingProgress: {
+          profileSetup: false,
+          verification: false,
+          payoutSetup: false,
+          firstListing: false,
+          completed: false,
+          currentStep: 1,
+          totalSteps: 5
+        },
+        settings: {
+          notifications: {
+            orders: true,
+            disputes: true,
+            daoActivity: true,
+            tips: true,
+            marketing: false
+          },
+          privacy: {
+            showEmail: false,
+            showPhone: false,
+            showStats: true
+          },
+          escrow: {
+            defaultEnabled: true,
+            minimumAmount: 10
+          }
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      return res.json({
+        success: true,
+        data: defaultProfile
+      });
+    }
+
+    const user = result.rows[0];
+    let profileData = {};
+
+    try {
+      if (user.profile_cid) {
+        profileData = JSON.parse(user.profile_cid);
+      }
+    } catch (e) {
+      console.log('Failed to parse profile data for user:', user.wallet_address);
+    }
+
+    const sellerProfile = {
+      id: user.id,
+      walletAddress: user.wallet_address,
+      tier: profileData.tier || 'basic',
+      displayName: profileData.displayName || user.handle || '',
+      storeName: profileData.storeName || '',
+      bio: profileData.bio || '',
+      description: profileData.description || '',
+      profilePicture: profileData.profilePicture || '',
+      logo: profileData.logo || '',
+      email: profileData.email || '',
+      emailVerified: profileData.emailVerified || false,
+      phone: profileData.phone || '',
+      phoneVerified: profileData.phoneVerified || false,
+      kycStatus: profileData.kycStatus || 'none',
+      payoutPreferences: profileData.payoutPreferences || {
+        defaultCrypto: 'USDC',
+        cryptoAddresses: { USDC: walletAddress, ETH: walletAddress },
+        fiatEnabled: false
+      },
+      stats: profileData.stats || {
+        totalSales: 0,
+        activeListings: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalReviews: 0,
+        reputationScore: 100,
+        joinDate: user.created_at,
+        lastActive: new Date().toISOString()
+      },
+      badges: profileData.badges || [],
+      onboardingProgress: profileData.onboardingProgress || {
+        profileSetup: true,
+        verification: false,
+        payoutSetup: false,
+        firstListing: false,
+        completed: false,
+        currentStep: 2,
+        totalSteps: 5
+      },
+      settings: profileData.settings || {
+        notifications: {
+          orders: true,
+          disputes: true,
+          daoActivity: true,
+          tips: true,
+          marketing: false
+        },
+        privacy: {
+          showEmail: false,
+          showPhone: false,
+          showStats: true
+        },
+        escrow: {
+          defaultEnabled: true,
+          minimumAmount: 10
+        }
+      },
+      createdAt: user.created_at,
+      updatedAt: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      data: sellerProfile
+    });
+  } catch (error) {
+    console.error('Error fetching seller profile:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add missing seller dashboard endpoint
+app.get('/marketplace/seller/dashboard/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+
+    // Mock dashboard data - in production, this would come from your database
+    const dashboardStats = {
+      sales: {
+        today: Math.floor(Math.random() * 500),
+        thisWeek: Math.floor(Math.random() * 2000),
+        thisMonth: Math.floor(Math.random() * 8000),
+        total: Math.floor(Math.random() * 50000)
+      },
+      orders: {
+        pending: Math.floor(Math.random() * 10),
+        processing: Math.floor(Math.random() * 5),
+        shipped: Math.floor(Math.random() * 15),
+        delivered: Math.floor(Math.random() * 100),
+        disputed: Math.floor(Math.random() * 2)
+      },
+      listings: {
+        active: Math.floor(Math.random() * 20),
+        draft: Math.floor(Math.random() * 5),
+        sold: Math.floor(Math.random() * 50),
+        expired: Math.floor(Math.random() * 3)
+      },
+      balance: {
+        crypto: {
+          USDC: Math.floor(Math.random() * 1000),
+          ETH: Math.random() * 2,
+          BTC: Math.random() * 0.1
+        },
+        fiatEquivalent: Math.floor(Math.random() * 5000),
+        pendingEscrow: Math.floor(Math.random() * 500),
+        availableWithdraw: Math.floor(Math.random() * 2000)
+      },
+      reputation: {
+        score: 85 + Math.floor(Math.random() * 15),
+        trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)],
+        recentReviews: Math.floor(Math.random() * 10),
+        averageRating: 4.0 + Math.random()
+      }
+    };
+
+    res.json({
+      success: true,
+      data: dashboardStats
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add missing seller listings endpoint
+app.get('/marketplace/seller/listings/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+    const { status } = req.query;
+
+    console.log(`Fetching listings for wallet: ${walletAddress}`);
+
+    // Mock listings data - in production, this would come from your database
+    const mockListings = [
+      {
+        id: 'listing_1',
+        title: 'Sample Product 1',
+        description: 'A great product for everyone',
+        category: 'electronics',
+        price: 99.99,
+        currency: 'USDC',
+        quantity: 10,
+        condition: 'new',
+        images: ['https://picsum.photos/400/300?random=1'],
+        status: 'active',
+        saleType: 'fixed',
+        escrowEnabled: true,
+        views: 45,
+        favorites: 8,
+        questions: 2,
+        sellerWalletAddress: walletAddress,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+      }
+    ];
+
+    // Filter by status if provided
+    const filteredListings = status ? mockListings.filter(listing => listing.status === status) : mockListings;
+
+    console.log(`Returning ${filteredListings.length} listings`);
+
+    res.json({
+      success: true,
+      data: filteredListings
+    });
+  } catch (error) {
+    console.error('Error fetching listings:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add missing seller notifications endpoint
+app.get('/marketplace/seller/notifications/:walletAddress', async (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+
+    const notifications = [
+      {
+        id: 'notif_1',
+        type: 'order',
+        title: 'New Order Received',
+        message: 'You have received a new order for "Sample Product"',
+        read: false,
+        priority: 'high',
+        createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 minutes ago
+      },
+      {
+        id: 'notif_2',
+        type: 'system',
+        title: 'Profile Verification',
+        message: 'Complete your profile verification to unlock more features',
+        read: false,
+        priority: 'medium',
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
+      },
+      {
+        id: 'notif_3',
+        type: 'tip',
+        title: 'Seller Tip',
+        message: 'Add more product images to increase your sales by up to 30%',
+        read: true,
+        priority: 'low',
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Add verification endpoints (mock for now)
+app.post('/marketplace/seller/verification/email', (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      error: 'Email address is required'
+    });
+  }
+
+  console.log(`Mock: Sending verification email to ${email}`);
+
+  res.json({
+    success: true,
+    message: `Verification email sent to ${email}. Please check your inbox.`
+  });
+});
+
+app.post('/marketplace/seller/verification/email/verify', (req, res) => {
+  const { token, code } = req.body;
+
+  if (!token && !code) {
+    return res.status(400).json({
+      success: false,
+      error: 'Verification token or code is required'
+    });
+  }
+
+  console.log(`Mock: Verifying email with token/code: ${token || code}`);
+
+  res.json({
+    success: true,
+    message: 'Email verified successfully'
+  });
+});
+
+app.post('/marketplace/seller/verification/phone', (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({
+      success: false,
+      error: 'Phone number is required'
+    });
+  }
+
+  console.log(`Mock: Sending verification SMS to ${phone}`);
+
+  res.json({
+    success: true,
+    message: `Verification code sent to ${phone}. Please check your SMS.`
+  });
+});
+
+app.post('/marketplace/seller/verification/phone/verify', (req, res) => {
+  const { phone, code } = req.body;
+
+  if (!phone || !code) {
+    return res.status(400).json({
+      success: false,
+      error: 'Phone number and verification code are required'
+    });
+  }
+
+  console.log(`Mock: Verifying phone ${phone} with code: ${code}`);
+
+  res.json({
+    success: true,
+    message: 'Phone verified successfully'
+  });
+});
+
+// Add Web3 Auth endpoints that the frontend expects
+app.get('/api/auth/nonce/:address', (req, res) => {
+  const { address } = req.params;
+
+  if (!address) {
+    return res.status(400).json({
+      success: false,
+      error: 'Wallet address is required'
+    });
+  }
+
+  // Generate a simple nonce for testing
+  const nonce = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const message = `Sign this message to authenticate with LinkDAO Marketplace.\n\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
+
+  console.log(`🔑 Generated nonce for ${address}: ${nonce}`);
+
+  res.json({
+    success: true,
+    nonce,
+    message
+  });
+});
+
+app.post('/api/auth/wallet', async (req, res) => {
+  const { address, signature, message, nonce } = req.body;
+
+  console.log(`🔐 Wallet auth attempt for ${address}`);
+
+  if (!address || !signature || !message || !nonce) {
+    return res.status(400).json({
+      success: false,
+      error: 'Address, signature, message, and nonce are required'
+    });
+  }
+
+  // Mock successful wallet authentication (in production, verify signature)
+  const user = {
+    id: `user_${Date.now()}`,
+    address: address,
+    handle: `user_${address.slice(-8)}`,
+    ens: '',
+    kycStatus: 'none',
+    createdAt: new Date().toISOString()
+  };
+
+  const token = `jwt_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+  console.log(`✅ Wallet auth successful for ${address}`);
+
+  res.json({
+    success: true,
+    token,
+    user
+  });
+});
+
+// Add missing feed endpoint
+app.get('/api/posts/feed', (req, res) => {
+  res.json({
+    success: true,
+    data: [],
+    message: 'Feed endpoint - mock response'
+  });
+});
+
+// Add missing reputation endpoint
+app.get('/marketplace/reputation/:address', (req, res) => {
+  const { address } = req.params;
+
+  res.json({
+    success: true,
+    data: {
+      address,
+      score: 85 + Math.floor(Math.random() * 15),
+      level: 'Trusted Seller',
+      totalTransactions: Math.floor(Math.random() * 50),
+      successRate: 95 + Math.floor(Math.random() * 5),
+      badges: ['verified', 'fast-shipper']
+    }
   });
 });
 
@@ -481,8 +954,20 @@ app.use('*', (req, res) => {
       'GET /api/profiles/address/:address',
       'POST /marketplace/seller/profile',
       'PUT /marketplace/seller/profile/:walletAddress',
+      'GET /marketplace/seller/profile/:walletAddress',
       'GET /marketplace/seller/onboarding/:walletAddress',
-      'PUT /marketplace/seller/onboarding/:walletAddress/:stepId'
+      'PUT /marketplace/seller/onboarding/:walletAddress/:stepId',
+      'GET /marketplace/seller/dashboard/:walletAddress',
+      'GET /marketplace/seller/listings/:walletAddress',
+      'GET /marketplace/seller/notifications/:walletAddress',
+      'POST /marketplace/seller/verification/email',
+      'POST /marketplace/seller/verification/email/verify',
+      'POST /marketplace/seller/verification/phone',
+      'POST /marketplace/seller/verification/phone/verify',
+      'GET /api/auth/nonce/:address',
+      'POST /api/auth/wallet',
+      'GET /api/posts/feed',
+      'GET /marketplace/reputation/:address'
     ]
   });
 });
@@ -496,13 +981,25 @@ initializeDatabase().then(() => {
     console.log(`💾 Database: PostgreSQL (${dbConnected ? 'Connected' : 'Not connected'})`);
     console.log(`⏰ Started at: ${new Date().toISOString()}`);
     console.log(`\n📋 Available endpoints:`);
-    console.log(`   GET  /                                    - API info`);
-    console.log(`   GET  /health                              - Health check`);
-    console.log(`   GET  /api/profiles/address/:address       - User profile`);
-    console.log(`   POST /marketplace/seller/profile          - Create seller profile`);
-    console.log(`   PUT  /marketplace/seller/profile/:walletAddress - Update seller profile`);
-    console.log(`   GET  /marketplace/seller/onboarding/:walletAddress - Get onboarding steps`);
+    console.log(`   GET  /                                                     - API info`);
+    console.log(`   GET  /health                                               - Health check`);
+    console.log(`   GET  /api/profiles/address/:address                        - User profile`);
+    console.log(`   POST /marketplace/seller/profile                           - Create seller profile`);
+    console.log(`   PUT  /marketplace/seller/profile/:walletAddress            - Update seller profile`);
+    console.log(`   GET  /marketplace/seller/profile/:walletAddress            - Get seller profile`);
+    console.log(`   GET  /marketplace/seller/onboarding/:walletAddress         - Get onboarding steps`);
     console.log(`   PUT  /marketplace/seller/onboarding/:walletAddress/:stepId - Update onboarding step`);
+    console.log(`   GET  /marketplace/seller/dashboard/:walletAddress          - Get dashboard stats`);
+    console.log(`   GET  /marketplace/seller/listings/:walletAddress           - Get seller listings`);
+    console.log(`   GET  /marketplace/seller/notifications/:walletAddress      - Get notifications`);
+    console.log(`   POST /marketplace/seller/verification/email                - Send email verification`);
+    console.log(`   POST /marketplace/seller/verification/email/verify         - Verify email`);
+    console.log(`   POST /marketplace/seller/verification/phone                - Send SMS verification`);
+    console.log(`   POST /marketplace/seller/verification/phone/verify         - Verify phone`);
+    console.log(`   GET  /api/auth/nonce/:address                              - Get auth nonce`);
+    console.log(`   POST /api/auth/wallet                                      - Authenticate wallet`);
+    console.log(`   GET  /api/posts/feed                                       - Social feed`);
+    console.log(`   GET  /marketplace/reputation/:address                      - User reputation`);
     console.log(`\n✅ Server ready for requests\n`);
   });
 });
