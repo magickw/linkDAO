@@ -18,6 +18,7 @@ import {
 } from '../models/Product';
 import { DatabaseService } from './databaseService';
 import { MetadataService } from './metadataService';
+import { priceOracleService } from './priceOracleService';
 import { ValidationHelper, ValidationError } from '../models/validation';
 import { eq, and, or, like, gte, lte, inArray, desc, asc, isNull, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
@@ -204,7 +205,7 @@ export class ProductService {
       await db.insert(schema.productTags).values(tagInserts);
     }
 
-    return this.mapProductFromDb(product, category);
+    return await this.mapProductFromDb(product, category);
   }
 
   async getProductById(id: string): Promise<Product | null> {
@@ -217,7 +218,7 @@ export class ProductService {
     if (!result[0]) return null;
     
     const { products: product, categories: category } = result[0];
-    return this.mapProductFromDb(product, category);
+    return await this.mapProductFromDb(product, category);
   }
 
   async getProductsBySeller(sellerId: string, filters?: Partial<ProductSearchFilters>): Promise<Product[]> {
@@ -322,10 +323,10 @@ export class ProductService {
       .limit(pagination.limit)
       .offset(offset);
     
-    const products = result.map((row: any) => {
+    const products = await Promise.all(result.map(async (row: any) => {
       const { products: product, categories: category } = row;
-      return this.mapProductFromDb(product, category);
-    });
+      return await this.mapProductFromDb(product, category);
+    }));
     
     return {
       products,
@@ -638,7 +639,7 @@ export class ProductService {
     };
   }
 
-  private mapProductFromDb(dbProduct: any, dbCategory?: any): Product {
+  private async mapProductFromDb(dbProduct: any, dbCategory?: any): Promise<Product> {
     const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
       id: dbProduct.categoryId,
       name: 'Unknown',
@@ -650,15 +651,40 @@ export class ProductService {
       updatedAt: new Date(),
     };
 
+    // Parse price metadata if it exists
+    let priceData: any = {
+      amount: dbProduct.priceAmount,
+      currency: dbProduct.priceCurrency,
+    };
+    
+    // If we don't have fiat equivalents, try to generate them
+    if (!priceData.usdEquivalent) {
+      try {
+        // Convert to multiple fiat currencies
+        const fiatEquivalents = await priceOracleService.convertProductPrice(
+          priceData.amount,
+          priceData.currency
+        );
+        
+        priceData = {
+          ...priceData,
+          usdEquivalent: fiatEquivalents.USD,
+          eurEquivalent: fiatEquivalents.EUR,
+          gbpEquivalent: fiatEquivalents.GBP,
+          lastUpdated: new Date()
+        };
+      } catch (error) {
+        console.error('Failed to convert product price:', error);
+        // Continue with original price data
+      }
+    }
+
     return {
       id: dbProduct.id,
       sellerId: dbProduct.sellerId,
       title: dbProduct.title,
       description: dbProduct.description,
-      price: {
-        amount: dbProduct.priceAmount,
-        currency: dbProduct.priceCurrency,
-      },
+      price: priceData,
       category,
       images: JSON.parse(dbProduct.images || '[]'),
       metadata: JSON.parse(dbProduct.metadata || '{}'),

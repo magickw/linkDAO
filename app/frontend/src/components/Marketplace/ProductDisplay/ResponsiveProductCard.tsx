@@ -1,16 +1,22 @@
 /**
- * ProductCard Component - Glassmorphic product card with lazy-loaded images
- * Displays product information with trust indicators and dual pricing
+ * ResponsiveProductCard Component - Product card that adapts to different screen sizes
+ * Provides optimized layouts for mobile, tablet, and desktop views
  */
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { DualPricing } from '../../../design-system/components/DualPricing';
+import { 
+  DualPricing } from '../../../design-system/components/DualPricing';
 import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
-import { LoadingSkeleton } from '../../../design-system/components/LoadingSkeleton';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
+import { useResponsive } from '../../../design-system/components/ResponsiveContainer';
+import { 
+  Heart, ShoppingCart, Eye, 
+  Star, CheckCircle, Shield, Vote,
+  Truck, Award, Wrench
+} from 'lucide-react';
 
 interface Product {
   id: string;
@@ -98,36 +104,26 @@ interface Product {
   };
 }
 
-interface ProductCardProps {
+interface ResponsiveProductCardProps {
   product: Product;
-  variant?: 'grid' | 'list';
-  showTrustIndicators?: boolean;
   onProductClick?: (productId: string) => void;
   onSellerClick?: (sellerId: string) => void;
   onAddToCart?: (productId: string) => void;
   onAddToWishlist?: (productId: string) => void;
+  onQuickView?: (productId: string) => void;
   className?: string;
 }
 
-interface OptimizedImageProps {
-  src: string;
-  alt: string;
+const OptimizedImage: React.FC<{ 
+  src: string; 
+  alt: string; 
   className?: string;
-  onLoad?: () => void;
-}
-
-const OptimizedImage: React.FC<OptimizedImageProps> = ({ 
-  src, 
-  alt, 
-  className = '',
-  onLoad 
-}) => {
+}> = ({ src, alt, className = '' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const handleLoad = () => {
     setLoading(false);
-    onLoad?.();
   };
 
   const handleError = () => {
@@ -138,14 +134,18 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {loading && (
-        <div className="absolute inset-0">
-          <LoadingSkeleton variant="image" height="100%" />
-        </div>
+        <div 
+          className="absolute inset-0 bg-white/10 animate-pulse rounded-lg"
+          style={{
+            background: designTokens.glassmorphism.secondary.background,
+            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
+          }}
+        />
       )}
       
       {error ? (
         <div 
-          className="w-full h-full flex items-center justify-center text-white/60"
+          className="w-full h-full flex items-center justify-center text-white/60 rounded-lg"
           style={{
             background: designTokens.glassmorphism.secondary.background,
             backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
@@ -159,19 +159,23 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
           alt={alt}
           onLoad={handleLoad}
           onError={handleError}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
+          className={`w-full h-full object-cover transition-opacity duration-300 rounded-lg ${
             loading ? 'opacity-0' : 'opacity-100'
           }`}
-          loading="lazy"
         />
       )}
     </div>
   );
 };
 
-const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }> = ({ 
+const SellerBadge: React.FC<{ 
+  seller: Product['seller']; 
+  onClick?: () => void;
+  size?: 'sm' | 'md' | 'lg';
+}> = ({ 
   seller, 
-  onClick 
+  onClick,
+  size = 'md'
 }) => {
   // Format reputation score for display
   const formatReputationScore = (score: number) => {
@@ -191,88 +195,81 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
     }
   };
 
+  const sizeClasses = {
+    sm: { avatar: 'w-6 h-6', text: 'text-xs', badge: 'text-[10px]' },
+    md: { avatar: 'w-8 h-8', text: 'text-sm', badge: 'text-xs' },
+    lg: { avatar: 'w-10 h-10', text: 'text-base', badge: 'text-sm' },
+  };
+
+  const classes = sizeClasses[size];
+
   return (
     <motion.div
-      className="flex items-center gap-2 cursor-pointer"
+      className="flex items-center gap-2 cursor-pointer group"
       onClick={onClick}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-      <div className="w-6 h-6 rounded-full overflow-hidden">
+      <div className={`${classes.avatar} rounded-full overflow-hidden`}>
         <OptimizedImage
           src={seller.avatar}
           alt={seller.name}
           className="w-full h-full"
         />
       </div>
-      <div className="flex items-center gap-1">
-        <span className="text-sm font-medium text-white/90">{seller.name}</span>
-        {seller.verified && <span className="text-xs">✅</span>}
-        {seller.daoApproved && (
-          <div 
-            className="px-1 py-0.5 rounded text-xs font-medium"
-            style={{
-              background: designTokens.colors.trust.dao + '20',
-              color: designTokens.colors.trust.dao,
-              border: `1px solid ${designTokens.colors.trust.dao}40`,
-            }}
-          >
-            DAO
-          </div>
-        )}
-        {/* Reputation Score Badge */}
-        {seller.reputationMetrics && (
-          <div 
-            className="px-1 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-            style={{
-              background: getReputationTierColor(seller.reputationMetrics.reputationTier) + '20',
-              color: getReputationTierColor(seller.reputationMetrics.reputationTier),
-              border: `1px solid ${getReputationTierColor(seller.reputationMetrics.reputationTier)}40`,
-            }}
-          >
-            <span>⭐</span>
-            <span>{formatReputationScore(seller.reputationMetrics.overallScore)}</span>
-          </div>
-        )}
+      <div>
+        <div className="flex items-center gap-1">
+          <span className={`font-medium text-white group-hover:text-white/80 transition-colors ${classes.text}`}>
+            {seller.name}
+          </span>
+          {seller.verified && <CheckCircle size={12} className="text-green-400" />}
+          {seller.daoApproved && (
+            <div 
+              className={`px-1 py-0.5 rounded font-medium ${classes.badge}`}
+              style={{
+                background: designTokens.colors.trust.dao + '20',
+                color: designTokens.colors.trust.dao,
+                border: `1px solid ${designTokens.colors.trust.dao}40`,
+              }}
+            >
+              DAO
+            </div>
+          )}
+          {/* Reputation Score Badge */}
+          {seller.reputationMetrics && (
+            <div 
+              className={`px-1 py-0.5 rounded font-medium flex items-center gap-1 ${classes.badge}`}
+              style={{
+                background: getReputationTierColor(seller.reputationMetrics.reputationTier) + '20',
+                color: getReputationTierColor(seller.reputationMetrics.reputationTier),
+                border: `1px solid ${getReputationTierColor(seller.reputationMetrics.reputationTier)}40`,
+              }}
+            >
+              <Star size={10} />
+              <span>{formatReputationScore(seller.reputationMetrics.overallScore)}</span>
+            </div>
+          )}
+        </div>
+        <div className={`flex items-center gap-1 ${classes.text} text-white/60`}>
+          <Star size={12} />
+          <span>{seller.reputation}</span>
+        </div>
       </div>
     </motion.div>
   );
 };
 
-const ReputationIndicator: React.FC<{ reputation: number }> = ({ reputation }) => {
-  // Determine reputation level
-  const getReputationLevel = (score: number) => {
-    if (score >= 2000) return { level: 'Excellent', color: '#10B981' };
-    if (score >= 1500) return { level: 'Good', color: '#3B82F6' };
-    if (score >= 1000) return { level: 'Fair', color: '#F59E0B' };
-    if (score >= 500) return { level: 'Poor', color: '#EF4444' };
-    return { level: 'Very Poor', color: '#78716C' };
-  };
-
-  const { level, color } = getReputationLevel(reputation);
-
-  return (
-    <div className="flex items-center gap-1 text-xs">
-      <div 
-        className="w-2 h-2 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      <span className="text-white/70">{level}</span>
-    </div>
-  );
-};
-
-export const ProductCard: React.FC<ProductCardProps> = ({
+export const ResponsiveProductCard: React.FC<ResponsiveProductCardProps> = ({
   product,
-  variant = 'grid',
-  showTrustIndicators = true,
   onProductClick,
   onSellerClick,
   onAddToCart,
   onAddToWishlist,
+  onQuickView,
   className = '',
 }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isMobile, isTablet, isDesktop } = useResponsive();
 
   const handleProductClick = () => {
     onProductClick?.(product.id);
@@ -294,30 +291,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     onAddToWishlist?.(product.id);
   };
 
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4, ease: 'easeOut' },
-    },
-    hover: {
-      y: -8,
-      transition: { duration: 0.2, ease: 'easeOut' },
-    },
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onQuickView?.(product.id);
   };
-
-  const nftGlowStyle = product.isNFT ? {
-    boxShadow: designTokens.nftShadows.standard.boxShadow,
-    border: designTokens.nftShadows.standard.border,
-  } : {};
-
-  const daoGlowStyle = product.seller.daoApproved ? {
-    boxShadow: designTokens.nftShadows.dao.boxShadow,
-    border: designTokens.nftShadows.dao.border,
-  } : {};
-
-  const glowStyle = product.seller.daoApproved ? daoGlowStyle : nftGlowStyle;
 
   // Format shipping information
   const shippingInfo = [];
@@ -342,22 +319,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     fiatSymbol: 'USD'
   };
 
-  if (variant === 'list') {
+  // Card layout based on screen size
+  if (isMobile) {
+    // Mobile layout - compact card
     return (
       <motion.div
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover="hover"
         className={`cursor-pointer ${className}`}
         onClick={handleProductClick}
+        whileHover={{ y: -4 }}
+        whileTap={{ scale: 0.98 }}
       >
         <GlassPanel 
           variant="secondary" 
-          className="p-4"
+          className="overflow-hidden"
           nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
         >
-          <div className="flex gap-4">
+          <div className="flex gap-3 p-3">
             {/* Image */}
             <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
               <OptimizedImage
@@ -369,76 +346,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between mb-2">
-                <SellerBadge 
-                  seller={product.seller} 
-                  onClick={() => onSellerClick?.(product.seller.id)}
-                />
-                {showTrustIndicators && (
-                  <TrustIndicators
-                    {...product.trust}
-                    daoApproved={product.seller.daoApproved}
-                    layout="compact"
-                    size="small"
-                  />
-                )}
-              </div>
-
-              <h3 className="font-semibold text-lg text-white mb-1 truncate">
+              {/* Title */}
+              <h3 className="font-semibold text-white mb-1 line-clamp-2">
                 {product.title}
               </h3>
 
-              {/* Product metadata */}
-              <div className="flex flex-wrap gap-2 mb-2">
-                {product.condition && (
-                  <span className="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-300">
-                    {product.condition}
-                  </span>
-                )}
-                {product.brand && (
-                  <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300">
-                    {product.brand}
-                  </span>
-                )}
-                {product.hasWarranty && (
-                  <span className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-300">
-                    Warranty
-                  </span>
-                )}
-                {product.isFeatured && (
-                  <span className="px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-300">
-                    Featured
-                  </span>
-                )}
-                {/* Quality Score Badge */}
-                {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
-                  <span className="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-300">
-                    High Quality
-                  </span>
-                )}
+              {/* Seller */}
+              <div className="mb-2">
+                <SellerBadge 
+                  seller={product.seller} 
+                  onClick={handleSellerClick}
+                  size="sm"
+                />
               </div>
 
-              <p className="text-white/70 text-sm mb-3 line-clamp-2">
-                {product.description}
-              </p>
-
-              {/* Shipping info */}
-              {shippingInfo.length > 0 && (
-                <div className="text-xs text-white/60 mb-2">
-                  {shippingInfo.join(' • ')}
-                </div>
-              )}
-
-              {/* Discount badge */}
-              {product.discount?.active && product.discount.percentage && (
-                <div className="mb-2">
-                  <span className="px-2 py-1 text-xs rounded bg-red-500 text-white">
-                    {product.discount.percentage}% OFF
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
+              {/* Pricing */}
+              <div className="mb-2">
                 <DualPricing
                   cryptoPrice={priceData.crypto}
                   cryptoSymbol={priceData.cryptoSymbol}
@@ -447,23 +370,36 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   size="small"
                   layout="horizontal"
                 />
+              </div>
 
-                <div className="flex gap-2">
-                  <Button
-                    variant="primary"
-                    size="small"
-                    onClick={handleAddToCart}
-                  >
-                    Add to Cart
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="small"
-                    onClick={handleWishlistToggle}
-                  >
-                    {isWishlisted ? '❤️' : '🤍'}
-                  </Button>
-                </div>
+              {/* Trust indicators */}
+              <div className="mb-2">
+                <TrustIndicators
+                  {...product.trust}
+                  daoApproved={product.seller.daoApproved}
+                  layout="compact"
+                  size="small"
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleAddToCart}
+                  className="flex-1"
+                  disabled={product.inventory === 0}
+                >
+                  {product.inventory === 0 ? 'Out' : 'Buy'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  onClick={handleWishlistToggle}
+                >
+                  {isWishlisted ? <Heart size={16} fill="currentColor" /> : <Heart size={16} />}
+                </Button>
               </div>
             </div>
           </div>
@@ -472,15 +408,150 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     );
   }
 
-  // Grid variant (default)
+  if (isTablet) {
+    // Tablet layout - medium card
+    return (
+      <motion.div
+        className={`cursor-pointer ${className}`}
+        onClick={handleProductClick}
+        whileHover={{ y: -4 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <GlassPanel 
+          variant="secondary" 
+          className="overflow-hidden"
+          nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
+        >
+          <div className="relative h-48 w-full">
+            <OptimizedImage
+              src={product.images[0]}
+              alt={product.title}
+              className="w-full h-full"
+            />
+            
+            {/* Wishlist button overlay */}
+            <motion.button
+              className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                background: designTokens.glassmorphism.primary.background,
+                backdropFilter: designTokens.glassmorphism.primary.backdropFilter,
+                border: designTokens.glassmorphism.primary.border,
+              }}
+              onClick={handleWishlistToggle}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              {isWishlisted ? <Heart size={16} fill="currentColor" /> : <Heart size={16} />}
+            </motion.button>
+
+            {/* Badges */}
+            <div className="absolute top-2 left-2 flex flex-col gap-1">
+              {product.isNFT && (
+                <div 
+                  className="px-2 py-1 rounded text-xs font-medium"
+                  style={{
+                    background: designTokens.gradients.nftRainbow,
+                    color: 'white',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  NFT
+                </div>
+              )}
+              {product.discount?.active && product.discount.percentage && (
+                <div 
+                  className="px-2 py-1 rounded text-xs font-medium"
+                  style={{
+                    background: designTokens.colors.status.error + 'dd',
+                    color: 'white',
+                  }}
+                >
+                  {product.discount.percentage}% OFF
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="p-4">
+            {/* Seller and Trust Indicators */}
+            <div className="flex items-center justify-between mb-3">
+              <SellerBadge 
+                seller={product.seller} 
+                onClick={handleSellerClick}
+                size="md"
+              />
+              <TrustIndicators
+                {...product.trust}
+                daoApproved={product.seller.daoApproved}
+                layout="compact"
+                size="small"
+              />
+            </div>
+
+            {/* Title */}
+            <h3 className="font-semibold text-lg text-white mb-2 line-clamp-2">
+              {product.title}
+            </h3>
+
+            {/* Description */}
+            <p className="text-white/70 text-sm mb-3 line-clamp-2">
+              {product.description}
+            </p>
+
+            {/* Shipping info */}
+            {shippingInfo.length > 0 && (
+              <div className="text-xs text-white/60 mb-3">
+                {shippingInfo.join(' • ')}
+              </div>
+            )}
+
+            {/* Pricing */}
+            <div className="mb-4">
+              <DualPricing
+                cryptoPrice={priceData.crypto}
+                cryptoSymbol={priceData.cryptoSymbol}
+                fiatPrice={priceData.fiat}
+                fiatSymbol={priceData.fiatSymbol}
+                size="medium"
+                layout="vertical"
+                realTimeConversion
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="small"
+                onClick={handleAddToCart}
+                className="flex-1"
+                disabled={product.inventory === 0}
+              >
+                {product.inventory === 0 ? 'Out of Stock' : 'Buy Now'}
+              </Button>
+              <Button
+                variant="outline"
+                size="small"
+                onClick={handleAddToCart}
+                className="flex-1"
+                disabled={product.inventory === 0}
+              >
+                Add to Cart
+              </Button>
+            </div>
+          </div>
+        </GlassPanel>
+      </motion.div>
+    );
+  }
+
+  // Desktop layout - full featured card
   return (
     <motion.div
-      variants={cardVariants}
-      initial="hidden"
-      animate="visible"
-      whileHover="hover"
       className={`cursor-pointer ${className}`}
       onClick={handleProductClick}
+      whileHover={{ y: -8 }}
+      whileTap={{ scale: 0.98 }}
     >
       <GlassPanel 
         variant="secondary" 
@@ -488,7 +559,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
       >
         {/* Image */}
-        <div className="relative h-48 w-full">
+        <div className="relative h-56 w-full">
           <OptimizedImage
             src={product.images[0]}
             alt={product.title}
@@ -507,12 +578,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            {isWishlisted ? '❤️' : '🤍'}
+            {isWishlisted ? <Heart size={16} fill="currentColor" /> : <Heart size={16} />}
           </motion.button>
 
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1">
-            {/* NFT badge */}
             {product.isNFT && (
               <div 
                 className="px-2 py-1 rounded text-xs font-medium"
@@ -525,8 +595,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 NFT
               </div>
             )}
-
-            {/* Discount badge */}
             {product.discount?.active && product.discount.percentage && (
               <div 
                 className="px-2 py-1 rounded text-xs font-medium"
@@ -538,8 +606,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {product.discount.percentage}% OFF
               </div>
             )}
-
-            {/* Featured badge */}
             {product.isFeatured && (
               <div 
                 className="px-2 py-1 rounded text-xs font-medium"
@@ -551,8 +617,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 Featured
               </div>
             )}
-
-            {/* Quality Score Badge */}
             {product.metadata?.qualityScore && product.metadata.qualityScore > 80 && (
               <div 
                 className="px-2 py-1 rounded text-xs font-medium"
@@ -594,48 +658,46 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-5">
           {/* Seller and Trust Indicators */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <SellerBadge 
               seller={product.seller} 
-              onClick={() => onSellerClick?.(product.seller.id)}
+              onClick={handleSellerClick}
+              size="md"
             />
-            {showTrustIndicators && (
-              <TrustIndicators
-                {...product.trust}
-                daoApproved={product.seller.daoApproved}
-                layout="compact"
-                size="small"
-              />
-            )}
+            <TrustIndicators
+              {...product.trust}
+              daoApproved={product.seller.daoApproved}
+              layout="compact"
+              size="small"
+            />
           </div>
 
           {/* Title */}
-          <h3 className="font-semibold text-lg text-white mb-2 line-clamp-2">
+          <h3 className="font-semibold text-xl text-white mb-2 line-clamp-2">
             {product.title}
           </h3>
 
           {/* Product metadata */}
-          <div className="flex flex-wrap gap-1 mb-2">
+          <div className="flex flex-wrap gap-2 mb-3">
             {product.condition && (
-              <span className="px-1.5 py-0.5 text-xs rounded bg-blue-500/20 text-blue-300">
+              <span className="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-300">
                 {product.condition}
               </span>
             )}
             {product.brand && (
-              <span className="px-1.5 py-0.5 text-xs rounded bg-purple-500/20 text-purple-300">
+              <span className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300">
                 {product.brand}
               </span>
             )}
             {product.hasWarranty && (
-              <span className="px-1.5 py-0.5 text-xs rounded bg-green-500/20 text-green-300">
+              <span className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-300">
                 Warranty
               </span>
             )}
-            {/* Certification badges */}
             {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
-              <span className="px-1.5 py-0.5 text-xs rounded bg-indigo-500/20 text-indigo-300">
+              <span className="px-2 py-1 text-xs rounded bg-indigo-500/20 text-indigo-300">
                 Certified
               </span>
             )}
@@ -648,29 +710,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Shipping info */}
           {shippingInfo.length > 0 && (
-            <div className="text-xs text-white/60 mb-3">
+            <div className="text-xs text-white/60 mb-4">
               {shippingInfo.join(' • ')}
             </div>
           )}
 
           {/* Pricing */}
-          <div className="mb-4">
+          <div className="mb-5">
             <DualPricing
               cryptoPrice={priceData.crypto}
               cryptoSymbol={priceData.cryptoSymbol}
               fiatPrice={priceData.fiat}
               fiatSymbol={priceData.fiatSymbol}
-              size="medium"
+              size="large"
               layout="vertical"
               realTimeConversion
             />
           </div>
 
           {/* Engagement metrics */}
-          <div className="flex items-center justify-between mb-4 text-xs text-white/60">
+          <div className="flex items-center justify-between mb-5 text-xs text-white/60">
             <div className="flex items-center gap-3">
-              <span>👁️ {product.views || 0}</span>
-              <span>❤️ {product.favorites || 0}</span>
+              <span className="flex items-center gap-1">
+                <Eye size={14} />
+                {product.views || 0}
+              </span>
+              <span className="flex items-center gap-1">
+                <Heart size={14} />
+                {product.favorites || 0}
+              </span>
             </div>
             {product.metadata?.publishedAt && (
               <span>
@@ -680,10 +748,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button
               variant="primary"
-              size="small"
+              size="medium"
               onClick={handleAddToCart}
               className="flex-1"
               disabled={product.inventory === 0}
@@ -692,12 +760,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </Button>
             <Button
               variant="outline"
-              size="small"
+              size="medium"
               onClick={handleAddToCart}
               className="flex-1"
               disabled={product.inventory === 0}
             >
               Add to Cart
+            </Button>
+            <Button
+              variant="ghost"
+              size="medium"
+              onClick={handleQuickView}
+            >
+              <Eye size={20} />
             </Button>
           </div>
         </div>
@@ -706,4 +781,4 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   );
 };
 
-export default ProductCard;
+export default ResponsiveProductCard;

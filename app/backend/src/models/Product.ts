@@ -84,6 +84,10 @@ export interface ProductMetadata {
   escrowId?: string;
   escrowCreatedAt?: string;
   isEscrowed?: boolean;
+  
+  // Price conversion data
+  fiatEquivalents?: Record<string, string>;
+  priceLastUpdated?: Date;
 }
 
 export interface ShippingInfo {
@@ -140,6 +144,9 @@ export interface Product {
     amount: string;
     currency: string;
     usdEquivalent?: string;
+    eurEquivalent?: string;
+    gbpEquivalent?: string;
+    lastUpdated?: Date;
   };
   category: ProductCategory;
   images: string[]; // IPFS hashes
@@ -208,7 +215,7 @@ export interface ProductSearchFilters {
 }
 
 export interface ProductSortOptions {
-  field: 'price' | 'createdAt' | 'updatedAt' | 'publishedAt' | 'title' | 'views' | 'favorites' | 'relevance';
+  field: 'price' | 'createdAt' | 'updatedAt' | 'publishedAt' | 'title' | 'views' | 'favorites' | 'relevance' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
   direction: 'asc' | 'desc';
 }
 

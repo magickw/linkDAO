@@ -40,29 +40,7 @@ export class ExchangeRateService {
     { code: 'DAI', name: 'Dai Stablecoin', symbol: 'DAI', type: 'crypto', decimals: 18, isStablecoin: true }
   ];
 
-  // Mock exchange rates (in production, use real API like CoinGecko, CoinMarketCap, etc.)
-  private readonly MOCK_RATES: Record<string, number> = {
-    'USD_EUR': 0.85,
-    'USD_GBP': 0.73,
-    'USD_CAD': 1.25,
-    'USD_AUD': 1.35,
-    'USD_JPY': 110,
-    'EUR_USD': 1.18,
-    'GBP_USD': 1.37,
-    'CAD_USD': 0.80,
-    'AUD_USD': 0.74,
-    'JPY_USD': 0.0091,
-    'ETH_USD': 2500,
-    'MATIC_USD': 0.85,
-    'USDC_USD': 1.00,
-    'USDT_USD': 1.00,
-    'DAI_USD': 1.00,
-    'USD_ETH': 0.0004,
-    'USD_MATIC': 1.18,
-    'USD_USDC': 1.00,
-    'USD_USDT': 1.00,
-    'USD_DAI': 1.00
-  };
+  // Real-time exchange rates are fetched from external APIs.
 
   /**
    * Get exchange rate between two currencies
@@ -260,41 +238,105 @@ export class ExchangeRateService {
 
   // Private methods
 
+  private getCoinGeckoId(currencyCode: string): string {
+    switch (currencyCode.toUpperCase()) {
+      case 'ETH': return 'ethereum';
+      case 'MATIC': return 'matic-network';
+      case 'USDC': return 'usd-coin';
+      case 'USDT': return 'tether';
+      case 'DAI': return 'dai';
+      default:
+        throw new Error(`No CoinGecko ID mapping for currency: ${currencyCode}`);
+    }
+  }
+
   private async fetchExchangeRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate> {
-    // Mock implementation - in production, use real API
-    const cacheKey = `${fromCurrency}_${toCurrency}`;
-    const reverseKey = `${toCurrency}_${fromCurrency}`;
-    
-    let rate = this.MOCK_RATES[cacheKey];
-    
-    // Try reverse rate
-    if (!rate && this.MOCK_RATES[reverseKey]) {
-      rate = 1 / this.MOCK_RATES[reverseKey];
+    if (fromCurrency === toCurrency) {
+      return {
+        fromCurrency,
+        toCurrency,
+        rate: 1,
+        lastUpdated: new Date(),
+        source: 'self',
+      };
     }
-    
-    // Default to 1 for same currency or unknown pairs
-    if (!rate) {
-      if (fromCurrency === toCurrency) {
-        rate = 1;
-      } else {
-        throw new Error(`Exchange rate not available for ${fromCurrency}/${toCurrency}`);
+
+    const fromInfo = this.getCurrencyInfo(fromCurrency);
+    const toInfo = this.getCurrencyInfo(toCurrency);
+
+    if (!fromInfo || !toInfo) {
+      throw new Error(`Unsupported currency in pair ${fromCurrency}/${toCurrency}`);
+    }
+
+    let rate: number;
+    let source: string;
+
+    try {
+      // Case 1: Fiat to Fiat
+      if (fromInfo.type === 'fiat' && toInfo.type === 'fiat') {
+        const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch fiat exchange rate from Frankfurter API: ${response.statusText}`);
+        }
+        const data = await response.json();
+        rate = data.rates[toCurrency];
+        source = 'frankfurter.app';
       }
+      // Case 2: Crypto to Fiat or Crypto to Crypto
+      else if (fromInfo.type === 'crypto') {
+        const fromId = this.getCoinGeckoId(fromCurrency);
+        const toCode = toCurrency.toLowerCase();
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${fromId}&vs_currencies=${toCode}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch crypto exchange rate from CoinGecko API: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (data[fromId] === undefined || data[fromId][toCode] === undefined) {
+          throw new Error(`Rate not found for ${fromCurrency}/${toCurrency} on CoinGecko`);
+        }
+        rate = data[fromId][toCode];
+        source = 'coingecko.com';
+      }
+      // Case 3: Fiat to Crypto
+      else if (fromInfo.type === 'fiat' && toInfo.type === 'crypto') {
+        const toId = this.getCoinGeckoId(toCurrency);
+        const fromCode = fromCurrency.toLowerCase();
+        const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${toId}&vs_currencies=${fromCode}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch crypto exchange rate from CoinGecko API: ${response.statusText}`);
+        }
+        const data = await response.json();
+        if (data[toId] === undefined || data[toId][fromCode] === undefined) {
+          throw new Error(`Rate not found for ${toCurrency}/${fromCurrency} on CoinGecko`);
+        }
+        const cryptoPerFiat = data[toId][fromCode];
+        if (cryptoPerFiat === 0) {
+          throw new Error(`Cannot convert ${fromCurrency} to ${toCurrency}, inverse rate is zero.`);
+        }
+        rate = 1 / cryptoPerFiat;
+        source = 'coingecko.com';
+      } else {
+        throw new Error(`Unsupported currency conversion: ${fromCurrency} to ${toCurrency}`);
+      }
+
+      if (typeof rate !== 'number') {
+        throw new Error(`Invalid rate received for ${fromCurrency}/${toCurrency}`);
+      }
+
+      return {
+        fromCurrency,
+        toCurrency,
+        rate,
+        lastUpdated: new Date(),
+        source,
+        bid: rate * 0.999,
+        ask: rate * 1.001,
+        spread: rate * 0.002,
+      };
+    } catch (error) {
+      console.error(`Error fetching real exchange rate for ${fromCurrency}/${toCurrency}:`, error);
+      throw new Error(`Unable to get real exchange rate for ${fromCurrency}/${toCurrency}`);
     }
-    
-    // Add some random variation to simulate real market conditions
-    const variation = (Math.random() - 0.5) * 0.02; // ±1% variation
-    rate = rate * (1 + variation);
-    
-    return {
-      fromCurrency,
-      toCurrency,
-      rate,
-      lastUpdated: new Date(),
-      source: 'mock_exchange_service',
-      bid: rate * 0.999, // Slightly lower bid
-      ask: rate * 1.001, // Slightly higher ask
-      spread: rate * 0.002 // 0.2% spread
-    };
   }
 
   /**
