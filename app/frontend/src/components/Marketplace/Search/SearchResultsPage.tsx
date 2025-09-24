@@ -4,13 +4,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/router';
 import { SearchBar } from './SearchBar';
 import { SearchFilters } from './SearchFilters';
 import { ProductGrid } from '../ProductDisplay/ProductGrid';
 import { LoadingSkeleton } from '../../../design-system/components/LoadingSkeleton';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { designTokens } from '../../../design-system/tokens';
+import { 
+  AnimatedEngagementMetrics,
+  AnimatedProductBadge
+} from '../../../components/VisualPolish/MarketplaceAnimations';
 
 // Define types based on backend models
 interface Product {
@@ -59,6 +63,7 @@ interface Product {
   category: string;
   isNFT?: boolean;
   inventory?: number;
+  createdAt: Date; // Changed from optional to required to match ProductGrid expectations
   views?: number;
   favorites?: number;
   condition?: 'new' | 'used' | 'refurbished';
@@ -79,7 +84,6 @@ interface Product {
   };
   isFeatured?: boolean;
   isPublished?: boolean;
-  createdAt?: Date;
   // Enhanced metadata
   metadata?: {
     weight?: number;
@@ -98,6 +102,19 @@ interface Product {
     priceLastUpdated?: Date;
   };
   tags: string[];
+}
+
+// Define the SortOption interface that matches what SearchFilters expects
+interface SearchFiltersSortOption {
+  field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites' | 'relevance' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
+  direction: 'asc' | 'desc';
+  label: string;
+}
+
+// Define the SortOption interface that matches what ProductGrid expects
+interface ProductGridSortOption {
+  field: 'price' | 'title' | 'createdAt' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
+  direction: 'asc' | 'desc';
 }
 
 interface AdvancedSearchFilters {
@@ -155,19 +172,38 @@ interface AdvancedSearchFilters {
   customAttributes?: Record<string, any>;
 }
 
-interface SortOption {
-  field: 'price' | 'createdAt' | 'updatedAt' | 'title' | 'views' | 'favorites' | 'relevance' | 'reputation' | 'sales' | 'rating' | 'inventory' | 'discount' | 'handlingTime';
-  direction: 'asc' | 'desc';
-}
+// Convert SearchFiltersSortOption to ProductGridSortOption
+const convertSortOption = (option: SearchFiltersSortOption): ProductGridSortOption => {
+  // Map compatible fields, default to 'createdAt' if not compatible
+  const compatibleFields: Record<string, ProductGridSortOption['field']> = {
+    'price': 'price',
+    'title': 'title',
+    'createdAt': 'createdAt',
+    'reputation': 'reputation',
+    'sales': 'sales',
+    'rating': 'rating',
+    'inventory': 'inventory',
+    'discount': 'discount',
+    'handlingTime': 'handlingTime',
+    'relevance': 'createdAt', // Map relevance to createdAt as default
+    'updatedAt': 'createdAt', // Map updatedAt to createdAt
+    'views': 'rating', // Map views to rating
+    'favorites': 'sales', // Map favorites to sales
+  };
+  
+  return {
+    field: compatibleFields[option.field] || 'createdAt',
+    direction: option.direction
+  };
+};
 
 const SearchResultsPage: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const router = useRouter();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<string | undefined>(undefined);
   const [filters, setFilters] = useState<AdvancedSearchFilters>({});
-  const [sortBy, setSortBy] = useState<SortOption>({ field: 'relevance', direction: 'desc' });
+  const [sortBy, setSortBy] = useState<SearchFiltersSortOption>({ field: 'relevance', direction: 'desc', label: 'Best Match' });
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +216,7 @@ const SearchResultsPage: React.FC = () => {
 
   // Extract search query from URL parameters
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(router.asPath.split('?')[1] || '');
     const query = params.get('q') || '';
     const category = params.get('category') || undefined;
     
@@ -190,7 +226,7 @@ const SearchResultsPage: React.FC = () => {
     if (query) {
       performSearch(query, category);
     }
-  }, [location.search]);
+  }, [router.asPath]);
 
   // Mock data for demonstration
   // In a real implementation, this would come from API calls
@@ -338,7 +374,7 @@ const SearchResultsPage: React.FC = () => {
     const params = new URLSearchParams();
     if (query) params.set('q', query);
     if (category) params.set('category', category);
-    navigate(`/search?${params.toString()}`);
+    router.push(`/search?${params.toString()}`);
     
     // Perform search
     performSearch(query, category);
@@ -352,7 +388,7 @@ const SearchResultsPage: React.FC = () => {
   };
 
   // Handle sort changes
-  const handleSortChange = (newSort: SortOption) => {
+  const handleSortChange = (newSort: SearchFiltersSortOption) => {
     setSortBy(newSort);
     // In a real implementation, this would call the search API with sort options
     console.log('Sort changed:', newSort);
@@ -433,13 +469,13 @@ const SearchResultsPage: React.FC = () => {
                 loading={loading}
                 error={error || undefined}
                 filters={filters}
-                sortBy={sortBy}
+                sortBy={convertSortOption(sortBy)}
                 onProductClick={handleProductClick}
                 onSellerClick={handleSellerClick}
                 onAddToCart={handleAddToCart}
                 onAddToWishlist={handleAddToWishlist}
                 onFiltersChange={handleFiltersChange}
-                onSortChange={handleSortChange}
+                onSortChange={(newSort) => handleSortChange({ ...newSort, label: sortBy.label })}
                 showFilters={false} // We're using our custom filters
                 showSorting={false} // We're using our custom sorting
               />

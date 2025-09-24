@@ -17,10 +17,12 @@ interface Product {
   description: string;
   images: string[];
   price: {
-    crypto: string;
-    cryptoSymbol: string;
-    fiat: string;
-    fiatSymbol: string;
+    amount: string;
+    currency: string;
+    usdEquivalent?: string;
+    eurEquivalent?: string;
+    gbpEquivalent?: string;
+    lastUpdated?: Date;
   };
   seller: {
     id: string;
@@ -31,6 +33,21 @@ interface Product {
     daoApproved: boolean;
     tier?: 'basic' | 'premium' | 'enterprise';
     onlineStatus?: 'online' | 'offline' | 'away';
+    // Enhanced reputation metrics
+    reputationMetrics?: {
+      overallScore: number;
+      moderationScore: number;
+      reportingScore: number;
+      juryScore: number;
+      violationCount: number;
+      helpfulReportsCount: number;
+      falseReportsCount: number;
+      successfulAppealsCount: number;
+      juryDecisionsCount: number;
+      juryAccuracyRate: number;
+      reputationTier: string;
+      lastViolationAt?: Date;
+    };
   };
   trust: {
     verified: boolean;
@@ -61,6 +78,23 @@ interface Product {
   };
   isFeatured?: boolean;
   isPublished?: boolean;
+  // Enhanced metadata
+  metadata?: {
+    weight?: number;
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+    };
+    materials?: string[];
+    certifications?: string[];
+    qualityScore?: number;
+    publishedAt?: Date;
+    lastIndexed?: Date;
+    // Price conversion data
+    fiatEquivalents?: Record<string, string>;
+    priceLastUpdated?: Date;
+  };
 }
 
 interface FilterOptions {
@@ -598,7 +632,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       // Price range filter
       if (filters.priceRange) {
         const [minPrice, maxPrice] = filters.priceRange;
-        const price = parseFloat(product.price.fiat);
+        const price = parseFloat(product.price.usdEquivalent || product.price.amount);
         if (minPrice !== undefined && price < minPrice) return false;
         if (maxPrice !== undefined && price > maxPrice) return false;
       }
@@ -677,8 +711,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
       switch (sortBy.field) {
         case 'price':
-          aValue = parseFloat(a.price.fiat);
-          bValue = parseFloat(b.price.fiat);
+          aValue = parseFloat(a.price.usdEquivalent || a.price.amount);
+          bValue = parseFloat(b.price.usdEquivalent || b.price.amount);
           break;
         case 'title':
           aValue = a.title.toLowerCase();

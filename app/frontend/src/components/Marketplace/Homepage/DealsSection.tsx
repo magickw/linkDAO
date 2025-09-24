@@ -9,10 +9,9 @@ const deals = [
     description: 'Noise-cancelling headphones with 30hr battery',
     images: ['/images/sample-deal-1.jpg'],
     price: {
-      crypto: '89.99',
-      cryptoSymbol: 'USDC',
-      fiat: '89.99',
-      fiatSymbol: '$'
+      amount: '89.99',
+      currency: 'USDC',
+      usdEquivalent: '89.99'
     },
     seller: {
       id: 'seller-1',
@@ -29,7 +28,10 @@ const deals = [
     },
     category: 'Electronics',
     originalPrice: '129.99',
-    discount: '31% off',
+    discount: {
+      percentage: 31,
+      active: true
+    },
     dealEnds: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours from now
   },
   {
@@ -38,10 +40,9 @@ const deals = [
     description: '1080p HD indoor security camera with night vision',
     images: ['/images/sample-deal-2.jpg'],
     price: {
-      crypto: '39.99',
-      cryptoSymbol: 'USDC',
-      fiat: '39.99',
-      fiatSymbol: '$'
+      amount: '39.99',
+      currency: 'USDC',
+      usdEquivalent: '39.99'
     },
     seller: {
       id: 'seller-2',
@@ -58,7 +59,10 @@ const deals = [
     },
     category: 'Home Security',
     originalPrice: '59.99',
-    discount: '33% off',
+    discount: {
+      percentage: 33,
+      active: true
+    },
     dealEnds: new Date(Date.now() + 12 * 60 * 60 * 1000) // 12 hours from now
   }
 ];
@@ -98,7 +102,7 @@ const DealsSection = () => {
           <div className="p-4">
             <div className="flex justify-between items-start mb-2">
               <span className="bg-red-100 text-red-800 text-sm font-medium px-2.5 py-0.5 rounded">
-                {deal.discount}
+                {deal.discount.percentage}% off
               </span>
               {timeLeft[deal.id] && (
                 <div className="flex items-center text-sm text-gray-600">

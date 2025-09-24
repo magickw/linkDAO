@@ -10,6 +10,9 @@ import { AutoSuggestSearch } from './AutoSuggestSearch';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
 import { designTokens } from '../../../design-system/tokens';
+import { 
+  AnimatedCategoryCard 
+} from '../../../components/VisualPolish/MarketplaceAnimations';
 
 interface SearchSuggestion {
   id: string;
@@ -139,17 +142,19 @@ export const SearchBar: React.FC<SearchBarProps> = ({
       <div className="mt-4 flex flex-wrap gap-2">
         <span className="text-sm text-white/60">Quick search:</span>
         {['Electronics', 'Fashion', 'Home & Garden', 'NFTs'].map((tag) => (
-          <button
+          <motion.button
             key={tag}
             onClick={() => {
               setQuery(tag);
               handleSearch(tag);
             }}
             className="px-3 py-1 rounded-full text-xs bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-1"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Tag size={12} />
             {tag}
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>

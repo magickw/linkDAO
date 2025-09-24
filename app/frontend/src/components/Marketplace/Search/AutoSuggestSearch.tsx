@@ -7,6 +7,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { designTokens } from '../../../design-system/tokens';
+import { 
+  searchBarAnimations 
+} from '../../../components/VisualPolish/MarketplaceAnimations';
 
 interface SearchSuggestion {
   id: string;
@@ -227,10 +230,7 @@ export const AutoSuggestSearch: React.FC<AutoSuggestSearchProps> = ({
       <AnimatePresence>
         {showSuggestions && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            {...searchBarAnimations.suggestion}
             className="absolute z-50 w-full mt-2"
           >
             <GlassPanel variant="secondary" className="rounded-lg overflow-hidden">
