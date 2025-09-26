@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Shield, AlertTriangle, CheckCircle, XCircle, 
   ExternalLink, Brain, Zap, Eye, EyeOff, 
-  Info, AlertCircle, Lock, Globe, Wallet, X
+  Info, AlertCircle, Lock, Globe, Wallet, X, Image
 } from 'lucide-react';
 
 interface ScamDetectionResult {
