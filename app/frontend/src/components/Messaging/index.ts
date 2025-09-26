@@ -4,6 +4,7 @@
  */
 
 export { default as MessagingInterface } from './MessagingInterface';
+export { default as DiscordStyleMessagingInterface } from './DiscordStyleMessagingInterface';
 export { default as MessagingWidget } from './MessagingWidget';
 export { default as AddressSearch } from './AddressSearch';
 
