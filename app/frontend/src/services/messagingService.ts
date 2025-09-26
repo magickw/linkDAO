@@ -71,6 +71,34 @@ export interface BlockedUser {
   reason?: string;
 }
 
+export interface ChatChannel {
+  id: string;
+  name: string;
+  description?: string;
+  isPrivate: boolean;
+  isInviteOnly: boolean;
+  members: string[];
+  admins: string[];
+  createdAt: Date;
+  createdBy: string;
+  topic?: string;
+  memberCount: number;
+  unreadCount: number;
+  lastMessage?: ChatMessage;
+  isPinned?: boolean;
+}
+
+export interface ChannelMessage extends ChatMessage {
+  channelId: string;
+  threadId?: string; // For threaded replies
+  reactions?: {
+    emoji: string;
+    count: number;
+    users: string[];
+  }[];
+  isPinned?: boolean;
+}
+
 class MessagingService {
   private wallet: ethers.Wallet | null = null;
   private currentAddress: string | null = null;
