@@ -7,9 +7,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, Search, Send, User, Plus, Hash, Lock, 
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
-  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag
+  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import CrossChainBridge from './CrossChainBridge';
 
 interface ChatChannel {
   id: string;
@@ -38,11 +39,14 @@ interface ChannelMessage {
   }[];
   threadReplies?: ChannelMessage[];
   isThread?: boolean;
+  parentId?: string;
   attachments?: {
-    type: 'nft' | 'transaction' | 'proposal';
+    type: 'nft' | 'transaction' | 'proposal' | 'image' | 'file';
     url: string;
     name: string;
+    preview?: string;
   }[];
+  mentions?: string[];
 }
 
 interface ChannelMember {
@@ -240,18 +244,86 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         const existingReaction = reactions.find(r => r.emoji === emoji);
         
         if (existingReaction) {
-          return { 
-            ...msg, 
-            reactions: reactions.map(r => 
-              r.emoji === emoji ? { ...r, count: r.count + 1 } : r
-            ) 
-          };
+          // Check if user already reacted with this emoji
+          if (existingReaction.users.includes(address || '')) {
+            return { 
+              ...msg, 
+              reactions: reactions.map(r => 
+                r.emoji === emoji 
+                  ? { 
+                      ...r, 
+                      count: r.count - 1,
+                      users: r.users.filter(u => u !== address)
+                    } 
+                  : r
+              ).filter(r => r.count > 0)
+            };
+          } else {
+            return { 
+              ...msg, 
+              reactions: reactions.map(r => 
+                r.emoji === emoji 
+                  ? { 
+                      ...r, 
+                      count: r.count + 1,
+                      users: [...r.users, address || '']
+                    } 
+                  : r
+              ) 
+            };
+          }
         } else {
           return { 
             ...msg, 
-            reactions: [...reactions, { emoji, count: 1, users: [] }] 
+            reactions: [...reactions, { emoji, count: 1, users: [address || ''] }] 
           };
         }
+      }
+      return msg;
+    }));
+  };
+
+  const openThread = (messageId: string) => {
+    const message = messages.find(msg => msg.id === messageId);
+    if (message) {
+      setThreadMessages([
+        message,
+        ...(message.threadReplies || [])
+      ]);
+      setShowThread({ messageId, show: true });
+    }
+  };
+
+  const closeThread = () => {
+    setShowThread({ messageId: '', show: false });
+  };
+
+  const replyToMessage = (messageId: string, username: string) => {
+    setReplyingTo({ messageId, username });
+  };
+
+  const sendThreadReply = (content: string) => {
+    if (!content.trim() || !address) return;
+
+    const reply: ChannelMessage = {
+      id: `reply_${Date.now()}`,
+      fromAddress: address,
+      content: content.trim(),
+      timestamp: new Date(),
+      isThread: true,
+      parentId: showThread.messageId
+    };
+
+    // Add to thread messages
+    setThreadMessages(prev => [...prev, reply]);
+
+    // Update main messages with thread reply
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === showThread.messageId) {
+        return {
+          ...msg,
+          threadReplies: [...(msg.threadReplies || []), reply]
+        };
       }
       return msg;
     }));
@@ -297,6 +369,31 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   };
 
   const reactionEmojis = ['👍', '❤️', '😂', '😮', '🔥', '🚀'];
+
+  const [showReactionPicker, setShowReactionPicker] = useState<{ messageId: string; show: boolean }>({ 
+    messageId: '', 
+    show: false 
+  });
+  const [showThread, setShowThread] = useState<{ messageId: string; show: boolean }>({ 
+    messageId: '', 
+    show: false 
+  });
+  const [threadMessages, setThreadMessages] = useState<ChannelMessage[]>([]);
+  const [replyingTo, setReplyingTo] = useState<{ messageId: string; username: string } | null>(null);
+  const [showChannelSettings, setShowChannelSettings] = useState(false);
+  const [showCrossChainBridge, setShowCrossChainBridge] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    general: true,
+    mentions: true,
+    reactions: false
+  });
+
+  const toggleReactionPicker = (messageId: string) => {
+    setShowReactionPicker(prev => ({
+      messageId: prev.messageId === messageId && prev.show ? '' : messageId,
+      show: !(prev.messageId === messageId && prev.show)
+    }));
+  };
 
   return (
     <div className={`flex h-full bg-gray-900 rounded-lg overflow-hidden ${className}`}>
@@ -431,6 +528,21 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         </div>
       </div>
 
+      {/* Cross-Chain Bridge Panel */}
+      {showCrossChainBridge && (
+        <div className="w-80 border-r border-gray-700 bg-gray-800">
+          <CrossChainBridge 
+            className="h-full"
+            onBridgeMessage={(message) => {
+              console.log('Bridge message:', message);
+            }}
+            onChannelSync={(channelId, chains) => {
+              console.log('Channel sync:', channelId, chains);
+            }}
+          />
+        </div>
+      )}
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Channel Header */}
@@ -452,15 +564,47 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 <Users size={16} className="mr-1" />
                 {channels.find(c => c.id === selectedChannel)?.memberCount}
               </div>
+              
+              {/* Cross-Chain Bridge Toggle */}
+              <button
+                onClick={() => setShowCrossChainBridge(!showCrossChainBridge)}
+                className={`flex items-center px-3 py-1 rounded text-sm ${
+                  showCrossChainBridge 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-700 text-gray-400 hover:text-white'
+                }`}
+              >
+                <ArrowLeftRight size={14} className="mr-1" />
+                Bridge
+              </button>
             </div>
           </div>
         )}
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 bg-gray-800">
+          {/* Reply banner */}
+          {replyingTo && (
+            <div className="bg-blue-900/30 border-l-4 border-blue-500 p-2 mb-2 rounded flex items-center justify-between">
+              <div className="text-sm">
+                Replying to <span className="font-semibold">{replyingTo.username}</span>
+              </div>
+              <button 
+                onClick={() => setReplyingTo(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          
           <div className="space-y-4">
             {messages.map(message => (
-              <div key={message.id} className="hover:bg-gray-750 p-2 rounded">
+              <div 
+                key={message.id} 
+                className="hover:bg-gray-750 p-2 rounded"
+                id={`message-${message.id}`}
+              >
                 <div className="flex">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0">
                     <User size={20} className="text-white" />
@@ -484,6 +628,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                             {attachment.type === 'nft' && <Image size={16} className="mr-1" />}
                             {attachment.type === 'transaction' && <Wallet size={16} className="mr-1" />}
                             {attachment.type === 'proposal' && <Vote size={16} className="mr-1" />}
+                            {attachment.type === 'image' && <Image size={16} className="mr-1" />}
+                            {attachment.type === 'file' && <LinkIcon size={16} className="mr-1" />}
                             <span className="text-xs text-gray-300">{attachment.name}</span>
                           </div>
                         ))}
@@ -492,31 +638,74 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                     
                     {/* Reactions */}
                     {message.reactions && message.reactions.length > 0 && (
-                      <div className="flex mt-2 space-x-1">
+                      <div className="flex mt-2 space-x-1 relative">
                         {message.reactions.map((reaction, idx) => (
                           <button
                             key={idx}
-                            className="flex items-center bg-gray-700 rounded px-2 py-1 text-sm hover:bg-gray-600"
+                            className={`flex items-center rounded px-2 py-1 text-sm ${
+                              reaction.users.includes(address || '') 
+                                ? 'bg-blue-500/30 text-white' 
+                                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                            }`}
                             onClick={() => addReaction(message.id, reaction.emoji)}
+                            onMouseEnter={() => {
+                              // Show who reacted on hover
+                            }}
                           >
                             <span className="mr-1">{reaction.emoji}</span>
                             <span className="text-gray-300">{reaction.count}</span>
                           </button>
                         ))}
+                        
+                        {/* Reaction picker button */}
+                        <button
+                          className="w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white"
+                          onClick={() => toggleReactionPicker(message.id)}
+                        >
+                          <span>+</span>
+                        </button>
+                        
+                        {/* Reaction picker popup */}
+                        {showReactionPicker.messageId === message.id && showReactionPicker.show && (
+                          <div className="absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-lg z-10">
+                            <div className="flex space-x-1">
+                              {['👍', '❤️', '😂', '😮', '🔥', '🚀', '👏', '🎉'].map(emoji => (
+                                <button
+                                  key={emoji}
+                                  className="w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-lg"
+                                  onClick={() => {
+                                    addReaction(message.id, emoji);
+                                    setShowReactionPicker({ messageId: '', show: false });
+                                  }}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                     
-                    {/* Reaction picker */}
-                    <div className="flex mt-2 space-x-1">
-                      {reactionEmojis.map(emoji => (
-                        <button
-                          key={emoji}
-                          className="w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center"
-                          onClick={() => addReaction(message.id, emoji)}
+                    {/* Message actions */}
+                    <div className="flex mt-1 space-x-3 text-xs text-gray-400">
+                      <button 
+                        className="hover:text-white"
+                        onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
+                      >
+                        Reply
+                      </button>
+                      {message.threadReplies && message.threadReplies.length > 0 && (
+                        <button 
+                          className="hover:text-white flex items-center"
+                          onClick={() => openThread(message.id)}
                         >
-                          {emoji}
+                          <span>Thread</span>
+                          <span className="ml-1 bg-gray-700 rounded-full px-1.5 py-0.5">
+                            {message.threadReplies.length}
+                          </span>
                         </button>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
@@ -525,6 +714,69 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
             <div ref={messagesEndRef} />
           </div>
         </div>
+
+        {/* Thread View Overlay */}
+        {showThread.show && (
+          <div className="absolute inset-0 bg-black/70 z-20 flex">
+            <div className="ml-auto w-2/3 h-full bg-gray-800 border-l border-gray-700 flex flex-col">
+              <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+                <h3 className="font-semibold text-white">Thread</h3>
+                <button 
+                  onClick={closeThread}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4">
+                {threadMessages.map((message, index) => (
+                  <div 
+                    key={message.id} 
+                    className={`p-2 rounded ${index === 0 ? 'bg-gray-750 mb-4' : 'hover:bg-gray-750'}`}
+                  >
+                    <div className="flex">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-2 flex-shrink-0">
+                        <User size={16} className="text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-baseline">
+                          <span className="font-semibold text-white text-sm mr-2">
+                            {message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4)}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-gray-200 text-sm">{message.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="p-4 border-t border-gray-700">
+                <div className="flex items-end">
+                  <textarea
+                    placeholder="Reply to thread..."
+                    className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
+                    rows={2}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendThreadReply(e.currentTarget.value);
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  <button className="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2">
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Message Input */}
         <div className="border-t border-gray-700 p-4">
@@ -558,9 +810,66 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
       {/* Members Sidebar */}
       <div className="w-60 border-l border-gray-700 bg-gray-800 hidden md:block">
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h3 className="font-semibold text-white">Members</h3>
+          <button 
+            className="text-gray-400 hover:text-white"
+            onClick={() => setShowChannelSettings(!showChannelSettings)}
+          >
+            <Settings size={16} />
+          </button>
         </div>
+        
+        {/* Channel Settings Panel */}
+        {showChannelSettings && (
+          <div className="p-4 border-b border-gray-700 bg-gray-850">
+            <h4 className="font-semibold text-white mb-2">Channel Settings</h4>
+            
+            <div className="mb-3">
+              <h5 className="text-xs text-gray-400 uppercase mb-1">Notifications</h5>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded bg-gray-700 border-gray-600"
+                    checked={notificationSettings.general}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, general: e.target.checked }))}
+                  />
+                  <span className="ml-2 text-sm text-gray-300">General messages</span>
+                </label>
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded bg-gray-700 border-gray-600"
+                    checked={notificationSettings.mentions}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, mentions: e.target.checked }))}
+                  />
+                  <span className="ml-2 text-sm text-gray-300">Mentions</span>
+                </label>
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded bg-gray-700 border-gray-600"
+                    checked={notificationSettings.reactions}
+                    onChange={(e) => setNotificationSettings(prev => ({ ...prev, reactions: e.target.checked }))}
+                  />
+                  <span className="ml-2 text-sm text-gray-300">Reactions</span>
+                </label>
+              </div>
+            </div>
+            
+            <div className="mb-3">
+              <h5 className="text-xs text-gray-400 uppercase mb-1">Channel Actions</h5>
+              <button className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-1.5 rounded mb-1">
+                Invite Members
+              </button>
+              <button className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-1.5 rounded">
+                Channel Permissions
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="p-4">
           <div className="space-y-3">
             {channelMembers.map(member => (
