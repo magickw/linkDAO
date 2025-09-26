@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { useAccount } from 'wagmi';
-import DashboardLayout from '@/components/DashboardLayout';
+import Layout from '@/components/Layout';
 import { GlassPanel } from '@/design-system';
 import SimpleMessagingInterface from '@/components/Messaging/SimpleMessagingInterface';
 
@@ -34,9 +34,8 @@ export default function MessagingPage() {
 
   if (!isConnected) {
     return (
-      <DashboardLayout 
-        title="Messages - LinkDAO" 
-        activeView="feed"
+      <Layout 
+        title="Messages - LinkDAO"
       >
         <div className="flex items-center justify-center h-full">
           <GlassPanel className="text-center p-8 max-w-md">
@@ -51,7 +50,7 @@ export default function MessagingPage() {
             </p>
           </GlassPanel>
         </div>
-      </DashboardLayout>
+      </Layout>
     );
   }
 
@@ -62,9 +61,8 @@ export default function MessagingPage() {
         <meta name="description" content="Secure wallet-to-wallet messaging on LinkDAO" />
       </Head>
       
-      <DashboardLayout 
-        title="Messages - LinkDAO" 
-        activeView="feed"
+      <Layout 
+        title="Messages - LinkDAO"
       >
         <div className="h-full">
           <div className="mb-6">
@@ -147,7 +145,7 @@ export default function MessagingPage() {
             </GlassPanel>
           </div>
         </div>
-      </DashboardLayout>
+      </Layout>
     </>
   );
 }
