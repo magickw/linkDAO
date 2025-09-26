@@ -216,9 +216,9 @@ const Web3TranslationAssistant: React.FC<{
 
     // Simple translation simulation
     const lowerText = text.toLowerCase();
-    for (const [key, translations] of Object.entries(translations)) {
+    for (const [key, translationMap] of Object.entries(translations)) {
       if (lowerText.includes(key)) {
-        return translations[to] || text;
+        return translationMap[to] || text;
       }
     }
 

@@ -8,7 +8,7 @@ import {
   Brain, Zap, Shield, TrendingUp, AlertTriangle, 
   CheckCircle, XCircle, Info, ExternalLink, 
   Copy, Send, Wallet, Target, Lightbulb,
-  ArrowRight, Clock, DollarSign, Gas
+  ArrowRight, Clock, DollarSign, Fuel
 } from 'lucide-react';
 import { useAccount, useChainId } from 'wagmi';
 
@@ -205,7 +205,7 @@ const SmartContractAssistant: React.FC<{
     switch (type) {
       case 'optimization': return <TrendingUp size={16} className="text-green-500" />;
       case 'security': return <Shield size={16} className="text-blue-500" />;
-      case 'gas': return <Gas size={16} className="text-yellow-500" />;
+      case 'gas': return <Fuel size={16} className="text-yellow-500" />;
       case 'alternative': return <Lightbulb size={16} className="text-purple-500" />;
       case 'warning': return <AlertTriangle size={16} className="text-red-500" />;
       default: return <Info size={16} className="text-gray-500" />;
@@ -383,7 +383,7 @@ const SmartContractAssistant: React.FC<{
                   <div className="flex items-center space-x-4 text-sm text-gray-400">
                     {suggestion.gasSavings && (
                       <div className="flex items-center">
-                        <Gas size={14} className="mr-1" />
+                        <Fuel size={14} className="mr-1" />
                         Save {suggestion.gasSavings.toLocaleString()} gas
                       </div>
                     )}
@@ -485,4 +485,4 @@ const SmartContractAssistant: React.FC<{
   );
 };
 
-export default SmartContractAssistant;rtContractAssistant;
+export default SmartContractAssistant;
