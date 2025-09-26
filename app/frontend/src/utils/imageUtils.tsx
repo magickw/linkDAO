@@ -9,6 +9,18 @@ const PLACEHOLDER_IMAGES = {
 
 type ImageType = keyof typeof PLACEHOLDER_IMAGES;
 
+// Simple cache to reduce excessive API calls
+const imageCache = new Map<string, string>();
+const failedImageCache = new Set<string>();
+
+// Periodically clean up caches to prevent memory issues
+setInterval(() => {
+  // Keep successful image cache for 5 minutes
+  imageCache.clear();
+  // Keep failed image cache for 10 minutes
+  failedImageCache.clear();
+}, 5 * 60 * 1000); // 5 minutes
+
 /**
  * Get a fallback image URL based on type
  * @param type The type of placeholder image needed
@@ -30,15 +42,26 @@ export const getImageWithFallback = async (
 ): Promise<string> => {
   if (!src) return getFallbackImage(fallbackType);
   
+  // Check cache first
+  if (imageCache.has(src)) {
+    return imageCache.get(src)!;
+  }
+  
+  // If we've already tried and failed, return fallback immediately
+  if (failedImageCache.has(src)) {
+    return getFallbackImage(fallbackType);
+  }
+  
   // If it's already a local path or data URL, return as is
   if (src.startsWith('/') || src.startsWith('data:image')) {
+    imageCache.set(src, src);
     return src;
   }
 
   // Check if the image loads successfully with a timeout
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
     
     const response = await fetch(src, { 
       method: 'HEAD',
@@ -48,14 +71,22 @@ export const getImageWithFallback = async (
     clearTimeout(timeoutId);
     
     if (response.ok) {
+      imageCache.set(src, src);
       return src;
+    } else {
+      // Mark as failed to avoid repeated attempts
+      failedImageCache.add(src);
     }
   } catch (error) {
     console.warn(`Error loading image ${src}:`, error);
+    // Mark as failed to avoid repeated attempts
+    failedImageCache.add(src);
   }
   
   // Return fallback if there's an error or the image doesn't load
-  return getFallbackImage(fallbackType);
+  const fallback = getFallbackImage(fallbackType);
+  imageCache.set(src, fallback);
+  return fallback;
 };
 
 /**
@@ -109,7 +140,8 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({
     <div className={`relative ${className}`}>
       {isLoading && (
         <div className="absolute inset-0 bg-gray-800/50 flex items-center justify-center">
-          <div className="animate-pulse w-full h-full bg-gray-700/50" />
+          {/* Simplified loading indicator to reduce overhead */}
+          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
         </div>
       )}
       <img

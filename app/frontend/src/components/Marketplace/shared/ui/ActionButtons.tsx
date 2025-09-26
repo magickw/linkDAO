@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/design-system/components/Button';
 import { cn } from '@/lib/utils';
 import { 
   PencilIcon, 
@@ -44,20 +44,20 @@ const actionLabels: Record<ActionType, string> = {
   view: 'View',
 };
 
-const actionVariants: Record<ActionType, 'outline' | 'ghost' | 'link' | 'default'> = {
+const actionVariants: Record<ActionType, 'primary' | 'secondary' | 'outline' | 'ghost' | 'gradient'> = {
   edit: 'outline',
   delete: 'ghost',
   activate: 'ghost',
   deactivate: 'ghost',
   complete: 'outline',
   cancel: 'ghost',
-  view: 'link',
+  view: 'ghost',
 };
 
 interface ActionButtonsProps {
   actions: ActionButtonConfig[];
   className?: string;
-  size?: 'default' | 'sm' | 'lg' | 'icon';
+  size?: 'small' | 'medium' | 'large';
   align?: 'start' | 'center' | 'end';
   spacing?: 'none' | 'xs' | 'sm' | 'md';
 }
@@ -65,7 +65,7 @@ interface ActionButtonsProps {
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   actions,
   className,
-  size = 'sm',
+  size = 'small',
   align = 'end',
   spacing = 'sm',
 }) => {

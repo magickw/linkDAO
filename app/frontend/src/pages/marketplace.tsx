@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
 import { useSeller } from '@/hooks/useSeller';
 import { ImageWithFallback } from '@/utils/imageUtils';
+import { getFallbackImage } from '@/utils/imageUtils';
 import { 
   MarketplaceService, 
   type MarketplaceListing, 
@@ -60,22 +61,23 @@ const MarketplaceContent: React.FC = () => {
 
   useEffect(() => {
     let mounted = true;
-    const fetchData = async () => {
+    
+    const timer = setTimeout(async () => {
       if (mounted) {
         await fetchListings();
         if (address && mounted) {
           await fetchReputation(address);
         }
       }
+    }, 1000); // Increase debounce to 1 second to prevent rapid calls
+    
+    return () => {
+      clearTimeout(timer);
+      mounted = false;
     };
-    fetchData();
-    return () => { mounted = false; };
-  }, [address]);
+  }, [address, debouncedSearchTerm]);
 
   const fetchListings = useCallback(async () => {
-    // Prevent multiple simultaneous requests
-    if (loading) return;
-    
     try {
       setLoading(true);
       

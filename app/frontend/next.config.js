@@ -5,7 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   trailingSlash: false,
-  output: 'standalone',
+  // output: 'standalone', // Temporarily disable standalone output to fix build issue
   
   // Performance optimizations
   experimental: {
