@@ -1,5 +1,5 @@
 import React, { useState, useRef, useId } from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '@/design-system/components/Button';
 import { cn } from '../../lib/utils';
 import { 
   UserGroupIcon, 
@@ -145,7 +145,7 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
           <div className="absolute top-4 right-4">
             <Button
               variant="secondary"
-              size="sm"
+              size="small"
               onClick={triggerBannerUpload}
               disabled={isUploading}
               className="bg-black/50 hover:bg-black/70 text-white border-0"
@@ -245,8 +245,8 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
                 );
               }}
               disabled={loading}
-              variant={isJoined ? "outline" : "default"}
-              size="lg"
+              variant={isJoined ? "outline" : "primary"}
+              size="large"
               className={cn(
                 "min-w-[120px] transition-all duration-200",
                 isJoined 

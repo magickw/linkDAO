@@ -126,7 +126,7 @@ export function DataTable<T extends Record<string, any>>({
                 >
                   <ActionButtons 
                     actions={typeof actions === 'function' ? actions(item) : actions} 
-                    size={compact ? 'icon' : 'sm'}
+                    size={compact ? 'small' : 'small'}
                     spacing="xs"
                   />
                 </td>

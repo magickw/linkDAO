@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassPanel } from './ui/GlassPanel';
-import { Button } from './ui/Button';
+import { Button } from '@/design-system/components/Button';
 
 // Extend Navigator interface to include Safari's standalone property
 declare global {
@@ -136,7 +136,7 @@ export function PWAInstallPrompt({
       {canInstall && !showPrompt && (
         <Button
           variant="outline"
-          size="sm"
+          size="small"
           onClick={handleManualShow}
           className="fixed bottom-4 right-4 z-40 md:bottom-6 md:right-6"
         >
@@ -238,15 +238,15 @@ export function PWAInstallPrompt({
                   <div className="flex space-x-3">
                     <Button
                       variant="outline"
-                      size="default"
+                      size="medium"
                       onClick={handleDismiss}
                       className="flex-1"
                     >
                       Not Now
                     </Button>
                     <Button
-                      variant="default"
-                      size="default"
+                      variant="primary"
+                      size="medium"
                       onClick={handleInstallClick}
                       className="flex-1"
                     >

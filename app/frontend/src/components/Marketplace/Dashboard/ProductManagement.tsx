@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { PlusIcon, PencilIcon, TrashIcon, PlayIcon, PauseIcon } from '@heroicons/react/24/outline';
 
 // Shared components and types
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { DataTable, StatusBadge } from '../shared';
 import type { Product } from '../shared/types';
@@ -151,7 +151,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           {product.status === 'draft' && (
             <Button
               variant="ghost"
-              size="sm"
+              size="small"
               onClick={() => handleStatusChange(product.id, 'active')}
               className="text-green-500 hover:bg-green-500/10"
             >
@@ -161,7 +161,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           {product.status === 'active' && (
             <Button
               variant="ghost"
-              size="sm"
+              size="small"
               onClick={() => handleStatusChange(product.id, 'draft')}
               className="text-yellow-500 hover:bg-yellow-500/10"
             >
@@ -170,7 +170,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           )}
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => console.log('Edit', product.id)}
             className="text-blue-500 hover:bg-blue-500/10"
           >
@@ -178,7 +178,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({ address })
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => handleDelete(product.id)}
             className="text-red-500 hover:bg-red-500/10"
           >

@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
 // Get the backend URL from environment variables
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+// Use BACKEND_URL for server-side, fallback to NEXT_PUBLIC_BACKEND_URL for compatibility
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('API route called:', req.method, req.url);
@@ -13,7 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Construct the backend URL
-    let backendEndpoint = `${BACKEND_URL}/marketplace/seller/profile`;
+    // Use the correct backend endpoint: /api/sellers/profile/:walletAddress
+    let backendEndpoint = `${BACKEND_URL}/api/sellers/profile`;
     
     // For GET and PUT requests with a wallet address, append the wallet address
     // For POST requests, don't append anything (creating a new profile)
