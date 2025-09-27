@@ -7,10 +7,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageCircle, Search, Send, User, Plus, Hash, Lock, 
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
-  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight
+  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
+  Phone, Video, Shield
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
+import useENSIntegration from '../../hooks/useENSIntegration';
+
 
 interface ChatChannel {
   id: string;
@@ -25,6 +28,19 @@ interface ChatChannel {
   isGated?: boolean;
   gateType?: 'nft' | 'token' | 'role';
   gateRequirement?: string;
+}
+
+// Add DirectMessageConversation interface
+interface DirectMessageConversation {
+  id: string;
+  participant: string;
+  participantEnsName?: string;
+  isOnline: boolean;
+  isTyping?: boolean;
+  lastSeen?: Date;
+  unreadCount: number;
+  lastMessage?: ChannelMessage;
+  isPinned?: boolean;
 }
 
 interface ChannelMessage {
@@ -59,6 +75,9 @@ interface ChannelMessage {
     };
   }[];
   mentions?: string[];
+  // DM-specific properties
+  isEncrypted?: boolean;
+  encryptionStatus?: 'encrypted' | 'unencrypted' | 'pending';
 }
 
 interface ChannelMember {
@@ -86,11 +105,42 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   onClose 
 }) => {
   const { address, isConnected } = useAccount();
-  const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
-    { id: 'direct', name: 'Direct Messages', isCollapsed: false },
-    { id: 'public', name: 'Public Channels', isCollapsed: false },
-    { id: 'private', name: 'Private Channels', isCollapsed: false },
-    { id: 'gated', name: 'Gated Channels', isCollapsed: false }
+  const { resolveName, resolvedNames, isLoading } = useENSIntegration();
+  
+  // Add typing timeout ref for channel messages
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Add state for DM conversations
+  const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([
+    {
+      id: 'dm1',
+      participant: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
+      participantEnsName: 'vitalik.eth',
+      isOnline: true,
+      isTyping: false,
+      unreadCount: 3,
+      lastMessage: {
+        id: 'msg1',
+        fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
+        content: 'Hey, are you interested in the new NFT drop?',
+        timestamp: new Date(Date.now() - 300000)
+      },
+      isPinned: true
+    },
+    {
+      id: 'dm2',
+      participant: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
+      participantEnsName: 'alice.eth',
+      isOnline: false,
+      lastSeen: new Date(Date.now() - 3600000),
+      unreadCount: 1,
+      lastMessage: {
+        id: 'msg2',
+        fromAddress: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
+        content: 'Thanks for the trade!',
+        timestamp: new Date(Date.now() - 86400000)
+      }
+    }
   ]);
 
   const [channels, setChannels] = useState<ChatChannel[]>([
@@ -159,7 +209,12 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
     }
   ]);
   
-  const [selectedChannel, setSelectedChannel] = useState<string>('general');
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  
+  // Add state to track if we're viewing a DM or channel
+  const [isViewingDM, setIsViewingDM] = useState(false);
+  const [selectedDM, setSelectedDM] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<ChannelMessage[]>([
     {
       id: '1',
@@ -192,6 +247,14 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   const [conversations, setConversations] = useState([
     { id: 'conv1', name: '0x742...d8b1', unreadCount: 1 }
   ]);
+  
+  // Add state for channel categories
+  const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
+    { id: 'direct', name: 'Direct Messages', isCollapsed: false },
+    { id: 'public', name: 'Public Channels', isCollapsed: false },
+    { id: 'private', name: 'Private Channels', isCollapsed: false },
+    { id: 'gated', name: 'Gated Channels', isCollapsed: false }
+  ]);
   const [channelMembers] = useState<ChannelMember[]>([
     { 
       address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1', 
@@ -223,6 +286,50 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Resolve ENS names for DM participants
+  useEffect(() => {
+    const resolveParticipantNames = async () => {
+      // Get participants that don't have ENS names resolved yet
+      const participantsToResolve = dmConversations
+        .filter(dm => dm.participant && !dm.participantEnsName)
+        .map(dm => dm.participant);
+      
+      if (participantsToResolve.length > 0) {
+        try {
+          // Resolve all participant addresses to ENS names
+          const resolved = await Promise.all(
+            participantsToResolve.map(async (addr) => {
+              try {
+                const result = await resolveName(addr);
+                return { address: addr, ensName: result.resolved && result.isValid ? result.resolved : null };
+              } catch (error) {
+                console.warn(`Failed to resolve ENS name for ${addr}:`, error);
+                return { address: addr, ensName: null };
+              }
+            })
+          );
+          
+          // Update DM conversations with resolved ENS names
+          setDmConversations(prev => 
+            prev.map(dm => {
+              const resolvedEntry = resolved.find(r => r.address === dm.participant);
+              if (resolvedEntry && resolvedEntry.ensName) {
+                return { ...dm, participantEnsName: resolvedEntry.ensName };
+              }
+              return dm;
+            })
+          );
+        } catch (error) {
+          console.warn('Batch ENS resolution failed:', error);
+        }
+      }
+    };
+    
+    if (dmConversations.length > 0) {
+      resolveParticipantNames();
+    }
+  }, [dmConversations, resolveName]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -302,6 +409,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
     }));
   };
 
+
+
   const openThread = (messageId: string) => {
     const message = messages.find(msg => msg.id === messageId);
     if (message) {
@@ -349,8 +458,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   };
 
   const toggleCategory = (categoryId: string) => {
-    setChannelCategories(prev => 
-      prev.map(cat => 
+    setChannelCategories((prev: ChannelCategory[]) => 
+      prev.map((cat: ChannelCategory) => 
         cat.id === categoryId 
           ? { ...cat, isCollapsed: !cat.isCollapsed } 
           : cat
@@ -598,6 +707,24 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   const handleMessageChange = (value: string) => {
     setNewMessage(value);
 
+    // Handle typing indicators
+    if (isViewingDM && selectedDM) {
+      // Start typing indicator for DM
+      startDmTyping(selectedDM);
+    } else if (selectedChannel) {
+      // Handle channel typing (existing functionality)
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set timeout to stop typing
+      typingTimeoutRef.current = setTimeout(() => {
+        // In a real implementation, you would notify the server that typing stopped
+      }, 3000);
+    }
+
+    // Handle mention suggestions
     const cursorPos = (document.activeElement as HTMLTextAreaElement)?.selectionStart || 0;
     const textBeforeCursor = value.substring(0, cursorPos);
     const atIndex = textBeforeCursor.lastIndexOf('@');
@@ -613,6 +740,113 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
     } else {
       setShowMentionSuggestions(false);
     }
+  };
+
+  // Add typing timeouts for DMs
+  const dmTypingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Function to start typing indicator for a DM
+  const startDmTyping = (dmId: string) => {
+    // Clear existing timeout
+    const existingTimeout = dmTypingTimeouts.current.get(dmId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Update DM to show typing
+    setDmConversations(prev => prev.map(dm => 
+      dm.id === dmId ? { ...dm, isTyping: true } : dm
+    ));
+
+    // Set timeout to stop typing
+    const timeout = setTimeout(() => {
+      setDmConversations(prev => prev.map(dm => 
+        dm.id === dmId ? { ...dm, isTyping: false } : dm
+      ));
+      dmTypingTimeouts.current.delete(dmId);
+    }, 5000); // Stop typing after 5 seconds
+
+    dmTypingTimeouts.current.set(dmId, timeout);
+  };
+
+  // Function to stop typing indicator for a DM
+  const stopDmTyping = (dmId: string) => {
+    const timeout = dmTypingTimeouts.current.get(dmId);
+    if (timeout) {
+      clearTimeout(timeout);
+      dmTypingTimeouts.current.delete(dmId);
+    }
+
+    setDmConversations(prev => prev.map(dm => 
+      dm.id === dmId ? { ...dm, isTyping: false } : dm
+    ));
+  };
+
+  // Function to update online status for a DM participant
+  const updateDmParticipantStatus = (participantAddress: string, isOnline: boolean, lastSeen?: Date) => {
+    setDmConversations(prev => prev.map(dm => 
+      dm.participant === participantAddress 
+        ? { ...dm, isOnline, lastSeen: lastSeen || new Date() } 
+        : dm
+    ));
+  };
+
+  // Function to sort DM conversations by recent activity
+  const sortDmConversations = (conversations: DirectMessageConversation[]) => {
+    return [...conversations].sort((a, b) => {
+      // Pinned DMs first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      
+      // Unread DMs next
+      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+      if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+      
+      // Online users next
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      
+      // Then by last activity
+      const aTime = a.lastMessage?.timestamp.getTime() || 0;
+      const bTime = b.lastMessage?.timestamp.getTime() || 0;
+      return bTime - aTime;
+    });
+  };
+
+  // Function to mark DM messages as read
+  const markDmMessagesAsRead = (dmId: string) => {
+    setDmConversations(prev => prev.map(dm => 
+      dm.id === dmId ? { ...dm, unreadCount: 0 } : dm
+    ));
+  };
+
+  // Function to add a new DM conversation
+  const addNewDmConversation = (participantAddress: string, participantEnsName?: string) => {
+    const newDm: DirectMessageConversation = {
+      id: `dm_${Date.now()}`,
+      participant: participantAddress,
+      participantEnsName,
+      isOnline: false,
+      unreadCount: 0,
+      isPinned: false
+    };
+    
+    setDmConversations(prev => [newDm, ...prev]);
+    return newDm.id;
+  };
+
+  // Function to update DM unread count
+  const updateDmUnreadCount = (dmId: string, count: number) => {
+    setDmConversations(prev => prev.map(dm => 
+      dm.id === dmId ? { ...dm, unreadCount: count } : dm
+    ));
+  };
+
+  // Function to pin/unpin a DM
+  const toggleDmPin = (dmId: string) => {
+    setDmConversations(prev => prev.map(dm => 
+      dm.id === dmId ? { ...dm, isPinned: !dm.isPinned } : dm
+    ));
   };
 
   return (
@@ -663,28 +897,67 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
           
           {!channelCategories.find(c => c.id === 'direct')?.isCollapsed && (
             <>
-              {conversations.map(conv => (
-                <div 
-                  key={conv.id}
-                  className="flex items-center px-2 py-1.5 rounded cursor-pointer hover:bg-gray-700 mb-1 ml-4"
-                >
-                  <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                      <User size={16} className="text-white" />
-                    </div>
-                    {conv.unreadCount > 0 && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs">
-                        {conv.unreadCount}
+              {dmConversations
+                .sort((a, b) => {
+                  // Pinned DMs first
+                  if (a.isPinned && !b.isPinned) return -1;
+                  if (!a.isPinned && b.isPinned) return 1;
+                  
+                  // Online users next
+                  if (a.isOnline && !b.isOnline) return -1;
+                  if (!a.isOnline && b.isOnline) return 1;
+                  
+                  // Then by last activity
+                  const aTime = a.lastMessage?.timestamp.getTime() || 0;
+                  const bTime = b.lastMessage?.timestamp.getTime() || 0;
+                  return bTime - aTime;
+                })
+                .map(dm => (
+                  <div 
+                    key={dm.id}
+                    className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ml-4 ${
+                      isViewingDM && selectedDM === dm.id ? 'bg-gray-700' : 'hover:bg-gray-700'
+                    }`}
+                    onClick={() => {
+                      setIsViewingDM(true);
+                      setSelectedDM(dm.id);
+                      setSelectedChannel(null);
+                    }}
+                  >
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                        <User size={16} className="text-white" />
                       </div>
-                    )}
-                  </div>
-                  <div className="ml-2 flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">
-                      {conv.name}
+                      {/* Online status indicator */}
+                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 ${
+                        dm.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                      }`}></div>
+                      {/* Typing indicator */}
+                      {dm.isTyping && (
+                        <div className="absolute -top-1 -right-1 flex space-x-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                      )}
+                      {dm.unreadCount > 0 && !dm.isTyping && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs">
+                          {dm.unreadCount}
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-2 flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">
+                        {dm.participantEnsName || `${dm.participant.slice(0, 6)}...${dm.participant.slice(-4)}`}
+                      </div>
+                      {dm.lastMessage && (
+                        <div className="text-xs text-gray-400 truncate">
+                          {dm.lastMessage.content}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </>
           )}
         </div>
@@ -716,9 +989,13 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                       <div 
                         key={channel.id}
                         className={`flex items-center px-2 py-1.5 rounded cursor-pointer mb-1 ${
-                          selectedChannel === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'
+                          !isViewingDM && selectedChannel === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'
                         }`}
-                        onClick={() => setSelectedChannel(channel.id)}
+                        onClick={() => {
+                          setIsViewingDM(false);
+                          setSelectedDM(null);
+                          setSelectedChannel(channel.id);
+                        }}
                       >
                         <div className="flex items-center">
                           {channel.isGated ? (
@@ -766,7 +1043,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Channel Header */}
-        {selectedChannel && (
+        {!isViewingDM && selectedChannel && (
           <div className="border-b border-gray-700 p-4 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold text-white flex items-center">
@@ -797,6 +1074,49 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 <ArrowLeftRight size={14} className="mr-1" />
                 Bridge
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* DM Header */}
+        {isViewingDM && selectedDM && (
+          <div className="border-b border-gray-700 p-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                  <User size={20} className="text-white" />
+                </div>
+                {/* Online status indicator */}
+                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-800 ${
+                  dmConversations.find(dm => dm.id === selectedDM)?.isOnline ? 'bg-green-500' : 'bg-gray-500'
+                }`}></div>
+              </div>
+              <div className="ml-3">
+                <h2 className="text-xl font-bold text-white">
+                  {dmConversations.find(dm => dm.id === selectedDM)?.participantEnsName || 
+                   `${dmConversations.find(dm => dm.id === selectedDM)?.participant.slice(0, 6)}...${dmConversations.find(dm => dm.id === selectedDM)?.participant.slice(-4)}`}
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {dmConversations.find(dm => dm.id === selectedDM)?.isOnline 
+                    ? 'Online' 
+                    : `Last seen ${dmConversations.find(dm => dm.id === selectedDM)?.lastSeen?.toLocaleTimeString()}`}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              {/* Voice/Video Call Buttons */}
+              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2">
+                <Phone size={16} />
+              </button>
+              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2">
+                <Video size={16} />
+              </button>
+              
+              {/* Encryption Indicator */}
+              <div className="flex items-center space-x-1 text-xs text-green-400">
+                <Shield size={14} />
+                <span>Encrypted</span>
+              </div>
             </div>
           </div>
         )}
@@ -837,6 +1157,10 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                       <span className="text-xs text-gray-400">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
+                      {/* Encryption indicator for DM messages */}
+                      {isViewingDM && message.isEncrypted && (
+                        <Lock size={12} className="ml-1 text-green-400" />
+                      )}
                     </div>
                     <p className="text-gray-200">{parseMentions(message.content)}</p>
                     
@@ -1082,6 +1406,10 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                           <span className="text-xs text-gray-400">
                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
+                          {/* Encryption indicator for DM thread messages */}
+                          {isViewingDM && message.isEncrypted && (
+                            <Lock size={12} className="ml-1 text-green-400" />
+                          )}
                         </div>
                         <p className="text-gray-200 text-sm">{parseMentions(message.content)}</p>
                       </div>
@@ -1122,7 +1450,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 Share this link to invite others to join the channel.
               </p>
 
-              {inviteLinks[selectedChannel] && (
+              {selectedChannel && inviteLinks[selectedChannel] && (
                 <div className="mb-4">
                   <div className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-gray-300 font-mono break-all">
                     {inviteLinks[selectedChannel]}
@@ -1133,7 +1461,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
               <div className="flex space-x-2">
                 <button
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded"
-                  onClick={() => inviteLinks[selectedChannel] && copyInviteLink(inviteLinks[selectedChannel])}
+                  onClick={() => selectedChannel && inviteLinks[selectedChannel] && copyInviteLink(inviteLinks[selectedChannel])}
                 >
                   Copy Link
                 </button>
@@ -1147,7 +1475,6 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
             </div>
           </div>
         )}
-
         {/* Attachment Modal */}
         {showAttachmentModal && (
           <div className="fixed inset-0 bg-black/70 z-30 flex items-center justify-center p-4">
@@ -1222,10 +1549,11 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                     />
                     <button
                       className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded"
-                      onClick={() => shareNFT('0x...', '1234', '0.5')}
+                      onClick={() => selectedChannel && shareNFT('0x...', '1234', '0.5')}
                     >
                       Share NFT
                     </button>
+
                   </div>
                 </div>
               )}
@@ -1247,7 +1575,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                     </select>
                     <button
                       className="w-full bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded"
-                      onClick={() => shareTransaction('0x123...abc', 'success')}
+                      onClick={() => selectedChannel && shareTransaction('0x123...abc', 'success')}
                     >
                       Share Transaction
                     </button>
@@ -1326,8 +1654,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         </div>
       </div>
 
-      {/* Members Sidebar */}
-      <div className="w-60 border-l border-gray-700 bg-gray-800 hidden md:block">
+      {/* Members Sidebar - only show for channels, not DMs */}
+      <div className={`w-60 border-l border-gray-700 bg-gray-800 hidden md:block ${isViewingDM ? 'hidden' : ''}`}>
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h3 className="font-semibold text-white">Members</h3>
           <button 
@@ -1351,7 +1679,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                   <input
                     type="text"
                     className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    defaultValue={channels.find(c => c.id === selectedChannel)?.name || ''}
+                    defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.name || '') : ''}
                     placeholder="Channel name"
                   />
                 </div>
@@ -1360,7 +1688,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                   <textarea
                     className="w-full bg-gray-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
                     rows={2}
-                    defaultValue={channels.find(c => c.id === selectedChannel)?.topic || ''}
+                    defaultValue={selectedChannel ? (channels.find(c => c.id === selectedChannel)?.topic || '') : ''}
                     placeholder="What's this channel about?"
                   />
                 </div>
@@ -1410,11 +1738,15 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
             <div className="mb-4">
               <h5 className="text-xs text-gray-400 uppercase mb-2">Invite Links</h5>
-              {channels.find(c => c.id === selectedChannel)?.isPrivate && (
+              {selectedChannel && channels.find(c => c.id === selectedChannel)?.isPrivate && (
                 <div className="space-y-2">
                   <button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded"
-                    onClick={() => generateInviteLink(selectedChannel)}
+                    onClick={() => {
+                      if (selectedChannel) {
+                        generateInviteLink(selectedChannel);
+                      }
+                    }}
                   >
                     Generate Invite Link
                   </button>
@@ -1423,7 +1755,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                   </div>
                 </div>
               )}
-              {!channels.find(c => c.id === selectedChannel)?.isPrivate && (
+              {selectedChannel && !channels.find(c => c.id === selectedChannel)?.isPrivate && (
                 <div className="text-xs text-gray-400">
                   Invite links are only available for private channels
                 </div>

@@ -50,7 +50,7 @@ export default function MessagingPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Wallet-to-Wallet Messages
+                  Wallet-to-Wallet Chatting
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
                   Secure, encrypted messaging between Web3 addresses across multiple chains

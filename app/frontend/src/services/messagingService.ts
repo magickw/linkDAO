@@ -32,6 +32,15 @@ export interface ChatMessage {
   chainId?: number;
 }
 
+// Direct Message interface that extends ChatMessage with DM-specific properties
+export interface DirectMessage extends ChatMessage {
+  isTyping?: boolean;
+  isOnline?: boolean;
+  lastSeen?: Date;
+  encryptionStatus?: 'encrypted' | 'unencrypted' | 'pending';
+  ensName?: string;
+}
+
 export interface ChatConversation {
   id: string;
   participants: string[];
@@ -43,6 +52,16 @@ export interface ChatConversation {
   metadata?: {
     conversationName?: string;
     groupAdmin?: string;
+  };
+  // DM-specific properties
+  isDirectMessage?: boolean;
+  participantStatus?: {
+    [address: string]: {
+      isOnline: boolean;
+      lastSeen: Date;
+      isTyping?: boolean;
+      ensName?: string;
+    }
   };
 }
 
