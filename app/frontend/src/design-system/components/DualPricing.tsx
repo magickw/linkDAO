@@ -138,18 +138,22 @@ export const DualPricing: React.FC<DualPricingProps> = ({
       // Track price history
       if (trackHistory) {
         const currentPrice = parseFloat(newPrices[currentCurrency] || '0');
-        const lastPrice = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1].price : currentPrice;
-        const change = ((currentPrice - lastPrice) / lastPrice) * 100;
-
-        setPriceChange(change);
-        setPriceHistory(prev => [
-          ...prev.slice(-19), // Keep last 20 entries
-          {
-            timestamp: Date.now(),
-            price: currentPrice,
-            change: change
-          }
-        ]);
+        // Use functional update to avoid dependency issues
+        setPriceHistory(prev => {
+          const lastPrice = prev.length > 0 ? prev[prev.length - 1].price : currentPrice;
+          const change = prev.length > 0 ? ((currentPrice - lastPrice) / lastPrice) * 100 : 0;
+          
+          setPriceChange(change);
+          
+          return [
+            ...prev.slice(-19), // Keep last 20 entries
+            {
+              timestamp: Date.now(),
+              price: currentPrice,
+              change: change
+            }
+          ];
+        });
       }
 
       setLastUpdated(new Date());
@@ -159,7 +163,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
     } finally {
       setIsConverting(false);
     }
-  }, [realTimeConversion, cryptoPrice, cryptoSymbol, supportedCurrencies, convertPrice, trackHistory, currentCurrency, priceHistory, onPriceUpdate]);
+  }, [realTimeConversion, cryptoPrice, cryptoSymbol, supportedCurrencies, convertPrice, trackHistory, currentCurrency, onPriceUpdate]);
 
   // Set up automatic price updates
   useEffect(() => {
