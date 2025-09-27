@@ -41,6 +41,7 @@ import messagingService, {
   ChatConversation, 
   UserPresence 
 } from '../../services/messagingService';
+import { useChatHistory } from '../../hooks/useChatHistory';
 import nftNegotiationBot from '../../services/nftNegotiationBot';
 import multichainResolver, { ResolvedAddress } from '../../services/multichainResolver';
 import notificationService from '../../services/notificationService';
@@ -63,6 +64,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   initialConversationId
 }) => {
   const { address, isConnected } = useAccount();
+  // Local UI state (kept for selection and UI flags). Actual data comes from useChatHistory.
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<string | null>(
     initialConversationId || null
@@ -82,12 +84,62 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize messaging service
+  // Chat history hook (drives conversations/messages from backend)
+  const chat = useChatHistory();
+  const { messages: hookMessages, conversations: hookConversations, loading: chatLoading, loadMessages: loadMessagesHook, sendMessage: sendMessageHook, markAsRead: markAsReadHook } = chat;
+
+  // Initialize messaging service (real-time) and sync initial data from hook
   useEffect(() => {
     if (typeof window === 'undefined' || !isConnected || !address) return;
-    
     initializeMessaging();
   }, [isConnected, address]);
+
+  // Keep UI conversations/messages in sync with the chatHistory hook
+  // Transform hook (backend) conversation/message shapes into the UI's ChatConversation/ChatMessage
+  useEffect(() => {
+    if (!hookConversations) {
+      setConversations([]);
+      return;
+    }
+
+    const transformed = hookConversations.map(conv => ({
+      id: conv.id,
+      participants: conv.participants,
+      lastMessage: conv.lastMessage as any,
+      lastActivity: new Date(conv.lastActivity),
+      unreadCount: conv.unreadCount || 0,
+      isBlocked: false,
+      isPinned: false,
+      metadata: (conv as any).metadata || {},
+      isDirectMessage: conv.type === 'dm',
+      participantStatus: {}
+    } as ChatConversation));
+
+    setConversations(transformed);
+  }, [hookConversations]);
+
+  useEffect(() => {
+    if (!hookMessages) {
+      setMessages([]);
+      return;
+    }
+
+    const transformedMsgs = hookMessages.map(m => ({
+      id: m.id,
+      fromAddress: m.fromAddress,
+      toAddress: (m as any).toAddress || undefined,
+      content: m.content,
+      encryptedContent: (m as any).encryptedContent,
+      timestamp: new Date(m.timestamp),
+      messageType: m.messageType as any,
+      isEncrypted: !!m.isEncrypted,
+      isRead: (m as any).isRead || false,
+      isDelivered: (m as any).isDelivered || false,
+      metadata: (m as any).metadata || {}
+    } as ChatMessage));
+
+    setMessages(transformedMsgs);
+  }, [hookMessages]);
 
   // Load initial conversation
   useEffect(() => {
@@ -112,11 +164,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       // Initialize notification service
       await notificationService.initializeService();
       
-      // Load conversations
-      const convs = messagingService.getConversations();
-      setConversations(convs);
-
-      // Load blocked users
+      // chatHistoryService will load conversations on mount via the hook
+      // Load blocked users from real-time service (local store)
       const blocked = messagingService.getBlockedUsers();
       setBlockedUsers(new Set(blocked));
 
@@ -243,11 +292,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   };
 
   const loadMessages = (conversationId: string) => {
-    const msgs = messagingService.getMessages(conversationId);
-    setMessages(msgs);
-
-    // Mark messages as read
-    messagingService.markMessagesAsRead(conversationId);
+    // Load messages via hook-backed API
+    loadMessagesHook({ conversationId, limit: 50 }).catch(console.error);
+    // Mark as read through the hook service (non-blocking)
+    markAsReadHook(conversationId, []).catch(() => {});
   };
 
   const sendMessage = async () => {
@@ -257,10 +305,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const otherParticipant = getOtherParticipant(selectedConversation);
       if (!otherParticipant) return;
 
-      await messagingService.sendMessage(otherParticipant, newMessage.trim());
+      await sendMessageHook({
+        conversationId: selectedConversation,
+        fromAddress: address.toLowerCase(),
+        toAddress: otherParticipant,
+        content: newMessage.trim(),
+        messageType: 'text',
+        isEncrypted: false
+      });
+
       setNewMessage('');
-      
-      // Stop typing indicator
+
+      // Stop typing indicator via real-time service
       messagingService.stopTyping(selectedConversation);
     } catch (error) {
       console.error('Failed to send message:', error);

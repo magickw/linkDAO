@@ -146,34 +146,44 @@ const BadgeCollection: React.FC<BadgeCollectionProps> = ({
 
         {/* Show More Button */}
         {!showAllBadges && remainingCount > 0 && (
-          <button
-            onClick={() => setShowAllBadges(true)}
-            className={`
-              ${getSizeStyles(size).container}
-              bg-gray-100 border-2 border-gray-300 rounded-full
-              flex items-center justify-center text-gray-600
-              hover:bg-gray-200 transition-colors duration-200
-              ${getSizeStyles(size).icon}
-            `}
-          >
-            +{remainingCount}
-          </button>
+          (() => {
+            const btnSize = getSizeStyles(size);
+            return (
+              <button
+                onClick={() => setShowAllBadges(true)}
+                className={`
+                  ${btnSize.container}
+                  bg-gray-100 border-2 border-gray-300 rounded-full
+                  flex items-center justify-center text-gray-600
+                  hover:bg-gray-200 transition-colors duration-200
+                  ${btnSize.icon}
+                `}
+              >
+                +{remainingCount}
+              </button>
+            );
+          })()
         )}
 
         {/* Show Less Button */}
         {showAllBadges && badges.length > maxDisplay && (
-          <button
-            onClick={() => setShowAllBadges(false)}
-            className={`
-              ${getSizeStyles(size).container}
-              bg-gray-100 border-2 border-gray-300 rounded-full
-              flex items-center justify-center text-gray-600
-              hover:bg-gray-200 transition-colors duration-200
-              ${getSizeStyles(size).icon}
-            `}
-          >
-            −
-          </button>
+          (() => {
+            const btnSize = getSizeStyles(size);
+            return (
+              <button
+                onClick={() => setShowAllBadges(false)}
+                className={`
+                  ${btnSize.container}
+                  bg-gray-100 border-2 border-gray-300 rounded-full
+                  flex items-center justify-center text-gray-600
+                  hover:bg-gray-200 transition-colors duration-200
+                  ${btnSize.icon}
+                `}
+              >
+                −
+              </button>
+            );
+          })()
         )}
       </div>
 

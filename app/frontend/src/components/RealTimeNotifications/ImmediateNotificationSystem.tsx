@@ -11,7 +11,10 @@ import {
 } from '../../types/realTimeNotifications';
 
 interface ImmediateNotificationSystemProps {
-  onNotificationClick: (notification: RealTimeNotification) => void;
+  // Accept any notification-like payload here because the toast shape (ToastNotification)
+  // differs from the RealTimeNotification type used elsewhere. We keep this loose to
+  // avoid unsafe casts at the call sites and let callers handle the shape they expect.
+  onNotificationClick: (notification: any) => void;
   onNotificationDismiss: (notificationId: string) => void;
   maxVisible?: number;
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';

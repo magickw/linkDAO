@@ -8,6 +8,7 @@ import { MessageCircle, X, Bell } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import MessagingInterface from './MessagingInterface';
 import messagingService, { ChatMessage, ChatConversation } from '../../services/messagingService';
+import { useChatHistory } from '@/hooks/useChatHistory';
 import notificationService from '../../services/notificationService';
 
 interface MessagingWidgetProps {
@@ -26,16 +27,19 @@ const MessagingWidget: React.FC<MessagingWidgetProps> = ({
 
   useEffect(() => {
     if (isConnected && address) {
-      loadConversations();
+      // hook loads conversations on mount; compute unread from hook
+      // no-op here — load will be handled by hook effects below
       setupEventListeners();
     }
   }, [isConnected, address]);
 
-  const loadConversations = () => {
-    const convs = messagingService.getConversations();
-    const total = convs.reduce((sum, conv) => sum + conv.unreadCount, 0);
+  const { conversations: hookConversations, loadConversations } = useChatHistory();
+
+  useEffect(() => {
+    if (!hookConversations) return;
+    const total = hookConversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
     setUnreadCount(total);
-  };
+  }, [hookConversations]);
 
   const setupEventListeners = () => {
     messagingService.on('message_received', handleMessageReceived);
