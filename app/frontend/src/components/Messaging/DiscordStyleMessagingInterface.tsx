@@ -13,6 +13,7 @@ import {
 import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
 import useENSIntegration from '../../hooks/useENSIntegration';
+import { useChatHistory } from '@/hooks/useChatHistory';
 
 
 interface ChatChannel {
@@ -110,38 +111,9 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   // Add typing timeout ref for channel messages
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Add state for DM conversations
-  const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([
-    {
-      id: 'dm1',
-      participant: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-      participantEnsName: 'vitalik.eth',
-      isOnline: true,
-      isTyping: false,
-      unreadCount: 3,
-      lastMessage: {
-        id: 'msg1',
-        fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-        content: 'Hey, are you interested in the new NFT drop?',
-        timestamp: new Date(Date.now() - 300000)
-      },
-      isPinned: true
-    },
-    {
-      id: 'dm2',
-      participant: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
-      participantEnsName: 'alice.eth',
-      isOnline: false,
-      lastSeen: new Date(Date.now() - 3600000),
-      unreadCount: 1,
-      lastMessage: {
-        id: 'msg2',
-        fromAddress: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
-        content: 'Thanks for the trade!',
-        timestamp: new Date(Date.now() - 86400000)
-      }
-    }
-  ]);
+  // Add state for DM conversations (backed by chat history hook)
+  const { conversations: hookConversations, messages: hookMessages, loadMessages, sendMessage } = useChatHistory();
+  const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([]);
 
   const [channels, setChannels] = useState<ChatChannel[]>([
     {
@@ -215,33 +187,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   const [isViewingDM, setIsViewingDM] = useState(false);
   const [selectedDM, setSelectedDM] = useState<string | null>(null);
 
-  const [messages, setMessages] = useState<ChannelMessage[]>([
-    {
-      id: '1',
-      fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-      content: 'Welcome to the #general channel! This is where we discuss all things Web3.',
-      timestamp: new Date(Date.now() - 3600000)
-    },
-    {
-      id: '2',
-      fromAddress: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
-      content: 'Has anyone checked out the new NFT collection that dropped today? 🚀',
-      timestamp: new Date(Date.now() - 1800000),
-      reactions: [
-        { emoji: '👍', count: 5, users: [] },
-        { emoji: '🔥', count: 3, users: [] }
-      ],
-      attachments: [
-        { type: 'nft', url: '#', name: 'LinkDAO Genesis #1234' }
-      ]
-    },
-    {
-      id: '3',
-      fromAddress: address || '',
-      content: 'Yes, the artwork looks amazing! I might pick up a few pieces.',
-      timestamp: new Date(Date.now() - 1200000)
-    }
-  ]);
+  const [messages, setMessages] = useState<ChannelMessage[]>([]);
   
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState([
@@ -286,6 +232,55 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Sync hook conversations into DM list
+  useEffect(() => {
+    if (!hookConversations) return;
+    const mapped: DirectMessageConversation[] = hookConversations.map(c => ({
+      id: c.id,
+      participant: Array.isArray(c.participants) ? c.participants[0] : (c.participants as any),
+      participantEnsName: undefined,
+      isOnline: false,
+      isTyping: false,
+      lastSeen: undefined,
+      unreadCount: c.unreadCount || 0,
+      lastMessage: c.lastMessage ? ({
+        id: c.lastMessage.id,
+        fromAddress: c.lastMessage.fromAddress,
+        content: c.lastMessage.content,
+        timestamp: new Date(c.lastMessage.timestamp)
+      } as ChannelMessage) : undefined,
+      isPinned: (c as any).isPinned || false
+    }));
+
+    setDmConversations(mapped);
+  }, [hookConversations]);
+
+  // When viewing a DM, load messages via hook
+  useEffect(() => {
+    const load = async () => {
+      if (isViewingDM && selectedDM) {
+        await loadMessages({ conversationId: selectedDM, limit: 100 });
+      }
+    };
+    load();
+  }, [isViewingDM, selectedDM, loadMessages]);
+
+  // Mirror hook messages into channel messages when viewing DM
+  useEffect(() => {
+    if (isViewingDM) {
+      setMessages(hookMessages.map(m => ({
+        id: m.id,
+        fromAddress: m.fromAddress,
+        content: m.content,
+        timestamp: new Date(m.timestamp),
+        reactions: (m as any).reactions as any,
+        threadReplies: (m as any).threadReplies as any,
+        isEncrypted: !!(m as any).isEncrypted,
+        attachments: (m as any).attachments as any
+      })));
+    }
+  }, [isViewingDM, hookMessages]);
 
   // Resolve ENS names for DM participants
   useEffect(() => {
@@ -335,7 +330,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const sendMessage = () => {
+  const sendChannelMessage = () => {
     if (!newMessage.trim() || !address) return;
 
     const message: ChannelMessage = {
@@ -352,14 +347,23 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       sendNotification('message', message);
     }
 
-    setMessages(prev => [...prev, message]);
+    // If viewing a DM, use hook sendMessage to persist
+    if (isViewingDM && selectedDM) {
+      sendMessage({ conversationId: selectedDM, fromAddress: address, content: newMessage.trim(), messageType: 'text' } as any).catch(err => {
+        console.warn('Failed to send DM via hook', err);
+        setMessages(prev => [...prev, message]);
+      });
+    } else {
+      setMessages(prev => [...prev, message]);
+    }
+
     setNewMessage('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      sendChannelMessage();
     }
   };
 
@@ -1631,7 +1635,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
             )}
 
             <button
-              onClick={sendMessage}
+              onClick={sendChannelMessage}
               disabled={!newMessage.trim()}
               className="ml-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg p-3"
             >

@@ -41,6 +41,47 @@ pool.query(`
   )
 `).catch(console.error);
 
+// Chat tables
+pool.query(`
+  CREATE TABLE IF NOT EXISTS conversations (
+    id VARCHAR(255) PRIMARY KEY,
+    type VARCHAR(50) DEFAULT 'dm',
+    participants TEXT[],
+    last_message_id VARCHAR(255),
+    last_activity TIMESTAMP,
+    unread_counts JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+  )
+`).catch(console.error);
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id VARCHAR(255) PRIMARY KEY,
+    conversation_id VARCHAR(255) REFERENCES conversations(id) ON DELETE CASCADE,
+    from_address VARCHAR(42),
+    to_address VARCHAR(42),
+    content TEXT,
+    encrypted BOOLEAN DEFAULT false,
+    message_type VARCHAR(50) DEFAULT 'text',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP,
+    edited_at TIMESTAMP,
+    deleted_at TIMESTAMP
+  )
+`).catch(console.error);
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS reactions (
+    id VARCHAR(255) PRIMARY KEY,
+    message_id VARCHAR(255) REFERENCES messages(id) ON DELETE CASCADE,
+    emoji VARCHAR(50),
+    user_address VARCHAR(42),
+    created_at TIMESTAMP
+  )
+`).catch(console.error);
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -94,6 +135,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.get('Origin') || 'none'}`);
+  next();
+});
+
+// Simple auth middleware - validates Bearer token and attaches user address to req.user
+app.use((req, res, next) => {
+  const auth = req.get('Authorization') || '';
+  if (!auth) return next();
+  const parts = auth.split(' ');
+  if (parts.length === 2 && parts[0] === 'Bearer') {
+    const token = parts[1];
+    // For now accept 'mock-jwt-token' and map to address in header X-User-Address if provided
+    if (token === 'mock-jwt-token') {
+      req.user = { address: req.get('X-User-Address') || null };
+    }
+  }
   next();
 });
 
@@ -249,6 +305,168 @@ app.post('/api/posts', (req, res) => {
     data: newPost
   });
 });
+
+// --- Chat API stubs (development) ---
+// Get user's conversations (persistent)
+app.get('/api/chat/conversations', async (req, res) => {
+  try {
+    const userAddress = req.user?.address || req.get('X-User-Address');
+    if (!userAddress) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    const { rows } = await pool.query(
+      `SELECT id, type, participants, last_message_id, last_activity, unread_counts, metadata, created_at
+       FROM conversations
+       WHERE $1 = ANY(participants)
+       ORDER BY last_activity DESC
+       LIMIT 100`,
+      [userAddress]
+    );
+
+    // Load last messages for each conversation
+    const convs = await Promise.all(rows.map(async (r) => {
+      let lastMessage = null;
+      if (r.last_message_id) {
+        const msgRes = await pool.query('SELECT * FROM messages WHERE id = $1', [r.last_message_id]);
+        if (msgRes.rows[0]) {
+          const m = msgRes.rows[0];
+          lastMessage = {
+            id: m.id,
+            conversationId: m.conversation_id,
+            fromAddress: m.from_address,
+            toAddress: m.to_address,
+            content: m.content,
+            timestamp: m.created_at,
+            messageType: m.message_type,
+            isEncrypted: m.encrypted
+          };
+        }
+      }
+
+      return {
+        id: r.id,
+        type: r.type,
+        participants: r.participants,
+        lastMessage,
+        lastActivity: r.last_activity,
+        unreadCount: (r.unread_counts && r.unread_counts[userAddress]) || 0,
+        metadata: r.metadata,
+        createdAt: r.created_at
+      };
+    }));
+
+    res.json(convs);
+  } catch (err) {
+    console.error('Error fetching conversations', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get chat history for a conversation
+app.get('/api/chat/history/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit || '50'), 200);
+    const before = req.query.before;
+    const userAddress = req.user?.address || req.get('X-User-Address');
+    if (!userAddress) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    // Verify membership
+    const convRes = await pool.query('SELECT participants FROM conversations WHERE id = $1', [conversationId]);
+    if (convRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Conversation not found' });
+    const participants = convRes.rows[0].participants || [];
+    if (!participants.includes(userAddress)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
+    // Pagination: created_at < before or latest
+    const params = [conversationId, limit];
+    let query = 'SELECT * FROM messages WHERE conversation_id = $1';
+    if (before) {
+      query += ` AND created_at < $3`;
+      params.push(before);
+    }
+    query += ' ORDER BY created_at DESC LIMIT $2';
+
+    const messagesRes = await pool.query(query, params);
+
+    const messages = messagesRes.rows.map(m => ({
+      id: m.id,
+      conversationId: m.conversation_id,
+      fromAddress: m.from_address,
+      toAddress: m.to_address,
+      content: m.content,
+      timestamp: m.created_at,
+      messageType: m.message_type,
+      isEncrypted: m.encrypted,
+      metadata: m.metadata
+    }));
+
+    res.json({ messages, hasMore: messages.length === limit, nextCursor: messages.length ? messages[messages.length - 1].timestamp : null, prevCursor: null });
+  } catch (err) {
+    console.error('Error fetching chat history', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Send a message (store stub)
+app.post('/api/chat/messages', async (req, res) => {
+  try {
+    const { conversationId, fromAddress, toAddress, content, messageType, encrypted } = req.body;
+    const userAddress = req.user?.address || req.get('X-User-Address');
+    if (!userAddress) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!conversationId || !content) return res.status(400).json({ success: false, error: 'Missing required fields' });
+
+    // Ensure user is sender
+    if (fromAddress && fromAddress.toLowerCase() !== userAddress?.toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'fromAddress must match authenticated user' });
+    }
+
+    // Verify conversation exists and user is participant
+    const convRes = await pool.query('SELECT participants FROM conversations WHERE id = $1', [conversationId]);
+    if (convRes.rows.length === 0) return res.status(404).json({ success: false, error: 'Conversation not found' });
+    const participants = convRes.rows[0].participants || [];
+    if (!participants.includes(userAddress)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
+    const messageId = `msg_${Date.now()}`;
+    const now = new Date().toISOString();
+
+    await pool.query(
+      `INSERT INTO messages (id, conversation_id, from_address, to_address, content, encrypted, message_type, metadata, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [messageId, conversationId, userAddress, toAddress || null, content, !!encrypted, messageType || 'text', {}, now]
+    );
+
+    // Update conversation last message and last_activity
+    await pool.query('UPDATE conversations SET last_message_id = $1, last_activity = $2, updated_at = $2 WHERE id = $3', [messageId, now, conversationId]);
+
+    // Increment unread counts for other participants
+    const otherParticipants = participants.filter(p => p !== userAddress);
+    if (otherParticipants.length) {
+      const countsRes = await pool.query('SELECT unread_counts FROM conversations WHERE id = $1', [conversationId]);
+      const unread = countsRes.rows[0].unread_counts || {};
+      otherParticipants.forEach(p => {
+        unread[p] = (unread[p] || 0) + 1;
+      });
+      await pool.query('UPDATE conversations SET unread_counts = $1 WHERE id = $2', [unread, conversationId]);
+    }
+
+    const newMessage = {
+      id: messageId,
+      conversationId,
+      fromAddress: userAddress,
+      toAddress: toAddress || null,
+      content,
+      timestamp: now,
+      messageType: messageType || 'text',
+      isEncrypted: !!encrypted
+    };
+
+    // TODO: broadcast via websocket if available
+    res.status(201).json(newMessage);
+  } catch (err) {
+    console.error('Error saving message', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 
 // Communities routes
 app.get('/api/communities', (req, res) => {
@@ -510,6 +728,173 @@ app.get('/api/profiles/address/:address', (req, res) => {
   res.json({
     success: true,
     data: profile
+  });
+});
+
+// Chat History Routes
+app.get('/api/chat/conversations', (req, res) => {
+  // Mock conversations for now - replace with database query
+  const conversations = [
+    {
+      id: 'conv_1',
+      type: 'dm',
+      participants: ['0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1', req.headers.authorization?.split(' ')[1] || ''],
+      lastActivity: new Date(),
+      unreadCount: 2,
+      isArchived: false,
+      createdAt: new Date(Date.now() - 86400000)
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: conversations
+  });
+});
+
+app.get('/api/chat/history/:conversationId', (req, res) => {
+  const { conversationId } = req.params;
+  const { limit = 50, before, after } = req.query;
+  
+  // Mock messages - replace with database query
+  const messages = [
+    {
+      id: 'msg_1',
+      conversationId,
+      fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
+      content: 'Hello! How are you?',
+      timestamp: new Date(Date.now() - 3600000),
+      messageType: 'text',
+      isEncrypted: true,
+      reactions: []
+    },
+    {
+      id: 'msg_2',
+      conversationId,
+      fromAddress: req.headers.authorization?.split(' ')[1] || '',
+      content: 'Hi! I\'m doing well, thanks for asking.',
+      timestamp: new Date(Date.now() - 1800000),
+      messageType: 'text',
+      isEncrypted: true,
+      reactions: []
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: {
+      messages,
+      hasMore: false,
+      nextCursor: null,
+      prevCursor: null
+    }
+  });
+});
+
+app.post('/api/chat/messages', (req, res) => {
+  const { conversationId, toAddress, channelId, content, messageType = 'text', isEncrypted = true } = req.body;
+  
+  if (!conversationId || !content) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields: conversationId, content'
+    });
+  }
+  
+  const message = {
+    id: `msg_${Date.now()}`,
+    conversationId,
+    fromAddress: req.headers.authorization?.split(' ')[1] || '',
+    toAddress,
+    channelId,
+    content,
+    timestamp: new Date(),
+    messageType,
+    isEncrypted,
+    reactions: []
+  };
+  
+  res.status(201).json({
+    success: true,
+    data: message
+  });
+});
+
+app.post('/api/chat/conversations/dm', (req, res) => {
+  const { participantAddress } = req.body;
+  
+  if (!participantAddress) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing participantAddress'
+    });
+  }
+  
+  const conversation = {
+    id: `conv_${Date.now()}`,
+    type: 'dm',
+    participants: [req.headers.authorization?.split(' ')[1] || '', participantAddress],
+    lastActivity: new Date(),
+    unreadCount: 0,
+    isArchived: false,
+    createdAt: new Date()
+  };
+  
+  res.status(201).json({
+    success: true,
+    data: conversation
+  });
+});
+
+app.post('/api/chat/messages/read', (req, res) => {
+  const { conversationId, messageIds } = req.body;
+  
+  if (!conversationId || !messageIds) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing required fields'
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Messages marked as read'
+  });
+});
+
+app.post('/api/chat/messages/:messageId/reactions', (req, res) => {
+  const { messageId } = req.params;
+  const { emoji } = req.body;
+  
+  if (!emoji) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing emoji'
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Reaction added'
+  });
+});
+
+app.delete('/api/chat/messages/:messageId/reactions', (req, res) => {
+  const { messageId } = req.params;
+  const { emoji } = req.body;
+  
+  res.json({
+    success: true,
+    message: 'Reaction removed'
+  });
+});
+
+app.delete('/api/chat/messages/:messageId', (req, res) => {
+  const { messageId } = req.params;
+  
+  res.json({
+    success: true,
+    message: 'Message deleted'
   });
 });
 

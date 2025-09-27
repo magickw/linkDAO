@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
+import { useChatHistory } from '@/hooks/useChatHistory';
 
 interface SimpleMessage {
   id: string;
@@ -53,97 +54,63 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
   const [newConversationAddress, setNewConversationAddress] = useState('');
   const [showNewConversation, setShowNewConversation] = useState(false);
 
-  // Mock data for demonstration
+  const { conversations: hookConversations, loadMessages, sendMessage } = useChatHistory();
+
   useEffect(() => {
-    if (isConnected && address) {
-      // Initialize with some mock conversations
-      const mockConversations: SimpleConversation[] = [
-        {
-          id: 'conv1',
-          otherParticipant: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-          lastMessage: {
-            id: 'msg1',
-            fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-            toAddress: address,
-            content: 'Hey! Interested in your NFT collection 🎨',
-            timestamp: new Date(Date.now() - 300000),
-            isOwn: false
-          },
-          unreadCount: 1
-        },
-        {
-          id: 'conv2',
-          otherParticipant: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
-          lastMessage: {
-            id: 'msg2',
-            fromAddress: address,
-            toAddress: '0x8ba1f109551bD432803012645Hac136c30C6d8b1',
-            content: 'Thanks for the trade! 🤝',
-            timestamp: new Date(Date.now() - 3600000),
-            isOwn: true
-          },
-          unreadCount: 0
-        }
-      ];
-      setConversations(mockConversations);
-    }
-  }, [isConnected, address]);
+    if (!isConnected || !address) return;
 
-  // Load messages for selected conversation
+    // Map hook conversations to simple UI shape
+    if (hookConversations) {
+      const mapped = hookConversations.map(c => ({
+        id: c.id,
+        otherParticipant: Array.isArray(c.participants) ? c.participants.find(p => p !== address) || c.participants[0] : '',
+        lastMessage: c.lastMessage ? {
+          id: c.lastMessage.id,
+          fromAddress: c.lastMessage.fromAddress,
+          toAddress: c.lastMessage.toAddress || '',
+          content: c.lastMessage.content,
+          timestamp: new Date(c.lastMessage.timestamp),
+          isOwn: c.lastMessage.fromAddress === address
+        } : undefined,
+        unreadCount: c.unreadCount || 0
+      } as SimpleConversation));
+
+      setConversations(mapped);
+    }
+  }, [hookConversations, isConnected, address]);
+
+  // Load messages for selected conversation using the hook
   useEffect(() => {
-    if (selectedConversation) {
-      // Mock messages for the selected conversation
-      const mockMessages: SimpleMessage[] = [
-        {
-          id: 'msg1',
-          fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-          toAddress: address || '',
-          content: 'Hey! Interested in your NFT collection 🎨',
-          timestamp: new Date(Date.now() - 300000),
-          isOwn: false
-        },
-        {
-          id: 'msg2',
-          fromAddress: address || '',
-          toAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-          content: 'Hi! Which piece are you interested in?',
-          timestamp: new Date(Date.now() - 240000),
-          isOwn: true
-        },
-        {
-          id: 'msg3',
-          fromAddress: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1',
-          toAddress: address || '',
-          content: 'The CryptoPunk #1234. Would you consider 2.5 ETH?',
-          timestamp: new Date(Date.now() - 180000),
-          isOwn: false
-        }
-      ];
-      setMessages(mockMessages);
-    }
-  }, [selectedConversation, address]);
-
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation || !address) return;
-
-    const message: SimpleMessage = {
-      id: `msg_${Date.now()}`,
-      fromAddress: address,
-      toAddress: conversations.find(c => c.id === selectedConversation)?.otherParticipant || '',
-      content: newMessage.trim(),
-      timestamp: new Date(),
-      isOwn: true
+    const load = async () => {
+      if (!selectedConversation) return;
+      try {
+        await loadMessages({ conversationId: selectedConversation, limit: 50 });
+        // messages are provided via hook; the simple UI expects local messages so the page-level hook should be used in a real app
+      } catch (err) {
+        console.warn('Failed to load messages for conversation', selectedConversation, err);
+      }
     };
 
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
+    load();
+  }, [selectedConversation, loadMessages]);
 
-    // Update conversation's last message
-    setConversations(prev => prev.map(conv => 
-      conv.id === selectedConversation 
-        ? { ...conv, lastMessage: message }
-        : conv
-    ));
+  const sendSimpleMessage = async () => {
+    if (!newMessage.trim() || !selectedConversation || !address) return;
+
+    const payload = {
+      conversationId: selectedConversation,
+      fromAddress: address,
+      toAddress: conversations.find(c => c.id === selectedConversation)?.otherParticipant || undefined,
+      content: newMessage.trim(),
+      messageType: 'text'
+    };
+
+    try {
+      await sendMessage(payload as any);
+      setNewMessage('');
+    } catch (err) {
+      console.warn('Failed to send message', err);
+    }
   };
 
   const startNewConversation = () => {
@@ -399,7 +366,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
-                        sendMessage();
+                        sendSimpleMessage();
                       }
                     }}
                     placeholder="Type a message..."
@@ -410,7 +377,7 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
                 <Button 
                   variant="primary" 
                   size="small" 
-                  onClick={sendMessage}
+                  onClick={sendSimpleMessage}
                   disabled={!newMessage.trim()}
                   className="p-2"
                 >
