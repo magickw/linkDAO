@@ -386,7 +386,6 @@ export default function Web3SocialFeed() {
                     <Web3SocialPostCard 
                       key={post.id} 
                       post={post} 
-                      profile={authorProfile} 
                       onReaction={handleReaction}
                       onTip={handleTip}
                     />

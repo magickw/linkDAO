@@ -17,91 +17,15 @@ import Link from 'next/link';
 import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
-// Mock profile data - only used as fallback
-const mockProfiles: Record<string, any> = {
-  '0x1234567890123456789012345678901234567890': {
-    handle: 'alexj',
-    ens: 'alex.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 750,
-    reputationTier: 'Expert',
-    verified: true
-  },
-  '0x2345678901234567890123456789012345678901': {
-    handle: 'samc',
-    ens: 'sam.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 420,
-    reputationTier: 'Contributor',
-    verified: false
-  },
-  '0x3456789012345678901234567890123456789012': {
-    handle: 'taylorr',
-    ens: 'taylor.eth',
-    avatarCid: 'https://placehold.co/40',
-    reputationScore: 890,
-    reputationTier: 'Expert',
-    verified: true
-  },
-};
-
-// Mock posts data for the feed
-const mockPosts = [
-  {
-    id: '1',
-    author: '0x1234567890123456789012345678901234567890',
-    dao: 'ethereum-builders',
-    title: 'New Yield Farming Strategy on Arbitrum',
-    contentCid: 'Just deployed a new yield farming strategy on Arbitrum. Got 15% APY so far! What do you think about the risk profile?',
-    mediaCids: [],
-    tags: ['defi', 'yield', 'arbitrum'],
-    createdAt: new Date(Date.now() - 3600000),
-    onchainRef: '0x1234...5678',
-    reputationScore: 750,
-    commentCount: 24,
-    stakedValue: 120
-  },
-  {
-    id: '2',
-    author: '0x2345678901234567890123456789012345678901',
-    dao: 'nft-collectors',
-    title: 'My Latest NFT Collection Drop',
-    contentCid: 'Check out my latest NFT collection drop! Each piece represents a different DeFi protocol. Feedback welcome.',
-    mediaCids: ['https://placehold.co/300'],
-    tags: ['nft', 'art', 'defi'],
-    createdAt: new Date(Date.now() - 7200000),
-    onchainRef: '0x2345...6789',
-    reputationScore: 420,
-    commentCount: 18,
-    stakedValue: 85
-  },
-  {
-    id: '3',
-    author: '0x3456789012345678901234567890123456789012',
-    dao: 'dao-governance',
-    title: 'Proposal: Quadratic Voting Implementation',
-    contentCid: 'Proposal for implementing quadratic voting for smaller governance proposals to increase participation. Thoughts?',
-    mediaCids: [],
-    tags: ['governance', 'proposal', 'dao'],
-    createdAt: new Date(Date.now() - 10800000),
-    onchainRef: '0x3456...7890',
-    reputationScore: 890,
-    commentCount: 56,
-    stakedValue: 210
-  }
-];
-
 export default function Home() {
   const { address, isConnected, balance } = useWeb3();
   const { addToast } = useToast();
-  const { feed, isLoading: isFeedLoading } = useFeed(address);
+  const { feed: feedData, isLoading: isFeedLoading } = useFeed(address);
   const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { data: profile } = useProfile(address);
   const { navigationState } = useNavigation();
   
   const [mounted, setMounted] = useState(false);
-  const [profiles, setProfiles] = useState<Record<string, any>>(mockProfiles);
-  const [posts, setPosts] = useState(mockPosts);
   const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [isPostLoading, setIsPostLoading] = useState(false);
@@ -111,8 +35,8 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  // Use real feed data if available, otherwise fall back to mock data
-  const displayPosts = feed && feed.length > 0 ? feed : posts;
+  // Use real feed data - ensure it's always an array
+  const displayPosts = Array.isArray(feedData) ? feedData : [];
 
   // Handle post creation
   const handlePostSubmit = async (postData: CreatePostInput) => {
@@ -120,17 +44,7 @@ export default function Home() {
     try {
       const createdPost = await createPost({ ...postData, author: address || '' });
       
-      // Add to local posts state for immediate UI update
-      const newPost = {
-        ...createdPost,
-        title: postData.content.split('\n')[0] || 'New Post',
-        dao: 'general',
-        commentCount: 0,
-        stakedValue: 0,
-        reputationScore: (profile as any)?.reputationScore || 0
-      };
-      
-      setPosts(prev => [newPost, ...prev]);
+      // The feed will automatically update through the useFeed hook
       addToast('Post created successfully!', 'success');
     } catch (error) {
       console.error('Error creating post:', error);
@@ -383,8 +297,8 @@ export default function Home() {
               
               <div className="text-center">
                 <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="text-2xl font-bold text-white">4</span>
-                </div>
+                    <span className="text-2xl font-bold text-white">4</span>
+                  </div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Participate in DAO</h3>
                 <p className="text-gray-600 dark:text-gray-300">
                   Vote on proposals, earn rewards, and help shape the platform's future.
@@ -574,62 +488,12 @@ export default function Home() {
                       </div>
                     ) : (
                       displayPosts.map((post) => {
-                        const authorProfile = profiles[post.author] || { 
-                          handle: 'Unknown', 
-                          ens: '', 
-                          avatarCid: 'https://placehold.co/40' 
-                        };
-                        
-                        // Convert post to EnhancedPost format
-                        const enhancedPost = {
-                          id: post.id,
-                          title: (post as any).title || 'Untitled Post',
-                          content: post.contentCid,
-                          author: post.author,
-                          authorProfile: {
-                            handle: authorProfile.handle,
-                            verified: authorProfile.verified || false,
-                            reputationTier: authorProfile.reputationTier || 'Member',
-                            avatar: authorProfile.avatarCid
-                          },
-                          createdAt: post.createdAt,
-                          updatedAt: post.createdAt,
-                          contentType: 'text' as const,
-                          media: post.mediaCids || [],
-                          previews: [],
-                          hashtags: post.tags || [],
-                          mentions: [],
-                          reactions: [
-                            {
-                              type: 'hot' as const,
-                              emoji: '🔥',
-                              label: 'Hot',
-                              totalStaked: (post as any).stakedValue || 0,
-                              userStaked: 0,
-                              contributors: [],
-                              rewardsEarned: 0
-                            }
-                          ],
-                          tips: [],
-                          comments: (post as any).commentCount || 0,
-                          shares: 0,
-                          views: 0,
-                          engagementScore: authorProfile.reputationScore || 0,
-                          socialProof: {
-                            followedUsersWhoEngaged: [],
-                            totalEngagementFromFollowed: 0,
-                            communityLeadersWhoEngaged: [],
-                            verifiedUsersWhoEngaged: []
-                          },
-                          communityId: (post as any).dao || 'general',
-                          tags: post.tags || []
-                        };
-                        
+                        // For each post, we need to fetch the author's profile
+                        // This will be handled by the Web3SocialPostCard component or we can fetch it here
                         return (
                           <Web3SocialPostCard
                             key={post.id}
-                            post={enhancedPost}
-                            profile={authorProfile}
+                            post={post}
                             onReaction={async (postId, reactionType, amount) => {
                               console.log('Reaction:', postId, reactionType, amount);
                               addToast(`Reacted with ${reactionType}!`, 'success');

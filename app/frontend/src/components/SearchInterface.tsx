@@ -418,7 +418,6 @@ export default function SearchInterface({
                   <Web3SocialPostCard
                     key={post.id}
                     post={post}
-                    profile={{ handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/40' }}
                     onTip={async () => {}}
                     onExpand={() => handleResultClick('post', post.id)}
                     className="cursor-pointer hover:shadow-md transition-shadow"
