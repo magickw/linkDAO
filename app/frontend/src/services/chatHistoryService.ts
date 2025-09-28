@@ -12,6 +12,8 @@ class ChatHistoryService {
     '/api/messaging/conversations'
   ];
 
+  private conversationEndpointCacheKey = 'linkdao-conversations-endpoint';
+
   // Get chat history for a conversation
   async getChatHistory(request: ChatHistoryRequest): Promise<ChatHistoryResponse> {
     const params = new URLSearchParams({
@@ -65,6 +67,37 @@ class ChatHistoryService {
 
   // Get user conversations
   async getConversations(): Promise<Conversation[]> {
+    // Check cache first to avoid hammering the backend with repeated 404s
+    try {
+      const cached = localStorage.getItem(this.conversationEndpointCacheKey);
+      if (cached) {
+        if (cached === 'none') {
+          console.debug('[chatHistoryService] Conversations endpoint cached as none; skipping checks');
+          return [];
+        }
+        const cachedUrl = `${this.baseUrl}${cached}`;
+        try {
+          const response = await fetch(cachedUrl, {
+            headers: {
+              'Authorization': `Bearer ${this.getAuthToken()}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            console.debug('[chatHistoryService] Using cached conversations endpoint:', cachedUrl);
+            const data = await response.json();
+            return Array.isArray(data) ? data.map(this.transformConversation) : [];
+          }
+        } catch (err) {
+          console.warn('[chatHistoryService] Cached conversations endpoint failed, will try candidates', err);
+        }
+      }
+    } catch (err) {
+      // If localStorage access fails (e.g., SSR or restrictive env), fall through to candidate checks
+      console.warn('[chatHistoryService] localStorage unavailable for conversation endpoint cache', err);
+    }
+
     // Try a list of candidate endpoints in case the deployed backend uses a different route
     for (const path of this.conversationEndpointCandidates) {
       const url = `${this.baseUrl}${path}`;
@@ -87,10 +120,19 @@ class ChatHistoryService {
           throw new Error(`Failed to fetch conversations (${response.status} ${response.statusText}) from ${url} - ${text}`);
         }
 
-  const data = await response.json();
-  // Inform which endpoint succeeded to make debugging easier in production console
-  console.debug('[chatHistoryService] Conversations endpoint succeeded at:', url);
-  return Array.isArray(data) ? data.map(this.transformConversation) : [];
+        const data = await response.json();
+        // Inform which endpoint succeeded to make debugging easier in production console
+        console.debug('[chatHistoryService] Conversations endpoint succeeded at:', url);
+
+        // Cache the successful path (relative path) so subsequent loads don't attempt all candidates
+        try {
+          const relative = path;
+          localStorage.setItem(this.conversationEndpointCacheKey, relative);
+        } catch (err) {
+          /* ignore localStorage write errors */
+        }
+
+        return Array.isArray(data) ? data.map(this.transformConversation) : [];
       } catch (err) {
         // If it's the last candidate rethrow; otherwise continue
         if (path === this.conversationEndpointCandidates[this.conversationEndpointCandidates.length - 1]) {
@@ -101,7 +143,13 @@ class ChatHistoryService {
       }
     }
 
-    // If none of the endpoints returned data, return empty array rather than throwing a generic 404
+    // None of the candidate endpoints returned OK; cache 'none' to avoid repeated attempts
+    try {
+      localStorage.setItem(this.conversationEndpointCacheKey, 'none');
+    } catch (err) {
+      /* ignore */
+    }
+
     return [];
   }
 
