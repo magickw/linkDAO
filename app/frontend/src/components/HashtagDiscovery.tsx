@@ -229,11 +229,6 @@ export default function HashtagDiscovery({
                       <Web3SocialPostCard
                         key={post.id}
                         post={post}
-                        profile={{ 
-                          handle: post.author.slice(0, 6) + '...' + post.author.slice(-4), 
-                          ens: '', 
-                          avatarCid: 'https://placehold.co/40' 
-                        }}
                         onTip={async () => {}}
                         className="transition-all duration-300 hover:shadow-lg"
                       />
