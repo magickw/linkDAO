@@ -219,6 +219,60 @@ export default function BackendTest() {
     setIsRunning(false);
   };
 
+  // New: Run chat endpoint checks and auth debug
+  const runChatEndpointChecks = async () => {
+    const testName = 'Chat endpoints + auth debug';
+    addTest({ test: testName, status: 'pending', message: 'Running chat endpoint checks...' });
+
+    try {
+      const backend = backendUrl;
+      const candidates = [
+        '/api/chat/conversations',
+        '/api/conversations',
+        '/api/messages/conversations',
+        '/api/messaging/conversations'
+      ];
+
+      const results: any[] = [];
+
+      for (const path of candidates) {
+        const url = `${backend}${path}`;
+        try {
+          const resp = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+            }
+          });
+
+          const bodyText = await resp.text().catch(() => '');
+          results.push({ path, status: resp.status, ok: resp.ok, body: bodyText, url });
+
+          if (resp.ok) {
+            addTest({ test: testName, status: 'success', message: `Found conversations endpoint at ${url}`, details: results });
+            return;
+          }
+        } catch (err) {
+          results.push({ path, error: String(err), url });
+        }
+      }
+
+      // If we didn't find a successful endpoint, include auth token debug
+      const token = localStorage.getItem('linkdao-auth-token');
+      const tokenInfo = { present: !!token, length: token ? token.length : 0 };
+
+      addTest({
+        test: testName,
+        status: 'error',
+        message: 'No conversations endpoint returned OK. See details for results and auth token presence.',
+        details: { results, tokenInfo }
+      });
+    } catch (err: any) {
+      addTest({ test: testName, status: 'error', message: err.message || 'Chat endpoint check failed', details: err });
+    }
+  };
+
   const getStatusColor = (status: BackendTestResult['status']) => {
     switch (status) {
       case 'success': return 'text-green-600 bg-green-100';
@@ -354,6 +408,12 @@ export default function BackendTest() {
                   className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
                 >
                   Open Render Dashboard
+                </button>
+                <button
+                  onClick={runChatEndpointChecks}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                >
+                  Run Chat endpoints + auth debug
                 </button>
               </div>
             </div>

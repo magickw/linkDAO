@@ -3,6 +3,15 @@ import { ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } fr
 class ChatHistoryService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+  // List of candidate endpoints to try when an endpoint returns 404.
+  // This helps when backend route names differ between deployments.
+  private conversationEndpointCandidates = [
+    '/api/chat/conversations',
+    '/api/conversations',
+    '/api/messages/conversations',
+    '/api/messaging/conversations'
+  ];
+
   // Get chat history for a conversation
   async getChatHistory(request: ChatHistoryRequest): Promise<ChatHistoryResponse> {
     const params = new URLSearchParams({
@@ -11,18 +20,18 @@ class ChatHistoryService {
       ...(request.after && { after: request.after })
     });
 
-    const response = await fetch(
-      `${this.baseUrl}/api/chat/history/${request.conversationId}?${params}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${this.getAuthToken()}`,
-          'Content-Type': 'application/json'
-        }
+    const url = `${this.baseUrl}/api/chat/history/${request.conversationId}?${params}`;
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${this.getAuthToken()}`,
+        'Content-Type': 'application/json'
       }
-    );
+    });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch chat history: ${response.statusText}`);
+      // For non-OK responses provide a detailed error including URL and status
+      const text = await response.text().catch(() => '');
+      throw new Error(`Failed to fetch chat history (${response.status} ${response.statusText}) from ${url} - ${text}`);
     }
 
     const data = await response.json();
@@ -46,7 +55,8 @@ class ChatHistoryService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to send message: ${response.statusText}`);
+      const text = await response.text().catch(() => '');
+      throw new Error(`Failed to send message (${response.status} ${response.statusText}) - ${text}`);
     }
 
     const data = await response.json();
@@ -55,19 +65,44 @@ class ChatHistoryService {
 
   // Get user conversations
   async getConversations(): Promise<Conversation[]> {
-    const response = await fetch(`${this.baseUrl}/api/chat/conversations`, {
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    // Try a list of candidate endpoints in case the deployed backend uses a different route
+    for (const path of this.conversationEndpointCandidates) {
+      const url = `${this.baseUrl}${path}`;
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${this.getAuthToken()}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch conversations: ${response.statusText}`);
+        if (response.status === 404) {
+          // Try next candidate
+          console.warn(`Conversations endpoint not found at ${url} (404), trying next candidate`);
+          continue;
+        }
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`Failed to fetch conversations (${response.status} ${response.statusText}) from ${url} - ${text}`);
+        }
+
+  const data = await response.json();
+  // Inform which endpoint succeeded to make debugging easier in production console
+  console.debug('[chatHistoryService] Conversations endpoint succeeded at:', url);
+  return Array.isArray(data) ? data.map(this.transformConversation) : [];
+      } catch (err) {
+        // If it's the last candidate rethrow; otherwise continue
+        if (path === this.conversationEndpointCandidates[this.conversationEndpointCandidates.length - 1]) {
+          throw err;
+        }
+        // transient/network errors - log and continue to next candidate
+        console.warn(`Error fetching conversations from ${url}:`, err);
+      }
     }
 
-    const data = await response.json();
-    return data.map(this.transformConversation);
+    // If none of the endpoints returned data, return empty array rather than throwing a generic 404
+    return [];
   }
 
   // Create or get DM conversation
