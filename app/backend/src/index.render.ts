@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import compression from 'compression';
+import compatChatRoutes from './routes/compatibilityChat';
 
 // Load environment variables
 dotenv.config();
@@ -182,6 +183,9 @@ app.get('/api/marketplace/listings/:id', (req, res) => {
     }
   });
 });
+
+// Mount compatibility chat routes BEFORE the catch-all so these endpoints resolve
+app.use(compatChatRoutes);
 
 // User authentication endpoints (simplified)
 app.post('/api/auth/login', (req, res) => {
