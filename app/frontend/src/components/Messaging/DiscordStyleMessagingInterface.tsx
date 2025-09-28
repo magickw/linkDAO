@@ -120,8 +120,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       id: 'general',
       name: 'general',
       isPrivate: false,
-      memberCount: 1242,
-      unreadCount: 3,
+      memberCount: 0,
+      unreadCount: 0,
       isPinned: true,
       topic: 'Welcome to LinkDAO! Discuss anything Web3 related here.',
       category: 'public',
@@ -131,7 +131,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       id: 'trading',
       name: 'trading',
       isPrivate: false,
-      memberCount: 856,
+      memberCount: 0,
       unreadCount: 0,
       topic: 'Share your trading insights and strategies',
       category: 'public',
@@ -141,8 +141,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       id: 'nfts',
       name: 'nfts',
       isPrivate: false,
-      memberCount: 2103,
-      unreadCount: 12,
+      memberCount: 0,
+      unreadCount: 0,
       topic: 'Discuss the latest NFT projects and drops',
       category: 'public',
       icon: '🎨'
@@ -151,8 +151,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       id: 'governance',
       name: 'governance',
       isPrivate: false,
-      memberCount: 432,
-      unreadCount: 5,
+      memberCount: 0,
+      unreadCount: 0,
       topic: 'DAO proposals and voting discussions',
       category: 'public',
       icon: '🏛️'
@@ -161,7 +161,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       id: 'private-trading',
       name: 'private-trading',
       isPrivate: true,
-      memberCount: 12,
+      memberCount: 0,
       unreadCount: 0,
       topic: 'Private trading discussions',
       category: 'private'
@@ -173,8 +173,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       isGated: true,
       gateType: 'nft',
       gateRequirement: 'LinkDAO Genesis NFT',
-      memberCount: 892,
-      unreadCount: 2,
+      memberCount: 0,
+      unreadCount: 0,
       topic: 'Exclusive discussions for NFT holders',
       category: 'gated',
       icon: '🏆'
@@ -190,9 +190,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   const [messages, setMessages] = useState<ChannelMessage[]>([]);
   
   const [newMessage, setNewMessage] = useState('');
-  const [conversations, setConversations] = useState([
-    { id: 'conv1', name: '0x742...d8b1', unreadCount: 1 }
-  ]);
+  const [conversations, setConversations] = useState([]);
   
   // Add state for channel categories
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
@@ -201,31 +199,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
     { id: 'private', name: 'Private Channels', isCollapsed: false },
     { id: 'gated', name: 'Gated Channels', isCollapsed: false }
   ]);
-  const [channelMembers] = useState<ChannelMember[]>([
-    { 
-      address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b1', 
-      name: 'vitalik.eth', 
-      status: 'online',
-      role: 'admin',
-      ensName: 'vitalik.eth',
-      balance: { eth: 124.5, ld: 50000 }
-    },
-    { 
-      address: '0x8ba1f109551bD432803012645Hac136c30C6d8b1', 
-      name: 'alice.eth', 
-      status: 'idle',
-      role: 'moderator',
-      ensName: 'alice.eth',
-      balance: { eth: 42.1, ld: 12500 }
-    },
-    { 
-      address: address || '', 
-      name: 'you', 
-      status: 'online',
-      role: 'holder',
-      balance: { eth: 5.2, ld: 2500 }
-    }
-  ]);
+  const [channelMembers] = useState<ChannelMember[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
