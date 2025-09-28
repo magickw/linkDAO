@@ -196,21 +196,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 Navigation
               </div>
 
-              {/* Home - Now serves as the main Feed/Dashboard */}
-              <Link
-                href="/"
-                className={`w-full flex items-center px-3 py-3 md:py-2 text-sm font-medium rounded-lg transition-colors touch-target ${
-                  navigationState.activeView === 'feed'
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                }`}
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                Home
-              </Link>
-
               {/* Search */}
               <Link
                 href="/search"
@@ -291,19 +276,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           ) : (
             /* Collapsed Navigation */
             <div className="space-y-2">
-              <Link
-                href="/"
-                className={`w-full p-2 rounded-lg transition-colors ${
-                  navigationState.activeView === 'feed'
-                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                }`}
-                title="Home"
-              >
-                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              </Link>
 
               <Link
                 href="/dao"
