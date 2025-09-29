@@ -75,7 +75,7 @@ const MarketplaceContent: React.FC = () => {
       clearTimeout(timer);
       mounted = false;
     };
-  }, [address, debouncedSearchTerm]);
+  }, [address, debouncedSearchTerm]); // Remove fetchListings and fetchReputation from dependencies
 
   const fetchListings = useCallback(async () => {
     try {
@@ -406,7 +406,7 @@ const MarketplaceContent: React.FC = () => {
         daoApproved: true
       });
     }
-  }, [reputation]);
+  }, []); // Remove reputation dependency to prevent infinite loop
 
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -603,18 +603,7 @@ const MarketplaceContent: React.FC = () => {
           <div className="flex justify-center mb-8">
             <div className="flex space-x-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
               <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    console.log('Browse tab clicked');
-                    setActiveTab('browse');
-                    setShowCart(false);
-                    setShowCheckout(false);
-                  } catch (error) {
-                    console.error('Browse tab error:', error);
-                  }
-                }}
+                onClick={() => { setActiveTab('browse'); setShowCart(false); setShowCheckout(false); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
                   activeTab === 'browse' && !showCart && !showCheckout
                     ? 'bg-white text-gray-900'
@@ -625,18 +614,7 @@ const MarketplaceContent: React.FC = () => {
               </button>
 
               <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    console.log('Cart tab clicked');
-                    setShowCart(true);
-                    setShowCheckout(false);
-                    setActiveTab('browse');
-                  } catch (error) {
-                    console.error('Cart tab error:', error);
-                  }
-                }}
+                onClick={() => { setShowCart(true); setShowCheckout(false); setActiveTab('browse'); }}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
                   showCart && !showCheckout
                     ? 'bg-white text-gray-900'
@@ -916,21 +894,13 @@ const MarketplaceContent: React.FC = () => {
                                 <Button
                                   variant="primary"
                                   className="w-full"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    try {
-                                      console.log('Bid button clicked');
-                                      if (!isConnected) {
-                                        addToast('Please connect your wallet first', 'warning');
-                                        return;
-                                      }
-                                      setSelectedListing(listing);
-                                      setShowBidModal(true);
-                                    } catch (error) {
-                                      console.error('Bid button error:', error);
-                                      addToast('An error occurred. Please try again.', 'error');
+                                  onClick={() => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
                                     }
+                                    setSelectedListing(listing);
+                                    setShowBidModal(true);
                                   }}
                                 >
                                   🔨 Bid Now
@@ -955,57 +925,49 @@ const MarketplaceContent: React.FC = () => {
                                 <Button
                                   variant="primary"
                                   className="w-full"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    try {
-                                      console.log('Add to cart clicked');
-                                      if (!isConnected) {
-                                        addToast('Please connect your wallet first', 'warning');
-                                        return;
-                                      }
-                                      // Enhanced cart product with all required fields
-                                      const cartProduct = {
-                                        id: listing.id,
-                                        title: listing.metadataURI || 'Unnamed Item',
-                                        description: listing.metadataURI || '',
-                                        image: formatImageUrl(listing.metadataURI, 400, 300) || '',
-                                        price: {
-                                          crypto: listing.price,
-                                          cryptoSymbol: 'ETH',
-                                          fiat: (parseFloat(listing.price) * 2400).toFixed(2),
-                                          fiatSymbol: 'USD'
-                                        },
-                                        seller: {
-                                          id: listing.sellerWalletAddress,
-                                          name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
-                                          avatar: '',
-                                          verified: true,
-                                          daoApproved: true,
-                                          escrowSupported: true
-                                        },
-                                        category: listing.itemType.toLowerCase(),
-                                        isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                        isNFT: listing.itemType === 'NFT',
-                                        inventory: listing.quantity,
-                                        shipping: {
-                                          cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
-                                          freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                          estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
-                                          regions: ['US', 'CA', 'EU']
-                                        },
-                                        trust: {
-                                          escrowProtected: true,
-                                          onChainCertified: true,
-                                          safetyScore: 95
-                                        }
-                                      };
-                                      cart.addItem(cartProduct);
-                                      addToast('Added to cart! 🛒', 'success');
-                                    } catch (error) {
-                                      console.error('Add to cart error:', error);
-                                      addToast('Failed to add item to cart. Please try again.', 'error');
+                                  onClick={() => {
+                                    if (!isConnected) {
+                                      addToast('Please connect your wallet first', 'warning');
+                                      return;
                                     }
+                                    // Enhanced cart product with all required fields
+                                    const cartProduct = {
+                                      id: listing.id,
+                                      title: listing.metadataURI || 'Unnamed Item',
+                                      description: listing.metadataURI || '',
+                                      image: formatImageUrl(listing.metadataURI, 400, 300) || '',
+                                      price: {
+                                        crypto: listing.price,
+                                        cryptoSymbol: 'ETH',
+                                        fiat: (parseFloat(listing.price) * 2400).toFixed(2),
+                                        fiatSymbol: 'USD'
+                                      },
+                                      seller: {
+                                        id: listing.sellerWalletAddress,
+                                        name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
+                                        avatar: '',
+                                        verified: true,
+                                        daoApproved: true,
+                                        escrowSupported: true
+                                      },
+                                      category: listing.itemType.toLowerCase(),
+                                      isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                      isNFT: listing.itemType === 'NFT',
+                                      inventory: listing.quantity,
+                                      shipping: {
+                                        cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
+                                        freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                        estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
+                                        regions: ['US', 'CA', 'EU']
+                                      },
+                                      trust: {
+                                        escrowProtected: true,
+                                        onChainCertified: true,
+                                        safetyScore: 95
+                                      }
+                                    };
+                                    cart.addItem(cartProduct);
+                                    addToast('Added to cart! 🛒', 'success');
                                   }}
                                 >
                                   🛒 Add to Cart
@@ -1014,34 +976,14 @@ const MarketplaceContent: React.FC = () => {
                                   <Button
                                     variant="outline"
                                     className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      try {
-                                        console.log('View details clicked for listing:', listing.id);
-                                        router.push(`/marketplace/listing/${listing.id}`);
-                                      } catch (error) {
-                                        console.error('View details error:', error);
-                                        addToast('Failed to open details. Please try again.', 'error');
-                                      }
-                                    }}
+                                    onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
                                   >
                                     Details
                                   </Button>
                                   <Button
                                     variant="outline"
                                     className="w-full border-blue-400/50 text-blue-300 hover:bg-blue-500/20 text-xs"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      try {
-                                        console.log('Visit store clicked for seller:', listing.sellerWalletAddress);
-                                        router.push(`/seller/${listing.sellerWalletAddress}`);
-                                      } catch (error) {
-                                        console.error('Visit store error:', error);
-                                        addToast('Failed to open store. Please try again.', 'error');
-                                      }
-                                    }}
+                                    onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
                                   >
                                     🏪 Store
                                   </Button>

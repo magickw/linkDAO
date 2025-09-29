@@ -16,34 +16,58 @@ async function main() {
     console.log('Connected to DB. Running queries...');
 
     // Try several table name variants to be robust across schema versions
-    const tablesToCheck = ['conversations', 'chat_messages', 'messages'];
+    const tablesToCheck = ['conversations', 'chat_messages', 'messages', 'conversation_messages'];
 
     for (const table of tablesToCheck) {
       try {
-        const rows = await sql`SELECT * FROM ${sql(String(table))} ORDER BY created_at DESC LIMIT 50`;
-        console.log(`\n=== ${table} (${rows.length} rows) ===`);
-        console.log(JSON.stringify(rows, null, 2));
+        // Use unsafe with a quoted identifier so we can handle dynamic table names
+        const count = await sql.unsafe(`SELECT count(*)::int AS cnt FROM public."${table}"`);
+        const cnt = count && count[0] ? count[0].cnt : 0;
+        console.log(`\n=== ${table} (${cnt} rows) ===`);
+
+        if (cnt > 0) {
+          // Try ordering by common timestamp columns if present, otherwise just limit
+          let sampleRows: any[] = [];
+          try {
+            sampleRows = await sql.unsafe(`SELECT * FROM public."${table}" ORDER BY created_at DESC NULLS LAST LIMIT 50`);
+          } catch (e) {
+            try {
+              sampleRows = await sql.unsafe(`SELECT * FROM public."${table}" ORDER BY timestamp DESC NULLS LAST LIMIT 50`);
+            } catch (e2) {
+              sampleRows = await sql.unsafe(`SELECT * FROM public."${table}" LIMIT 50`);
+            }
+          }
+          console.log(JSON.stringify(sampleRows, null, 2));
+        }
       } catch (err: any) {
         // Table might not exist; show a friendly message
-        if (err && /does not exist/.test(String(err))) {
+        const msg = String(err || '');
+        if (/does not exist/.test(msg) || /relation ".+" does not exist/.test(msg)) {
           console.log(`\n=== ${table} - table not found (skipping) ===`);
         } else {
-          console.log(`\n=== ${table} - query error: ${String(err)} ===`);
+          console.log(`\n=== ${table} - query error: ${msg} ===`);
         }
       }
     }
 
-    // Also show a join of conversation -> last message if both exist
+    // Also attempt a basic join if both conversations and chat_messages exist
     try {
-      const joined = await sql`
-        SELECT c.id AS conversation_id, c.participants, c.last_message_id, m.id AS message_id, m.content, m.created_at AS message_created_at
-        FROM conversations c
-        LEFT JOIN chat_messages m ON m.conversation_id = c.id
-        ORDER BY c.created_at DESC
-        LIMIT 50
-      `;
-      console.log('\n=== conversation -> chat_messages join (up to 50 rows) ===');
-      console.log(JSON.stringify(joined, null, 2));
+      const hasConv = (await sql.unsafe("SELECT to_regclass('public.conversations') IS NOT NULL AS exists"))[0].exists;
+      const hasChat = (await sql.unsafe("SELECT to_regclass('public.chat_messages') IS NOT NULL AS exists"))[0].exists;
+      if (hasConv && hasChat) {
+        // left join and select a few fields
+        const joined = await sql.unsafe(
+          `SELECT c.id AS conversation_id, c.participants, c.unread_count, m.id AS message_id, m.content, m.timestamp AS message_timestamp
+           FROM public.conversations c
+           LEFT JOIN public.chat_messages m ON CAST(m.conversation_id AS text) = CAST(c.id AS text)
+           ORDER BY c.created_at DESC NULLS LAST
+           LIMIT 50`
+        );
+        console.log('\n=== conversation -> chat_messages join (up to 50 rows) ===');
+        console.log(JSON.stringify(joined, null, 2));
+      } else {
+        console.log('\n=== conversation/chat_messages join skipped (one or both tables missing) ===');
+      }
     } catch (err: any) {
       console.log('\n=== join query failed (maybe tables not present or different names) ===');
     }
