@@ -1,5 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { requireJwt } from '../middleware/authJwt';
+// Import Drizzle DB and table bindings for typed queries
+import { db } from '../db';
+import { conversations, chatMessages } from '../db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 // Minimal in-memory compatibility router for chat endpoints.
 // Purpose: stop frontend 404s and provide JWT-protected stubs until DB-backed
@@ -27,25 +31,21 @@ type Message = {
 const router = Router();
 
 // Simple in-memory stores
-const conversations: Record<string, Conversation> = {};
+const inMemoryConversations: Record<string, Conversation> = {};
 const messages: Record<string, Message[]> = {};
 
 // Optional runtime PostgreSQL client (useful when DATABASE_URL is set).
 // We use dynamic require to avoid importing the Drizzle schema at compile time
 // so TypeScript doesn't try to type-check the large schema file while we
 // incrementally migrate to DB-backed implementations.
-let sqlClient: any | null = null;
+// Use Drizzle db when available. db will attempt to connect based on DATABASE_URL.
+// If db is not usable at runtime, we'll fallback to in-memory stores.
+let hasDb = true;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const postgres = require('postgres');
-  const conn = process.env.DATABASE_URL || undefined;
-  if (conn) {
-    sqlClient = postgres(conn, { prepare: false });
-    console.debug('[compatibilityChat] postgres client initialized');
-  }
+  // sanity-check that db has a run/select method
+  if (!db) hasDb = false;
 } catch (err) {
-  // If postgres is not installed or connection not available, we'll stay in-memory.
-  sqlClient = null;
+  hasDb = false;
 }
 
 // Helpers
@@ -59,27 +59,36 @@ router.get('/api/health', (_req: Request, res: Response) => {
 
 // List conversations (protected)
 router.get('/api/chat/conversations', requireJwt, (_req: Request, res: Response) => {
-  if (sqlClient) {
+  if (hasDb) {
     (async () => {
       try {
-        const rows = await sqlClient`SELECT id, title, participants, last_message_id, last_activity, unread_count, created_at FROM conversations ORDER BY last_activity DESC NULLS LAST`;
+        const rows = await db.select({
+          id: conversations.id,
+          title: conversations.title,
+          participants: conversations.participants,
+          lastMessageId: conversations.lastMessageId,
+          lastActivity: conversations.lastActivity,
+          unreadCount: conversations.unreadCount,
+          createdAt: conversations.createdAt,
+  }).from(conversations).orderBy(desc(conversations.lastActivity));
+
         return res.json({ conversations: rows });
       } catch (err) {
         console.error('[compatibilityChat] DB error fetching conversations', err);
-        const list = Object.values(conversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+        const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
         return res.json({ conversations: list });
       }
     })();
     return;
   }
 
-  const list = Object.values(conversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+  const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
   res.json({ conversations: list });
 });
 
 // Also support /api/conversations as an alternate path
 router.get('/api/conversations', requireJwt, (_req: Request, res: Response) => {
-  const list = Object.values(conversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
+  const list = Object.values(inMemoryConversations).sort((a, b) => (b.last_activity || b.created_at).localeCompare(a.last_activity || a.created_at));
   res.json({ conversations: list });
 });
 
@@ -90,14 +99,22 @@ router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Respon
     return res.status(400).json({ error: 'participants (string[]) required' });
   }
 
-  if (sqlClient) {
+  if (hasDb) {
     (async () => {
       try {
-        const participantsJson = JSON.stringify(participants);
-        const [created] = await sqlClient`INSERT INTO conversations (title, participants, last_activity, unread_count, created_at) VALUES (${null}, ${participantsJson}, NOW(), 0, NOW()) RETURNING id, title, participants, last_message_id, last_activity, unread_count, created_at`;
-        // ensure messages array exists in-memory for compatibility tooling
-        messages[created.id] = [];
-        return res.status(201).json({ conversation: created });
+        const inserted = await db.insert(conversations).values({
+          title: null,
+          participants: participants,
+          lastMessageId: null,
+          lastActivity: new Date(),
+          unreadCount: 0,
+          createdAt: new Date(),
+        }).returning();
+
+  const created = inserted[0];
+  // ensure messages array exists in-memory for compatibility tooling
+  messages[String(created.id)] = [];
+  return res.status(201).json({ conversation: created });
       } catch (err) {
         console.error('[compatibilityChat] DB error creating conversation', err);
         // fallback to in-memory
@@ -110,7 +127,7 @@ router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Respon
           unread_count: 0,
           created_at: nowIso(),
         };
-        conversations[id] = conv;
+        inMemoryConversations[id] = conv;
         messages[id] = [];
         return res.status(201).json({ conversation: conv });
       }
@@ -128,7 +145,7 @@ router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Respon
     created_at: nowIso(),
   };
 
-  conversations[id] = conv;
+  inMemoryConversations[id] = conv;
   messages[id] = [];
 
   res.status(201).json({ conversation: conv });
@@ -137,48 +154,78 @@ router.post('/api/chat/conversations/dm', requireJwt, (req: Request, res: Respon
 // Get chat history for a conversation
 router.get('/api/chat/history/:conversationId', requireJwt, (req: Request, res: Response) => {
   const { conversationId } = req.params;
-  if (!conversationId || !conversations[conversationId]) {
-    return res.status(404).json({ error: 'conversation not found' });
-  }
-
-  if (sqlClient) {
+  if (hasDb) {
     (async () => {
       try {
-        const msgs = await sqlClient`SELECT id, conversation_id, sender_address, content, timestamp, edited_at, deleted_at FROM chat_messages WHERE conversation_id = ${conversationId} ORDER BY timestamp DESC LIMIT 500`;
-        const [convRow] = await sqlClient`SELECT id, title, participants, last_message_id, last_activity, unread_count, created_at FROM conversations WHERE id = ${conversationId} LIMIT 1`;
-        return res.json({ conversation: convRow || conversations[conversationId], messages: msgs });
+        const msgs = await db.select({
+          id: chatMessages.id,
+          conversationId: chatMessages.conversationId,
+          senderAddress: chatMessages.senderAddress,
+          content: chatMessages.content,
+          sentAt: chatMessages.sentAt,
+          editedAt: chatMessages.editedAt,
+          deletedAt: chatMessages.deletedAt,
+        }).from(chatMessages).where(eq(chatMessages.conversationId, conversationId)).orderBy(desc(chatMessages.sentAt)).limit(500);
+
+        const convRows = await db.select().from(conversations).where(eq(conversations.id, conversationId)).limit(1);
+        const convRow = convRows[0];
+        return res.json({ conversation: convRow || inMemoryConversations[conversationId], messages: msgs });
       } catch (err) {
         console.error('[compatibilityChat] DB error fetching history', err);
         const msgs = messages[conversationId] || [];
-        return res.json({ conversation: conversations[conversationId], messages: msgs });
+        return res.json({ conversation: inMemoryConversations[conversationId], messages: msgs });
       }
     })();
     return;
   }
 
   const msgs = messages[conversationId] || [];
-  res.json({ conversation: conversations[conversationId], messages: msgs });
+  res.json({ conversation: inMemoryConversations[conversationId], messages: msgs });
 });
 
 // Post a message
 router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
   const { conversation_id, sender_address, content } = req.body || {};
-  if (!conversation_id || !conversations[conversation_id]) {
+  if (!conversation_id || !inMemoryConversations[conversation_id]) {
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
   if (!sender_address || !content) {
     return res.status(400).json({ error: 'sender_address and content required' });
   }
 
-  if (sqlClient) {
+  if (hasDb) {
     (async () => {
       try {
-        const [created] = await sqlClient`INSERT INTO chat_messages (conversation_id, sender_address, content, timestamp) VALUES (${conversation_id}, ${sender_address}, ${content}, NOW()) RETURNING id, conversation_id, sender_address, content, timestamp, edited_at, deleted_at`;
-        // update conversations metadata
-        await sqlClient`UPDATE conversations SET last_message_id = ${created.id}, last_activity = NOW(), unread_count = COALESCE(unread_count,0) + 1 WHERE id = ${conversation_id}`;
-        // mirror into in-memory for compatibility
+        const inserted = await db.insert(chatMessages).values({
+          conversationId: conversation_id,
+          senderAddress: sender_address,
+          content,
+          sentAt: new Date(),
+        }).returning();
+
+        const created = inserted[0];
+
+        // read current unreadCount then update conversation
+        const convRows = await db.select({ unreadCount: conversations.unreadCount }).from(conversations).where(eq(conversations.id, conversation_id)).limit(1);
+        const currentUnread = convRows[0]?.unreadCount ?? 0;
+
+        await db.update(conversations).set({
+          lastMessageId: created.id,
+          lastActivity: new Date(),
+          unreadCount: Number(currentUnread) + 1,
+        }).where(eq(conversations.id, conversation_id));
+
+        // mirror into in-memory for compatibility (map DB row shape to Message)
         messages[conversation_id] = messages[conversation_id] || [];
-        messages[conversation_id].push(created);
+        messages[conversation_id].push({
+          id: String(created.id),
+          conversation_id: String(created.conversationId ?? conversation_id),
+          sender_address: String(created.senderAddress ?? ''),
+          content: String(created.content ?? ''),
+          timestamp: (created.sentAt instanceof Date ? created.sentAt.toISOString() : String(created.sentAt)),
+          edited_at: created.editedAt ? String(created.editedAt) : null,
+          deleted_at: created.deletedAt ? String(created.deletedAt) : null,
+        });
         return res.status(201).json({ message: created });
       } catch (err) {
         console.error('[compatibilityChat] DB error creating message', err);
@@ -191,7 +238,7 @@ router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
           timestamp: nowIso(),
         };
         messages[conversation_id].push(msg);
-        const conv = conversations[conversation_id];
+        const conv = inMemoryConversations[conversation_id];
         conv.last_message = content;
         conv.last_activity = msg.timestamp;
         conv.unread_count = (conv.unread_count || 0) + 1;
@@ -212,7 +259,7 @@ router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
   messages[conversation_id].push(msg);
 
   // update conversation metadata
-  const conv = conversations[conversation_id];
+  const conv = inMemoryConversations[conversation_id];
   conv.last_message = content;
   conv.last_activity = msg.timestamp;
   conv.unread_count = (conv.unread_count || 0) + 1;
@@ -223,27 +270,27 @@ router.post('/api/chat/messages', requireJwt, (req: Request, res: Response) => {
 // Mark messages as read for a conversation
 router.post('/api/chat/messages/read', requireJwt, (req: Request, res: Response) => {
   const { conversation_id } = req.body || {};
-  if (!conversation_id || !conversations[conversation_id]) {
+  if (!conversation_id) {
     return res.status(400).json({ error: 'valid conversation_id required' });
   }
 
-  if (sqlClient) {
+  if (hasDb) {
     (async () => {
       try {
-        await sqlClient`UPDATE conversations SET unread_count = 0 WHERE id = ${conversation_id}`;
+        await db.update(conversations).set({ unreadCount: 0 }).where(eq(conversations.id, conversation_id));
         // also update in-memory if present
-        if (conversations[conversation_id]) conversations[conversation_id].unread_count = 0;
+        if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
         return res.json({ ok: true });
       } catch (err) {
         console.error('[compatibilityChat] DB error marking read', err);
-        conversations[conversation_id].unread_count = 0;
+        if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
         return res.json({ ok: true });
       }
     })();
     return;
   }
 
-  conversations[conversation_id].unread_count = 0;
+  if (inMemoryConversations[conversation_id]) inMemoryConversations[conversation_id].unread_count = 0;
   res.json({ ok: true });
 });
 
