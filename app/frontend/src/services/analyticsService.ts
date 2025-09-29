@@ -243,7 +243,7 @@ class AnalyticsService {
   }
 
   /**
-   * Track user events for analytics
+   * Track user events for analytics with enhanced geolocation
    */
   async trackUserEvent(
     eventType: string,
@@ -264,6 +264,9 @@ class AnalyticsService {
       const userId = this.getCurrentUserId();
       const sessionId = this.getSessionId();
 
+      // Get accurate IP address and geolocation
+      const geoData = await this.getAccurateGeolocation();
+
       await requestManager.request(`${this.baseUrl}/track/event`, {
         method: 'POST',
         headers: {
@@ -280,6 +283,7 @@ class AnalyticsService {
             referrer: document.referrer,
             deviceType: this.getDeviceType(),
             browser: this.getBrowserName(),
+            ...geoData,
             ...metadata
           }
         })
@@ -392,6 +396,150 @@ class AnalyticsService {
     if (userAgent.includes('Edge')) return 'Edge';
     if (userAgent.includes('Opera')) return 'Opera';
     return 'Unknown';
+  }
+
+  /**
+   * Get accurate geolocation data using multiple methods
+   */
+  private async getAccurateGeolocation(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+    timezone?: string;
+    latitude?: number;
+    longitude?: number;
+  }> {
+    try {
+      // Try to get user's IP and location from a reliable service
+      const geoData = await this.getClientIPAndLocation();
+      return geoData;
+    } catch (error) {
+      console.warn('Failed to get accurate geolocation:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Get client IP and location using multiple geolocation services
+   */
+  private async getClientIPAndLocation(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+    timezone?: string;
+    latitude?: number;
+    longitude?: number;
+  }> {
+    const geoServices = [
+      () => this.getLocationFromIPAPI(),
+      () => this.getLocationFromIPify(),
+      () => this.getLocationFromCloudflare()
+    ];
+
+    for (const service of geoServices) {
+      try {
+        const result = await service();
+        if (result.ipAddress) {
+          return result;
+        }
+      } catch (error) {
+        console.warn('Geolocation service failed, trying next:', error);
+        continue;
+      }
+    }
+
+    // Fallback: try to get timezone at least
+    return {
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+  }
+
+  /**
+   * Get location from IP-API service
+   */
+  private async getLocationFromIPAPI(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+    timezone?: string;
+    latitude?: number;
+    longitude?: number;
+  }> {
+    const response = await fetch('http://ip-api.com/json/');
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      return {
+        ipAddress: data.query,
+        country: data.country,
+        city: data.city,
+        timezone: data.timezone,
+        latitude: data.lat,
+        longitude: data.lon
+      };
+    }
+
+    throw new Error('IP-API request failed');
+  }
+
+  /**
+   * Get location from IPify service
+   */
+  private async getLocationFromIPify(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+    timezone?: string;
+    latitude?: number;
+    longitude?: number;
+  }> {
+    // First get IP
+    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    const ipData = await ipResponse.json();
+
+    if (!ipData.ip) {
+      throw new Error('Failed to get IP from Ipify');
+    }
+
+    // Then get location (requires API key for detailed info)
+    const apiKey = process.env.NEXT_PUBLIC_IPINFO_API_KEY;
+    if (apiKey) {
+      const locationResponse = await fetch(`https://ipinfo.io/${ipData.ip}?token=${apiKey}`);
+      const locationData = await locationResponse.json();
+
+      const [lat, lon] = (locationData.loc || '').split(',');
+
+      return {
+        ipAddress: ipData.ip,
+        country: locationData.country,
+        city: locationData.city,
+        timezone: locationData.timezone,
+        latitude: lat ? parseFloat(lat) : undefined,
+        longitude: lon ? parseFloat(lon) : undefined
+      };
+    }
+
+    return { ipAddress: ipData.ip };
+  }
+
+  /**
+   * Get location from Cloudflare (if available)
+   */
+  private async getLocationFromCloudflare(): Promise<{
+    ipAddress?: string;
+    country?: string;
+    city?: string;
+  }> {
+    // Cloudflare provides geolocation headers when behind their service
+    // This would need to be implemented on the server side
+    const response = await fetch('/api/client-info');
+    const data = await response.json();
+
+    return {
+      ipAddress: data.ip,
+      country: data.country,
+      city: data.city
+    };
   }
 
   // Auto-tracking methods

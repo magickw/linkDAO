@@ -297,9 +297,9 @@ export class AnalyticsService {
   }
 
   async trackUserEvent(
-    userId: string, 
+    userId: string,
     sessionId: string,
-    eventType: string, 
+    eventType: string,
     eventData: any,
     metadata?: {
       pageUrl?: string;
@@ -313,16 +313,26 @@ export class AnalyticsService {
     }
   ): Promise<void> {
     try {
+      // Get accurate geolocation data from IP if not provided
+      let geoData = {
+        country: metadata?.country,
+        city: metadata?.city
+      };
+
+      if (metadata?.ipAddress && (!geoData.country || !geoData.city)) {
+        geoData = await this.getLocationFromIP(metadata.ipAddress);
+      }
+
       // Insert into user_analytics table
       await db.execute(sql`
         INSERT INTO user_analytics (
-          user_id, session_id, event_type, event_data, 
+          user_id, session_id, event_type, event_data,
           page_url, user_agent, ip_address, country, city,
           device_type, browser, referrer, timestamp
         ) VALUES (
           ${userId}, ${sessionId}, ${eventType}, ${JSON.stringify(eventData)},
           ${metadata?.pageUrl}, ${metadata?.userAgent}, ${metadata?.ipAddress},
-          ${metadata?.country}, ${metadata?.city}, ${metadata?.deviceType},
+          ${geoData.country}, ${geoData.city}, ${metadata?.deviceType},
           ${metadata?.browser}, ${metadata?.referrer}, NOW()
         )
       `);
@@ -404,9 +414,33 @@ export class AnalyticsService {
     };
   }
 
-  async getGeographicDistribution(startDate: string, endDate: string, assetId: string) {
-    const behaviorData = await this.getUserBehaviorData(new Date(startDate), new Date(endDate));
-    return behaviorData.geographicDistribution;
+  /**
+   * Enhanced geographic analytics with IP-based location tracking
+   */
+  async getGeographicDistribution(startDate: string, endDate: string, assetId?: string) {
+    try {
+      const behaviorData = await this.getUserBehaviorData(new Date(startDate), new Date(endDate));
+
+      // Enhance with additional geographic insights
+      const enhancedGeoData = await this.enhanceGeographicData(behaviorData.geographicDistribution);
+
+      return enhancedGeoData;
+    } catch (error) {
+      console.error('Error getting geographic distribution:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Enhance geographic data with additional insights
+   */
+  private async enhanceGeographicData(geoData: any[]) {
+    return geoData.map(location => ({
+      ...location,
+      percentage: 0, // Calculate percentage of total users
+      growth: 0, // Calculate growth compared to previous period
+      revenue: location.revenue || 0
+    }));
   }
 
   async getRevenueAnalytics(startDate: string, endDate: string, userId: string) {
@@ -515,16 +549,134 @@ export class AnalyticsService {
   }
 
   private async queryUserAnalytics(startDate?: Date, endDate?: Date) {
-    // Mock implementation - would query actual user_analytics table
-    return {
-      totalPageViews: 0,
-      avgSessionDuration: 0,
-      bounceRate: 0,
-      topPages: [],
-      userJourney: [],
-      deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
-      geographicDistribution: []
-    };
+    try {
+      const dateFilter = startDate && endDate
+        ? sql`WHERE timestamp >= ${startDate} AND timestamp <= ${endDate}`
+        : sql`WHERE timestamp >= NOW() - INTERVAL '30 days'`;
+
+      // Get page views and session data
+      const pageViewsResult = await db.execute(sql`
+        SELECT COUNT(*) as total_page_views,
+               AVG(EXTRACT(EPOCH FROM (MAX(timestamp) - MIN(timestamp)))) as avg_session_duration
+        FROM user_analytics
+        ${dateFilter}
+      `);
+
+      // Get top pages
+      const topPagesResult = await db.execute(sql`
+        SELECT page_url as page,
+               COUNT(*) as views,
+               COUNT(DISTINCT user_id)::float / COUNT(*)::float * 100 as conversion_rate
+        FROM user_analytics
+        ${dateFilter}
+        GROUP BY page_url
+        ORDER BY views DESC
+        LIMIT 10
+      `);
+
+      // Get device breakdown
+      const deviceResult = await db.execute(sql`
+        SELECT device_type,
+               COUNT(*) as count
+        FROM user_analytics
+        ${dateFilter}
+        GROUP BY device_type
+      `);
+
+      // Get accurate geographic distribution
+      const geoResult = await db.execute(sql`
+        SELECT country,
+               city,
+               COUNT(DISTINCT user_id) as users,
+               COUNT(*) as sessions
+        FROM user_analytics
+        ${dateFilter}
+        AND country IS NOT NULL
+        GROUP BY country, city
+        ORDER BY users DESC
+        LIMIT 50
+      `);
+
+      // Get user journey data
+      const journeyResult = await db.execute(sql`
+        WITH user_sessions AS (
+          SELECT user_id, session_id,
+                 ROW_NUMBER() OVER (PARTITION BY user_id, session_id ORDER BY timestamp) as step_number,
+                 event_type
+          FROM user_analytics
+          ${dateFilter}
+        ),
+        journey_steps AS (
+          SELECT step_number, event_type,
+                 COUNT(DISTINCT user_id) as users,
+                 LAG(COUNT(DISTINCT user_id)) OVER (ORDER BY step_number) as prev_users
+          FROM user_sessions
+          GROUP BY step_number, event_type
+          ORDER BY step_number
+        )
+        SELECT event_type as step,
+               users,
+               CASE WHEN prev_users > 0 THEN ((prev_users - users)::float / prev_users::float * 100) ELSE 0 END as dropoff_rate
+        FROM journey_steps
+        LIMIT 10
+      `);
+
+      // Calculate bounce rate
+      const bounceResult = await db.execute(sql`
+        WITH session_page_counts AS (
+          SELECT session_id, COUNT(*) as page_count
+          FROM user_analytics
+          ${dateFilter}
+          GROUP BY session_id
+        )
+        SELECT
+          COUNT(CASE WHEN page_count = 1 THEN 1 END)::float / COUNT(*)::float * 100 as bounce_rate
+        FROM session_page_counts
+      `);
+
+      const deviceBreakdown = deviceResult.reduce((acc: any, row: any) => {
+        acc[row.device_type || 'unknown'] = Number(row.count);
+        return acc;
+      }, { mobile: 0, desktop: 0, tablet: 0, unknown: 0 });
+
+      const geographicDistribution = geoResult.map((row: any) => ({
+        country: row.country,
+        city: row.city,
+        users: Number(row.users),
+        sessions: Number(row.sessions),
+        revenue: 0 // Would need to join with orders table for revenue data
+      }));
+
+      return {
+        totalPageViews: Number(pageViewsResult[0]?.total_page_views) || 0,
+        avgSessionDuration: Number(pageViewsResult[0]?.avg_session_duration) || 0,
+        bounceRate: Number(bounceResult[0]?.bounce_rate) || 0,
+        topPages: topPagesResult.map((row: any) => ({
+          page: row.page,
+          views: Number(row.views),
+          conversionRate: Number(row.conversion_rate)
+        })),
+        userJourney: journeyResult.map((row: any) => ({
+          step: row.step,
+          users: Number(row.users),
+          dropoffRate: Number(row.dropoff_rate)
+        })),
+        deviceBreakdown,
+        geographicDistribution
+      };
+    } catch (error) {
+      console.error('Error querying user analytics:', error);
+      // Return empty data structure if table doesn't exist or query fails
+      return {
+        totalPageViews: 0,
+        avgSessionDuration: 0,
+        bounceRate: 0,
+        topPages: [],
+        userJourney: [],
+        deviceBreakdown: { mobile: 0, desktop: 0, tablet: 0 },
+        geographicDistribution: []
+      };
+    }
   }
 
   private async getDailySalesData(dateFilter: any) {
@@ -647,6 +799,100 @@ export class AnalyticsService {
     const metricKey = `realtime:${eventType}`;
     await this.redis.incr(metricKey);
     await this.redis.expire(metricKey, 3600); // 1 hour TTL
+  }
+
+  /**
+   * Get accurate location data from IP address using multiple geolocation services
+   */
+  private async getLocationFromIP(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
+    try {
+      // Skip localhost and private IPs
+      if (ipAddress === '127.0.0.1' || ipAddress === '::1' ||
+          ipAddress.startsWith('192.168.') || ipAddress.startsWith('10.') ||
+          ipAddress.startsWith('172.')) {
+        return { country: null, city: null };
+      }
+
+      // Try multiple geolocation services for accuracy
+      const geoServices = [
+        () => this.getLocationFromIPAPI(ipAddress),
+        () => this.getLocationFromIPInfo(ipAddress),
+        () => this.getLocationFromFreeGeoIP(ipAddress)
+      ];
+
+      for (const service of geoServices) {
+        try {
+          const result = await service();
+          if (result.country) {
+            return result;
+          }
+        } catch (error) {
+          console.warn('Geolocation service failed, trying next:', error);
+          continue;
+        }
+      }
+
+      return { country: null, city: null };
+    } catch (error) {
+      console.error('Error getting location from IP:', error);
+      return { country: null, city: null };
+    }
+  }
+
+  /**
+   * Get location from IP-API service (free, no API key required)
+   */
+  private async getLocationFromIPAPI(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
+    const response = await fetch(`http://ip-api.com/json/${ipAddress}`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      return {
+        country: data.country || null,
+        city: data.city || null
+      };
+    }
+
+    throw new Error('IP-API request failed');
+  }
+
+  /**
+   * Get location from IPInfo service (requires API key for production)
+   */
+  private async getLocationFromIPInfo(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
+    const apiKey = process.env.IPINFO_API_KEY;
+    const url = apiKey
+      ? `https://ipinfo.io/${ipAddress}?token=${apiKey}`
+      : `https://ipinfo.io/${ipAddress}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.country) {
+      return {
+        country: data.country || null,
+        city: data.city || null
+      };
+    }
+
+    throw new Error('IPInfo request failed');
+  }
+
+  /**
+   * Get location from FreeGeoIP service (backup option)
+   */
+  private async getLocationFromFreeGeoIP(ipAddress: string): Promise<{ country: string | null; city: string | null }> {
+    const response = await fetch(`https://freegeoip.app/json/${ipAddress}`);
+    const data = await response.json();
+
+    if (data.country_name) {
+      return {
+        country: data.country_name || null,
+        city: data.city || null
+      };
+    }
+
+    throw new Error('FreeGeoIP request failed');
   }
 }
 

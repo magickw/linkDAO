@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb } from "drizzle-orm/pg-core";
 import * as marketplaceSchema from "./marketplaceSchema";
 
 // Users / Profiles
@@ -126,7 +126,7 @@ export const follows = pgTable("follows", {
   followingId: uuid("following_id").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.followerId, t.followingId] }),
+  pk: primaryKey(t.followerId, t.followingId),
   idx: index("follow_idx").on(t.followerId, t.followingId),
   followerFk: foreignKey({
     columns: [t.followerId],
@@ -366,6 +366,9 @@ export const sellerTransactions = pgTable("seller_transactions", {
     foreignColumns: [sellers.walletAddress]
   })
 }));
+
+// Chat: conversations and messages
+
 
 // Marketplace listings (keeping for backward compatibility)
 export const listings = pgTable("listings", {
@@ -793,23 +796,7 @@ export const reviews = pgTable("reviews", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const reviewHelpfulness = pgTable("review_helpfulness", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
-  isHelpful: boolean("is_helpful").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-export const reviewReports = pgTable("review_reports", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
-  reporterId: uuid("reporter_id").references(() => users.id).notNull(),
-  reason: varchar("reason", { length: 100 }).notNull(),
-  description: text("description"),
-  status: varchar("status", { length: 20 }).default("pending"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+// reviewHelpfulness and reviewReports are provided by marketplaceSchema; do not redeclare here.
 
 
 // Services Marketplace Tables
@@ -826,8 +813,7 @@ export const serviceCategories = pgTable("service_categories", {
 }, (table) => ({
   parentFk: foreignKey({
     columns: [table.parentId],
-    foreignColumns: [table.id],
-    name: "service_categories_parent_id_service_categories_id_fk"
+    foreignColumns: [table.id]
   }),
 }));
 
@@ -856,13 +842,11 @@ export const services = pgTable("services", {
 }, (table) => ({
   providerFk: foreignKey({
     columns: [table.providerId],
-    foreignColumns: [users.id],
-    name: "services_provider_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   categoryFk: foreignKey({
     columns: [table.categoryId],
-    foreignColumns: [serviceCategories.id],
-    name: "services_category_id_service_categories_id_fk"
+    foreignColumns: [serviceCategories.id]
   }),
   providerIdx: index("services_provider_id_idx").on(table.providerId),
   categoryIdx: index("services_category_id_idx").on(table.categoryId),
@@ -881,8 +865,7 @@ export const serviceAvailability = pgTable("service_availability", {
 }, (table) => ({
   serviceFk: foreignKey({
     columns: [table.serviceId],
-    foreignColumns: [services.id],
-    name: "service_availability_service_id_services_id_fk"
+    foreignColumns: [services.id]
   }),
   serviceIdx: index("service_availability_service_id_idx").on(table.serviceId),
 }));
@@ -911,18 +894,15 @@ export const serviceBookings = pgTable("service_bookings", {
 }, (table) => ({
   serviceFk: foreignKey({
     columns: [table.serviceId],
-    foreignColumns: [services.id],
-    name: "service_bookings_service_id_services_id_fk"
+    foreignColumns: [services.id]
   }),
   clientFk: foreignKey({
     columns: [table.clientId],
-    foreignColumns: [users.id],
-    name: "service_bookings_client_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   providerFk: foreignKey({
     columns: [table.providerId],
-    foreignColumns: [users.id],
-    name: "service_bookings_provider_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   clientIdx: index("service_bookings_client_id_idx").on(table.clientId),
   providerIdx: index("service_bookings_provider_id_idx").on(table.providerId),
@@ -946,8 +926,7 @@ export const serviceMilestones = pgTable("service_milestones", {
 }, (table) => ({
   bookingFk: foreignKey({
     columns: [table.bookingId],
-    foreignColumns: [serviceBookings.id],
-    name: "service_milestones_booking_id_service_bookings_id_fk"
+    foreignColumns: [serviceBookings.id]
   }),
   bookingIdx: index("service_milestones_booking_id_idx").on(table.bookingId),
 }));
@@ -971,23 +950,19 @@ export const serviceReviews = pgTable("service_reviews", {
 }, (table) => ({
   bookingFk: foreignKey({
     columns: [table.bookingId],
-    foreignColumns: [serviceBookings.id],
-    name: "service_reviews_booking_id_service_bookings_id_fk"
+    foreignColumns: [serviceBookings.id]
   }),
   reviewerFk: foreignKey({
     columns: [table.reviewerId],
-    foreignColumns: [users.id],
-    name: "service_reviews_reviewer_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   revieweeFk: foreignKey({
     columns: [table.revieweeId],
-    foreignColumns: [users.id],
-    name: "service_reviews_reviewee_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   serviceFk: foreignKey({
     columns: [table.serviceId],
-    foreignColumns: [services.id],
-    name: "service_reviews_service_id_services_id_fk"
+    foreignColumns: [services.id]
   }),
   serviceIdx: index("service_reviews_service_id_idx").on(table.serviceId),
 }));
@@ -1016,8 +991,7 @@ export const serviceProviderProfiles = pgTable("service_provider_profiles", {
 }, (table) => ({
   userFk: foreignKey({
     columns: [table.userId],
-    foreignColumns: [users.id],
-    name: "service_provider_profiles_user_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   userUnique: index("service_provider_profiles_user_id_unique").on(table.userId),
 }));
@@ -1035,18 +1009,15 @@ export const serviceMessages = pgTable("service_messages", {
 }, (table) => ({
   bookingFk: foreignKey({
     columns: [table.bookingId],
-    foreignColumns: [serviceBookings.id],
-    name: "service_messages_booking_id_service_bookings_id_fk"
+    foreignColumns: [serviceBookings.id]
   }),
   senderFk: foreignKey({
     columns: [table.senderId],
-    foreignColumns: [users.id],
-    name: "service_messages_sender_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   recipientFk: foreignKey({
     columns: [table.recipientId],
-    foreignColumns: [users.id],
-    name: "service_messages_recipient_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   bookingIdx: index("service_messages_booking_id_idx").on(table.bookingId),
 }));
@@ -1072,17 +1043,17 @@ export const timeTracking = pgTable("time_tracking", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "time_tracking_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "time_tracking_milestone_id_service_milestones_id_fk"
+  
   }),
   providerFk: foreignKey({
     columns: [table.providerId],
     foreignColumns: [users.id],
-    name: "time_tracking_provider_id_users_id_fk"
+  
   }),
   bookingIdx: index("time_tracking_booking_id_idx").on(table.bookingId),
   providerIdx: index("time_tracking_provider_id_idx").on(table.providerId),
@@ -1114,12 +1085,12 @@ export const projectDeliverables = pgTable("project_deliverables", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "project_deliverables_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "project_deliverables_milestone_id_service_milestones_id_fk"
+  
   }),
   bookingIdx: index("project_deliverables_booking_id_idx").on(table.bookingId),
   milestoneIdx: index("project_deliverables_milestone_id_idx").on(table.milestoneId),
@@ -1145,12 +1116,12 @@ export const milestonePayments = pgTable("milestone_payments", {
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "milestone_payments_milestone_id_service_milestones_id_fk"
+  
   }),
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "milestone_payments_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneIdx: index("milestone_payments_milestone_id_idx").on(table.milestoneId),
   statusIdx: index("milestone_payments_status_idx").on(table.status),
@@ -1170,17 +1141,17 @@ export const projectThreads = pgTable("project_threads", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "project_threads_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "project_threads_milestone_id_service_milestones_id_fk"
+  
   }),
   createdByFk: foreignKey({
     columns: [table.createdBy],
     foreignColumns: [users.id],
-    name: "project_threads_created_by_users_id_fk"
+  
   }),
   bookingIdx: index("project_threads_booking_id_idx").on(table.bookingId),
 }));
@@ -1202,18 +1173,15 @@ export const projectMessages = pgTable("project_messages", {
 }, (table) => ({
   threadFk: foreignKey({
     columns: [table.threadId],
-    foreignColumns: [projectThreads.id],
-    name: "project_messages_thread_id_project_threads_id_fk"
+    foreignColumns: [projectThreads.id]
   }),
   bookingFk: foreignKey({
     columns: [table.bookingId],
-    foreignColumns: [serviceBookings.id],
-    name: "project_messages_booking_id_service_bookings_id_fk"
+    foreignColumns: [serviceBookings.id]
   }),
   senderFk: foreignKey({
     columns: [table.senderId],
-    foreignColumns: [users.id],
-    name: "project_messages_sender_id_users_id_fk"
+    foreignColumns: [users.id]
   }),
   threadIdx: index("project_messages_thread_id_idx").on(table.threadId),
   bookingIdx: index("project_messages_booking_id_idx").on(table.bookingId),
@@ -1235,23 +1203,19 @@ export const projectApprovals = pgTable("project_approvals", {
 }, (table) => ({
   bookingFk: foreignKey({
     columns: [table.bookingId],
-    foreignColumns: [serviceBookings.id],
-    name: "project_approvals_booking_id_service_bookings_id_fk"
+    foreignColumns: [serviceBookings.id]
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
-    foreignColumns: [serviceMilestones.id],
-    name: "project_approvals_milestone_id_service_milestones_id_fk"
+    foreignColumns: [serviceMilestones.id]
   }),
   deliverableFk: foreignKey({
     columns: [table.deliverableId],
-    foreignColumns: [projectDeliverables.id],
-    name: "project_approvals_deliverable_id_project_deliverables_id_fk"
+    foreignColumns: [projectDeliverables.id]
   }),
   approverFk: foreignKey({
     columns: [table.approverId],
     foreignColumns: [users.id],
-    name: "project_approvals_approver_id_users_id_fk"
   }),
   bookingIdx: index("project_approvals_booking_id_idx").on(table.bookingId),
   statusIdx: index("project_approvals_status_idx").on(table.status),
@@ -1270,17 +1234,17 @@ export const projectActivities = pgTable("project_activities", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "project_activities_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "project_activities_milestone_id_service_milestones_id_fk"
+  
   }),
   userFk: foreignKey({
     columns: [table.userId],
     foreignColumns: [users.id],
-    name: "project_activities_user_id_users_id_fk"
+  
   }),
   bookingIdx: index("project_activities_booking_id_idx").on(table.bookingId),
   createdAtIdx: index("project_activities_created_at_idx").on(table.createdAt),
@@ -1305,22 +1269,22 @@ export const projectFiles = pgTable("project_files", {
   bookingFk: foreignKey({
     columns: [table.bookingId],
     foreignColumns: [serviceBookings.id],
-    name: "project_files_booking_id_service_bookings_id_fk"
+  
   }),
   milestoneFk: foreignKey({
     columns: [table.milestoneId],
     foreignColumns: [serviceMilestones.id],
-    name: "project_files_milestone_id_service_milestones_id_fk"
+  
   }),
   deliverableFk: foreignKey({
     columns: [table.deliverableId],
     foreignColumns: [projectDeliverables.id],
-    name: "project_files_deliverable_id_project_deliverables_id_fk"
+  
   }),
   uploaderFk: foreignKey({
     columns: [table.uploaderId],
     foreignColumns: [users.id],
-    name: "project_files_uploader_id_users_id_fk"
+  
   }),
   bookingIdx: index("project_files_booking_id_idx").on(table.bookingId),
   fileHashIdx: index("project_files_file_hash_idx").on(table.fileHash),
@@ -1597,21 +1561,9 @@ export const reputationRewards = pgTable("reputation_rewards", {
 
 
 // Marketplace-specific moderation tables
-
-// Marketplace verification records
-export const marketplaceVerifications = pgTable("marketplace_verifications", {
-  id: serial("id").primaryKey(),
-  listingId: varchar("listing_id", { length: 64 }).notNull(),
-  verificationLevel: varchar("verification_level", { length: 24 }).default("basic").notNull(),
-  sellerTier: varchar("seller_tier", { length: 24 }).default("unverified").notNull(),
-  riskScore: numeric("risk_score", { precision: 3, scale: 2 }).default("0").notNull(),
-  proofOfOwnership: text("proof_of_ownership"), // JSON string
-  brandVerification: text("brand_verification"), // JSON string
-  verificationStatus: varchar("verification_status", { length: 24 }).default("pending").notNull(),
-  verifiedBy: varchar("verified_by", { length: 64 }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// The detailed marketplace moderation tables (e.g. marketplaceVerifications, sellerVerifications)
+// are defined in app/backend/src/db/marketplaceSchema.ts and imported at the top of this file.
+// We intentionally do not redeclare them here to avoid duplicate symbol errors.
 
 // Counterfeit detection results
 export const counterfeitDetections = pgTable("counterfeit_detections", {
@@ -1637,21 +1589,7 @@ export const scamPatterns = pgTable("scam_patterns", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Seller verification tiers and history
-export const sellerVerifications = pgTable("seller_verifications", {
-  id: serial("id").primaryKey(),
-  walletAddress: varchar("wallet_address", { length: 66 }).unique().notNull(),
-  currentTier: varchar("current_tier", { length: 24 }).default("unverified").notNull(),
-  kycVerified: boolean("kyc_verified").default(false),
-  kycVerifiedAt: timestamp("kyc_verified_at"),
-  reputationScore: integer("reputation_score").default(0),
-  totalVolume: numeric("total_volume", { precision: 20, scale: 8 }).default("0"),
-  successfulTransactions: integer("successful_transactions").default(0),
-  disputeRate: numeric("dispute_rate", { precision: 3, scale: 2 }).default("0"),
-  lastTierUpdate: timestamp("last_tier_update").defaultNow().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+// sellerVerifications is defined in marketplaceSchema and imported above; do not redeclare here.
 
 // Proof of ownership records
 export const ownershipProofs = pgTable("ownership_proofs", {
@@ -2206,8 +2144,7 @@ export const orderPaymentEvents = pgTable("order_payment_events", {
   paymentStatusIdx: index("idx_order_payment_events_payment_status").on(t.paymentStatus),
   createdAtIdx: index("idx_order_payment_events_created_at").on(t.createdAt)
 }));
-// Qui
-ck Polling System Tables
+// Quick Polling System Tables
 export const polls = pgTable("polls", {
   id: uuid("id").defaultRandom().primaryKey(),
   postId: integer("post_id").references(() => posts.id, { onDelete: "cascade" }).notNull(),
@@ -2245,4 +2182,29 @@ export const pollVotes = pgTable("poll_votes", {
   userIdIdx: index("idx_poll_votes_user_id").on(t.userId),
   optionIdIdx: index("idx_poll_votes_option_id").on(t.optionId),
   uniqueVote: index("idx_poll_votes_unique").on(t.pollId, t.userId, t.optionId),
+}));
+
+// Conversations and Chat Messages
+export const conversations = pgTable("conversations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: varchar("title", { length: 255 }),
+  participants: jsonb("participants").notNull(),
+  lastMessageId: uuid("last_message_id"),
+  lastActivity: timestamp("last_activity"),
+  unreadCount: integer("unread_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
+}));
+
+export const chatMessages = pgTable("chat_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  senderAddress: varchar("sender_address", { length: 66 }).notNull(),
+  content: text("content").notNull(),
+  sentAt: timestamp("timestamp").defaultNow(),
+  editedAt: timestamp("edited_at"),
+  deletedAt: timestamp("deleted_at"),
+}, (t) => ({
+  convoTimestampIdx: index("idx_chat_messages_conversation_id_timestamp").on(t.conversationId, t.sentAt),
 }));
