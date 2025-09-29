@@ -7,7 +7,7 @@ import React, { useState, useRef } from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 import { designTokens, GradientVariant } from '../tokens';
 
-interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'size'> {
+interface ButtonProps extends Omit<HTMLMotionProps<'button'>, 'size' | 'whileHover' | 'whileTap' | 'variants'> {
   /** Button variant */
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'gradient';
   /** Button size */
@@ -49,24 +49,36 @@ export const Button: React.FC<ButtonProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (ripple && !disabled && !loading) {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (rect) {
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        const newRipple = { id: Date.now(), x, y };
-        
-        setRipples(prev => [...prev, newRipple]);
-        
-        // Remove ripple after animation
-        setTimeout(() => {
-          setRipples(prev => prev.filter(r => r.id !== newRipple.id));
-        }, 600);
+    try {
+      if (ripple && !disabled && !loading) {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (rect) {
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          const newRipple = { id: Date.now(), x, y };
+          
+          setRipples(prev => [...prev, newRipple]);
+          
+          // Remove ripple after animation
+          setTimeout(() => {
+            setRipples(prev => prev.filter(r => r.id !== newRipple.id));
+          }, 600);
+        }
       }
-    }
-    
-    if (onClick && !disabled && !loading) {
-      onClick(event);
+      
+      if (onClick && !disabled && !loading) {
+        onClick(event);
+      }
+    } catch (error) {
+      console.error('Button click error:', error);
+      // Don't let the error prevent the click from working
+      if (onClick && !disabled && !loading) {
+        try {
+          onClick(event);
+        } catch (secondError) {
+          console.error('Button onClick error:', secondError);
+        }
+      }
     }
   };
 
@@ -168,6 +180,9 @@ export const Button: React.FC<ButtonProps> = ({
     },
   };
 
+  // Filter out conflicting motion properties - don't override internal motion handling
+  const filteredMotionProps = motionProps as any;
+
   return (
     <motion.button
       ref={buttonRef}
@@ -178,7 +193,7 @@ export const Button: React.FC<ButtonProps> = ({
       whileTap={!disabled && !loading ? 'tap' : undefined}
       onClick={handleClick}
       disabled={disabled || loading}
-      {...motionProps}
+      {...filteredMotionProps}
     >
       {/* Ripple effects */}
       {ripples.map(ripple => (

@@ -193,8 +193,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 gradient="primary"
                 onClick={onBrowseMarketplace}
                 className="text-lg px-8 py-4 font-semibold shadow-2xl"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
               >
                 <span className="mr-2">🛍️</span> Browse Marketplace
               </GradientButton>
@@ -206,8 +204,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     size="large"
                     onClick={() => router.push('/marketplace/seller/dashboard')}
                     className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
                   >
                     <span className="mr-2">📊</span> Seller Dashboard
                   </Button>
@@ -217,8 +213,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     size="large"
                     onClick={() => router.push('/marketplace/seller/listings/create')}
                     className="text-lg px-8 py-4 font-semibold border-2 border-white/30 text-white hover:bg-white/10"
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
                   >
                     <span className="mr-2">➕</span> Create Listing
                   </Button>
@@ -229,8 +223,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   size="large"
                   onClick={onStartSelling}
                   className="text-lg px-8 py-4 font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
                 >
                   <span className="mr-2">🏪</span> Become a Seller
                 </Button>
