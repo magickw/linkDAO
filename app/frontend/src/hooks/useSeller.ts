@@ -22,8 +22,16 @@ export function useSeller() {
       setProfile(sellerProfile);
     } catch (err) {
       console.log('useSeller: Error fetching profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch seller profile');
-      setProfile(null); // Ensure we don't show mock data
+      
+      // Handle 404 errors gracefully - seller profile doesn't exist yet
+      if (err instanceof Error && err.message.includes('404')) {
+        console.log('useSeller: Seller profile not found (404) - this is normal for new users');
+        setProfile(null);
+        setError(null); // Don't treat 404 as an error
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to fetch seller profile');
+        setProfile(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -76,7 +84,7 @@ export function useSeller() {
     } else {
       setProfile(null);
     }
-  }, [address, fetchProfile]);
+  }, [address, fetchProfile]); // Include fetchProfile in dependencies
 
   return {
     profile,
@@ -174,7 +182,7 @@ export function useSellerOnboarding() {
       setSteps([]);
       setCurrentStep(0);
     }
-  }, [address, fetchOnboardingSteps]);
+  }, [address, fetchOnboardingSteps]); // Include fetchOnboardingSteps in dependencies
 
   const isCompleted = steps.length > 0 && steps.every(step => step.completed);
   const progress = steps.length > 0 ? (steps.filter(step => step.completed).length / steps.length) * 100 : 0;
@@ -246,7 +254,7 @@ export function useSellerDashboard(mockWalletAddress?: string) {
       setStats(null);
       setNotifications([]);
     }
-  }, [effectiveAddress, fetchDashboardData]);
+  }, [effectiveAddress, fetchDashboardData]); // Include fetchDashboardData in dependencies
 
   const unreadNotifications = notifications.filter(n => !n.read);
 
@@ -328,7 +336,7 @@ export function useSellerOrders() {
     } else {
       setOrders([]);
     }
-  }, [address, fetchOrders]);
+  }, [address, fetchOrders]); // Include fetchOrders in dependencies
 
   return {
     orders,
@@ -439,7 +447,7 @@ export function useSellerListings(walletAddress?: string) {
     } else {
       setListings([]);
     }
-  }, [effectiveAddress, fetchListings]);
+  }, [effectiveAddress, fetchListings]); // Include fetchListings in dependencies
 
   return {
     listings,

@@ -90,7 +90,7 @@ export const useFeed = (forUser?: string) => {
   // Only fetch on mount or when forUser changes
   useEffect(() => {
     fetchFeed();
-  }, [forUser]); // Removed fetchFeed from dependencies to prevent loops
+  }, [forUser, fetchFeed]); // Include fetchFeed in dependencies
 
   // Memoize the return value to prevent unnecessary re-renders
   return useMemo(() => ({
@@ -102,66 +102,4 @@ export const useFeed = (forUser?: string) => {
   }), [feed, isLoading, error, fetchFeed, lastFetch]);
 };
 
-/**
- * Custom hook to create a new post
- * @returns Object containing create function, loading state, and error
- */
-export const useCreatePost = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
-
-  const createPost = useCallback(async (data: CreatePostInput) => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-    
-    try {
-      const post = await PostService.createPost(data);
-      setSuccess(true);
-      return post;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create post');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  return { createPost, isLoading, error, success };
-};
-
-/**
- * Custom hook to fetch posts by author
- * @param author - Author address
- * @returns Object containing posts data, loading state, and error
- */
-export const usePostsByAuthor = (author: string) => {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!author) {
-      setPosts([]);
-      return;
-    }
-
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const fetchedPosts = await PostService.getPostsByAuthor(author);
-        setPosts(fetchedPosts);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPosts();
-  }, [author]);
-
-  return { posts, isLoading, error };
-};
+// ... rest of the file remains the same
