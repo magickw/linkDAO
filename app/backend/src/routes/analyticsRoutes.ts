@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { analyticsController } from '../controllers/analyticsController';
 import { authMiddleware } from '../middleware/authMiddleware';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 
@@ -9,11 +9,7 @@ const router = Router();
 router.use(authMiddleware);
 
 // Apply rate limiting to prevent abuse
-router.use(rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many analytics requests from this IP'
-}));
+router.use(apiLimiter);
 
 /**
  * @route GET /api/analytics/overview

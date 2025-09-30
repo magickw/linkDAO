@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { MarketplaceModerationService, MarketplaceListingInput } from '../services/marketplaceModerationService';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 import { z } from 'zod';
 
 // Request validation schemas
@@ -89,10 +89,10 @@ export class MarketplaceModerationController {
       if (error instanceof z.ZodError) {
         throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Moderation failed: ${error.message}`);
+      throw new AppError(`Moderation failed: ${error.message}`);
     }
   }
 
@@ -140,10 +140,10 @@ export class MarketplaceModerationController {
       if (error instanceof z.ZodError) {
         throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `NFT verification failed: ${error.message}`);
+      throw new AppError(`NFT verification failed: ${error.message}`);
     }
   }
 
@@ -198,10 +198,10 @@ export class MarketplaceModerationController {
       if (error instanceof z.ZodError) {
         throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Counterfeit detection failed: ${error.message}`);
+      throw new AppError(`Counterfeit detection failed: ${error.message}`);
     }
   }
 
@@ -250,10 +250,10 @@ export class MarketplaceModerationController {
       if (error instanceof z.ZodError) {
         throw new ValidationError(`Validation error: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Scam detection failed: ${error.message}`);
+      throw new AppError(`Scam detection failed: ${error.message}`);
     }
   }
 
@@ -302,10 +302,10 @@ export class MarketplaceModerationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Seller verification failed: ${error.message}`);
+      throw new AppError(`Seller verification failed: ${error.message}`);
     }
   }
 
@@ -338,10 +338,10 @@ export class MarketplaceModerationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get moderation status: ${error.message}`);
+      throw new AppError(`Failed to get moderation status: ${error.message}`);
     }
   }
 
@@ -420,10 +420,10 @@ export class MarketplaceModerationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Bulk moderation failed: ${error.message}`);
+      throw new AppError(`Bulk moderation failed: ${error.message}`);
     }
   }
 
@@ -461,7 +461,7 @@ export class MarketplaceModerationController {
       });
 
     } catch (error: any) {
-      throw new APIError(500, `Failed to get moderation statistics: ${error.message}`);
+      throw new AppError(`Failed to get moderation statistics: ${error.message}`);
     }
   }
 }

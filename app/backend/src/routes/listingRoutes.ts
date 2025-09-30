@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { ListingController } from '../controllers/listingController';
 import { ListingVisibilityController } from '../controllers/listingVisibilityController';
 import { ListingImageController } from '../controllers/listingImageController';
-import { auth } from '../middleware/auth';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { authenticateToken } from '../middleware/auth';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 const listingController = new ListingController();
@@ -18,7 +18,7 @@ const listingImageController = new ListingImageController();
  * Requirements: 3.2, 3.3
  */
 router.get('/marketplace', 
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingController.getMarketplaceListings.bind(listingController)
 );
 
@@ -28,7 +28,7 @@ router.get('/marketplace',
  * Requirements: 3.2, 3.3
  */
 router.get('/marketplace/real-time',
-  rateLimiter({ windowMs: 60000, max: 200 }), // 200 requests per minute for real-time
+  apiLimiter, // 200 requests per minute for real-time
   listingVisibilityController.getRealTimeMarketplaceFeed.bind(listingVisibilityController)
 );
 
@@ -38,7 +38,7 @@ router.get('/marketplace/real-time',
  * Requirements: 3.2, 3.3
  */
 router.get('/search',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingController.searchListings.bind(listingController)
 );
 
@@ -48,7 +48,7 @@ router.get('/search',
  * Requirements: 3.2, 3.3
  */
 router.get('/:id',
-  rateLimiter({ windowMs: 60000, max: 200 }), // 200 requests per minute
+  apiLimiter, // 200 requests per minute
   listingController.getListingById.bind(listingController)
 );
 
@@ -58,7 +58,7 @@ router.get('/:id',
  * Requirements: 3.3
  */
 router.get('/:id/stats',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingController.getListingStats.bind(listingController)
 );
 
@@ -68,7 +68,7 @@ router.get('/:id/stats',
  * Requirements: 3.2, 3.3
  */
 router.get('/seller/:sellerId',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingController.getListingsBySeller.bind(listingController)
 );
 
@@ -80,8 +80,8 @@ router.get('/seller/:sellerId',
  * Requirements: 3.1, 3.2, 3.4
  */
 router.post('/',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 10 }), // 10 listings per minute
+  authenticateToken,
+  apiLimiter, // 10 listings per minute
   listingController.createListing.bind(listingController)
 );
 
@@ -91,8 +91,8 @@ router.post('/',
  * Requirements: 3.1, 3.4
  */
 router.put('/:id',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 updates per minute
+  authenticateToken,
+  apiLimiter, // 20 updates per minute
   listingController.updateListing.bind(listingController)
 );
 
@@ -102,8 +102,8 @@ router.put('/:id',
  * Requirements: 3.2, 3.3
  */
 router.post('/:id/publish',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 publishes per minute
+  authenticateToken,
+  apiLimiter, // 20 publishes per minute
   listingController.publishListing.bind(listingController)
 );
 
@@ -113,8 +113,8 @@ router.post('/:id/publish',
  * Requirements: 3.2, 3.4
  */
 router.post('/:id/unpublish',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 unpublishes per minute
+  authenticateToken,
+  apiLimiter, // 20 unpublishes per minute
   listingController.unpublishListing.bind(listingController)
 );
 
@@ -124,8 +124,8 @@ router.post('/:id/unpublish',
  * Requirements: 3.1, 3.4
  */
 router.post('/validate',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 50 }), // 50 validations per minute
+  authenticateToken,
+  apiLimiter, // 50 validations per minute
   listingController.validateListing.bind(listingController)
 );
 
@@ -137,8 +137,8 @@ router.post('/validate',
  * Requirements: 3.2, 3.3
  */
 router.post('/:id/publish-immediate',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 immediate publishes per minute
+  authenticateToken,
+  apiLimiter, // 20 immediate publishes per minute
   listingVisibilityController.publishListingImmediate.bind(listingVisibilityController)
 );
 
@@ -148,8 +148,8 @@ router.post('/:id/publish-immediate',
  * Requirements: 3.2, 3.4
  */
 router.post('/:id/unpublish-immediate',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 immediate unpublishes per minute
+  authenticateToken,
+  apiLimiter, // 20 immediate unpublishes per minute
   listingVisibilityController.unpublishListingImmediate.bind(listingVisibilityController)
 );
 
@@ -159,7 +159,7 @@ router.post('/:id/unpublish-immediate',
  * Requirements: 3.3
  */
 router.get('/:id/publication-status',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 status checks per minute
+  apiLimiter, // 100 status checks per minute
   listingVisibilityController.getPublicationStatus.bind(listingVisibilityController)
 );
 
@@ -169,7 +169,7 @@ router.get('/:id/publication-status',
  * Requirements: 3.3
  */
 router.get('/:id/visibility-metrics',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 metrics requests per minute
+  apiLimiter, // 100 metrics requests per minute
   listingVisibilityController.getListingVisibilityMetrics.bind(listingVisibilityController)
 );
 
@@ -179,8 +179,8 @@ router.get('/:id/visibility-metrics',
  * Requirements: 3.2, 3.3
  */
 router.post('/batch-publish',
-  auth,
-  rateLimiter({ windowMs: 300000, max: 5 }), // 5 batch operations per 5 minutes
+  authenticateToken,
+  apiLimiter, // 5 batch operations per 5 minutes
   listingVisibilityController.batchPublishListings.bind(listingVisibilityController)
 );
 
@@ -190,8 +190,8 @@ router.post('/batch-publish',
  * Requirements: 3.2, 3.4
  */
 router.post('/batch-unpublish',
-  auth,
-  rateLimiter({ windowMs: 300000, max: 5 }), // 5 batch operations per 5 minutes
+  authenticateToken,
+  apiLimiter, // 5 batch operations per 5 minutes
   listingVisibilityController.batchUnpublishListings.bind(listingVisibilityController)
 );
 
@@ -201,8 +201,8 @@ router.post('/batch-unpublish',
  * Requirements: 3.2, 3.3
  */
 router.post('/marketplace/refresh-cache',
-  auth,
-  rateLimiter({ windowMs: 300000, max: 2 }), // 2 cache refreshes per 5 minutes
+  authenticateToken,
+  apiLimiter, // 2 cache refreshes per 5 minutes
   listingVisibilityController.refreshMarketplaceCache.bind(listingVisibilityController)
 );
 
@@ -214,8 +214,8 @@ router.post('/marketplace/refresh-cache',
  * Requirements: 2.1, 3.1, 3.4
  */
 router.post('/:id/images',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 10 }), // 10 image uploads per minute
+  authenticateToken,
+  apiLimiter, // 10 image uploads per minute
   listingImageController.getUploadMiddleware(),
   listingImageController.uploadImages.bind(listingImageController)
 );
@@ -226,7 +226,7 @@ router.post('/:id/images',
  * Requirements: 2.1, 3.1, 3.4
  */
 router.get('/:id/images',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingImageController.getListingImages.bind(listingImageController)
 );
 
@@ -236,7 +236,7 @@ router.get('/:id/images',
  * Requirements: 3.1, 3.4
  */
 router.get('/:id/images/gallery',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 requests per minute
+  apiLimiter, // 100 requests per minute
   listingImageController.getImageGalleryData.bind(listingImageController)
 );
 
@@ -246,7 +246,7 @@ router.get('/:id/images/gallery',
  * Requirements: 2.1, 3.4
  */
 router.get('/:id/images/optimized',
-  rateLimiter({ windowMs: 60000, max: 200 }), // 200 requests per minute
+  apiLimiter, // 200 requests per minute
   listingImageController.getOptimizedImages.bind(listingImageController)
 );
 
@@ -256,8 +256,8 @@ router.get('/:id/images/optimized',
  * Requirements: 2.1, 3.1, 3.4
  */
 router.put('/:id/images/primary',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 updates per minute
+  authenticateToken,
+  apiLimiter, // 20 updates per minute
   listingImageController.setPrimaryImage.bind(listingImageController)
 );
 
@@ -267,8 +267,8 @@ router.put('/:id/images/primary',
  * Requirements: 2.1, 3.1, 3.4
  */
 router.put('/:id/images/reorder',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 reorders per minute
+  authenticateToken,
+  apiLimiter, // 20 reorders per minute
   listingImageController.reorderImages.bind(listingImageController)
 );
 
@@ -278,7 +278,7 @@ router.put('/:id/images/reorder',
  * Requirements: 2.1, 3.4
  */
 router.get('/:id/images/:imageId/urls',
-  rateLimiter({ windowMs: 60000, max: 200 }), // 200 requests per minute
+  apiLimiter, // 200 requests per minute
   listingImageController.getImageUrls.bind(listingImageController)
 );
 
@@ -288,8 +288,8 @@ router.get('/:id/images/:imageId/urls',
  * Requirements: 2.1, 3.1, 3.4
  */
 router.delete('/:id/images/:imageId',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 deletions per minute
+  authenticateToken,
+  apiLimiter, // 20 deletions per minute
   listingImageController.deleteImage.bind(listingImageController)
 );
 
@@ -299,8 +299,8 @@ router.delete('/:id/images/:imageId',
  * Requirements: 2.1, 3.1
  */
 router.post('/images/batch',
-  auth,
-  rateLimiter({ windowMs: 300000, max: 5 }), // 5 batch operations per 5 minutes
+  authenticateToken,
+  apiLimiter, // 5 batch operations per 5 minutes
   listingImageController.batchProcessImages.bind(listingImageController)
 );
 
@@ -312,8 +312,8 @@ router.post('/images/batch',
  * Requirements: Blockchain integration
  */
 router.post('/:id/publish-blockchain',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 10 }), // 10 blockchain publishes per minute
+  authenticateToken,
+  apiLimiter, // 10 blockchain publishes per minute
   listingController.publishToBlockchain.bind(listingController)
 );
 
@@ -323,8 +323,8 @@ router.post('/:id/publish-blockchain',
  * Requirements: Blockchain synchronization
  */
 router.post('/:id/sync-blockchain',
-  auth,
-  rateLimiter({ windowMs: 60000, max: 20 }), // 20 sync operations per minute
+  authenticateToken,
+  apiLimiter, // 20 sync operations per minute
   listingController.syncWithBlockchain.bind(listingController)
 );
 
@@ -334,7 +334,7 @@ router.post('/:id/sync-blockchain',
  * Requirements: Blockchain data access
  */
 router.get('/:id/blockchain-data',
-  rateLimiter({ windowMs: 60000, max: 100 }), // 100 blockchain data requests per minute
+  apiLimiter, // 100 blockchain data requests per minute
   listingController.getBlockchainData.bind(listingController)
 );
 

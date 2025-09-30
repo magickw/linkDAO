@@ -28,7 +28,7 @@ export class PollController {
       if (!validation.success) {
         res.status(400).json({
           error: 'Invalid input',
-          details: validation.error.errors
+          details: 'Validation failed'
         });
         return;
       }
@@ -36,7 +36,7 @@ export class PollController {
       const { postId, question, options, allowMultiple, tokenWeighted, minTokens, expiresAt } = validation.data;
 
       // Check if user is authenticated
-      if (!req.user?.id) {
+      if (!req.user?.walletAddress) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
@@ -79,7 +79,7 @@ export class PollController {
         return;
       }
 
-      const userId = req.user?.id;
+      const userId = req.user?.walletAddress;
       const poll = await pollService.getPollById(pollId, userId);
 
       if (!poll) {
@@ -113,7 +113,7 @@ export class PollController {
         return;
       }
 
-      const userId = req.user?.id;
+      const userId = req.user?.walletAddress;
       const poll = await pollService.getPollByPostId(postIdNum, userId);
 
       if (!poll) {
@@ -145,12 +145,12 @@ export class PollController {
       if (!validation.success) {
         res.status(400).json({
           error: 'Invalid input',
-          details: validation.error.errors
+          details: 'Validation failed'
         });
         return;
       }
 
-      if (!req.user?.id) {
+      if (!req.user?.walletAddress) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
@@ -160,14 +160,14 @@ export class PollController {
       const input: PollVoteInput = {
         pollId,
         optionIds,
-        userId: req.user.id,
+        userId: req.user.walletAddress,
         tokenAmount,
       };
 
       await pollService.voteOnPoll(input);
 
       // Return updated poll results
-      const updatedPoll = await pollService.getPollById(pollId, req.user.id);
+      const updatedPoll = await pollService.getPollById(pollId, req.user.walletAddress);
 
       res.json({
         success: true,
@@ -209,13 +209,13 @@ export class PollController {
    */
   async getUserVotingHistory(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user?.id) {
+      if (!req.user?.walletAddress) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
 
       const limit = parseInt(req.query.limit as string) || 50;
-      const history = await pollService.getUserVotingHistory(req.user.id, limit);
+      const history = await pollService.getUserVotingHistory(req.user.walletAddress, limit);
 
       res.json({
         success: true,
@@ -265,7 +265,7 @@ export class PollController {
       }
 
       // TODO: Add admin/moderator permission check
-      if (!req.user?.id) {
+      if (!req.user?.walletAddress) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }
@@ -299,7 +299,7 @@ export class PollController {
       }
 
       // TODO: Add admin/moderator permission check
-      if (!req.user?.id) {
+      if (!req.user?.walletAddress) {
         res.status(401).json({ error: 'Authentication required' });
         return;
       }

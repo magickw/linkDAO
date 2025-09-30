@@ -5,7 +5,7 @@ import {
   PaymentPathDecision,
   HybridPaymentResult
 } from '../services/hybridPaymentOrchestrator';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class HybridPaymentController {
   private hybridPaymentOrchestrator: HybridPaymentOrchestrator;
@@ -52,10 +52,10 @@ export class HybridPaymentController {
         data: recommendation
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment path recommendation failed: ${error.message}`);
+      throw new AppError(`Payment path recommendation failed: ${error.message}`, 500, 'PAYMENT_PATH_ERROR');
     }
   }
 
@@ -99,10 +99,10 @@ export class HybridPaymentController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Hybrid checkout failed: ${error.message}`);
+      throw new AppError(`Hybrid checkout failed: ${error.message}`, 500, 'HYBRID_CHECKOUT_ERROR');
     }
   }
 
@@ -131,10 +131,10 @@ export class HybridPaymentController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Order fulfillment failed: ${error.message}`);
+      throw new AppError(`Order fulfillment failed: ${error.message}`, 500, 'ORDER_FULFILLMENT_ERROR');
     }
   }
 
@@ -156,10 +156,10 @@ export class HybridPaymentController {
         data: status
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get order status: ${error.message}`);
+      throw new AppError(`Failed to get order status: ${error.message}`, 500, 'ORDER_STATUS_ERROR');
     }
   }
 
@@ -224,10 +224,10 @@ export class HybridPaymentController {
         data: comparison
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment method comparison failed: ${error.message}`);
+      throw new AppError(`Payment method comparison failed: ${error.message}`, 500, 'PAYMENT_COMPARISON_ERROR');
     }
   }
 
@@ -275,10 +275,10 @@ export class HybridPaymentController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get payment history: ${error.message}`);
+      throw new AppError(`Failed to get payment history: ${error.message}`, 500, 'PAYMENT_HISTORY_ERROR');
     }
   }
 
@@ -311,10 +311,10 @@ export class HybridPaymentController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment method switch failed: ${error.message}`);
+      throw new AppError(`Payment method switch failed: ${error.message}`, 500, 'PAYMENT_SWITCH_ERROR');
     }
   }
 
@@ -361,10 +361,10 @@ export class HybridPaymentController {
         data: analytics
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Analytics retrieval failed: ${error.message}`);
+      throw new AppError(`Analytics retrieval failed: ${error.message}`, 500, 'ANALYTICS_ERROR');
     }
   }
 

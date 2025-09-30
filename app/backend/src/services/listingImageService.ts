@@ -113,12 +113,15 @@ export class ListingImageService {
         const uploadResult = await this.imageStorageService.uploadImage(
           image.file,
           image.originalName,
-          image.mimeType,
-          listing.sellerId,
-          'listing'
+          {
+            userId: listing.sellerId,
+            usageType: 'listing',
+            usageReferenceId: listingId
+          }
         );
 
-        if (uploadResult.success) {
+        // Check if upload was successful by checking for id
+        if (uploadResult.id) {
           // Store image metadata in database
           const imageRecord = await this.storeImageMetadata(
             listingId,
@@ -131,13 +134,22 @@ export class ListingImageService {
             imageId: imageRecord.id,
             ipfsHash: uploadResult.ipfsHash,
             cdnUrl: uploadResult.cdnUrl,
-            thumbnails: uploadResult.thumbnails,
-            metadata: uploadResult.metadata
+            thumbnails: {
+              small: uploadResult.thumbnails?.small || uploadResult.cdnUrl || '',
+              medium: uploadResult.thumbnails?.medium || uploadResult.cdnUrl || '',
+              large: uploadResult.thumbnails?.large || uploadResult.cdnUrl || ''
+            },
+            metadata: {
+              width: uploadResult.width || 0,
+              height: uploadResult.height || 0,
+              format: uploadResult.contentType || '',
+              size: uploadResult.fileSize || 0
+            }
           });
         } else {
           results.push({
             success: false,
-            error: uploadResult.error || 'Upload failed'
+            error: 'Upload failed'
           });
         }
       } catch (error) {
@@ -184,7 +196,7 @@ export class ListingImageService {
 
     // Get listing to determine primary image
     const listing = await this.listingService.getListingById(listingId);
-    const primaryImageIndex = listing?.metadata?.primaryImageIndex || 0;
+    const primaryImageIndex = listing?.metadata?.imageIpfsHashes?.length ? 0 : 0;
 
     const images: ListingImageInfo[] = listingImages.map((record, index) => ({
       id: record.id,
@@ -319,7 +331,7 @@ export class ListingImageService {
 
     // Delete from storage service
     if (imageRecord[0].ipfsHash) {
-      await this.imageStorageService.deleteImage(imageRecord[0].ipfsHash);
+      await this.imageStorageService.deleteImage(imageRecord[0].ipfsHash, listing.sellerId);
     }
 
     // Delete from database
@@ -331,7 +343,8 @@ export class ListingImageService {
 
     // Adjust primary image index if necessary
     const gallery = await this.getListingImages(listingId);
-    if (listing.metadata?.primaryImageIndex && listing.metadata.primaryImageIndex >= gallery.totalImages) {
+    if (listing.metadata?.imageIpfsHashes && listing.metadata.imageIpfsHashes.length > 0 && 
+        listing.metadata.imageIpfsHashes.length >= gallery.totalImages) {
       await this.listingService.updateListing(listingId, {
         primaryImageIndex: Math.max(0, gallery.totalImages - 1)
       });

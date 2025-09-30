@@ -7,7 +7,7 @@ import {
   PlaceBidInput,
   MakeOfferInput
 } from '../models/Marketplace';
-import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 const marketplaceService = new MarketplaceService();
 const enhancedEscrowService = new EnhancedEscrowService(
@@ -64,10 +64,10 @@ export class MarketplaceController {
       const listing = await marketplaceService.createListing(input);
       return res.status(201).json(listing);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'CREATE_LISTING_ERROR');
     }
   }
 
@@ -82,10 +82,10 @@ export class MarketplaceController {
       
       return res.json(listing);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -95,7 +95,7 @@ export class MarketplaceController {
       const listings = await marketplaceService.getListingsBySeller(sellerAddress);
       return res.json(listings);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'GET_LISTINGS_BY_SELLER_ERROR');
     }
   }
 
@@ -104,7 +104,7 @@ export class MarketplaceController {
       const listings = await marketplaceService.getAllListings();
       return res.json(listings);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'GET_ALL_LISTINGS_ERROR');
     }
   }
 
@@ -113,7 +113,7 @@ export class MarketplaceController {
       const listings = await marketplaceService.getActiveListings();
       return res.json(listings);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'GET_ACTIVE_LISTINGS_ERROR');
     }
   }
 
@@ -130,10 +130,10 @@ export class MarketplaceController {
       
       return res.json(listing);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -149,10 +149,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -175,10 +175,10 @@ export class MarketplaceController {
       
       return res.status(201).json(bid);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'PLACE_BID_ERROR');
     }
   }
 
@@ -188,7 +188,7 @@ export class MarketplaceController {
       const listingBids = await marketplaceService.getBidsByListing(listingId);
       return res.json(listingBids);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'GET_BIDS_BY_LISTING_ERROR');
     }
   }
 
@@ -198,7 +198,7 @@ export class MarketplaceController {
       const bidderBids = await marketplaceService.getBidsByBidder(bidderAddress);
       return res.json(bidderBids);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'GET_BIDS_BY_BIDDER_ERROR');
     }
   }
 
@@ -221,10 +221,10 @@ export class MarketplaceController {
       
       return res.status(201).json(offer);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -234,7 +234,7 @@ export class MarketplaceController {
       const listingOffers = await marketplaceService.getOffersByListing(listingId);
       return res.json(listingOffers);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -244,7 +244,7 @@ export class MarketplaceController {
       const buyerOffers = await marketplaceService.getOffersByBuyer(buyerAddress);
       return res.json(buyerOffers);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -260,10 +260,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -285,10 +285,10 @@ export class MarketplaceController {
       
       return res.status(201).json(escrow);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -309,10 +309,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -333,10 +333,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -360,10 +360,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -378,10 +378,10 @@ export class MarketplaceController {
       
       return res.json(escrow);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -391,7 +391,7 @@ export class MarketplaceController {
       const userEscrows = await marketplaceService.getEscrowsByUser(userAddress);
       return res.json(userEscrows);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -414,15 +414,15 @@ export class MarketplaceController {
       );
       
       if (!order) {
-        throw new APIError(500, 'Failed to create order');
+        throw new AppError('Failed to create order', 500, 'ORDER_CREATION_ERROR');
       }
       
       return res.status(201).json(order);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -437,10 +437,10 @@ export class MarketplaceController {
       
       return res.json(order);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -450,7 +450,7 @@ export class MarketplaceController {
       const userOrders = await marketplaceService.getOrdersByUser(userAddress);
       return res.json(userOrders);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -476,10 +476,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -495,15 +495,15 @@ export class MarketplaceController {
       const dispute = await marketplaceService.createDispute(escrowId, reporterAddress, reason, evidence);
       
       if (!dispute) {
-        throw new APIError(500, 'Failed to create dispute');
+        throw new AppError('Failed to create dispute');
       }
       
       return res.status(201).json(dispute);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -518,10 +518,10 @@ export class MarketplaceController {
       
       return res.json(dispute);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -531,7 +531,7 @@ export class MarketplaceController {
       const userDisputes = await marketplaceService.getDisputesByUser(userAddress);
       return res.json(userDisputes);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -557,10 +557,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -576,15 +576,15 @@ export class MarketplaceController {
       const aiModeration = await marketplaceService.createAIModeration(objectType, objectId, aiAnalysis);
       
       if (!aiModeration) {
-        throw new APIError(500, 'Failed to create AI moderation record');
+        throw new AppError('Failed to create AI moderation record');
       }
       
       return res.status(201).json(aiModeration);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -604,10 +604,10 @@ export class MarketplaceController {
       
       return res.json(aiModeration);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -633,10 +633,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -645,7 +645,7 @@ export class MarketplaceController {
       const aiModerations = await marketplaceService.getPendingAIModeration();
       return res.json(aiModerations);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -668,10 +668,10 @@ export class MarketplaceController {
       
       return res.status(201).json({ escrowId });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -688,10 +688,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -711,10 +711,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -731,10 +731,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -751,10 +751,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -771,10 +771,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -791,10 +791,10 @@ export class MarketplaceController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -810,7 +810,7 @@ export class MarketplaceController {
       
       return res.json(reputation);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -829,10 +829,10 @@ export class MarketplaceController {
       const reputation = await marketplaceService.updateUserReputation(address, score, daoApproved);
       return res.json(reputation);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -841,7 +841,7 @@ export class MarketplaceController {
       const vendors = await marketplaceService.getDAOApprovedVendors();
       return res.json(vendors);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 }

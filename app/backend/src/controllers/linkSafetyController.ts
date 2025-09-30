@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { LinkSafetyService } from '../services/linkSafetyService.js';
-import { DomainReputationService } from '../services/domainReputationService.js';
-import { LinkMonitoringService } from '../services/linkMonitoringService.js';
-import { GoogleSafeBrowsingService } from '../services/vendors/googleSafeBrowsingService.js';
-import { PhishFortService } from '../services/vendors/phishFortService.js';
+import { LinkSafetyService } from '../services/linkSafetyService';
+import { DomainReputationService } from '../services/domainReputationService';
+import { LinkMonitoringService } from '../services/linkMonitoringService';
+import { GoogleSafeBrowsingService } from '../services/vendors/googleSafeBrowsingService';
+import { PhishFortService } from '../services/vendors/phishFortService';
 
 export class LinkSafetyController {
   private linkSafetyService: LinkSafetyService;

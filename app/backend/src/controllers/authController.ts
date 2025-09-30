@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { generateToken, verifySignature } from '../middleware/authMiddleware';
 import { UserProfileService } from '../services/userProfileService';
-import { APIError, UnauthorizedError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 import { AuthService } from '../services/authService';
 import { KYCService } from '../services/kycService';
 
@@ -66,10 +66,10 @@ export class AuthController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Wallet authentication failed');
+      throw new AppError('Wallet authentication failed', 500, 'AUTH_ERROR');
     }
   }
 
@@ -93,7 +93,7 @@ export class AuthController {
         message
       });
     } catch (error: any) {
-      throw new APIError(500, 'Failed to generate nonce');
+      throw new AppError('Failed to generate nonce', 500, 'NONCE_ERROR');
     }
   }
 
@@ -132,10 +132,10 @@ export class AuthController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Internal server error');
+      throw new AppError('Internal server error', 500, 'INTERNAL_ERROR');
     }
   }
 
@@ -230,10 +230,10 @@ export class AuthController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Registration failed');
+      throw new AppError('Registration failed', 500, 'REGISTRATION_ERROR');
     }
   }
 
@@ -279,10 +279,10 @@ export class AuthController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to get user profile');
+      throw new AppError('Failed to get user profile', 500, 'PROFILE_ERROR');
     }
   }
 
@@ -311,10 +311,10 @@ export class AuthController {
         preferences: updatedProfile.preferences
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to update preferences');
+      throw new AppError('Failed to update preferences', 500, 'PREFERENCES_ERROR');
     }
   }
 
@@ -343,10 +343,10 @@ export class AuthController {
         privacySettings: updatedProfile.privacySettings
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to update privacy settings');
+      throw new AppError('Failed to update privacy settings', 500, 'PRIVACY_SETTINGS_ERROR');
     }
   }
 
@@ -375,10 +375,10 @@ export class AuthController {
         estimatedProcessingTime: kycResult.estimatedProcessingTime
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to initiate KYC');
+      throw new AppError('Failed to initiate KYC', 500, 'KYC_INITIATE_ERROR');
     }
   }
 
@@ -398,10 +398,10 @@ export class AuthController {
         ...kycStatus
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to get KYC status');
+      throw new AppError('Failed to get KYC status', 500, 'KYC_STATUS_ERROR');
     }
   }
 
@@ -421,10 +421,10 @@ export class AuthController {
         message: 'Successfully logged out'
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Logout failed');
+      throw new AppError('Logout failed', 500, 'LOGOUT_ERROR');
     }
   }
 
@@ -456,10 +456,10 @@ export class AuthController {
         token: newToken
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Token refresh failed');
+      throw new AppError('Token refresh failed', 500, 'TOKEN_REFRESH_ERROR');
     }
   }
 }

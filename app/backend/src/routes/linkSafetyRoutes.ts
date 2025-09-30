@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { LinkSafetyController } from '../controllers/linkSafetyController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
-import { validateRequest } from '../middleware/validateRequest.js';
+import { LinkSafetyController } from '../controllers/linkSafetyController';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { validateRequest } from '../middleware/validateRequest';
 import { body, param, query } from 'express-validator';
 
 const router = Router();

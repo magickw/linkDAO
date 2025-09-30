@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { marketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService.js';
+import { marketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService';
 import { z } from 'zod';
 
 const VerifyListingSchema = z.object({

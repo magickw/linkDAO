@@ -7,7 +7,9 @@
 
 import crypto from 'crypto';
 import { securityConfig } from '../config/securityConfig';
-import { auditLoggingService } from './auditLoggingService';
+import AuditLoggingService from './auditLoggingService';
+
+const auditLoggingService = new AuditLoggingService();
 import { encryptionService } from './encryptionService';
 
 export interface KeyMetadata {

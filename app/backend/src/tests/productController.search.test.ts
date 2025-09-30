@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { Request, Response } from 'express';
 import { ProductController } from '../controllers/productController';
 import { SearchService } from '../services/searchService';
-import { APIError, ValidationError } from '../middleware/errorHandler';
+import { AppError, ValidationError } from '../middleware/errorHandler';
 
 // Mock dependencies
 jest.mock('../services/searchService');
@@ -167,7 +167,7 @@ describe('ProductController - Search Features', () => {
 
       await expect(
         productController.advancedSearch(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(APIError);
+      ).rejects.toThrow(AppError);
     });
   });
 
@@ -240,7 +240,7 @@ describe('ProductController - Search Features', () => {
 
       await expect(
         productController.getRecommendations(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(APIError);
+      ).rejects.toThrow(AppError);
     });
   });
 
@@ -304,7 +304,7 @@ describe('ProductController - Search Features', () => {
 
       await expect(
         productController.compareProducts(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(APIError);
+      ).rejects.toThrow(AppError);
     });
   });
 
@@ -369,7 +369,7 @@ describe('ProductController - Search Features', () => {
 
       await expect(
         productController.getSearchSuggestions(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(APIError);
+      ).rejects.toThrow(AppError);
     });
   });
 
@@ -454,7 +454,7 @@ describe('ProductController - Search Features', () => {
 
       await expect(
         productController.getSearchAnalytics(mockRequest as Request, mockResponse as Response)
-      ).rejects.toThrow(APIError);
+      ).rejects.toThrow(AppError);
     });
   });
 });

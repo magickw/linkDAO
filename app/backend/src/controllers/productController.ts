@@ -12,7 +12,7 @@ import {
   BulkProductUpload,
   CSVProductRow
 } from '../models/Product';
-import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 import { Readable } from 'stream';
 
 const multer = require('multer');
@@ -50,10 +50,10 @@ export class ProductController {
       const category = await productService.createCategory(input);
       return res.status(201).json(category);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -68,10 +68,10 @@ export class ProductController {
       
       return res.json(category);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -86,10 +86,10 @@ export class ProductController {
       
       return res.json(category);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -98,7 +98,7 @@ export class ProductController {
       const categories = await productService.getAllCategories();
       return res.json(categories);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -108,7 +108,7 @@ export class ProductController {
       const categories = await productService.getCategoriesByParent(parentId === 'null' ? null : parentId);
       return res.json(categories);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -125,10 +125,10 @@ export class ProductController {
       
       return res.json(category);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -144,10 +144,10 @@ export class ProductController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -164,10 +164,10 @@ export class ProductController {
       const product = await productService.createProduct(input);
       return res.status(201).json(product);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -182,10 +182,10 @@ export class ProductController {
       
       return res.json(product);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -197,7 +197,7 @@ export class ProductController {
       const products = await productService.getProductsBySeller(sellerId, filters);
       return res.json(products);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -230,7 +230,7 @@ export class ProductController {
       const result = await productService.searchProducts(filters, sort, pagination);
       return res.json(result);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -281,7 +281,7 @@ export class ProductController {
       const result = await searchService.advancedSearch(filters, sort, pagination);
       return res.json(result);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -308,10 +308,10 @@ export class ProductController {
         count: recommendations.length,
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -332,10 +332,10 @@ export class ProductController {
       const comparison = await searchService.compareProducts(ids);
       return res.json(comparison);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -358,10 +358,10 @@ export class ProductController {
         count: suggestions.length,
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -389,10 +389,10 @@ export class ProductController {
       const analytics = await searchService.getSearchAnalytics(start, end, filters);
       return res.json(analytics);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -405,10 +405,10 @@ export class ProductController {
         results: result,
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -425,10 +425,10 @@ export class ProductController {
       
       return res.json(product);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -444,10 +444,10 @@ export class ProductController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -467,10 +467,10 @@ export class ProductController {
       const result = await productService.uploadProductImages(files);
       return res.json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -490,10 +490,10 @@ export class ProductController {
       const result = await productService.bulkUploadProducts(upload);
       return res.json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -533,18 +533,18 @@ export class ProductController {
               const result = await productService.bulkUploadProducts(bulkUpload);
               resolve(res.json(result));
             } catch (error: any) {
-              reject(new APIError(500, error.message));
+              reject(new AppError(500, error.message));
             }
           })
           .on('error', (error: any) => {
-            reject(new APIError(400, `CSV parsing error: ${error.message}`));
+            reject(new AppError(400, `CSV parsing error: ${error.message}`));
           });
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -573,10 +573,10 @@ export class ProductController {
       
       return res.json(analytics);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 

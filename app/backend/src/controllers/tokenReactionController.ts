@@ -3,15 +3,16 @@
  * Handles HTTP requests for token-based reactions
  */
 
-import { Request, Response } from 'express';
-import tokenReactionService, { ReactionType } from '../services/tokenReactionService';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/auth';
+import tokenReactionService, { ReactionType, REACTION_TYPES } from '../services/tokenReactionService';
 
 export class TokenReactionController {
   /**
    * Create a new token reaction
    * POST /api/reactions
    */
-  async createReaction(req: Request, res: Response) {
+  async createReaction(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, type, amount } = req.body;
       const userId = req.user?.id; // Assuming auth middleware sets req.user
@@ -61,7 +62,7 @@ export class TokenReactionController {
    * Get reactions for a post
    * GET /api/reactions?postId=123&reactionType=🔥&limit=20&offset=0
    */
-  async getReactions(req: Request, res: Response) {
+  async getReactions(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, reactionType, limit = '20', offset = '0' } = req.query;
 
@@ -109,7 +110,7 @@ export class TokenReactionController {
    * Get reaction summaries for a post
    * GET /api/reactions/:postId/summaries
    */
-  async getReactionSummaries(req: Request, res: Response) {
+  async getReactionSummaries(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId } = req.params;
       const userId = req.user?.id;
@@ -133,7 +134,7 @@ export class TokenReactionController {
    * Get reaction analytics for a post
    * GET /api/reactions/:postId/analytics
    */
-  async getReactionAnalytics(req: Request, res: Response) {
+  async getReactionAnalytics(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId } = req.params;
 
@@ -155,7 +156,7 @@ export class TokenReactionController {
    * Get user's reactions for a post
    * GET /api/reactions/:postId/user/:userId
    */
-  async getUserReactions(req: Request, res: Response) {
+  async getUserReactions(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId, userId } = req.params;
       const requestingUserId = req.user?.id;
@@ -187,7 +188,7 @@ export class TokenReactionController {
    * Remove a reaction (unstake tokens)
    * DELETE /api/reactions/:reactionId
    */
-  async removeReaction(req: Request, res: Response) {
+  async removeReaction(req: AuthenticatedRequest, res: Response) {
     try {
       const { reactionId } = req.params;
       const userId = req.user?.id;
@@ -218,7 +219,7 @@ export class TokenReactionController {
    * Get top reactors for a post
    * GET /api/reactions/:postId/top-reactors?limit=10
    */
-  async getTopReactors(req: Request, res: Response) {
+  async getTopReactors(req: AuthenticatedRequest, res: Response) {
     try {
       const { postId } = req.params;
       const { limit = '10' } = req.query;
@@ -268,10 +269,10 @@ export class TokenReactionController {
    * Get reaction types configuration
    * GET /api/reactions/types
    */
-  async getReactionTypes(req: Request, res: Response) {
+  async getReactionTypes(req: AuthenticatedRequest, res: Response) {
     try {
       res.json({
-        reactionTypes: tokenReactionService.REACTION_TYPES || {}
+        reactionTypes: REACTION_TYPES
       });
     } catch (error: any) {
       console.error('Error getting reaction types:', error);

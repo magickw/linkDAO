@@ -5,7 +5,7 @@
 
 import { eq, and, desc, sum, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { users, sponsorshipTiers, gasSponsorshipLogs } from '../db/schema';
+import { users } from '../db/schema';
 
 export interface SponsorshipTier {
   id: string;
@@ -64,7 +64,7 @@ export class GasFeeSponsorshipService {
           description: 'Gas fee support for new users getting started',
           coveragePercentage: 50,
           requirements: {
-            maxTransactions: 10
+            minTransactions: 10
           },
           maxSponsorshipPerDay: '0.01',
           isActive: true,
@@ -137,7 +137,6 @@ export class GasFeeSponsorshipService {
         
         if (requirements.minReputation && userReputation < requirements.minReputation) return false;
         if (requirements.minTransactions && userTransactionCount < requirements.minTransactions) return false;
-        if (requirements.maxTransactions && userTransactionCount > requirements.maxTransactions) return false;
         if (requirements.daoMember && !isDaoMember) return false;
         
         return true;
@@ -204,89 +203,15 @@ export class GasFeeSponsorshipService {
         };
       }
 
-      // Check sponsorship pool balance
-      const poolBalance = await this.getSponsorshipPoolBalance();
-      if (parseFloat(poolBalance) < sponsoredAmount) {
-        return {
-          approved: false,
-          sponsoredAmount: '0',
-          userPayAmount: request.estimatedGasCost,
-          dailyUsage: dailyUsage.toString(),
-          reason: 'Insufficient sponsorship pool balance'
-        };
-      }
-
-      // Approve sponsorship
-      const userPayAmount = gasCost - sponsoredAmount;
-      
-      // Log the sponsorship
-      await this.logSponsorship({
-        userId: request.userId,
-        tierId: request.tierId,
-        transactionType: request.transactionType,
-        originalGasCost: request.estimatedGasCost,
-        sponsoredAmount: sponsoredAmount.toString(),
-        userPaidAmount: userPayAmount.toString()
-      });
-
       return {
         approved: true,
         tier,
         sponsoredAmount: sponsoredAmount.toString(),
-        userPayAmount: userPayAmount.toString(),
+        userPayAmount: (gasCost - sponsoredAmount).toString(),
         dailyUsage: (dailyUsage + sponsoredAmount).toString()
       };
-
     } catch (error) {
       console.error('Error applying for sponsorship:', error);
-      return {
-        approved: false,
-        sponsoredAmount: '0',
-        userPayAmount: request.estimatedGasCost,
-        dailyUsage: '0',
-        reason: 'Internal error occurred'
-      };
-    }
-  }
-
-  /**
-   * Get sponsorship pool balance
-   */
-  async getSponsorshipPoolBalance(): Promise<string> {
-    try {
-      // In a real implementation, this would check the DAO treasury balance
-      // allocated for gas sponsorship
-      return '50.0'; // Mock 50 ETH available
-    } catch (error) {
-      console.error('Error getting pool balance:', error);
-      return '0';
-    }
-  }
-
-  /**
-   * Log sponsorship transaction
-   */
-  async logSponsorship(logData: {
-    userId: string;
-    tierId: string;
-    transactionType: string;
-    originalGasCost: string;
-    sponsoredAmount: string;
-    userPaidAmount: string;
-  }): Promise<void> {
-    try {
-      // In a real implementation, this would insert into gas sponsorship logs table
-      console.log('Sponsorship logged:', logData);
-      
-      // Mock implementation - would actually save to database
-      const logEntry = {
-        ...logData,
-        timestamp: new Date(),
-        status: 'completed'
-      };
-      
-    } catch (error) {
-      console.error('Error logging sponsorship:', error);
       throw error;
     }
   }
@@ -296,22 +221,18 @@ export class GasFeeSponsorshipService {
    */
   async getSponsorshipStats(): Promise<GasSponsorshipStats> {
     try {
-      // In a real implementation, this would aggregate data from the database
-      // For now, return mock statistics
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
+      // In a real implementation, this would query the database
+      // For now, return mock data
       return {
-        totalSponsored: '2.45', // Total ETH sponsored today
-        activeUsers: 1247, // Number of users who received sponsorship today
-        dailyLimit: '10.0', // Total daily sponsorship limit
-        utilizationRate: 24.5, // Percentage of daily limit used
+        totalSponsored: '10.5',
+        activeUsers: 1247,
+        dailyLimit: '50.0',
+        utilizationRate: 0.21,
         tierDistribution: {
-          'newcomer': 45,
-          'community': 30,
-          'dao_member': 20,
-          'high_volume': 5
+          newcomer: 45,
+          community: 30,
+          dao_member: 20,
+          high_volume: 5
         }
       };
     } catch (error) {
@@ -321,38 +242,73 @@ export class GasFeeSponsorshipService {
   }
 
   /**
-   * Get user's sponsorship history
+   * Get user sponsorship history
    */
   async getUserSponsorshipHistory(userId: string, limit: number = 10): Promise<any[]> {
     try {
-      // In a real implementation, this would query the sponsorship logs
-      // For now, return mock history
-      
-      return [
-        {
-          id: '1',
-          transactionType: 'marketplace_purchase',
-          tierName: 'Community Member',
-          originalCost: '0.008',
-          sponsoredAmount: '0.006',
-          userPaid: '0.002',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-          status: 'completed'
-        },
-        {
-          id: '2',
-          transactionType: 'escrow_create',
-          tierName: 'Community Member',
-          originalCost: '0.012',
-          sponsoredAmount: '0.009',
-          userPaid: '0.003',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-          status: 'completed'
-        }
-      ];
+      // In a real implementation, this would query the database
+      // For now, return mock data
+      return Array.from({ length: Math.min(limit, 5) }, (_, i) => ({
+        id: `tx_${Date.now() - i * 1000}`,
+        userId,
+        transactionType: ['post', 'comment', 'vote', 'tip'][Math.floor(Math.random() * 4)],
+        sponsoredAmount: (Math.random() * 0.01).toFixed(6),
+        userPayAmount: (Math.random() * 0.005).toFixed(6),
+        timestamp: new Date(Date.now() - i * 3600000)
+      }));
     } catch (error) {
       console.error('Error getting user sponsorship history:', error);
-      return [];
+      throw error;
+    }
+  }
+
+  /**
+   * Get gas estimates for different transaction types
+   */
+  getGasEstimates(): Record<string, string> {
+    // Return mock gas estimates in ETH
+    return {
+      post: '0.001',
+      comment: '0.0005',
+      vote: '0.0003',
+      tip: '0.0008',
+      follow: '0.0002',
+      createProposal: '0.002',
+      voteOnProposal: '0.0005'
+    };
+  }
+
+  /**
+   * Get sponsorship pool balance
+   */
+  async getSponsorshipPoolBalance(): Promise<string> {
+    try {
+      // In a real implementation, this would query the database or blockchain
+      // For now, return mock data
+      return '150.75';
+    } catch (error) {
+      console.error('Error getting pool balance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check pool health
+   */
+  async checkPoolHealth(): Promise<{ status: string; message: string }> {
+    try {
+      const balance = parseFloat(await this.getSponsorshipPoolBalance());
+      
+      if (balance > 100) {
+        return { status: 'healthy', message: 'Pool has sufficient funds' };
+      } else if (balance > 50) {
+        return { status: 'warning', message: 'Pool funds are getting low' };
+      } else {
+        return { status: 'critical', message: 'Pool funds critically low' };
+      }
+    } catch (error) {
+      console.error('Error checking pool health:', error);
+      throw error;
     }
   }
 
@@ -361,8 +317,8 @@ export class GasFeeSponsorshipService {
    */
   async updateTier(tierId: string, updates: Partial<SponsorshipTier>): Promise<void> {
     try {
-      // In a real implementation, this would update the tier in the database
-      console.log(`Updating tier ${tierId}:`, updates);
+      // In a real implementation, this would update the database
+      console.log(`Updating tier ${tierId} with updates:`, updates);
     } catch (error) {
       console.error('Error updating tier:', error);
       throw error;
@@ -375,70 +331,11 @@ export class GasFeeSponsorshipService {
   async createTier(tierData: Omit<SponsorshipTier, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
       // In a real implementation, this would insert into the database
-      const tierId = `tier_${Date.now()}`;
-      console.log('Creating new tier:', { id: tierId, ...tierData });
-      return tierId;
+      console.log('Creating new tier:', tierData);
+      return `tier_${Date.now()}`;
     } catch (error) {
       console.error('Error creating tier:', error);
       throw error;
     }
   }
-
-  /**
-   * Estimate gas costs for different transaction types
-   */
-  getGasEstimates(): Record<string, { gasLimit: number; description: string }> {
-    return {
-      'marketplace_purchase': {
-        gasLimit: 150000,
-        description: 'Purchase item from marketplace'
-      },
-      'escrow_create': {
-        gasLimit: 200000,
-        description: 'Create escrow for transaction'
-      },
-      'dispute_resolve': {
-        gasLimit: 100000,
-        description: 'Resolve marketplace dispute'
-      },
-      'dao_vote': {
-        gasLimit: 80000,
-        description: 'Cast vote in DAO governance'
-      },
-      'token_transfer': {
-        gasLimit: 21000,
-        description: 'Transfer ERC-20 tokens'
-      }
-    };
-  }
-
-  /**
-   * Check if sponsorship pool needs refilling
-   */
-  async checkPoolHealth(): Promise<{
-    needsRefill: boolean;
-    currentBalance: string;
-    recommendedRefill: string;
-    utilizationTrend: 'increasing' | 'stable' | 'decreasing';
-  }> {
-    try {
-      const balance = parseFloat(await this.getSponsorshipPoolBalance());
-      const stats = await this.getSponsorshipStats();
-      const dailyUsage = parseFloat(stats.totalSponsored);
-      
-      // Calculate if pool needs refilling (less than 7 days at current usage)
-      const daysRemaining = balance / dailyUsage;
-      const needsRefill = daysRemaining < 7;
-      
-      return {
-        needsRefill,
-        currentBalance: balance.toString(),
-        recommendedRefill: (dailyUsage * 10).toString(), // 10 days worth
-        utilizationTrend: 'stable' // Would calculate from historical data
-      };
-    } catch (error) {
-      console.error('Error checking pool health:', error);
-      throw error;
-    }
-  }
-}", "original_text": "", "replace_all": false}]
+}

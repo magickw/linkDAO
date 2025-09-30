@@ -4,7 +4,7 @@ import {
   OrderCreationRequest, 
   OrderCreationResult 
 } from '../services/orderCreationService';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class OrderCreationController {
   private orderCreationService: OrderCreationService;
@@ -48,10 +48,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Order creation failed: ${error.message}`);
+      throw new AppError(`Order creation failed: ${error.message}`, 500, 'ORDER_CREATION_ERROR');
     }
   }
 
@@ -74,10 +74,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Order validation failed: ${error.message}`);
+      throw new AppError(`Order validation failed: ${error.message}`, 500, 'ORDER_VALIDATION_ERROR');
     }
   }
 
@@ -104,10 +104,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get order summary: ${error.message}`);
+      throw new AppError(`Failed to get order summary: ${error.message}`, 500, 'ORDER_SUMMARY_ERROR');
     }
   }
 
@@ -135,7 +135,7 @@ export class OrderCreationController {
       const success = await this.orderCreationService.updateOrderStatus(orderId, status, message, metadata);
 
       if (!success) {
-        throw new APIError(500, 'Failed to update order status');
+        throw new AppError('Failed to update order status', 500, 'ORDER_STATUS_UPDATE_ERROR');
       }
 
       return res.json({
@@ -144,10 +144,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to update order status: ${error.message}`);
+      throw new AppError(`Failed to update order status: ${error.message}`, 500, 'ORDER_STATUS_UPDATE_ERROR');
     }
   }
 
@@ -179,10 +179,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to cancel order: ${error.message}`);
+      throw new AppError(`Failed to cancel order: ${error.message}`, 500, 'ORDER_CANCEL_ERROR');
     }
   }
 
@@ -224,7 +224,7 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      throw new APIError(500, `Failed to get order statistics: ${error.message}`);
+      throw new AppError(`Failed to get order statistics: ${error.message}`, 500, 'ORDER_STATS_ERROR');
     }
   }
 
@@ -308,10 +308,10 @@ export class OrderCreationController {
       });
 
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Bulk operation failed: ${error.message}`);
+      throw new AppError(`Bulk operation failed: ${error.message}`, 500, 'BULK_OPERATION_ERROR');
     }
   }
 

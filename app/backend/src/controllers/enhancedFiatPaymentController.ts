@@ -6,7 +6,7 @@ import {
   PaymentMethodSelection,
   PaymentMethodInfo
 } from '../services/enhancedFiatPaymentService';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class EnhancedFiatPaymentController {
   private enhancedFiatPaymentService: EnhancedFiatPaymentService;
@@ -38,10 +38,10 @@ export class EnhancedFiatPaymentController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Fiat payment processing failed: ${error.message}`);
+      throw new AppError(`Fiat payment processing failed: ${error.message}`, 500, 'FIAT_PAYMENT_ERROR');
     }
   }
 
@@ -68,10 +68,10 @@ export class EnhancedFiatPaymentController {
         data: methods
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get payment methods: ${error.message}`);
+      throw new AppError(`Failed to get payment methods: ${error.message}`, 500, 'FIAT_METHODS_ERROR');
     }
   }
 
@@ -98,10 +98,10 @@ export class EnhancedFiatPaymentController {
         data: paymentMethod
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment method setup failed: ${error.message}`);
+      throw new AppError(`Payment method setup failed: ${error.message}`, 500, 'FIAT_SETUP_ERROR');
     }
   }
 
@@ -128,10 +128,10 @@ export class EnhancedFiatPaymentController {
         data: selectionData
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get selection data: ${error.message}`);
+      throw new AppError(`Failed to get selection data: ${error.message}`, 500, 'FIAT_SELECTION_ERROR');
     }
   }
 
@@ -164,10 +164,10 @@ export class EnhancedFiatPaymentController {
         data: conversion
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Crypto conversion failed: ${error.message}`);
+      throw new AppError(`Crypto conversion failed: ${error.message}`, 500, 'FIAT_CONVERSION_ERROR');
     }
   }
 
@@ -210,10 +210,10 @@ export class EnhancedFiatPaymentController {
         data: receipt
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Receipt generation failed: ${error.message}`);
+      throw new AppError(`Receipt generation failed: ${error.message}`, 500, 'FIAT_RECEIPT_ERROR');
     }
   }
 
@@ -240,10 +240,10 @@ export class EnhancedFiatPaymentController {
         data: refundResult
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Refund processing failed: ${error.message}`);
+      throw new AppError(`Refund processing failed: ${error.message}`, 500, 'FIAT_REFUND_ERROR');
     }
   }
 
@@ -282,10 +282,10 @@ export class EnhancedFiatPaymentController {
         data: transaction
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get transaction: ${error.message}`);
+      throw new AppError(`Failed to get transaction: ${error.message}`, 500, 'FIAT_TRANSACTION_ERROR');
     }
   }
 
@@ -347,10 +347,10 @@ export class EnhancedFiatPaymentController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get payment history: ${error.message}`);
+      throw new AppError(`Failed to get payment history: ${error.message}`, 500, 'FIAT_HISTORY_ERROR');
     }
   }
 
@@ -391,10 +391,10 @@ export class EnhancedFiatPaymentController {
         data: statistics
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get payment statistics: ${error.message}`);
+      throw new AppError(`Failed to get payment statistics: ${error.message}`, 500, 'FIAT_STATS_ERROR');
     }
   }
 
@@ -434,10 +434,10 @@ export class EnhancedFiatPaymentController {
         data: validation
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment method validation failed: ${error.message}`);
+      throw new AppError(`Payment method validation failed: ${error.message}`, 500, 'FIAT_VALIDATION_ERROR');
     }
   }
 

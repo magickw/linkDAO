@@ -1,13 +1,13 @@
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { 
   linkMonitoringAlerts, 
   urlAnalysisResults, 
   contentLinks, 
   domainReputation 
-} from '../db/schema.js';
-import { eq, and, or, desc, sql, count, inArray } from 'drizzle-orm';
-import { LinkSafetyService } from './linkSafetyService.js';
-import { DomainReputationService } from './domainReputationService.js';
+} from '../db/schema';
+import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
+import { LinkSafetyService } from './linkSafetyService';
+import { DomainReputationService } from './domainReputationService';
 
 export interface MonitoringAlert {
   id: number;
@@ -186,7 +186,7 @@ export class LinkMonitoringService {
     // Get alert counts by severity
     const [alertCounts] = await db
       .select({
-        total: count(linkMonitoringAlerts.id),
+        total: sql<number>`COUNT(${linkMonitoringAlerts.id})`,
         critical: sql<number>`COUNT(CASE WHEN ${linkMonitoringAlerts.severity} = 'critical' THEN 1 END)`,
         high: sql<number>`COUNT(CASE WHEN ${linkMonitoringAlerts.severity} = 'high' THEN 1 END)`,
         medium: sql<number>`COUNT(CASE WHEN ${linkMonitoringAlerts.severity} = 'medium' THEN 1 END)`,
@@ -199,7 +199,7 @@ export class LinkMonitoringService {
     const alertsByType = await db
       .select({
         alertType: linkMonitoringAlerts.alertType,
-        count: count(linkMonitoringAlerts.id),
+        count: sql<number>`COUNT(${linkMonitoringAlerts.id})`,
       })
       .from(linkMonitoringAlerts)
       .where(eq(linkMonitoringAlerts.isResolved, false))
@@ -331,7 +331,7 @@ export class LinkMonitoringService {
   ): Promise<void> {
     // Count affected content
     const [contentCount] = await db
-      .select({ count: count(contentLinks.id) })
+      .select({ count: sql<number>`COUNT(${contentLinks.id})` })
       .from(contentLinks)
       .where(eq(contentLinks.urlAnalysisId, urlAnalysisId));
 

@@ -71,7 +71,7 @@ export class RedisService {
   async getSession(sessionId: string): Promise<any | null> {
     await this.ensureConnected();
     const data = await this.client.get(`session:${sessionId}`);
-    return data ? JSON.parse(data) : null;
+    return data && typeof data === 'string' ? JSON.parse(data) : null;
   }
 
   async deleteSession(sessionId: string): Promise<void> {
@@ -99,7 +99,7 @@ export class RedisService {
   async get(key: string): Promise<any | null> {
     await this.ensureConnected();
     const data = await this.client.get(key);
-    return data ? JSON.parse(data) : null;
+    return data && typeof data === 'string' ? JSON.parse(data) : null;
   }
 
   async del(key: string): Promise<void> {

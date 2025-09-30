@@ -13,7 +13,7 @@ import {
   OrderEvent,
   OrderAnalytics
 } from '../models/Order';
-import { APIError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ForbiddenError } from '../middleware/errorHandler';
 
 export class OrderTrackingService {
   private databaseService: DatabaseService;

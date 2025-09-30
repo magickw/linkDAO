@@ -453,6 +453,19 @@ export class UnifiedMarketplaceService {
             throw new ValidationError('Failed to perform bulk sync', 'bulk_sync');
         }
     }
+
+    /**
+     * Get blockchain data for a listing
+     * Requirements: Access blockchain functionality
+     */
+    async getBlockchainData(listingId: string): Promise<{
+        listing: MarketplaceListing | null;
+        bids: any[];
+        offers: any[];
+        escrow: any | null;
+    }> {
+        return this.productListingService.getBlockchainData(listingId);
+    }
 }
 
 // Export singleton instance

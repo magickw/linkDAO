@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { contentPreviewController } from '../controllers/contentPreviewController';
-import { auth } from '../middleware/auth';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { authenticateToken } from '../middleware/auth';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
 // Apply rate limiting to preview endpoints
-const previewRateLimit = rateLimiter({
+const previewRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many preview requests, please try again later'
@@ -19,10 +19,10 @@ router.post('/generate', previewRateLimit, contentPreviewController.generatePrev
 router.get('/cache/:urlHash', contentPreviewController.getCachedPreview);
 
 // Clear preview cache (admin only)
-router.delete('/cache', auth, contentPreviewController.clearCache);
+router.delete('/cache', authenticateToken, contentPreviewController.clearCache);
 
 // Get cache statistics (admin only)
-router.get('/cache/stats', auth, contentPreviewController.getCacheStats);
+router.get('/cache/stats', authenticateToken, contentPreviewController.getCacheStats);
 
 // Security scan endpoint
 router.post('/security/scan', previewRateLimit, contentPreviewController.securityScan);

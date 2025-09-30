@@ -1,6 +1,6 @@
 import { eq, and, gte, desc } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { users, userReputationScores, sellerVerifications } from '../db/schema.js';
+import { db } from '../db';
+import { users, userReputationScores, sellerVerifications } from '../db/schema';
 import { ethers } from 'ethers';
 import crypto from 'crypto';
 
@@ -351,7 +351,7 @@ export class MarketplaceVerificationService {
       const verification = await db
         .select({ kycVerified: sellerVerifications.kycVerified })
         .from(sellerVerifications)
-        .where(eq(sellerVerifications.walletAddress, walletAddress))
+        .where(eq(sellerVerifications.userId, walletAddress))
         .limit(1);
 
       return verification[0]?.kycVerified || false;

@@ -23,6 +23,9 @@ export class AppError extends Error implements ApiError {
   }
 }
 
+// Export alias for backward compatibility
+export { AppError as APIError };
+
 // Common error types
 export class ValidationError extends AppError {
   constructor(message: string, details?: any) {

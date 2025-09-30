@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { EngagementAnalyticsController } from '../controllers/engagementAnalyticsController';
-import { auth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // Engagement analytics routes
 router.get('/engagement', EngagementAnalyticsController.getEngagementAnalytics);
 router.get('/engagement/trends', EngagementAnalyticsController.getEngagementTrends);
-router.post('/engagement/track', auth, EngagementAnalyticsController.trackEngagementInteraction);
-router.post('/engagement/track-batch', auth, EngagementAnalyticsController.trackEngagementBatch);
+router.post('/engagement/track', authenticateToken, EngagementAnalyticsController.trackEngagementInteraction);
+router.post('/engagement/track-batch', authenticateToken, EngagementAnalyticsController.trackEngagementBatch);
 
 // Post-specific analytics
 router.get('/posts/top-performing', EngagementAnalyticsController.getTopPerformingPosts);
