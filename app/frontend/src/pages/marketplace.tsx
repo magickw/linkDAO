@@ -1342,9 +1342,12 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
 
   useEffect(() => {
     let mounted = true;
-    if (address) {
-      fetchMyListings(mounted);
-    }
+    const fetchListings = async () => {
+      if (address) {
+        await fetchMyListings(mounted);
+      }
+    };
+    fetchListings();
     return () => { mounted = false; };
   }, [address, fetchMyListings]);
 
