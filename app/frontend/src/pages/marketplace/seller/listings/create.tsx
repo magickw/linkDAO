@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
@@ -126,7 +126,8 @@ const CreateListingPage: React.FC = () => {
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
   
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   // Mock ETH price fetching (in real app, use CoinGecko API)
   useEffect(() => {

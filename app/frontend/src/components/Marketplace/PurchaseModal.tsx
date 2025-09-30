@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { MarketplaceListing, MarketplaceService } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
@@ -28,7 +28,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   const [useEscrow, setUseEscrow] = useState(true);
   const [deliveryInfo, setDeliveryInfo] = useState('');
 
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   const handlePurchase = async () => {
     if (!address) {

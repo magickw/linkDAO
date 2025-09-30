@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { MarketplaceListing, MarketplaceService } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
@@ -24,7 +24,8 @@ const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
   const [offerAmount, setOfferAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

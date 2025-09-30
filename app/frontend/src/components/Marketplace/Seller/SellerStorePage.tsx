@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -264,7 +264,8 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   const [reviewFilter, setReviewFilter] = useState<'recent' | 'highest' | 'verified'>('recent');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   // Fetch seller data
   useEffect(() => {
