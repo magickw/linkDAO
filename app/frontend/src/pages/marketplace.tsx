@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
@@ -57,7 +57,8 @@ const MarketplaceContent: React.FC = () => {
   
   const cart = useEnhancedCart();
   
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   const fetchListings = useCallback(async () => {
     try {
@@ -388,7 +389,7 @@ const MarketplaceContent: React.FC = () => {
         daoApproved: true
       });
     }
-  }, [reputation, marketplaceService]);
+  }, [marketplaceService, reputation?.walletAddress]);
 
   useEffect(() => {
     let mounted = true;
@@ -1286,7 +1287,8 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   const { profile } = useSeller();
   const router = useRouter();
   
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
   const fetchMyListings = useCallback(async (mounted = true) => {
     try {

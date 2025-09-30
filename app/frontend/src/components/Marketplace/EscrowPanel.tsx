@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   MarketplaceEscrow,
   MarketplaceService
@@ -18,7 +18,8 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const marketplaceService = new MarketplaceService();
+  // Memoize the marketplace service to prevent recreation on every render
+  const marketplaceService = useMemo(() => new MarketplaceService(), []);
   
   const isBuyer = escrow.buyerWalletAddress.toLowerCase() === userAddress.toLowerCase();
   const isSeller = escrow.sellerWalletAddress.toLowerCase() === userAddress.toLowerCase();
