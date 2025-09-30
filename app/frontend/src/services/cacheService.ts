@@ -20,7 +20,7 @@ class IntelligentCache<T = any> {
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = {
       maxSize: config.maxSize || 1000,
-      defaultTTL: config.defaultTTL || 5 * 60 * 1000, // 5 minutes
+      defaultTTL: config.defaultTTL || 10 * 60 * 1000, // 10 minutes
       cleanupInterval: config.cleanupInterval || 60 * 1000 // 1 minute
     };
 
@@ -164,7 +164,7 @@ class UserCache extends IntelligentCache<any> {
   constructor() {
     super({
       maxSize: 500,
-      defaultTTL: 10 * 60 * 1000, // 10 minutes for user data
+      defaultTTL: 15 * 60 * 1000, // 15 minutes for user data
       cleanupInterval: 2 * 60 * 1000 // 2 minutes
     });
   }
@@ -224,7 +224,7 @@ class PostCache extends IntelligentCache<any> {
   constructor() {
     super({
       maxSize: 1000,
-      defaultTTL: 5 * 60 * 1000, // 5 minutes for posts
+      defaultTTL: 10 * 60 * 1000, // 10 minutes for posts
       cleanupInterval: 60 * 1000 // 1 minute
     });
   }
@@ -238,7 +238,7 @@ class PostCache extends IntelligentCache<any> {
   }
 
   setPostComments(postId: string, comments: any[]): void {
-    this.set(`post:${postId}:comments`, comments, 2 * 60 * 1000); // 2 minutes
+    this.set(`post:${postId}:comments`, comments, 5 * 60 * 1000); // 5 minutes
   }
 
   getPostComments(postId: string): any[] | null {
@@ -246,7 +246,7 @@ class PostCache extends IntelligentCache<any> {
   }
 
   setFeed(feedType: string, posts: any[]): void {
-    this.set(`feed:${feedType}`, posts, 3 * 60 * 1000); // 3 minutes for feeds
+    this.set(`feed:${feedType}`, posts, 5 * 60 * 1000); // 5 minutes for feeds
   }
 
   getFeed(feedType: string): any[] | null {

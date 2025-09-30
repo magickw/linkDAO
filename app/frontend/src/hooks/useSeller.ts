@@ -13,7 +13,32 @@ export function useSeller() {
     console.log('useSeller: fetchProfile called', { address });
     if (!address) return;
     
+    // Check if profile is already cached before making any requests
+    if (sellerService.isProfileCached(address)) {
+      const cachedProfile = sellerService.getCachedProfile(address);
+      if (cachedProfile) {
+        console.log('useSeller: Using cached profile for address:', address);
+        setProfile(cachedProfile);
+        return;
+      }
+    }
+    
+    // Prevent unnecessary calls if we already have the profile for this address
+    if (profile && profile.walletAddress === address) {
+      console.log('useSeller: Profile already loaded for this address, skipping fetch');
+      return;
+    }
+    
+    // Prevent rapid successive calls
+    const now = Date.now();
+    const lastFetchTime = (window as any).__lastSellerProfileFetch || 0;
+    if (now - lastFetchTime < 2000) { // Increased minimum time between calls to 2 seconds
+      console.log('useSeller: Too soon since last fetch, skipping');
+      return;
+    }
+    
     console.log('useSeller: Fetching profile for address:', address);
+    (window as any).__lastSellerProfileFetch = now;
     setLoading(true);
     setError(null);
     
@@ -25,7 +50,7 @@ export function useSeller() {
       console.log('useSeller: Error fetching profile:', err);
       
       // Handle 404 errors gracefully - seller profile doesn't exist yet
-      if (err instanceof Error && err.message.includes('404')) {
+      if (err instanceof Error && (err.message.includes('404') || err.message.includes('not found'))) {
         console.log('useSeller: Seller profile not found (404) - this is normal for new users');
         setProfile(null);
         setError(null); // Don't treat 404 as an error
@@ -36,7 +61,7 @@ export function useSeller() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, profile]);
 
   const createProfile = useCallback(async (profileData: Partial<SellerProfile>) => {
     if (!address) throw new Error('Wallet not connected');
@@ -49,6 +74,8 @@ export function useSeller() {
         ...profileData,
         walletAddress: address,
       });
+      // Clear cache for this address
+      sellerService.clearProfileCache(address);
       setProfile(newProfile);
       return newProfile;
     } catch (err) {
@@ -68,6 +95,8 @@ export function useSeller() {
     
     try {
       const updatedProfile = await sellerService.updateSellerProfile(address, updates);
+      // Clear cache for this address
+      sellerService.clearProfileCache(address);
       setProfile(updatedProfile);
       return updatedProfile;
     } catch (err) {
@@ -83,20 +112,32 @@ export function useSeller() {
     console.log('useSeller: useEffect triggered', { address });
     if (address) {
       console.log('useSeller: Calling fetchProfile for address:', address);
-      fetchProfile();
+      // Add debounce to prevent rapid calls
+      const timer = setTimeout(() => {
+        fetchProfile();
+      }, 500); // Increased debounce time
+      
+      return () => clearTimeout(timer);
     } else {
       console.log('useSeller: No address, setting profile to null');
       setProfile(null);
     }
-  }, [address, fetchProfile]); // Include fetchProfile in dependencies
+  }, [address]); // Remove fetchProfile from dependencies to prevent infinite loop
 
+  const refetchProfile = useCallback(async () => {
+    if (address) {
+      sellerService.clearProfileCache(address);
+      await fetchProfile();
+    }
+  }, [address, fetchProfile]);
+  
   return {
     profile,
     loading,
     error,
     createProfile,
     updateProfile,
-    refetch: fetchProfile,
+    refetch: refetchProfile,
     isConnected: !!address,
     walletAddress: address,
   };

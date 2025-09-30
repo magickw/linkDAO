@@ -21,6 +21,24 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
 
   const [balance, setBalance] = useState<string>('0');
 
+  // Prevent multiple initializations of WalletConnect
+  useEffect(() => {
+    // Check if WalletConnect is already initialized
+    const isWalletConnectInitialized = (window as any).__walletConnectInitialized;
+    if (isWalletConnectInitialized) {
+      console.log('WalletConnect is already initialized, skipping duplicate initialization');
+      return;
+    }
+    
+    // Mark as initialized
+    (window as any).__walletConnectInitialized = true;
+    
+    // Cleanup on unmount
+    return () => {
+      (window as any).__walletConnectInitialized = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (balanceData) {
       setBalance(balanceData.formatted);

@@ -25,10 +25,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const { isConnected } = useAccount();
   const { profile, loading, error } = useSeller();
   
-  // Debug logging
-  console.log('HeroSection - profile:', profile);
-  console.log('HeroSection - loading:', loading);
-  console.log('HeroSection - error:', error);
   const router = useRouter();
   
   const handleSellerDashboard = () => {

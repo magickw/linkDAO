@@ -19,10 +19,10 @@ class RequestManager {
   private pendingRequests = new Map<string, PendingRequest>();
   private requestCounts = new Map<string, { count: number; windowStart: number }>();
   private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
-  private readonly MAX_REQUESTS_PER_MINUTE = 20;
-  private readonly DEFAULT_TIMEOUT = 10000;
-  private readonly DEFAULT_RETRIES = 2;
-  private readonly DEFAULT_RETRY_DELAY = 1000;
+  private readonly MAX_REQUESTS_PER_MINUTE = 30; // Increased from 20 to 30
+  private readonly DEFAULT_TIMEOUT = 15000; // Increased from 10s to 15s
+  private readonly DEFAULT_RETRIES = 1; // Reduced from 2 to 1
+  private readonly DEFAULT_RETRY_DELAY = 2000; // Increased from 1s to 2s
 
   /**
    * Make a managed API request with deduplication and rate limiting
@@ -232,6 +232,16 @@ class RequestManager {
   private getRequestKey(url: string, options: RequestInit): string {
     const method = options.method || 'GET';
     const body = options.body ? JSON.stringify(options.body) : '';
+    
+    // Special handling for seller profile requests to increase deduplication
+    if (url.includes('/api/marketplace/seller/') || url.includes('/marketplace/seller/profile/')) {
+      // Extract wallet address from URL for seller profile requests
+      const walletAddressMatch = url.match(/(0x[a-fA-F0-9]{40})/);
+      if (walletAddressMatch) {
+        return `${method}:seller-profile:${walletAddressMatch[1]}`;
+      }
+    }
+    
     return `${method}:${url}:${body}`;
   }
 

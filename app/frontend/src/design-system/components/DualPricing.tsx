@@ -81,6 +81,25 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout>();
 
+  // Store props in refs to avoid recreating updatePrices
+  const cryptoPriceRef = useRef(cryptoPrice);
+  const cryptoSymbolRef = useRef(cryptoSymbol);
+  const supportedCurrenciesRef = useRef(supportedCurrencies);
+  const realTimeConversionRef = useRef(realTimeConversion);
+  const trackHistoryRef = useRef(trackHistory);
+  const currentCurrencyRef = useRef(currentCurrency);
+  const conversionApiRef = useRef(conversionApi);
+
+  useEffect(() => {
+    cryptoPriceRef.current = cryptoPrice;
+    cryptoSymbolRef.current = cryptoSymbol;
+    supportedCurrenciesRef.current = supportedCurrencies;
+    realTimeConversionRef.current = realTimeConversion;
+    trackHistoryRef.current = trackHistory;
+    currentCurrencyRef.current = currentCurrency;
+    conversionApiRef.current = conversionApi;
+  });
+
   // Mock conversion rates (in real app, these would come from API)
   const mockRates = {
     'ETH-USD': 2400,
@@ -99,9 +118,9 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   // Enhanced conversion function with multiple currencies
   const convertPrice = useCallback(async (price: string, from: string, to: string): Promise<string> => {
     try {
-      if (conversionApi) {
+      if (conversionApiRef.current) {
         // Use custom API
-        const response = await fetch(`${conversionApi}?from=${from}&to=${to}&amount=${price}`);
+        const response = await fetch(`${conversionApiRef.current}?from=${from}&to=${to}&amount=${price}`);
         const data = await response.json();
         return data.converted.toString();
       } else {
@@ -115,11 +134,17 @@ export const DualPricing: React.FC<DualPricingProps> = ({
       console.error('Conversion failed:', error);
       throw new Error('Conversion failed');
     }
-  }, [conversionApi]);
+  }, []);
 
-  // Real-time price updates
+  // Stable reference for onPriceUpdate callback
+  const onPriceUpdateRef = useRef(onPriceUpdate);
+  useEffect(() => {
+    onPriceUpdateRef.current = onPriceUpdate;
+  }, [onPriceUpdate]);
+
+  // Real-time price updates - stable function that doesn't change
   const updatePrices = useCallback(async () => {
-    if (!realTimeConversion) return;
+    if (!realTimeConversionRef.current) return;
 
     setIsConverting(true);
     setConversionError(null);
@@ -128,23 +153,23 @@ export const DualPricing: React.FC<DualPricingProps> = ({
       const newPrices: Record<string, string> = {};
 
       // Convert to all supported currencies
-      for (const currency of supportedCurrencies) {
-        const converted = await convertPrice(cryptoPrice, cryptoSymbol, currency);
+      for (const currency of supportedCurrenciesRef.current) {
+        const converted = await convertPrice(cryptoPriceRef.current, cryptoSymbolRef.current, currency);
         newPrices[currency] = converted;
       }
 
       setConvertedPrices(newPrices);
 
       // Track price history
-      if (trackHistory) {
-        const currentPrice = parseFloat(newPrices[currentCurrency] || '0');
+      if (trackHistoryRef.current) {
+        const currentPrice = parseFloat(newPrices[currentCurrencyRef.current] || '0');
         // Use functional update to avoid dependency issues
         setPriceHistory(prev => {
           const lastPrice = prev.length > 0 ? prev[prev.length - 1].price : currentPrice;
           const change = prev.length > 0 ? ((currentPrice - lastPrice) / lastPrice) * 100 : 0;
-          
+
           setPriceChange(change);
-          
+
           return [
             ...prev.slice(-19), // Keep last 20 entries
             {
@@ -157,17 +182,17 @@ export const DualPricing: React.FC<DualPricingProps> = ({
       }
 
       setLastUpdated(new Date());
-      onPriceUpdate?.(newPrices[currentCurrency] || '0', currentCurrency);
+      onPriceUpdateRef.current?.(newPrices[currentCurrencyRef.current] || '0', currentCurrencyRef.current);
     } catch (error) {
       setConversionError('Failed to update prices');
     } finally {
       setIsConverting(false);
     }
-  }, [realTimeConversion, cryptoPrice, cryptoSymbol, supportedCurrencies, convertPrice, trackHistory, currentCurrency, onPriceUpdate]);
+  }, [convertPrice]);
 
-  // Set up automatic price updates
+  // Set up automatic price updates - only re-run if updateInterval changes
   useEffect(() => {
-    if (realTimeConversion && updateInterval > 0) {
+    if (realTimeConversionRef.current && updateInterval > 0) {
       updatePrices(); // Initial update
 
       intervalRef.current = setInterval(updatePrices, updateInterval);
@@ -178,19 +203,17 @@ export const DualPricing: React.FC<DualPricingProps> = ({
         }
       };
     }
-  }, [realTimeConversion, updateInterval, updatePrices]);
+  }, [updateInterval, updatePrices]);
 
-  // Initialize prices
+  // Initialize prices - only run when fiatPrice or currentCurrency changes
   useEffect(() => {
     if (fiatPrice) {
       setConvertedPrices(prev => ({
         ...prev,
         [currentCurrency]: fiatPrice
       }));
-    } else if (realTimeConversion) {
-      updatePrices();
     }
-  }, [fiatPrice, currentCurrency, realTimeConversion, updatePrices]);
+  }, [fiatPrice, currentCurrency]);
 
   const sizeConfig = {
     small: {

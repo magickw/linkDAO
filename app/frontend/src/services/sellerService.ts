@@ -18,7 +18,42 @@ import {
 
 class SellerService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  private profileCache = new Map<string, { data: SellerProfile | null; timestamp: number }>();
+  private readonly CACHE_DURATION = 60000; // 60 seconds cache
 
+  // Cache management
+  clearProfileCache(walletAddress?: string): void {
+    if (walletAddress) {
+      this.profileCache.delete(walletAddress);
+    } else {
+      this.profileCache.clear();
+    }
+  }
+  
+  // Method to check if a profile is cached
+  isProfileCached(walletAddress: string): boolean {
+    const cached = this.profileCache.get(walletAddress);
+    if (!cached) return false;
+    
+    const now = Date.now();
+    return now - cached.timestamp < this.CACHE_DURATION;
+  }
+  
+  // Method to get cached profile without making a request
+  getCachedProfile(walletAddress: string): SellerProfile | null {
+    const cached = this.profileCache.get(walletAddress);
+    if (!cached) return null;
+    
+    const now = Date.now();
+    if (now - cached.timestamp < this.CACHE_DURATION) {
+      return cached.data;
+    }
+    
+    // Cache expired, remove it
+    this.profileCache.delete(walletAddress);
+    return null;
+  }
+  
   // Helper method to determine the correct base URL based on context
   private getApiBaseUrl(): string {
     // When running in browser, use relative URLs which will be handled by Next.js rewrites
@@ -120,9 +155,9 @@ class SellerService {
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
     try {
       const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint
+      // Use the correct backend endpoint (using plural 'sellers' as per memory)
       const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/marketplace/seller/onboarding/${walletAddress}`  // Server-side direct call
+        ? `${baseUrl}/api/sellers/onboarding/${walletAddress}`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}`;  // Client-side through proxy
       console.log(`Making GET request to: ${endpoint}`);
       const response = await fetch(endpoint);
@@ -190,9 +225,9 @@ class SellerService {
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
     const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint
+    // Use the correct backend endpoint (using plural 'sellers' as per memory)
     const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/marketplace/seller/onboarding/${walletAddress}/${stepId}`  // Server-side direct call
+      ? `${baseUrl}/api/sellers/onboarding/${walletAddress}/${stepId}`  // Server-side direct call
       : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}/${stepId}`;  // Client-side through proxy
     console.log(`Making PUT request to: ${endpoint}`, data);
     const response = await fetch(endpoint, {
@@ -218,17 +253,28 @@ class SellerService {
 
   // Seller Profile Management
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
+    // Check cache first using the new method
+    const cachedProfile = this.getCachedProfile(walletAddress);
+    if (cachedProfile !== null) {
+      console.log(`Returning cached profile for ${walletAddress}`);
+      return cachedProfile;
+    }
+    
     try {
       const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint
+      // Use the correct backend endpoint (using plural 'sellers' as per memory)
       const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/marketplace/seller/profile/${walletAddress}`  // Server-side direct call
+        ? `${baseUrl}/api/sellers/profile/${walletAddress}`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
       console.log(`Making GET request to: ${endpoint}`);
       const response = await fetch(endpoint);
       console.log(`Response status: ${response.status}`);
       if (!response.ok) {
-        if (response.status === 404) return null;
+        if (response.status === 404) {
+          // Cache 404 responses as well to prevent repeated calls
+          this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
+          return null;
+        }
         throw new Error(`Failed to fetch seller profile: ${response.status} ${response.statusText}`);
       }
       
@@ -251,6 +297,9 @@ class SellerService {
           }
         }
         
+        // Cache the result
+        this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
+        
         return profile;
       } else {
         throw new Error(result.message || 'Failed to fetch seller profile');
@@ -263,9 +312,9 @@ class SellerService {
 
   async createSellerProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
     const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint
+    // Use the correct backend endpoint (using plural 'sellers' as per memory)
     const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/marketplace/seller/profile`  // Server-side direct call
+      ? `${baseUrl}/api/sellers/profile`  // Server-side direct call
       : `${baseUrl}/api/marketplace/seller/profile`;  // Client-side through proxy
     console.log(`Making POST request to: ${endpoint}`, profileData);
     const response = await fetch(endpoint, {
@@ -294,9 +343,9 @@ class SellerService {
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
     const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint
+    // Use the correct backend endpoint (using plural 'sellers' as per memory)
     const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/marketplace/seller/profile/${walletAddress}`  // Server-side direct call
+      ? `${baseUrl}/api/sellers/profile/${walletAddress}`  // Server-side direct call
       : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
     console.log(`Making PUT request to: ${endpoint}`, updates);
     const response = await fetch(endpoint, {
@@ -327,8 +376,9 @@ class SellerService {
   async updateSellerProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
     try {
       const baseUrl = this.getApiBaseUrl();
+      // Use the correct backend endpoint (using plural 'sellers' as per memory)
       const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/marketplace/seller/profile/${walletAddress}/enhanced`  // Server-side direct call
+        ? `${baseUrl}/api/sellers/profile/${walletAddress}/enhanced`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/${walletAddress}/enhanced`;     // Client-side through proxy
       console.log(`Making PUT request to: ${endpoint}`);
 
@@ -382,9 +432,9 @@ class SellerService {
   async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {
     try {
       const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint
+      // Use the correct backend endpoint (using plural 'sellers' as per memory)
       const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/marketplace/seller/ens/validate`  // Server-side direct call
+        ? `${baseUrl}/api/sellers/ens/validate`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/ens/validate`;  // Client-side through proxy
       console.log(`Making POST request to: ${endpoint}`, { ensHandle });
       const response = await fetch(endpoint, {
@@ -422,9 +472,9 @@ class SellerService {
   async verifyENSOwnership(ensHandle: string, walletAddress: string): Promise<boolean> {
     try {
       const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint
+      // Use the correct backend endpoint (using plural 'sellers' as per memory)
       const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/marketplace/seller/ens/verify-ownership`  // Server-side direct call
+        ? `${baseUrl}/api/sellers/ens/verify-ownership`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/ens/verify-ownership`;  // Client-side through proxy
       console.log(`Making POST request to: ${endpoint}`, { ensHandle, walletAddress });
       const response = await fetch(endpoint, {
