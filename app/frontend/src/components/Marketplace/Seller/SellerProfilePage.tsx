@@ -88,10 +88,7 @@ export function SellerProfilePage() {
     }
   });
 
-  // Debug logging
-  console.log('SellerProfilePage - Wallet connected:', isConnected);
-  console.log('SellerProfilePage - Wallet address:', walletAddress);
-  console.log('SellerProfilePage - Profile:', profile);
+
 
   // Initialize form data when profile loads
   useEffect(() => {

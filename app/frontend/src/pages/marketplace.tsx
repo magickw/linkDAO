@@ -45,7 +45,7 @@ const MarketplaceContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms debounce
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // Increased debounce to 500ms
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
@@ -69,7 +69,7 @@ const MarketplaceContent: React.FC = () => {
       
       const { enhancedMarketplaceService } = await import('@/services/enhancedMarketplaceService');
       const data = await enhancedMarketplaceService.getMarketplaceListings({
-        limit: 50,
+        limit: 20, // Reduced limit for faster initial load
         sortBy: 'createdAt',
         sortOrder: 'desc'
       });
@@ -401,7 +401,7 @@ const MarketplaceContent: React.FC = () => {
           await fetchReputation(address);
         }
       }
-    }, 1000); // Increase debounce to 1 second to prevent rapid calls
+    }, 1500); // Increase debounce to 1.5 seconds to prevent rapid calls
     
     return () => {
       clearTimeout(timer);

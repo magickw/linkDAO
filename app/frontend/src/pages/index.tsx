@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import DashboardRightSidebar from '@/components/DashboardRightSidebar';
 import FeedView from '@/components/FeedView';
@@ -36,7 +36,9 @@ export default function Home() {
   }, []);
 
   // Use real feed data - ensure it's always an array
-  const displayPosts = Array.isArray(feedData) ? feedData : [];
+  const displayPosts = useMemo(() => {
+    return Array.isArray(feedData) ? feedData : [];
+  }, [feedData]);
 
   // Handle post creation
   const handlePostSubmit = async (postData: CreatePostInput) => {
@@ -487,7 +489,7 @@ export default function Home() {
                         </p>
                       </div>
                     ) : (
-                      displayPosts.map((post) => {
+                      displayPosts.map((post: any) => {
                         // For each post, we need to fetch the author's profile
                         // This will be handled by the Web3SocialPostCard component or we can fetch it here
                         return (

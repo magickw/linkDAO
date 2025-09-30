@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
@@ -40,7 +40,25 @@ export default function Web3SocialPostCard({
 }: Web3SocialPostCardProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  const { data: authorProfile, isLoading: isProfileLoading } = useProfile(post?.author); // Fetch author's profile
+  
+  // Use embedded author data from post if available, otherwise use useProfile hook with caching
+  const authorProfile = useMemo(() => {
+    return post?.author && typeof post.author === 'object' ? post.author : null;
+  }, [post?.author]);
+  
+  const { data: fetchedProfile, isLoading: isProfileLoading } = useProfile(
+    authorProfile ? undefined : (post?.author?.address || post?.author)
+  );
+  
+  // Use either embedded profile or fetched profile
+  const profileData = useMemo(() => {
+    return authorProfile || fetchedProfile;
+  }, [authorProfile, fetchedProfile]);
+  
+  const isProfileLoadingFinal = useMemo(() => {
+    return !authorProfile && isProfileLoading;
+  }, [authorProfile, isProfileLoading]);
+  
   const [expanded, setExpanded] = useState(false);
   const [tipAmount, setTipAmount] = useState(0);
   const [showTipInput, setShowTipInput] = useState(false);
@@ -55,7 +73,13 @@ export default function Web3SocialPostCard({
   ]);
 
   // Format the timestamp
-  const formatTimestamp = (date: Date) => {
+  const timestamp = useMemo(() => {
+    if (!post?.createdAt) return 'Unknown time';
+    
+    const date = post.createdAt instanceof Date ? 
+      post.createdAt : 
+      new Date(post.createdAt);
+      
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -71,13 +95,29 @@ export default function Web3SocialPostCard({
       const days = Math.floor(diffInSeconds / 86400);
       return `${days} day${days > 1 ? 's' : ''} ago`;
     }
-  };
+  }, [post?.createdAt]);
 
-  const timestamp = post?.createdAt ? (
-    post.createdAt instanceof Date ?
-      formatTimestamp(post.createdAt) :
-      formatTimestamp(new Date(post.createdAt))
-  ) : 'Unknown time';
+  // Use embedded author data or fallback values
+  const authorData = useMemo(() => {
+    return profileData || post?.author;
+  }, [profileData, post?.author]);
+  
+  const authorHandle = useMemo(() => {
+    return authorData?.username || authorData?.displayName || (authorData?.address ? `${authorData.address.substring(0, 6)}...${authorData.address.substring(38)}` : 'Unknown');
+  }, [authorData]);
+  
+  const authorAvatar = useMemo(() => {
+    return authorData?.avatar || 'https://placehold.co/40';
+  }, [authorData]);
+  
+  const isVerified = useMemo(() => {
+    return authorData?.username ? true : false;
+  }, [authorData]);
+
+  // If post is not available, don't render anything
+  if (!post) {
+    return null;
+  }
 
   // Handle reaction (staking tokens)
   const handleReaction = async (reactionType: string, amount: number = 1) => {
@@ -311,16 +351,6 @@ export default function Web3SocialPostCard({
     return stakedAmount > 10; // High-value if staked more than 10 tokens
   };
 
-  // Use author's profile data or fallback values
-  const authorHandle = authorProfile?.handle || authorProfile?.ens || `${post?.author?.substring(0, 6)}...${post?.author?.substring(38)}`;
-  const authorAvatar = authorProfile?.avatarCid || 'https://placehold.co/40';
-  const isVerified = authorProfile?.ens ? true : false;
-
-  // If post is not available, don't render anything
-  if (!post) {
-    return null;
-  }
-
   return (
     <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg ${className}`}>
       {/* Post Header */}
@@ -372,7 +402,7 @@ export default function Web3SocialPostCard({
       {/* Post Content */}
       <div className="px-4 pb-3">
         <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-          {post.contentCid}
+          {post.content || post.contentCid}
         </p>
       </div>
 

@@ -34,7 +34,7 @@ const testCompleteFlow = async () => {
     
     // Test 2: Fetch the created profile
     console.log("\n2. Fetching seller profile...");
-    const fetchResponse = await fetch(`http://localhost:3000/api/marketplace/seller/profile/${walletAddress}`);
+    const fetchResponse = await fetch(`http://localhost:3000/api/sellers/profile/${walletAddress}`);
     const fetchResult = await fetchResponse.json();
     console.log("Fetch profile result:", fetchResult.success ? "SUCCESS" : "FAILED");
     
@@ -52,7 +52,7 @@ const testCompleteFlow = async () => {
     
     // Test 3: Update the profile
     console.log("\n3. Updating seller profile...");
-    const updateResponse = await fetch(`http://localhost:3000/api/marketplace/seller/profile/${walletAddress}`, {
+    const updateResponse = await fetch(`http://localhost:3000/api/sellers/profile/${walletAddress}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -73,7 +73,7 @@ const testCompleteFlow = async () => {
     
     // Test 4: Fetch updated profile
     console.log("\n4. Fetching updated profile...");
-    const fetchUpdatedResponse = await fetch(`http://localhost:3000/api/marketplace/seller/profile/${walletAddress}`);
+    const fetchUpdatedResponse = await fetch(`http://localhost:3000/api/sellers/profile/${walletAddress}`);
     const fetchUpdatedResult = await fetchUpdatedResponse.json();
     console.log("Fetch updated profile result:", fetchUpdatedResult.success ? "SUCCESS" : "FAILED");
     

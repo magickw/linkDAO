@@ -223,7 +223,10 @@ export class EnhancedMarketplaceService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`);
+      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch marketplace listings');

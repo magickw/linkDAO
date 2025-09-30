@@ -31,7 +31,7 @@ const testProfileSetup = async () => {
     
     // Test fetching the seller profile
     console.log("\nTesting profile fetch...");
-    const fetchResponse = await fetch(`http://localhost:10000/marketplace/seller/profile/${walletAddress}`);
+    const fetchResponse = await fetch(`http://localhost:10000/api/sellers/profile/${walletAddress}`);
     const fetchResult = await fetchResponse.json();
     console.log("Fetch profile result:", fetchResult);
     

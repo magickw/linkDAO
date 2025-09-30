@@ -26,7 +26,7 @@ export const useFeed = (forUser?: string) => {
 
   const fetchFeed = useCallback(async (force = false) => {
     const now = Date.now();
-    const CACHE_DURATION = 30000; // 30 seconds cache duration
+    const CACHE_DURATION = 60000; // 60 seconds cache duration
     
     // Prevent excessive requests - only fetch if forced or cache expired
     if (!force && now - lastFetch < CACHE_DURATION) {
@@ -85,12 +85,12 @@ export const useFeed = (forUser?: string) => {
       setIsLoading(false);
       endTiming();
     }
-  }, [forUser, isLoading, lastFetch, startTiming, markEvent]);
+  }, [forUser, isLoading, lastFetch, startTiming, markEvent]); // Removed fetchFeed from dependencies to prevent infinite loop
 
   // Only fetch on mount or when forUser changes
   useEffect(() => {
     fetchFeed();
-  }, [forUser, fetchFeed]); // Include fetchFeed in dependencies
+  }, [forUser]); // Removed fetchFeed from dependencies to prevent infinite loop
 
   // Memoize the return value to prevent unnecessary re-renders
   return useMemo(() => ({
@@ -99,7 +99,7 @@ export const useFeed = (forUser?: string) => {
     error,
     refetch: () => fetchFeed(true), // Force refresh when manually called
     lastFetch
-  }), [feed, isLoading, error, fetchFeed, lastFetch]);
+  }), [feed, isLoading, error, lastFetch]);
 };
 
 /**

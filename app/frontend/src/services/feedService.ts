@@ -19,6 +19,20 @@ const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://loca
  * Provides advanced feed functionality with sorting, filtering, and engagement features
  */
 export class FeedService {
+  // Cache for feed requests to prevent excessive calls
+  private static feedCache = new Map<string, { data: any; timestamp: number }>();
+  private static readonly FEED_CACHE_DURATION = 60000; // 60 seconds
+
+  // Method to clear feed cache
+  static clearFeedCache() {
+    this.feedCache.clear();
+  }
+  
+  // Method to clear specific feed cache entry
+  static clearFeedCacheEntry(cacheKey: string) {
+    this.feedCache.delete(cacheKey);
+  }
+  
   /**
    * Get enhanced feed with sorting and filtering
    */
@@ -27,6 +41,18 @@ export class FeedService {
     page: number = 1,
     limit: number = 20
   ): Promise<{ posts: EnhancedPost[]; hasMore: boolean; totalPages: number }> {
+    // Create cache key
+    const cacheKey = `${JSON.stringify(filter)}-${page}-${limit}`;
+    
+    // Check cache first
+    const cached = this.feedCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && now - cached.timestamp < this.FEED_CACHE_DURATION) {
+      console.log('Returning cached feed data for key:', cacheKey);
+      return cached.data;
+    }
+    
     try {
       const params = new URLSearchParams({
         sortBy: filter.sortBy,
@@ -51,15 +77,20 @@ export class FeedService {
         headers: { 'Content-Type': 'application/json' },
       }, {
         timeout: 15000,
-        retries: 2,
+        retries: 1, // Reduced retries
         deduplicate: true
       });
 
-      return {
+      const result = {
         posts: response.posts.map(post => this.enhancePost(post)),
         hasMore: response.hasMore,
         totalPages: response.totalPages
       };
+      
+      // Cache the result
+      this.feedCache.set(cacheKey, { data: result, timestamp: now });
+      
+      return result;
     } catch (error) {
       console.error('Error fetching enhanced feed:', error);
       
