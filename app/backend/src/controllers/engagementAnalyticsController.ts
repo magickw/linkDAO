@@ -73,7 +73,7 @@ export class EngagementAnalyticsController {
   static async trackEngagementInteraction(req: Request, res: Response) {
     try {
       const interaction = req.body;
-      const userId = req.user?.address;
+      const userId = req.user?.walletAddress;
 
       if (!userId) {
         return res.status(401).json({
@@ -113,7 +113,7 @@ export class EngagementAnalyticsController {
   static async trackEngagementBatch(req: Request, res: Response) {
     try {
       const interactions = req.body;
-      const userId = req.user?.address;
+      const userId = req.user?.walletAddress;
 
       if (!userId) {
         return res.status(401).json({

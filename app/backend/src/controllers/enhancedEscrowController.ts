@@ -6,7 +6,7 @@ import {
   EscrowStatus,
   EscrowRecoveryOptions
 } from '../services/enhancedEscrowService';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class EnhancedEscrowController {
   private enhancedEscrowService: EnhancedEscrowService;
@@ -37,10 +37,10 @@ export class EnhancedEscrowController {
         data: validation
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Escrow validation failed: ${error.message}`);
+      throw new AppError(`Escrow validation failed: ${error.message}`, 500, 'ESCROW_VALIDATION_ERROR');
     }
   }
 
@@ -71,10 +71,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Escrow creation failed: ${error.message}`);
+      throw new AppError(`Escrow creation failed: ${error.message}`, 500, 'ESCROW_CREATION_ERROR');
     }
   }
 
@@ -103,10 +103,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Fund locking failed: ${error.message}`);
+      throw new AppError(`Fund locking failed: ${error.message}`, 500, 'ESCROW_LOCK_ERROR');
     }
   }
 
@@ -132,10 +132,10 @@ export class EnhancedEscrowController {
         data: escrow
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get escrow: ${error.message}`);
+      throw new AppError(`Failed to get escrow: ${error.message}`, 500, 'ESCROW_GET_ERROR');
     }
   }
 
@@ -161,10 +161,10 @@ export class EnhancedEscrowController {
         data: status
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get escrow status: ${error.message}`);
+      throw new AppError(`Failed to get escrow status: ${error.message}`, 500, 'ESCROW_STATUS_ERROR');
     }
   }
 
@@ -186,10 +186,10 @@ export class EnhancedEscrowController {
         data: options
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get recovery options: ${error.message}`);
+      throw new AppError(`Failed to get recovery options: ${error.message}`, 500, 'ESCROW_RECOVERY_ERROR');
     }
   }
 
@@ -218,10 +218,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Delivery confirmation failed: ${error.message}`);
+      throw new AppError(`Delivery confirmation failed: ${error.message}`, 500, 'ESCROW_DELIVERY_ERROR');
     }
   }
 
@@ -250,10 +250,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Escrow approval failed: ${error.message}`);
+      throw new AppError(`Escrow approval failed: ${error.message}`, 500, 'ESCROW_APPROVAL_ERROR');
     }
   }
 
@@ -282,10 +282,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Dispute opening failed: ${error.message}`);
+      throw new AppError(`Dispute opening failed: ${error.message}`, 500, 'ESCROW_DISPUTE_ERROR');
     }
   }
 
@@ -314,10 +314,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Evidence submission failed: ${error.message}`);
+      throw new AppError(`Evidence submission failed: ${error.message}`, 500, 'ESCROW_EVIDENCE_ERROR');
     }
   }
 
@@ -346,10 +346,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Vote casting failed: ${error.message}`);
+      throw new AppError(`Vote casting failed: ${error.message}`, 500, 'ESCROW_VOTE_ERROR');
     }
   }
 
@@ -378,10 +378,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Escrow cancellation failed: ${error.message}`);
+      throw new AppError(`Escrow cancellation failed: ${error.message}`, 500, 'ESCROW_CANCEL_ERROR');
     }
   }
 
@@ -410,10 +410,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Operation retry failed: ${error.message}`);
+      throw new AppError(`Operation retry failed: ${error.message}`, 500, 'ESCROW_RETRY_ERROR');
     }
   }
 
@@ -438,10 +438,10 @@ export class EnhancedEscrowController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get user reputation: ${error.message}`);
+      throw new AppError(`Failed to get user reputation: ${error.message}`, 500, 'ESCROW_REPUTATION_ERROR');
     }
   }
 

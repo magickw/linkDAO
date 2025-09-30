@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { APIError, ValidationError, UnauthorizedError } from '../middleware/errorHandler';
+import { AppError, ValidationError, UnauthorizedError } from '../middleware/errorHandler';
 import { MarketplaceRegistrationService } from '../services/marketplaceRegistrationService';
 
 const marketplaceRegistrationService = new MarketplaceRegistrationService();
@@ -47,10 +47,10 @@ export class MarketplaceRegistrationController {
         sellerProfile
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Seller registration failed');
+      throw new AppError('Seller registration failed', 500);
     }
   }
 
@@ -92,10 +92,10 @@ export class MarketplaceRegistrationController {
         buyerProfile
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Buyer registration failed');
+      throw new AppError('Buyer registration failed', 500);
     }
   }
 
@@ -124,10 +124,10 @@ export class MarketplaceRegistrationController {
         profile
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to retrieve marketplace profile');
+      throw new AppError('Failed to retrieve marketplace profile', 500);
     }
   }
 
@@ -158,10 +158,10 @@ export class MarketplaceRegistrationController {
         profile: updatedProfile
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to update marketplace profile');
+      throw new AppError('Failed to update marketplace profile', 500);
     }
   }
 
@@ -183,10 +183,10 @@ export class MarketplaceRegistrationController {
         isSeller
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to check seller status');
+      throw new AppError('Failed to check seller status', 500);
     }
   }
 
@@ -208,10 +208,10 @@ export class MarketplaceRegistrationController {
         isBuyer
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, 'Failed to check buyer status');
+      throw new AppError('Failed to check buyer status', 500);
     }
   }
 }

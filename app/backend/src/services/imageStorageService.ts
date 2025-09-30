@@ -513,25 +513,18 @@ class ImageStorageService {
   /**
    * Get images by usage type and reference
    */
-  async getImagesByUsage(
-    usageType: string,
-    usageReferenceId: string,
-    userId?: string
-  ): Promise<ImageUploadResult[]> {
+  async getImagesByUsage(usageType: string, usageReferenceId?: string, userId?: string): Promise<ImageUploadResult[]> {
     try {
-      let query = db
+      const conditions = [
+        eq(imageStorage.usageType, usageType),
+        usageReferenceId ? eq(imageStorage.usageReferenceId, usageReferenceId) : undefined,
+        userId ? eq(imageStorage.ownerId, userId) : undefined
+      ].filter(Boolean) as any[];
+
+      const records = await db
         .select()
         .from(imageStorage)
-        .where(and(
-          eq(imageStorage.usageType, usageType),
-          eq(imageStorage.usageReferenceId, usageReferenceId || '')
-        ));
-
-      if (userId) {
-        query = query.where(eq(imageStorage.ownerId, userId));
-      }
-
-      const records = await query;
+        .where(and(...conditions));
 
       return records.map(record => ({
         id: record.id,
@@ -631,13 +624,12 @@ class ImageStorageService {
     byUsageType: Record<string, number>;
   }> {
     try {
-      let query = db.select().from(imageStorage);
+      const conditions = userId ? [eq(imageStorage.ownerId, userId)] : [];
       
-      if (userId) {
-        query = query.where(eq(imageStorage.ownerId, userId));
-      }
-
-      const records = await query;
+      const records = await db
+        .select()
+        .from(imageStorage)
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
 
       const totalImages = records.length;
       const totalSize = records.reduce((sum, record) => sum + (record.fileSize || 0), 0);

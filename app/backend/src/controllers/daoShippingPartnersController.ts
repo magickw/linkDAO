@@ -276,4 +276,4 @@ export const verifyPartnerRequirements = async (req: Request, res: Response) => 
       error: 'Failed to verify partner requirements'
     });
   }
-};", "original_text": "", "replace_all": false}]
+};

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { AIService } from '../services/aiService';
-import { APIError, ValidationError } from '../middleware/errorHandler';
+import { AppError, ValidationError } from '../middleware/errorHandler';
 
 const aiService = new AIService();
 
@@ -19,10 +19,10 @@ export class AIController {
       const result = await aiService.analyzeListing(listingId);
       return res.status(200).json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'AI_ANALYSIS_ERROR');
     }
   }
 
@@ -40,10 +40,10 @@ export class AIController {
       const result = await aiService.assistDisputeResolution(disputeId);
       return res.status(200).json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'AI_DISPUTE_ERROR');
     }
   }
 
@@ -61,10 +61,10 @@ export class AIController {
       const result = await aiService.detectFraud(userAddress);
       return res.status(200).json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'AI_FRAUD_ERROR');
     }
   }
 
@@ -82,10 +82,10 @@ export class AIController {
       const result = await aiService.suggestPrice(itemType, metadataURI);
       return res.status(200).json(result);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'AI_PRICE_ERROR');
     }
   }
 
@@ -97,10 +97,10 @@ export class AIController {
       await aiService.processPendingModeration();
       return res.status(200).json({ message: 'Pending moderation processed successfully' });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'AI_MODERATION_ERROR');
     }
   }
 }

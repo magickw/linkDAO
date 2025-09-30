@@ -8,7 +8,6 @@ import { eq, and, gte, lte, desc, asc } from 'drizzle-orm';
 export type ActorType = 'user' | 'moderator' | 'system' | 'ai';
 
 export interface AuditLogEntry {
-  caseId?: number;
   actionType: string;
   actorId?: string;
   actorType: ActorType;
@@ -21,7 +20,6 @@ export interface AuditLogEntry {
 }
 
 export interface AuditLogQuery {
-  caseId?: number;
   actorId?: string;
   actorType?: ActorType;
   actionType?: string;
@@ -60,7 +58,6 @@ class AuditLoggingService {
       
       // Create audit log record
       const auditLog = {
-        caseId: entry.caseId,
         actionType: entry.actionType,
         actorId: entry.actorId,
         actorType: entry.actorType,
@@ -79,7 +76,7 @@ class AuditLoggingService {
 
       // Create immutable IPFS record
       const ipfsHash = await evidenceStorageService.createAuditRecord({
-        caseId: entry.caseId || 0,
+        caseId: 0, // Placeholder since caseId is not in the database schema
         action: entry.actionType,
         actorId: entry.actorId,
         actorType: entry.actorType,
@@ -100,8 +97,10 @@ class AuditLoggingService {
 
       return {
         ...dbResult,
+        oldState: dbResult.oldState ? JSON.parse(dbResult.oldState) : undefined,
+        newState: dbResult.newState ? JSON.parse(dbResult.newState) : undefined,
         reasoning: auditLog.reasoning, // Return original reasoning without IPFS hash
-      } as ModerationAuditLog;
+      } as unknown as ModerationAuditLog;
     } catch (error) {
       console.error('Error creating audit log:', error);
       throw new Error(`Failed to create audit log: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -115,9 +114,7 @@ class AuditLoggingService {
     try {
       const conditions = [];
 
-      if (query.caseId) {
-        conditions.push(eq(moderationAuditLog.caseId, query.caseId));
-      }
+      // caseId filtering removed since it's not in the database schema
 
       if (query.actorId) {
         conditions.push(eq(moderationAuditLog.actorId, query.actorId));
@@ -162,11 +159,13 @@ class AuditLoggingService {
       // Clean up IPFS hashes from reasoning field for display
       const cleanedLogs = logs.map(log => ({
         ...log,
+        oldState: log.oldState ? JSON.parse(log.oldState) : undefined,
+        newState: log.newState ? JSON.parse(log.newState) : undefined,
         reasoning: log.reasoning?.replace(/\n\[IPFS:[^\]]+\]/g, '') || null,
       }));
 
       return {
-        logs: cleanedLogs as ModerationAuditLog[],
+        logs: cleanedLogs as unknown as ModerationAuditLog[],
         total,
         hasMore: (query.offset || 0) + logs.length < total,
       };
@@ -204,7 +203,6 @@ class AuditLoggingService {
       // Generate local hash for comparison
       const localData = {
         id: auditLog.id,
-        caseId: auditLog.caseId,
         actionType: auditLog.actionType,
         actorId: auditLog.actorId,
         actorType: auditLog.actorType,
@@ -244,7 +242,6 @@ class AuditLoggingService {
     userAgent?: string;
   }): Promise<ModerationAuditLog> {
     return this.createAuditLog({
-      caseId: params.caseId,
       actionType: 'moderation_decision',
       actorId: params.moderatorId,
       actorType: params.moderatorId ? 'moderator' : 'ai',
@@ -271,7 +268,6 @@ class AuditLoggingService {
     userAgent?: string;
   }): Promise<ModerationAuditLog> {
     return this.createAuditLog({
-      caseId: params.caseId,
       actionType: 'appeal_submitted',
       actorId: params.appellantId,
       actorType: 'user',
@@ -296,7 +292,6 @@ class AuditLoggingService {
     voteWeight: number;
   }): Promise<ModerationAuditLog> {
     return this.createAuditLog({
-      caseId: params.caseId,
       actionType: 'jury_vote',
       actorId: params.jurorId,
       actorType: 'user',
@@ -318,7 +313,6 @@ class AuditLoggingService {
     reasoning?: string;
   }): Promise<ModerationAuditLog> {
     return this.createAuditLog({
-      caseId: params.caseId,
       actionType: params.action,
       actorType: 'system',
       newState: params.details,
@@ -422,7 +416,6 @@ class AuditLoggingService {
   }): Promise<string> {
     try {
       const auditTrail = await this.getAuditTrail({
-        caseId: params.caseId,
         startDate: params.startDate,
         endDate: params.endDate,
         limit: 10000, // Large limit for export
@@ -464,3 +457,5 @@ class AuditLoggingService {
     return csvRows.join('\n');
   }
 }
+
+export default AuditLoggingService;

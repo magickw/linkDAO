@@ -1,6 +1,6 @@
-import { db } from '../db/index.js';
-import { domainReputation, customBlacklist, urlAnalysisResults } from '../db/schema.js';
-import { eq, and, or, desc, sql, count, avg } from 'drizzle-orm';
+import { db } from '../db';
+import { domainReputation, customBlacklist, urlAnalysisResults } from '../db/schema';
+import { eq, and, or, desc, sql } from 'drizzle-orm';
 
 export interface DomainReputationScore {
   domain: string;
@@ -137,8 +137,8 @@ export class DomainReputationService {
     // Get basic stats
     const [stats] = await db
       .select({
-        totalAnalyses: count(urlAnalysisResults.id),
-        averageRiskScore: avg(sql`CAST(${urlAnalysisResults.riskScore} AS NUMERIC)`),
+        totalAnalyses: sql<number>`COUNT(${urlAnalysisResults.id})`,
+        averageRiskScore: sql<number>`AVG(CAST(${urlAnalysisResults.riskScore} AS NUMERIC))`,
       })
       .from(urlAnalysisResults)
       .where(eq(urlAnalysisResults.domain, normalizedDomain));
@@ -150,7 +150,7 @@ export class DomainReputationService {
     // Get malicious rate
     const [maliciousStats] = await db
       .select({
-        maliciousCount: count(urlAnalysisResults.id),
+        maliciousCount: sql<number>`COUNT(${urlAnalysisResults.id})`,
       })
       .from(urlAnalysisResults)
       .where(
@@ -419,7 +419,7 @@ export class DomainReputationService {
     // Get average risk score for last 30 days
     const [recent] = await db
       .select({
-        avgRisk: avg(sql`CAST(${urlAnalysisResults.riskScore} AS NUMERIC)`),
+        avgRisk: sql<number>`AVG(CAST(${urlAnalysisResults.riskScore} AS NUMERIC))`,
       })
       .from(urlAnalysisResults)
       .where(
@@ -432,7 +432,7 @@ export class DomainReputationService {
     // Get average risk score for previous 30 days
     const [previous] = await db
       .select({
-        avgRisk: avg(sql`CAST(${urlAnalysisResults.riskScore} AS NUMERIC)`),
+        avgRisk: sql<number>`AVG(CAST(${urlAnalysisResults.riskScore} AS NUMERIC))`,
       })
       .from(urlAnalysisResults)
       .where(

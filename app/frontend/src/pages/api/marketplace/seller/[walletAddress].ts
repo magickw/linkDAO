@@ -5,6 +5,30 @@ import { sellerService } from '../../../../services/sellerService';
 // Use BACKEND_URL for server-side, fallback to NEXT_PUBLIC_BACKEND_URL for compatibility
 const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+// In-memory cache for this API route instance
+const requestCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 60000; // 60 seconds
+
+// Helper function to get cached data
+function getCachedData(key: string) {
+  const cached = requestCache.get(key);
+  if (!cached) return null;
+  
+  const now = Date.now();
+  if (now - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  
+  // Cache expired, remove it
+  requestCache.delete(key);
+  return null;
+}
+
+// Helper function to set cached data
+function setCachedData(key: string, data: any) {
+  requestCache.set(key, { data, timestamp: Date.now() });
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('API route called:', req.method, req.url);
   console.log('Request query:', req.query);
@@ -17,7 +41,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === 'GET' && walletAddress && typeof walletAddress === 'string' && walletAddress !== 'undefined' && walletAddress !== 'profile') {
     try {
       console.log(`Fetching seller profile with caching for: ${walletAddress}`);
+      
+      // Check if profile is already cached in this request context
+      const cacheKey = `profile_${walletAddress}`;
+      const cachedProfile = getCachedData(cacheKey);
+      if (cachedProfile) {
+        console.log(`Returning cached profile for ${walletAddress} from request cache`);
+        return res.status(200).json({ success: true, data: cachedProfile });
+      }
+      
+      // Check if profile is already cached in the service
+      const isCached = sellerService.isProfileCached(walletAddress);
+      console.log(`Profile is cached in service: ${isCached}`);
+      
       const profile = await sellerService.getSellerProfile(walletAddress);
+      
+      // Cache the result in this request context as well
+      if (profile !== null) {
+        setCachedData(cacheKey, profile);
+      }
       
       if (profile === null) {
         // Profile not found (could be cached 404)

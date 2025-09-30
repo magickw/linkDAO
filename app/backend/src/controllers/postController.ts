@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { PostService } from '../services/postService';
 import { CreatePostInput, UpdatePostInput } from '../models/Post';
-import { APIError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, NotFoundError } from '../middleware/errorHandler';
 
 const postService = new PostService();
 

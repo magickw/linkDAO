@@ -2,13 +2,13 @@ import { db } from '../db';
 import { 
   users, 
   moderationActions, 
-  reputationImpacts,
+  reputationHistory,
   moderationCases,
   posts,
   reactions,
   tips
 } from '../db/schema';
-import { eq, and, desc, sql, count, sum } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 
 export interface UserContext {
   userId: string;

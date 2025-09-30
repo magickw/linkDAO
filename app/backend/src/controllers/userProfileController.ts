@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { UserProfileService } from '../services/userProfileService';
 import { CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
-import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 const userProfileService = new UserProfileService();
 
@@ -46,7 +46,7 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new APIError(403, 'You can only update your own profile');
+      throw new AppError(403, 'You can only update your own profile');
     }
     
     const profile = await userProfileService.updateProfile(id, input);
@@ -66,7 +66,7 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new APIError(403, 'You can only delete your own profile');
+      throw new AppError(403, 'You can only delete your own profile');
     }
     
     const deleted = await userProfileService.deleteProfile(id);

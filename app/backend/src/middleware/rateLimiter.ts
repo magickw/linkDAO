@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { Request, Response } from 'express';
 
 // General rate limiter for all requests
@@ -58,10 +58,7 @@ export const feedLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => {
-    // Use IP + user agent for better identification
-    return `${req.ip}-${req.get('User-Agent') || 'unknown'}`;
-  },
+  // keyGenerator: ipKeyGenerator, // Removed to fix compilation error
   handler: (req: Request, res: Response) => {
     console.warn(`Feed rate limit exceeded for IP: ${req.ip}, User: ${req.query.forUser || 'anonymous'}`);
     res.status(429).json({

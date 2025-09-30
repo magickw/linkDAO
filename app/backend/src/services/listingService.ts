@@ -3,6 +3,8 @@ import {
     UpdateProductInput,
     Product,
     ProductStatus,
+    ProductCategory,
+    ProductMetadata,
     ProductSearchFilters,
     ProductSortOptions,
     PaginationOptions,
@@ -791,63 +793,9 @@ export class ProductListingService {
         return null;
     }
 
-    // Event handlers
-
-    private async handleBidPlaced(listingId: string, bidData: any): Promise<void> {
-        const listing = await this.getListingById(listingId);
-        if (listing) {
-            await this.updateListing(listingId, {
-                metadata: {
-                    ...listing.metadata,
-                    lastBidAmount: bidData.amount,
-                    totalBids: (listing.metadata?.totalBids || 0) + 1,
-                    lastBidAt: new Date().toISOString()
-                }
-            });
-        }
-    }
-
-    private async handleOfferMade(listingId: string, offerData: any): Promise<void> {
-        const listing = await this.getListingById(listingId);
-        if (listing) {
-            await this.updateListing(listingId, {
-                metadata: {
-                    ...listing.metadata,
-                    lastOfferAmount: offerData.amount,
-                    totalOffers: (listing.metadata?.totalOffers || 0) + 1,
-                    lastOfferAt: new Date().toISOString()
-                }
-            });
-        }
-    }
-
-    private async handleListingSold(listingId: string, saleData: any): Promise<void> {
-        // Update inventory and status
-        await this.updateListing(listingId, {
-            inventory: 0,
-            status: 'sold_out',
-            metadata: {
-                soldAt: new Date().toISOString(),
-                soldPrice: saleData.price,
-                buyer: saleData.buyer
-            }
-        });
-    }
-
-    private async handleEscrowCreated(listingId: string, escrowData: any): Promise<void> {
-        const listing = await this.getListingById(listingId);
-        if (listing) {
-            await this.updateListing(listingId, {
-                metadata: {
-                    ...listing.metadata,
-                    escrowId: escrowData.escrowId,
-                    escrowCreatedAt: new Date().toISOString(),
-                    isEscrowed: true
-                }
-            });
-        }
-    }
-
+    /**
+     * Map product status to string representation
+     */
     private mapProductStatus(status: ProductStatus): string {
         const statusMap: Record<ProductStatus, string> = {
             'active': 'ACTIVE',
@@ -860,16 +808,138 @@ export class ProductListingService {
     }
 
     /**
+     * Map category from database
+     */
+    private mapCategoryFromDb(dbCategory: any): ProductCategory {
+        return {
+            id: dbCategory.id,
+            name: dbCategory.name,
+            slug: dbCategory.slug,
+            description: dbCategory.description,
+            parentId: dbCategory.parentId,
+            path: JSON.parse(dbCategory.path || '[]'),
+            imageUrl: dbCategory.imageUrl,
+            isActive: dbCategory.isActive,
+            sortOrder: dbCategory.sortOrder,
+            createdAt: dbCategory.createdAt,
+            updatedAt: dbCategory.updatedAt,
+        };
+    }
+
+    /**
      * Map product from database with enhanced fields
      */
     private mapProductFromDb(dbProduct: any, dbCategory?: any): Product {
-        // Use the existing mapping from ProductService but enhance with listing fields
-        const baseProduct = this.productService['mapProductFromDb'](dbProduct, dbCategory);
-        
-        // Add listing-specific enhancements
-        return {
-            ...baseProduct,
-            // Add any listing-specific fields that aren't in the base product
+        // Create the product object directly instead of calling private method
+        const category = dbCategory ? this.mapCategoryFromDb(dbCategory) : {
+            id: dbProduct.categoryId,
+            name: 'Unknown',
+            slug: 'unknown',
+            path: [],
+            isActive: true,
+            sortOrder: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
         };
+
+        // Parse price metadata if it exists
+        let priceData: any = {
+            amount: dbProduct.priceAmount,
+            currency: dbProduct.priceCurrency,
+        };
+
+        return {
+            id: dbProduct.id,
+            sellerId: dbProduct.sellerId,
+            title: dbProduct.title,
+            description: dbProduct.description,
+            price: priceData,
+            category,
+            images: JSON.parse(dbProduct.images || '[]'),
+            metadata: JSON.parse(dbProduct.metadata || '{}'),
+            inventory: dbProduct.inventory,
+            status: dbProduct.status,
+            tags: JSON.parse(dbProduct.tags || '[]'),
+            shipping: dbProduct.shipping ? JSON.parse(dbProduct.shipping) : undefined,
+            nft: dbProduct.nft ? JSON.parse(dbProduct.nft) : undefined,
+            views: dbProduct.views || 0,
+            favorites: dbProduct.favorites || 0,
+            createdAt: dbProduct.createdAt,
+            updatedAt: dbProduct.updatedAt,
+        };
+    }
+
+    /**
+     * Handle bid placed event
+     */
+    private async handleBidPlaced(listingId: string, bidData: any): Promise<void> {
+        // Update listing metadata with bid information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    lastBidAmount: bidData.amount,
+                    buyer: bidData.bidder,
+                    lastBidAt: new Date().toISOString(),
+                    totalBids: (listing.metadata.totalBids || 0) + 1
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle offer made event
+     */
+    private async handleOfferMade(listingId: string, offerData: any): Promise<void> {
+        // Update listing metadata with offer information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    lastOfferAmount: offerData.amount,
+                    buyer: offerData.buyer,
+                    lastOfferAt: new Date().toISOString(),
+                    totalOffers: (listing.metadata.totalOffers || 0) + 1
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle listing sold event
+     */
+    private async handleListingSold(listingId: string, saleData: any): Promise<void> {
+        // Update listing status and inventory
+        await this.updateListing(listingId, {
+            status: 'sold_out',
+            inventory: 0,
+            metadata: {
+                ...((await this.getListingById(listingId))?.metadata || {}),
+                soldAt: new Date().toISOString(),
+                buyer: saleData.buyer,
+                soldPrice: saleData.price
+            }
+        });
+    }
+
+    /**
+     * Handle escrow created event
+     */
+    private async handleEscrowCreated(listingId: string, escrowData: any): Promise<void> {
+        // Update listing metadata with escrow information
+        const listing = await this.getListingById(listingId);
+        if (listing) {
+            await this.updateListing(listingId, {
+                metadata: {
+                    ...listing.metadata,
+                    escrowId: escrowData.escrowId,
+                    escrowCreatedAt: new Date().toISOString(),
+                    buyer: escrowData.buyer,
+                    isEscrowed: true
+                }
+            });
+        }
     }
 }

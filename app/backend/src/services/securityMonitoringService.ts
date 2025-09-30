@@ -7,7 +7,9 @@
 
 import { EventEmitter } from 'events';
 import { securityConfig } from '../config/securityConfig';
-import { auditLoggingService } from './auditLoggingService';
+import AuditLoggingService from './auditLoggingService';
+
+const auditLoggingService = new AuditLoggingService();
 import crypto from 'crypto';
 
 export interface SecurityEvent {

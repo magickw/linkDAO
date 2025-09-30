@@ -33,4 +33,4 @@ router.post('/proposals/vote', submitProposalVote);
 router.put('/partners/:partnerId/metrics', updatePartnerMetrics);
 router.get('/partners/:partnerId/verify', verifyPartnerRequirements);
 
-export { router as daoShippingPartnersRouter };", "original_text": "", "replace_all": false}]
+export { router as daoShippingPartnersRouter };

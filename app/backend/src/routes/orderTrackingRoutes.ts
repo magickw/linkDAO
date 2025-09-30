@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { OrderTrackingController } from '../controllers/orderTrackingController';
-import { auth } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validation';
 import { body, param, query } from 'express-validator';
 
@@ -50,7 +50,7 @@ const trackingValidation = [
  */
 router.get(
   '/user/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   validateRequest,
   orderTrackingController.getOrderHistory.bind(orderTrackingController)
@@ -63,7 +63,7 @@ router.get(
  */
 router.get(
   '/:orderId',
-  auth,
+  authenticateToken,
   orderIdValidation,
   validateRequest,
   orderTrackingController.getOrderById.bind(orderTrackingController)
@@ -76,7 +76,7 @@ router.get(
  */
 router.get(
   '/:orderId/timeline',
-  auth,
+  authenticateToken,
   orderIdValidation,
   validateRequest,
   orderTrackingController.getOrderTimeline.bind(orderTrackingController)
@@ -89,7 +89,7 @@ router.get(
  */
 router.post(
   '/search',
-  auth,
+  authenticateToken,
   searchValidation,
   validateRequest,
   orderTrackingController.searchOrders.bind(orderTrackingController)
@@ -102,7 +102,7 @@ router.post(
  */
 router.put(
   '/:orderId/status',
-  auth,
+  authenticateToken,
   orderIdValidation,
   statusUpdateValidation,
   validateRequest,
@@ -116,7 +116,7 @@ router.put(
  */
 router.put(
   '/:orderId/tracking',
-  auth,
+  authenticateToken,
   orderIdValidation,
   trackingValidation,
   validateRequest,
@@ -130,7 +130,7 @@ router.put(
  */
 router.post(
   '/:orderId/confirm-delivery',
-  auth,
+  authenticateToken,
   orderIdValidation,
   validateRequest,
   orderTrackingController.confirmDelivery.bind(orderTrackingController)
@@ -143,7 +143,7 @@ router.post(
  */
 router.get(
   '/statistics/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   [
     query('userType').optional().isIn(['buyer', 'seller']).withMessage('Invalid user type'),
@@ -160,7 +160,7 @@ router.get(
  */
 router.get(
   '/:orderId/tracking',
-  auth,
+  authenticateToken,
   orderIdValidation,
   validateRequest,
   orderTrackingController.getTrackingInfo.bind(orderTrackingController)
@@ -173,7 +173,7 @@ router.get(
  */
 router.get(
   '/export/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   [
     query('userType').optional().isIn(['buyer', 'seller']).withMessage('Invalid user type'),
@@ -193,7 +193,7 @@ router.get(
  */
 router.get(
   '/notifications/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   [
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
@@ -210,7 +210,7 @@ router.get(
  */
 router.put(
   '/notifications/:notificationId/read',
-  auth,
+  authenticateToken,
   [param('notificationId').isString().notEmpty().withMessage('Notification ID is required')],
   validateRequest,
   orderTrackingController.markNotificationAsRead.bind(orderTrackingController)
@@ -223,7 +223,7 @@ router.put(
  */
 router.get(
   '/bulk/status-counts/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   [query('userType').optional().isIn(['buyer', 'seller']).withMessage('Invalid user type')],
   validateRequest,
@@ -237,7 +237,7 @@ router.get(
  */
 router.post(
   '/bulk/update-status',
-  auth,
+  authenticateToken,
   [
     body('orderIds').isArray({ min: 1 }).withMessage('Order IDs array is required'),
     body('orderIds.*').isString().notEmpty().withMessage('Each order ID must be a non-empty string'),
@@ -259,7 +259,7 @@ router.post(
  */
 router.get(
   '/analytics/trends/:userAddress',
-  auth,
+  authenticateToken,
   userAddressValidation,
   [
     query('userType').optional().isIn(['buyer', 'seller']).withMessage('Invalid user type'),

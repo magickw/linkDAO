@@ -216,7 +216,7 @@ export class ListingController {
         limit: Math.min(parseInt(req.query.limit as string) || 20, 100)
       };
 
-      const result = await this.listingService.searchListingsEnhanced(filters, sort, pagination);
+      const result = await this.unifiedMarketplaceService.searchListings(filters, sort, pagination);
       
       return res.json({
         success: true,
@@ -240,9 +240,11 @@ export class ListingController {
     try {
       const { id } = req.params;
       
-      const listing = await this.listingService.updateListing(id, {
-        listingStatus: 'published'
+      const result = await this.unifiedMarketplaceService.updateListing(id, {
+        status: 'active'
       });
+      
+      const { product: listing } = result;
       
       if (!listing) {
         return res.status(404).json({
@@ -283,9 +285,11 @@ export class ListingController {
     try {
       const { id } = req.params;
       
-      const listing = await this.listingService.updateListing(id, {
-        listingStatus: 'inactive'
+      const result = await this.unifiedMarketplaceService.updateListing(id, {
+        status: 'inactive'
       });
+      
+      const { product: listing } = result;
       
       if (!listing) {
         return res.status(404).json({
@@ -350,7 +354,7 @@ export class ListingController {
         limit: Math.min(parseInt(req.query.limit as string) || 20, 100)
       };
 
-      const result = await this.listingService.searchListingsEnhanced(filters, sort, pagination);
+      const result = await this.unifiedMarketplaceService.searchListings(filters, sort, pagination);
       
       return res.json({
         success: true,
@@ -373,7 +377,8 @@ export class ListingController {
   async getListingStats(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const listing = await this.listingService.getListingById(id);
+      const result = await this.unifiedMarketplaceService.getListingById(id);
+      const { product: listing } = result;
       
       if (!listing) {
         return res.status(404).json({
@@ -384,12 +389,12 @@ export class ListingController {
       
       // Return basic stats (in a real implementation, this would include more detailed analytics)
       const stats = {
-        views: listing.views,
-        favorites: listing.favorites,
+        views: (listing as any).views || 0,
+        favorites: (listing as any).favorites || 0,
         status: listing.status,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
-        inventory: listing.inventory,
+        inventory: (listing as any).inventory || 0,
         price: listing.price
       };
       
@@ -417,7 +422,7 @@ export class ListingController {
       
       // Use the private validation method from ListingService
       // Note: In a real implementation, we'd expose this as a public method
-      const validation = await (this.listingService as any).validateListingInput(input);
+      const validation = await (this.unifiedMarketplaceService as any).validateListingInput(input);
       
       return res.json({
         success: true,
@@ -442,7 +447,7 @@ export class ListingController {
       const { id: listingId } = req.params;
       const options = req.body;
       
-      const blockchainListing = await this.listingService.publishToBlockchain(listingId, options);
+      const blockchainListing = await this.unifiedMarketplaceService.publishToBlockchain(listingId, options);
       
       if (!blockchainListing) {
         return res.status(400).json({
@@ -483,7 +488,7 @@ export class ListingController {
     try {
       const { id: listingId } = req.params;
       
-      const syncResult = await this.listingService.syncWithBlockchain(listingId);
+      const syncResult = await this.unifiedMarketplaceService.syncWithBlockchain(listingId);
       
       return res.json({
         success: true,
@@ -508,7 +513,7 @@ export class ListingController {
     try {
       const { id: listingId } = req.params;
       
-      const blockchainData = await this.listingService.getBlockchainData(listingId);
+      const blockchainData = await this.unifiedMarketplaceService.getBlockchainData(listingId);
       
       return res.json({
         success: true,

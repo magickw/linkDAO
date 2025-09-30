@@ -6,7 +6,7 @@ import {
 } from '../services/paymentValidationService';
 import { PaymentMethodAvailabilityService } from '../services/paymentMethodAvailabilityService';
 import { ExchangeRateService } from '../services/exchangeRateService';
-import { APIError, ValidationError, NotFoundError } from '../middleware/errorHandler';
+import { AppError, ValidationError, NotFoundError } from '../middleware/errorHandler';
 
 export class PaymentValidationController {
   private paymentValidationService: PaymentValidationService;
@@ -42,10 +42,10 @@ export class PaymentValidationController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Payment validation failed: ${error.message}`);
+      throw new AppError(`Payment validation failed: ${error.message}`);
     }
   }
 
@@ -72,10 +72,10 @@ export class PaymentValidationController {
         data: balanceCheck
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Balance check failed: ${error.message}`);
+      throw new AppError(`Balance check failed: ${error.message}`);
     }
   }
 
@@ -105,10 +105,10 @@ export class PaymentValidationController {
         }
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Failed to get payment alternatives: ${error.message}`);
+      throw new AppError(`Failed to get payment alternatives: ${error.message}`);
     }
   }
 
@@ -130,10 +130,10 @@ export class PaymentValidationController {
         data: fees
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Fee estimation failed: ${error.message}`);
+      throw new AppError(`Fee estimation failed: ${error.message}`);
     }
   }
 
@@ -160,10 +160,10 @@ export class PaymentValidationController {
         data: availability
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Availability check failed: ${error.message}`);
+      throw new AppError(`Availability check failed: ${error.message}`);
     }
   }
 
@@ -190,10 +190,10 @@ export class PaymentValidationController {
         data: recommendation
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Recommendation failed: ${error.message}`);
+      throw new AppError(`Recommendation failed: ${error.message}`);
     }
   }
 
@@ -225,10 +225,10 @@ export class PaymentValidationController {
         data: availability
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Method availability check failed: ${error.message}`);
+      throw new AppError(`Method availability check failed: ${error.message}`);
     }
   }
 
@@ -258,10 +258,10 @@ export class PaymentValidationController {
         data: limits
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Limits check failed: ${error.message}`);
+      throw new AppError(`Limits check failed: ${error.message}`);
     }
   }
 
@@ -283,10 +283,10 @@ export class PaymentValidationController {
         data: profile
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Profile retrieval failed: ${error.message}`);
+      throw new AppError(`Profile retrieval failed: ${error.message}`);
     }
   }
 
@@ -311,10 +311,10 @@ export class PaymentValidationController {
         data: rate
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Exchange rate retrieval failed: ${error.message}`);
+      throw new AppError(`Exchange rate retrieval failed: ${error.message}`);
     }
   }
 
@@ -336,10 +336,10 @@ export class PaymentValidationController {
         data: rates
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Exchange rates retrieval failed: ${error.message}`);
+      throw new AppError(`Exchange rates retrieval failed: ${error.message}`);
     }
   }
 
@@ -369,10 +369,10 @@ export class PaymentValidationController {
         data: conversion
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Currency conversion failed: ${error.message}`);
+      throw new AppError(`Currency conversion failed: ${error.message}`);
     }
   }
 
@@ -397,7 +397,7 @@ export class PaymentValidationController {
         data: currencies
       });
     } catch (error: any) {
-      throw new APIError(500, `Failed to get supported currencies: ${error.message}`);
+      throw new AppError(`Failed to get supported currencies: ${error.message}`);
     }
   }
 
@@ -423,10 +423,10 @@ export class PaymentValidationController {
         data: info
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Currency info retrieval failed: ${error.message}`);
+      throw new AppError(`Currency info retrieval failed: ${error.message}`);
     }
   }
 
@@ -451,10 +451,10 @@ export class PaymentValidationController {
         data: trends
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Rate trends retrieval failed: ${error.message}`);
+      throw new AppError(`Rate trends retrieval failed: ${error.message}`);
     }
   }
 
@@ -480,10 +480,10 @@ export class PaymentValidationController {
         data: historicalRates
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, `Historical rates retrieval failed: ${error.message}`);
+      throw new AppError(`Historical rates retrieval failed: ${error.message}`);
     }
   }
 

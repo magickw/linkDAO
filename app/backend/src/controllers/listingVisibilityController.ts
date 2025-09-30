@@ -318,8 +318,8 @@ export class ListingVisibilityController {
       if (categoryId) filters.categoryId = categoryId;
       if (sellerId) filters.sellerId = sellerId;
 
-      const freshListings = await this.listingService.searchListingsEnhanced(
-        { ...filters, listingStatus: 'published' },
+      const freshListings = await this.listingService.getMarketplaceListings(
+        { ...filters, status: ['active'] },
         { field: 'publishedAt', direction: 'desc' },
         { page: 1, limit: 100 }
       );

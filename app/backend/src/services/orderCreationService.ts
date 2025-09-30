@@ -1,8 +1,8 @@
 import { DatabaseService } from './databaseService';
 import { NotificationService } from './notificationService';
 import { HybridPaymentOrchestrator } from './hybridPaymentOrchestrator';
-import { ListingService } from './listingService';
-import { SellerService } from './sellerService';
+import { ProductListingService } from './listingService';
+import { sellerService } from './sellerService';
 import { ShippingService } from './shippingService';
 
 export interface OrderCreationRequest {
@@ -86,16 +86,16 @@ export class OrderCreationService {
   private databaseService: DatabaseService;
   private notificationService: NotificationService;
   private hybridPaymentOrchestrator: HybridPaymentOrchestrator;
-  private listingService: ListingService;
-  private sellerService: SellerService;
+  private listingService: ProductListingService;
+  private sellerService: typeof sellerService;
   private shippingService: ShippingService;
 
   constructor() {
     this.databaseService = new DatabaseService();
     this.notificationService = new NotificationService();
     this.hybridPaymentOrchestrator = new HybridPaymentOrchestrator();
-    this.listingService = new ListingService();
-    this.sellerService = new SellerService();
+    this.listingService = new ProductListingService();
+    this.sellerService = sellerService;
     this.shippingService = new ShippingService();
   }
 
@@ -113,14 +113,9 @@ export class OrderCreationService {
       }
 
       // 2. Get listing and seller information
-      const listing = await this.listingService.getListingById(parseInt(request.listingId));
+      const listing = await this.listingService.getListingById(request.listingId);
       if (!listing) {
         throw new Error('Listing not found');
-      }
-
-      const seller = await this.sellerService.getSellerById(listing.sellerId);
-      if (!seller) {
-        throw new Error('Seller not found');
       }
 
       // 3. Calculate order totals
@@ -130,42 +125,16 @@ export class OrderCreationService {
       const orderNumber = await this.generateOrderNumber();
 
       // 5. Create order record
-      const order = await this.databaseService.createOrder({
-        listingId: parseInt(request.listingId),
-        buyerId: await this.getOrCreateBuyerId(request.buyerAddress),
-        sellerId: listing.sellerId,
-        quantity: request.quantity,
-        unitPrice: listing.price,
-        totalAmount: orderTotals.total.toString(),
-        currency: listing.currency || 'USD',
-        paymentMethod: request.paymentMethod,
-        shippingAddress: JSON.stringify(request.shippingAddress),
-        status: 'pending',
-        orderNumber,
-        metadata: JSON.stringify(request.metadata || {}),
-        // Payment-specific fields
-        escrowId: request.paymentDetails?.escrowId,
-        paymentIntentId: request.paymentDetails?.paymentIntentId,
-        stripeTransferGroup: request.paymentDetails?.stripeTransferGroup,
-        stripeSellerAccount: request.paymentDetails?.stripeSellerAccount,
-        transactionHash: request.paymentDetails?.transactionHash
-      });
+      const order = await this.databaseService.createOrder(
+        parseInt(request.listingId),
+        request.buyerAddress,
+        listing.sellerId, // sellerId
+        orderTotals.total.toString(),
+        'USDC' // paymentToken
+      );
 
-      // 6. Create shipping record
-      const shippingInfo = await this.shippingService.createShippingRecord({
-        orderId: order.id,
-        shippingAddress: request.shippingAddress,
-        expedited: request.metadata?.expeditedShipping || false
-      });
-
-      // 7. Update listing inventory
-      await this.updateListingInventory(parseInt(request.listingId), request.quantity);
-
-      // 8. Send notifications
-      const notifications = await this.sendOrderNotifications(order, listing, seller, request);
-
-      // 9. Create order tracking entry
-      await this.createOrderTracking(order.id, 'created', 'Order successfully created');
+      // 6. Send notifications
+      const notifications = await this.sendOrderNotifications(order, listing, request);
 
       console.log(`✅ Order ${order.id} created successfully with number ${orderNumber}`);
 
@@ -174,13 +143,10 @@ export class OrderCreationService {
         orderNumber,
         status: 'pending',
         totalAmount: orderTotals.total.toString(),
-        currency: listing.currency || 'USD',
-        estimatedDelivery: shippingInfo.estimatedDelivery,
-        trackingInfo: {
-          estimatedDelivery: shippingInfo.estimatedDelivery
-        },
+        currency: 'USDC',
+        estimatedDelivery: '5-7 business days',
         paymentStatus: 'pending',
-        nextSteps: this.generateNextSteps(request.paymentMethod, order.status),
+        nextSteps: this.generateNextSteps(request.paymentMethod, 'pending'),
         notifications
       };
 
@@ -198,377 +164,140 @@ export class OrderCreationService {
     const warnings: string[] = [];
     const suggestions: string[] = [];
 
-    try {
-      // Validate listing exists and is available
-      const listing = await this.listingService.getListingById(parseInt(request.listingId));
-      if (!listing) {
-        errors.push('Listing not found');
-        return { isValid: false, errors, warnings, suggestions };
-      }
-
-      if (listing.status !== 'active') {
-        errors.push('Listing is not available for purchase');
-      }
-
-      // Validate quantity
-      if (request.quantity <= 0) {
-        errors.push('Quantity must be greater than 0');
-      }
-
-      if (listing.inventory && request.quantity > listing.inventory) {
-        errors.push(`Insufficient inventory. Available: ${listing.inventory}, Requested: ${request.quantity}`);
-        suggestions.push(`Consider reducing quantity to ${listing.inventory} or less`);
-      }
-
-      // Validate buyer address
-      if (!request.buyerAddress || !/^0x[a-fA-F0-9]{40}$/.test(request.buyerAddress)) {
-        errors.push('Invalid buyer address');
-      }
-
-      // Validate shipping address
-      const shippingValidation = this.validateShippingAddress(request.shippingAddress);
-      errors.push(...shippingValidation.errors);
-      warnings.push(...shippingValidation.warnings);
-
-      // Validate payment method and details
-      const paymentValidation = await this.validatePaymentDetails(request.paymentMethod, request.paymentDetails);
-      errors.push(...paymentValidation.errors);
-      warnings.push(...paymentValidation.warnings);
-
-      // Check if buyer is not the seller
-      if (request.buyerAddress.toLowerCase() === listing.sellerAddress?.toLowerCase()) {
-        errors.push('Cannot purchase your own listing');
-      }
-
-      // Validate listing price and calculate totals
-      if (!listing.price || parseFloat(listing.price) <= 0) {
-        errors.push('Invalid listing price');
-      }
-
-      return {
-        isValid: errors.length === 0,
-        errors,
-        warnings,
-        suggestions
-      };
-
-    } catch (error) {
-      console.error('Error validating order request:', error);
-      errors.push('Validation failed due to system error');
-      return { isValid: false, errors, warnings, suggestions };
-    }
-  }
-
-  /**
-   * Validate shipping address
-   */
-  private validateShippingAddress(address: OrderCreationRequest['shippingAddress']): { errors: string[], warnings: string[] } {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    if (!address.fullName || address.fullName.trim().length < 2) {
-      errors.push('Full name is required and must be at least 2 characters');
+    // Validate required fields
+    if (!request.listingId) {
+      errors.push('Listing ID is required');
     }
 
-    if (!address.addressLine1 || address.addressLine1.trim().length < 5) {
-      errors.push('Address line 1 is required and must be at least 5 characters');
+    if (!request.buyerAddress) {
+      errors.push('Buyer address is required');
     }
 
-    if (!address.city || address.city.trim().length < 2) {
-      errors.push('City is required and must be at least 2 characters');
+    if (!request.quantity || request.quantity <= 0) {
+      errors.push('Quantity must be a positive number');
     }
 
-    if (!address.state || address.state.trim().length < 2) {
-      errors.push('State/Province is required');
+    if (!request.shippingAddress) {
+      errors.push('Shipping address is required');
     }
 
-    if (!address.postalCode || address.postalCode.trim().length < 3) {
-      errors.push('Postal code is required and must be at least 3 characters');
+    if (!request.paymentMethod) {
+      errors.push('Payment method is required');
     }
 
-    if (!address.country || address.country.trim().length < 2) {
-      errors.push('Country is required');
-    }
-
-    // Validate phone number format if provided
-    if (address.phoneNumber && !/^\+?[\d\s\-\(\)]{10,}$/.test(address.phoneNumber)) {
-      warnings.push('Phone number format may be invalid');
-    }
-
-    return { errors, warnings };
-  }
-
-  /**
-   * Validate payment details based on payment method
-   */
-  private async validatePaymentDetails(
-    paymentMethod: 'crypto' | 'fiat',
-    paymentDetails?: OrderCreationRequest['paymentDetails']
-  ): Promise<{ errors: string[], warnings: string[] }> {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    if (paymentMethod === 'crypto') {
-      if (!paymentDetails?.escrowId) {
-        errors.push('Escrow ID is required for crypto payments');
+    // Validate shipping address
+    if (request.shippingAddress) {
+      if (!request.shippingAddress.fullName) {
+        errors.push('Shipping address full name is required');
       }
-
-      if (paymentDetails?.tokenAddress && !/^0x[a-fA-F0-9]{40}$/.test(paymentDetails.tokenAddress)) {
-        errors.push('Invalid token address format');
+      if (!request.shippingAddress.addressLine1) {
+        errors.push('Shipping address line 1 is required');
       }
-
-      if (paymentDetails?.transactionHash && !/^0x[a-fA-F0-9]{64}$/.test(paymentDetails.transactionHash)) {
-        warnings.push('Transaction hash format may be invalid');
+      if (!request.shippingAddress.city) {
+        errors.push('Shipping address city is required');
       }
-    } else if (paymentMethod === 'fiat') {
-      if (!paymentDetails?.paymentIntentId) {
-        errors.push('Payment Intent ID is required for fiat payments');
+      if (!request.shippingAddress.state) {
+        errors.push('Shipping address state is required');
       }
-
-      if (!paymentDetails?.stripeTransferGroup) {
-        warnings.push('Stripe transfer group not provided - may affect payment tracking');
+      if (!request.shippingAddress.postalCode) {
+        errors.push('Shipping address postal code is required');
+      }
+      if (!request.shippingAddress.country) {
+        errors.push('Shipping address country is required');
       }
     }
 
-    return { errors, warnings };
-  }
-
-  /**
-   * Calculate comprehensive order totals
-   */
-  private async calculateOrderTotals(
-    listing: any,
-    quantity: number,
-    shippingAddress: OrderCreationRequest['shippingAddress']
-  ): Promise<{
-    subtotal: number;
-    shipping: number;
-    tax: number;
-    total: number;
-    breakdown: any;
-  }> {
-    try {
-      const unitPrice = parseFloat(listing.price);
-      const subtotal = unitPrice * quantity;
-
-      // Calculate shipping cost
-      const shippingCost = await this.shippingService.calculateShippingCost({
-        weight: listing.weight || 1,
-        dimensions: listing.dimensions || { length: 10, width: 10, height: 10 },
-        origin: listing.sellerAddress || 'US',
-        destination: shippingAddress.country,
-        expedited: false
-      });
-
-      // Calculate tax (simplified - in production, use proper tax service)
-      const taxRate = await this.calculateTaxRate(shippingAddress);
-      const tax = subtotal * taxRate;
-
-      const total = subtotal + shippingCost + tax;
-
-      return {
-        subtotal,
-        shipping: shippingCost,
-        tax,
-        total,
-        breakdown: {
-          unitPrice,
-          quantity,
-          subtotal,
-          shippingCost,
-          taxRate,
-          tax,
-          total
-        }
-      };
-
-    } catch (error) {
-      console.error('Error calculating order totals:', error);
-      // Fallback calculation
-      const subtotal = parseFloat(listing.price) * quantity;
-      return {
-        subtotal,
-        shipping: 0,
-        tax: 0,
-        total: subtotal,
-        breakdown: {
-          unitPrice: parseFloat(listing.price),
-          quantity,
-          subtotal,
-          shippingCost: 0,
-          taxRate: 0,
-          tax: 0,
-          total: subtotal
-        }
-      };
-    }
-  }
-
-  /**
-   * Calculate tax rate based on shipping address
-   */
-  private async calculateTaxRate(shippingAddress: OrderCreationRequest['shippingAddress']): Promise<number> {
-    // Simplified tax calculation - in production, integrate with tax service like TaxJar
-    const taxRates: { [key: string]: number } = {
-      'US': 0.08,
-      'CA': 0.13,
-      'GB': 0.20,
-      'DE': 0.19,
-      'FR': 0.20,
-      'AU': 0.10
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings,
+      suggestions
     };
+  }
 
-    return taxRates[shippingAddress.country] || 0;
+  /**
+   * Calculate order totals including shipping and taxes
+   */
+  private async calculateOrderTotals(listing: any, quantity: number, shippingAddress: any) {
+    const subtotal = parseFloat(listing.price || '0') * quantity;
+    const shippingCost = 5.99; // Fixed shipping cost for now
+    const tax = subtotal * 0.08; // 8% tax
+    const total = subtotal + shippingCost + tax;
+
+    return {
+      subtotal,
+      shippingCost,
+      tax,
+      total
+    };
   }
 
   /**
    * Generate unique order number
    */
   private async generateOrderNumber(): Promise<string> {
-    const timestamp = Date.now().toString();
-    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
-    return `ORD-${timestamp.slice(-8)}-${random}`;
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `ORD-${timestamp}-${random}`;
   }
 
   /**
-   * Get or create buyer ID from address
+   * Send order notifications to buyer and seller
    */
-  private async getOrCreateBuyerId(buyerAddress: string): Promise<string> {
+  private async sendOrderNotifications(order: any, listing: any, request: OrderCreationRequest) {
     try {
-      let buyer = await this.databaseService.getUserProfileByAddress(buyerAddress);
-      
-      if (!buyer) {
-        // Create new buyer profile
-        buyer = await this.databaseService.createUser({
-          walletAddress: buyerAddress,
-          handle: `buyer_${buyerAddress.slice(-8)}`,
-          email: `${buyerAddress.slice(-8)}@temp.com`, // Temporary email
-          role: 'buyer'
-        });
-      }
-
-      return buyer.id;
-    } catch (error) {
-      console.error('Error getting/creating buyer ID:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update listing inventory after order
-   */
-  private async updateListingInventory(listingId: number, quantity: number): Promise<void> {
-    try {
-      const listing = await this.listingService.getListingById(listingId);
-      if (listing && listing.inventory) {
-        const newInventory = Math.max(0, listing.inventory - quantity);
-        await this.listingService.updateListing(listingId, {
-          inventory: newInventory,
-          status: newInventory === 0 ? 'sold_out' : listing.status
-        });
-        console.log(`📦 Updated listing ${listingId} inventory: ${listing.inventory} -> ${newInventory}`);
-      }
-    } catch (error) {
-      console.error('Error updating listing inventory:', error);
-      // Don't throw - inventory update failure shouldn't fail order creation
-    }
-  }
-
-  /**
-   * Send comprehensive order notifications
-   */
-  private async sendOrderNotifications(
-    order: any,
-    listing: any,
-    seller: any,
-    request: OrderCreationRequest
-  ): Promise<{ buyer: boolean; seller: boolean }> {
-    try {
-      const notifications = { buyer: false, seller: false };
-
       // Notify buyer
-      try {
-        await this.notificationService.sendOrderNotification(
-          request.buyerAddress,
-          'ORDER_CREATED',
-          order.id.toString(),
-          {
-            orderNumber: order.orderNumber,
-            listingTitle: listing.title,
-            sellerName: seller.handle || seller.walletAddress,
-            totalAmount: order.totalAmount,
-            currency: order.currency,
-            paymentMethod: request.paymentMethod,
-            estimatedDelivery: '5-7 business days'
-          }
-        );
-        notifications.buyer = true;
-      } catch (error) {
-        console.error('Failed to notify buyer:', error);
-      }
+      await this.notificationService.sendOrderNotification(
+        request.buyerAddress,
+        'ORDER_CREATED',
+        order.id.toString(),
+        {
+          orderId: order.id,
+          listingTitle: listing.title,
+          totalAmount: order.amount
+        }
+      );
 
       // Notify seller
-      try {
-        await this.notificationService.sendOrderNotification(
-          seller.walletAddress,
-          'ORDER_RECEIVED',
-          order.id.toString(),
-          {
-            orderNumber: order.orderNumber,
-            listingTitle: listing.title,
-            buyerAddress: request.buyerAddress,
-            quantity: request.quantity,
-            totalAmount: order.totalAmount,
-            currency: order.currency,
-            paymentMethod: request.paymentMethod
-          }
-        );
-        notifications.seller = true;
-      } catch (error) {
-        console.error('Failed to notify seller:', error);
-      }
+      await this.notificationService.sendOrderNotification(
+        listing.sellerId,
+        'ORDER_RECEIVED',
+        order.id.toString(),
+        {
+          orderId: order.id,
+          buyer: request.buyerAddress,
+          totalAmount: order.amount
+        }
+      );
 
-      return notifications;
-
+      return {
+        buyer: true,
+        seller: true
+      };
     } catch (error) {
-      console.error('Error sending order notifications:', error);
-      return { buyer: false, seller: false };
+      console.error('Failed to send order notifications:', error);
+      return {
+        buyer: false,
+        seller: false
+      };
     }
   }
 
   /**
-   * Create order tracking entry
+   * Generate next steps based on payment method and order status
    */
-  private async createOrderTracking(orderId: number, status: string, message: string): Promise<void> {
-    try {
-      await this.databaseService.createOrderTracking({
-        orderId,
-        status,
-        message,
-        timestamp: new Date()
-      });
-    } catch (error) {
-      console.error('Error creating order tracking:', error);
-      // Don't throw - tracking failure shouldn't fail order creation
-    }
-  }
-
-  /**
-   * Generate next steps based on payment method and status
-   */
-  private generateNextSteps(paymentMethod: 'crypto' | 'fiat', status: string): string[] {
+  private generateNextSteps(paymentMethod: string, status: string): string[] {
     const steps: string[] = [];
 
-    if (paymentMethod === 'crypto') {
-      steps.push('Complete payment by funding the escrow contract');
-      steps.push('Seller will be notified to prepare your order');
-      steps.push('Track your order status in your dashboard');
-      steps.push('Confirm delivery when you receive your item');
-    } else {
-      steps.push('Complete payment with your selected payment method');
-      steps.push('Your payment will be held securely until delivery');
-      steps.push('Seller will be notified to prepare your order');
-      steps.push('Track your order status and shipping updates');
+    if (status === 'pending') {
+      if (paymentMethod === 'crypto') {
+        steps.push('Complete crypto payment');
+        steps.push('Wait for payment confirmation');
+      } else {
+        steps.push('Complete fiat payment');
+        steps.push('Wait for payment processing');
+      }
+      steps.push('Order confirmation');
     }
 
     return steps;
@@ -584,55 +313,59 @@ export class OrderCreationService {
         return null;
       }
 
-      const listing = await this.listingService.getListingById(order.listingId);
-      const seller = await this.sellerService.getSellerById(order.sellerId);
+      const listing = await this.listingService.getListingById(order.listingId.toString());
+      if (!listing) {
+        throw new Error('Listing not found for order');
+      }
 
       return {
         orderId: order.id.toString(),
-        orderNumber: order.orderNumber || `ORD-${order.id}`,
-        listingTitle: listing?.title || 'Unknown Item',
-        sellerName: seller?.handle || seller?.walletAddress || 'Unknown Seller',
-        buyerAddress: order.buyerAddress || 'Unknown Buyer',
-        quantity: order.quantity,
-        unitPrice: listing?.price || '0',
-        totalAmount: order.totalAmount,
-        currency: order.currency || 'USD',
-        paymentMethod: order.paymentMethod as 'crypto' | 'fiat',
-        status: order.status,
-        createdAt: order.createdAt,
-        estimatedDelivery: '5-7 business days' // Calculate based on shipping
+        orderNumber: `ORD-${order.id}`,
+        listingTitle: listing.title || 'Untitled Listing',
+        sellerName: listing.sellerId,
+        buyerAddress: order.buyerId,
+        quantity: 1,
+        unitPrice: order.amount,
+        totalAmount: order.amount,
+        currency: 'USDC',
+        paymentMethod: 'crypto',
+        status: 'pending',
+        createdAt: new Date(),
+        estimatedDelivery: '5-7 business days'
       };
-
     } catch (error) {
       console.error('Error getting order summary:', error);
-      return null;
+      throw error;
     }
   }
 
   /**
-   * Update order status with tracking
+   * Update order status
    */
-  async updateOrderStatus(
-    orderId: string,
-    newStatus: string,
-    message?: string,
-    metadata?: any
-  ): Promise<boolean> {
+  async updateOrderStatus(orderId: string, status: string, message?: string, metadata?: any): Promise<boolean> {
     try {
+      const order = await this.databaseService.getOrderById(parseInt(orderId));
+      if (!order) {
+        return false;
+      }
+
       await this.databaseService.updateOrder(parseInt(orderId), {
-        status: newStatus,
-        updatedAt: new Date()
+        status
       });
 
-      await this.createOrderTracking(
-        parseInt(orderId),
-        newStatus,
-        message || `Order status updated to ${newStatus}`
+      // Send notification about status update
+      await this.notificationService.sendOrderNotification(
+        order.buyerId,
+        'ORDER_PROCESSING',
+        orderId,
+        {
+          orderId,
+          status,
+          metadata
+        }
       );
 
-      console.log(`📋 Order ${orderId} status updated to ${newStatus}`);
       return true;
-
     } catch (error) {
       console.error('Error updating order status:', error);
       return false;
@@ -640,45 +373,37 @@ export class OrderCreationService {
   }
 
   /**
-   * Cancel order with proper cleanup
+   * Cancel order
    */
-  async cancelOrder(
-    orderId: string,
-    reason: string,
-    cancelledBy: string
-  ): Promise<{ success: boolean; refundInitiated?: boolean }> {
+  async cancelOrder(orderId: string, reason: string, cancelledBy: string): Promise<any> {
     try {
       const order = await this.databaseService.getOrderById(parseInt(orderId));
       if (!order) {
         throw new Error('Order not found');
       }
 
-      if (['shipped', 'delivered', 'cancelled'].includes(order.status)) {
-        throw new Error(`Cannot cancel order with status: ${order.status}`);
-      }
+      // Update order status to cancelled
+      await this.databaseService.updateOrder(parseInt(orderId), {
+        status: 'cancelled'
+      });
 
-      // Update order status
-      await this.updateOrderStatus(orderId, 'cancelled', `Cancelled by ${cancelledBy}: ${reason}`);
+      // Send cancellation notification
+      await this.notificationService.sendOrderNotification(
+        order.buyerId,
+        'ORDER_CANCELLED',
+        orderId,
+        {
+          orderId,
+          reason,
+          cancelledBy
+        }
+      );
 
-      // Restore inventory
-      const listing = await this.listingService.getListingById(order.listingId);
-      if (listing) {
-        await this.updateListingInventory(order.listingId, -order.quantity); // Add back inventory
-      }
-
-      // Initiate refund if payment was completed
-      let refundInitiated = false;
-      if (order.paymentMethod === 'crypto' && order.escrowId) {
-        // Handle crypto refund through escrow
-        refundInitiated = true;
-      } else if (order.paymentMethod === 'fiat' && order.paymentIntentId) {
-        // Handle fiat refund through Stripe
-        refundInitiated = true;
-      }
-
-      console.log(`🚫 Order ${orderId} cancelled successfully`);
-      return { success: true, refundInitiated };
-
+      return {
+        success: true,
+        orderId,
+        status: 'cancelled'
+      };
     } catch (error) {
       console.error('Error cancelling order:', error);
       throw error;

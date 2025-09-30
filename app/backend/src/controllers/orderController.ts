@@ -9,7 +9,7 @@ import {
   OrderStatus,
   ShippingInfo
 } from '../models/Order';
-import { APIError, NotFoundError, ValidationError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
 
 const orderService = new OrderService();
 const shippingService = new ShippingService();
@@ -32,10 +32,10 @@ export class OrderController {
       const order = await orderService.createOrder(input);
       return res.status(201).json(order);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -53,10 +53,10 @@ export class OrderController {
       
       return res.json(order);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -85,7 +85,7 @@ export class OrderController {
         offset: Number(offset)
       });
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -114,10 +114,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -141,10 +141,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -168,10 +168,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -184,7 +184,7 @@ export class OrderController {
       const history = await orderService.getOrderHistory(orderId);
       return res.json(history);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -203,10 +203,10 @@ export class OrderController {
       const analytics = await orderService.getOrderAnalytics(userAddress, timeframe as any);
       return res.json(analytics);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -230,10 +230,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -251,10 +251,10 @@ export class OrderController {
       const rates = await shippingService.getShippingRates(fromAddress, toAddress, packageInfo);
       return res.json(rates);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -268,10 +268,10 @@ export class OrderController {
       const trackingInfo = await shippingService.trackShipment(trackingNumber, carrier);
       return res.json(trackingInfo);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -289,10 +289,10 @@ export class OrderController {
       const validation = await shippingService.validateAddress(address);
       return res.json(validation);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -316,10 +316,10 @@ export class OrderController {
       
       return res.json(events);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -339,7 +339,7 @@ export class OrderController {
       
       return res.json(notifications);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -358,10 +358,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -375,15 +375,15 @@ export class OrderController {
       const success = await notificationService.markAllAsRead(userAddress);
       
       if (!success) {
-        throw new APIError(500, 'Failed to mark notifications as read');
+        throw new AppError('Failed to mark notifications as read');
       }
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -397,7 +397,7 @@ export class OrderController {
       const count = await notificationService.getUnreadCount(userAddress);
       return res.json({ count });
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -412,15 +412,15 @@ export class OrderController {
       const success = await notificationService.updateNotificationPreferences(userAddress, preferences);
       
       if (!success) {
-        throw new APIError(500, 'Failed to update notification preferences');
+        throw new AppError('Failed to update notification preferences');
       }
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -434,7 +434,7 @@ export class OrderController {
       const preferences = await notificationService.getNotificationPreferences(userAddress);
       return res.json(preferences);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -467,7 +467,7 @@ export class OrderController {
       
       return res.json(statistics);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -487,10 +487,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -510,10 +510,10 @@ export class OrderController {
       
       return res.status(204).send();
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -546,10 +546,10 @@ export class OrderController {
         failed
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 }

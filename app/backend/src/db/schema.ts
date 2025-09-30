@@ -484,6 +484,8 @@ export const orders = pgTable("orders", {
   totalAmount: numeric("total_amount", { precision: 20, scale: 8 }), // Total including fees, taxes, shipping
   currency: varchar("currency", { length: 10 }).default("USD"),
   orderMetadata: text("order_metadata"), // JSON object for additional order data
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  stripeTransferGroup: varchar("stripe_transfer_group", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   checkoutSessionIdx: index("idx_orders_checkout_session_id").on(t.checkoutSessionId),

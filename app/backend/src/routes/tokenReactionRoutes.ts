@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { tokenReactionController } from '../controllers/tokenReactionController';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
 import { body, param, query } from 'express-validator';
 
@@ -69,7 +69,7 @@ const userIdValidation = [
  */
 router.post(
   '/',
-  authMiddleware,
+  authenticateToken,
   createReactionValidation,
   validateRequest,
   tokenReactionController.createReaction
@@ -143,7 +143,7 @@ router.get(
  */
 router.get(
   '/:postId/user/:userId',
-  authMiddleware,
+  authenticateToken,
   postIdValidation,
   userIdValidation,
   validateRequest,
@@ -157,7 +157,7 @@ router.get(
  */
 router.delete(
   '/:reactionId',
-  authMiddleware,
+  authenticateToken,
   reactionIdValidation,
   validateRequest,
   tokenReactionController.removeReaction

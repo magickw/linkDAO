@@ -11,7 +11,9 @@ import { securityMonitoringService } from '../services/securityMonitoringService
 import { complianceService } from '../services/complianceService';
 import { vulnerabilityScanner } from '../services/vulnerabilityScanner';
 import { keyManagementService } from '../services/keyManagementService';
-import { auditLoggingService } from '../services/auditLoggingService';
+import AuditLoggingService from '../services/auditLoggingService';
+
+const auditLoggingService = new AuditLoggingService();
 
 export class SecurityController {
   /**

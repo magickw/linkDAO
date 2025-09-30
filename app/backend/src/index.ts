@@ -19,9 +19,6 @@ import {
   apiRateLimit,
 } from './middleware/securityMiddleware';
 
-// Import proxy routes
-import proxyRoutes from './routes/proxyRoutes';
-
 // Validate security configuration on startup
 try {
   validateSecurityConfig();
@@ -71,87 +68,22 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Proxy routes
-app.use('/', proxyRoutes);
-
-// Post routes - simplified to avoid compilation errors
-app.get('/api/posts/feed', (req, res) => {
-  res.json({
-    success: true,
-    data: [],
-    message: 'Feed endpoint working - fixed version'
-  });
-});
-
-app.get('/api/posts/:id', (req, res) => {
-  const { id } = req.params;
-  
-  if (!id || id.trim() === '') {
-    return res.status(400).json({ error: 'Post ID is required' });
-  }
-  
-  // For now, return a mock response to prevent the NotFoundError
-  res.json({
-    id,
-    author: 'mock-author',
-    content: 'This is a mock post response to prevent the NotFoundError',
-    createdAt: new Date().toISOString(),
-    message: 'Post endpoint working - mock response'
-  });
-});
-
-app.get('/api/posts/author/:author', (req, res) => {
-  const { author } = req.params;
-  res.json({
-    success: true,
-    data: [],
-    message: `Posts by author ${author} - mock response`
-  });
-});
-
-app.get('/api/posts/tag/:tag', (req, res) => {
-  const { tag } = req.params;
-  res.json({
-    success: true,
-    data: [],
-    message: `Posts by tag ${tag} - mock response`
-  });
-});
-
-app.post('/api/posts', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Create post endpoint working - mock response',
-    data: { id: 'mock-post-id' }
-  });
-});
-
-app.put('/api/posts/:id', (req, res) => {
-  const { id } = req.params;
-  res.json({
-    success: true,
-    message: `Update post ${id} - mock response`,
-    data: { id }
-  });
-});
-
-app.delete('/api/posts/:id', (req, res) => {
-  const { id } = req.params;
-  res.status(204).send();
-});
-
-app.get('/api/posts', (req, res) => {
-  res.json({
-    success: true,
-    data: [],
-    message: 'Get all posts - mock response'
-  });
-});
+// Import post routes
+import postRoutes from './routes/postRoutes';
 
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
 
-// Import marketplace verification routes
+// Use post routes
+app.use('/api/posts', postRoutes);
+
+// Import proxy routes
+import proxyRoutes from './routes/proxyRoutes';
+
+// Proxy routes (should be after specific API routes)
+app.use('/', proxyRoutes);
+
+// Import security routes
 import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoutes';
 // Import link safety routes
 import linkSafetyRoutes from './routes/linkSafetyRoutes';

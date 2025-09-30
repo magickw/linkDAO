@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { GovernanceService } from '../services/governanceService';
 import { ReputationService } from '../services/reputationService';
 import { ProposalEvaluationService } from '../services/proposalEvaluationService';
-import { APIError, ValidationError } from '../middleware/errorHandler';
+import { AppError, ValidationError } from '../middleware/errorHandler';
 
 // Initialize services
 const governanceService = new GovernanceService(
@@ -37,10 +37,10 @@ export class GovernanceController {
 
       return res.json(votingPower);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'VOTING_POWER_ERROR');
     }
   }
 
@@ -66,10 +66,10 @@ export class GovernanceController {
 
       return res.json(vote);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'CAST_VOTE_ERROR');
     }
   }
 
@@ -104,10 +104,10 @@ export class GovernanceController {
 
       return res.json(reputation);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'REPUTATION_ERROR');
     }
   }
 
@@ -127,10 +127,10 @@ export class GovernanceController {
 
       return res.json(reputation);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'UPDATE_REPUTATION_ERROR');
     }
   }
 
@@ -149,10 +149,10 @@ export class GovernanceController {
 
       return res.json(evaluation);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'EVALUATE_PROPOSAL_ERROR');
     }
   }
 
@@ -171,10 +171,10 @@ export class GovernanceController {
 
       return res.json({ guidance });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'VOTING_GUIDANCE_ERROR');
     }
   }
 
@@ -193,10 +193,10 @@ export class GovernanceController {
 
       return res.json(prediction);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'PROPOSAL_PREDICTION_ERROR');
     }
   }
 }

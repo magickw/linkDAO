@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { FollowService } from '../services/followService';
-import { APIError, ValidationError } from '../middleware/errorHandler';
+import { AppError, ValidationError } from '../middleware/errorHandler';
 
 const followService = new FollowService();
 
@@ -25,10 +25,10 @@ export class FollowController {
         throw new ValidationError('Already following this user');
       }
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'FOLLOW_ERROR');
     }
   }
 
@@ -48,10 +48,10 @@ export class FollowController {
         throw new ValidationError('Not following this user');
       }
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'UNFOLLOW_ERROR');
     }
   }
 
@@ -61,7 +61,7 @@ export class FollowController {
       const followers = await followService.getFollowers(address);
       return res.json(followers);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'FOLLOWERS_ERROR');
     }
   }
 
@@ -71,7 +71,7 @@ export class FollowController {
       const following = await followService.getFollowing(address);
       return res.json(following);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'FOLLOWING_ERROR');
     }
   }
 
@@ -81,7 +81,7 @@ export class FollowController {
       const isFollowing = await followService.isFollowing(follower, following);
       return res.json({ isFollowing });
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'IS_FOLLOWING_ERROR');
     }
   }
 
@@ -91,7 +91,7 @@ export class FollowController {
       const count = await followService.getFollowCount(address);
       return res.json(count);
     } catch (error: any) {
-      throw new APIError(500, error.message);
+      throw new AppError(error.message, 500, 'FOLLOW_COUNT_ERROR');
     }
   }
 }

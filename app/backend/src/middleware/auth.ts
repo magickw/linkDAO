@@ -8,6 +8,7 @@ export interface AuthenticatedRequest extends Request {
     kycStatus?: string;
     permissions?: string[];
     id?: string; // Add id property for compatibility
+    isAdmin?: boolean; // Add isAdmin property
   };
 }
 

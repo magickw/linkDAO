@@ -1,4 +1,4 @@
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { 
   urlAnalysisResults, 
   domainReputation, 
@@ -6,7 +6,7 @@ import {
   linkSafetyVendorResults,
   contentLinks,
   linkMonitoringAlerts
-} from '../db/schema.js';
+} from '../db/schema';
 import { eq, and, or, desc, sql, inArray } from 'drizzle-orm';
 import crypto from 'crypto';
 import { URL } from 'url';

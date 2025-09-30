@@ -145,13 +145,6 @@ export class SellerController {
       }
 
       // Parse JSON fields if they exist
-      if (typeof updates.socialLinks === 'string') {
-        try {
-          updates.socialLinks = JSON.parse(updates.socialLinks);
-        } catch (e) {
-          console.warn('Failed to parse socialLinks JSON:', e);
-        }
-      }
 
       // Get uploaded files
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -173,8 +166,8 @@ export class SellerController {
       const result = await sellerService.updateSellerProfileWithImages(
         walletAddress,
         updates,
-        profileImage,
-        coverImage
+        profileImage as any,
+        coverImage as any
       );
 
       const completeness = sellerService.calculateProfileCompleteness(result.profile);

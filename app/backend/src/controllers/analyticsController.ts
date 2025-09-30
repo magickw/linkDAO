@@ -240,7 +240,24 @@ export class AnalyticsController {
    */
   async trackTransaction(req: Request, res: Response): Promise<void> {
     try {
-      const transactionData = transactionTrackingSchema.parse(req.body);
+      const parsedData = transactionTrackingSchema.parse(req.body);
+      
+      // Ensure all required fields are present with defaults for optional ones
+      const transactionData = {
+        transactionId: parsedData.transactionId,
+        orderId: parsedData.orderId,
+        type: parsedData.type,
+        amount: parsedData.amount,
+        currency: parsedData.currency,
+        feeAmount: parsedData.feeAmount ?? 0,
+        gasUsed: parsedData.gasUsed ?? 0,
+        gasPrice: parsedData.gasPrice ?? 0,
+        blockNumber: parsedData.blockNumber ?? 0,
+        transactionHash: parsedData.transactionHash ?? '',
+        status: parsedData.status,
+        processingTime: parsedData.processingTime ?? 0,
+        errorMessage: parsedData.errorMessage ?? ''
+      };
       
       await this.analyticsService.trackTransaction(transactionData);
       

@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { OrderTrackingService } from '../services/orderTrackingService';
-import { APIError, NotFoundError, ValidationError, ForbiddenError } from '../middleware/errorHandler';
+import { AppError, NotFoundError, ValidationError, ForbiddenError } from '../middleware/errorHandler';
 
 export class OrderTrackingController {
   private orderTrackingService: OrderTrackingService;
@@ -58,10 +58,10 @@ export class OrderTrackingController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -88,10 +88,10 @@ export class OrderTrackingController {
         data: order
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -114,10 +114,10 @@ export class OrderTrackingController {
         data: timeline
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -140,10 +140,10 @@ export class OrderTrackingController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -172,10 +172,10 @@ export class OrderTrackingController {
         message: 'Order status updated successfully'
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -205,10 +205,10 @@ export class OrderTrackingController {
         message: 'Tracking information added successfully'
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -236,10 +236,10 @@ export class OrderTrackingController {
         message: 'Delivery confirmed successfully'
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -262,10 +262,10 @@ export class OrderTrackingController {
         data: statistics
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -292,10 +292,10 @@ export class OrderTrackingController {
         data: trackingInfo
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -337,10 +337,10 @@ export class OrderTrackingController {
 
       return res.send(exportData);
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -363,10 +363,10 @@ export class OrderTrackingController {
         data: notifications
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -389,10 +389,10 @@ export class OrderTrackingController {
         message: 'Notification marked as read'
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -414,10 +414,10 @@ export class OrderTrackingController {
         data: statusCounts
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -445,10 +445,10 @@ export class OrderTrackingController {
         data: result
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 
@@ -476,10 +476,10 @@ export class OrderTrackingController {
         data: trends
       });
     } catch (error: any) {
-      if (error instanceof APIError) {
+      if (error instanceof AppError) {
         throw error;
       }
-      throw new APIError(500, error.message);
+      throw new AppError(error.message);
     }
   }
 }
