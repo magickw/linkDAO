@@ -59,24 +59,6 @@ const MarketplaceContent: React.FC = () => {
   
   const marketplaceService = new MarketplaceService();
 
-  useEffect(() => {
-    let mounted = true;
-    
-    const timer = setTimeout(async () => {
-      if (mounted) {
-        await fetchListings();
-        if (address && mounted) {
-          await fetchReputation(address);
-        }
-      }
-    }, 1000); // Increase debounce to 1 second to prevent rapid calls
-    
-    return () => {
-      clearTimeout(timer);
-      mounted = false;
-    };
-  }, [address, debouncedSearchTerm]); // Remove fetchListings and fetchReputation from dependencies
-
   const fetchListings = useCallback(async () => {
     try {
       setLoading(true);
@@ -387,7 +369,7 @@ const MarketplaceContent: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [addToast]);
 
   const fetchReputation = useCallback(async (userAddress: string) => {
     // Skip if already loading or if we already have reputation data
@@ -406,7 +388,25 @@ const MarketplaceContent: React.FC = () => {
         daoApproved: true
       });
     }
-  }, []); // Remove reputation dependency to prevent infinite loop
+  }, [reputation, marketplaceService]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const timer = setTimeout(async () => {
+      if (mounted) {
+        await fetchListings();
+        if (address && mounted) {
+          await fetchReputation(address);
+        }
+      }
+    }, 1000); // Increase debounce to 1 second to prevent rapid calls
+    
+    return () => {
+      clearTimeout(timer);
+      mounted = false;
+    };
+  }, [address, debouncedSearchTerm, fetchListings, fetchReputation]); // Include fetchListings and fetchReputation in dependencies
 
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -435,7 +435,6 @@ const MarketplaceContent: React.FC = () => {
     
     return matchesSearch && matchesCategory;
   }) : [];
-
   return (
     <Layout title="Marketplace - LinkDAO">
       {/* Background */}
@@ -1289,15 +1288,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   
   const marketplaceService = new MarketplaceService();
 
-  useEffect(() => {
-    let mounted = true;
-    if (address) {
-      fetchMyListings(mounted);
-    }
-    return () => { mounted = false; };
-  }, [address]);
-
-  const fetchMyListings = async (mounted = true) => {
+  const fetchMyListings = useCallback(async (mounted = true) => {
     try {
       setLoading(true);
       console.log('Fetching listings for wallet address:', address);
@@ -1345,7 +1336,15 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
         setLoading(false);
       }
     }
-  };
+  }, [address, addToast, marketplaceService]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (address) {
+      fetchMyListings(mounted);
+    }
+    return () => { mounted = false; };
+  }, [address, fetchMyListings]);
 
   const formatItemType = (type: string) => {
     return type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ');
