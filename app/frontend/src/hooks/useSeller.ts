@@ -10,6 +10,7 @@ export function useSeller() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
+    console.log('useSeller: fetchProfile called', { address });
     if (!address) return;
     
     console.log('useSeller: Fetching profile for address:', address);
@@ -79,9 +80,12 @@ export function useSeller() {
   }, [address]);
 
   useEffect(() => {
+    console.log('useSeller: useEffect triggered', { address });
     if (address) {
+      console.log('useSeller: Calling fetchProfile for address:', address);
       fetchProfile();
     } else {
+      console.log('useSeller: No address, setting profile to null');
       setProfile(null);
     }
   }, [address, fetchProfile]); // Include fetchProfile in dependencies
