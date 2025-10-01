@@ -5,16 +5,16 @@ import { useToast } from '@/context/ToastContext';
 import { useSeller } from '@/hooks/useSeller';
 import { ImageWithFallback } from '@/utils/imageUtils';
 import { getFallbackImage } from '@/utils/imageUtils';
-import { 
-  MarketplaceService, 
-  type MarketplaceListing, 
+import {
+  MarketplaceService,
+  type MarketplaceListing,
   type MarketplaceBid,
-  type UserReputation 
+  type UserReputation
 } from '@/services/marketplaceService';
-import { 
+import {
   HeroSection,
   CategoryGrid,
-  FeaturedProductCarousel 
+  FeaturedProductCarousel
 } from '@/components/Marketplace/Homepage';
 import { SellerQuickAccessPanel } from '@/components/Marketplace/Seller';
 import BidModal from '@/components/Marketplace/BidModal';
@@ -26,6 +26,14 @@ import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedC
 import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
 import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
 import { useDebounce } from '@/hooks/useDebounce';
+
+// New redesigned components
+import { EnhancedProductCard } from '@/components/Marketplace/ProductDisplay/EnhancedProductCard';
+import { FilterBar, type FilterOptions } from '@/components/Marketplace/ProductDisplay/FilterBar';
+import { ViewDensityToggle, useDensityPreference } from '@/components/Marketplace/ProductDisplay/ViewDensityToggle';
+import { SortingControls, type SortField, type SortDirection } from '@/components/Marketplace/ProductDisplay/SortingControls';
+import { SearchBar } from '@/components/Marketplace/ProductDisplay/SearchBar';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { ShoppingCart } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
@@ -39,14 +47,17 @@ const MarketplaceContent: React.FC = () => {
   const { addToast } = useToast();
   const router = useRouter();
   const { profile } = useSeller();
-  
+  const { density, setDensity } = useDensityPreference();
+
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'orders' | 'disputes'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<UserReputation | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 500); // Increased debounce to 500ms
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const [sortField, setSortField] = useState<SortField>('relevance');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -54,7 +65,7 @@ const MarketplaceContent: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  
+
   const cart = useEnhancedCart();
   
   // Memoize the marketplace service to prevent recreation on every render
@@ -427,15 +438,96 @@ const MarketplaceContent: React.FC = () => {
     return getFallbackImage('product');
   }, []);
 
-  // Filter listings based on search term and category
-  const filteredListings = Array.isArray(listings) ? listings.filter(listing => {
-    const matchesSearch = listing.metadataURI?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      listing.sellerWalletAddress?.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'all' || listing.itemType === selectedCategory.toUpperCase();
-    
-    return matchesSearch && matchesCategory;
-  }) : [];
+  // Filter and sort listings with new filter options
+  const filteredAndSortedListings = useMemo(() => {
+    let result = Array.isArray(listings) ? [...listings] : [];
+
+    // Search filter
+    if (debouncedSearchTerm) {
+      const query = debouncedSearchTerm.toLowerCase();
+      result = result.filter(listing =>
+        listing.metadataURI?.toLowerCase().includes(query) ||
+        listing.enhancedData?.title?.toLowerCase().includes(query) ||
+        listing.enhancedData?.description?.toLowerCase().includes(query) ||
+        listing.sellerWalletAddress?.toLowerCase().includes(query)
+      );
+    }
+
+    // Category filter
+    if (filters.category) {
+      result = result.filter(listing =>
+        listing.enhancedData?.category === filters.category ||
+        listing.itemType.toLowerCase() === filters.category
+      );
+    }
+
+    // Price range filter
+    if (filters.priceRange) {
+      const { min, max } = filters.priceRange;
+      result = result.filter(listing => {
+        const price = parseFloat(listing.price);
+        if (min !== undefined && price < min) return false;
+        if (max !== undefined && price > max) return false;
+        return true;
+      });
+    }
+
+    // Condition filter
+    if (filters.condition) {
+      result = result.filter(listing =>
+        listing.enhancedData?.condition === filters.condition
+      );
+    }
+
+    // Trust filters
+    if (filters.verified) {
+      result = result.filter(listing => listing.enhancedData?.seller?.verified);
+    }
+    if (filters.escrowProtected) {
+      result = result.filter(listing => listing.enhancedData?.trust?.escrowProtected || listing.isEscrowed);
+    }
+    if (filters.daoApproved) {
+      result = result.filter(listing => listing.enhancedData?.seller?.daoApproved);
+    }
+
+    // In stock filter
+    if (filters.inStock) {
+      result = result.filter(listing => (listing.quantity ?? 0) > 0);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortField) {
+        case 'price':
+          comparison = parseFloat(a.price) - parseFloat(b.price);
+          break;
+        case 'rating':
+          comparison = (b.enhancedData?.seller?.rating || 0) - (a.enhancedData?.seller?.rating || 0);
+          break;
+        case 'popularity':
+          comparison = (b.enhancedData?.views || 0) - (a.enhancedData?.views || 0);
+          break;
+        case 'date':
+          comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [listings, debouncedSearchTerm, filters, sortField, sortDirection]);
+
+  // Grid columns based on density
+  const gridColumns =
+    density === 'comfortable'
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
+
   return (
     <Layout title="Marketplace - LinkDAO">
       {/* Background */}
@@ -664,56 +756,60 @@ const MarketplaceContent: React.FC = () => {
           </div>
 
           {activeTab === 'browse' && (
-            <GlassPanel variant="secondary" className="mb-6">
-              <div className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="Search items..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                    />
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                      <svg className="h-5 w-5 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="digital">Digital Goods</option>
-                    <option value="physical">Physical Goods</option>
-                    <option value="nft">NFTs</option>
-                    <option value="service">Services</option>
-                  </select>
+            <>
+              {/* New Filter Bar with Chips */}
+              <FilterBar
+                filters={filters}
+                onFiltersChange={setFilters}
+                className="mb-6"
+              />
+
+              {/* Search, Sort, and Density Controls */}
+              <div className="mb-6 space-y-4">
+                <SearchBar
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  resultCount={filteredAndSortedListings.length}
+                  placeholder="Search products, categories..."
+                />
+
+                <div className="flex items-center justify-between">
+                  <SortingControls
+                    currentSort={{ field: sortField, direction: sortDirection }}
+                    onSortChange={(field, direction) => {
+                      setSortField(field);
+                      setSortDirection(direction);
+                    }}
+                  />
+                  <ViewDensityToggle density={density} onDensityChange={setDensity} />
                 </div>
               </div>
-            </GlassPanel>
+            </>
           )}
 
           {loading ? (
-            <GlassPanel variant="primary" className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
-            </GlassPanel>
+            <div className={`grid ${gridColumns} gap-4`}>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-96 rounded-lg animate-pulse"
+                  style={{ background: designTokens.glassmorphism.secondary.background }}
+                />
+              ))}
+            </div>
           ) : (
           <>
             {(activeTab === 'browse' && !showCart && !showCheckout) && (
               <div>
-                {filteredListings.length === 0 ? (
+                {filteredAndSortedListings.length === 0 ? (
                   <GlassPanel variant="primary" className="text-center py-12">
                     <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
                     <h3 className="mt-2 text-lg font-medium text-white">No items found</h3>
                     <p className="mt-1 text-white/70">
-                      {searchTerm || selectedCategory !== 'all' 
-                        ? 'No items match your search criteria.' 
+                      {searchTerm || Object.keys(filters).length > 0
+                        ? 'No items match your search criteria.'
                         : 'No listings available at the moment.'}
                     </p>
                     {isConnected && (
@@ -734,281 +830,125 @@ const MarketplaceContent: React.FC = () => {
                     )}
                   </GlassPanel>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                    {filteredListings.map((listing) => (
-                      <GlassPanel key={listing.id} variant="secondary" hoverable className="overflow-hidden">
-                        <div className="p-6">
-                          {/* Enhanced Product Image with S3/CloudFront optimization */}
-                          <div className="relative h-48 bg-gray-800/50 rounded-lg overflow-hidden mb-4 group">
-                            <ImageWithFallback
-                              src={formatImageUrl(listing.metadataURI, 400, 300)}
-                              alt={listing.metadataURI || 'Product image'}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                              fallbackType="product"
-                            />
-                            {/* Trust Indicators Overlay */}
-                            <div className="absolute top-2 right-2 flex gap-1">
-                              <span className="bg-green-500/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                                ✅ Escrow Protected
-                              </span>
-                            </div>
-                            {/* Quick Action Overlay */}
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="primary"
-                                  size="small"
-                                  onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
-                                  className="backdrop-blur-sm"
-                                >
-                                  View Details
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="small"
-                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
-                                  className="backdrop-blur-sm border-blue-400/50 text-blue-300 hover:bg-blue-500/20"
-                                >
-                                  🏪 Store
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
+                  <motion.div
+                    className={`grid ${gridColumns} gap-4`}
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      visible: {
+                        transition: {
+                          staggerChildren: 0.05,
+                        },
+                      },
+                    }}
+                  >
+                    <AnimatePresence mode="popLayout">
+                      {filteredAndSortedListings.map((listing) => {
+                        // Transform listing to product format for EnhancedProductCard
+                        const product = {
+                          id: listing.id,
+                          title: listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item',
+                          description: listing.enhancedData?.description || '',
+                          images: listing.enhancedData?.images || [formatImageUrl(listing.metadataURI, 400, 300)],
+                          price: {
+                            amount: listing.price,
+                            currency: listing.enhancedData?.price?.cryptoSymbol || 'ETH',
+                            usdEquivalent: listing.enhancedData?.price?.fiat,
+                          },
+                          seller: {
+                            id: listing.sellerWalletAddress,
+                            name: listing.enhancedData?.seller?.name || formatAddress(listing.sellerWalletAddress),
+                            avatar: listing.enhancedData?.seller?.walletAddress,
+                            verified: listing.enhancedData?.seller?.verified || false,
+                            rating: listing.enhancedData?.seller?.rating,
+                            reviewCount: listing.enhancedData?.favorites,
+                            daoApproved: listing.enhancedData?.seller?.daoApproved || false,
+                          },
+                          trust: {
+                            verified: listing.enhancedData?.trust?.verified,
+                            escrowProtected: listing.enhancedData?.trust?.escrowProtected || listing.isEscrowed,
+                            onChainCertified: listing.enhancedData?.trust?.onChainCertified,
+                          },
+                          category: listing.enhancedData?.category || listing.itemType.toLowerCase(),
+                          stock: listing.quantity,
+                          shipping: {
+                            free: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                            deliverySpeed: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'Instant' : '2-3 days',
+                          },
+                          condition: listing.enhancedData?.condition as 'new' | 'used' | 'refurbished' | undefined,
+                          listingType: listing.listingType,
+                          endTime: listing.endTime,
+                          highestBid: listing.highestBid,
+                        };
 
-                          {/* Enhanced Product Info */}
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1 min-w-0">
-                              <button
-                                onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
-                                className="text-lg font-medium text-white truncate hover:text-blue-300 transition-colors text-left w-full"
-                                title={listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
-                              >
-                                {listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item'}
-                              </button>
-                              
-                              {/* Enhanced Seller Info with Profile Link */}
-                              <div className="flex items-center gap-2 mt-2">
-                                {/* Seller Avatar */}
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-medium">
-                                  {(listing.enhancedData?.seller?.name || listing.sellerWalletAddress).charAt(0).toUpperCase()}
-                                </div>
-                                
-                                {/* Clickable Seller Name */}
-                                <button
-                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
-                                  className="text-sm text-blue-300 hover:text-blue-200 hover:underline font-medium transition-colors truncate"
-                                  title="Visit seller store"
-                                >
-                                  {listing.enhancedData?.seller?.name || formatAddress(listing.sellerWalletAddress)}
-                                </button>
-                                
-                                {/* Enhanced Seller Badges */}
-                                <div className="flex gap-1">
-                                  {listing.enhancedData?.seller?.verified && (
-                                    <span className="text-xs" title="Verified Seller">✅</span>
-                                  )}
-                                  {listing.enhancedData?.seller?.daoApproved && (
-                                    <span className="text-xs" title="DAO Approved">🏛️</span>
-                                  )}
-                                  {listing.enhancedData?.trust?.escrowProtected && (
-                                    <span className="text-xs" title="Escrow Protected">🔒</span>
-                                  )}
-                                  {listing.enhancedData?.trust?.onChainCertified && (
-                                    <span className="text-xs" title="On-Chain Certified">⛓️</span>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Seller Rating and Store Link */}
-                              <div className="flex items-center justify-between mt-1">
-                                {listing.enhancedData?.seller?.rating && (
-                                  <div className="flex items-center gap-1">
-                                    <div className="flex text-yellow-400 text-xs">
-                                      {'⭐'.repeat(Math.floor(listing.enhancedData.seller.rating))}
-                                    </div>
-                                    <span className="text-xs text-white/60">
-                                      {listing.enhancedData.seller.rating.toFixed(1)}
-                                    </span>
-                                  </div>
-                                )}
-                                <button
-                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
-                                  className="text-xs text-blue-300 hover:text-blue-200 underline transition-colors"
-                                  title="Visit seller store"
-                                >
-                                  Visit Store →
-                                </button>
-                              </div>
-                            </div>
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-400/30 ml-2 flex-shrink-0">
-                              {formatItemType(listing.itemType)}
-                            </span>
-                          </div>
-                          
-                          {/* Enhanced Pricing Display */}
-                          <div className="mb-4">
-                            <div className="flex items-baseline gap-2">
-                              <p className="text-2xl font-bold text-white">
-                                {listing.enhancedData?.price?.crypto || listing.price} {listing.enhancedData?.price?.cryptoSymbol || 'ETH'}
-                              </p>
-                              <p className="text-sm text-white/60">
-                                ≈ ${listing.enhancedData?.price?.fiat || (parseFloat(listing.price) * 2400).toFixed(2)} {listing.enhancedData?.price?.fiatSymbol || 'USD'}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-between mt-1">
-                              <p className="text-sm text-white/70">
-                                Qty: {listing.quantity}
-                              </p>
-                              <div className="flex items-center gap-2">
-                                {listing.quantity > 0 && (
-                                  <span className="text-xs text-green-400">In Stock</span>
-                                )}
-                                {listing.enhancedData?.views && (
-                                  <span className="text-xs text-white/50">
-                                    👁 {listing.enhancedData.views}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Enhanced Status and Auction Info */}
-                          <div className="mb-6 flex items-center justify-between">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-400/30">
-                              {listing.listingType.replace('_', ' ')}
-                            </span>
-                            {listing.listingType === 'AUCTION' && listing.endTime && (
-                              <div className="text-right">
-                                <span className="text-xs text-white/70 block">Ends:</span>
-                                <span className="text-xs text-white font-medium">
-                                  {new Date(listing.endTime).toLocaleDateString()}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Enhanced Action Buttons */}
-                          <div className="mt-6 space-y-2">
-                            {listing.listingType === 'AUCTION' ? (
-                              <>
-                                <Button
-                                  variant="primary"
-                                  className="w-full"
-                                  onClick={() => {
-                                    if (!isConnected) {
-                                      addToast('Please connect your wallet first', 'warning');
-                                      return;
-                                    }
-                                    setSelectedListing(listing);
-                                    setShowBidModal(true);
-                                  }}
-                                >
-                                  🔨 Bid Now
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  className="w-full border-white/30 text-white/80 hover:bg-white/10 flex items-center gap-2"
-                                  onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
-                                >
-                                  View Details
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  className="w-full border-blue-400/50 text-blue-300 hover:bg-blue-500/20 flex items-center gap-1"
-                                  onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
-                                >
-                                  🏪 Visit Store
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="primary"
-                                  className="w-full"
-                                  onClick={() => {
-                                    if (!isConnected) {
-                                      addToast('Please connect your wallet first', 'warning');
-                                      return;
-                                    }
-                                    // Enhanced cart product with all required fields
-                                    const cartProduct = {
-                                      id: listing.id,
-                                      title: listing.metadataURI || 'Unnamed Item',
-                                      description: listing.metadataURI || '',
-                                      image: formatImageUrl(listing.metadataURI, 400, 300) || '',
-                                      price: {
-                                        crypto: listing.price,
-                                        cryptoSymbol: 'ETH',
-                                        fiat: (parseFloat(listing.price) * 2400).toFixed(2),
-                                        fiatSymbol: 'USD'
-                                      },
-                                      seller: {
-                                        id: listing.sellerWalletAddress,
-                                        name: `Seller ${listing.sellerWalletAddress.slice(0, 6)}`,
-                                        avatar: '',
-                                        verified: true,
-                                        daoApproved: true,
-                                        escrowSupported: true
-                                      },
-                                      category: listing.itemType.toLowerCase(),
-                                      isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                      isNFT: listing.itemType === 'NFT',
-                                      inventory: listing.quantity,
-                                      shipping: {
-                                        cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
-                                        freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                                        estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
-                                        regions: ['US', 'CA', 'EU']
-                                      },
-                                      trust: {
-                                        escrowProtected: true,
-                                        onChainCertified: true,
-                                        safetyScore: 95
-                                      }
-                                    };
-                                    cart.addItem(cartProduct);
-                                    addToast('Added to cart! 🛒', 'success');
-                                  }}
-                                >
-                                  🛒 Add to Cart
-                                </Button>
-                                <div className="grid grid-cols-3 gap-2">
-                                  <Button
-                                    variant="outline"
-                                    className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
-                                    onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
-                                  >
-                                    Details
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full border-blue-400/50 text-blue-300 hover:bg-blue-500/20 text-xs"
-                                    onClick={() => router.push(`/seller/${listing.sellerWalletAddress}`)}
-                                  >
-                                    🏪 Store
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full border-white/30 text-white/80 hover:bg-white/10 text-xs"
-                                    onClick={() => {
-                                      if (!isConnected) {
-                                        addToast('Please connect your wallet first', 'warning');
-                                        return;
-                                      }
-                                      setSelectedListing(listing);
-                                      setShowOfferModal(true);
-                                    }}
-                                  >
-                                    Offer
-                                  </Button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </GlassPanel>
-                    ))}
-                  </div>
+                        return (
+                          <motion.div
+                            key={listing.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <EnhancedProductCard
+                              product={product}
+                              density={density}
+                              onProductClick={(id) => router.push(`/marketplace/listing/${id}`)}
+                              onSellerClick={(id) => router.push(`/seller/${id}`)}
+                              onAddToCart={(id) => {
+                                // Add to cart logic
+                                const cartProduct = {
+                                  id: listing.id,
+                                  title: listing.enhancedData?.title || listing.metadataURI || 'Unnamed Item',
+                                  description: listing.enhancedData?.description || '',
+                                  image: formatImageUrl(listing.metadataURI, 400, 300) || '',
+                                  price: {
+                                    crypto: listing.price,
+                                    cryptoSymbol: 'ETH',
+                                    fiat: (parseFloat(listing.price) * 2400).toFixed(2),
+                                    fiatSymbol: 'USD',
+                                  },
+                                  seller: {
+                                    id: listing.sellerWalletAddress,
+                                    name: listing.enhancedData?.seller?.name || formatAddress(listing.sellerWalletAddress),
+                                    avatar: '',
+                                    verified: true,
+                                    daoApproved: listing.enhancedData?.seller?.daoApproved || false,
+                                    escrowSupported: true,
+                                  },
+                                  category: listing.itemType.toLowerCase(),
+                                  isDigital: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                  isNFT: listing.itemType === 'NFT',
+                                  inventory: listing.quantity,
+                                  shipping: {
+                                    cost: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? '0' : '0.001',
+                                    freeShipping: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
+                                    estimatedDays: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'instant' : '3-5',
+                                    regions: ['US', 'CA', 'EU'],
+                                  },
+                                  trust: {
+                                    escrowProtected: true,
+                                    onChainCertified: true,
+                                    safetyScore: 95,
+                                  },
+                                };
+                                cart.addItem(cartProduct);
+                                addToast('Added to cart! 🛒', 'success');
+                              }}
+                              onBidClick={(id) => {
+                                if (!isConnected) {
+                                  addToast('Please connect your wallet first', 'warning');
+                                  return;
+                                }
+                                setSelectedListing(listing);
+                                setShowBidModal(true);
+                              }}
+                            />
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </motion.div>
                 )}
               </div>
             )}
