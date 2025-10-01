@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { EnhancedWalletData } from '../types/wallet';
-import { walletDataService } from '../services/walletDataService';
-import { staticWalletService } from '../services/staticWalletService';
-// Temporarily disable real-time prices to fix refresh issue
-// import { useWalletPrices } from './useRealTimePrices';
+import { useAccount, useBalance } from 'wagmi';
+import { EnhancedWalletData, TokenBalance, TransactionType, TransactionStatus } from '../types/wallet';
+import { formatUnits } from 'viem';
 
 interface UseWalletDataOptions {
   address?: string;
@@ -44,108 +42,112 @@ interface UseWalletDataReturn {
 }
 
 export function useWalletData({
-  address,
+  address: providedAddress,
   refreshInterval = 300000, // 5 minutes
   autoRefresh = true,
   enableTransactionHistory = false,
   maxTransactions = 10
 }: UseWalletDataOptions = {}): UseWalletDataReturn {
+  const { address: connectedAddress } = useAccount();
+  const address = providedAddress || connectedAddress;
+
+  const { data: ethBalance, isLoading: isLoadingBalance, refetch: refetchBalance } = useBalance({
+    address: address as `0x${string}` | undefined,
+  });
+
   const [walletData, setWalletData] = useState<EnhancedWalletData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Temporarily disable real-time prices to fix refresh issue
-  // const {
-  //   walletData: enhancedWalletData,
-  //   isLoading: pricesLoading,
-  //   error: pricesError
-  // } = useWalletPrices(walletData);
-  
-  // Use static data instead
-  const enhancedWalletData = walletData;
-  const pricesLoading = false;
-  const pricesError = null;
-
-  // Fetch wallet data - use static service to prevent API spam
+  // Fetch real wallet data from blockchain
   const fetchWalletData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+    if (!address || !ethBalance) return;
 
     try {
-      // Use static wallet service to prevent rapid API calls
-      const data = staticWalletService.getWalletDataWithMinorUpdates();
+      setError(null);
+
+      // Convert ETH balance to number
+      const ethBalanceNumber = parseFloat(formatUnits(ethBalance.value, ethBalance.decimals));
+
+      // For now, we'll use a fixed ETH price of $2000 for USD conversion
+      // In production, you should fetch this from a price API
+      const ethPriceUSD = 2000;
+      const ethValueUSD = ethBalanceNumber * ethPriceUSD;
+
+      // Create token balances array with real ETH balance
+      const balances: TokenBalance[] = [
+        {
+          symbol: ethBalance.symbol,
+          name: 'Ethereum',
+          balance: ethBalanceNumber,
+          valueUSD: ethValueUSD,
+          change24h: 0, // TODO: Fetch from price API
+          contractAddress: '0x0000000000000000000000000000000000000000'
+        }
+      ];
+
+      // For now, we'll use empty transactions
+      // In production, you should fetch these from an indexer like Etherscan API
+      const recentTransactions: any[] = [];
+
+      const portfolioValue = ethValueUSD;
+      const portfolioChange = 0; // TODO: Calculate from historical data
+
+      const data: EnhancedWalletData = {
+        address,
+        balances,
+        recentTransactions,
+        portfolioValue,
+        portfolioChange,
+        quickActions: []
+      };
+
       setWalletData(data);
       setLastUpdated(new Date());
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch wallet data';
       setError(errorMessage);
       console.error('Wallet data fetch error:', err);
-    } finally {
-      setIsLoading(false);
     }
-  }, [address]);
+  }, [address, ethBalance]);
 
   // Refresh wallet data manually
   const refreshWalletData = useCallback(async () => {
-    if (walletData) {
-      setIsLoading(true);
-      try {
-        const refreshedData = await walletDataService.refreshWalletData(walletData);
-        setWalletData(refreshedData);
-        setLastUpdated(new Date());
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to refresh wallet data';
-        setError(errorMessage);
-        console.error('Wallet data refresh error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
+    setIsRefreshing(true);
+    try {
+      await refetchBalance();
       await fetchWalletData();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh wallet data';
+      setError(errorMessage);
+      console.error('Wallet data refresh error:', err);
+    } finally {
+      setIsRefreshing(false);
     }
-  }, [walletData, fetchWalletData]);
+  }, [refetchBalance, fetchWalletData]);
 
-  // Initial fetch
+  // Initial fetch when balance is available
   useEffect(() => {
-    fetchWalletData();
-  }, [fetchWalletData]);
-
-  // Disable auto-refresh to prevent API spam
-  // useEffect(() => {
-  //   if (!autoRefresh || refreshInterval <= 0) return;
-
-  //   const interval = setInterval(() => {
-  //     // Only refresh if not currently loading and enough time has passed since last update
-  //     const now = Date.now();
-  //     const timeSinceLastUpdate = lastUpdated ? now - lastUpdated.getTime() : Infinity;
-      
-  //     if (!isLoading && !pricesLoading && timeSinceLastUpdate >= refreshInterval) {
-  //       refreshWalletData();
-  //     }
-  //   }, refreshInterval);
-
-  //   return () => clearInterval(interval);
-  // }, [autoRefresh, refreshInterval, isLoading, pricesLoading, lastUpdated]);
-
-  // Combine wallet data error with prices error
-  const combinedError = error || pricesError;
-  const finalWalletData = enhancedWalletData || walletData;
+    if (ethBalance && address) {
+      fetchWalletData();
+    }
+  }, [ethBalance, address, fetchWalletData]);
 
   // Transform data for the wallet page
-  const portfolio = finalWalletData ? {
-    totalValueUSD: finalWalletData.portfolioValue,
-    change24hPercent: finalWalletData.portfolioChange
+  const portfolio = walletData ? {
+    totalValueUSD: walletData.portfolioValue,
+    change24hPercent: walletData.portfolioChange
   } : null;
 
-  const tokens = finalWalletData?.balances.map(balance => ({
+  const tokens = walletData?.balances.map(balance => ({
     symbol: balance.symbol,
     balanceFormatted: `${balance.balance.toFixed(4)} ${balance.symbol}`,
     valueUSD: balance.valueUSD,
     change24h: balance.change24h
   })) || [];
 
-  const transactions = finalWalletData?.recentTransactions.map(tx => ({
+  const transactions = walletData?.recentTransactions.map(tx => ({
     id: tx.id,
     type: tx.type,
     amount: tx.amount,
@@ -161,13 +163,13 @@ export function useWalletData({
   }, []);
 
   return {
-    walletData: finalWalletData,
+    walletData,
     portfolio,
     tokens,
     transactions,
-    isLoading: isLoading || pricesLoading,
-    isRefreshing: isLoading,
-    error: combinedError,
+    isLoading: isLoadingBalance,
+    isRefreshing,
+    error,
     lastUpdated,
     refresh: refreshWalletData,
     clearError
@@ -183,35 +185,11 @@ export function usePortfolioPerformance(timeframe: '1d' | '1w' | '1m' | '1y') {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setIsLoading(true);
-    
-    // Simulate API call for portfolio performance data
-    setTimeout(() => {
-      const now = Date.now();
-      const intervals = {
-        '1d': { count: 24, step: 60 * 60 * 1000 }, // hourly for 1 day
-        '1w': { count: 7, step: 24 * 60 * 60 * 1000 }, // daily for 1 week
-        '1m': { count: 30, step: 24 * 60 * 60 * 1000 }, // daily for 1 month
-        '1y': { count: 12, step: 30 * 24 * 60 * 60 * 1000 } // monthly for 1 year
-      };
-
-      const { count, step } = intervals[timeframe];
-      const baseValue = 5000;
-      const values: number[] = [];
-      const timestamps: string[] = [];
-
-      for (let i = 0; i < count; i++) {
-        const timestamp = new Date(now - (count - i - 1) * step);
-        const randomVariation = (Math.random() - 0.5) * 0.1; // ±5% variation
-        const value = baseValue * (1 + randomVariation + (i * 0.01)); // slight upward trend
-        
-        values.push(value);
-        timestamps.push(timestamp.toISOString());
-      }
-
-      setData({ values, timestamps });
-      setIsLoading(false);
-    }, 500);
+    // Portfolio performance tracking requires historical data from a price API or indexer
+    // For now, we return null to indicate this feature is not yet implemented
+    // TODO: Integrate with a price API like CoinGecko or a blockchain indexer
+    setIsLoading(false);
+    setData(null);
   }, [timeframe]);
 
   return { data, isLoading };
