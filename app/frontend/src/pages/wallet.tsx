@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { RefreshCw, TrendingUp, TrendingDown, ExternalLink, Copy } from 'lucide-react';
 
 export default function Wallet() {
-  const { address, balance } = useWeb3();
+  const { address, balance, chainId } = useWeb3();
   const { addToast } = useToast();
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -92,6 +92,46 @@ export default function Wallet() {
     }
   };
 
+  const getExplorerUrl = (type: 'address' | 'tx', value: string): string => {
+    // Map chain IDs to their explorers
+    const explorers: Record<number, string> = {
+      1: 'https://etherscan.io',
+      5: 'https://goerli.etherscan.io',
+      11155111: 'https://sepolia.etherscan.io',
+      137: 'https://polygonscan.com',
+      80001: 'https://mumbai.polygonscan.com',
+      8453: 'https://basescan.org',
+      84532: 'https://sepolia.basescan.org',
+    };
+
+    const baseUrl = chainId ? explorers[chainId] || 'https://etherscan.io' : 'https://etherscan.io';
+    return `${baseUrl}/${type}/${value}`;
+  };
+
+  const handleViewOnExplorer = () => {
+    console.log('handleViewOnExplorer called');
+
+    if (!address) {
+      console.log('No address found');
+      addToast('No wallet address found', 'error');
+      return;
+    }
+
+    const explorerUrl = getExplorerUrl('address', address);
+    console.log('Explorer URL:', explorerUrl);
+    console.log('Chain ID:', chainId);
+    console.log('Address:', address);
+
+    try {
+      // Open in new tab - using _blank as target
+      window.open(explorerUrl, '_blank');
+      addToast('Opening blockchain explorer...', 'success');
+    } catch (error) {
+      console.error('Error opening explorer:', error);
+      addToast('Failed to open explorer. Please check your popup blocker.', 'error');
+    }
+  };
+
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -162,16 +202,28 @@ export default function Wallet() {
                 }`} />
               </button>
               {address && (
-                <button
-                  onClick={handleCopyAddress}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Copy wallet address"
-                >
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {address.slice(0, 6)}...{address.slice(-4)}
-                  </span>
-                  <Copy className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                </button>
+                <>
+                  <button
+                    onClick={handleCopyAddress}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    title="Copy wallet address"
+                  >
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {address.slice(0, 6)}...{address.slice(-4)}
+                    </span>
+                    <Copy className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                  </button>
+                  <button
+                    onClick={handleViewOnExplorer}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-primary-100 dark:bg-primary-900 hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors"
+                    title="View on Explorer"
+                  >
+                    <span className="text-sm text-primary-700 dark:text-primary-300 font-medium">
+                      View on Explorer
+                    </span>
+                    <ExternalLink className="w-4 h-4 text-primary-700 dark:text-primary-300" />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -314,7 +366,14 @@ export default function Wallet() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-500 dark:text-gray-400">Portfolio performance chart would be displayed here</p>
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 mb-2">Portfolio Performance Tracking</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500">
+                        Historical performance data requires integration with a price API.
+                        <br />
+                        This feature will be available soon.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -497,11 +556,11 @@ export default function Wallet() {
                           <div className="flex items-center space-x-2">
                             <span>{transaction.type}</span>
                             <a
-                              href={`https://etherscan.io/tx/${transaction.hash}`}
+                              href={getExplorerUrl('tx', transaction.hash)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300"
-                              title="View on Etherscan"
+                              title="View on Explorer"
                             >
                               <ExternalLink className="w-3 h-3" />
                             </a>
