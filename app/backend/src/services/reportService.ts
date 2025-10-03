@@ -56,8 +56,8 @@ export class ReportService {
     }
 
     // Check minimum reputation requirement
-    const userReputation = await reputationService.getUserReputation(reporterId);
-    if (userReputation < this.MIN_REPUTATION_FOR_REPORTING) {
+    const userReputation = await reputationService.getReputation(reporterId);
+    if (userReputation.score < this.MIN_REPUTATION_FOR_REPORTING) {
       throw new Error('Insufficient reputation to submit reports');
     }
 
@@ -90,17 +90,17 @@ export class ReportService {
   }
 
   async getReporterWeight(reporterId: string): Promise<number> {
-    const userReputation = await reputationService.getUserReputation(reporterId);
+    const userReputation = await reputationService.getReputation(reporterId);
     
     // Calculate weight based on reputation
     // Base weight is 1.0, modified by reputation
     let weight = 1.0;
     
-    if (userReputation >= 100) {
+    if (userReputation.score >= 100) {
       weight = 2.0; // High reputation users get double weight
-    } else if (userReputation >= 50) {
+    } else if (userReputation.score >= 50) {
       weight = 1.5; // Medium reputation users get 1.5x weight
-    } else if (userReputation < 0) {
+    } else if (userReputation.score < 0) {
       weight = 0.5; // Low reputation users get reduced weight
     }
 
@@ -273,11 +273,11 @@ export class ReportService {
     // Check if user can still report (reputation, daily limits, etc.)
     let canReport = true;
     if (userId) {
-      const userReputation = await reputationService.getUserReputation(userId);
+      const userReputation = await reputationService.getReputation(userId);
       const dailyCount = await this.getDailyReportCount(userId);
       
       canReport = !hasReported && 
-                  userReputation >= this.MIN_REPUTATION_FOR_REPORTING &&
+                  userReputation.score >= this.MIN_REPUTATION_FOR_REPORTING &&
                   dailyCount < this.MAX_REPORTS_PER_USER_PER_DAY;
     }
 

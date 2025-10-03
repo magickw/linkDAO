@@ -2,6 +2,7 @@ import { cacheService } from './cacheService';
 import { sellerProfileService } from './sellerProfileService';
 import { marketplaceListingsService } from './marketplaceListingsService';
 import { reputationService } from './reputationService';
+import { MarketplaceListingFilters } from '../types/marketplaceListing';
 
 interface WarmupJob {
   key: string;
@@ -66,7 +67,7 @@ export class CacheWarmingService {
     console.log('Warming popular listings...');
 
     // Common filter combinations to warm
-    const popularFilters = [
+    const popularFilters: MarketplaceListingFilters[] = [
       {}, // All listings
       { sortBy: 'price', sortOrder: 'asc' }, // Cheapest first
       { sortBy: 'createdAt', sortOrder: 'desc' }, // Newest first
