@@ -15,7 +15,7 @@ function stringToColor(str: string): string {
 }
 
 // Generate SVG placeholder
-function generateSVGPlaceholder(
+export function generateSVGPlaceholder(
   width: number, 
   height: number, 
   text?: string,
