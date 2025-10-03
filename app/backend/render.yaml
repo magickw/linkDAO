@@ -2,14 +2,15 @@ services:
   - type: web
     name: linkdao-backend
     env: node
-    plan: free
+    plan: starter # Can upgrade to standard if needed
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
-      - key: FRONTEND_URL
-        value: https://linkdao.vercel.app
+      - key: NODE_OPTIONS
+        value: "--max-old-space-size=1024 --optimize-for-size"
     healthCheckPath: /health
+    autoDeploy: true
+    branch: main
+    rootDir: app/backend
