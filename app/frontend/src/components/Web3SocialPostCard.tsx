@@ -12,6 +12,7 @@ import GestureHandler from '@/components/GestureHandler';
 import PostInteractionBar from '@/components/PostInteractionBar';
 import OptimizedImage from '@/components/OptimizedImage';
 import EnhancedCommentSystem from '@/components/EnhancedCommentSystem';
+import { generateAvatarPlaceholder, generateSVGPlaceholder } from '../utils/placeholderService';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -107,7 +108,7 @@ export default function Web3SocialPostCard({
   }, [authorData]);
   
   const authorAvatar = useMemo(() => {
-    return authorData?.avatar || 'https://placehold.co/40';
+    return authorData?.avatar || generateAvatarPlaceholder(authorData?.handle || 'User', 40);
   }, [authorData]);
   
   const isVerified = useMemo(() => {
@@ -313,7 +314,7 @@ export default function Web3SocialPostCard({
         {
           id: '1',
           name: 'Crypto Punk #1234',
-          image: 'https://placehold.co/300',
+          image: generateSVGPlaceholder(300, 300, 'NFT'),
           collection: 'Crypto Punks',
           tokenId: '1234',
           contractAddress: '0x1234567890123456789012345678901234567890'
@@ -365,7 +366,7 @@ export default function Web3SocialPostCard({
               onError={(e) => {
                 // Fallback image if avatar fails to load
                 const target = e.target as HTMLImageElement;
-                target.src = 'https://placehold.co/40';
+                target.src = generateAvatarPlaceholder('User', 40);
               }}
             />
             {isVerified && (

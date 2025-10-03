@@ -16,11 +16,13 @@ const trendingDAOs = [
   { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
 ];
 
+import { COMMON_PLACEHOLDERS } from '../utils/placeholderService';
+
 // Mock suggested users
 const suggestedUsers = [
-  { id: '1', handle: 'web3dev', ens: 'dev.web3.eth', avatarCid: 'https://placehold.co/40', followers: 1200, reputationScore: 650 },
-  { id: '2', handle: 'defiwhale', ens: 'whale.defi.eth', avatarCid: 'https://placehold.co/40', followers: 8900, reputationScore: 920 },
-  { id: '3', handle: 'nftartist', ens: 'artist.nft.eth', avatarCid: 'https://placehold.co/40', followers: 5600, reputationScore: 780 },
+  { id: '1', handle: 'web3dev', ens: 'dev.web3.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 1200, reputationScore: 650 },
+  { id: '2', handle: 'defiwhale', ens: 'whale.defi.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 8900, reputationScore: 920 },
+  { id: '3', handle: 'nftartist', ens: 'artist.nft.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 5600, reputationScore: 780 },
 ];
 
 // Mock marketplace data
