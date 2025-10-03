@@ -17,7 +17,7 @@ interface GatewayConfig {
   rateLimit: {
     windowMs: number;
     max: number;
-    message: string;
+    message: string | object;
     standardHeaders: boolean;
     legacyHeaders: boolean;
   };
@@ -32,14 +32,14 @@ interface GatewayConfig {
     crossOriginOpenerPolicy: boolean;
     crossOriginResourcePolicy: boolean;
     dnsPrefetchControl: boolean;
-    frameguard: boolean;
+    frameguard: boolean | object;
     hidePoweredBy: boolean;
     hsts: boolean;
     ieNoOpen: boolean;
     noSniff: boolean;
     originAgentCluster: boolean;
     permittedCrossDomainPolicies: boolean;
-    referrerPolicy: boolean;
+    referrerPolicy: boolean | object;
     xssFilter: boolean;
   };
 }
@@ -55,11 +55,11 @@ class APIGatewayManager {
 
   private loadConfiguration(): GatewayConfig {
     const isProduction = process.env.NODE_ENV === 'production';
-    
+
     // Parse allowed origins
-    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-      : isProduction 
+      : isProduction
         ? ['https://yourdomain.com', 'https://www.yourdomain.com']
         : ['http://localhost:3000', 'http://localhost:3001'];
 
@@ -70,7 +70,7 @@ class APIGatewayManager {
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
         allowedHeaders: [
           'Origin',
-          'X-Requested-With', 
+          'X-Requested-With',
           'Content-Type',
           'Accept',
           'Authorization',
@@ -81,10 +81,7 @@ class APIGatewayManager {
       rateLimit: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
         max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
-        message: {
-          error: 'Too many requests from this IP, please try again later.',
-          retryAfter: '15 minutes'
-        },
+        message: 'Too many requests from this IP, please try again later.',
         standardHeaders: true,
         legacyHeaders: false
       },
@@ -150,31 +147,31 @@ class APIGatewayManager {
   }
 
   private requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
-    const requestId = req.headers['x-request-id'] as string || 
-                     `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+    const requestId = req.headers['x-request-id'] as string ||
+      `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     req.headers['x-request-id'] = requestId;
     res.setHeader('X-Request-ID', requestId);
-    
+
     next();
   }
 
   private requestLoggingMiddleware(req: Request, res: Response, next: NextFunction): void {
     const start = Date.now();
     const requestId = req.headers['x-request-id'];
-    
+
     // Log request
     console.log(`📥 ${req.method} ${req.path} [${requestId}]`);
-    
+
     // Log response when finished
     res.on('finish', () => {
       const duration = Date.now() - start;
       const status = res.statusCode;
       const statusEmoji = status >= 400 ? '❌' : status >= 300 ? '⚠️' : '✅';
-      
+
       console.log(`📤 ${statusEmoji} ${status} ${req.method} ${req.path} [${requestId}] ${duration}ms`);
     });
-    
+
     next();
   }
 
@@ -183,10 +180,7 @@ class APIGatewayManager {
     const authLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 10, // 10 attempts per window
-      message: {
-        error: 'Too many authentication attempts, please try again later.',
-        retryAfter: '15 minutes'
-      },
+      message: 'Too many authentication attempts, please try again later.',
       standardHeaders: true,
       legacyHeaders: false
     });
@@ -196,10 +190,7 @@ class APIGatewayManager {
     const profileLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 20, // 20 updates per window
-      message: {
-        error: 'Too many profile updates, please try again later.',
-        retryAfter: '15 minutes'
-      },
+      message: 'Too many profile updates, please try again later.',
       standardHeaders: true,
       legacyHeaders: false
     });
@@ -209,10 +200,7 @@ class APIGatewayManager {
     const listingLimiter = rateLimit({
       windowMs: 60 * 60 * 1000, // 1 hour
       max: 50, // 50 listings per hour
-      message: {
-        error: 'Too many listing creations, please try again later.',
-        retryAfter: '1 hour'
-      },
+      message: 'Too many listing creations, please try again later.',
       standardHeaders: true,
       legacyHeaders: false
     });
@@ -265,9 +253,9 @@ class APIGatewayManager {
       // This would integrate with your database health check
       return { status: 'healthy', latency: 0 };
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        error: error instanceof Error ? error.message : String(error) 
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -278,9 +266,9 @@ class APIGatewayManager {
       const redisManager = getRedisManager();
       return await redisManager.healthCheck();
     } catch (error) {
-      return { 
-        status: 'unhealthy', 
-        error: error instanceof Error ? error.message : String(error) 
+      return {
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -313,15 +301,15 @@ class APIGatewayManager {
     // Global error handler
     this.app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
       const requestId = req.headers['x-request-id'];
-      
+
       console.error(`💥 Error [${requestId}]:`, error);
-      
+
       res.status(500).json({
         success: false,
         error: {
           code: 'INTERNAL_SERVER_ERROR',
-          message: process.env.NODE_ENV === 'production' 
-            ? 'An internal server error occurred' 
+          message: process.env.NODE_ENV === 'production'
+            ? 'An internal server error occurred'
             : error.message,
           timestamp: new Date().toISOString(),
           requestId
