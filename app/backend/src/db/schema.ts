@@ -2215,3 +2215,147 @@ export const chatMessages = pgTable("chat_messages", {
 }, (t) => ({
   convoTimestampIdx: index("idx_chat_messages_conversation_id_timestamp").on(t.conversationId, t.sentAt),
 }));
+
+// Marketplace Listings - for the marketplace API endpoints
+export const marketplaceListings = pgTable("marketplace_listings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  sellerAddress: varchar("seller_address", { length: 42 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  price: numeric("price", { precision: 18, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("ETH"),
+  images: jsonb("images"), // JSON array of image URLs/IPFS hashes
+  category: varchar("category", { length: 100 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerFk: foreignKey({
+    columns: [t.sellerAddress],
+    foreignColumns: [sellers.walletAddress]
+  }),
+  sellerAddressIdx: index("idx_marketplace_listings_seller_address").on(t.sellerAddress),
+  createdAtIdx: index("idx_marketplace_listings_created_at").on(t.createdAt),
+  priceIdx: index("idx_marketplace_listings_price").on(t.price),
+  categoryIdx: index("idx_marketplace_listings_category").on(t.category),
+  isActiveIdx: index("idx_marketplace_listings_is_active").on(t.isActive),
+  titleIdx: index("idx_marketplace_listings_title").on(t.title),
+  activeCreatedIdx: index("idx_marketplace_listings_active_created").on(t.isActive, t.createdAt),
+  sellerActiveIdx: index("idx_marketplace_listings_seller_active").on(t.sellerAddress, t.isActive),
+  categoryActiveIdx: index("idx_marketplace_listings_category_active").on(t.category, t.isActive, t.createdAt),
+}));
+
+// Authentication System Tables
+export const authSessions = pgTable("auth_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  sessionToken: varchar("session_token", { length: 255 }).notNull().unique(),
+  refreshToken: varchar("refresh_token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  refreshExpiresAt: timestamp("refresh_expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  userAgent: text("user_agent"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+}, (t) => ({
+  walletAddressIdx: index("idx_auth_sessions_wallet_address").on(t.walletAddress),
+  sessionTokenIdx: index("idx_auth_sessions_session_token").on(t.sessionToken),
+  refreshTokenIdx: index("idx_auth_sessions_refresh_token").on(t.refreshToken),
+  expiresAtIdx: index("idx_auth_sessions_expires_at").on(t.expiresAt),
+  isActiveIdx: index("idx_auth_sessions_is_active").on(t.isActive),
+}));
+
+export const walletAuthAttempts = pgTable("wallet_auth_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  attemptType: varchar("attempt_type", { length: 32 }).notNull(), // 'login', 'refresh', 'logout'
+  success: boolean("success").notNull(),
+  errorMessage: text("error_message"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  walletAddressIdx: index("idx_wallet_auth_attempts_wallet_address").on(t.walletAddress),
+  createdAtIdx: index("idx_wallet_auth_attempts_created_at").on(t.createdAt),
+  successIdx: index("idx_wallet_auth_attempts_success").on(t.success),
+}));
+
+export const walletNonces = pgTable("wallet_nonces", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  nonce: varchar("nonce", { length: 255 }).notNull().unique(),
+  message: text("message").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  walletAddressIdx: index("idx_wallet_nonces_wallet_address").on(t.walletAddress),
+  nonceIdx: index("idx_wallet_nonces_nonce").on(t.nonce),
+  expiresAtIdx: index("idx_wallet_nonces_expires_at").on(t.expiresAt),
+  usedIdx: index("idx_wallet_nonces_used").on(t.used),
+}));
+
+// Marketplace Reputation System Tables
+export const userReputation = pgTable("user_reputation", {
+  walletAddress: varchar("wallet_address", { length: 66 }).primaryKey(),
+  reputationScore: numeric("reputation_score", { precision: 5, scale: 2 }).default("0.00").notNull(),
+  totalTransactions: integer("total_transactions").default(0).notNull(),
+  positiveReviews: integer("positive_reviews").default(0).notNull(),
+  negativeReviews: integer("negative_reviews").default(0).notNull(),
+  neutralReviews: integer("neutral_reviews").default(0).notNull(),
+  successfulSales: integer("successful_sales").default(0).notNull(),
+  successfulPurchases: integer("successful_purchases").default(0).notNull(),
+  disputedTransactions: integer("disputed_transactions").default(0).notNull(),
+  resolvedDisputes: integer("resolved_disputes").default(0).notNull(),
+  averageResponseTime: numeric("average_response_time", { precision: 10, scale: 2 }).default("0.00"),
+  completionRate: numeric("completion_rate", { precision: 5, scale: 2 }).default("100.00"),
+  lastCalculated: timestamp("last_calculated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  scoreIdx: index("idx_user_reputation_score").on(t.reputationScore),
+  totalTransactionsIdx: index("idx_user_reputation_total_transactions").on(t.totalTransactions),
+  updatedAtIdx: index("idx_user_reputation_updated_at").on(t.updatedAt),
+}));
+
+export const reputationHistoryMarketplace = pgTable("reputation_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  scoreChange: numeric("score_change", { precision: 5, scale: 2 }).notNull(),
+  previousScore: numeric("previous_score", { precision: 5, scale: 2 }).notNull(),
+  newScore: numeric("new_score", { precision: 5, scale: 2 }).notNull(),
+  transactionId: varchar("transaction_id", { length: 100 }),
+  reviewId: uuid("review_id"),
+  description: text("description"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  walletAddressIdx: index("idx_reputation_history_wallet_address").on(t.walletAddress),
+  eventTypeIdx: index("idx_reputation_history_event_type").on(t.eventType),
+  createdAtIdx: index("idx_reputation_history_created_at").on(t.createdAt),
+  transactionIdIdx: index("idx_reputation_history_transaction_id").on(t.transactionId),
+  walletAddressFk: foreignKey({
+    columns: [t.walletAddress],
+    foreignColumns: [userReputation.walletAddress]
+  })
+}));
+
+export const reputationCalculationRules = pgTable("reputation_calculation_rules", {
+  id: serial("id").primaryKey(),
+  ruleName: varchar("rule_name", { length: 100 }).notNull().unique(),
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  scoreImpact: numeric("score_impact", { precision: 5, scale: 2 }).notNull(),
+  weightFactor: numeric("weight_factor", { precision: 3, scale: 2 }).default("1.00"),
+  minThreshold: integer("min_threshold").default(0),
+  maxImpact: numeric("max_impact", { precision: 5, scale: 2 }),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  eventTypeIdx: index("idx_reputation_rules_event_type").on(t.eventType),
+  activeIdx: index("idx_reputation_rules_active").on(t.isActive),
+}));

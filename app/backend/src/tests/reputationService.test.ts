@@ -1,721 +1,418 @@
-import { reputationService, ReputationService } from '../services/reputationService';
-import { 
-  userReputationScores, 
-  reputationChangeEvents, 
-  reputationPenalties,
-  reputationThresholds,
-  reputationRewards,
-  jurorPerformance,
-  reporterPerformance,
-  users
-} from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { reputationService, ReputationData, ReputationTransaction } from '../services/reputationService';
+import { db } from '../db/connection';
 
-// Mock database
-jest.mock('../db/connectionPool', () => ({
+// Mock the database connection
+jest.mock('../db/connection', () => ({
   db: {
     select: jest.fn(),
     insert: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn()
+    execute: jest.fn(),
+  }
+}));
+
+// Mock the logger
+jest.mock('../utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
   }
 }));
 
 describe('ReputationService', () => {
-  let testUserId: string;
+  const mockDb = db as jest.Mocked<typeof db>;
+  const testWalletAddress = '0x1234567890123456789012345678901234567890';
 
   beforeEach(() => {
-    testUserId = 'test-user-123';
-    
-    // Reset all mocks
     jest.clearAllMocks();
+    reputationService.clearCache();
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
   });
 
-  describe('getUserReputation', () => {
-    it('should return user reputation if exists', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1500.0000',
-        moderationScore: '1400.0000',
-        reportingScore: '1600.0000',
-        juryScore: '1300.0000',
-        violationCount: 2,
-        helpfulReportsCount: 5,
-        falseReportsCount: 1,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 3,
-        juryAccuracyRate: '0.6667',
-        lastViolationAt: new Date('2024-01-15'),
-        reputationTier: 'gold'
+  describe('getReputation', () => {
+    it('should return reputation data for existing user', async () => {
+      const mockReputationData = {
+        walletAddress: testWalletAddress,
+        reputationScore: '75.50',
+        totalTransactions: 10,
+        positiveReviews: 8,
+        negativeReviews: 1,
+        neutralReviews: 1,
+        successfulSales: 5,
+        successfulPurchases: 5,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: '2.5',
+        completionRate: '95.00',
+        updatedAt: new Date(),
       };
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([mockReputationData])
           })
         })
       });
 
-      const result = await reputationService.getUserReputation(testUserId);
+      const result = await reputationService.getReputation(testWalletAddress);
 
       expect(result).toEqual({
-        userId: testUserId,
-        overallScore: 1500,
-        moderationScore: 1400,
-        reportingScore: 1600,
-        juryScore: 1300,
-        violationCount: 2,
-        helpfulReportsCount: 5,
-        falseReportsCount: 1,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 3,
-        juryAccuracyRate: 0.6667,
-        lastViolationAt: new Date('2024-01-15'),
-        reputationTier: 'gold'
+        walletAddress: testWalletAddress,
+        score: 75.50,
+        totalTransactions: 10,
+        positiveReviews: 8,
+        negativeReviews: 1,
+        neutralReviews: 1,
+        successfulSales: 5,
+        successfulPurchases: 5,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: 2.5,
+        completionRate: 95.00,
+        lastUpdated: mockReputationData.updatedAt,
       });
     });
 
-    it('should initialize reputation for new user', async () => {
-      // First call returns empty (user not found)
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([])
+    it('should return default reputation data for new user', async () => {
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([])
           })
         })
       });
 
-      // Second call returns initialized user
-      const initialReputation = {
-        userId: testUserId,
-        overallScore: '1000.0000',
-        moderationScore: '1000.0000',
-        reportingScore: '1000.0000',
-        juryScore: '1000.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([initialReputation])
-          })
+      mockDb.insert = jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          onConflictDoNothing: jest.fn().mockResolvedValue(undefined)
         })
       });
 
-      const result = await reputationService.getUserReputation(testUserId);
+      const result = await reputationService.getReputation(testWalletAddress);
 
-      expect(mockDb.insert).toHaveBeenCalledWith(userReputationScores);
-      expect(result?.overallScore).toBe(1000);
-      expect(result?.reputationTier).toBe('silver');
-    });
-  });
-
-  describe('applyViolationPenalty', () => {
-    it('should apply penalty for policy violation', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1500.0000',
-        moderationScore: '1500.0000',
-        reportingScore: '1500.0000',
-        juryScore: '1500.0000',
-        violationCount: 1,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'gold'
-      };
-
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
+      expect(result).toEqual({
+        walletAddress: testWalletAddress,
+        score: 50.0,
+        totalTransactions: 0,
+        positiveReviews: 0,
+        negativeReviews: 0,
+        neutralReviews: 0,
+        successfulSales: 0,
+        successfulPurchases: 0,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: 0,
+        completionRate: 100,
+        lastUpdated: expect.any(Date),
       });
-
-      await reputationService.applyViolationPenalty(testUserId, 123, 'harassment', 'high');
-
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationPenalties);
     });
 
-    it('should apply progressive penalties for repeat violations', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1200.0000',
-        moderationScore: '1200.0000',
-        reportingScore: '1200.0000',
-        juryScore: '1200.0000',
-        violationCount: 4, // This should trigger content_review penalty
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: new Date(),
-        reputationTier: 'silver'
+    it('should return cached data on subsequent calls', async () => {
+      const mockReputationData = {
+        walletAddress: testWalletAddress,
+        reputationScore: '75.50',
+        totalTransactions: 10,
+        positiveReviews: 8,
+        negativeReviews: 1,
+        neutralReviews: 1,
+        successfulSales: 5,
+        successfulPurchases: 5,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: '2.5',
+        completionRate: '95.00',
+        updatedAt: new Date(),
       };
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([mockReputationData])
           })
         })
       });
 
-      await reputationService.applyViolationPenalty(testUserId, 123, 'spam', 'medium');
-
-      // Should record reputation change and apply progressive penalty
-      expect(mockDb.insert).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  describe('rewardHelpfulReport', () => {
-    it('should reward user for helpful report', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1300.0000',
-        moderationScore: '1300.0000',
-        reportingScore: '1400.0000',
-        juryScore: '1300.0000',
-        violationCount: 0,
-        helpfulReportsCount: 2,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      const mockReward = {
-        rewardType: 'helpful_report',
-        baseReward: '50.0000',
-        multiplierMin: '1.0000',
-        multiplierMax: '2.0000',
-        isActive: true
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReward])
-          })
-        })
-      });
-
-      await reputationService.rewardHelpfulReport(testUserId, 456, 0.9);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
-      expect(mockDb.insert).toHaveBeenCalledWith(reporterPerformance);
-    });
-
-    it('should apply accuracy multiplier to reward', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1000.0000',
-        moderationScore: '1000.0000',
-        reportingScore: '1000.0000',
-        juryScore: '1000.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      const mockReward = {
-        rewardType: 'helpful_report',
-        baseReward: '50.0000',
-        multiplierMin: '1.0000',
-        multiplierMax: '2.0000',
-        isActive: true
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReward])
-          })
-        })
-      });
-
-      await reputationService.rewardHelpfulReport(testUserId, 456, 0.3); // Low accuracy
-
-      // Should still give minimum 50% of reward
-      const insertCall = mockDb.insert.mock.calls.find(call => call[0] === reputationChangeEvents);
-      expect(insertCall).toBeDefined();
-    });
-  });
-
-  describe('penalizeFalseReport', () => {
-    it('should penalize user for false report', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1200.0000',
-        moderationScore: '1200.0000',
-        reportingScore: '1100.0000',
-        juryScore: '1200.0000',
-        violationCount: 0,
-        helpfulReportsCount: 1,
-        falseReportsCount: 1, // Previous false report
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      await reputationService.penalizeFalseReport(testUserId, 789);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
-      expect(mockDb.insert).toHaveBeenCalledWith(reporterPerformance);
-    });
-
-    it('should apply escalating penalty for multiple false reports', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1000.0000',
-        moderationScore: '1000.0000',
-        reportingScore: '900.0000',
-        juryScore: '1000.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 3, // Multiple false reports
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      await reputationService.penalizeFalseReport(testUserId, 789);
-
-      // Should apply higher penalty due to multiple false reports
-      const insertCall = mockDb.insert.mock.calls.find(call => call[0] === reputationChangeEvents);
-      expect(insertCall).toBeDefined();
-    });
-  });
-
-  describe('restoreReputationForAppeal', () => {
-    it('should restore reputation for successful appeal', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '800.0000', // Reduced due to previous violation
-        moderationScore: '800.0000',
-        reportingScore: '1000.0000',
-        juryScore: '1000.0000',
-        violationCount: 1,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: new Date(),
-        reputationTier: 'bronze'
-      };
-
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      const originalPenalty = 200;
-      await reputationService.restoreReputationForAppeal(testUserId, 101, originalPenalty);
-
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
+      // First call
+      await reputationService.getReputation(testWalletAddress);
       
-      // Should restore 75% of penalty plus bonus
-      const insertCall = mockDb.insert.mock.calls.find(call => call[0] === reputationChangeEvents);
-      const values = insertCall[1].values;
-      expect(parseFloat(values.scoreChange)).toBeGreaterThan(150); // 75% of 200 + bonus
+      // Second call should use cache
+      const result = await reputationService.getReputation(testWalletAddress);
+
+      expect(result.score).toBe(75.50);
+      // Database should only be called once
+      expect(mockDb.select).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle database errors gracefully', async () => {
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockRejectedValue(new Error('Database error'))
+          })
+        })
+      });
+
+      const result = await reputationService.getReputation(testWalletAddress);
+
+      // Should return default values on error
+      expect(result).toEqual({
+        walletAddress: testWalletAddress,
+        score: 50.0,
+        totalTransactions: 0,
+        positiveReviews: 0,
+        negativeReviews: 0,
+        neutralReviews: 0,
+        successfulSales: 0,
+        successfulPurchases: 0,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: 0,
+        completionRate: 100,
+        lastUpdated: expect.any(Date),
+      });
     });
   });
 
-  describe('updateJurorPerformance', () => {
-    it('should reward juror for correct decision', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1800.0000',
-        moderationScore: '1800.0000',
-        reportingScore: '1800.0000',
-        juryScore: '1700.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 2,
-        juryAccuracyRate: '1.0000',
-        lastViolationAt: null,
-        reputationTier: 'gold'
+  describe('updateReputation', () => {
+    it('should update reputation successfully', async () => {
+      const transaction: ReputationTransaction = {
+        eventType: 'review_received',
+        reviewId: 'review-123',
+        metadata: { rating: 5 }
       };
 
-      const mockReward = {
-        rewardType: 'accurate_jury_vote',
-        baseReward: '100.0000',
-        multiplierMin: '1.0000',
-        multiplierMax: '3.0000',
-        isActive: true
-      };
+      mockDb.execute = jest.fn().mockResolvedValue(undefined);
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
+      await expect(reputationService.updateReputation(testWalletAddress, transaction))
+        .resolves.not.toThrow();
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReward])
-          })
-        })
-      });
-
-      // Mock jury accuracy calculation
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ total: 3, correct: 3 }])
-        })
-      });
-
-      await reputationService.updateJurorPerformance(
-        testUserId, 
-        202, 
-        'uphold', 
-        true, 
-        true, 
-        1000, 
-        45
-      );
-
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
-      expect(mockDb.insert).toHaveBeenCalledWith(jurorPerformance);
-      expect(mockDb.update).toHaveBeenCalled(); // For accuracy rate update
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.any(Object));
     });
 
-    it('should penalize juror for incorrect decision', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1500.0000',
-        moderationScore: '1500.0000',
-        reportingScore: '1500.0000',
-        juryScore: '1400.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 1,
-        juryAccuracyRate: '0.5000',
-        lastViolationAt: null,
-        reputationTier: 'gold'
+    it('should handle update errors', async () => {
+      const transaction: ReputationTransaction = {
+        eventType: 'review_received',
+        reviewId: 'review-123',
+        metadata: { rating: 5 }
       };
 
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
+      mockDb.execute = jest.fn().mockRejectedValue(new Error('Update failed'));
+
+      await expect(reputationService.updateReputation(testWalletAddress, transaction))
+        .rejects.toThrow('Failed to update reputation: Update failed');
+    });
+
+    it('should clear cache after update', async () => {
+      const transaction: ReputationTransaction = {
+        eventType: 'review_received',
+        reviewId: 'review-123',
+        metadata: { rating: 5 }
+      };
+
+      // First, populate cache
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([{
+              walletAddress: testWalletAddress,
+              reputationScore: '75.50',
+              totalTransactions: 10,
+              positiveReviews: 8,
+              negativeReviews: 1,
+              neutralReviews: 1,
+              successfulSales: 5,
+              successfulPurchases: 5,
+              disputedTransactions: 0,
+              resolvedDisputes: 0,
+              averageResponseTime: '2.5',
+              completionRate: '95.00',
+              updatedAt: new Date(),
+            }])
           })
         })
       });
 
-      // Mock jury accuracy calculation
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ total: 2, correct: 1 }])
-        })
-      });
+      await reputationService.getReputation(testWalletAddress);
 
-      await reputationService.updateJurorPerformance(
-        testUserId, 
-        203, 
-        'overturn', 
-        false, 
-        false, 
-        1000, 
-        120
-      );
+      // Update reputation
+      mockDb.execute = jest.fn().mockResolvedValue(undefined);
+      await reputationService.updateReputation(testWalletAddress, transaction);
 
-      expect(mockDb.insert).toHaveBeenCalledWith(reputationChangeEvents);
-      expect(mockDb.insert).toHaveBeenCalledWith(jurorPerformance);
+      // Next call should hit database again (cache cleared)
+      await reputationService.getReputation(testWalletAddress);
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('calculateReputation', () => {
+    it('should calculate reputation and return score', async () => {
+      mockDb.execute = jest.fn().mockResolvedValue(undefined);
       
-      // Should record negative reputation change
-      const insertCall = mockDb.insert.mock.calls.find(call => call[0] === reputationChangeEvents);
-      const values = insertCall[1].values;
-      expect(parseFloat(values.scoreChange)).toBeLessThan(0);
+      // Mock the getReputation call after calculation
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([{
+              walletAddress: testWalletAddress,
+              reputationScore: '80.00',
+              totalTransactions: 15,
+              positiveReviews: 12,
+              negativeReviews: 2,
+              neutralReviews: 1,
+              successfulSales: 8,
+              successfulPurchases: 7,
+              disputedTransactions: 1,
+              resolvedDisputes: 1,
+              averageResponseTime: '1.5',
+              completionRate: '98.00',
+              updatedAt: new Date(),
+            }])
+          })
+        })
+      });
+
+      const score = await reputationService.calculateReputation(testWalletAddress);
+
+      expect(score).toBe(80.00);
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.any(Object));
+    });
+
+    it('should handle calculation errors', async () => {
+      mockDb.execute = jest.fn().mockRejectedValue(new Error('Calculation failed'));
+
+      await expect(reputationService.calculateReputation(testWalletAddress))
+        .rejects.toThrow('Failed to calculate reputation: Calculation failed');
     });
   });
 
-  describe('getModerationStrictness', () => {
-    it('should return appropriate strictness multiplier based on reputation', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '750.0000', // Low reputation
-        moderationScore: '750.0000',
-        reportingScore: '750.0000',
-        juryScore: '750.0000',
-        violationCount: 2,
-        helpfulReportsCount: 0,
-        falseReportsCount: 1,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: new Date(),
-        reputationTier: 'bronze'
-      };
-
-      const mockThreshold = {
-        thresholdType: 'moderation_strictness',
-        minScore: '500.0000',
-        maxScore: '1000.0000',
-        multiplier: '1.5000',
-        isActive: true
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockThreshold])
-          })
-        })
-      });
-
-      const strictness = await reputationService.getModerationStrictness(testUserId);
-      expect(strictness).toBe(1.5);
-    });
-
-    it('should return default strictness if no threshold found', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1000.0000',
-        moderationScore: '1000.0000',
-        reportingScore: '1000.0000',
-        juryScore: '1000.0000',
-        violationCount: 0,
-        helpfulReportsCount: 0,
-        falseReportsCount: 0,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 0,
-        juryAccuracyRate: '0.0000',
-        lastViolationAt: null,
-        reputationTier: 'silver'
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]) // No threshold found
-          })
-        })
-      });
-
-      const strictness = await reputationService.getModerationStrictness(testUserId);
-      expect(strictness).toBe(1.0);
-    });
-  });
-
-  describe('isEligibleForJury', () => {
-    it('should return true for eligible user', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '2000.0000', // High reputation
-        moderationScore: '2000.0000',
-        reportingScore: '2000.0000',
-        juryScore: '1900.0000',
-        violationCount: 0,
-        helpfulReportsCount: 5,
-        falseReportsCount: 0,
-        successfulAppealsCount: 1,
-        juryDecisionsCount: 10,
-        juryAccuracyRate: '0.8000', // Good accuracy
-        lastViolationAt: null,
-        reputationTier: 'gold'
-      };
-
-      const mockThreshold = {
-        thresholdType: 'jury_eligibility',
-        minScore: '1500.0000',
-        maxScore: null,
-        multiplier: '1.0000',
-        isActive: true
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockThreshold])
-          })
-        })
-      });
-
-      const isEligible = await reputationService.isEligibleForJury(testUserId);
-      expect(isEligible).toBe(true);
-    });
-
-    it('should return false for low reputation user', async () => {
-      const mockReputation = {
-        userId: testUserId,
-        overallScore: '1200.0000', // Below threshold
-        moderationScore: '1200.0000',
-        reportingScore: '1200.0000',
-        juryScore: '1200.0000',
-        violationCount: 1,
-        helpfulReportsCount: 2,
-        falseReportsCount: 1,
-        successfulAppealsCount: 0,
-        juryDecisionsCount: 2,
-        juryAccuracyRate: '0.5000', // Low accuracy
-        lastViolationAt: new Date(),
-        reputationTier: 'silver'
-      };
-
-      const mockThreshold = {
-        thresholdType: 'jury_eligibility',
-        minScore: '1500.0000',
-        maxScore: null,
-        multiplier: '1.0000',
-        isActive: true
-      };
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockReputation])
-          })
-        })
-      });
-
-      mockDb.select.mockReturnValueOnce({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockThreshold])
-          })
-        })
-      });
-
-      const isEligible = await reputationService.isEligibleForJury(testUserId);
-      expect(isEligible).toBe(false);
-    });
-  });
-
-  describe('getReportingWeight', () => {
-    it('should return correct weight for different reputation levels', () => {
-      expect(reputationService.getReportingWeight(400)).toBe(0.5); // Low reputation
-      expect(reputationService.getReportingWeight(1000)).toBe(1.0); // Medium reputation
-      expect(reputationService.getReportingWeight(2000)).toBe(1.5); // High reputation
-    });
-  });
-
-  describe('getActivePenalties', () => {
-    it('should return active penalties for user', async () => {
-      const mockPenalties = [
+  describe('getReputationHistory', () => {
+    it('should return reputation history', async () => {
+      const mockHistory = [
         {
-          userId: testUserId,
-          penaltyType: 'rate_limit',
-          severityLevel: 1,
-          violationCount: 2,
-          penaltyStart: new Date('2024-01-01'),
-          penaltyEnd: new Date('2024-01-02'),
-          isActive: true,
-          caseId: 123,
-          description: 'Rate limit for violations'
+          id: 'history-1',
+          eventType: 'review_received',
+          scoreChange: '2.50',
+          previousScore: '75.00',
+          newScore: '77.50',
+          description: 'Positive review received',
+          createdAt: new Date(),
+        },
+        {
+          id: 'history-2',
+          eventType: 'transaction_completed',
+          scoreChange: '1.00',
+          previousScore: '74.00',
+          newScore: '75.00',
+          description: 'Successfully completed transaction',
+          createdAt: new Date(),
         }
       ];
 
-      mockDb.select.mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue(mockPenalties)
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            orderBy: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue(mockHistory)
+            })
           })
         })
       });
 
-      const penalties = await reputationService.getActivePenalties(testUserId);
-      
-      expect(penalties).toHaveLength(1);
-      expect(penalties[0].penaltyType).toBe('rate_limit');
-      expect(penalties[0].severityLevel).toBe(1);
+      const result = await reputationService.getReputationHistory(testWalletAddress);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        id: 'history-1',
+        eventType: 'review_received',
+        scoreChange: 2.50,
+        previousScore: 75.00,
+        newScore: 77.50,
+        description: 'Positive review received',
+        createdAt: expect.any(Date),
+      });
+    });
+
+    it('should handle history query errors', async () => {
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            orderBy: jest.fn().mockReturnValue({
+              limit: jest.fn().mockRejectedValue(new Error('Query failed'))
+            })
+          })
+        })
+      });
+
+      const result = await reputationService.getReputationHistory(testWalletAddress);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('utility methods', () => {
+    it('should return correct reputation tier', () => {
+      expect(reputationService.getReputationTier(95)).toBe('excellent');
+      expect(reputationService.getReputationTier(85)).toBe('very_good');
+      expect(reputationService.getReputationTier(75)).toBe('good');
+      expect(reputationService.getReputationTier(65)).toBe('fair');
+      expect(reputationService.getReputationTier(55)).toBe('neutral');
+      expect(reputationService.getReputationTier(45)).toBe('poor');
+      expect(reputationService.getReputationTier(35)).toBe('very_poor');
+    });
+
+    it('should return correct reputation color', () => {
+      expect(reputationService.getReputationColor(85)).toBe('#10B981');
+      expect(reputationService.getReputationColor(65)).toBe('#F59E0B');
+      expect(reputationService.getReputationColor(45)).toBe('#EF4444');
+      expect(reputationService.getReputationColor(35)).toBe('#6B7280');
+    });
+
+    it('should clear cache correctly', () => {
+      reputationService.clearCache(testWalletAddress);
+      reputationService.clearCache(); // Clear all
+
+      const stats = reputationService.getCacheStats();
+      expect(stats.size).toBe(0);
+    });
+  });
+
+  describe('getBulkReputation', () => {
+    it('should return reputation for multiple addresses', async () => {
+      const addresses = [testWalletAddress, '0x9876543210987654321098765432109876543210'];
+      const mockReputations = [
+        {
+          walletAddress: testWalletAddress,
+          reputationScore: '75.50',
+          totalTransactions: 10,
+          positiveReviews: 8,
+          negativeReviews: 1,
+          neutralReviews: 1,
+          successfulSales: 5,
+          successfulPurchases: 5,
+          disputedTransactions: 0,
+          resolvedDisputes: 0,
+          averageResponseTime: '2.5',
+          completionRate: '95.00',
+          updatedAt: new Date(),
+        }
+      ];
+
+      mockDb.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockResolvedValue(mockReputations)
+        })
+      });
+
+      const result = await reputationService.getBulkReputation(addresses);
+
+      expect(result.size).toBe(2);
+      expect(result.get(testWalletAddress)?.score).toBe(75.50);
+      expect(result.get(addresses[1])?.score).toBe(50.0); // Default for missing
     });
   });
 });

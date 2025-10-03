@@ -1,592 +1,403 @@
-/**
- * Service Worker Cache Service
- * Enhanced service worker integration for offline functionality
- */
-
-interface ServiceWorkerCacheConfig {
-  cacheName: string;
+interface CacheConfig {
   version: string;
-  maxAge: number;
-  maxEntries: number;
-  networkTimeoutMs: number;
-  strategies: {
-    [key: string]: 'cacheFirst' | 'networkFirst' | 'staleWhileRevalidate' | 'networkOnly' | 'cacheOnly';
-  };
+  staticCacheName: string;
+  dynamicCacheName: string;
+  imageCacheName: string;
+  maxCacheSize: number;
+  maxCacheAge: number;
 }
 
-interface CacheEntry {
-  url: string;
-  response: Response;
-  timestamp: number;
-  accessCount: number;
-  lastAccessed: number;
-  size: number;
+interface CacheStats {
+  totalSize: number;
+  entryCount: number;
+  hitRate: number;
+  lastCleanup: number;
 }
 
-interface OfflineAction {
-  id: string;
-  type: 'post' | 'reaction' | 'comment' | 'vote';
-  data: any;
-  timestamp: number;
-  retryCount: number;
-}
-
-/**
- * Service Worker Cache Manager
- */
 export class ServiceWorkerCacheService {
-  private config: ServiceWorkerCacheConfig;
-  private registration: ServiceWorkerRegistration | null = null;
-  private offlineActions: OfflineAction[] = [];
-  private syncInProgress = false;
+  private config: CacheConfig;
+  private stats: CacheStats;
 
-  constructor(config: Partial<ServiceWorkerCacheConfig> = {}) {
+  constructor() {
     this.config = {
-      cacheName: 'community-enhancements-v1',
-      version: '1.0.0',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      maxEntries: 1000,
-      networkTimeoutMs: 5000,
-      strategies: {
-        '/api/communities': 'staleWhileRevalidate',
-        '/api/posts': 'networkFirst',
-        '/api/users': 'staleWhileRevalidate',
-        '/static': 'cacheFirst',
-        '/images': 'cacheFirst',
-        '/icons': 'cacheFirst',
-        ...config.strategies
-      },
-      ...config
+      version: 'v2',
+      staticCacheName: `static-v2`,
+      dynamicCacheName: `dynamic-v2`,
+      imageCacheName: `images-v2`,
+      maxCacheSize: 50 * 1024 * 1024, // 50MB
+      maxCacheAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     };
 
-    this.initializeServiceWorker();
-  }
-
-  /**
-   * Initialize service worker
-   */
-  private async initializeServiceWorker(): Promise<void> {
-    if ('serviceWorker' in navigator) {
-      try {
-        this.registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/'
-        });
-
-        // Listen for service worker messages
-        navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage.bind(this));
-
-        // Handle service worker updates
-        this.registration.addEventListener('updatefound', () => {
-          const newWorker = this.registration?.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker is available
-                this.notifyServiceWorkerUpdate();
-              }
-            });
-          }
-        });
-
-        // Send configuration to service worker
-        await this.sendToServiceWorker({
-          type: 'configure',
-          config: this.config
-        });
-
-        console.log('Service Worker registered successfully');
-      } catch (error) {
-        console.warn('Service Worker registration failed:', error);
-      }
-    }
-  }
-
-  /**
-   * Handle messages from service worker
-   */
-  private handleServiceWorkerMessage(event: MessageEvent): void {
-    const { type, data } = event.data;
-
-    switch (type) {
-      case 'cache_updated':
-        this.handleCacheUpdate(data);
-        break;
-      case 'offline_action_queued':
-        this.handleOfflineActionQueued(data);
-        break;
-      case 'sync_required':
-        this.handleSyncRequired();
-        break;
-      case 'cache_stats':
-        this.handleCacheStats(data);
-        break;
-    }
-  }
-
-  /**
-   * Send message to service worker
-   */
-  private async sendToServiceWorker(message: any): Promise<void> {
-    if (this.registration?.active) {
-      this.registration.active.postMessage(message);
-    }
-  }
-
-  /**
-   * Preload critical resources
-   */
-  async preloadCriticalResources(resources: string[]): Promise<void> {
-    await this.sendToServiceWorker({
-      type: 'preload_resources',
-      resources,
-      strategy: 'cacheFirst'
-    });
-  }
-
-  /**
-   * Cache community data with intelligent strategy
-   */
-  async cacheCommunityData(communityId: string, data: any): Promise<void> {
-    const resources = [
-      `/api/communities/${communityId}`,
-      `/api/communities/${communityId}/posts`,
-      `/api/communities/${communityId}/icon`,
-      `/api/communities/${communityId}/members`
-    ];
-
-    await this.sendToServiceWorker({
-      type: 'cache_community_data',
-      communityId,
-      resources,
-      data
-    });
-  }
-
-  /**
-   * Preload user profile data
-   */
-  async preloadUserProfile(userId: string): Promise<void> {
-    const resources = [
-      `/api/users/${userId}/profile`,
-      `/api/users/${userId}/posts`,
-      `/api/users/${userId}/avatar`
-    ];
-
-    await this.sendToServiceWorker({
-      type: 'preload_user_data',
-      userId,
-      resources
-    });
-  }
-
-  /**
-   * Cache preview content
-   */
-  async cachePreviewContent(url: string, type: string, data: any): Promise<void> {
-    await this.sendToServiceWorker({
-      type: 'cache_preview',
-      url,
-      previewType: type,
-      data
-    });
-  }
-
-  /**
-   * Queue offline action
-   */
-  async queueOfflineAction(action: Omit<OfflineAction, 'id' | 'timestamp' | 'retryCount'>): Promise<void> {
-    const offlineAction: OfflineAction = {
-      ...action,
-      id: this.generateActionId(),
-      timestamp: Date.now(),
-      retryCount: 0
+    this.stats = {
+      totalSize: 0,
+      entryCount: 0,
+      hitRate: 0,
+      lastCleanup: Date.now()
     };
-
-    this.offlineActions.push(offlineAction);
-
-    // Store in IndexedDB for persistence
-    await this.storeOfflineAction(offlineAction);
-
-    // Notify service worker
-    await this.sendToServiceWorker({
-      type: 'queue_offline_action',
-      action: offlineAction
-    });
   }
 
-  /**
-   * Sync offline actions when back online
-   */
-  async syncOfflineActions(): Promise<void> {
-    if (this.syncInProgress || !navigator.onLine) {
+  // Initialize service worker cache service
+  async initialize(): Promise<void> {
+    if (!('serviceWorker' in navigator)) {
+      console.warn('Service Worker not supported');
       return;
     }
 
-    this.syncInProgress = true;
-
     try {
-      const actions = await this.getStoredOfflineActions();
+      // Register service worker if not already registered
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (!registration) {
+        await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered');
+      }
+
+      // Update cache statistics
+      await this.updateCacheStats();
+
+      // Setup periodic cleanup
+      this.setupPeriodicCleanup();
+
+      console.log('Service Worker Cache Service initialized');
+    } catch (error) {
+      console.error('Failed to initialize Service Worker Cache Service:', error);
+    }
+  }
+
+  // Cache resource with verification
+  async cacheResource(url: string, cacheName?: string): Promise<boolean> {
+    try {
+      // Verify resource availability first
+      const isAvailable = await this.verifyResourceAvailability(url);
+      if (!isAvailable) {
+        console.warn(`Resource not available for caching: ${url}`);
+        return false;
+      }
+
+      const cache = await caches.open(cacheName || this.config.dynamicCacheName);
+      const response = await fetch(url);
+
+      if (response.ok) {
+        await cache.put(url, response.clone());
+        console.log(`Successfully cached: ${url}`);
+        return true;
+      } else {
+        console.warn(`Failed to cache ${url}: ${response.status}`);
+        return false;
+      }
+    } catch (error) {
+      console.error(`Error caching resource ${url}:`, error);
+      return false;
+    }
+  }
+
+  // Batch cache resources with graceful failure handling
+  async cacheResources(urls: string[], cacheName?: string): Promise<{
+    successful: number;
+    failed: number;
+    results: Array<{ url: string; success: boolean; error?: string }>;
+  }> {
+    const results: Array<{ url: string; success: boolean; error?: string }> = [];
+    let successful = 0;
+    let failed = 0;
+
+    // Process in batches to avoid overwhelming the browser
+    const batchSize = 5;
+    for (let i = 0; i < urls.length; i += batchSize) {
+      const batch = urls.slice(i, i + batchSize);
       
-      for (const action of actions) {
+      const batchPromises = batch.map(async (url) => {
         try {
-          await this.executeOfflineAction(action);
-          await this.removeStoredOfflineAction(action.id);
-          
-          // Remove from memory
-          const index = this.offlineActions.findIndex(a => a.id === action.id);
-          if (index > -1) {
-            this.offlineActions.splice(index, 1);
+          const success = await this.cacheResource(url, cacheName);
+          if (success) {
+            successful++;
+            return { url, success: true };
+          } else {
+            failed++;
+            return { url, success: false, error: 'Caching failed' };
           }
         } catch (error) {
-          console.warn('Failed to sync offline action:', error);
-          
-          // Increment retry count
-          action.retryCount++;
-          
-          // Remove if too many retries
-          if (action.retryCount >= 3) {
-            await this.removeStoredOfflineAction(action.id);
-          } else {
-            await this.storeOfflineAction(action);
-          }
+          failed++;
+          return { 
+            url, 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          };
         }
-      }
-    } finally {
-      this.syncInProgress = false;
-    }
-  }
-
-  /**
-   * Execute offline action
-   */
-  private async executeOfflineAction(action: OfflineAction): Promise<void> {
-    const { type, data } = action;
-
-    switch (type) {
-      case 'post':
-        await this.syncOfflinePost(data);
-        break;
-      case 'reaction':
-        await this.syncOfflineReaction(data);
-        break;
-      case 'comment':
-        await this.syncOfflineComment(data);
-        break;
-      case 'vote':
-        await this.syncOfflineVote(data);
-        break;
-      default:
-        throw new Error(`Unknown offline action type: ${type}`);
-    }
-  }
-
-  /**
-   * Sync offline post
-   */
-  private async syncOfflinePost(data: any): Promise<void> {
-    const response = await fetch('/api/posts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to sync post: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Sync offline reaction
-   */
-  private async syncOfflineReaction(data: any): Promise<void> {
-    const response = await fetch(`/api/posts/${data.postId}/reactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to sync reaction: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Sync offline comment
-   */
-  private async syncOfflineComment(data: any): Promise<void> {
-    const response = await fetch(`/api/posts/${data.postId}/comments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to sync comment: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Sync offline vote
-   */
-  private async syncOfflineVote(data: any): Promise<void> {
-    const response = await fetch(`/api/governance/${data.proposalId}/vote`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to sync vote: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Store offline action in IndexedDB
-   */
-  private async storeOfflineAction(action: OfflineAction): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('CommunityEnhancementsDB', 1);
-      
-      request.onerror = () => reject(request.error);
-      
-      request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['offlineActions'], 'readwrite');
-        const store = transaction.objectStore('offlineActions');
-        
-        const putRequest = store.put(action);
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(putRequest.error);
-      };
-      
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        if (!db.objectStoreNames.contains('offlineActions')) {
-          const store = db.createObjectStore('offlineActions', { keyPath: 'id' });
-          store.createIndex('timestamp', 'timestamp');
-          store.createIndex('type', 'type');
-        }
-      };
-    });
-  }
-
-  /**
-   * Get stored offline actions
-   */
-  private async getStoredOfflineActions(): Promise<OfflineAction[]> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('CommunityEnhancementsDB', 1);
-      
-      request.onerror = () => reject(request.error);
-      
-      request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['offlineActions'], 'readonly');
-        const store = transaction.objectStore('offlineActions');
-        
-        const getAllRequest = store.getAll();
-        getAllRequest.onsuccess = () => resolve(getAllRequest.result);
-        getAllRequest.onerror = () => reject(getAllRequest.error);
-      };
-    });
-  }
-
-  /**
-   * Remove stored offline action
-   */
-  private async removeStoredOfflineAction(actionId: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('CommunityEnhancementsDB', 1);
-      
-      request.onerror = () => reject(request.error);
-      
-      request.onsuccess = () => {
-        const db = request.result;
-        const transaction = db.transaction(['offlineActions'], 'readwrite');
-        const store = transaction.objectStore('offlineActions');
-        
-        const deleteRequest = store.delete(actionId);
-        deleteRequest.onsuccess = () => resolve();
-        deleteRequest.onerror = () => reject(deleteRequest.error);
-      };
-    });
-  }
-
-  /**
-   * Handle cache update from service worker
-   */
-  private handleCacheUpdate(data: any): void {
-    // Notify components about cache updates
-    window.dispatchEvent(new CustomEvent('cache-updated', { detail: data }));
-  }
-
-  /**
-   * Handle offline action queued
-   */
-  private handleOfflineActionQueued(data: any): void {
-    // Notify UI about queued action
-    window.dispatchEvent(new CustomEvent('offline-action-queued', { detail: data }));
-  }
-
-  /**
-   * Handle sync required
-   */
-  private handleSyncRequired(): void {
-    // Trigger sync when back online
-    if (navigator.onLine) {
-      this.syncOfflineActions();
-    }
-  }
-
-  /**
-   * Handle cache statistics
-   */
-  private handleCacheStats(data: any): void {
-    // Update cache statistics
-    window.dispatchEvent(new CustomEvent('cache-stats-updated', { detail: data }));
-  }
-
-  /**
-   * Notify about service worker update
-   */
-  private notifyServiceWorkerUpdate(): void {
-    window.dispatchEvent(new CustomEvent('service-worker-updated'));
-  }
-
-  /**
-   * Generate unique action ID
-   */
-  private generateActionId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Clear all caches
-   */
-  async clearAllCaches(): Promise<void> {
-    await this.sendToServiceWorker({
-      type: 'clear_all_caches'
-    });
-  }
-
-  /**
-   * Get cache statistics
-   */
-  async getCacheStats(): Promise<any> {
-    return new Promise((resolve) => {
-      const handleStats = (event: Event) => {
-        const customEvent = event as CustomEvent;
-        window.removeEventListener('cache-stats-updated', handleStats);
-        resolve(customEvent.detail);
-      };
-
-      window.addEventListener('cache-stats-updated', handleStats);
-      
-      this.sendToServiceWorker({
-        type: 'get_cache_stats'
       });
 
-      // Timeout after 5 seconds
-      setTimeout(() => {
-        window.removeEventListener('cache-stats-updated', handleStats);
-        resolve(null);
-      }, 5000);
-    });
+      const batchResults = await Promise.allSettled(batchPromises);
+      batchResults.forEach(result => {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        } else {
+          results.push({ 
+            url: 'unknown', 
+            success: false, 
+            error: result.reason?.message || 'Promise rejected' 
+          });
+        }
+      });
+
+      // Small delay between batches to prevent blocking
+      if (i + batchSize < urls.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    return { successful, failed, results };
   }
 
-  /**
-   * Update cache strategy for specific patterns
-   */
-  async updateCacheStrategy(pattern: string, strategy: string): Promise<void> {
-    this.config.strategies[pattern] = strategy as any;
+  // Verify resource availability before caching
+  async verifyResourceAvailability(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url, { 
+        method: 'HEAD',
+        cache: 'no-cache'
+      });
+      return response.ok;
+    } catch (error) {
+      console.warn(`Resource verification failed for ${url}:`, error);
+      return false;
+    }
+  }
+
+  // Get cached resource
+  async getCachedResource(url: string, cacheName?: string): Promise<Response | null> {
+    try {
+      const cache = await caches.open(cacheName || this.config.dynamicCacheName);
+      return await cache.match(url);
+    } catch (error) {
+      console.error(`Error getting cached resource ${url}:`, error);
+      return null;
+    }
+  }
+
+  // Check if resource is cached
+  async isCached(url: string, cacheName?: string): Promise<boolean> {
+    try {
+      const cachedResponse = await this.getCachedResource(url, cacheName);
+      return cachedResponse !== null;
+    } catch (error) {
+      console.error(`Error checking cache for ${url}:`, error);
+      return false;
+    }
+  }
+
+  // Remove resource from cache
+  async removeCachedResource(url: string, cacheName?: string): Promise<boolean> {
+    try {
+      const cache = await caches.open(cacheName || this.config.dynamicCacheName);
+      return await cache.delete(url);
+    } catch (error) {
+      console.error(`Error removing cached resource ${url}:`, error);
+      return false;
+    }
+  }
+
+  // Clear specific cache
+  async clearCache(cacheName: string): Promise<boolean> {
+    try {
+      return await caches.delete(cacheName);
+    } catch (error) {
+      console.error(`Error clearing cache ${cacheName}:`, error);
+      return false;
+    }
+  }
+
+  // Clear all caches
+  async clearAllCaches(): Promise<void> {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      console.log('All caches cleared');
+    } catch (error) {
+      console.error('Error clearing all caches:', error);
+    }
+  }
+
+  // Perform cache cleanup
+  async performCleanup(): Promise<void> {
+    try {
+      console.log('Starting cache cleanup...');
+
+      // Clean up old cache versions
+      await this.cleanupOldCaches();
+
+      // Clean up oversized caches
+      await this.cleanupOversizedCaches();
+
+      // Clean up expired entries
+      await this.cleanupExpiredEntries();
+
+      // Update statistics
+      await this.updateCacheStats();
+
+      this.stats.lastCleanup = Date.now();
+      console.log('Cache cleanup completed');
+    } catch (error) {
+      console.error('Cache cleanup failed:', error);
+    }
+  }
+
+  // Clean up old cache versions
+  private async cleanupOldCaches(): Promise<void> {
+    const cacheNames = await caches.keys();
+    const currentCaches = [
+      this.config.staticCacheName,
+      this.config.dynamicCacheName,
+      this.config.imageCacheName
+    ];
+
+    const oldCaches = cacheNames.filter(name => !currentCaches.includes(name));
     
-    await this.sendToServiceWorker({
-      type: 'update_cache_strategy',
-      pattern,
-      strategy
-    });
+    await Promise.all(oldCaches.map(async (cacheName) => {
+      console.log(`Deleting old cache: ${cacheName}`);
+      return caches.delete(cacheName);
+    }));
   }
 
-  /**
-   * Prefetch resources based on user behavior
-   */
-  async prefetchResources(resources: Array<{ url: string; priority: 'high' | 'medium' | 'low' }>): Promise<void> {
-    await this.sendToServiceWorker({
-      type: 'prefetch_resources',
-      resources
-    });
-  }
+  // Clean up oversized caches
+  private async cleanupOversizedCaches(): Promise<void> {
+    const cacheNames = [this.config.dynamicCacheName, this.config.imageCacheName];
+    const maxEntries = 1000;
 
-  /**
-   * Check if resource is cached
-   */
-  async isResourceCached(url: string): Promise<boolean> {
-    if ('caches' in window) {
-      const cache = await caches.open(this.config.cacheName);
-      const response = await cache.match(url);
-      return !!response;
+    for (const cacheName of cacheNames) {
+      try {
+        const cache = await caches.open(cacheName);
+        const keys = await cache.keys();
+
+        if (keys.length > maxEntries) {
+          // Remove oldest entries (FIFO)
+          const entriesToRemove = keys.slice(0, keys.length - maxEntries);
+          
+          await Promise.all(entriesToRemove.map(key => cache.delete(key)));
+          console.log(`Cleaned up ${entriesToRemove.length} entries from ${cacheName}`);
+        }
+      } catch (error) {
+        console.error(`Failed to cleanup cache ${cacheName}:`, error);
+      }
     }
-    return false;
   }
 
-  /**
-   * Get offline actions count
-   */
-  getOfflineActionsCount(): number {
-    return this.offlineActions.length;
+  // Clean up expired entries (simplified - would need metadata for proper implementation)
+  private async cleanupExpiredEntries(): Promise<void> {
+    // This is a simplified implementation
+    // In a real scenario, you'd need to store metadata about when entries were cached
+    const maxAge = this.config.maxCacheAge;
+    const cutoffTime = Date.now() - maxAge;
+
+    // For now, just log that this would clean up expired entries
+    console.log(`Would clean up entries older than ${new Date(cutoffTime).toISOString()}`);
   }
 
-  /**
-   * Check if currently syncing
-   */
-  isSyncing(): boolean {
-    return this.syncInProgress;
-  }
+  // Update cache statistics
+  private async updateCacheStats(): Promise<void> {
+    try {
+      const cacheNames = await caches.keys();
+      let totalEntries = 0;
 
-  /**
-   * Force sync offline actions
-   */
-  async forceSyncOfflineActions(): Promise<void> {
-    await this.syncOfflineActions();
-  }
+      for (const cacheName of cacheNames) {
+        const cache = await caches.open(cacheName);
+        const keys = await cache.keys();
+        totalEntries += keys.length;
+      }
 
-  /**
-   * Listen for online/offline events
-   */
-  setupNetworkListeners(): void {
-    window.addEventListener('online', () => {
-      this.syncOfflineActions();
-      window.dispatchEvent(new CustomEvent('network-status-changed', { 
-        detail: { online: true } 
-      }));
-    });
+      this.stats.entryCount = totalEntries;
 
-    window.addEventListener('offline', () => {
-      window.dispatchEvent(new CustomEvent('network-status-changed', { 
-        detail: { online: false } 
-      }));
-    });
-  }
+      // Estimate total size (simplified)
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate();
+        this.stats.totalSize = estimate.usage || 0;
+      }
 
-  /**
-   * Destroy service and cleanup
-   */
-  destroy(): void {
-    if (this.registration) {
-      navigator.serviceWorker.removeEventListener('message', this.handleServiceWorkerMessage);
+      console.log(`Cache stats updated: ${totalEntries} entries, ${(this.stats.totalSize / 1024 / 1024).toFixed(2)}MB`);
+    } catch (error) {
+      console.error('Failed to update cache stats:', error);
     }
+  }
+
+  // Setup periodic cleanup
+  private setupPeriodicCleanup(): void {
+    // Run cleanup every 30 minutes
+    setInterval(() => {
+      this.performCleanup().catch(error => {
+        console.error('Periodic cleanup failed:', error);
+      });
+    }, 30 * 60 * 1000);
+  }
+
+  // Get cache statistics
+  getCacheStats(): CacheStats {
+    return { ...this.stats };
+  }
+
+  // Check storage quota
+  async checkStorageQuota(): Promise<{
+    used: number;
+    quota: number;
+    percentage: number;
+  } | null> {
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        const used = estimate.usage || 0;
+        const quota = estimate.quota || 0;
+        const percentage = quota > 0 ? (used / quota) * 100 : 0;
+
+        return { used, quota, percentage };
+      } catch (error) {
+        console.error('Failed to check storage quota:', error);
+      }
+    }
+
+    return null;
+  }
+
+  // Warm cache with important resources
+  async warmCache(urls: string[]): Promise<void> {
+    console.log('Starting cache warming...');
+    
+    try {
+      const result = await this.cacheResources(urls, this.config.staticCacheName);
+      console.log(`Cache warming completed: ${result.successful}/${urls.length} resources cached`);
+    } catch (error) {
+      console.error('Cache warming failed:', error);
+    }
+  }
+
+  // Health check
+  async healthCheck(): Promise<{
+    serviceWorkerSupported: boolean;
+    cacheApiSupported: boolean;
+    storageEstimateSupported: boolean;
+    cacheCount: number;
+    storageUsage?: number;
+  }> {
+    const health = {
+      serviceWorkerSupported: 'serviceWorker' in navigator,
+      cacheApiSupported: 'caches' in window,
+      storageEstimateSupported: 'storage' in navigator && 'estimate' in navigator.storage,
+      cacheCount: 0,
+      storageUsage: undefined as number | undefined
+    };
+
+    try {
+      if (health.cacheApiSupported) {
+        const cacheNames = await caches.keys();
+        health.cacheCount = cacheNames.length;
+      }
+
+      if (health.storageEstimateSupported) {
+        const estimate = await navigator.storage.estimate();
+        health.storageUsage = estimate.usage;
+      }
+    } catch (error) {
+      console.error('Health check failed:', error);
+    }
+
+    return health;
   }
 }
 
-// Export singleton instance
+// Singleton instance
 export const serviceWorkerCacheService = new ServiceWorkerCacheService();
-export default ServiceWorkerCacheService;

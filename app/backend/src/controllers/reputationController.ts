@@ -1,413 +1,394 @@
 import { Request, Response } from 'express';
-import { reputationService } from '../services/reputationService';
-import { z } from 'zod';
-
-// Validation schemas
-const applyViolationSchema = z.object({
-  userId: z.string().uuid(),
-  caseId: z.number().int().positive(),
-  violationType: z.string().min(1),
-  severity: z.enum(['low', 'medium', 'high', 'critical'])
-});
-
-const rewardReportSchema = z.object({
-  userId: z.string().uuid(),
-  reportId: z.number().int().positive(),
-  accuracy: z.number().min(0).max(1)
-});
-
-const penalizeReportSchema = z.object({
-  userId: z.string().uuid(),
-  reportId: z.number().int().positive()
-});
-
-const restoreAppealSchema = z.object({
-  userId: z.string().uuid(),
-  appealId: z.number().int().positive(),
-  originalPenalty: z.number().positive()
-});
-
-const updateJurorSchema = z.object({
-  jurorId: z.string().uuid(),
-  appealId: z.number().int().positive(),
-  vote: z.enum(['uphold', 'overturn', 'partial']),
-  wasMajority: z.boolean(),
-  wasCorrect: z.boolean(),
-  stakeAmount: z.number().positive(),
-  responseTimeMinutes: z.number().int().positive()
-});
+import { reputationService, ReputationTransaction } from '../services/reputationService';
+import { successResponse, errorResponse } from '../utils/apiResponse';
+import { logger } from '../utils/logger';
 
 export class ReputationController {
   /**
-   * Get user's reputation score and details
+   * Get reputation data for a wallet address
+   * GET /marketplace/reputation/:walletAddress
    */
-  async getUserReputation(req: Request, res: Response): Promise<void> {
+  async getReputation(req: Request, res: Response): Promise<void> {
     try {
-      const { userId } = req.params;
+      const { walletAddress } = req.params;
 
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
+      if (!walletAddress) {
+        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
         return;
       }
 
-      const reputation = await reputationService.getUserReputation(userId);
-      
-      if (!reputation) {
-        res.status(404).json({ error: 'User reputation not found' });
+      // Validate wallet address format
+      if (!this.isValidWalletAddress(walletAddress)) {
+        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
         return;
       }
 
-      res.json({
-        success: true,
-        data: reputation
-      });
+      logger.info(`Getting reputation for wallet: ${walletAddress}`);
+
+      const reputation = await reputationService.getReputation(walletAddress);
+
+      res.status(200).json(successResponse(reputation, {
+        requestId: req.headers['x-request-id'] as string,
+        cached: false, // Could implement cache hit detection
+      }));
+
     } catch (error) {
-      console.error('Error getting user reputation:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error getting reputation:', error);
+      
+      // Return default values instead of 500 error as per requirements
+      const defaultReputation = {
+        walletAddress: req.params.walletAddress,
+        score: 50.0,
+        totalTransactions: 0,
+        positiveReviews: 0,
+        negativeReviews: 0,
+        neutralReviews: 0,
+        successfulSales: 0,
+        successfulPurchases: 0,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: 0,
+        completionRate: 100,
+        lastUpdated: new Date(),
+      };
+
+      res.status(200).json(successResponse(defaultReputation, {
+        requestId: req.headers['x-request-id'] as string,
+        fallback: true,
+        error: 'Service temporarily unavailable, showing default values'
+      }));
     }
   }
 
   /**
-   * Apply violation penalty to user
+   * Update reputation for a wallet address
+   * POST /marketplace/reputation/:walletAddress
    */
-  async applyViolationPenalty(req: Request, res: Response): Promise<void> {
+  async updateReputation(req: Request, res: Response): Promise<void> {
     try {
-      const validation = applyViolationSchema.safeParse(req.body);
+      const { walletAddress } = req.params;
+      const { eventType, transactionId, reviewId, metadata } = req.body;
+
+      if (!walletAddress) {
+        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        return;
+      }
+
+      if (!eventType) {
+        res.status(400).json(errorResponse('Event type is required', 'MISSING_EVENT_TYPE'));
+        return;
+      }
+
+      // Validate wallet address format
+      if (!this.isValidWalletAddress(walletAddress)) {
+        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        return;
+      }
+
+      // Validate event type
+      const validEventTypes = [
+        'review_received',
+        'transaction_completed',
+        'dispute_created',
+        'dispute_resolved',
+        'response_time',
+        'completion_rate'
+      ];
+
+      if (!validEventTypes.includes(eventType)) {
+        res.status(400).json(errorResponse(
+          `Invalid event type. Must be one of: ${validEventTypes.join(', ')}`,
+          'INVALID_EVENT_TYPE'
+        ));
+        return;
+      }
+
+      logger.info(`Updating reputation for wallet: ${walletAddress}, event: ${eventType}`);
+
+      const transaction: ReputationTransaction = {
+        eventType,
+        transactionId,
+        reviewId,
+        metadata
+      };
+
+      await reputationService.updateReputation(walletAddress, transaction);
+
+      // Get updated reputation to return
+      const updatedReputation = await reputationService.getReputation(walletAddress);
+
+      res.status(200).json(successResponse({
+        message: 'Reputation updated successfully',
+        reputation: updatedReputation
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
+
+    } catch (error) {
+      logger.error('Error updating reputation:', error);
+      res.status(500).json(errorResponse(
+        'Failed to update reputation',
+        'REPUTATION_UPDATE_FAILED',
+        { error: error.message }
+      ));
+    }
+  }
+
+  /**
+   * Get reputation history for a wallet address
+   * GET /marketplace/reputation/:walletAddress/history
+   */
+  async getReputationHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const { walletAddress } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      if (!walletAddress) {
+        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        return;
+      }
+
+      // Validate wallet address format
+      if (!this.isValidWalletAddress(walletAddress)) {
+        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        return;
+      }
+
+      // Validate limit
+      if (limit < 1 || limit > 100) {
+        res.status(400).json(errorResponse('Limit must be between 1 and 100', 'INVALID_LIMIT'));
+        return;
+      }
+
+      logger.info(`Getting reputation history for wallet: ${walletAddress}, limit: ${limit}`);
+
+      const history = await reputationService.getReputationHistory(walletAddress, limit);
+
+      res.status(200).json(successResponse({
+        walletAddress,
+        history,
+        count: history.length,
+        limit
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
+
+    } catch (error) {
+      logger.error('Error getting reputation history:', error);
       
-      if (!validation.success) {
-        res.status(400).json({ 
-          error: 'Invalid request data',
-          details: validation.error.errors
+      // Return empty history instead of error
+      res.status(200).json(successResponse({
+        walletAddress: req.params.walletAddress,
+        history: [],
+        count: 0,
+        limit: parseInt(req.query.limit as string) || 50
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+        fallback: true,
+        error: 'Service temporarily unavailable, showing empty history'
+      }));
+    }
+  }
+
+  /**
+   * Get bulk reputation data for multiple wallet addresses
+   * POST /marketplace/reputation/bulk
+   */
+  async getBulkReputation(req: Request, res: Response): Promise<void> {
+    try {
+      const { walletAddresses } = req.body;
+
+      if (!walletAddresses || !Array.isArray(walletAddresses)) {
+        res.status(400).json(errorResponse('Wallet addresses array is required', 'MISSING_WALLET_ADDRESSES'));
+        return;
+      }
+
+      if (walletAddresses.length === 0) {
+        res.status(400).json(errorResponse('At least one wallet address is required', 'EMPTY_WALLET_ADDRESSES'));
+        return;
+      }
+
+      if (walletAddresses.length > 50) {
+        res.status(400).json(errorResponse('Maximum 50 wallet addresses allowed', 'TOO_MANY_ADDRESSES'));
+        return;
+      }
+
+      // Validate all wallet addresses
+      const invalidAddresses = walletAddresses.filter(addr => !this.isValidWalletAddress(addr));
+      if (invalidAddresses.length > 0) {
+        res.status(400).json(errorResponse(
+          `Invalid wallet address format: ${invalidAddresses.join(', ')}`,
+          'INVALID_WALLET_ADDRESSES'
+        ));
+        return;
+      }
+
+      logger.info(`Getting bulk reputation for ${walletAddresses.length} addresses`);
+
+      const reputationMap = await reputationService.getBulkReputation(walletAddresses);
+      
+      // Convert Map to object for JSON response
+      const reputationData: Record<string, any> = {};
+      reputationMap.forEach((reputation, address) => {
+        reputationData[address] = reputation;
+      });
+
+      res.status(200).json(successResponse({
+        reputations: reputationData,
+        count: walletAddresses.length
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
+
+    } catch (error) {
+      logger.error('Error getting bulk reputation:', error);
+      
+      // Return default values for all addresses
+      const { walletAddresses } = req.body;
+      const defaultReputations: Record<string, any> = {};
+      
+      if (Array.isArray(walletAddresses)) {
+        walletAddresses.forEach(address => {
+          defaultReputations[address] = {
+            walletAddress: address,
+            score: 50.0,
+            totalTransactions: 0,
+            positiveReviews: 0,
+            negativeReviews: 0,
+            neutralReviews: 0,
+            successfulSales: 0,
+            successfulPurchases: 0,
+            disputedTransactions: 0,
+            resolvedDisputes: 0,
+            averageResponseTime: 0,
+            completionRate: 100,
+            lastUpdated: new Date(),
+          };
         });
-        return;
       }
 
-      const { userId, caseId, violationType, severity } = validation.data;
-
-      await reputationService.applyViolationPenalty(userId, caseId, violationType, severity);
-
-      const updatedReputation = await reputationService.getUserReputation(userId);
-
-      res.json({
-        success: true,
-        message: 'Violation penalty applied successfully',
-        data: updatedReputation
-      });
-    } catch (error) {
-      console.error('Error applying violation penalty:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      res.status(200).json(successResponse({
+        reputations: defaultReputations,
+        count: Object.keys(defaultReputations).length
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+        fallback: true,
+        error: 'Service temporarily unavailable, showing default values'
+      }));
     }
   }
 
   /**
-   * Reward user for helpful report
+   * Calculate comprehensive reputation for a wallet address
+   * POST /marketplace/reputation/:walletAddress/calculate
    */
-  async rewardHelpfulReport(req: Request, res: Response): Promise<void> {
+  async calculateReputation(req: Request, res: Response): Promise<void> {
     try {
-      const validation = rewardReportSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        res.status(400).json({ 
-          error: 'Invalid request data',
-          details: validation.error.errors
-        });
+      const { walletAddress } = req.params;
+
+      if (!walletAddress) {
+        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
         return;
       }
 
-      const { userId, reportId, accuracy } = validation.data;
+      // Validate wallet address format
+      if (!this.isValidWalletAddress(walletAddress)) {
+        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        return;
+      }
 
-      await reputationService.rewardHelpfulReport(userId, reportId, accuracy);
+      logger.info(`Calculating comprehensive reputation for wallet: ${walletAddress}`);
 
-      const updatedReputation = await reputationService.getUserReputation(userId);
+      const score = await reputationService.calculateReputation(walletAddress);
+      const updatedReputation = await reputationService.getReputation(walletAddress);
 
-      res.json({
-        success: true,
-        message: 'Helpful report reward applied successfully',
-        data: updatedReputation
-      });
+      res.status(200).json(successResponse({
+        message: 'Reputation calculated successfully',
+        score,
+        reputation: updatedReputation
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
+
     } catch (error) {
-      console.error('Error rewarding helpful report:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error calculating reputation:', error);
+      res.status(500).json(errorResponse(
+        'Failed to calculate reputation',
+        'REPUTATION_CALCULATION_FAILED',
+        { error: error.message }
+      ));
     }
   }
 
   /**
-   * Penalize user for false report
+   * Get reputation statistics and cache info
+   * GET /marketplace/reputation/stats
    */
-  async penalizeFalseReport(req: Request, res: Response): Promise<void> {
+  async getReputationStats(req: Request, res: Response): Promise<void> {
     try {
-      const validation = penalizeReportSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        res.status(400).json({ 
-          error: 'Invalid request data',
-          details: validation.error.errors
-        });
-        return;
-      }
+      const cacheStats = reputationService.getCacheStats();
 
-      const { userId, reportId } = validation.data;
+      res.status(200).json(successResponse({
+        cache: cacheStats,
+        timestamp: new Date().toISOString()
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
 
-      await reputationService.penalizeFalseReport(userId, reportId);
-
-      const updatedReputation = await reputationService.getUserReputation(userId);
-
-      res.json({
-        success: true,
-        message: 'False report penalty applied successfully',
-        data: updatedReputation
-      });
     } catch (error) {
-      console.error('Error penalizing false report:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error getting reputation stats:', error);
+      res.status(500).json(errorResponse(
+        'Failed to get reputation statistics',
+        'REPUTATION_STATS_FAILED',
+        { error: error.message }
+      ));
     }
   }
 
   /**
-   * Restore reputation for successful appeal
+   * Clear reputation cache
+   * DELETE /marketplace/reputation/cache
    */
-  async restoreReputationForAppeal(req: Request, res: Response): Promise<void> {
+  async clearReputationCache(req: Request, res: Response): Promise<void> {
     try {
-      const validation = restoreAppealSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        res.status(400).json({ 
-          error: 'Invalid request data',
-          details: validation.error.errors
-        });
-        return;
-      }
+      const { walletAddress } = req.query;
 
-      const { userId, appealId, originalPenalty } = validation.data;
-
-      await reputationService.restoreReputationForAppeal(userId, appealId, originalPenalty);
-
-      const updatedReputation = await reputationService.getUserReputation(userId);
-
-      res.json({
-        success: true,
-        message: 'Reputation restored for successful appeal',
-        data: updatedReputation
-      });
-    } catch (error) {
-      console.error('Error restoring reputation for appeal:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
-   * Update juror performance
-   */
-  async updateJurorPerformance(req: Request, res: Response): Promise<void> {
-    try {
-      const validation = updateJurorSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        res.status(400).json({ 
-          error: 'Invalid request data',
-          details: validation.error.errors
-        });
-        return;
-      }
-
-      const { jurorId, appealId, vote, wasMajority, wasCorrect, stakeAmount, responseTimeMinutes } = validation.data;
-
-      await reputationService.updateJurorPerformance(
-        jurorId, 
-        appealId, 
-        vote, 
-        wasMajority, 
-        wasCorrect, 
-        stakeAmount, 
-        responseTimeMinutes
-      );
-
-      const updatedReputation = await reputationService.getUserReputation(jurorId);
-
-      res.json({
-        success: true,
-        message: 'Juror performance updated successfully',
-        data: updatedReputation
-      });
-    } catch (error) {
-      console.error('Error updating juror performance:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
-   * Get moderation strictness for user
-   */
-  async getModerationStrictness(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.params;
-
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
-        return;
-      }
-
-      const strictness = await reputationService.getModerationStrictness(userId);
-
-      res.json({
-        success: true,
-        data: {
-          userId,
-          strictnessMultiplier: strictness
+      if (walletAddress && typeof walletAddress === 'string') {
+        // Validate wallet address if provided
+        if (!this.isValidWalletAddress(walletAddress)) {
+          res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+          return;
         }
-      });
+        reputationService.clearCache(walletAddress);
+        logger.info(`Cleared reputation cache for wallet: ${walletAddress}`);
+      } else {
+        reputationService.clearCache();
+        logger.info('Cleared all reputation cache');
+      }
+
+      res.status(200).json(successResponse({
+        message: walletAddress ? 
+          `Cache cleared for wallet: ${walletAddress}` : 
+          'All reputation cache cleared'
+      }, {
+        requestId: req.headers['x-request-id'] as string,
+      }));
+
     } catch (error) {
-      console.error('Error getting moderation strictness:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
+      logger.error('Error clearing reputation cache:', error);
+      res.status(500).json(errorResponse(
+        'Failed to clear reputation cache',
+        'CACHE_CLEAR_FAILED',
+        { error: error.message }
+      ));
     }
   }
 
   /**
-   * Check if user is eligible for jury duty
+   * Validate wallet address format
    */
-  async checkJuryEligibility(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.params;
-
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
-        return;
-      }
-
-      const isEligible = await reputationService.isEligibleForJury(userId);
-
-      res.json({
-        success: true,
-        data: {
-          userId,
-          isEligible
-        }
-      });
-    } catch (error) {
-      console.error('Error checking jury eligibility:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
-   * Get active penalties for user
-   */
-  async getActivePenalties(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.params;
-
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
-        return;
-      }
-
-      const penalties = await reputationService.getActivePenalties(userId);
-
-      res.json({
-        success: true,
-        data: {
-          userId,
-          penalties
-        }
-      });
-    } catch (error) {
-      console.error('Error getting active penalties:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
-   * Get reporting weight for user
-   */
-  async getReportingWeight(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.params;
-
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
-        return;
-      }
-
-      const reputation = await reputationService.getUserReputation(userId);
-      
-      if (!reputation) {
-        res.status(404).json({ error: 'User reputation not found' });
-        return;
-      }
-
-      const weight = reputationService.getReportingWeight(reputation.reportingScore);
-
-      res.json({
-        success: true,
-        data: {
-          userId,
-          reportingScore: reputation.reportingScore,
-          reportingWeight: weight
-        }
-      });
-    } catch (error) {
-      console.error('Error getting reporting weight:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
-   * Initialize reputation for new user
-   */
-  async initializeUserReputation(req: Request, res: Response): Promise<void> {
-    try {
-      const { userId } = req.body;
-
-      if (!userId) {
-        res.status(400).json({ error: 'User ID is required' });
-        return;
-      }
-
-      await reputationService.initializeUserReputation(userId);
-      const reputation = await reputationService.getUserReputation(userId);
-
-      res.json({
-        success: true,
-        message: 'User reputation initialized successfully',
-        data: reputation
-      });
-    } catch (error) {
-      console.error('Error initializing user reputation:', error);
-      res.status(500).json({ 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
+  private isValidWalletAddress(address: string): boolean {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 }
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { sellerProfileService } from '../services/sellerProfileService';
 import { successResponse, errorResponse, notFoundResponse, validationErrorResponse } from '../utils/apiResponse';
+import { cachingMiddleware, rateLimitWithCache } from '../middleware/cachingMiddleware';
 import { 
   CreateSellerProfileRequest, 
   UpdateSellerProfileRequest,
@@ -15,7 +16,10 @@ const router = Router();
  * Get seller profile by wallet address
  * Returns null data instead of 404 for missing profiles
  */
-router.get('/seller/:walletAddress', async (req: Request, res: Response) => {
+router.get('/seller/:walletAddress', 
+  rateLimitWithCache(req => `seller_profile:${req.ip}`, 60, 60), // 60 requests per minute
+  cachingMiddleware.sellerProfileCache(),
+  async (req: Request, res: Response) => {
   try {
     const { walletAddress } = req.params;
 
@@ -59,7 +63,10 @@ router.get('/seller/:walletAddress', async (req: Request, res: Response) => {
  * POST /api/marketplace/seller/profile
  * Create or update seller profile
  */
-router.post('/seller/profile', async (req: Request, res: Response) => {
+router.post('/seller/profile',
+  rateLimitWithCache(req => `seller_profile_update:${req.ip}`, 10, 60), // 10 updates per minute
+  cachingMiddleware.invalidate('sellerProfile'),
+  async (req: Request, res: Response) => {
   try {
     const profileData: CreateSellerProfileRequest = req.body;
 
@@ -140,7 +147,10 @@ router.post('/seller/profile', async (req: Request, res: Response) => {
  * GET /api/marketplace/seller/onboarding/{walletAddress}
  * Get onboarding status for a seller
  */
-router.get('/seller/onboarding/:walletAddress', async (req: Request, res: Response) => {
+router.get('/seller/onboarding/:walletAddress',
+  rateLimitWithCache(req => `onboarding:${req.ip}`, 30, 60), // 30 requests per minute
+  cachingMiddleware.cache('sellerProfile', { ttl: 180 }), // Cache for 3 minutes
+  async (req: Request, res: Response) => {
   try {
     const { walletAddress } = req.params;
 

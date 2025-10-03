@@ -40,17 +40,32 @@ const CACHEABLE_APIS = [
   '/api/feed'
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets with graceful failure handling
 self.addEventListener('install', (event) => {
   console.log('Service Worker installing...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        
+        // Verify resource availability before caching
+        const verifiedAssets = await verifyResourceAvailability(STATIC_ASSETS);
+        
+        if (verifiedAssets.length === 0) {
+          console.warn('No static assets available for caching');
+          return;
+        }
+        
+        // Use graceful cache.addAll with individual fallbacks
+        return gracefulCacheAddAll(cache, verifiedAssets);
       })
       .then(() => {
+        return self.skipWaiting();
+      })
+      .catch((error) => {
+        console.error('Service Worker installation failed:', error);
+        // Continue installation even if caching fails
         return self.skipWaiting();
       })
   );
@@ -104,15 +119,17 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Cache first strategy - for static assets
+// Cache first strategy - for static assets with enhanced error handling
 async function cacheFirst(request, cacheName) {
   try {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {
-      // Update cache in background
-      updateCache(request, cacheName);
+      // Update cache in background (non-blocking)
+      updateCache(request, cacheName).catch(error => {
+        console.warn('Background cache update failed:', error);
+      });
       return cachedResponse;
     }
     
@@ -124,13 +141,24 @@ async function cacheFirst(request, cacheName) {
         await cache.put(request, responseToCache);
       } catch (cacheError) {
         console.warn('Failed to cache static asset:', cacheError);
+        // Continue serving the response even if caching fails
       }
     }
     
     return networkResponse;
   } catch (error) {
     console.error('Cache first strategy failed:', error);
-    return new Response('Offline content not available', { status: 503 });
+    
+    // Try fallback mechanisms
+    try {
+      return await handleCacheFailure(request, error);
+    } catch (fallbackError) {
+      console.error('All fallback mechanisms failed:', fallbackError);
+      return new Response('Service temporarily unavailable', { 
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
   }
 }
 
@@ -271,16 +299,67 @@ async function getCachedResponse(request, cacheName) {
       return cachedResponse;
     }
     
-    // Return offline page for navigation requests
-    if (isNavigation(request)) {
-      return caches.match('/offline.html') || 
-             new Response('You are offline', { status: 503 });
+    // Try alternative caches
+    const alternativeCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE]
+      .filter(name => name !== cacheName);
+    
+    for (const altCacheName of alternativeCaches) {
+      try {
+        const altCache = await caches.open(altCacheName);
+        const altResponse = await altCache.match(request);
+        
+        if (altResponse) {
+          console.log(`Found in alternative cache: ${altCacheName}`);
+          return altResponse;
+        }
+      } catch (altError) {
+        console.warn(`Alternative cache ${altCacheName} failed:`, altError);
+      }
     }
     
-    return new Response('Content not available offline', { status: 503 });
+    // Return offline page for navigation requests
+    if (isNavigation(request)) {
+      try {
+        const offlineResponse = await caches.match('/offline.html');
+        if (offlineResponse) {
+          return offlineResponse;
+        }
+      } catch (offlineError) {
+        console.warn('Failed to load offline page:', offlineError);
+      }
+      
+      return new Response(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>You are offline</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+              h1 { color: #333; }
+              p { color: #666; }
+            </style>
+          </head>
+          <body>
+            <h1>You are offline</h1>
+            <p>Please check your internet connection and try again.</p>
+            <button onclick="window.location.reload()">Retry</button>
+          </body>
+        </html>
+      `, { 
+        status: 503,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+    
+    return new Response('Content not available offline', { 
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   } catch (error) {
     console.error('Failed to get cached response:', error);
-    return new Response('Cache error', { status: 503 });
+    return await handleCacheFailure(request, error);
   }
 }
 
@@ -565,4 +644,192 @@ setInterval(() => {
   }
 }, 60000); // Clean up every minute
 
-console.log('Service Worker loaded with enhanced request management');
+// Resource availability verification
+async function verifyResourceAvailability(assets) {
+  const verifiedAssets = [];
+  
+  for (const asset of assets) {
+    try {
+      const response = await fetch(asset, { 
+        method: 'HEAD',
+        cache: 'no-cache'
+      });
+      
+      if (response.ok) {
+        verifiedAssets.push(asset);
+      } else {
+        console.warn(`Asset not available: ${asset} (${response.status})`);
+      }
+    } catch (error) {
+      console.warn(`Failed to verify asset: ${asset}`, error.message);
+    }
+  }
+  
+  return verifiedAssets;
+}
+
+// Graceful cache.addAll implementation with individual fallbacks
+async function gracefulCacheAddAll(cache, assets) {
+  const cachePromises = assets.map(async (asset) => {
+    try {
+      const response = await fetch(asset);
+      
+      if (response.ok) {
+        await cache.put(asset, response);
+        console.log(`Successfully cached: ${asset}`);
+        return { asset, success: true };
+      } else {
+        console.warn(`Failed to cache ${asset}: ${response.status}`);
+        return { asset, success: false, error: `HTTP ${response.status}` };
+      }
+    } catch (error) {
+      console.warn(`Failed to cache ${asset}:`, error.message);
+      return { asset, success: false, error: error.message };
+    }
+  });
+  
+  const results = await Promise.allSettled(cachePromises);
+  const successful = results.filter(result => 
+    result.status === 'fulfilled' && result.value.success
+  ).length;
+  
+  console.log(`Cached ${successful}/${assets.length} static assets`);
+  
+  // Don't throw error if some assets fail - continue with partial cache
+  return results;
+}
+
+// Cache cleanup strategies for storage management
+async function performCacheCleanup() {
+  try {
+    const cacheNames = await caches.keys();
+    const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE, PERFORMANCE_CACHE];
+    
+    // Delete old cache versions
+    const deletePromises = cacheNames
+      .filter(cacheName => !currentCaches.includes(cacheName))
+      .map(cacheName => {
+        console.log('Deleting old cache:', cacheName);
+        return caches.delete(cacheName);
+      });
+    
+    await Promise.all(deletePromises);
+    
+    // Clean up oversized caches
+    await cleanupOversizedCaches();
+    
+    console.log('Cache cleanup completed');
+  } catch (error) {
+    console.error('Cache cleanup failed:', error);
+  }
+}
+
+// Clean up oversized caches to manage storage
+async function cleanupOversizedCaches() {
+  const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB per cache
+  const MAX_CACHE_ENTRIES = 1000;
+  
+  const cacheNames = [DYNAMIC_CACHE, IMAGE_CACHE];
+  
+  for (const cacheName of cacheNames) {
+    try {
+      const cache = await caches.open(cacheName);
+      const keys = await cache.keys();
+      
+      if (keys.length > MAX_CACHE_ENTRIES) {
+        // Remove oldest entries (simple FIFO approach)
+        const entriesToRemove = keys.slice(0, keys.length - MAX_CACHE_ENTRIES);
+        
+        for (const key of entriesToRemove) {
+          await cache.delete(key);
+        }
+        
+        console.log(`Cleaned up ${entriesToRemove.length} entries from ${cacheName}`);
+      }
+    } catch (error) {
+      console.error(`Failed to cleanup cache ${cacheName}:`, error);
+    }
+  }
+}
+
+// Enhanced fallback mechanisms when caching operations fail
+async function handleCacheFailure(request, error) {
+  console.warn('Cache operation failed:', error);
+  
+  // Try to serve from alternative caches
+  const cacheNames = [STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
+  
+  for (const cacheName of cacheNames) {
+    try {
+      const cache = await caches.open(cacheName);
+      const response = await cache.match(request);
+      
+      if (response) {
+        console.log(`Served from alternative cache: ${cacheName}`);
+        return response;
+      }
+    } catch (cacheError) {
+      console.warn(`Alternative cache ${cacheName} also failed:`, cacheError);
+    }
+  }
+  
+  // Final fallback - return offline page or error response
+  if (isNavigation(request)) {
+    try {
+      return await caches.match('/offline.html') || 
+             new Response('You are offline', { 
+               status: 503,
+               headers: { 'Content-Type': 'text/html' }
+             });
+    } catch (offlineError) {
+      return new Response('Service temporarily unavailable', { 
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+  }
+  
+  return new Response('Content not available', { 
+    status: 503,
+    headers: { 'Content-Type': 'text/plain' }
+  });
+}
+
+// Storage quota management
+async function checkStorageQuota() {
+  if ('storage' in navigator && 'estimate' in navigator.storage) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      const usedMB = (estimate.usage || 0) / (1024 * 1024);
+      const quotaMB = (estimate.quota || 0) / (1024 * 1024);
+      const usagePercent = (usedMB / quotaMB) * 100;
+      
+      console.log(`Storage usage: ${usedMB.toFixed(2)}MB / ${quotaMB.toFixed(2)}MB (${usagePercent.toFixed(1)}%)`);
+      
+      // Trigger cleanup if usage is high
+      if (usagePercent > 80) {
+        console.log('High storage usage detected, triggering cleanup');
+        await performCacheCleanup();
+      }
+      
+      return { usedMB, quotaMB, usagePercent };
+    } catch (error) {
+      console.error('Failed to check storage quota:', error);
+      return null;
+    }
+  }
+  
+  return null;
+}
+
+// Periodic maintenance
+setInterval(async () => {
+  try {
+    await checkStorageQuota();
+    await performCacheCleanup();
+  } catch (error) {
+    console.error('Periodic maintenance failed:', error);
+  }
+}, 30 * 60 * 1000); // Run every 30 minutes
+
+console.log('Service Worker loaded with enhanced caching and graceful failure handling');

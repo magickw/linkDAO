@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
+import { performanceMonitoringService } from '../services/performanceMonitoringService';
+import { alertService } from '../services/alertService';
 
 // Request logging interface
 interface RequestLog {
@@ -25,7 +27,7 @@ interface RequestLog {
 
 // Generate unique request ID
 const generateRequestId = (): string => {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 };
 
 // Request logging middleware
@@ -79,12 +81,42 @@ export const requestLoggingMiddleware = (
     requestLog.statusCode = res.statusCode;
     requestLog.contentLength = JSON.stringify(body).length;
 
+    // Record performance metrics
+    performanceMonitoringService.recordRequest(
+      req.method,
+      req.route?.path || req.path,
+      responseTime,
+      res.statusCode,
+      res.statusCode >= 400 ? body.error : undefined
+    );
+
     // Log response
     if (res.statusCode >= 500) {
       logger.error(`Request ${requestId} failed`, {
         ...requestLog,
-        responseBody: body
+        responseBody: body,
+        performance: {
+          responseTime,
+          memoryUsage: process.memoryUsage()
+        }
       });
+
+      // Alert on server errors
+      if (res.statusCode >= 500) {
+        alertService.createAlert(
+          'service_down',
+          `Server Error: ${req.method} ${req.originalUrl}`,
+          `Server error ${res.statusCode} occurred for ${req.method} ${req.originalUrl}`,
+          'api',
+          {
+            statusCode: res.statusCode,
+            responseTime,
+            error: body.error,
+            requestId
+          },
+          'high'
+        );
+      }
     } else if (res.statusCode >= 400) {
       logger.warn(`Request ${requestId} client error`, {
         ...requestLog,
@@ -97,7 +129,10 @@ export const requestLoggingMiddleware = (
         url: req.originalUrl,
         statusCode: res.statusCode,
         responseTime,
-        contentLength: requestLog.contentLength
+        contentLength: requestLog.contentLength,
+        performance: {
+          responseTime
+        }
       });
     }
 
@@ -112,12 +147,23 @@ export const requestLoggingMiddleware = (
       requestLog.responseTime = responseTime;
       requestLog.statusCode = res.statusCode;
 
+      // Record performance metrics
+      performanceMonitoringService.recordRequest(
+        req.method,
+        req.route?.path || req.path,
+        responseTime,
+        res.statusCode
+      );
+
       logger.info(`Request ${requestId} finished`, {
         requestId,
         method: req.method,
         url: req.originalUrl,
         statusCode: res.statusCode,
-        responseTime
+        responseTime,
+        performance: {
+          responseTime
+        }
       });
     }
   });
@@ -146,8 +192,20 @@ export const performanceMonitoringMiddleware = (
         method: req.method,
         url: req.originalUrl,
         responseTime,
-        statusCode: res.statusCode
+        statusCode: res.statusCode,
+        performance: {
+          responseTime,
+          memoryUsage: process.memoryUsage()
+        }
       });
+
+      // Alert on very slow requests
+      if (responseTime > 5000) {
+        alertService.alertSlowResponse(
+          `${req.method} ${req.originalUrl}`,
+          responseTime
+        );
+      }
     }
     
     // Log very slow requests (> 5 seconds) as errors
@@ -159,7 +217,13 @@ export const performanceMonitoringMiddleware = (
         responseTime,
         statusCode: res.statusCode,
         query: req.query,
-        body: req.body
+        body: req.body,
+        performance: {
+          responseTime,
+          memoryUsage: process.memoryUsage(),
+          cpuUsage: process.cpuUsage()
+        },
+        critical: true
       });
     }
   });

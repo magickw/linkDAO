@@ -61,6 +61,9 @@ app.use(generalRateLimit);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Static files
+app.use('/static', express.static('src/public'));
+
 // Security middleware
 app.use(inputValidation);
 app.use(threatDetection);
@@ -136,6 +139,8 @@ import sellerRoutes from './routes/sellerRoutes';
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
+// Import marketplace listings routes
+import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -148,12 +153,23 @@ import enhancedSearchRoutes from './routes/enhancedSearchRoutes';
 import contentPreviewRoutes from './routes/contentPreviewRoutes';
 // Import engagement analytics routes
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
+// Import authentication routes
+import { createDefaultAuthRoutes } from './routes/authenticationRoutes';
 // Import poll routes
 import pollRoutes from './routes/pollRoutes';
+// Import cache routes
+import cacheRoutes from './routes/cacheRoutes';
 // Import marketplace search routes
 import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
 // Import price oracle routes
 import priceOracleRoutes from './routes/priceOracleRoutes';
+// Import reputation routes
+import { reputationRoutes } from './routes/reputationRoutes';
+// Import monitoring routes
+import monitoringRoutes from './routes/monitoringRoutes';
+
+// Authentication routes
+app.use('/api/auth', createDefaultAuthRoutes());
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -200,6 +216,9 @@ app.use('/api/marketplace', marketplaceSellerRoutes);
 // Seller profile API routes
 app.use('/api/marketplace', sellerProfileRoutes);
 
+// Marketplace listings routes
+app.use('/api/marketplace', marketplaceListingsRoutes);
+
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
 
@@ -215,20 +234,22 @@ app.use('/api/analytics', engagementAnalyticsRoutes);
 // Poll routes
 app.use('/api/polls', pollRoutes);
 
+// Cache management routes
+app.use('/api/cache', cacheRoutes);
+
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
 
 // Price oracle routes
 app.use('/api/price-oracle', priceOracleRoutes);
 
-// Marketplace fallback
-app.get('/api/marketplace/listings', (req, res) => {
-  res.json({
-    success: true,
-    data: [],
-    message: 'Marketplace endpoint working - fixed version'
-  });
-});
+// Reputation routes
+app.use('/marketplace/reputation', reputationRoutes);
+
+// Monitoring and alerting routes
+app.use('/api/monitoring', monitoringRoutes);
+
+// Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
 // Catch all API routes
 app.use('/api/*', (req, res) => {
@@ -244,12 +265,36 @@ app.use(errorCorrelationMiddleware);
 app.use(globalErrorHandler);
 app.use(notFoundHandler);
 
+// Initialize cache service
+import { cacheService } from './services/cacheService';
+import { cacheWarmingService } from './services/cacheWarmingService';
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 LinkDAO Backend with Post Routes Fixed running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
+  
+  // Initialize cache service
+  try {
+    await cacheService.connect();
+    console.log('✅ Cache service initialized');
+    
+    // Trigger initial cache warming
+    setTimeout(async () => {
+      try {
+        await cacheWarmingService.performQuickWarmup();
+        console.log('✅ Initial cache warming completed');
+      } catch (error) {
+        console.warn('⚠️ Initial cache warming failed:', error);
+      }
+    }, 5000); // Wait 5 seconds after server start
+    
+  } catch (error) {
+    console.warn('⚠️ Cache service initialization failed:', error);
+    console.log('📝 Server will continue without caching');
+  }
 });
 
 export default app;
