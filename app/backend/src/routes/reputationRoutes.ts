@@ -132,3 +132,6 @@ router.delete(
 );
 
 export { router as reputationRoutes };
+
+// Default export for easier importing
+export default router;

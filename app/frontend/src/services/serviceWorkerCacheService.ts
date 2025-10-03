@@ -166,7 +166,8 @@ export class ServiceWorkerCacheService {
   async getCachedResource(url: string, cacheName?: string): Promise<Response | null> {
     try {
       const cache = await caches.open(cacheName || this.config.dynamicCacheName);
-      return await cache.match(url);
+      const response = await cache.match(url);
+      return response || null;
     } catch (error) {
       console.error(`Error getting cached resource ${url}:`, error);
       return null;
