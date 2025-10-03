@@ -3,12 +3,55 @@
 export interface SellerProfile {
   walletAddress: string;
   displayName?: string;
+  storeName?: string;
+  bio?: string;
+  description?: string;
+  sellerStory?: string;
+  location?: string;
   ensHandle?: string;
-  storeDescription?: string;
+  ensVerified: boolean;
+  ensLastVerified?: string;
+  profileImageIpfs?: string;
+  profileImageCdn?: string;
+  profilePicture?: string; // For backward compatibility
+  coverImageIpfs?: string;
+  coverImageCdn?: string;
   coverImageUrl?: string;
+  websiteUrl?: string;
+  socialLinks?: {
+    twitter?: string;
+    discord?: string;
+    telegram?: string;
+    linkedin?: string;
+    website?: string;
+  };
+  storeDescription?: string;
+  tier?: string;
   isVerified: boolean;
   onboardingCompleted: boolean;
   onboardingSteps: OnboardingSteps;
+  // Profile Completeness
+  profileCompleteness?: {
+    score: number;
+    missingFields: string[];
+    recommendations: Array<{
+      action: string;
+      description: string;
+      impact: number;
+    }>;
+    lastCalculated: string;
+  };
+  // Seller Stats
+  stats?: {
+    totalSales: number;
+    activeListings: number;
+    completedOrders: number;
+    averageRating: number;
+    totalReviews: number;
+    reputationScore: number;
+    joinDate: string;
+    lastActive: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,14 +66,40 @@ export interface OnboardingSteps {
 export interface CreateSellerProfileRequest {
   walletAddress: string;
   displayName?: string;
+  storeName?: string;
+  bio?: string;
+  description?: string;
+  sellerStory?: string;
+  location?: string;
   ensHandle?: string;
+  websiteUrl?: string;
+  socialLinks?: {
+    twitter?: string;
+    discord?: string;
+    telegram?: string;
+    linkedin?: string;
+    website?: string;
+  };
   storeDescription?: string;
   coverImageUrl?: string;
 }
 
 export interface UpdateSellerProfileRequest {
   displayName?: string;
+  storeName?: string;
+  bio?: string;
+  description?: string;
+  sellerStory?: string;
+  location?: string;
   ensHandle?: string;
+  websiteUrl?: string;
+  socialLinks?: {
+    twitter?: string;
+    discord?: string;
+    telegram?: string;
+    linkedin?: string;
+    website?: string;
+  };
   storeDescription?: string;
   coverImageUrl?: string;
 }

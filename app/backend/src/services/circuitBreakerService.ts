@@ -107,10 +107,11 @@ class CircuitBreaker {
     } catch (error) {
       this.onFailure(error, Date.now() - startTime);
       
-      // If we have a fallback and the circuit is open, use it
-      if (fallback && this.state === 'OPEN') {
-        logger.warn(`Circuit breaker ${this.config.name} failed, using fallback`, {
-          error: error instanceof Error ? error.message : 'Unknown error'
+      // If we have a fallback, use it for any failure
+      if (fallback) {
+        logger.warn(`Circuit breaker ${this.config.name} operation failed, using fallback`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          state: this.state
         });
         return fallback();
       }

@@ -321,6 +321,14 @@ export function SellerProfilePage() {
       
       // Show success message
       alert('Profile updated successfully!');
+      
+      // Trigger store page refresh by setting a flag in localStorage
+      localStorage.setItem(`seller_profile_updated_${walletAddress}`, Date.now().toString());
+      
+      // Also dispatch a custom event for same-tab updates
+      window.dispatchEvent(new CustomEvent('sellerProfileUpdated', { 
+        detail: { walletAddress, profile: formData } 
+      }));
     } catch (err) {
       console.error('Failed to update profile:', err);
       // Show error message to user
@@ -404,7 +412,7 @@ export function SellerProfilePage() {
           </div>
           <div className="mt-4 md:mt-0 flex gap-3">
             <Button
-              onClick={() => router.push(`/marketplace/seller/store/${profile.walletAddress}`)}
+              onClick={() => window.open(`/seller/${profile.walletAddress}`, '_blank')}
               variant="outline"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

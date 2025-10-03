@@ -60,6 +60,59 @@ router.get('/seller/:walletAddress',
 });
 
 /**
+ * PUT /api/marketplace/seller/{walletAddress}
+ * Update existing seller profile
+ */
+router.put('/seller/:walletAddress',
+  rateLimitWithCache(req => `seller_profile_update:${req.ip}`, 10, 60), // 10 updates per minute
+  cachingMiddleware.invalidate('sellerProfile'),
+  async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.params;
+    const updates: UpdateSellerProfileRequest = req.body;
+
+    // Validate wallet address format
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return validationErrorResponse(res, [
+        { field: 'walletAddress', message: 'Invalid wallet address format' }
+      ], 'Invalid wallet address');
+    }
+
+    // Validate ENS handle if provided
+    if (updates.ensHandle && !/^[a-zA-Z0-9-]+\.eth$/.test(updates.ensHandle)) {
+      return validationErrorResponse(res, [
+        { field: 'ensHandle', message: 'Invalid ENS handle format' }
+      ]);
+    }
+
+    const profile = await sellerProfileService.updateProfile(walletAddress, updates);
+    return successResponse(res, profile, 200);
+  } catch (error) {
+    console.error('Error updating seller profile:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        return notFoundResponse<SellerProfile>(res, 'Seller profile not found');
+      }
+      
+      if (error.message.includes('Invalid wallet address') || error.message.includes('Invalid ENS handle')) {
+        return validationErrorResponse(res, [
+          { field: 'validation', message: error.message }
+        ]);
+      }
+    }
+
+    return errorResponse(
+      res,
+      'PROFILE_UPDATE_ERROR',
+      'Failed to update seller profile',
+      500,
+      { error: error instanceof Error ? error.message : 'Unknown error' }
+    );
+  }
+});
+
+/**
  * POST /api/marketplace/seller/profile
  * Create or update seller profile
  */
@@ -100,7 +153,14 @@ router.post('/seller/profile',
       // Update existing profile
       const updateData: UpdateSellerProfileRequest = {
         displayName: profileData.displayName,
+        storeName: profileData.storeName,
+        bio: profileData.bio,
+        description: profileData.description,
+        sellerStory: profileData.sellerStory,
+        location: profileData.location,
         ensHandle: profileData.ensHandle,
+        websiteUrl: profileData.websiteUrl,
+        socialLinks: profileData.socialLinks,
         storeDescription: profileData.storeDescription,
         coverImageUrl: profileData.coverImageUrl
       };
