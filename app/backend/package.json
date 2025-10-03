@@ -5,7 +5,8 @@
   "main": "src/index.production.js",
   "scripts": {
     "build": "echo 'Using JavaScript backend - no build needed'",
-    "start": "node src/index.production.js",
+    "start": "node --max-old-space-size=1024 --optimize-for-size src/index.production.optimized.js",
+    "start:ts": "node --max-old-space-size=1024 --optimize-for-size src/index.production.js",
     "dev": "ts-node src/index.ts",
     "simple": "node src/index.simple.js",
     "database": "node src/index.database.js",
@@ -19,6 +20,7 @@
     "backup:list": "ts-node src/scripts/database-backup.ts list",
     "deploy:db": "ts-node src/scripts/deploy-production-database.ts",
     "health": "curl -f http://localhost:${PORT:-10000}/health || exit 1",
+    "memory:check": "node scripts/check-memory.js",
     "test": "jest",
     "test:marketplace": "ts-node src/tests/marketplaceEnhancements/testRunner.ts",
     "test:marketplace:unit": "ts-node src/tests/marketplaceEnhancements/testRunner.ts --unit",
