@@ -105,6 +105,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Handle placehold.co requests with local placeholders
+  if (url.hostname === 'placehold.co') {
+    event.respondWith(handlePlaceholderRequest(url));
+    return;
+  }
+
   // Handle different types of requests with different strategies
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
@@ -396,6 +402,79 @@ async function updateCache(request, cacheName) {
   } catch (error) {
     console.log('Background cache update failed:', error);
   }
+}
+
+// Handle placehold.co requests with local SVG placeholders
+async function handlePlaceholderRequest(url) {
+  try {
+    // Parse placehold.co URL
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    
+    if (pathParts.length < 1) {
+      return generatePlaceholderSVG(40, 40, '?');
+    }
+    
+    const dimensions = pathParts[0];
+    let width = 40;
+    let height = 40;
+    
+    if (dimensions.includes('x')) {
+      const [w, h] = dimensions.split('x').map(Number);
+      width = w || 40;
+      height = h || 40;
+    } else {
+      width = height = Number(dimensions) || 40;
+    }
+    
+    // Extract background color if present
+    let backgroundColor;
+    if (pathParts.length > 1) {
+      backgroundColor = `#${pathParts[1]}`;
+    }
+    
+    // Extract text from query params
+    const text = url.searchParams.get('text')?.replace(/\+/g, ' ');
+    
+    return generatePlaceholderSVG(width, height, text, backgroundColor);
+  } catch (error) {
+    console.warn('Failed to generate placeholder:', error);
+    return generatePlaceholderSVG(40, 40, '?');
+  }
+}
+
+// Generate SVG placeholder response
+function generatePlaceholderSVG(width, height, text, backgroundColor) {
+  // Generate deterministic color if not provided
+  if (!backgroundColor) {
+    const str = text || `${width}x${height}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    backgroundColor = `hsl(${hue}, 65%, 50%)`;
+  }
+  
+  const textColor = '#ffffff';
+  const displayText = text || `${width}×${height}`;
+  const fontSize = Math.min(width, height) * 0.2;
+  
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="${backgroundColor}"/>
+    <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="${fontSize}" 
+          fill="${textColor}" text-anchor="middle" dominant-baseline="middle">
+      ${displayText}
+    </text>
+  </svg>`;
+  
+  return new Response(svg, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'Access-Control-Allow-Origin': '*'
+    }
+  });
 }
 
 // Helper functions
