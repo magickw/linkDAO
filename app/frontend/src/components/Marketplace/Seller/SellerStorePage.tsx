@@ -267,194 +267,419 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   // Memoize the marketplace service to prevent recreation on every render
   const marketplaceService = useMemo(() => new MarketplaceService(), []);
 
+  // Function to refresh seller data
+  const refreshSellerData = async () => {
+    if (sellerId) {
+      setLoading(true);
+      try {
+        const { sellerService } = await import('@/services/sellerService');
+        // Clear cache to ensure fresh data
+        sellerService.clearProfileCache(sellerId);
+        
+        // Re-fetch the data
+        const sellerProfile = await sellerService.getSellerProfile(sellerId);
+        if (sellerProfile) {
+          // Transform and update seller data (same logic as in useEffect)
+          const transformedSeller: SellerInfo = {
+            id: sellerProfile.walletAddress,
+            name: sellerProfile.displayName || sellerProfile.storeName || 'Anonymous Seller',
+            avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
+            coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
+            walletAddress: sellerProfile.walletAddress,
+            ensName: sellerProfile.ensHandle,
+            description: sellerProfile.bio || sellerProfile.description || 'No description available',
+            sellerStory: sellerProfile.sellerStory || '',
+            memberSince: new Date(sellerProfile.createdAt),
+            location: sellerProfile.location || '',
+            isOnline: true,
+            lastSeen: new Date(sellerProfile.updatedAt),
+            
+            reputationScore: { 
+              value: sellerProfile.stats?.reputationScore?.toString() || '0', 
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+            },
+            successRate: { 
+              value: '98.5%',
+              tooltip: 'Percentage of successful transactions without disputes or issues' 
+            },
+            safetyScore: { 
+              value: '9.2',
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+            },
+            totalTransactions: sellerProfile.stats?.completedOrders || 0,
+            successfulTransactions: sellerProfile.stats?.completedOrders || 0,
+            disputesRatio: 0.02,
+            
+            verificationLevels: {
+              identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
+              business: { type: 'BASIC', verified: false },
+              kyc: { type: 'PREMIUM', verified: sellerProfile.ensVerified }
+            },
+            socialLinks: {
+              twitter: sellerProfile.socialLinks?.twitter,
+              linkedin: sellerProfile.socialLinks?.linkedin,
+              website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
+            },
+            
+            performanceMetrics: {
+              avgDeliveryTime: '1.2 days',
+              customerSatisfaction: sellerProfile.stats?.averageRating || 0,
+              returnRate: 1.2,
+              repeatCustomerRate: 68,
+              responseTime: '< 2 hours',
+              trend: 'up',
+              trendValue: '+12%'
+            },
+            tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
+            tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
+            isKYCVerified: sellerProfile.ensVerified,
+            isDAOEndorsed: false,
+            hasEscrowProtection: true,
+            followers: 0,
+            following: 0,
+            daoMemberships: [],
+            daoEndorsements: [],
+            topCategories: ['electronics', 'digital', 'collectibles'],
+            totalListings: sellerProfile.stats?.activeListings || 0,
+            activeListings: sellerProfile.stats?.activeListings || 0,
+            featuredListings: [],
+            featuredProducts: [],
+            performanceBadges: [],
+            activityTimeline: [],
+            recentTransactions: [],
+            nftPortfolio: [],
+            web3Badges: []
+          };
+          
+          setSeller(transformedSeller);
+        }
+      } catch (error) {
+        console.error('Failed to refresh seller data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Listen for storage events to detect profile updates from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `seller_profile_updated_${sellerId}`) {
+        // Profile was updated, refresh the data
+        refreshSellerData();
+        // Clear the flag
+        localStorage.removeItem(`seller_profile_updated_${sellerId}`);
+      }
+    };
+
+    const handleProfileUpdate = (e: CustomEvent) => {
+      if (e.detail.walletAddress === sellerId) {
+        // Profile was updated in the same tab, refresh the data
+        refreshSellerData();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('sellerProfileUpdated', handleProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('sellerProfileUpdated', handleProfileUpdate as EventListener);
+    };
+  }, [sellerId]);
+
   // Fetch seller data
   useEffect(() => {
     const fetchSellerData = async () => {
       try {
         setLoading(true);
         
-        // For now, use mock seller data until we have a proper sellers endpoint
-        const mockSeller: SellerInfo = {
-          id: sellerId,
-          name: 'Alex Chen',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=300&fit=crop',
-          walletAddress: sellerId,
-          ensName: 'cryptoartist.eth',
-          description: 'Digital artist and NFT creator specializing in generative art and Web3 experiences.',
-          sellerStory: 'Started as a traditional artist in 2018, transitioned to Web3 in 2021. I create unique generative art pieces that blend mathematics with creativity, focusing on sustainable and community-driven projects.',
-          memberSince: new Date('2023-01-15'),
-          location: 'San Francisco, CA',
-          isOnline: true,
-          lastSeen: new Date(),
-          reputationScore: { value: '4.8', tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' },
-          successRate: { value: '98.5%', tooltip: 'Percentage of successful transactions without disputes or issues' },
-          safetyScore: { value: '9.2', tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' },
-          totalTransactions: 150,
-          successfulTransactions: 147,
-          disputesRatio: 0.02,
+        // Try to fetch real seller profile data first
+        try {
+          const { sellerService } = await import('@/services/sellerService');
+          const sellerProfile = await sellerService.getSellerProfile(sellerId);
           
-          verificationLevels: {
-            identity: { type: 'ENHANCED', verified: true, verifiedAt: new Date('2023-02-01') },
-            business: { type: 'BASIC', verified: true, verifiedAt: new Date('2023-03-15') },
-            kyc: { type: 'PREMIUM', verified: true, verifiedAt: new Date('2023-01-20') }
-          },
-          socialLinks: {
-            twitter: 'https://twitter.com/alexchen_art',
-            linkedin: 'https://linkedin.com/in/alexchen',
-            website: 'https://alexchen.art'
-          },
-          
-          performanceMetrics: {
-            avgDeliveryTime: '1.2 days',
-            customerSatisfaction: 4.9,
-            returnRate: 1.2,
-            repeatCustomerRate: 68,
-            responseTime: '< 2 hours',
-            trend: 'up',
-            trendValue: '+12%'
-          },
-          tier: 'TIER_2',
-          tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
-          isKYCVerified: true,
-          isDAOEndorsed: true,
-          hasEscrowProtection: true,
-          followers: 1250,
-          following: 89,
-          daoMemberships: [
-            { name: 'LinkDAO', role: 'Core Contributor', joinDate: '2023-03-15', contributions: 45 },
-            { name: 'TechDAO', role: 'Member', joinDate: '2023-06-20', contributions: 12 },
-            { name: 'ArtistsDAO', role: 'Delegate', joinDate: '2023-04-10', contributions: 28 }
-          ],
-          daoEndorsements: [
-            {
-              id: 'endorsement1',
-              endorserAddress: '0xdao123...',
-              endorserENS: 'dao_leader.eth',
-              proposalHash: '0xproposal123...',
-              voteCount: 45,
-              timestamp: new Date('2024-01-10'),
-              reason: 'Exceptional service and community contribution'
-            }
-          ],
-          topCategories: ['electronics', 'digital', 'collectibles'],
-          totalListings: 25,
-          activeListings: 12,
-          featuredListings: [],
-          featuredProducts: [
-            { id: '1', name: 'Quantum Dreams #001', price: '2.5 ETH', image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=200&h=200&fit=crop', category: 'Digital Art' },
-            { id: '2', name: 'Generative Landscape', price: '1.8 ETH', image: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=200&h=200&fit=crop', category: 'NFT' },
-            { id: '3', name: 'Abstract Motion', price: '3.2 ETH', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=200&h=200&fit=crop', category: 'Digital Art' }
-          ],
-          performanceBadges: [
-            {
-              id: 'perf1',
-              title: 'Top Seller This Month',
-              description: 'Ranked #3 in sales volume',
-              icon: '🏆',
-              color: 'text-yellow-400 bg-yellow-500/20',
-              earnedDate: new Date('2024-01-01')
-            },
-            {
-              id: 'perf2',
-              title: 'Fast Shipper',
-              description: 'Average shipping time: 1.2 days',
-              icon: '⚡',
-              color: 'text-green-400 bg-green-500/20',
-              earnedDate: new Date('2023-12-15')
-            }
-          ],
-          activityTimeline: [
-            {
-              id: 'activity1',
-              type: 'SALE',
-              title: 'Completed 3 sales',
-              description: 'Successfully delivered premium headphones, NFT artwork, and digital course',
-              timestamp: new Date('2024-01-15'),
-              icon: '💰'
-            },
-            {
-              id: 'activity2',
-              type: 'LISTING',
-              title: 'Listed Product A',
-              description: 'Added new wireless earbuds to marketplace',
-              timestamp: new Date('2024-01-12'),
-              icon: '📦'
-            },
-            {
-              id: 'activity3',
-              type: 'ENDORSEMENT',
-              title: 'Received DAO endorsement',
-              description: 'LinkDAO community voted to endorse this seller',
-              timestamp: new Date('2024-01-10'),
-              icon: '🏛️'
-            }
-          ],
-          recentTransactions: [
-            { id: '1', type: 'sale', amount: '2.1 ETH', timestamp: '2024-01-15T10:30:00Z', counterparty: '0x123...789' },
-            { id: '2', type: 'sale', amount: '1.5 ETH', timestamp: '2024-01-14T15:45:00Z', counterparty: '0xabc...def' },
-            { id: '3', type: 'purchase', amount: '0.8 ETH', timestamp: '2024-01-13T09:20:00Z', counterparty: '0x456...123' },
-            { id: '4', type: 'sale', amount: '4.2 ETH', timestamp: '2024-01-12T14:10:00Z', counterparty: '0x789...abc' },
-            { id: '5', type: 'sale', amount: '1.9 ETH', timestamp: '2024-01-11T11:55:00Z', counterparty: '0xdef...456' }
-          ],
-          nftPortfolio: [],
-          web3Badges: [
-            {
-              id: 'badge1',
-              name: 'Verified Creator',
-              type: 'VERIFICATION',
-              icon: '🎨',
-              description: 'Verified digital content creator',
-              earnedDate: new Date('2023-06-01')
-            }
-          ]
-        };
-        
-        setSeller(mockSeller);
-        
-        // Use mock listings data for now to avoid backend 503 errors
-        const mockListings: DisplayMarketplaceListing[] = [
-          {
-            id: '1',
-            title: 'Premium Wireless Headphones',
-            price: 0.15,
-            currency: 'ETH',
-            image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
-            category: 'electronics',
-            status: 'ACTIVE',
-            createdAt: new Date('2024-01-10'),
-            views: 245,
-            likes: 18,
-            isEscrowProtected: true
-          },
-          {
-            id: '2', 
-            title: 'Digital Art Collection NFT',
-            price: 2.5,
-            currency: 'ETH',
-            image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=400&h=300&fit=crop',
-            category: 'digital',
-            status: 'ACTIVE',
-            createdAt: new Date('2024-01-08'),
-            views: 189,
-            likes: 32,
-            isEscrowProtected: true
-          },
-          {
-            id: '3',
-            title: 'Vintage Collectible Watch',
-            price: 1.8,
-            currency: 'ETH', 
-            image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop',
-            category: 'collectibles',
-            status: 'ACTIVE',
-            createdAt: new Date('2024-01-05'),
-            views: 156,
-            likes: 24,
-            isEscrowProtected: true
+          if (sellerProfile) {
+            // Transform backend profile to store page format
+            const transformedSeller: SellerInfo = {
+              id: sellerProfile.walletAddress,
+              name: sellerProfile.displayName || sellerProfile.storeName || 'Anonymous Seller',
+              avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
+              coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
+              walletAddress: sellerProfile.walletAddress,
+              ensName: sellerProfile.ensHandle,
+              description: sellerProfile.bio || sellerProfile.description || 'No description available',
+              sellerStory: sellerProfile.sellerStory || '',
+              memberSince: new Date(sellerProfile.createdAt),
+              location: sellerProfile.location || '',
+              isOnline: true, // Default to online
+              lastSeen: new Date(sellerProfile.updatedAt),
+              
+              // Use stats from profile or defaults
+              reputationScore: { 
+                value: sellerProfile.stats?.reputationScore?.toString() || '0', 
+                tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+              },
+              successRate: { 
+                value: '98.5%', // Default for now
+                tooltip: 'Percentage of successful transactions without disputes or issues' 
+              },
+              safetyScore: { 
+                value: '9.2', // Default for now
+                tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+              },
+              totalTransactions: sellerProfile.stats?.completedOrders || 0,
+              successfulTransactions: sellerProfile.stats?.completedOrders || 0,
+              disputesRatio: 0.02, // Default
+              
+              verificationLevels: {
+                identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
+                business: { type: 'BASIC', verified: false },
+                kyc: { type: 'PREMIUM', verified: sellerProfile.ensVerified }
+              },
+              socialLinks: {
+                twitter: sellerProfile.socialLinks?.twitter,
+                linkedin: sellerProfile.socialLinks?.linkedin,
+                website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
+              },
+              
+              performanceMetrics: {
+                avgDeliveryTime: '1.2 days',
+                customerSatisfaction: sellerProfile.stats?.averageRating || 0,
+                returnRate: 1.2,
+                repeatCustomerRate: 68,
+                responseTime: '< 2 hours',
+                trend: 'up',
+                trendValue: '+12%'
+              },
+              tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
+              tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
+              isKYCVerified: sellerProfile.ensVerified,
+              isDAOEndorsed: false, // Default
+              hasEscrowProtection: true,
+              followers: 0, // Default
+              following: 0, // Default
+              daoMemberships: [],
+              daoEndorsements: [],
+              topCategories: ['electronics', 'digital', 'collectibles'], // Default
+              totalListings: sellerProfile.stats?.activeListings || 0,
+              activeListings: sellerProfile.stats?.activeListings || 0,
+              featuredListings: [],
+              featuredProducts: [],
+              performanceBadges: [],
+              activityTimeline: [],
+              recentTransactions: [],
+              nftPortfolio: [],
+              web3Badges: []
+            };
+            
+            setSeller(transformedSeller);
+          } else {
+            throw new Error('Profile not found');
           }
-        ];
-        setListings(mockListings);
+        } catch (profileError) {
+          console.warn('Failed to fetch real seller profile, using mock data:', profileError);
+          
+          // Fallback to mock seller data
+          const mockSeller: SellerInfo = {
+            id: sellerId,
+            name: 'Alex Chen',
+            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+            coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=300&fit=crop',
+            walletAddress: sellerId,
+            ensName: 'cryptoartist.eth',
+            description: 'Digital artist and NFT creator specializing in generative art and Web3 experiences.',
+            sellerStory: 'Started as a traditional artist in 2018, transitioned to Web3 in 2021. I create unique generative art pieces that blend mathematics with creativity, focusing on sustainable and community-driven projects.',
+            memberSince: new Date('2023-01-15'),
+            location: 'San Francisco, CA',
+            isOnline: true,
+            lastSeen: new Date(),
+            reputationScore: { value: '4.8', tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' },
+            successRate: { value: '98.5%', tooltip: 'Percentage of successful transactions without disputes or issues' },
+            safetyScore: { value: '9.2', tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' },
+            totalTransactions: 150,
+            successfulTransactions: 147,
+            disputesRatio: 0.02,
+            
+            verificationLevels: {
+              identity: { type: 'ENHANCED', verified: true, verifiedAt: new Date('2023-02-01') },
+              business: { type: 'BASIC', verified: true, verifiedAt: new Date('2023-03-15') },
+              kyc: { type: 'PREMIUM', verified: true, verifiedAt: new Date('2023-01-20') }
+            },
+            socialLinks: {
+              twitter: 'https://twitter.com/alexchen_art',
+              linkedin: 'https://linkedin.com/in/alexchen',
+              website: 'https://alexchen.art'
+            },
+            
+            performanceMetrics: {
+              avgDeliveryTime: '1.2 days',
+              customerSatisfaction: 4.9,
+              returnRate: 1.2,
+              repeatCustomerRate: 68,
+              responseTime: '< 2 hours',
+              trend: 'up',
+              trendValue: '+12%'
+            },
+            tier: 'TIER_2',
+            tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
+            isKYCVerified: true,
+            isDAOEndorsed: true,
+            hasEscrowProtection: true,
+            followers: 1250,
+            following: 89,
+            daoMemberships: [
+              { name: 'LinkDAO', role: 'Core Contributor', joinDate: '2023-03-15', contributions: 45 },
+              { name: 'TechDAO', role: 'Member', joinDate: '2023-06-20', contributions: 12 },
+              { name: 'ArtistsDAO', role: 'Delegate', joinDate: '2023-04-10', contributions: 28 }
+            ],
+            daoEndorsements: [
+              {
+                id: 'endorsement1',
+                endorserAddress: '0xdao123...',
+                endorserENS: 'dao_leader.eth',
+                proposalHash: '0xproposal123...',
+                voteCount: 45,
+                timestamp: new Date('2024-01-10'),
+                reason: 'Exceptional service and community contribution'
+              }
+            ],
+            topCategories: ['electronics', 'digital', 'collectibles'],
+            totalListings: 25,
+            activeListings: 12,
+            featuredListings: [],
+            featuredProducts: [
+              { id: '1', name: 'Quantum Dreams #001', price: '2.5 ETH', image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=200&h=200&fit=crop', category: 'Digital Art' },
+              { id: '2', name: 'Generative Landscape', price: '1.8 ETH', image: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=200&h=200&fit=crop', category: 'NFT' },
+              { id: '3', name: 'Abstract Motion', price: '3.2 ETH', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=200&h=200&fit=crop', category: 'Digital Art' }
+            ],
+            performanceBadges: [
+              {
+                id: 'perf1',
+                title: 'Top Seller This Month',
+                description: 'Ranked #3 in sales volume',
+                icon: '🏆',
+                color: 'text-yellow-400 bg-yellow-500/20',
+                earnedDate: new Date('2024-01-01')
+              },
+              {
+                id: 'perf2',
+                title: 'Fast Shipper',
+                description: 'Average shipping time: 1.2 days',
+                icon: '⚡',
+                color: 'text-green-400 bg-green-500/20',
+                earnedDate: new Date('2023-12-15')
+              }
+            ],
+            activityTimeline: [
+              {
+                id: 'activity1',
+                type: 'SALE',
+                title: 'Completed 3 sales',
+                description: 'Successfully delivered premium headphones, NFT artwork, and digital course',
+                timestamp: new Date('2024-01-15'),
+                icon: '💰'
+              },
+              {
+                id: 'activity2',
+                type: 'LISTING',
+                title: 'Listed Product A',
+                description: 'Added new wireless earbuds to marketplace',
+                timestamp: new Date('2024-01-12'),
+                icon: '📦'
+              },
+              {
+                id: 'activity3',
+                type: 'ENDORSEMENT',
+                title: 'Received DAO endorsement',
+                description: 'LinkDAO community voted to endorse this seller',
+                timestamp: new Date('2024-01-10'),
+                icon: '🏛️'
+              }
+            ],
+            recentTransactions: [
+              { id: '1', type: 'sale', amount: '2.1 ETH', timestamp: '2024-01-15T10:30:00Z', counterparty: '0x123...789' },
+              { id: '2', type: 'sale', amount: '1.5 ETH', timestamp: '2024-01-14T15:45:00Z', counterparty: '0xabc...def' },
+              { id: '3', type: 'purchase', amount: '0.8 ETH', timestamp: '2024-01-13T09:20:00Z', counterparty: '0x456...123' },
+              { id: '4', type: 'sale', amount: '4.2 ETH', timestamp: '2024-01-12T14:10:00Z', counterparty: '0x789...abc' },
+              { id: '5', type: 'sale', amount: '1.9 ETH', timestamp: '2024-01-11T11:55:00Z', counterparty: '0xdef...456' }
+            ],
+            nftPortfolio: [],
+            web3Badges: [
+              {
+                id: 'badge1',
+                name: 'Verified Creator',
+                type: 'VERIFICATION',
+                icon: '🎨',
+                description: 'Verified digital content creator',
+                earnedDate: new Date('2023-06-01')
+              }
+            ]
+          };
+          
+          setSeller(mockSeller);
+        }
+        
+        // Fetch seller listings
+        try {
+          const { sellerService } = await import('@/services/sellerService');
+          const sellerListings = await sellerService.getListings(sellerId);
+          
+          if (sellerListings && sellerListings.length > 0) {
+            // Transform seller listings to display format
+            const transformedListings: DisplayMarketplaceListing[] = sellerListings.map(listing => ({
+              id: listing.id,
+              title: listing.title,
+              price: listing.price,
+              currency: 'ETH', // Default currency
+              image: listing.images?.[0] || '',
+              category: listing.category,
+              status: listing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
+              createdAt: new Date(listing.createdAt),
+              views: listing.views || 0,
+              likes: listing.favorites || 0,
+              isEscrowProtected: listing.escrowEnabled
+            }));
+            setListings(transformedListings);
+          } else {
+            // Use mock listings data as fallback
+            const mockListings: DisplayMarketplaceListing[] = [
+              {
+                id: '1',
+                title: 'Premium Wireless Headphones',
+                price: 0.15,
+                currency: 'ETH',
+                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+                category: 'electronics',
+                status: 'ACTIVE',
+                createdAt: new Date('2024-01-10'),
+                views: 245,
+                likes: 18,
+                isEscrowProtected: true
+              }
+            ];
+            setListings(mockListings);
+          }
+        } catch (listingsError) {
+          console.warn('Failed to fetch seller listings, using mock data:', listingsError);
+          // Use mock listings as fallback
+          const mockListings: DisplayMarketplaceListing[] = [
+            {
+              id: '1',
+              title: 'Premium Wireless Headphones',
+              price: 0.15,
+              currency: 'ETH',
+              image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
+              category: 'electronics',
+              status: 'ACTIVE',
+              createdAt: new Date('2024-01-10'),
+              views: 245,
+              likes: 18,
+              isEscrowProtected: true
+            }
+          ];
+          setListings(mockListings);
+        }
         
         // Mock reviews data
         const mockReviews: Review[] = [
@@ -690,6 +915,15 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
 
                   {/* Enhanced CTA Button Group */}
                   <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+                    {/* Refresh Button for Testing */}
+                    <button 
+                      onClick={refreshSellerData}
+                      className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition-all font-medium flex items-center gap-2"
+                      disabled={loading}
+                    >
+                      <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </button>
 
                     <button className="px-6 py-3 bg-white/10 rounded-lg text-white hover:bg-white/20 transition-all font-medium border border-white/20 flex items-center gap-2">
                       <MessageCircle className="w-4 h-4" />
