@@ -103,6 +103,8 @@ import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 // Import seller routes
 import sellerRoutes from './routes/sellerRoutes';
+// Import marketplace seller routes
+import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -160,6 +162,9 @@ app.use('/api/listings', listingRoutes);
 
 // Order creation routes
 app.use('/api/orders', orderCreationRoutes);
+
+// Marketplace seller routes
+app.use('/api/marketplace', marketplaceSellerRoutes);
 
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
