@@ -398,7 +398,6 @@ export class ServiceWorkerCacheService {
 
     return health;
   }
-}
 
   // Setup network listeners
   setupNetworkListeners(): void {
@@ -481,6 +480,7 @@ export class ServiceWorkerCacheService {
       this.cleanupIntervalId = undefined;
     }
   }
+}
 
   // Singleton instance
 export const serviceWorkerCacheService = new ServiceWorkerCacheService();
