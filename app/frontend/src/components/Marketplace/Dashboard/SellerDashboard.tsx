@@ -10,86 +10,12 @@ interface SellerDashboardProps {
 export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
   const router = useRouter();
   const { profile, loading: profileLoading } = useSeller();
-  // Only use mockWalletAddress if explicitly provided and in development mode
-  const shouldUseMock = mockWalletAddress && process.env.NODE_ENV === 'development';
   const { stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, fetchListings } = useSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Mock data state - only used in development with explicit mock parameter
-  const [mockStats, setMockStats] = useState<any>(null);
-  const [mockProfile, setMockProfile] = useState<any>(null);
-  const [mockLoading, setMockLoading] = useState(false);
-
-  // Use mock data only if shouldUseMock is true
-  const effectiveProfile = shouldUseMock ? mockProfile : profile;
-  const effectiveStats = shouldUseMock ? mockStats : stats;
-  const effectiveLoading = shouldUseMock ? mockLoading : (profileLoading || loading);
-
-  // Fetch mock data only if shouldUseMock is true
-  React.useEffect(() => {
-    if (shouldUseMock) {
-      setMockLoading(true);
-      // In a real implementation, you would fetch data for the mock wallet address
-      // For now, we'll use sample data
-      setTimeout(() => {
-        setMockProfile({
-          walletAddress: mockWalletAddress,
-          displayName: 'Sample Seller',
-          storeName: 'Sample Store',
-          tier: 'pro',
-          coverImage: null,
-          stats: {
-            reputationScore: 95,
-            averageRating: 4.8,
-            totalReviews: 127
-          }
-        });
-        
-        setMockStats({
-          sales: {
-            today: 1250,
-            thisWeek: 8750,
-            thisMonth: 32500,
-            total: 125000
-          },
-          orders: {
-            pending: 3,
-            processing: 5,
-            shipped: 12,
-            delivered: 89,
-            disputed: 1
-          },
-          listings: {
-            active: 24,
-            draft: 2,
-            sold: 142,
-            expired: 3
-          },
-          balance: {
-            crypto: {
-              USDC: 12500,
-              ETH: 2.5,
-              BTC: 0.1
-            },
-            fiatEquivalent: 12500,
-            pendingEscrow: 3200,
-            availableWithdraw: 9300
-          },
-          reputation: {
-            score: 95,
-            trend: 'up',
-            recentReviews: 5,
-            averageRating: 4.8
-          }
-        });
-        setMockLoading(false);
-      }, 1000);
-    }
-  }, [shouldUseMock, mockWalletAddress]);
-
-  if (effectiveLoading) {
+  if (profileLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-7xl mx-auto">
@@ -105,7 +31,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  if (!effectiveProfile && !shouldUseMock) {
+  if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -129,7 +55,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
   }
 
   // If stats is null or undefined, show a loading state or message
-  if (!effectiveStats) {
+  if (!stats) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -149,8 +75,8 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  const currentTier = getTierById(effectiveProfile?.tier);
-  const nextTier = getNextTier(effectiveProfile?.tier);
+  const currentTier = getTierById(profile?.tier);
+  const nextTier = getNextTier(profile?.tier);
 
   const formatCurrency = (amount: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -159,17 +85,12 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
     }).format(amount);
   };
 
-  const StatCard = ({ title, value, change, icon, color = 'blue' }: any) => (
+  const StatCard = ({ title, value, icon, color = 'blue' }: any) => (
     <GlassPanel className="p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-gray-400 text-sm font-medium">{title}</p>
           <p className="text-2xl font-bold text-white mt-1">{value}</p>
-          {change && (
-            <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {change >= 0 ? '+' : ''}{change}% from last month
-            </p>
-          )}
         </div>
         <div className={`w-12 h-12 bg-${color}-500 bg-opacity-20 rounded-lg flex items-center justify-center`}>
           {icon}
@@ -184,21 +105,21 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center mb-4 md:mb-0">
-            {effectiveProfile?.coverImage ? (
+            {profile?.coverImage ? (
               <img
-                src={effectiveProfile.coverImage}
-                alt={effectiveProfile.displayName}
+                src={profile.coverImage}
+                alt={profile.displayName}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
               />
             ) : (
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mr-4">
                 <span className="text-white text-xl font-bold">
-                  {effectiveProfile?.displayName?.charAt(0) || effectiveProfile?.storeName?.charAt(0) || 'S'}
+                  {profile?.displayName?.charAt(0) || profile?.storeName?.charAt(0) || 'S'}
                 </span>
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white">{effectiveProfile?.storeName || effectiveProfile?.displayName}</h1>
+              <h1 className="text-2xl font-bold text-white">{profile?.storeName || profile?.displayName}</h1>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   currentTier?.id === 'pro' ? 'bg-purple-600 text-white' :
@@ -213,7 +134,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
                     <svg
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(effectiveProfile?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
+                        i < Math.floor(profile?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
                       }`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
@@ -222,7 +143,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
                     </svg>
                   ))}
                   <span className="text-gray-400 text-sm ml-1">
-                    ({effectiveProfile?.stats?.totalReviews || 0})
+                    ({profile?.stats?.totalReviews || 0})
                   </span>
                 </div>
               </div>
@@ -246,7 +167,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
               </Button>
             )}
             <Button
-              onClick={() => router.push(`/marketplace/seller/store/${effectiveProfile?.walletAddress || dashboardAddress}`)}
+              onClick={() => router.push(`/marketplace/seller/store/${profile?.walletAddress || dashboardAddress}`)}
               variant="outline"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,8 +229,7 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Sales"
-            value={formatCurrency(effectiveStats?.sales?.total || 0)}
-            change={12}
+            value={formatCurrency(stats?.sales?.total || 0)}
             color="green"
             icon={
               <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,11 +237,10 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
             }
           />
-          
+
           <StatCard
             title="Active Listings"
-            value={effectiveStats?.listings?.active || 0}
-            change={5}
+            value={stats?.listings?.active || 0}
             color="blue"
             icon={
               <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,11 +248,10 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
             }
           />
-          
+
           <StatCard
             title="Pending Orders"
-            value={effectiveStats?.orders?.pending || 0}
-            change={-2}
+            value={stats?.orders?.pending || 0}
             color="orange"
             icon={
               <svg className="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -341,11 +259,10 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
             }
           />
-          
+
           <StatCard
             title="Reputation Score"
-            value={effectiveProfile?.stats?.reputationScore || 0}
-            change={8}
+            value={profile?.stats?.reputationScore || 0}
             color="purple"
             icon={
               <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -387,60 +304,25 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
         {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Orders */}
-              <GlassPanel className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white">Recent Orders</h3>
-                  <Button
-                    onClick={() => router.push('/marketplace/seller/orders')}
-                    variant="outline"
-                    size="small"
-                  >
-                    View All
-                  </Button>
+            <GlassPanel className="p-6 text-center">
+              <div className="py-12">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
                 </div>
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                      <div>
-                        <p className="text-white font-medium">Order #{1000 + i}</p>
-                        <p className="text-gray-400 text-sm">Sample Product {i}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-medium">${(Math.random() * 100 + 20).toFixed(2)}</p>
-                        <span className="text-xs bg-yellow-600 text-white px-2 py-1 rounded">
-                          Processing
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </GlassPanel>
-
-              {/* Performance Metrics */}
-              <GlassPanel className="p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Performance</h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Response Rate</span>
-                    <span className="text-white font-medium">98%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Shipping Time</span>
-                    <span className="text-white font-medium">2.3 days avg</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Customer Satisfaction</span>
-                    <span className="text-white font-medium">4.8/5.0</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-300">Dispute Rate</span>
-                    <span className="text-green-400 font-medium">0.2%</span>
-                  </div>
-                </div>
-              </GlassPanel>
-            </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Welcome to Your Dashboard</h3>
+                <p className="text-gray-300 mb-6">
+                  Start by creating your first listing to begin selling on the marketplace
+                </p>
+                <Button
+                  onClick={() => router.push('/marketplace/seller/listings/create')}
+                  variant="primary"
+                >
+                  Create Your First Listing
+                </Button>
+              </div>
+            </GlassPanel>
           )}
 
           {activeTab === 'notifications' && (
