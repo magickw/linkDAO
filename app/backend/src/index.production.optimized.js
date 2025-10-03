@@ -102,50 +102,50 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Basic API endpoints
-app.get('/api/status', (req, res) => {
-  res.json({
-    message: 'LinkDAO Backend API is running',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Marketplace endpoints (minimal)
-app.get('/api/marketplace/listings', (req, res) => {
-  res.json({
-    listings: [],
-    total: 0,
-    page: 1,
-    limit: 20
-  });
-});
+// Import and use actual routes
+try {
+  // Import route files
+  const healthRoutes = require('./routes/healthRoutes');
+  const postRoutes = require('./routes/postRoutes');
+  const marketplaceListingsRoutes = require('./routes/marketplaceListingsRoutes');
+  const sellerProfileRoutes = require('./routes/sellerProfileRoutes');
+  const { reputationRoutes } = require('./routes/reputationRoutes');
+  const { createDefaultAuthRoutes } = require('./routes/authenticationRoutes');
 
-app.get('/api/marketplace/seller/:address', (req, res) => {
-  res.json({
-    address: req.params.address,
-    profile: null,
-    listings: [],
-    reputation: 0
-  });
-});
+  // Mount routes
+  app.use('/', healthRoutes);
+  app.use('/api/posts', postRoutes);
+  app.use('/api/marketplace', marketplaceListingsRoutes);
+  app.use('/api/marketplace', sellerProfileRoutes);
+  app.use('/marketplace/reputation', reputationRoutes);
+  app.use('/api/auth', createDefaultAuthRoutes());
 
-// Posts/Feed endpoints (minimal)
-app.get('/api/posts/feed', (req, res) => {
-  res.json({
-    posts: [],
-    hasMore: false,
-    nextCursor: null
-  });
-});
+  console.log('✅ Routes loaded successfully');
+} catch (error) {
+  console.warn('⚠️ Failed to load some routes:', error.message);
+  console.warn('Using fallback stub endpoints');
 
-// Profiles endpoint
-app.get('/api/profiles/address/:address', (req, res) => {
-  res.status(404).json({
-    error: 'Profile not found',
-    address: req.params.address
+  // Fallback stub endpoints if routes fail to load
+  app.get('/api/marketplace/listings', (req, res) => {
+    res.json({ listings: [], total: 0, page: 1, limit: 20 });
   });
-});
+
+  app.get('/api/marketplace/seller/:address', (req, res) => {
+    res.json({ address: req.params.address, profile: null, listings: [], reputation: 0 });
+  });
+
+  app.get('/api/posts/feed', (req, res) => {
+    res.json({ posts: [], hasMore: false, nextCursor: null });
+  });
+
+  app.get('/api/profiles/address/:address', (req, res) => {
+    res.status(404).json({ error: 'Profile not found', address: req.params.address });
+  });
+}
 
 // Catch-all for undefined routes
 app.use('*', (req, res) => {
