@@ -678,28 +678,34 @@ function checkRateLimit(requestKey, now) {
   if (isDevelopment) {
     return true;
   }
-  
+
   const endpoint = requestKey.split(':')[1].split('?')[0]; // Extract endpoint without query params
+
+  // Skip rate limiting for placeholder endpoints
+  if (endpoint.includes('/api/placeholder')) {
+    return true;
+  }
+
   const countKey = `rate_limit:${endpoint}`;
-  
+
   let requestInfo = requestCounts.get(countKey);
-  
+
   if (!requestInfo) {
     requestInfo = { count: 0, windowStart: now };
     requestCounts.set(countKey, requestInfo);
   }
-  
+
   // Reset window if expired
   if (now - requestInfo.windowStart > RATE_LIMIT_WINDOW) {
     requestInfo.count = 0;
     requestInfo.windowStart = now;
   }
-  
+
   // Check if under limit
   if (requestInfo.count >= MAX_REQUESTS_PER_MINUTE) {
     return false;
   }
-  
+
   requestInfo.count += 1;
   return true;
 }

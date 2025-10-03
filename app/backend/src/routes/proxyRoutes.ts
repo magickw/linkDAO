@@ -54,7 +54,6 @@ router.get('/api/proxy', async (req: Request, res: Response) => {
     
     // Set appropriate headers
     res.set('Content-Type', 'application/json');
-    res.set('Access-Control-Allow-Origin', '*');
     
     // Send the response back to the client
     res.status(response.status).json(data);
@@ -112,7 +111,6 @@ router.post('/api/proxy', async (req: Request, res: Response) => {
     
     // Set appropriate headers
     res.set('Content-Type', 'application/json');
-    res.set('Access-Control-Allow-Origin', '*');
     
     // Send the response back to the client
     res.status(response.status).json(data);
