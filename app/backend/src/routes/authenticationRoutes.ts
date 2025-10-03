@@ -114,3 +114,6 @@ export function createDefaultAuthRoutes(): Router {
 }
 
 export { AuthenticationService, AuthenticationMiddleware };
+
+// Default export for easier importing
+export default createDefaultAuthRoutes();
