@@ -17,6 +17,7 @@ interface CacheStats {
 export class ServiceWorkerCacheService {
   private config: CacheConfig;
   private stats: CacheStats;
+  private cleanupIntervalId?: number;
 
   constructor() {
     this.config = {
@@ -319,7 +320,7 @@ export class ServiceWorkerCacheService {
   // Setup periodic cleanup
   private setupPeriodicCleanup(): void {
     // Run cleanup every 30 minutes
-    setInterval(() => {
+    this.cleanupIntervalId = window.setInterval(() => {
       this.performCleanup().catch(error => {
         console.error('Periodic cleanup failed:', error);
       });
@@ -399,5 +400,87 @@ export class ServiceWorkerCacheService {
   }
 }
 
-// Singleton instance
+  // Setup network listeners
+  setupNetworkListeners(): void {
+    if (typeof window === 'undefined') return;
+
+    window.addEventListener('online', () => {
+      console.log('Network online - attempting cache maintenance');
+      this.performCleanup().catch(() => {});
+      try {
+        const key = 'sw-offline-actions';
+        const queued = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(queued) && queued.length) {
+          console.log(`Flushing ${queued.length} offline actions`);
+          // TODO: Dispatch queued actions to backend or service worker
+          localStorage.removeItem(key);
+        }
+      } catch {
+        // ignore
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      console.log('Network offline - switching to offline-first where possible');
+    });
+  }
+
+  // Preload critical resources
+  async preloadCriticalResources(urls: string[]): Promise<void> {
+    await this.warmCache(urls);
+  }
+
+  // Cache community data
+  async cacheCommunityData(communityId: string, _options: any): Promise<void> {
+    const urls = [
+      `/api/communities/${communityId}`,
+      `/api/communities/${communityId}/posts`,
+      `/api/communities/${communityId}/members`
+    ];
+    await this.cacheResources(urls, this.config.dynamicCacheName);
+  }
+
+  // Preload user profile
+  async preloadUserProfile(userId: string): Promise<void> {
+    const urls = [
+      `/api/users/${userId}`,
+      `/api/users/${userId}/stats`
+    ];
+    await this.cacheResources(urls, this.config.dynamicCacheName);
+  }
+
+  // Cache preview content data under its URL
+  async cachePreviewContent(url: string, _type: string, data: any): Promise<void> {
+    try {
+      const cache = await caches.open(this.config.dynamicCacheName);
+      const response = new Response(JSON.stringify(data), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      await cache.put(url, response);
+    } catch (error) {
+      console.error('Failed to cache preview content:', error);
+    }
+  }
+
+  // Queue offline action
+  async queueOfflineAction(action: { type: string; data: any }): Promise<void> {
+    try {
+      const key = 'sw-offline-actions';
+      const existing = JSON.parse(localStorage.getItem(key) || '[]');
+      existing.push({ ...action, ts: Date.now() });
+      localStorage.setItem(key, JSON.stringify(existing));
+    } catch (error) {
+      console.error('Failed to queue offline action:', error);
+    }
+  }
+
+  // Destroy service (cleanup timers)
+  destroy(): void {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+      this.cleanupIntervalId = undefined;
+    }
+  }
+
+  // Singleton instance
 export const serviceWorkerCacheService = new ServiceWorkerCacheService();
