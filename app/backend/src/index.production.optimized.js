@@ -40,9 +40,27 @@ app.use(compression({
   threshold: 1024 // Only compress files > 1KB
 }));
 
+// CORS configuration - handle multiple origins properly
+const allowedOrigins = (process.env.FRONTEND_URL || '*').split(',').map(o => o.trim());
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // Allow all origins if configured with '*'
+    if (allowedOrigins.includes('*')) return callback(null, true);
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
 }));
 
 // Rate limiting (memory efficient)
