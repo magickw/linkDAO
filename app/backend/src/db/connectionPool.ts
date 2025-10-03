@@ -27,11 +27,26 @@ export class DatabaseConnectionPool {
     }
 
     this.config = {
-      max: parseInt(process.env.DB_POOL_MAX || '20'), // Maximum connections
-      idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '30'), // Seconds
-      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '10'), // Reduced timeout
+      max: parseInt(process.env.DB_POOL_MAX || '25'), // Increased maximum connections
+      idle_timeout: parseInt(process.env.DB_IDLE_TIMEOUT || '60'), // Increased idle timeout
+      connect_timeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '15'), // Increased connect timeout
       prepare: false, // Disable prepared statements for better compatibility
-      debug: process.env.NODE_ENV === 'development'
+      debug: process.env.NODE_ENV === 'development',
+      // Performance optimizations
+      max_lifetime: parseInt(process.env.DB_MAX_LIFETIME || '3600'), // 1 hour connection lifetime
+      transform: {
+        undefined: null,
+        column: {
+          from: (column: any) => column,
+          to: (column: any) => column
+        }
+      },
+      // Connection pool optimizations
+      connection: {
+        application_name: 'marketplace-api',
+        statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'), // 30 seconds
+        idle_in_transaction_session_timeout: parseInt(process.env.DB_IDLE_TRANSACTION_TIMEOUT || '10000'), // 10 seconds
+      }
     };
 
     try {

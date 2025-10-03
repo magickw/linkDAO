@@ -1,392 +1,476 @@
 import { Pool, PoolClient } from 'pg';
-import { Redis } from 'ioredis';
-import { performance } from 'perf_hooks';
+import { dbPool } from '../db/connectionPool';
+import { cacheService } from './cacheService';
+import { logger } from '../utils/logger';
 
-interface QueryMetrics {
+interface QueryPerformanceMetrics {
   query: string;
-  duration: number;
+  executionTime: number;
+  rowsReturned: number;
   timestamp: Date;
-  params?: any[];
 }
 
-interface ConnectionPoolConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
-  max: number;
-  min: number;
-  idleTimeoutMillis: number;
-  connectionTimeoutMillis: number;
+interface IndexRecommendation {
+  table: string;
+  columns: string[];
+  reason: string;
+  estimatedImpact: 'high' | 'medium' | 'low';
 }
 
 export class DatabaseOptimizationService {
-  private pool: Pool;
-  private redis: Redis;
-  private queryMetrics: QueryMetrics[] = [];
+  private queryMetrics: QueryPerformanceMetrics[] = [];
   private slowQueryThreshold = 1000; // 1 second
+  private readReplicas: Pool[] = [];
 
-  constructor(config: ConnectionPoolConfig, redisUrl: string) {
-    this.pool = new Pool({
-      ...config,
-      // Connection pool optimization
-      max: config.max || 20, // Maximum number of clients
-      min: config.min || 5,  // Minimum number of clients
-      idleTimeoutMillis: config.idleTimeoutMillis || 30000,
-      connectionTimeoutMillis: config.connectionTimeoutMillis || 2000,
-      // Enable keep-alive
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
-    });
-
-    this.redis = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
-      enableReadyCheck: false,
-      maxRetriesPerRequest: null,
-    });
-
-    this.setupPoolEventHandlers();
+  constructor() {
+    this.initializeReadReplicas();
+    this.startQueryMonitoring();
   }
 
-  private setupPoolEventHandlers(): void {
-    this.pool.on('connect', (client: PoolClient) => {
-      console.log('Database client connected');
-      // Set session-level optimizations
-      client.query('SET statement_timeout = 30000'); // 30 second timeout
-      client.query('SET lock_timeout = 10000'); // 10 second lock timeout
-    });
-
-    this.pool.on('error', (err: Error) => {
-      console.error('Database pool error:', err);
-    });
-
-    this.pool.on('remove', () => {
-      console.log('Database client removed from pool');
+  /**
+   * Initialize read replica connections for heavy read operations
+   */
+  private initializeReadReplicas(): void {
+    const readReplicaUrls = process.env.READ_REPLICA_URLS?.split(',') || [];
+    
+    readReplicaUrls.forEach((url, index) => {
+      try {
+        const replica = new Pool({
+          connectionString: url.trim(),
+          max: 10, // Smaller pool for read replicas
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 10000,
+        });
+        
+        this.readReplicas.push(replica);
+        logger.info(`Read replica ${index + 1} initialized`);
+      } catch (error) {
+        logger.error(`Failed to initialize read replica ${index + 1}:`, error);
+      }
     });
   }
 
-  async executeOptimizedQuery<T = any>(
+  /**
+   * Get a read replica connection for heavy read operations
+   */
+  public getReadConnection(): Pool {
+    if (this.readReplicas.length === 0) {
+      // Fallback to main connection if no read replicas
+      return dbPool.getConnection() as any;
+    }
+    
+    // Simple round-robin selection
+    const index = Math.floor(Math.random() * this.readReplicas.length);
+    return this.readReplicas[index];
+  }
+
+  /**
+   * Execute optimized query with performance monitoring
+   */
+  public async executeOptimizedQuery<T>(
     query: string,
     params: any[] = [],
-    cacheKey?: string,
-    cacheTTL: number = 300
+    useReadReplica: boolean = false
   ): Promise<T[]> {
-    const startTime = performance.now();
-
+    const startTime = Date.now();
+    const connection = useReadReplica ? this.getReadConnection() : dbPool.getConnection();
+    
     try {
-      // Check cache first if cache key provided
-      if (cacheKey) {
-        const cached = await this.getCachedResult<T>(cacheKey);
-        if (cached) {
-          return cached;
-        }
-      }
-
-      // Execute query with connection from pool
-      const client = await this.pool.connect();
-      try {
-        const result = await client.query(query, params);
-        const data = result.rows;
-
-        // Cache result if cache key provided
-        if (cacheKey) {
-          await this.setCachedResult(cacheKey, data, cacheTTL);
-        }
-
-        return data;
-      } finally {
-        client.release();
-      }
-    } finally {
-      const duration = performance.now() - startTime;
-      this.recordQueryMetrics(query, duration, params);
-    }
-  }
-
-  private async getCachedResult<T>(key: string): Promise<T[] | null> {
-    try {
-      const cached = await this.redis.get(key);
-      return cached ? JSON.parse(cached) : null;
-    } catch (error) {
-      console.error('Cache read error:', error);
-      return null;
-    }
-  }
-
-  private async setCachedResult<T>(key: string, data: T[], ttl: number): Promise<void> {
-    try {
-      await this.redis.setex(key, ttl, JSON.stringify(data));
-    } catch (error) {
-      console.error('Cache write error:', error);
-    }
-  }
-
-  private recordQueryMetrics(query: string, duration: number, params?: any[]): void {
-    const metrics: QueryMetrics = {
-      query: query.substring(0, 200), // Truncate long queries
-      duration,
-      timestamp: new Date(),
-      params: params?.length ? params.slice(0, 5) : undefined, // Limit params logged
-    };
-
-    this.queryMetrics.push(metrics);
-
-    // Log slow queries
-    if (duration > this.slowQueryThreshold) {
-      console.warn('Slow query detected:', {
-        query: metrics.query,
-        duration: `${duration.toFixed(2)}ms`,
-        params: metrics.params,
+      const result = await (connection as any).unsafe(query, params);
+      const executionTime = Date.now() - startTime;
+      
+      // Track query performance
+      this.trackQueryPerformance({
+        query: this.sanitizeQuery(query),
+        executionTime,
+        rowsReturned: Array.isArray(result) ? result.length : 0,
+        timestamp: new Date()
       });
-    }
-
-    // Keep only last 1000 metrics
-    if (this.queryMetrics.length > 1000) {
-      this.queryMetrics = this.queryMetrics.slice(-1000);
-    }
-  }
-
-  // Optimized queries for common operations
-  async getProductsWithPagination(
-    limit: number = 20,
-    offset: number = 0,
-    filters: any = {}
-  ): Promise<any[]> {
-    const cacheKey = `products:${limit}:${offset}:${JSON.stringify(filters)}`;
-    
-    let whereClause = 'WHERE p.status = $1';
-    let params: any[] = ['active'];
-    let paramIndex = 2;
-
-    if (filters.category) {
-      whereClause += ` AND p.category_id = $${paramIndex}`;
-      params.push(filters.category);
-      paramIndex++;
-    }
-
-    if (filters.minPrice) {
-      whereClause += ` AND p.price_amount >= $${paramIndex}`;
-      params.push(filters.minPrice);
-      paramIndex++;
-    }
-
-    if (filters.maxPrice) {
-      whereClause += ` AND p.price_amount <= $${paramIndex}`;
-      params.push(filters.maxPrice);
-      paramIndex++;
-    }
-
-    params.push(limit, offset);
-
-    const query = `
-      SELECT 
-        p.id,
-        p.title,
-        p.description,
-        p.price_amount,
-        p.price_currency,
-        p.images,
-        p.created_at,
-        u.username as seller_name,
-        u.wallet_address as seller_address,
-        COALESCE(AVG(r.rating), 0) as avg_rating,
-        COUNT(r.id) as review_count
-      FROM products p
-      JOIN users u ON p.seller_id = u.id
-      LEFT JOIN reviews r ON r.reviewee_id = u.id
-      ${whereClause}
-      GROUP BY p.id, u.username, u.wallet_address
-      ORDER BY p.created_at DESC
-      LIMIT $${paramIndex - 1} OFFSET $${paramIndex}
-    `;
-
-    return this.executeOptimizedQuery(query, params, cacheKey, 300);
-  }
-
-  async getUserReputationWithCache(userId: string): Promise<any> {
-    const cacheKey = `user_reputation:${userId}`;
-    
-    const query = `
-      SELECT 
-        u.id,
-        u.username,
-        u.wallet_address,
-        COALESCE(AVG(r.rating), 0) as avg_rating,
-        COUNT(r.id) as total_reviews,
-        COUNT(CASE WHEN r.rating >= 4 THEN 1 END) as positive_reviews,
-        u.created_at
-      FROM users u
-      LEFT JOIN reviews r ON r.reviewee_id = u.id
-      WHERE u.id = $1
-      GROUP BY u.id, u.username, u.wallet_address, u.created_at
-    `;
-
-    const result = await this.executeOptimizedQuery(query, [userId], cacheKey, 600);
-    return result[0] || null;
-  }
-
-  async getOrdersWithDetails(userId: string, limit: number = 10): Promise<any[]> {
-    const cacheKey = `user_orders:${userId}:${limit}`;
-    
-    const query = `
-      SELECT 
-        o.id,
-        o.status,
-        o.total_amount,
-        o.currency,
-        o.created_at,
-        p.title as product_title,
-        p.images as product_images,
-        seller.username as seller_name,
-        buyer.username as buyer_name
-      FROM orders o
-      JOIN products p ON o.product_id = p.id
-      JOIN users seller ON o.seller_id = seller.id
-      JOIN users buyer ON o.buyer_id = buyer.id
-      WHERE o.buyer_id = $1 OR o.seller_id = $1
-      ORDER BY o.created_at DESC
-      LIMIT $2
-    `;
-
-    return this.executeOptimizedQuery(query, [userId, limit], cacheKey, 180);
-  }
-
-  // Database maintenance and optimization
-  async analyzeTablePerformance(): Promise<void> {
-    const tables = ['products', 'orders', 'users', 'reviews'];
-    
-    for (const table of tables) {
-      try {
-        await this.pool.query(`ANALYZE ${table}`);
-        console.log(`Analyzed table: ${table}`);
-      } catch (error) {
-        console.error(`Error analyzing table ${table}:`, error);
+      
+      // Log slow queries
+      if (executionTime > this.slowQueryThreshold) {
+        logger.warn('Slow query detected', {
+          query: this.sanitizeQuery(query),
+          executionTime,
+          params: params.length
+        });
       }
+      
+      return result;
+    } catch (error) {
+      logger.error('Query execution failed', {
+        query: this.sanitizeQuery(query),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
     }
   }
 
-  async createOptimizedIndexes(): Promise<void> {
+  /**
+   * Create database indexes for frequently queried fields
+   */
+  public async createOptimizationIndexes(): Promise<void> {
     const indexes = [
-      // Products indexes
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status ON products(status)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_category ON products(category_id)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_price ON products(price_amount)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_created_at ON products(created_at DESC)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_seller ON products(seller_id)',
+      // Seller profile indexes
+      {
+        name: 'idx_sellers_wallet_address_btree',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_wallet_address_btree ON sellers USING btree(wallet_address)',
+        table: 'sellers'
+      },
+      {
+        name: 'idx_sellers_created_at_desc',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_created_at_desc ON sellers(created_at DESC)',
+        table: 'sellers'
+      },
+      {
+        name: 'idx_sellers_onboarding_completed',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_onboarding_completed ON sellers(onboarding_completed) WHERE onboarding_completed = true',
+        table: 'sellers'
+      },
       
-      // Orders indexes
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_buyer ON orders(buyer_id)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_seller ON orders(seller_id)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_status ON orders(status)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC)',
+      // Marketplace listings indexes
+      {
+        name: 'idx_marketplace_listings_seller_address',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_seller_address ON marketplace_listings(seller_address)',
+        table: 'marketplace_listings'
+      },
+      {
+        name: 'idx_marketplace_listings_created_at_desc',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_created_at_desc ON marketplace_listings(created_at DESC)',
+        table: 'marketplace_listings'
+      },
+      {
+        name: 'idx_marketplace_listings_status_created_at',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_status_created_at ON marketplace_listings(status, created_at DESC)',
+        table: 'marketplace_listings'
+      },
+      {
+        name: 'idx_marketplace_listings_price_range',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_price_range ON marketplace_listings(price) WHERE status = \'active\'',
+        table: 'marketplace_listings'
+      },
       
-      // Reviews indexes
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_reviewee ON reviews(reviewee_id)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reviews_order ON reviews(order_id)',
+      // Authentication sessions indexes
+      {
+        name: 'idx_auth_sessions_wallet_address',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_wallet_address ON auth_sessions(wallet_address)',
+        table: 'auth_sessions'
+      },
+      {
+        name: 'idx_auth_sessions_expires_at',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at) WHERE expires_at > NOW()',
+        table: 'auth_sessions'
+      },
+      {
+        name: 'idx_auth_sessions_session_token_hash',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_session_token_hash ON auth_sessions USING hash(session_token)',
+        table: 'auth_sessions'
+      },
       
-      // Users indexes
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_wallet ON users(wallet_address)',
+      // User reputation indexes
+      {
+        name: 'idx_user_reputation_wallet_address',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_wallet_address ON user_reputation(wallet_address)',
+        table: 'user_reputation'
+      },
+      {
+        name: 'idx_user_reputation_score_desc',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_score_desc ON user_reputation(reputation_score DESC)',
+        table: 'user_reputation'
+      },
+      {
+        name: 'idx_user_reputation_last_calculated',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_last_calculated ON user_reputation(last_calculated DESC)',
+        table: 'user_reputation'
+      },
       
-      // Composite indexes for common queries
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_status_category ON products(status, category_id)',
-      'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_user_status ON orders(buyer_id, status)',
+      // Products table optimization indexes
+      {
+        name: 'idx_products_seller_status_created',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_seller_status_created ON products(seller_id, status, created_at DESC)',
+        table: 'products'
+      },
+      {
+        name: 'idx_products_category_price',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_category_price ON products(category_id, price_amount) WHERE status = \'active\'',
+        table: 'products'
+      },
+      {
+        name: 'idx_products_search_vector',
+        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_search_vector ON products USING gin(to_tsvector(\'english\', title || \' \' || description))',
+        table: 'products'
+      }
     ];
 
-    for (const indexQuery of indexes) {
+    for (const index of indexes) {
       try {
-        await this.pool.query(indexQuery);
-        console.log('Created index:', indexQuery.split(' ')[6]); // Extract index name
+        await this.executeOptimizedQuery(index.query);
+        logger.info(`Created index ${index.name} on table ${index.table}`);
       } catch (error) {
-        console.error('Error creating index:', error);
+        // Index might already exist, log but don't fail
+        logger.warn(`Failed to create index ${index.name}:`, error);
       }
     }
   }
 
-  // Performance monitoring
-  getQueryMetrics(): QueryMetrics[] {
-    return this.queryMetrics.slice();
-  }
+  /**
+   * Analyze query performance and provide optimization recommendations
+   */
+  public async analyzeQueryPerformance(): Promise<{
+    slowQueries: QueryPerformanceMetrics[];
+    indexRecommendations: IndexRecommendation[];
+    performanceStats: {
+      averageExecutionTime: number;
+      slowQueryCount: number;
+      totalQueries: number;
+    };
+  }> {
+    const slowQueries = this.queryMetrics.filter(
+      metric => metric.executionTime > this.slowQueryThreshold
+    );
 
-  getSlowQueries(threshold: number = 1000): QueryMetrics[] {
-    return this.queryMetrics.filter(m => m.duration > threshold);
-  }
+    const indexRecommendations = await this.generateIndexRecommendations();
 
-  async getPoolStats(): Promise<any> {
+    const totalQueries = this.queryMetrics.length;
+    const averageExecutionTime = totalQueries > 0 
+      ? this.queryMetrics.reduce((sum, metric) => sum + metric.executionTime, 0) / totalQueries
+      : 0;
+
     return {
-      totalCount: this.pool.totalCount,
-      idleCount: this.pool.idleCount,
-      waitingCount: this.pool.waitingCount,
+      slowQueries: slowQueries.slice(-10), // Last 10 slow queries
+      indexRecommendations,
+      performanceStats: {
+        averageExecutionTime,
+        slowQueryCount: slowQueries.length,
+        totalQueries
+      }
     };
   }
 
-  // Cleanup
-  async close(): Promise<void> {
-    await this.pool.end();
-    await this.redis.quit();
+  /**
+   * Generate index recommendations based on query patterns
+   */
+  private async generateIndexRecommendations(): Promise<IndexRecommendation[]> {
+    const recommendations: IndexRecommendation[] = [];
+
+    try {
+      // Analyze missing indexes from PostgreSQL stats
+      const missingIndexes = await this.executeOptimizedQuery(`
+        SELECT 
+          schemaname,
+          tablename,
+          attname as column_name,
+          n_distinct,
+          correlation
+        FROM pg_stats 
+        WHERE schemaname = 'public' 
+        AND tablename IN ('sellers', 'marketplace_listings', 'auth_sessions', 'user_reputation')
+        AND n_distinct > 100
+        ORDER BY n_distinct DESC
+      `);
+
+      for (const stat of missingIndexes as any[]) {
+        if (stat.n_distinct > 1000) {
+          recommendations.push({
+            table: stat.tablename,
+            columns: [stat.column_name],
+            reason: `High cardinality column (${stat.n_distinct} distinct values) frequently used in WHERE clauses`,
+            estimatedImpact: 'high'
+          });
+        }
+      }
+
+      // Add specific recommendations based on common query patterns
+      recommendations.push(
+        {
+          table: 'marketplace_listings',
+          columns: ['seller_address', 'created_at'],
+          reason: 'Composite index for seller listing queries with date sorting',
+          estimatedImpact: 'high'
+        },
+        {
+          table: 'auth_sessions',
+          columns: ['wallet_address', 'expires_at'],
+          reason: 'Composite index for active session lookups',
+          estimatedImpact: 'medium'
+        },
+        {
+          table: 'user_reputation',
+          columns: ['reputation_score'],
+          reason: 'Index for reputation-based sorting and filtering',
+          estimatedImpact: 'medium'
+        }
+      );
+
+    } catch (error) {
+      logger.error('Failed to generate index recommendations:', error);
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Optimize database connection settings
+   */
+  public async optimizeConnectionSettings(): Promise<void> {
+    const optimizationQueries = [
+      // Increase work memory for complex queries
+      "SET work_mem = '256MB'",
+      
+      // Optimize for read-heavy workloads
+      "SET random_page_cost = 1.1",
+      
+      // Increase effective cache size
+      "SET effective_cache_size = '2GB'",
+      
+      // Optimize checkpoint settings
+      "SET checkpoint_completion_target = 0.9",
+      
+      // Enable query plan caching
+      "SET plan_cache_mode = 'auto'"
+    ];
+
+    for (const query of optimizationQueries) {
+      try {
+        await this.executeOptimizedQuery(query);
+      } catch (error) {
+        logger.warn(`Failed to apply optimization setting: ${query}`, error);
+      }
+    }
+  }
+
+  /**
+   * Clean up old query metrics to prevent memory leaks
+   */
+  private cleanupOldMetrics(): void {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    this.queryMetrics = this.queryMetrics.filter(
+      metric => metric.timestamp > oneHourAgo
+    );
+  }
+
+  /**
+   * Track query performance metrics
+   */
+  private trackQueryPerformance(metrics: QueryPerformanceMetrics): void {
+    this.queryMetrics.push(metrics);
+    
+    // Keep only recent metrics to prevent memory issues
+    if (this.queryMetrics.length > 1000) {
+      this.queryMetrics = this.queryMetrics.slice(-500);
+    }
+  }
+
+  /**
+   * Sanitize query for logging (remove sensitive data)
+   */
+  private sanitizeQuery(query: string): string {
+    return query
+      .replace(/\$\d+/g, '?') // Replace parameter placeholders
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+      .substring(0, 200); // Limit length
+  }
+
+  /**
+   * Start monitoring query performance
+   */
+  private startQueryMonitoring(): void {
+    // Clean up old metrics every hour
+    setInterval(() => {
+      this.cleanupOldMetrics();
+    }, 60 * 60 * 1000);
+
+    logger.info('Database optimization service initialized');
+  }
+
+  /**
+   * Get database performance statistics
+   */
+  public async getDatabaseStats(): Promise<{
+    connectionStats: any;
+    queryStats: any;
+    indexUsage: any[];
+    tableStats: any[];
+  }> {
+    try {
+      const [connectionStats, queryStats, indexUsage, tableStats] = await Promise.all([
+        this.getConnectionStats(),
+        this.getQueryStats(),
+        this.getIndexUsageStats(),
+        this.getTableStats()
+      ]);
+
+      return {
+        connectionStats,
+        queryStats,
+        indexUsage,
+        tableStats
+      };
+    } catch (error) {
+      logger.error('Failed to get database stats:', error);
+      throw error;
+    }
+  }
+
+  private async getConnectionStats(): Promise<any> {
+    const result = await this.executeOptimizedQuery(`
+      SELECT 
+        count(*) as total_connections,
+        count(*) FILTER (WHERE state = 'active') as active_connections,
+        count(*) FILTER (WHERE state = 'idle') as idle_connections
+      FROM pg_stat_activity 
+      WHERE datname = current_database()
+    `);
+    return result[0];
+  }
+
+  private async getQueryStats(): Promise<any> {
+    const result = await this.executeOptimizedQuery(`
+      SELECT 
+        calls,
+        total_time,
+        mean_time,
+        rows
+      FROM pg_stat_statements 
+      ORDER BY total_time DESC 
+      LIMIT 1
+    `);
+    return result[0] || {};
+  }
+
+  private async getIndexUsageStats(): Promise<any[]> {
+    return this.executeOptimizedQuery(`
+      SELECT 
+        schemaname,
+        tablename,
+        indexname,
+        idx_tup_read,
+        idx_tup_fetch
+      FROM pg_stat_user_indexes 
+      ORDER BY idx_tup_read DESC 
+      LIMIT 10
+    `);
+  }
+
+  private async getTableStats(): Promise<any[]> {
+    return this.executeOptimizedQuery(`
+      SELECT 
+        schemaname,
+        tablename,
+        n_tup_ins,
+        n_tup_upd,
+        n_tup_del,
+        seq_scan,
+        seq_tup_read,
+        idx_scan,
+        idx_tup_fetch
+      FROM pg_stat_user_tables 
+      WHERE schemaname = 'public'
+      ORDER BY seq_scan DESC 
+      LIMIT 10
+    `);
   }
 }
 
-// Query builder for complex queries
-export class QueryBuilder {
-  private query: string = '';
-  private params: any[] = [];
-  private paramIndex: number = 1;
-
-  select(columns: string[]): this {
-    this.query = `SELECT ${columns.join(', ')}`;
-    return this;
-  }
-
-  from(table: string, alias?: string): this {
-    this.query += ` FROM ${table}`;
-    if (alias) {
-      this.query += ` ${alias}`;
-    }
-    return this;
-  }
-
-  join(table: string, condition: string, type: 'INNER' | 'LEFT' | 'RIGHT' = 'INNER'): this {
-    this.query += ` ${type} JOIN ${table} ON ${condition}`;
-    return this;
-  }
-
-  where(condition: string, value?: any): this {
-    if (this.query.includes('WHERE')) {
-      this.query += ` AND ${condition}`;
-    } else {
-      this.query += ` WHERE ${condition}`;
-    }
-    
-    if (value !== undefined) {
-      this.params.push(value);
-      this.query = this.query.replace('?', `$${this.paramIndex++}`);
-    }
-    
-    return this;
-  }
-
-  orderBy(column: string, direction: 'ASC' | 'DESC' = 'ASC'): this {
-    this.query += ` ORDER BY ${column} ${direction}`;
-    return this;
-  }
-
-  limit(count: number): this {
-    this.params.push(count);
-    this.query += ` LIMIT $${this.paramIndex++}`;
-    return this;
-  }
-
-  offset(count: number): this {
-    this.params.push(count);
-    this.query += ` OFFSET $${this.paramIndex++}`;
-    return this;
-  }
-
-  build(): { query: string; params: any[] } {
-    return {
-      query: this.query,
-      params: this.params,
-    };
-  }
-}
+export const databaseOptimizationService = new DatabaseOptimizationService();

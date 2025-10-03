@@ -155,7 +155,44 @@ export const serviceUnavailableResponse = <T>(
 
 // Generate unique request ID
 const generateRequestId = (): string => {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+};
+
+// Helper functions for creating response objects (without Express Response)
+export const createSuccessResponse = <T>(
+  data: T,
+  metadata?: Partial<ApiResponse['metadata']>
+): ApiResponse<T> => {
+  return {
+    success: true,
+    data,
+    metadata: {
+      timestamp: new Date().toISOString(),
+      requestId: generateRequestId(),
+      version: '1.0.0',
+      ...metadata
+    }
+  };
+};
+
+export const createErrorResponse = (
+  code: string,
+  message: string,
+  details?: any
+): ApiResponse => {
+  return {
+    success: false,
+    error: {
+      code,
+      message,
+      ...(details && { details })
+    },
+    metadata: {
+      timestamp: new Date().toISOString(),
+      requestId: generateRequestId(),
+      version: '1.0.0'
+    }
+  };
 };
 
 // Helper function to create pagination info
