@@ -295,6 +295,11 @@ export const sellers = pgTable("sellers", {
   twitterHandle: varchar("twitter_handle", { length: 100 }),
   discordHandle: varchar("discord_handle", { length: 100 }),
   telegramHandle: varchar("telegram_handle", { length: 100 }),
+  // Seller profile API fields
+  storeDescription: text("store_description"),
+  isVerified: boolean("is_verified").default(false),
+  onboardingCompleted: boolean("onboarding_completed").default(false),
+  onboardingSteps: jsonb("onboarding_steps").default('{"profile_setup": false, "verification": false, "payout_setup": false, "first_listing": false}'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

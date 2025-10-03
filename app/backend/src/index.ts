@@ -19,6 +19,18 @@ import {
   apiRateLimit,
 } from './middleware/securityMiddleware';
 
+// Import new marketplace infrastructure
+import { 
+  requestLoggingMiddleware, 
+  performanceMonitoringMiddleware,
+  requestSizeMonitoringMiddleware,
+  errorCorrelationMiddleware,
+  healthCheckExclusionMiddleware
+} from './middleware/requestLogging';
+import { globalErrorHandler, notFoundHandler } from './middleware/globalErrorHandler';
+import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
+import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
+
 // Validate security configuration on startup
 try {
   validateSecurityConfig();
@@ -30,41 +42,58 @@ try {
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Security middleware stack
+// Core middleware stack (order matters!)
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
 app.use(ddosProtection);
 app.use(requestFingerprinting);
-app.use(apiRateLimit);
+
+// Request tracking and monitoring
+app.use(metricsTrackingMiddleware);
+app.use(healthCheckExclusionMiddleware);
+app.use(performanceMonitoringMiddleware);
+app.use(requestSizeMonitoringMiddleware);
+
+// Rate limiting
+app.use(generalRateLimit);
+
+// Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Security middleware
 app.use(inputValidation);
 app.use(threatDetection);
 app.use(securityAuditLogging);
 app.use(fileUploadSecurity);
 
-// Basic routes
+// Import health routes
+import healthRoutes from './routes/healthRoutes';
+
+// Health and monitoring routes (before other routes)
+app.use('/', healthRoutes);
+
+// Basic API info route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'LinkDAO Backend API - Post Routes Fixed', 
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
-    status: 'healthy'
-  });
-});
-
-app.get('/ping', (req, res) => {
-  res.json({ pong: true, timestamp: new Date().toISOString() });
-});
-
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    environment: process.env.NODE_ENV || 'development'
+    success: true,
+    data: {
+      message: 'LinkDAO Marketplace API', 
+      version: '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString(),
+      status: 'healthy',
+      endpoints: {
+        health: '/health',
+        ping: '/ping',
+        status: '/status',
+        api: '/api/*'
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString(),
+      requestId: res.locals.requestId
+    }
   });
 });
 
@@ -105,6 +134,8 @@ import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
 import sellerRoutes from './routes/sellerRoutes';
 // Import marketplace seller routes
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
+// Import seller profile API routes
+import sellerProfileRoutes from './routes/sellerProfileRoutes';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -166,6 +197,9 @@ app.use('/api/orders', orderCreationRoutes);
 // Marketplace seller routes
 app.use('/api/marketplace', marketplaceSellerRoutes);
 
+// Seller profile API routes
+app.use('/api/marketplace', sellerProfileRoutes);
+
 // Token reaction routes
 app.use('/api/reactions', tokenReactionRoutes);
 
@@ -205,24 +239,10 @@ app.use('/api/*', (req, res) => {
   });
 });
 
-// Error handler
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', error);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: error.message,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.originalUrl} not found`,
-    timestamp: new Date().toISOString()
-  });
-});
+// Error handling middleware (must be last)
+app.use(errorCorrelationMiddleware);
+app.use(globalErrorHandler);
+app.use(notFoundHandler);
 
 // Start server
 app.listen(PORT, () => {
