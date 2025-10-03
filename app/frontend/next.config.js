@@ -180,6 +180,11 @@ const nextConfig = {
           },
         ],
       },
+      // Add proxy for API marketplace requests
+      {
+        source: '/api/marketplace/:path*',
+        destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/marketplace/:path*`,
+      },
     ];
   },
 }
