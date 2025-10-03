@@ -410,3 +410,6 @@ export class MarketplaceListingsService {
     }
   }
 }
+
+// Export singleton instance
+export const marketplaceListingsService = new MarketplaceListingsService();

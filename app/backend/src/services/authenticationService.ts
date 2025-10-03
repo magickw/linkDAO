@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, lt } from 'drizzle-orm';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
@@ -443,7 +443,7 @@ export class AuthenticationService {
     try {
       await this.db
         .delete(walletNonces)
-        .where(gt(new Date(), walletNonces.expiresAt));
+        .where(lt(walletNonces.expiresAt, new Date()));
     } catch (error) {
       console.error('Error cleaning up expired nonces:', error);
     }
@@ -457,7 +457,7 @@ export class AuthenticationService {
       await this.db
         .update(authSessions)
         .set({ isActive: false })
-        .where(gt(new Date(), authSessions.expiresAt));
+        .where(lt(authSessions.expiresAt, new Date()));
     } catch (error) {
       console.error('Error cleaning up expired sessions:', error);
     }

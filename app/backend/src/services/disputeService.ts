@@ -2,7 +2,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { disputes, escrows, users, orders } from '../db/schema';
 import { NotificationService } from './notificationService';
-import { ReputationService } from './reputationService';
+import { reputationService } from './reputationService';
 
 export interface CreateDisputeRequest {
   escrowId: number;
@@ -91,11 +91,9 @@ export interface DisputeAnalytics {
 
 export class DisputeService {
   private notificationService: NotificationService;
-  private reputationService: ReputationService;
 
   constructor() {
     this.notificationService = new NotificationService();
-    this.reputationService = new ReputationService();
   }
 
   /**

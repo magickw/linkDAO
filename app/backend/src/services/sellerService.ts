@@ -95,17 +95,13 @@ class SellerService {
 
       const sellerData = seller[0];
       
-      // Get user ID from wallet address
-      const user = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.walletAddress, walletAddress))
-        .limit(1);
-      
+      // Get reputation data using wallet address
       let reputation = null;
-      if (user.length > 0) {
-        // Get reputation data
-        reputation = await reputationService.getUserReputation(user[0].id);
+      try {
+        reputation = await reputationService.getReputation(walletAddress);
+      } catch (error) {
+        console.warn('Could not fetch reputation data:', error);
+        // Continue without reputation data
       }
       
       // Calculate profile completeness

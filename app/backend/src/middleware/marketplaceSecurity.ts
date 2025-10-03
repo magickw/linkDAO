@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { AppError } from './errorHandler';
 import { logger } from '../utils/logger';
 
@@ -86,11 +86,8 @@ export const generalRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req: Request) => {
-    // Use IP address and user agent for rate limiting
-    // Handle IPv6 addresses properly
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
-    const userAgent = req.get('User-Agent')?.slice(0, 50) || 'unknown';
-    return `${ip}_${userAgent}`;
+    // Use proper IPv6 handling with the helper function
+    return ipKeyGenerator(req.ip || req.connection.remoteAddress || 'unknown');
   },
   skip: (req: Request) => {
     // Skip rate limiting for health checks
