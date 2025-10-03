@@ -278,6 +278,69 @@ app.get('/api/marketplace/seller/onboarding/:address/:stepId?', (req, res) => {
   });
 });
 
+// Dashboard stats endpoint
+app.get('/marketplace/seller/dashboard/:address', (req, res) => {
+  const { address } = req.params;
+
+  res.json({
+    success: true,
+    data: {
+      address,
+      stats: {
+        totalListings: 0,
+        activeListings: 0,
+        totalSales: 0,
+        totalRevenue: '0',
+        pendingOrders: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalReviews: 0
+      },
+      recentActivity: [],
+      recentOrders: []
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Seller listings endpoint
+app.get('/marketplace/seller/listings/:address', (req, res) => {
+  const { address } = req.params;
+  const { status, limit = 20, offset = 0 } = req.query;
+
+  res.json({
+    success: true,
+    data: {
+      listings: [],
+      total: 0,
+      hasMore: false
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Seller notifications endpoint
+app.get('/marketplace/seller/notifications/:address', (req, res) => {
+  const { address } = req.params;
+  const { unreadOnly = false, limit = 20 } = req.query;
+
+  res.json({
+    success: true,
+    data: {
+      notifications: [],
+      unreadCount: 0,
+      total: 0
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
 // ============================================================================
 // REPUTATION ROUTES
 // ============================================================================
