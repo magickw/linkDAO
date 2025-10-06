@@ -79,3 +79,12 @@ export interface User {
   verified: boolean;
   reputation: number;
 }
+
+// Infinite scroll state
+export interface InfiniteScrollState {
+  hasMore: boolean;
+  isLoading: boolean;
+  page: number;
+  totalPages: number;
+  error?: string;
+}

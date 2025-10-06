@@ -163,7 +163,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
           <div className="detail-item">
             <span className="detail-label">Created</span>
             <span className="detail-value">
-              {formatDate(community.createdAt, 'MMM d, yyyy')}
+              {formatDate(community.createdAt, { format: 'medium' })}
             </span>
           </div>
 
@@ -185,7 +185,7 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
             <div className="detail-item">
               <span className="detail-label">Joined</span>
               <span className="detail-value">
-                {formatDate(membershipStatus.joinedAt, 'MMM d, yyyy')}
+                {formatDate(membershipStatus.joinedAt, { format: 'medium' })}
               </span>
             </div>
           )}

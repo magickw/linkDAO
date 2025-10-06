@@ -31,3 +31,13 @@ export interface MediaFile {
   size: number;
   uploadStatus: 'pending' | 'uploading' | 'completed' | 'failed';
 }
+
+// Media upload configuration
+export interface MediaUploadConfig {
+  maxFileSize: number; // in bytes
+  maxFiles: number;
+  allowedTypes: string[];
+  enablePreview: boolean;
+  enableEditing: boolean;
+  enableProgress: boolean;
+}

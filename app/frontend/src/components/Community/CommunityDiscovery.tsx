@@ -31,7 +31,7 @@ interface TrendingCommunity extends Community {
   activityLevel: 'low' | 'medium' | 'high';
 }
 
-export const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({
+const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({
   onCommunitySelect,
   showJoinButton = true,
   maxResults = 50
@@ -659,3 +659,5 @@ export const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({
     </div>
   );
 };
+
+export default CommunityDiscovery;

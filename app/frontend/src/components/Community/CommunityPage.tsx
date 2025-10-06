@@ -302,6 +302,7 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
             {activeTab === 'rules' && (
               <CommunityRules
+                communityId={community.id}
                 rules={community.rules}
                 canEdit={canUserModerate}
                 onRulesUpdate={(rules) => setCommunity(prev => 
