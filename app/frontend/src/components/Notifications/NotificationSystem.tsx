@@ -14,7 +14,7 @@ import { notificationService } from '../../services/notificationService';
 import { AppNotification, NotificationPreferences as NotificationPrefs } from '../../types/notifications';
 
 // Re-export types for backward compatibility
-export type { AppNotification as Notification, NotificationPrefs as NotificationPreferences } from '../../types/notifications';
+export type { AppNotification as Notification, NotificationPreferences as NotificationPrefs } from '../../types/notifications';
 
 interface NotificationSystemProps {
   className?: string;

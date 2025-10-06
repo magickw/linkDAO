@@ -4,7 +4,7 @@
  * Implements requirements 6.1, 6.3, 6.4, 6.5 from the interconnected social platform spec
  */
 
-import { 
+import type { 
   AppNotification, 
   NotificationPreferences, 
   GetNotificationsOptions, 
@@ -351,7 +351,7 @@ class NotificationService {
   /**
    * Create notification (for system use)
    */
-  async createNotification(notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>): Promise<Notification> {
+  async createNotification(notification: Omit<AppNotification, 'id' | 'createdAt' | 'isRead'>): Promise<AppNotification> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
         method: 'POST',

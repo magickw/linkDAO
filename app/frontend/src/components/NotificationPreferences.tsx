@@ -285,7 +285,7 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
         </div>
 
         {/* Community-Specific Preferences */}
-        {Object.keys(localPreferences.communityPreferences).length > 0 && (
+        {localPreferences.communityPreferences && Object.keys(localPreferences.communityPreferences).length > 0 && (
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
               Community-Specific Settings
@@ -314,8 +314,8 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
                       </label>
                       <input
                         type="checkbox"
-                        checked={settings.replies}
-                        onChange={(e) => updateCommunityPreference(communityId, 'replies', e.target.checked)}
+                        checked={settings.newComments}
+                        onChange={(e) => updateCommunityPreference(communityId, 'newComments', e.target.checked)}
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </div>
@@ -347,25 +347,114 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
             </div>
           </div>
         )}
-      </div>
 
-      {/* Save Button */}
-      <div className="mt-8 flex justify-end space-x-3">
-        {onClose && (
+        {/* Quiet Hours */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Quiet Hours
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-900 dark:text-white">
+                  Enable Quiet Hours
+                </label>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Pause notifications during specific hours
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={localPreferences.quietHours.enabled}
+                onChange={(e) => setLocalPreferences({
+                  ...localPreferences,
+                  quietHours: {
+                    ...localPreferences.quietHours,
+                    enabled: e.target.checked
+                  }
+                })}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+            </div>
+            
+            {localPreferences.quietHours.enabled && (
+              <div className="grid grid-cols-2 gap-4 pl-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={localPreferences.quietHours.startTime}
+                    onChange={(e) => setLocalPreferences({
+                      ...localPreferences,
+                      quietHours: {
+                        ...localPreferences.quietHours,
+                        startTime: e.target.value
+                      }
+                    })}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={localPreferences.quietHours.endTime}
+                    onChange={(e) => setLocalPreferences({
+                      ...localPreferences,
+                      quietHours: {
+                        ...localPreferences.quietHours,
+                        endTime: e.target.value
+                      }
+                    })}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sound Preferences */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Sound Preferences
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-900 dark:text-white">
+                Enable Notification Sounds
+              </label>
+              <input
+                type="checkbox"
+                checked={localPreferences.enableSound}
+                onChange={(e) => updatePreference('enableSound', e.target.checked)}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-3 pt-6">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
           >
             Cancel
           </button>
-        )}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? 'Saving...' : 'Save Preferences'}
-        </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Preferences'}
+          </button>
+        </div>
       </div>
     </div>
   );

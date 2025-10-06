@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { NotificationPreferences as NotificationPreferencesType } from './NotificationSystem';
+import { NotificationPreferences as NotificationPreferencesType } from '../../types/notifications';
 
 interface NotificationPreferencesProps {
   isOpen: boolean;
@@ -180,7 +180,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={settings.enabled}
+                        checked={(settings as any).enabled}
                         onChange={(e) => handlePreferenceChange(['categories', category, 'enabled'], e.target.checked)}
                         className="sr-only peer"
                       />
@@ -188,13 +188,13 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                     </label>
                   </div>
 
-                  {settings.enabled && (
+                  {(settings as any).enabled && (
                     <div className="grid grid-cols-2 gap-4 ml-4">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
                           id={`${category}-push`}
-                          checked={settings.push}
+                          checked={(settings as any).push}
                           onChange={(e) => handlePreferenceChange(['categories', category, 'push'], e.target.checked)}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                         />
@@ -207,7 +207,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                         <input
                           type="checkbox"
                           id={`${category}-sound`}
-                          checked={settings.sound}
+                          checked={(settings as any).sound}
                           onChange={(e) => handlePreferenceChange(['categories', category, 'sound'], e.target.checked)}
                           className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                         />

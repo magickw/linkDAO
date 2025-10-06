@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { ContentPreview } from '../../services/contentSharingService';
+import { ContentPreview } from '../../types/contentPreview';
 import { useRouter } from 'next/router';
 
 interface SharedContentPreviewProps {
@@ -35,16 +35,17 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
 
   const getContentUrl = (preview: ContentPreview): string | null => {
     switch (preview.type) {
-      case 'post':
-        return `/posts/${preview.id}`;
-      case 'community':
-        return `/communities/${preview.id}`;
-      case 'user_profile':
-        return `/profile/${preview.metadata.authorAddress}`;
+      case 'proposal':
+        const proposalData = preview.data as any; // Type assertion to access id
+        return `/governance/proposals/${proposalData.id}`;
       case 'nft':
-        return `/nft/${preview.id}`;
-      case 'governance_proposal':
-        return `/governance/proposals/${preview.id}`;
+        const nftData = preview.data as any; // Type assertion to access properties
+        return `/nft/${nftData.contractAddress}/${nftData.tokenId}`;
+      case 'link':
+        return preview.url;
+      case 'token':
+        const tokenData = preview.data as any; // Type assertion to access properties
+        return `/tokens/${tokenData.contractAddress}`;
       default:
         return null;
     }
@@ -52,16 +53,10 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
 
   const getTypeIcon = () => {
     switch (preview.type) {
-      case 'post':
+      case 'proposal':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-          </svg>
-        );
-      case 'community':
-        return (
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
           </svg>
         );
       case 'nft':
@@ -70,10 +65,16 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         );
-      case 'governance_proposal':
+      case 'link':
         return (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+        );
+      case 'token':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
       default:
@@ -87,16 +88,14 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
 
   const getTypeLabel = () => {
     switch (preview.type) {
-      case 'post':
-        return 'Post';
-      case 'community':
-        return 'Community';
-      case 'user_profile':
-        return 'Profile';
+      case 'proposal':
+        return 'Proposal';
       case 'nft':
         return 'NFT';
-      case 'governance_proposal':
-        return 'Proposal';
+      case 'link':
+        return 'Link';
+      case 'token':
+        return 'Token';
       default:
         return 'Content';
     }
@@ -116,6 +115,67 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
       return `${diffInDays}d ago`;
     }
   };
+
+  // Extract data based on type
+  const getTitle = () => {
+    switch (preview.type) {
+      case 'proposal':
+        const proposalData = preview.data as any;
+        return proposalData.title;
+      case 'nft':
+        const nftData = preview.data as any;
+        return nftData.name;
+      case 'link':
+        const linkData = preview.data as any;
+        return linkData.title;
+      case 'token':
+        const tokenData = preview.data as any;
+        return tokenData.name;
+      default:
+        return '';
+    }
+  };
+
+  const getDescription = () => {
+    switch (preview.type) {
+      case 'proposal':
+        const proposalData = preview.data as any;
+        return proposalData.description;
+      case 'nft':
+        const nftData = preview.data as any;
+        return nftData.description;
+      case 'link':
+        const linkData = preview.data as any;
+        return linkData.description;
+      case 'token':
+        const tokenData = preview.data as any;
+        return `Token symbol: ${tokenData.symbol}`;
+      default:
+        return '';
+    }
+  };
+
+  const getImageUrl = () => {
+    switch (preview.type) {
+      case 'proposal':
+        return undefined;
+      case 'nft':
+        const nftData = preview.data as any;
+        return nftData.image;
+      case 'link':
+        const linkData = preview.data as any;
+        return linkData.image;
+      case 'token':
+        const tokenData = preview.data as any;
+        return tokenData.logo;
+      default:
+        return undefined;
+    }
+  };
+
+  const title = getTitle();
+  const description = getDescription();
+  const imageUrl = getImageUrl();
 
   return (
     <div
@@ -139,25 +199,17 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
         <span className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide">
           {getTypeLabel()}
         </span>
-        {preview.metadata.communityName && (
-          <>
-            <span className="text-gray-400 dark:text-gray-500">•</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {preview.metadata.communityName}
-            </span>
-          </>
-        )}
       </div>
 
       {/* Content */}
       <div className="p-3">
         <div className="flex space-x-3">
           {/* Image */}
-          {preview.imageUrl && (
+          {imageUrl && (
             <div className="flex-shrink-0">
               <img
-                src={preview.imageUrl}
-                alt={preview.title}
+                src={imageUrl}
+                alt={title}
                 className="w-16 h-16 rounded-lg object-cover"
               />
             </div>
@@ -166,12 +218,12 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
           {/* Text Content */}
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
-              {preview.title}
+              {title}
             </h3>
             
-            {preview.description && (
+            {description && (
               <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                {preview.description}
+                {description}
               </p>
             )}
 
@@ -181,53 +233,13 @@ export const SharedContentPreview: React.FC<SharedContentPreviewProps> = ({
                 <span>by {preview.metadata.authorName}</span>
               )}
               
-              <span>{formatDate(preview.metadata.createdAt)}</span>
-
-              {/* Engagement Stats */}
-              {preview.metadata.engagement && (
-                <div className="flex items-center space-x-2">
-                  {preview.metadata.engagement.likes > 0 && (
-                    <span className="flex items-center space-x-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
-                      </svg>
-                      <span>{preview.metadata.engagement.likes}</span>
-                    </span>
-                  )}
-                  
-                  {preview.metadata.engagement.comments > 0 && (
-                    <span className="flex items-center space-x-1">
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <span>{preview.metadata.engagement.comments}</span>
-                    </span>
-                  )}
-                </div>
+              {preview.metadata.createdAt && (
+                <span>{formatDate(preview.metadata.createdAt)}</span>
               )}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Footer for special content types */}
-      {preview.type === 'community' && (
-        <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
-          <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-            <span>Community</span>
-            <span>Click to join</span>
-          </div>
-        </div>
-      )}
-
-      {preview.type === 'governance_proposal' && (
-        <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
-            <span>Governance Proposal</span>
-            <span>Click to vote</span>
-          </div>
-        </div>
-      )}
 
       <style jsx>{`
         .line-clamp-2 {

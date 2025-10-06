@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Notification, NotificationPreferences } from '@/types/notifications';
+import type { AppNotification as Notification, NotificationPreferences } from '@/types/notifications';
 import notificationService from '../services/notificationService';
 import { useWeb3 } from '@/context/Web3Context';
 
@@ -71,11 +71,11 @@ export function useNotifications() {
     }
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
   
   const getCommunityUnreadCount = useCallback((communityId: string) => {
     return notifications.filter(n => 
-      !n.read && 'communityId' in n && n.communityId === communityId
+      !n.isRead && 'communityId' in n && (n as any).communityId === communityId
     ).length;
   }, [notifications]);
 
@@ -108,8 +108,8 @@ export function useNotificationPreferences() {
       try {
         setLoading(true);
         // Get messaging notification preferences
-        const prefs = notificationService.getSettings();
-        setPreferences(null); // Would need to map from messaging preferences
+        const prefs = await notificationService.getPreferences();
+        setPreferences(prefs);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load preferences');
       } finally {
@@ -123,16 +123,7 @@ export function useNotificationPreferences() {
   const updatePreferences = useCallback(async (newPreferences: NotificationPreferences) => {
     try {
       // Update messaging notification preferences
-      // Map NotificationPreferences to NotificationSettings
-      const messagingSettings = {
-        browserNotifications: newPreferences.push,
-        messageNotifications: newPreferences.inApp,
-        nftOfferNotifications: true,
-        blockExplorerNotifications: false,
-        sound: true,
-        vibration: true
-      };
-      notificationService.updateSettings(messagingSettings);
+      await notificationService.updatePreferences(newPreferences);
       setPreferences(newPreferences);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update preferences');

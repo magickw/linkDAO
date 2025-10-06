@@ -13,14 +13,14 @@ export default function RealTimeNotifications({ children }: RealTimeNotification
   useEffect(() => {
     if (!address) return;
 
-    // Simulate WebSocket connection
-    setIsConnected(true);
-    
-    // Simulate receiving real-time notifications
+    // Simulate real-time notifications
     const interval = setInterval(() => {
-      // Randomly generate notifications (10% chance every 5 seconds)
-      if (Math.random() < 0.1) {
-        notificationService.testNotification();
+      // Only in development mode for testing
+      if (process.env.NODE_ENV === 'development') {
+        // Randomly generate notifications (10% chance every 5 seconds)
+        if (Math.random() < 0.1) {
+          console.log('Simulated notification received');
+        }
       }
     }, 5000);
 

@@ -21,12 +21,29 @@ export interface AppNotification {
 }
 
 export interface NotificationPreferences {
-  enablePush: boolean;
-  enableSound: boolean;
-  enableDesktop: boolean;
+  // Email preferences
   email?: boolean;
   follows?: boolean;
   communityPosts?: boolean;
+  governanceProposals?: boolean;
+  
+  // Push preferences
+  push?: boolean;
+  likes?: boolean;
+  comments?: boolean;
+  communityReplies?: boolean;
+  communityMentions?: boolean;
+  governanceVotes?: boolean;
+  governanceResults?: boolean;
+  
+  // In-app preferences
+  inApp?: boolean;
+  
+  // General settings
+  enablePush: boolean;
+  enableSound: boolean;
+  enableDesktop: boolean;
+  
   categories: {
     direct_message: { enabled: boolean; push: boolean; sound: boolean };
     post_reaction: { enabled: boolean; push: boolean; sound: boolean };
@@ -35,11 +52,13 @@ export interface NotificationPreferences {
     governance_proposal: { enabled: boolean; push: boolean; sound: boolean };
     system_alert: { enabled: boolean; push: boolean; sound: boolean };
   };
+  
   quietHours: {
     enabled: boolean;
     startTime: string;
     endTime: string;
   };
+  
   communityPreferences?: Record<string, CommunityNotificationPreferences>;
 }
 

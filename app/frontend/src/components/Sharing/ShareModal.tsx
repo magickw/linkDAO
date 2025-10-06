@@ -8,7 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { ShareableContent, ShareToMessageOptions, CrossPostOptions } from '../../services/contentSharingService';
 import { contentSharingService } from '../../services/contentSharingService';
 import { Conversation } from '../../types/messaging';
-import { Community } from '../../types/communityEnhancements';
+import { Community } from '../../models/Community';
 import { useWalletAuth } from '../../hooks/useWalletAuth';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
@@ -125,7 +125,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
       const crossPostOptions: CrossPostOptions = {
         targetCommunityIds: selectedCommunities,
         attribution: {
-          originalCommunityId: content.communityId,
+          originalCommunityId: content.metadata?.communityId,
           originalAuthor: content.authorAddress || address,
           originalPostId: content.id,
         },
@@ -390,7 +390,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                         className="text-blue-600"
                       />
                       <img
-                        src={community.iconUrl}
+                        src={community.avatar || '/default-community-icon.svg'}
                         alt={community.displayName}
                         className="w-6 h-6 rounded"
                       />
@@ -447,7 +447,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 <span className="text-gray-900 dark:text-white">Share on Twitter</span>
               </button>
 
-              {navigator.share && (
+              {typeof navigator !== 'undefined' && 'share' in navigator && (
                 <button
                   onClick={() => handleExternalShare('native_share')}
                   className="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
