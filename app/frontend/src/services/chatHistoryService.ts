@@ -1,4 +1,4 @@
-import { ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
+import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
 
 class ChatHistoryService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';

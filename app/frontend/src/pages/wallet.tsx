@@ -6,9 +6,14 @@ import { useWalletData, usePortfolioPerformance } from '@/hooks/useWalletData';
 import { useToast } from '@/context/ToastContext';
 import { formatDistanceToNow } from 'date-fns';
 import { RefreshCw, TrendingUp, TrendingDown, ExternalLink, Copy } from 'lucide-react';
+import { useAccount, useBalance } from 'wagmi';
 
 export default function Wallet() {
-  const { address, balance, chainId } = useWeb3();
+  const { isConnected } = useWeb3();
+  const { address, chain } = useAccount();
+  const { data: balanceData } = useBalance({ address: address as `0x${string}` | undefined });
+  const chainId = chain?.id;
+  
   const { addToast } = useToast();
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
@@ -294,7 +299,7 @@ export default function Wallet() {
                 <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg shadow-md p-6 text-white">
                   <h2 className="text-lg font-medium mb-2">Total Balance</h2>
                   <p className="text-3xl font-bold">
-                    {portfolio ? formatCurrency(portfolio.totalValueUSD) : formatCurrency(parseFloat(balance || '0') * 1700)}
+                    {portfolio ? formatCurrency(portfolio.totalValueUSD) : formatCurrency(parseFloat(balanceData?.formatted || '0') * 1700)}
                   </p>
                   <div className="flex items-center mt-1">
                     {portfolio && getChangeIcon(portfolio.change24hPercent)}
@@ -308,8 +313,8 @@ export default function Wallet() {
                 
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
                   <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">ETH Balance</h2>
-                  <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-2">{balance || '0'} ETH</p>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">≈ ${(parseFloat(balance || '0') * 1700).toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-2">{balanceData?.formatted || '0'} ETH</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">≈ ${(parseFloat(balanceData?.formatted || '0') * 1700).toLocaleString()}</p>
                 </div>
                 
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">

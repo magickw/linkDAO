@@ -54,10 +54,17 @@ export interface ChatHistoryRequest {
   conversationId: string;
   limit?: number;
   offset?: number;
+  before?: string;
+  after?: string;
   unreadCount?: number;
   isEncrypted?: boolean;
-  unreadCount: number;
-  isEncrypted: boolean;
+}
+
+export interface ChatHistoryResponse {
+  messages: Message[];
+  hasMore: boolean;
+  nextCursor?: string;
+  prevCursor?: string;
 }
 
 export interface TypingStatus {

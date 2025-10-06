@@ -376,7 +376,11 @@ export class CommunityCacheService {
       .slice(-20)
       .map((action: any) => action.context.communityId);
 
-    const predictions = [];
+    const predictions: Array<{
+      communityId: string;
+      priority: 'high' | 'medium' | 'low';
+      confidence: number;
+    }> = [];
     const communityFrequency = new Map<string, number>();
 
     // Count frequency of community visits

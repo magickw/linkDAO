@@ -256,7 +256,10 @@ export class MessageEncryptionService {
         createdAt: new Date(),
       });
 
-      await transaction.complete;
+      await new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve(undefined);
+        transaction.onerror = () => reject(transaction.error);
+      });
     } catch (error) {
       console.error('Failed to store key pair:', error);
     }
@@ -271,7 +274,12 @@ export class MessageEncryptionService {
       const transaction = db.transaction(['keyPairs'], 'readonly');
       const store = transaction.objectStore('keyPairs');
       
-      const result = await store.get(userAddress);
+      const request = store.get(userAddress);
+      const result = await new Promise<any>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      
       if (!result) return null;
 
       // Import keys from storage
@@ -342,7 +350,10 @@ export class MessageEncryptionService {
         createdAt: new Date(),
       });
 
-      await transaction.complete;
+      await new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve(undefined);
+        transaction.onerror = () => reject(transaction.error);
+      });
     } catch (error) {
       console.error('Failed to store public key:', error);
     }
@@ -357,7 +368,12 @@ export class MessageEncryptionService {
       const transaction = db.transaction(['publicKeys'], 'readonly');
       const store = transaction.objectStore('publicKeys');
       
-      const result = await store.get(userAddress);
+      const request = store.get(userAddress);
+      const result = await new Promise<any>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      
       return result ? result.publicKey : null;
     } catch (error) {
       console.error('Failed to get stored public key:', error);
@@ -379,7 +395,10 @@ export class MessageEncryptionService {
       await transaction.objectStore('keyPairs').clear();
       await transaction.objectStore('publicKeys').clear();
       
-      await transaction.complete;
+      await new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve(undefined);
+        transaction.onerror = () => reject(transaction.error);
+      });
     } catch (error) {
       console.error('Failed to clear keys:', error);
     }
