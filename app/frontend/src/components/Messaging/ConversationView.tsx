@@ -24,7 +24,10 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
-  const { socket, isConnected } = useWebSocket();
+  const { socket, isConnected } = useWebSocket({
+    walletAddress: currentUserAddress,
+    autoConnect: true
+  });
 
   // Load messages when conversation changes
   useEffect(() => {

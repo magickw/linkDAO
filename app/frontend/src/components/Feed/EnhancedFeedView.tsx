@@ -90,7 +90,15 @@ export default function EnhancedFeedView({
       updatedAt: feedPost.createdAt,
       contentType: 'text',
       media: feedPost.mediaCids,
-      previews: feedPost.previews || [],
+      previews: (feedPost.previews || []).map(p => ({
+        id: `${feedPost.id}-${p.url}`,
+        type: p.type as 'nft' | 'link' | 'proposal' | 'token',
+        url: p.url,
+        data: p.data || {},
+        metadata: {},
+        cached: false,
+        securityStatus: 'safe' as const
+      })),
       hashtags: feedPost.tags || [],
       mentions: [],
       reactions: feedPost.reactions?.map(r => ({

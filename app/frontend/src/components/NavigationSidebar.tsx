@@ -72,7 +72,7 @@ interface NavigationSidebarProps {
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
-  const { balance } = useWeb3();
+
   const { data: profile } = useProfile(address);
   const { getCommunityUnreadCount } = useNotifications();
   const { 
@@ -136,7 +136,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {balance} ETH
+                    0.00 ETH
                   </p>
                 </div>
               </div>

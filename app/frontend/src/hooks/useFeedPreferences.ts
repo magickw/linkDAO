@@ -12,12 +12,16 @@ interface FeedPreferences {
 interface DisplayPreferences {
   showTrending: boolean;
   showSocialProof: boolean;
+  showTrendingBadges: boolean;
   showPreviews: boolean;
   compactMode: boolean;
+  infiniteScroll: boolean;
+  postsPerPage: number;
   updateDisplayPreferences: (preferences: Partial<DisplayPreferences>) => void;
 }
 
 interface AutoRefreshPreferences {
+  isEnabled: boolean;
   enabled: boolean;
   interval: number;
   updateAutoRefreshPreferences: (preferences: Partial<AutoRefreshPreferences>) => void;
@@ -70,8 +74,11 @@ export const useDisplayPreferences = (): DisplayPreferences => {
   const [preferences, setPreferences] = useState({
     showTrending: true,
     showSocialProof: true,
+    showTrendingBadges: true,
     showPreviews: true,
-    compactMode: false
+    compactMode: false,
+    infiniteScroll: true,
+    postsPerPage: 20
   });
 
   const updateDisplayPreferences = (newPreferences: Partial<DisplayPreferences>) => {
@@ -99,6 +106,7 @@ export const useDisplayPreferences = (): DisplayPreferences => {
 export const useAutoRefreshPreferences = (): AutoRefreshPreferences => {
   const [preferences, setPreferences] = useState({
     enabled: false,
+    isEnabled: false,
     interval: 30000 // 30 seconds
   });
 
@@ -120,6 +128,7 @@ export const useAutoRefreshPreferences = (): AutoRefreshPreferences => {
 
   return {
     ...preferences,
+    isEnabled: preferences.enabled,
     updateAutoRefreshPreferences
   };
 };

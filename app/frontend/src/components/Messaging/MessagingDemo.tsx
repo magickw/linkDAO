@@ -19,12 +19,10 @@ import {
 } from 'lucide-react';
 import { useAccount, useConnect } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
-import { 
-  MessagingWidget, 
-  messagingService, 
-  nftNegotiationBot,
-  notificationService 
-} from './index';
+import { MessagingWidget } from './index';
+import { messagingService } from '../../services/messagingService';
+import { nftNegotiationBot } from '../../services/nftNegotiationBot';
+import { notificationService } from '../../services/notificationService';
 
 interface FeatureCardProps {
   icon: React.ReactNode;

@@ -3,7 +3,7 @@ export { default as EnhancedFeedView } from './EnhancedFeedView';
 export { default as InfiniteScrollFeed, useInfiniteScroll } from './InfiniteScrollFeed';
 
 // Sorting and filtering
-export { default as FeedSortingTabs, FeedSortingHeader, TimeRangeSelector } from './FeedSortingTabs';
+export { FeedSortingHeader } from './FeedSortingTabs';
 
 // Engagement features
 export { default as LikedByModal } from './LikedByModal';

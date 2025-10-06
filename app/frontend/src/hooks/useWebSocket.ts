@@ -21,6 +21,7 @@ interface WebSocketHookReturn {
   // Connection state
   connectionState: ConnectionState;
   isConnected: boolean;
+  socket?: any; // Raw socket access (deprecated, use methods instead)
   
   // Connection methods
   connect: () => Promise<void>;
@@ -201,6 +202,7 @@ export const useWebSocket = (config: UseWebSocketConfig): WebSocketHookReturn =>
   return {
     connectionState,
     isConnected: connectionState.status === 'connected',
+    socket: serviceRef.current?.getSocket(),
     connect,
     disconnect,
     subscribe,

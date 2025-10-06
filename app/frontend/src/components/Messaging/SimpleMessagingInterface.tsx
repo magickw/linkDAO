@@ -67,12 +67,12 @@ const SimpleMessagingInterface: React.FC<SimpleMessagingInterfaceProps> = ({
         lastMessage: c.lastMessage ? {
           id: c.lastMessage.id,
           fromAddress: c.lastMessage.fromAddress,
-          toAddress: c.lastMessage.toAddress || '',
+          toAddress: c.participants.find(p => p !== c.lastMessage?.fromAddress) || '',
           content: c.lastMessage.content,
           timestamp: new Date(c.lastMessage.timestamp),
           isOwn: c.lastMessage.fromAddress === address
         } : undefined,
-        unreadCount: c.unreadCount || 0
+        unreadCount: c.unreadCounts?.[address || ''] || 0
       } as SimpleConversation));
 
       setConversations(mapped);

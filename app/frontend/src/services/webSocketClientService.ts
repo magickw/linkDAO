@@ -497,6 +497,10 @@ export class WebSocketClientService {
     return this.socket?.connected || false;
   }
 
+  getSocket() {
+    return this.socket;
+  }
+
   getQueuedMessageCount(): number {
     return this.messageQueue.length;
   }

@@ -16,7 +16,10 @@ export const MessagingPage: React.FC<MessagingPageProps> = ({ className = '' }) 
   const [showConversationList, setShowConversationList] = useState(true);
   
   const { walletInfo: { address } } = useWalletAuth();
-  const { socket, isConnected } = useWebSocket();
+  const { socket, isConnected } = useWebSocket({
+    walletAddress: address || '',
+    autoConnect: true
+  });
 
   // Check if mobile viewport
   useEffect(() => {
@@ -138,7 +141,7 @@ export const MessagingPage: React.FC<MessagingPageProps> = ({ className = '' }) 
           selectedConversation={selectedConversation}
           onConversationSelect={handleConversationSelect}
           onStartNewConversation={startNewConversation}
-          currentUserAddress={address}
+          currentUserAddress={address || ''}
         />
       </div>
 
@@ -151,7 +154,7 @@ export const MessagingPage: React.FC<MessagingPageProps> = ({ className = '' }) 
         {selectedConversation ? (
           <ConversationView
             conversation={selectedConversation}
-            currentUserAddress={address}
+            currentUserAddress={address || ''}
             onBackToList={handleBackToList}
             showBackButton={isMobile}
           />

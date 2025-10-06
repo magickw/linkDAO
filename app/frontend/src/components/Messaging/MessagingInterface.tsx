@@ -107,11 +107,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       participants: conv.participants,
       lastMessage: conv.lastMessage as any,
       lastActivity: new Date(conv.lastActivity),
-      unreadCount: conv.unreadCount || 0,
+      unreadCount: conv.unreadCounts?.[address || ''] || 0,
       isBlocked: false,
       isPinned: false,
       metadata: (conv as any).metadata || {},
-      isDirectMessage: conv.type === 'dm',
+      isDirectMessage: conv.metadata?.type === 'direct',
       participantStatus: {}
     } as ChatConversation));
 

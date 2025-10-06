@@ -275,19 +275,19 @@ export default function PersonalizedFeedEngine({
     let score = 0;
 
     // Followed users engagement
-    const followedEngagement = post.socialProof.followedUsersWhoEngaged.length;
+    const followedEngagement = post.socialProof?.followedUsersWhoEngaged?.length || 0;
     if (followedEngagement > 0) {
       score += Math.min(followedEngagement / 5, 0.5); // Max 0.5 for followed users
     }
 
     // Community leaders engagement
-    const leaderEngagement = post.socialProof.communityLeadersWhoEngaged.length;
+    const leaderEngagement = post.socialProof?.communityLeadersWhoEngaged?.length || 0;
     if (leaderEngagement > 0) {
       score += Math.min(leaderEngagement / 3, 0.3); // Max 0.3 for leaders
     }
 
     // Verified users engagement
-    const verifiedEngagement = post.socialProof.verifiedUsersWhoEngaged.length;
+    const verifiedEngagement = post.socialProof?.verifiedUsersWhoEngaged?.length || 0;
     if (verifiedEngagement > 0) {
       score += Math.min(verifiedEngagement / 2, 0.2); // Max 0.2 for verified
     }
@@ -322,7 +322,7 @@ export default function PersonalizedFeedEngine({
     let alignment = 0;
 
     // Curiosity alignment - new authors/communities for curious users
-    const isNewContent = !post.socialProof.followedUsersWhoEngaged.length;
+    const isNewContent = !(post.socialProof?.followedUsersWhoEngaged?.length || 0);
     if (behaviorScore.curiosity > 0.7 && isNewContent) alignment += 0.25;
     if (behaviorScore.curiosity < 0.3 && !isNewContent) alignment += 0.25;
 
@@ -335,7 +335,7 @@ export default function PersonalizedFeedEngine({
     if (behaviorScore.social > 0.7 && hasHighInteraction) alignment += 0.25;
 
     // Loyalty alignment - posts from followed creators for loyal users
-    const isFromFollowed = post.socialProof.followedUsersWhoEngaged.length > 0;
+    const isFromFollowed = (post.socialProof?.followedUsersWhoEngaged?.length || 0) > 0;
     if (behaviorScore.loyalty > 0.7 && isFromFollowed) alignment += 0.25;
 
     return alignment;

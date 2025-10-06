@@ -48,6 +48,12 @@ export interface ConversationPreview {
     timestamp: Date;
     fromAddress: string;
   };
+}
+
+export interface ChatHistoryRequest {
+  conversationId: string;
+  limit?: number;
+  offset?: number;
   unreadCount: number;
   isEncrypted: boolean;
 }

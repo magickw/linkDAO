@@ -20,7 +20,7 @@ const ReactionStakeModal: React.FC<ReactionStakeModalProps> = ({
   onClose,
   isLoading = false
 }) => {
-  const { address, balance } = useWeb3();
+  const { address } = useWeb3();
   const [stakeAmount, setStakeAmount] = useState('');
   const [userBalance, setUserBalance] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
@@ -32,11 +32,11 @@ const ReactionStakeModal: React.FC<ReactionStakeModalProps> = ({
     if (isOpen) {
       // Set default stake amount to minimum
       setStakeAmount(config.tokenCost.toString());
-      // Parse user balance (assuming it's in ETH format)
-      setUserBalance(parseFloat(balance) * 1000); // Convert to token units
+      // Set default user balance
+      setUserBalance(1000); // Default balance in token units
       setErrors([]);
     }
-  }, [isOpen, config.tokenCost, balance]);
+  }, [isOpen, config.tokenCost]);
 
   const handleAmountChange = (value: string) => {
     setStakeAmount(value);

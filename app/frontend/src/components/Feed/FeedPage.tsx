@@ -1,7 +1,7 @@
 // Mock FeedPage component for testing
 import React, { useState, useEffect } from 'react';
 import { FeedSortingHeader } from './FeedSortingTabs';
-import { FeedSortType } from '../../types/feed';
+import { FeedSortType, EnhancedPost } from '../../types/feed';
 import { useFeedSortingPreferences } from '../../hooks/useFeedPreferences';
 import { useIntelligentCache } from '../../hooks/useIntelligentCache';
 import { FeedService } from '../../services/feedService';
@@ -18,7 +18,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
   showHeader = true,
   enablePullToRefresh = false
 }) => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);

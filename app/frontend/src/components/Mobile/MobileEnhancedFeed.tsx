@@ -5,7 +5,8 @@ import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
 import { MobileVirtualScrolling } from './MobileVirtualScrolling';
 import { MobileEnhancedPostCard } from './MobileEnhancedPostCard';
 import { MobileEnhancedPostComposer } from './MobileEnhancedPostComposer';
-import { EnhancedPost, RichPostInput } from '@/types/enhancedPost';
+import { EnhancedPost } from '@/types/feed';
+import { RichPostInput } from '@/types/enhancedPost';
 import { ReactionType } from '@/types/tokenReaction';
 
 interface MobileEnhancedFeedProps {

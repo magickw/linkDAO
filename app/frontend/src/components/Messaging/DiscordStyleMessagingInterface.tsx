@@ -217,7 +217,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
       isOnline: false,
       isTyping: false,
       lastSeen: undefined,
-      unreadCount: c.unreadCount || 0,
+      unreadCount: c.unreadCounts?.[address || ''] || 0,
       lastMessage: c.lastMessage ? ({
         id: c.lastMessage.id,
         fromAddress: c.lastMessage.fromAddress,

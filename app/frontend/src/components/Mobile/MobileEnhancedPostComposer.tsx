@@ -280,7 +280,7 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
                       onUpload={handleMediaUpload}
                       maxFiles={10}
                       acceptedTypes={['image/*', 'video/*']}
-                      className="mobile-optimized"
+
                     />
                     
                     {media.length > 0 && (
@@ -378,9 +378,10 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
               {/* Hashtag and Mention Input */}
               <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
                 <HashtagMentionInput
+                  value={content}
+                  onChange={setContent}
                   onHashtagsChange={setHashtags}
                   onMentionsChange={setMentions}
-                  className="mobile-optimized"
                 />
               </div>
 

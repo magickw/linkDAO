@@ -7,6 +7,7 @@ interface HashtagMentionInputProps {
   onHashtagsChange: (hashtags: string[]) => void;
   onMentionsChange: (mentions: string[]) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
 export const HashtagMentionInput: React.FC<HashtagMentionInputProps> = ({
@@ -14,7 +15,8 @@ export const HashtagMentionInput: React.FC<HashtagMentionInputProps> = ({
   onChange,
   onHashtagsChange,
   onMentionsChange,
-  disabled
+  disabled,
+  placeholder
 }) => {
   useEffect(() => {
     // Extract hashtags and mentions from content

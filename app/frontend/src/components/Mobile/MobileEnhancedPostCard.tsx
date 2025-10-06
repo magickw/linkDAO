@@ -6,7 +6,7 @@ import { MobileTokenReactionSystem } from './MobileTokenReactionSystem';
 import { InlinePreviewRenderer } from '@/components/InlinePreviews/InlinePreviewRenderer';
 import SocialProofIndicator from '@/components/SocialProof/SocialProofIndicator';
 import TrendingBadge from '@/components/TrendingBadge/TrendingBadge';
-import { EnhancedPost } from '@/types/enhancedPost';
+import { EnhancedPost } from '@/types/feed';
 import { ReactionType } from '@/types/tokenReaction';
 
 interface MobileEnhancedPostCardProps {
@@ -140,7 +140,7 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
       {/* Trending Badge */}
       {post.trendingStatus && (
         <div className="absolute top-3 right-3 z-10">
-          <TrendingBadge level={post.trendingStatus === 'trending' ? 'hot' : post.trendingStatus} />
+          <TrendingBadge level={post.trendingStatus === 'trending' ? 'hot' : (post.trendingStatus as any)} />
         </div>
       )}
 
@@ -219,9 +219,9 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         </div>
 
         {/* Hashtags */}
-        {post.hashtags.length > 0 && (
+        {post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
-            {post.hashtags.map((hashtag, index) => (
+            {post.tags.map((hashtag, index) => (
               <span
                 key={index}
                 className="text-blue-500 dark:text-blue-400 text-sm font-medium"
@@ -233,27 +233,27 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         )}
 
         {/* Media */}
-        {post.media && post.media.length > 0 && (
+        {post.mediaCids && post.mediaCids.length > 0 && (
           <div className="mb-3 -mx-4">
-            {post.media.length === 1 ? (
+            {post.mediaCids.length === 1 ? (
               <img
-                src={post.media[0].preview}
+                src={`https://ipfs.io/ipfs/${post.mediaCids[0]}`}
                 alt="Post media"
                 className="w-full max-h-96 object-cover"
               />
             ) : (
               <div className="grid grid-cols-2 gap-1">
-                {post.media.slice(0, 4).map((media, index) => (
-                  <div key={media.id} className="relative">
+                {post.mediaCids.slice(0, 4).map((cid, index) => (
+                  <div key={cid} className="relative">
                     <img
-                      src={media.preview}
+                      src={`https://ipfs.io/ipfs/${cid}`}
                       alt={`Post media ${index + 1}`}
                       className="w-full h-32 object-cover"
                     />
-                    {index === 3 && post.media!.length > 4 && (
+                    {index === 3 && post.mediaCids!.length > 4 && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <span className="text-white font-semibold">
-                          +{post.media!.length - 4}
+                          +{post.mediaCids!.length - 4}
                         </span>
                       </div>
                     )}
@@ -290,14 +290,22 @@ export const MobileEnhancedPostCard: React.FC<MobileEnhancedPostCardProps> = ({
         {/* Engagement Stats */}
         <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
           <span>{post.views} views</span>
-          <span>{post.comments.length} comments</span>
-          <span>{post.shares.length} shares</span>
+          <span>{post.comments} comments</span>
+          <span>{post.shares} shares</span>
         </div>
 
         {/* Token Reactions */}
         <MobileTokenReactionSystem
           postId={post.id}
-          reactions={post.reactions}
+          reactions={post.reactions.map(r => ({
+            id: `${post.id}-${r.type}`,
+            postId: post.id,
+            userId: 'current-user',
+            type: r.type as ReactionType,
+            amount: r.totalAmount,
+            rewardsEarned: 0,
+            createdAt: new Date()
+          }))}
           userWallet="user-wallet" // This should come from context
           onReact={handleReaction}
           onViewReactors={handleViewReactors}

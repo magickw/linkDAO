@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ChatMessage, Conversation, ChatHistoryRequest } from '@/types/messaging';
+import { Message as ChatMessage, Conversation, ChatHistoryRequest } from '@/types/messaging';
 import { chatHistoryService } from '@/services/chatHistoryService';
 
 interface UseChatHistoryReturn {

@@ -37,7 +37,7 @@ const MessagingWidget: React.FC<MessagingWidgetProps> = ({
 
   useEffect(() => {
     if (!hookConversations) return;
-    const total = hookConversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+    const total = hookConversations.reduce((sum, conv) => sum + (conv.unreadCounts?.[address || ''] || 0), 0);
     setUnreadCount(total);
   }, [hookConversations]);
 
