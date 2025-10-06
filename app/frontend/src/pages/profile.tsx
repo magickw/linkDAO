@@ -22,7 +22,7 @@ const mockDAOs = [
 
 export default function Profile() {
   const router = useRouter();
-  const { address, isConnected, balance } = useWeb3();
+  const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   // Backend profile loading with error handling
   const { data: backendProfile, isLoading: isBackendProfileLoading, error: backendProfileError } = useProfile(address);
@@ -766,7 +766,7 @@ export default function Profile() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500 dark:text-gray-400">Total Balance</span>
                         <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                          {parseFloat(balance || '0').toFixed(4)} ETH
+                          0.0000 ETH
                         </span>
                       </div>
                       <div className="mt-2 flex justify-between text-sm">

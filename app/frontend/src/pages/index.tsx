@@ -18,7 +18,7 @@ import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucid
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Home() {
-  const { address, isConnected, balance } = useWeb3();
+  const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
   const { feed: feedData, isLoading: isFeedLoading } = useFeed(address);
   const { createPost, isLoading: isCreatingPost } = useCreatePost();

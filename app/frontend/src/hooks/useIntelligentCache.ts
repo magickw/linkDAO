@@ -21,7 +21,7 @@ export function useIntelligentCache() {
 
   // Initialize cache service
   useEffect(() => {
-    cacheServiceRef.current.initialize().catch(error => {
+    cacheServiceRef.current.initialize().catch((error: any) => {
       console.warn('Failed to initialize intelligent cache:', error);
     });
 

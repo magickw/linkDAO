@@ -131,8 +131,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       content: m.content,
       encryptedContent: (m as any).encryptedContent,
       timestamp: new Date(m.timestamp),
-      messageType: m.messageType as any,
-      isEncrypted: !!m.isEncrypted,
+      messageType: (m as any).messageType || 'text',
+      isEncrypted: !!(m as any).isEncrypted,
       isRead: (m as any).isRead || false,
       isDelivered: (m as any).isDelivered || false,
       metadata: (m as any).metadata || {}
@@ -308,10 +308,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       await sendMessageHook({
         conversationId: selectedConversation,
         fromAddress: address.toLowerCase(),
-        toAddress: otherParticipant,
         content: newMessage.trim(),
-        messageType: 'text',
-        isEncrypted: false
+        contentType: 'text',
+        deliveryStatus: 'sent'
       });
 
       setNewMessage('');
