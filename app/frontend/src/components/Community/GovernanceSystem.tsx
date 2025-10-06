@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDate, formatNumber, formatPercentage } from '../../utils/formatters';
-import { LoadingSpinner } from '../UI/LoadingSpinner';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
 
 interface Proposal {
   id: string;

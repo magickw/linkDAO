@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ConversationList } from './ConversationList';
 import { ConversationView } from './ConversationView';
 import { useWebSocket } from '../../hooks/useWebSocket';
-import { useWallet } from '../../hooks/useWallet';
+import { useWalletAuth } from '../../hooks/useWalletAuth';
 import { Conversation, Message } from '../../types/messaging';
 
 interface MessagingPageProps {
@@ -15,7 +15,7 @@ export const MessagingPage: React.FC<MessagingPageProps> = ({ className = '' }) 
   const [isMobile, setIsMobile] = useState(false);
   const [showConversationList, setShowConversationList] = useState(true);
   
-  const { address } = useWallet();
+  const { walletInfo: { address } } = useWalletAuth();
   const { socket, isConnected } = useWebSocket();
 
   // Check if mobile viewport

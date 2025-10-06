@@ -1,41 +1,14 @@
-/**
- * Messaging Components - Centralized exports
- * Comprehensive wallet-to-wallet messaging system
- */
-
-export { default as MessagingInterface } from './MessagingInterface';
-export { default as DiscordStyleMessagingInterface } from './DiscordStyleMessagingInterface';
+export { MessagingPage } from './MessagingPage';
+export { ConversationList } from './ConversationList';
+export { ConversationView } from './ConversationView';
+export { MessageBubble } from './MessageBubble';
+export { MessageInput } from './MessageInput';
+export { EmojiPicker } from './EmojiPicker';
+export { TypingIndicator } from './TypingIndicator';
+export { EncryptionIndicator } from './EncryptionIndicator';
+export { KeyExchangeModal } from './KeyExchangeModal';
+export { ConversationSearchModal } from './ConversationSearchModal';
+export { ConversationSettingsModal } from './ConversationSettingsModal';
+export { OfflineIndicator } from './OfflineIndicator';
 export { default as MessagingWidget } from './MessagingWidget';
-export { default as AddressSearch } from './AddressSearch';
-
-// Re-export services for convenience
-export { default as messagingService } from '../../services/messagingService';
-export { default as nftNegotiationBot } from '../../services/nftNegotiationBot';
-export { default as multichainResolver } from '../../services/multichainResolver';
-export { default as notificationService } from '../../services/notificationService';
-
-// Export types
-export type {
-  ChatMessage,
-  ChatConversation,
-  UserPresence,
-  BlockedUser,
-  MessageNotification
-} from '../../services/messagingService';
-
-export type {
-  NFTOffer,
-  BotResponse
-} from '../../services/nftNegotiationBot';
-
-export type {
-  ChainInfo,
-  ResolvedAddress,
-  AddressSearchResult
-} from '../../services/multichainResolver';
-
-export type {
-  NotificationSettings,
-  MessageNotificationData,
-  BlockExplorerNotification
-} from '../../services/notificationService';
+export { default as DiscordStyleMessagingInterface } from './DiscordStyleMessagingInterface';

@@ -75,7 +75,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
       // Warm cache with frequently accessed data
       const relatedCommunities = await fetchRelatedCommunities();
       if (relatedCommunities.length > 0) {
-        await communityCacheService.warmCache(relatedCommunities.map(c => c.id));
+        await communityCacheService.warmCache(relatedCommunities.map((c: any) => c.id));
       }
     } catch (error) {
       console.warn('Failed to preload community content:', error);
@@ -159,7 +159,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
           posts = data.posts;
           
           // Cache the posts
-          communityCacheService.cacheCommunityPosts(communityId, posts, page, sort);
+          communityCacheService.cacheCommunityPosts(communityId, posts as any[], page, sort);
           performanceRef.current.networkRequests++;
         }
       } catch (error) {
@@ -169,7 +169,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
     }
 
     // Render posts
-    renderPosts(element, posts);
+    renderPosts(element, posts as any[]);
   }, [communityId]);
 
   // Load community members with caching
@@ -189,7 +189,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
           members = data.members;
           
           // Cache the members
-          communityCacheService.cacheCommunityMembers(communityId, members, filters);
+          communityCacheService.cacheCommunityMembers(communityId, members as any[], filters);
           performanceRef.current.networkRequests++;
         }
       } catch (error) {
@@ -199,7 +199,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
     }
 
     // Render members
-    renderMembers(element, members);
+    renderMembers(element, members as any[]);
   }, [communityId]);
 
   // Load community stats with caching
@@ -239,8 +239,8 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
     const cacheKey = `image:${originalSrc}`;
     const cachedMetadata = communityCacheService.get(cacheKey);
     
-    if (cachedMetadata?.optimizedUrl) {
-      img.src = cachedMetadata.optimizedUrl;
+    if ((cachedMetadata as any)?.optimizedUrl) {
+      img.src = (cachedMetadata as any).optimizedUrl;
       return;
     }
 

@@ -15,12 +15,14 @@ interface Rule {
 }
 
 interface CommunityRulesProps {
+  communityId: string;
   rules: string[];
   canEdit: boolean;
   onRulesUpdate: (rules: string[]) => void;
 }
 
 export const CommunityRules: React.FC<CommunityRulesProps> = ({
+  communityId,
   rules,
   canEdit,
   onRulesUpdate
