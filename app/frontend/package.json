@@ -24,7 +24,7 @@
     "test:feed:performance": "jest --config jest.feed.config.js --testPathPattern=performance/Feed",
     "test:feed:watch": "jest --config jest.feed.config.js --watch",
     "test:feed:coverage": "jest --config jest.feed.config.js --coverage",
-    "test:feed:runner": "ts-node src/__tests__/Feed/runFeedTests.ts",
+    "test:feed:runner": "ts-node src/__tests__/feed/runFeedTests.ts",
     "test:comprehensive": "ts-node src/__tests__/testRunner.ts",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:performance && npm run test:accessibility && npm run test:realtime",
     "integration-test": "node scripts/integration-test.js",

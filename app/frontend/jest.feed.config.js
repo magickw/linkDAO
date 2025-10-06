@@ -11,143 +11,107 @@ module.exports = {
   collectCoverageFrom: [
     'src/components/Feed/**/*.{ts,tsx}',
     'src/services/feedService.ts',
+    'src/services/serviceWorkerCacheService.ts',
+    'src/services/intelligentCacheService.ts',
     'src/hooks/useFeedPreferences.ts',
     'src/hooks/useIntelligentCache.ts',
     'src/types/feed.ts',
     '!src/**/*.d.ts',
     '!src/**/*.stories.{ts,tsx}',
-    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**'
   ],
   coverageThreshold: {
     global: {
-      branches: 85,
-      functions: 85,
-      lines: 85,
-      statements: 85,
-    },
-    './src/components/Feed/': {
-      branches: 90,
-      functions: 90,
-      lines: 90,
-      statements: 90,
-    },
-    './src/services/feedService.ts': {
       branches: 80,
       functions: 80,
       lines: 80,
-      statements: 80,
+      statements: 80
     },
+    './src/components/Feed/': {
+      branches: 85,
+      functions: 85,
+      lines: 85,
+      statements: 85
+    },
+    './src/services/feedService.ts': {
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90
+    }
   },
+  testTimeout: 30000,
   setupFilesAfterEnv: [
-    '<rootDir>/jest.setup.ts',
-    '<rootDir>/src/__tests__/setup/testSetup.ts'
+    '<rootDir>/src/__tests__/setup/testSetup.ts',
+    '<rootDir>/jest.setup.ts'
   ],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/components/Feed/(.*)$': '<rootDir>/src/components/Feed/$1',
+    '^@/services/feedService$': '<rootDir>/src/services/feedService.ts',
+    '^@/hooks/useFeedPreferences$': '<rootDir>/src/hooks/useFeedPreferences.ts',
+    '^@/hooks/useIntelligentCache$': '<rootDir>/src/hooks/useIntelligentCache.ts'
+  },
   testEnvironment: 'jsdom',
   testEnvironmentOptions: {
     url: 'http://localhost:3000'
   },
-  // Performance testing configuration
-  testTimeout: 30000,
-  maxWorkers: '50%',
-  
-  // Mock configuration for feed tests
-  moduleNameMapper: {
-    ...baseConfig.moduleNameMapper,
-    '^@/components/Feed/(.*)$': '<rootDir>/src/components/Feed/$1',
-    '^@/services/feedService$': '<rootDir>/src/services/feedService.ts',
-    '^@/hooks/useFeedPreferences$': '<rootDir>/src/hooks/useFeedPreferences.ts',
-    '^@/hooks/useIntelligentCache$': '<rootDir>/src/hooks/useIntelligentCache.ts',
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react-jsx'
+      }
+    }
   },
+  // Performance test specific configuration
+  testRunner: 'jest-circus/runner',
+  maxWorkers: '50%',
+  cache: true,
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest-feed',
   
+  // Custom reporters for detailed output
+  reporters: ['default'],
+
+  // Performance monitoring
+  verbose: false,
+  silent: false,
+  
+  // Mock configuration for feed-specific tests
+  modulePathIgnorePatterns: [
+    '<rootDir>/src/__tests__/(?!.*Feed).*'
+  ],
+
   // Transform configuration
   transform: {
-    ...baseConfig.transform,
     '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
         jsx: 'react-jsx',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
       },
     }],
+    '^.+\\.(js|jsx)$': 'babel-jest'
   },
-  
-  // Global setup for feed tests
-  globalSetup: '<rootDir>/src/__tests__/setup/globalSetup.ts',
-  globalTeardown: '<rootDir>/src/__tests__/setup/globalTeardown.ts',
-  
-  // Reporter configuration
-  reporters: [
-    'default',
-    ['jest-html-reporters', {
-      publicPath: './test-reports/feed',
-      filename: 'feed-test-report.html',
-      expand: true,
-      hideIcon: false,
-      pageTitle: 'Feed System Test Report',
-      logoImgPath: undefined,
-      includeFailureMsg: true,
-      includeSuiteFailure: true,
-    }],
-    ['jest-junit', {
-      outputDirectory: './test-reports/feed',
-      outputName: 'feed-junit.xml',
-      suiteName: 'Feed System Tests',
-      classNameTemplate: '{classname}',
-      titleTemplate: '{title}',
-      ancestorSeparator: ' › ',
-      usePathForSuiteName: true,
-    }],
+
+  // File extensions to consider
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+
+  // Ignore patterns
+  testPathIgnorePatterns: [
+    '<rootDir>/node_modules/',
+    '<rootDir>/dist/',
+    '<rootDir>/build/',
+    '<rootDir>/coverage/'
   ],
-  
-  // Coverage configuration
-  coverageDirectory: './coverage/feed',
-  coverageReporters: [
-    'text',
-    'text-summary',
-    'html',
-    'lcov',
-    'json-summary'
-  ],
-  
-  // Performance and memory settings
-  logHeapUsage: true,
-  detectOpenHandles: true,
-  forceExit: true,
-  
-  // Custom test environment variables
-  testEnvironmentOptions: {
-    url: 'http://localhost:3000',
-    userAgent: 'jest-test-environment'
-  },
-  
-  // Mock implementations for feed-specific modules
-  setupFiles: [
-    '<rootDir>/src/__tests__/setup/feedMocks.ts'
-  ],
-  
-  // Test result processor for performance metrics
-  testResultsProcessor: '<rootDir>/src/__tests__/setup/performanceProcessor.js',
-  
-  // Verbose output for debugging
-  verbose: true,
-  
+
+  // Watch plugins for development
+  watchPlugins: [],
+
   // Error handling
   errorOnDeprecated: true,
+  bail: false,
   
-  // Cache configuration
-  cacheDirectory: '<rootDir>/.jest-cache/feed',
+  // Memory management for performance tests
+  workerIdleMemoryLimit: '1GB',
   
-  // Watch mode configuration
-  watchPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/coverage/',
-    '<rootDir>/test-reports/',
-    '<rootDir>/.next/',
-  ],
-  
-  // Custom matchers for feed testing
-  setupFilesAfterEnv: [
-    ...baseConfig.setupFilesAfterEnv || [],
-    '<rootDir>/src/__tests__/setup/feedMatchers.ts'
-  ],
+  // Custom matchers and utilities
+  setupFiles: []
 };

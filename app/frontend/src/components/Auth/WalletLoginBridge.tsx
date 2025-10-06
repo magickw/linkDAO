@@ -27,6 +27,10 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
   const lastAddressRef = useRef<string | undefined>();
   const hasTriedLoginRef = useRef(false);
 
+  // Prevent page refresh loops by tracking failed attempts
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const maxFailedAttempts = 3;
+
   // Simple notification function (will be enhanced when ToastProvider is available)
   const notify = (message: string, type: 'info' | 'success' | 'warning' | 'error') => {
     console.log(`[${type.toUpperCase()}] ${message}`);
@@ -136,10 +140,6 @@ export const WalletLoginBridge: React.FC<WalletLoginBridgeProps> = ({
       console.log('User authenticated successfully, resetting login attempt flag');
     }
   }, [isAuthenticated]);
-
-  // Prevent page refresh loops by tracking failed attempts
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const maxFailedAttempts = 3;
 
   useEffect(() => {
     if (failedAttempts >= maxFailedAttempts) {

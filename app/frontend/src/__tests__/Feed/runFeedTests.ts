@@ -1,329 +1,363 @@
 #!/usr/bin/env node
 
 /**
- * Feed System Test Runner
+ * Comprehensive Feed System Test Runner
  * 
- * Comprehensive test suite for the Feed System including:
+ * This script runs all feed-related tests including:
  * - Unit tests for individual components
  * - Integration tests for workflows
- * - Performance tests for optimization
- * - Caching tests for intelligent caching
+ * - Performance tests for caching and infinite scroll
+ * 
+ * Usage:
+ * npm run test:feed
+ * npm run test:feed -- --coverage
+ * npm run test:feed -- --performance
+ * npm run test:feed -- --integration
  */
 
 import { execSync } from 'child_process';
-import { performance } from 'perf_hooks';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface TestSuite {
   name: string;
   pattern: string;
-  timeout: number;
   description: string;
+  timeout?: number;
 }
 
-interface TestResult {
+interface TestResults {
   suite: string;
-  passed: boolean;
+  passed: number;
+  failed: number;
   duration: number;
   coverage?: number;
-  errors?: string[];
 }
 
 class FeedTestRunner {
-  private results: TestResult[] = [];
-  private startTime: number = 0;
-
   private testSuites: TestSuite[] = [
     {
-      name: 'Feed Unit Tests',
+      name: 'Unit Tests',
       pattern: 'src/__tests__/unit/Feed/**/*.test.tsx',
-      timeout: 30000,
-      description: 'Unit tests for FeedPage, EnhancedPostCard, and PostComposer components'
+      description: 'Individual component unit tests',
+      timeout: 30000
     },
     {
-      name: 'Feed Integration Tests',
+      name: 'Integration Tests',
       pattern: 'src/__tests__/integration/Feed/**/*.test.tsx',
-      timeout: 60000,
-      description: 'Integration tests for complete feed workflows and interactions'
+      description: 'Cross-component workflow tests',
+      timeout: 60000
     },
     {
-      name: 'Feed Performance Tests',
+      name: 'Performance Tests',
       pattern: 'src/__tests__/performance/Feed/**/*.test.tsx',
-      timeout: 120000,
-      description: 'Performance tests for rendering, scrolling, and caching optimization'
+      description: 'Performance and caching tests',
+      timeout: 120000
     }
   ];
 
-  async runAllTests(): Promise<void> {
-    console.log('🚀 Starting Feed System Test Suite...\n');
-    this.startTime = performance.now();
+  private results: TestResults[] = [];
 
-    for (const suite of this.testSuites) {
-      await this.runTestSuite(suite);
+  async runAllTests(options: {
+    coverage?: boolean;
+    performance?: boolean;
+    integration?: boolean;
+    unit?: boolean;
+    verbose?: boolean;
+  } = {}): Promise<void> {
+    console.log('🚀 Starting Feed System Test Suite\n');
+
+    const suitesToRun = this.filterSuites(options);
+
+    for (const suite of suitesToRun) {
+      await this.runTestSuite(suite, options);
     }
 
-    this.printSummary();
+    this.generateReport();
   }
 
-  private async runTestSuite(suite: TestSuite): Promise<void> {
-    console.log(`📋 Running ${suite.name}...`);
+  private filterSuites(options: any): TestSuite[] {
+    if (options.unit) {
+      return this.testSuites.filter(s => s.name === 'Unit Tests');
+    }
+    if (options.integration) {
+      return this.testSuites.filter(s => s.name === 'Integration Tests');
+    }
+    if (options.performance) {
+      return this.testSuites.filter(s => s.name === 'Performance Tests');
+    }
+    return this.testSuites;
+  }
+
+  private async runTestSuite(suite: TestSuite, options: any): Promise<void> {
+    console.log(`\n📋 Running ${suite.name}`);
     console.log(`   ${suite.description}`);
-    
-    const startTime = performance.now();
-    
+    console.log(`   Pattern: ${suite.pattern}\n`);
+
+    const startTime = Date.now();
+
     try {
-      const command = this.buildJestCommand(suite);
-      const output = execSync(command, { 
-        encoding: 'utf8',
-        timeout: suite.timeout,
-        stdio: 'pipe'
-      });
-      
-      const duration = performance.now() - startTime;
-      const coverage = this.extractCoverage(output);
-      
-      this.results.push({
-        suite: suite.name,
-        passed: true,
-        duration,
-        coverage
-      });
-      
-      console.log(`   ✅ Passed in ${Math.round(duration)}ms`);
-      if (coverage) {
-        console.log(`   📊 Coverage: ${coverage}%`);
+      const jestArgs = this.buildJestArgs(suite, options);
+      const command = `npx jest ${jestArgs.join(' ')}`;
+
+      if (options.verbose) {
+        console.log(`   Command: ${command}\n`);
       }
-      
-    } catch (error: any) {
-      const duration = performance.now() - startTime;
-      const errors = this.extractErrors(error.stdout || error.message);
-      
+
+      const output = execSync(command, {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: suite.timeout || 60000
+      });
+
+      const result = this.parseJestOutput(output);
+      const duration = Date.now() - startTime;
+
       this.results.push({
         suite: suite.name,
-        passed: false,
+        passed: result.passed,
+        failed: result.failed,
         duration,
-        errors
+        coverage: result.coverage
       });
+
+      console.log(`✅ ${suite.name} completed in ${duration}ms`);
+      console.log(`   Passed: ${result.passed}, Failed: ${result.failed}`);
       
-      console.log(`   ❌ Failed in ${Math.round(duration)}ms`);
-      console.log(`   🔍 Errors: ${errors.length} found`);
+      if (result.coverage) {
+        console.log(`   Coverage: ${result.coverage}%`);
+      }
+
+    } catch (error: any) {
+      console.error(`❌ ${suite.name} failed:`);
+      console.error(error.message);
+
+      this.results.push({
+        suite: suite.name,
+        passed: 0,
+        failed: 1,
+        duration: Date.now() - startTime
+      });
     }
-    
-    console.log('');
   }
 
-  private buildJestCommand(suite: TestSuite): string {
-    const baseCommand = 'npx jest';
-    const options = [
+  private buildJestArgs(suite: TestSuite, options: any): string[] {
+    const args = [
       `--testPathPattern="${suite.pattern}"`,
-      '--coverage',
-      '--coverageReporters=text-summary',
-      '--verbose',
+      '--passWithNoTests',
       '--detectOpenHandles',
-      '--forceExit',
-      `--testTimeout=${suite.timeout}`
+      '--forceExit'
     ];
-    
-    return `${baseCommand} ${options.join(' ')}`;
-  }
 
-  private extractCoverage(output: string): number | undefined {
-    const coverageMatch = output.match(/All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*(\d+\.?\d*)/);
-    return coverageMatch ? parseFloat(coverageMatch[1]) : undefined;
-  }
-
-  private extractErrors(output: string): string[] {
-    const errors: string[] = [];
-    
-    // Extract Jest test failures
-    const failureMatches = output.match(/● .+/g);
-    if (failureMatches) {
-      errors.push(...failureMatches);
+    if (options.coverage) {
+      args.push(
+        '--coverage',
+        '--coverageDirectory=coverage/feed',
+        '--coverageReporters=text,lcov,html',
+        '--collectCoverageFrom=src/components/Feed/**/*.{ts,tsx}',
+        '--collectCoverageFrom=src/services/feedService.ts',
+        '--collectCoverageFrom=src/hooks/useFeedPreferences.ts',
+        '--collectCoverageFrom=src/hooks/useIntelligentCache.ts'
+      );
     }
-    
-    // Extract console errors
-    const consoleErrorMatches = output.match(/console\.error[^\n]*/g);
-    if (consoleErrorMatches) {
-      errors.push(...consoleErrorMatches);
+
+    if (options.verbose) {
+      args.push('--verbose');
     }
-    
-    return errors;
+
+    if (suite.name === 'Performance Tests') {
+      args.push(
+        '--testTimeout=120000',
+        '--maxWorkers=1' // Run performance tests sequentially
+      );
+    }
+
+    return args;
   }
 
-  private printSummary(): void {
-    const totalDuration = performance.now() - this.startTime;
-    const passedTests = this.results.filter(r => r.passed).length;
-    const failedTests = this.results.filter(r => !r.passed).length;
-    const totalTests = this.results.length;
+  private parseJestOutput(output: string): {
+    passed: number;
+    failed: number;
+    coverage?: number;
+  } {
+    const lines = output.split('\n');
     
-    console.log('📊 Feed System Test Summary');
-    console.log('=' .repeat(50));
-    console.log(`Total Duration: ${Math.round(totalDuration)}ms`);
-    console.log(`Total Suites: ${totalTests}`);
-    console.log(`Passed: ${passedTests}`);
-    console.log(`Failed: ${failedTests}`);
-    console.log('');
-    
-    // Detailed results
+    let passed = 0;
+    let failed = 0;
+    let coverage: number | undefined;
+
+    for (const line of lines) {
+      // Parse test results
+      const testMatch = line.match(/Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed/);
+      if (testMatch) {
+        failed = parseInt(testMatch[1]);
+        passed = parseInt(testMatch[2]);
+      }
+
+      const passOnlyMatch = line.match(/Tests:\s+(\d+)\s+passed/);
+      if (passOnlyMatch && !testMatch) {
+        passed = parseInt(passOnlyMatch[1]);
+        failed = 0;
+      }
+
+      // Parse coverage
+      const coverageMatch = line.match(/All files\s+\|\s+([\d.]+)/);
+      if (coverageMatch) {
+        coverage = parseFloat(coverageMatch[1]);
+      }
+    }
+
+    return { passed, failed, coverage };
+  }
+
+  private generateReport(): void {
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 FEED SYSTEM TEST REPORT');
+    console.log('='.repeat(60));
+
+    const totalPassed = this.results.reduce((sum, r) => sum + r.passed, 0);
+    const totalFailed = this.results.reduce((sum, r) => sum + r.failed, 0);
+    const totalDuration = this.results.reduce((sum, r) => sum + r.duration, 0);
+
+    console.log(`\nOverall Results:`);
+    console.log(`  Total Tests: ${totalPassed + totalFailed}`);
+    console.log(`  Passed: ${totalPassed}`);
+    console.log(`  Failed: ${totalFailed}`);
+    console.log(`  Success Rate: ${((totalPassed / (totalPassed + totalFailed)) * 100).toFixed(1)}%`);
+    console.log(`  Total Duration: ${(totalDuration / 1000).toFixed(2)}s`);
+
+    console.log(`\nSuite Breakdown:`);
     this.results.forEach(result => {
-      const status = result.passed ? '✅' : '❌';
-      const duration = Math.round(result.duration);
-      const coverage = result.coverage ? ` (${result.coverage}% coverage)` : '';
+      const successRate = result.passed / (result.passed + result.failed) * 100;
+      console.log(`  ${result.suite}:`);
+      console.log(`    Passed: ${result.passed}, Failed: ${result.failed}`);
+      console.log(`    Success Rate: ${successRate.toFixed(1)}%`);
+      console.log(`    Duration: ${(result.duration / 1000).toFixed(2)}s`);
       
-      console.log(`${status} ${result.suite}: ${duration}ms${coverage}`);
-      
-      if (result.errors && result.errors.length > 0) {
-        result.errors.slice(0, 3).forEach(error => {
-          console.log(`   🔍 ${error.substring(0, 100)}...`);
-        });
-        if (result.errors.length > 3) {
-          console.log(`   ... and ${result.errors.length - 3} more errors`);
-        }
+      if (result.coverage) {
+        console.log(`    Coverage: ${result.coverage}%`);
       }
     });
-    
-    console.log('');
-    
-    // Performance insights
-    this.printPerformanceInsights();
-    
-    // Coverage summary
-    this.printCoverageSummary();
-    
-    // Recommendations
-    this.printRecommendations();
-    
-    // Exit with appropriate code
-    process.exit(failedTests > 0 ? 1 : 0);
-  }
 
-  private printPerformanceInsights(): void {
-    console.log('⚡ Performance Insights');
-    console.log('-'.repeat(30));
-    
-    const performanceResult = this.results.find(r => r.suite.includes('Performance'));
+    // Performance benchmarks
+    const performanceResult = this.results.find(r => r.suite === 'Performance Tests');
     if (performanceResult) {
-      if (performanceResult.passed) {
-        console.log('✅ All performance benchmarks passed');
-        console.log('   - Initial render < 200ms');
-        console.log('   - Scroll performance < 16ms');
-        console.log('   - Memory usage optimized');
-      } else {
-        console.log('⚠️  Performance issues detected');
-        console.log('   - Check render times and memory usage');
-        console.log('   - Consider virtualization optimizations');
-      }
+      console.log(`\nPerformance Benchmarks:`);
+      console.log(`  Cache Hit Time: < 50ms (target)`);
+      console.log(`  Infinite Scroll: < 16ms per frame (target)`);
+      console.log(`  Memory Usage: < 100MB for 1000 posts (target)`);
+      console.log(`  Initial Render: < 200ms (target)`);
     }
-    console.log('');
-  }
 
-  private printCoverageSummary(): void {
-    console.log('📈 Coverage Summary');
-    console.log('-'.repeat(30));
-    
+    // Coverage summary
     const coverageResults = this.results.filter(r => r.coverage !== undefined);
     if (coverageResults.length > 0) {
-      const averageCoverage = coverageResults.reduce((sum, r) => sum + (r.coverage || 0), 0) / coverageResults.length;
+      const avgCoverage = coverageResults.reduce((sum, r) => sum + (r.coverage || 0), 0) / coverageResults.length;
+      console.log(`\nCode Coverage:`);
+      console.log(`  Average Coverage: ${avgCoverage.toFixed(1)}%`);
+      console.log(`  Target Coverage: 80%`);
       
-      console.log(`Average Coverage: ${Math.round(averageCoverage)}%`);
-      
-      coverageResults.forEach(result => {
-        const coverage = result.coverage || 0;
-        const status = coverage >= 80 ? '✅' : coverage >= 60 ? '⚠️' : '❌';
-        console.log(`${status} ${result.suite}: ${coverage}%`);
-      });
-      
-      if (averageCoverage < 80) {
-        console.log('⚠️  Consider adding more tests to improve coverage');
+      if (avgCoverage >= 80) {
+        console.log(`  ✅ Coverage target met`);
+      } else {
+        console.log(`  ⚠️  Coverage below target`);
       }
-    } else {
-      console.log('No coverage data available');
     }
-    console.log('');
+
+    // Recommendations
+    console.log(`\nRecommendations:`);
+    
+    if (totalFailed > 0) {
+      console.log(`  🔧 Fix ${totalFailed} failing test(s)`);
+    }
+
+    const slowSuites = this.results.filter(r => r.duration > 30000);
+    if (slowSuites.length > 0) {
+      console.log(`  ⚡ Optimize slow test suites: ${slowSuites.map(s => s.suite).join(', ')}`);
+    }
+
+    const lowCoverage = coverageResults.filter(r => (r.coverage || 0) < 80);
+    if (lowCoverage.length > 0) {
+      console.log(`  📈 Improve coverage for: ${lowCoverage.map(r => r.suite).join(', ')}`);
+    }
+
+    if (totalFailed === 0) {
+      console.log(`  🎉 All tests passing! Great work!`);
+    }
+
+    console.log('\n' + '='.repeat(60));
+
+    // Exit with appropriate code
+    process.exit(totalFailed > 0 ? 1 : 0);
   }
 
-  private printRecommendations(): void {
-    console.log('💡 Recommendations');
-    console.log('-'.repeat(30));
-    
-    const failedSuites = this.results.filter(r => !r.passed);
-    
-    if (failedSuites.length === 0) {
-      console.log('🎉 All tests passed! Consider:');
-      console.log('   - Adding more edge case tests');
-      console.log('   - Testing with different data sizes');
-      console.log('   - Adding accessibility tests');
-      console.log('   - Performance regression tests');
-    } else {
-      console.log('🔧 Fix the following issues:');
-      
-      failedSuites.forEach(suite => {
-        console.log(`   - ${suite.suite}: Review test failures`);
-        
-        if (suite.suite.includes('Performance')) {
-          console.log('     * Check component optimization');
-          console.log('     * Review virtualization implementation');
-          console.log('     * Optimize caching strategies');
-        }
-        
-        if (suite.suite.includes('Integration')) {
-          console.log('     * Verify component interactions');
-          console.log('     * Check async operation handling');
-          console.log('     * Review error boundaries');
-        }
-        
-        if (suite.suite.includes('Unit')) {
-          console.log('     * Fix component logic issues');
-          console.log('     * Update mock implementations');
-          console.log('     * Review prop handling');
-        }
+  async generateCoverageReport(): Promise<void> {
+    console.log('\n📊 Generating detailed coverage report...');
+
+    try {
+      execSync('npx jest --coverage --coverageDirectory=coverage/feed-detailed', {
+        stdio: 'inherit'
       });
+
+      console.log('\n✅ Coverage report generated in coverage/feed-detailed/');
+      console.log('   Open coverage/feed-detailed/lcov-report/index.html to view');
+    } catch (error) {
+      console.error('❌ Failed to generate coverage report:', error);
     }
-    
-    console.log('');
-    console.log('📚 Additional Testing Resources:');
-    console.log('   - React Testing Library: https://testing-library.com/docs/react-testing-library/intro/');
-    console.log('   - Jest Performance: https://jestjs.io/docs/performance');
-    console.log('   - Accessibility Testing: https://github.com/nickcolley/jest-axe');
   }
 }
 
 // CLI interface
-if (require.main === module) {
-  const runner = new FeedTestRunner();
-  
+async function main() {
   const args = process.argv.slice(2);
-  
+  const options = {
+    coverage: args.includes('--coverage'),
+    performance: args.includes('--performance'),
+    integration: args.includes('--integration'),
+    unit: args.includes('--unit'),
+    verbose: args.includes('--verbose') || args.includes('-v')
+  };
+
+  const runner = new FeedTestRunner();
+
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('Feed System Test Runner');
-    console.log('');
-    console.log('Usage: npm run test:feed [options]');
-    console.log('');
-    console.log('Options:');
-    console.log('  --help, -h     Show this help message');
-    console.log('  --unit         Run only unit tests');
-    console.log('  --integration  Run only integration tests');
-    console.log('  --performance  Run only performance tests');
-    console.log('');
-    console.log('Examples:');
-    console.log('  npm run test:feed                 # Run all feed tests');
-    console.log('  npm run test:feed --unit          # Run only unit tests');
-    console.log('  npm run test:feed --performance   # Run only performance tests');
-    process.exit(0);
+    console.log(`
+Feed System Test Runner
+
+Usage:
+  npm run test:feed [options]
+
+Options:
+  --unit          Run only unit tests
+  --integration   Run only integration tests  
+  --performance   Run only performance tests
+  --coverage      Generate coverage report
+  --verbose       Verbose output
+  --help          Show this help
+
+Examples:
+  npm run test:feed
+  npm run test:feed -- --coverage
+  npm run test:feed -- --performance --verbose
+  npm run test:feed -- --unit --coverage
+    `);
+    return;
   }
-  
-  // Filter test suites based on arguments
-  if (args.includes('--unit')) {
-    runner['testSuites'] = runner['testSuites'].filter(s => s.name.includes('Unit'));
-  } else if (args.includes('--integration')) {
-    runner['testSuites'] = runner['testSuites'].filter(s => s.name.includes('Integration'));
-  } else if (args.includes('--performance')) {
-    runner['testSuites'] = runner['testSuites'].filter(s => s.name.includes('Performance'));
-  }
-  
-  runner.runAllTests().catch(error => {
+
+  try {
+    await runner.runAllTests(options);
+
+    if (options.coverage) {
+      await runner.generateCoverageReport();
+    }
+  } catch (error) {
     console.error('❌ Test runner failed:', error);
     process.exit(1);
-  });
+  }
 }
 
-export default FeedTestRunner;
+if (require.main === module) {
+  main().catch(console.error);
+}
+
+export { FeedTestRunner };

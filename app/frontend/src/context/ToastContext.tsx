@@ -1,70 +1,86 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import ToastNotification from '@/components/ToastNotification';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-type ToastType = 'success' | 'error' | 'info' | 'warning';
-
-interface Toast {
+export interface Toast {
   id: string;
   message: string;
-  type: ToastType;
+  type: 'success' | 'error' | 'warning' | 'info';
   duration?: number;
 }
 
-type ToastAction =
-  | { type: 'ADD_TOAST'; payload: Omit<Toast, 'id'> }
-  | { type: 'REMOVE_TOAST'; payload: { id: string } };
-
 interface ToastContextType {
-  addToast: (message: string, type: ToastType, duration?: number) => void;
+  toasts: Toast[];
+  addToast: (message: string, type: Toast['type'], duration?: number) => void;
+  removeToast: (id: string) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-const toastReducer = (state: Toast[], action: ToastAction): Toast[] => {
-  switch (action.type) {
-    case 'ADD_TOAST':
-      return [...state, { ...action.payload, id: Math.random().toString(36).substr(2, 9) }];
-    case 'REMOVE_TOAST':
-      return state.filter(toast => toast.id !== action.payload.id);
-    default:
-      return state;
-  }
-};
+interface ToastProviderProps {
+  children: ReactNode;
+}
 
-export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [toasts, dispatch] = useReducer(toastReducer, []);
+export function ToastProvider({ children }: ToastProviderProps) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = (message: string, type: ToastType, duration?: number) => {
-    dispatch({ type: 'ADD_TOAST', payload: { message, type, duration } });
+  const addToast = (message: string, type: Toast['type'], duration = 5000) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const toast: Toast = { id, message, type, duration };
+    
+    setToasts(prev => [...prev, toast]);
+
+    if (duration > 0) {
+      setTimeout(() => {
+        removeToast(id);
+      }, duration);
+    }
   };
 
   const removeToast = (id: string) => {
-    dispatch({ type: 'REMOVE_TOAST', payload: { id } });
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  const value: ToastContextType = {
+    toasts,
+    addToast,
+    removeToast,
   };
 
   return (
-    <ToastContext.Provider value={{ addToast }}>
+    <ToastContext.Provider value={value}>
       {children}
+      {/* Toast Container */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map(toast => (
-          <ToastNotification
+          <div
             key={toast.id}
-            id={toast.id}
-            message={toast.message}
-            type={toast.type}
-            duration={toast.duration}
-            onClose={removeToast}
-          />
+            className={`
+              px-4 py-3 rounded-lg shadow-lg max-w-sm
+              ${toast.type === 'success' ? 'bg-green-500 text-white' : ''}
+              ${toast.type === 'error' ? 'bg-red-500 text-white' : ''}
+              ${toast.type === 'warning' ? 'bg-yellow-500 text-white' : ''}
+              ${toast.type === 'info' ? 'bg-blue-500 text-white' : ''}
+            `}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{toast.message}</span>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="ml-2 text-white hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+          </div>
         ))}
       </div>
     </ToastContext.Provider>
   );
-};
+}
 
-export const useToast = () => {
+export function useToast() {
   const context = useContext(ToastContext);
   if (context === undefined) {
     throw new Error('useToast must be used within a ToastProvider');
   }
   return context;
-};
+}

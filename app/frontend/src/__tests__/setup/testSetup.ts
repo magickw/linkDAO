@@ -1,5 +1,4 @@
 import { configure } from '@testing-library/react';
-import { performance } from 'perf_hooks';
 
 // Configure testing library
 configure({
@@ -73,17 +72,16 @@ expect.extend({
   },
 });
 
-// Performance monitoring for tests
-const performanceObserver = new PerformanceObserver((list) => {
-  const entries = list.getEntries();
-  entries.forEach((entry) => {
-    if (entry.duration > 100) {
-      console.warn(`Slow operation detected: ${entry.name} took ${entry.duration}ms`);
-    }
-  });
-});
+// Performance monitoring for tests (mock for Node.js environment)
+const performanceObserver = {
+  observe: jest.fn(),
+  disconnect: jest.fn()
+};
 
-performanceObserver.observe({ entryTypes: ['measure'] });
+// Mock PerformanceObserver for Node.js environment
+if (typeof PerformanceObserver === 'undefined') {
+  global.PerformanceObserver = jest.fn().mockImplementation(() => performanceObserver);
+}
 
 // Global test hooks
 beforeAll(() => {
@@ -119,17 +117,27 @@ beforeAll(() => {
 
 beforeEach(() => {
   // Reset performance marks before each test
-  performance.clearMarks();
-  performance.clearMeasures();
+  if (performance.clearMarks) {
+    performance.clearMarks();
+  }
+  if (performance.clearMeasures) {
+    performance.clearMeasures();
+  }
   
   // Mark test start
-  performance.mark('test-start');
+  if (performance.mark) {
+    performance.mark('test-start');
+  }
 });
 
 afterEach(() => {
   // Measure test duration
-  performance.mark('test-end');
-  performance.measure('test-duration', 'test-start', 'test-end');
+  if (performance.mark) {
+    performance.mark('test-end');
+  }
+  if (performance.measure) {
+    performance.measure('test-duration', 'test-start', 'test-end');
+  }
   
   // Clean up any remaining timers
   jest.clearAllTimers();
@@ -145,7 +153,9 @@ afterEach(() => {
 
 afterAll(() => {
   // Global cleanup
-  performanceObserver.disconnect();
+  if (performanceObserver && performanceObserver.disconnect) {
+    performanceObserver.disconnect();
+  }
   console.log('✅ Comprehensive test suite completed');
 });
 
@@ -175,31 +185,27 @@ export const testUtils = {
   // Create mock post for testing
   createMockPost: (overrides = {}) => ({
     id: 'test-post-1',
-    author: testUtils.createMockUser(),
-    content: {
-      type: 'text',
-      body: 'Test post content',
-      formatting: {},
-    },
+    author: '0x1234567890123456789012345678901234567890',
+    contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z4',
+    mediaCids: [],
+    tags: [],
     createdAt: new Date(),
     updatedAt: new Date(),
     reactions: [],
     tips: [],
-    comments: [],
-    shares: [],
+    comments: 0,
+    shares: 0,
     views: 0,
     engagementScore: 0,
     previews: [],
-    hashtags: [],
-    mentions: [],
-    media: [],
     socialProof: {
       followedUsersWhoEngaged: [],
       totalEngagementFromFollowed: 0,
       communityLeadersWhoEngaged: [],
       verifiedUsersWhoEngaged: [],
     },
-    moderationStatus: 'approved',
+    trendingStatus: null,
+    isBookmarked: false,
     ...overrides,
   }),
   
