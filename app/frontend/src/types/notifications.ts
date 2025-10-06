@@ -1,107 +1,70 @@
-export interface BaseNotification {
+/**
+ * Notification Types
+ * Type definitions for the notification system
+ */
+
+export interface AppNotification {
   id: string;
-  userId: string;
-  type: NotificationType;
+  type: 'message' | 'reaction' | 'mention' | 'community' | 'governance' | 'system';
+  category: 'direct_message' | 'post_reaction' | 'comment_mention' | 'community_invite' | 'governance_proposal' | 'system_alert';
   title: string;
   message: string;
-  timestamp: Date;
-  read: boolean;
+  data?: Record<string, any>;
+  fromAddress?: string;
+  fromName?: string;
+  avatarUrl?: string;
   actionUrl?: string;
-  metadata?: Record<string, any>;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  isRead: boolean;
+  createdAt: Date;
+  expiresAt?: Date;
 }
-
-export type NotificationType = 
-  // Personal notifications
-  | 'follow' 
-  | 'like' 
-  | 'comment' 
-  | 'mention'
-  | 'tip_received'
-  // Community notifications
-  | 'community_new_post'
-  | 'community_post_reply'
-  | 'community_mention'
-  | 'community_moderation'
-  | 'community_join_request'
-  | 'community_member_joined'
-  | 'community_rule_update'
-  // Governance notifications
-  | 'governance_proposal'
-  | 'governance_vote_reminder'
-  | 'governance_result';
-
-export interface CommunityNotification extends BaseNotification {
-  type: 'community_new_post' | 'community_post_reply' | 'community_mention' | 'community_moderation' | 'community_join_request' | 'community_member_joined' | 'community_rule_update';
-  communityId: string;
-  communityName: string;
-  postId?: string;
-  authorId?: string;
-  authorName?: string;
-}
-
-export interface PersonalNotification extends BaseNotification {
-  type: 'follow' | 'like' | 'comment' | 'mention' | 'tip_received';
-  fromUserId: string;
-  fromUserName: string;
-  postId?: string;
-  amount?: string; // For tip notifications
-}
-
-export interface GovernanceNotification extends BaseNotification {
-  type: 'governance_proposal' | 'governance_vote_reminder' | 'governance_result';
-  proposalId: string;
-  proposalTitle: string;
-  daoId?: string;
-  daoName?: string;
-}
-
-export type Notification = CommunityNotification | PersonalNotification | GovernanceNotification;
 
 export interface NotificationPreferences {
-  userId: string;
-  email: boolean;
-  push: boolean;
-  inApp: boolean;
-  
-  // Personal notification preferences
-  follows: boolean;
-  likes: boolean;
-  comments: boolean;
-  mentions: boolean;
-  tips: boolean;
-  
-  // Community notification preferences
-  communityPosts: boolean;
-  communityReplies: boolean;
-  communityMentions: boolean;
-  communityModeration: boolean;
-  communityMembers: boolean;
-  
-  // Governance notification preferences
-  governanceProposals: boolean;
-  governanceVotes: boolean;
-  governanceResults: boolean;
-  
-  // Community-specific preferences
-  communityPreferences: Record<string, CommunityNotificationPreferences>;
+  enablePush: boolean;
+  enableSound: boolean;
+  enableDesktop: boolean;
+  email?: boolean;
+  follows?: boolean;
+  communityPosts?: boolean;
+  categories: {
+    direct_message: { enabled: boolean; push: boolean; sound: boolean };
+    post_reaction: { enabled: boolean; push: boolean; sound: boolean };
+    comment_mention: { enabled: boolean; push: boolean; sound: boolean };
+    community_invite: { enabled: boolean; push: boolean; sound: boolean };
+    governance_proposal: { enabled: boolean; push: boolean; sound: boolean };
+    system_alert: { enabled: boolean; push: boolean; sound: boolean };
+  };
+  quietHours: {
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+  };
+  communityPreferences?: Record<string, CommunityNotificationPreferences>;
+}
+
+export interface GetNotificationsOptions {
+  page?: number;
+  limit?: number;
+  includeRead?: boolean;
+  category?: string;
+  type?: string;
+}
+
+export interface GetNotificationsResponse {
+  notifications: AppNotification[];
+  unreadCount: number;
+  totalCount: number;
+  hasMore: boolean;
 }
 
 export interface CommunityNotificationPreferences {
-  communityId: string;
-  enabled: boolean;
-  newPosts: boolean;
-  replies: boolean;
-  mentions: boolean;
-  moderation: boolean;
-  memberActivity: boolean;
-}
-
-export interface NotificationSettings {
-  frequency: 'immediate' | 'hourly' | 'daily' | 'weekly';
-  quietHours: {
-    enabled: boolean;
-    start: string; // HH:MM format
-    end: string;   // HH:MM format
-  };
-  maxPerDay: number;
+  communityId?: string;
+  communityName?: string;
+  enabled?: boolean;
+  newPosts?: boolean;
+  newComments?: boolean;
+  mentions?: boolean;
+  governance?: boolean;
+  moderation?: boolean;
 }

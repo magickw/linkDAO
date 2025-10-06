@@ -15,8 +15,8 @@ import { describe } from 'node:test';
 
 // Test component that uses accessibility features
 const TestComponent: React.FC = () => {
-  const { announceToScreenReader, generateId } = useAccessibility();
-  const buttonId = generateId('test-button');
+  const { announceToScreenReader } = useAccessibility();
+  const buttonId = 'test-button-123';
 
   const handleClick = () => {
     announceToScreenReader('Button clicked successfully');

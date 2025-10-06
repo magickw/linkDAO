@@ -8,7 +8,7 @@ import PostMetadata from './PostMetadata';
 import PostFlair, { FlairConfig } from './PostFlair';
 import ReportModal from './ReportModal';
 import { getViewModeClasses, shouldShowThumbnail, getThumbnailSize } from '@/hooks/useViewMode';
-import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
+import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useKeyboardNavigation } from '@/hooks/useAccessibility';
 
 interface RedditStylePostCardProps {
@@ -54,20 +54,17 @@ export default function RedditStylePostCard({
   // Accessibility hooks and refs
   const { 
     announceToScreenReader, 
-    generateId, 
-    keyboardNavigation, 
-    prefersReducedMotion,
-    isScreenReaderActive 
-  } = useAccessibilityContext();
+    settings
+  } = useAccessibility();
   const { createKeyboardHandler } = useKeyboardNavigation();
   const postCardRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   
   // Generate unique IDs for ARIA relationships
   const postId = useId();
-  const menuId = generateId('post-menu');
-  const voteGroupId = generateId('vote-group');
-  const actionsId = generateId('post-actions');
+  const menuId = `post-menu-${postId}`;
+  const voteGroupId = `vote-group-${postId}`;
+  const actionsId = `post-actions-${postId}`;
 
   // Calculate vote score
   const voteScore = post.upvotes - post.downvotes;
@@ -264,8 +261,8 @@ export default function RedditStylePostCard({
     return (
       <motion.article
         ref={postCardRef}
-        initial={prefersReducedMotion ? {} : { opacity: 0, y: 10 }}
-        animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+        initial={settings.reducedMotion ? {} : { opacity: 0, y: 10 }}
+        animate={settings.reducedMotion ? {} : { opacity: 1, y: 0 }}
         className={`${viewModeClasses.postCard} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all duration-200 ${className}`}
         role="article"
         aria-labelledby={`${postId}-title`}
@@ -285,7 +282,7 @@ export default function RedditStylePostCard({
               Post voting controls
             </span>
             <motion.button
-              whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+              whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
               onClick={() => handleVote('up')}
               disabled={isVoting}
               className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('up')}`}
@@ -303,7 +300,7 @@ export default function RedditStylePostCard({
               {voteScore > 0 ? '+' : ''}{voteScore}
             </div>
             <motion.button
-              whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+              whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
               onClick={() => handleVote('down')}
               disabled={isVoting}
               className={`p-0.5 rounded transition-colors ${getVoteButtonStyle('down')}`}
@@ -432,8 +429,8 @@ export default function RedditStylePostCard({
   return (
     <motion.article
       ref={postCardRef}
-      initial={prefersReducedMotion ? {} : { opacity: 0, y: 20 }}
-      animate={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
+      initial={settings.reducedMotion ? {} : { opacity: 0, y: 20 }}
+      animate={settings.reducedMotion ? {} : { opacity: 1, y: 0 }}
       className={`${viewModeClasses.postCard} hover:border-gray-300 dark:hover:border-gray-600 transition-all duration-200 ${className}`}
       role="article"
       aria-labelledby={`${postId}-title`}
@@ -455,7 +452,7 @@ export default function RedditStylePostCard({
           
           {/* Upvote Button */}
           <motion.button
-            whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+            whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
             onClick={() => handleVote('up')}
             disabled={isVoting}
             className={getVoteButtonStyle('up')}
@@ -469,8 +466,8 @@ export default function RedditStylePostCard({
           {/* Vote Score */}
           <motion.div
             key={voteScore}
-            initial={prefersReducedMotion ? {} : { scale: 1.2 }}
-            animate={prefersReducedMotion ? {} : { scale: 1 }}
+            initial={settings.reducedMotion ? {} : { scale: 1.2 }}
+            animate={settings.reducedMotion ? {} : { scale: 1 }}
             id={`${voteGroupId}-score`}
             className={`text-sm font-bold py-1 min-w-[24px] text-center ${getVoteScoreStyle()}`}
             aria-label={`Current score: ${voteScore > 0 ? '+' : ''}${voteScore} points`}
@@ -482,7 +479,7 @@ export default function RedditStylePostCard({
 
           {/* Downvote Button */}
           <motion.button
-            whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+            whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
             onClick={() => handleVote('down')}
             disabled={isVoting}
             className={getVoteButtonStyle('down')}
@@ -527,7 +524,7 @@ export default function RedditStylePostCard({
                   {/* Save Button */}
                   {onSave && (
                     <motion.button
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+                      whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
                       onClick={handleSave}
                       disabled={isProcessingAction}
                       className={`p-2 rounded-md transition-all duration-200 ${
@@ -545,7 +542,7 @@ export default function RedditStylePostCard({
 
                   {/* Share Button */}
                   <motion.button
-                    whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+                    whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
                     onClick={handleShare}
                     disabled={isProcessingAction}
                     className="p-2 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 disabled:opacity-50"
@@ -558,7 +555,7 @@ export default function RedditStylePostCard({
                   {/* Hide Button */}
                   {onHide && (
                     <motion.button
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+                      whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
                       onClick={handleHide}
                       disabled={isProcessingAction}
                       className="p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50"
@@ -572,7 +569,7 @@ export default function RedditStylePostCard({
                   {/* Report Button */}
                   {onReport && (
                     <motion.button
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.9 }}
+                      whileTap={settings.reducedMotion ? {} : { scale: 0.9 }}
                       onClick={() => setShowReportModal(true)}
                       disabled={isProcessingAction}
                       className="p-2 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 disabled:opacity-50"
@@ -604,9 +601,9 @@ export default function RedditStylePostCard({
               <AnimatePresence>
                 {showMenu && (
                   <motion.div
-                    initial={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
-                    animate={prefersReducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
-                    exit={prefersReducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
+                    initial={settings.reducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
+                    animate={settings.reducedMotion ? {} : { opacity: 1, scale: 1, y: 0 }}
+                    exit={settings.reducedMotion ? {} : { opacity: 0, scale: 0.95, y: -10 }}
                     id={menuId}
                     role="menu"
                     aria-labelledby={menuButtonRef.current?.id}

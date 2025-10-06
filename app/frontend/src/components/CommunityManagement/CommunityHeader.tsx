@@ -8,7 +8,7 @@ import {
   CheckIcon,
   XMarkIcon 
 } from '@heroicons/react/24/outline';
-import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
+import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 
 // Types based on design document
 interface Community {
@@ -46,9 +46,9 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Accessibility hooks
-  const { announceToScreenReader, generateId } = useAccessibilityContext();
+  const { announceToScreenReader } = useAccessibility();
   const headerId = useId();
-  const bannerUploadId = generateId('banner-upload');
+  const bannerUploadId = `banner-upload-${headerId}`;
 
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

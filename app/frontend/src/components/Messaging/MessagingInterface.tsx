@@ -162,7 +162,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       // await messagingService.initialize(wallet);
       
       // Initialize notification service
-      await notificationService.initializeService();
+      // Service is initialized automatically
       
       // chatHistoryService will load conversations on mount via the hook
       // Load blocked users from real-time service (local store)

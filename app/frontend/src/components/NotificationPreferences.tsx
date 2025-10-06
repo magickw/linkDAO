@@ -55,7 +55,7 @@ export default function NotificationPreferences({ onClose }: NotificationPrefere
       communityPreferences: {
         ...localPreferences.communityPreferences,
         [communityId]: {
-          ...localPreferences.communityPreferences[communityId],
+          ...localPreferences.communityPreferences?.[communityId],
           [type]: value
         }
       }

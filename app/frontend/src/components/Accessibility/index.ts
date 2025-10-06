@@ -1,5 +1,5 @@
 // Accessibility components and utilities
-export { AccessibilityProvider, useAccessibilityContext, withAccessibility } from './AccessibilityProvider';
+export { AccessibilityProvider, useAccessibility as useAccessibilityContext } from './AccessibilityProvider';
 export { SkipLinks } from './SkipLinks';
 export { FocusManager } from './FocusManager';
 

@@ -130,7 +130,7 @@ const MessagingDemo: React.FC = () => {
         setFeatures(prev => ({ ...prev, notifications: true }));
         
         // Test notification
-        await notificationService.testNotification();
+        await notificationService.sendTestNotification('message');
       } else {
         alert('Notification permission denied. You can enable it in your browser settings.');
       }

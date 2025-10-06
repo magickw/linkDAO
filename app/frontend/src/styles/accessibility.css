@@ -1,0 +1,544 @@
+/* Accessibility Styles */
+
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.sr-only-focusable:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Skip Links */
+.skip-links {
+  position: relative;
+  z-index: 9999;
+}
+
+.skip-link {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  background: #2563eb;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  z-index: 10000;
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.skip-link:hover {
+  background: #1d4ed8;
+}
+
+/* High Contrast Mode */
+.accessibility-high-contrast,
+.high-contrast-mode {
+  --text-color: #000000;
+  --bg-color: #ffffff;
+  --border-color: #000000;
+  --focus-color: #0000ff;
+  --link-color: #0000ff;
+  --visited-color: #800080;
+  --button-bg: #ffffff;
+  --button-border: #000000;
+}
+
+.accessibility-high-contrast *,
+.high-contrast-mode * {
+  color: var(--text-color) !important;
+  background-color: var(--bg-color) !important;
+  border-color: var(--border-color) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.accessibility-high-contrast a,
+.high-contrast-mode a {
+  color: var(--link-color) !important;
+  text-decoration: underline !important;
+}
+
+.accessibility-high-contrast a:visited,
+.high-contrast-mode a:visited {
+  color: var(--visited-color) !important;
+}
+
+.accessibility-high-contrast button,
+.accessibility-high-contrast input[type="button"],
+.accessibility-high-contrast input[type="submit"],
+.high-contrast-mode button,
+.high-contrast-mode input[type="button"],
+.high-contrast-mode input[type="submit"] {
+  background-color: var(--button-bg) !important;
+  border: 2px solid var(--button-border) !important;
+  color: var(--text-color) !important;
+}
+
+.accessibility-high-contrast img,
+.high-contrast-mode img {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+/* Dark Mode High Contrast */
+@media (prefers-color-scheme: dark) {
+  .accessibility-high-contrast,
+  .high-contrast-mode {
+    --text-color: #ffffff;
+    --bg-color: #000000;
+    --border-color: #ffffff;
+    --focus-color: #ffff00;
+    --link-color: #ffff00;
+    --visited-color: #ff00ff;
+    --button-bg: #000000;
+    --button-border: #ffffff;
+  }
+}
+
+/* Reduced Motion */
+.accessibility-reduced-motion,
+.reduce-motion {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.accessibility-reduced-motion *,
+.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Large Text Support */
+.accessibility-large-text,
+.large-text {
+  font-size: 1.125rem !important;
+  line-height: 1.75rem !important;
+}
+
+.accessibility-large-text h1,
+.large-text h1 {
+  font-size: 2.5rem !important;
+  line-height: 3rem !important;
+}
+
+.accessibility-large-text h2,
+.large-text h2 {
+  font-size: 2rem !important;
+  line-height: 2.5rem !important;
+}
+
+.accessibility-large-text h3,
+.large-text h3 {
+  font-size: 1.5rem !important;
+  line-height: 2rem !important;
+}
+
+.accessibility-large-text h4,
+.large-text h4 {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+}
+
+.accessibility-large-text small,
+.large-text small {
+  font-size: 1rem !important;
+}
+
+/* Text Size Variations */
+.accessibility-text-size-large {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.accessibility-text-size-extra-large {
+  font-size: 1.25rem;
+  line-height: 1.875rem;
+}
+
+/* Focus Management */
+.accessibility-focus-visible *:focus-visible,
+.accessibility-keyboard-nav.keyboard-navigation-active *:focus {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  border-radius: 0.25rem;
+}
+
+.accessibility-focus-visible button:focus-visible,
+.accessibility-focus-visible a:focus-visible,
+.accessibility-focus-visible input:focus-visible,
+.accessibility-focus-visible textarea:focus-visible,
+.accessibility-focus-visible select:focus-visible {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* High contrast focus indicators */
+.accessibility-high-contrast *:focus,
+.high-contrast-mode *:focus {
+  outline: 3px solid var(--focus-color) !important;
+  outline-offset: 2px !important;
+  background-color: var(--focus-color) !important;
+  color: var(--bg-color) !important;
+}
+
+/* Screen Reader Mode */
+.accessibility-screen-reader {
+  /* Enhanced for screen readers */
+}
+
+.accessibility-screen-reader .decorative {
+  display: none !important;
+}
+
+.accessibility-screen-reader [aria-hidden="true"] {
+  display: none !important;
+}
+
+/* Touch Target Enhancement */
+.accessibility-touch-target {
+  min-height: 44px !important;
+  min-width: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Keyboard Navigation */
+.accessibility-keyboard-nav [role="button"],
+.accessibility-keyboard-nav [role="link"],
+.accessibility-keyboard-nav [tabindex="0"] {
+  cursor: pointer;
+}
+
+.accessibility-keyboard-nav [role="button"]:focus,
+.accessibility-keyboard-nav [role="link"]:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* List Navigation */
+.accessibility-keyboard-nav [role="listbox"] [role="option"]:focus,
+.accessibility-keyboard-nav [role="menu"] [role="menuitem"]:focus,
+.accessibility-keyboard-nav [role="grid"] [role="gridcell"]:focus {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  outline: none;
+}
+
+/* Modal and Dialog Accessibility */
+.accessibility-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.accessibility-modal-content {
+  position: relative;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.accessibility-modal-content:focus {
+  outline: none;
+}
+
+/* Form Accessibility */
+.accessibility-form-field {
+  position: relative;
+}
+
+.accessibility-form-field label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.accessibility-form-field input:required + label::after,
+.accessibility-form-field textarea:required + label::after,
+.accessibility-form-field select:required + label::after {
+  content: " *";
+  color: #ef4444;
+}
+
+.accessibility-form-field input[aria-invalid="true"],
+.accessibility-form-field textarea[aria-invalid="true"],
+.accessibility-form-field select[aria-invalid="true"] {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ef4444 !important;
+}
+
+.accessibility-form-error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Color Scheme Support */
+.accessibility-color-scheme-dark {
+  color-scheme: dark;
+}
+
+.accessibility-color-scheme-light {
+  color-scheme: light;
+}
+
+.accessibility-color-scheme-auto {
+  color-scheme: light dark;
+}
+
+/* Print Accessibility */
+@media print {
+  .skip-links,
+  .accessibility-no-print {
+    display: none !important;
+  }
+  
+  .accessibility-print-only {
+    display: block !important;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+  
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
+  }
+}
+
+/* Animation Preferences */
+@media (prefers-reduced-motion: reduce) {
+  .respect-motion-preference {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .respect-motion-preference {
+    animation-duration: inherit;
+    transition-duration: inherit;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Contrast Preferences */
+@media (prefers-contrast: high) {
+  .respect-contrast-preference {
+    border-width: 2px !important;
+    outline-width: 3px !important;
+  }
+  
+  .respect-contrast-preference button,
+  .respect-contrast-preference input,
+  .respect-contrast-preference select,
+  .respect-contrast-preference textarea {
+    border: 2px solid currentColor !important;
+  }
+}
+
+/* Color Scheme Preferences */
+@media (prefers-color-scheme: dark) {
+  .respect-color-scheme-preference {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .respect-color-scheme-preference {
+    background-color: #ffffff;
+    color: #1f2937;
+  }
+}
+
+/* Utility Classes */
+.accessibility-hidden {
+  display: none !important;
+}
+
+.accessibility-visible {
+  display: block !important;
+}
+
+.accessibility-focusable {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.accessibility-focusable:focus {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: inherit !important;
+  margin: inherit !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* Live Region Styles */
+#accessibility-live-region {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Error and Status Messages */
+.accessibility-error {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.accessibility-warning {
+  color: #d97706;
+  font-weight: 500;
+}
+
+.accessibility-success {
+  color: #059669;
+  font-weight: 500;
+}
+
+.accessibility-info {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+/* Loading States */
+.accessibility-loading {
+  position: relative;
+}
+
+.accessibility-loading::after {
+  content: "Loading...";
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Responsive Text Scaling */
+@media (max-width: 640px) {
+  .accessibility-responsive-text {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+@media (min-width: 641px) {
+  .accessibility-responsive-text {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+}
+
+/* Custom Focus Indicators */
+.accessibility-custom-focus:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
+}
+
+.accessibility-custom-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #3b82f6;
+}
+
+/* Landmark Regions */
+[role="banner"],
+[role="navigation"],
+[role="main"],
+[role="complementary"],
+[role="contentinfo"] {
+  position: relative;
+}
+
+/* Ensure proper heading hierarchy */
+.accessibility-heading-hierarchy h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.accessibility-heading-hierarchy h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.accessibility-heading-hierarchy h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.accessibility-heading-hierarchy h4 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.accessibility-heading-hierarchy h5 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.accessibility-heading-hierarchy h6 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}

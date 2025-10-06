@@ -1,5 +1,5 @@
 import React, { useState, useId } from 'react';
-import { useAccessibilityContext } from '@/components/Accessibility/AccessibilityProvider';
+import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useAccessibility';
 
 // Reddit-style sorting options
@@ -104,13 +104,13 @@ export default function PostSortingTabs({
   const [isChanging, setIsChanging] = useState(false);
   
   // Accessibility hooks
-  const { announceToScreenReader, generateId, prefersReducedMotion } = useAccessibilityContext();
+  const { announceToScreenReader, settings } = useAccessibility();
   const { createKeyboardHandler } = useKeyboardNavigation();
   const { focusedIndex, setFocusedIndex, handleArrowNavigation } = useFocusManagement(SORT_TABS.length);
   
   // Generate unique IDs
   const tabsId = useId();
-  const timeFilterId = generateId('time-filter');
+  const timeFilterId = `time-filter-${tabsId}`;
 
   const handleSortChange = async (newSort: PostSortOption) => {
     if (newSort === sortBy || isChanging) return;
