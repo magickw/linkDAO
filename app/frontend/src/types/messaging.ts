@@ -54,6 +54,8 @@ export interface ChatHistoryRequest {
   conversationId: string;
   limit?: number;
   offset?: number;
+  unreadCount?: number;
+  isEncrypted?: boolean;
   unreadCount: number;
   isEncrypted: boolean;
 }
