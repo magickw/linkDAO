@@ -219,3 +219,20 @@ export const withResponseTime = (startTime: number) => {
     responseTime: Date.now() - startTime
   };
 };
+
+// Simple API response helpers (for backward compatibility)
+export const apiResponse = {
+  success: <T>(data: T, message?: string) => ({
+    success: true,
+    data,
+    message,
+    timestamp: new Date().toISOString()
+  }),
+  
+  error: (message: string, statusCode?: number) => ({
+    success: false,
+    error: message,
+    statusCode,
+    timestamp: new Date().toISOString()
+  })
+};

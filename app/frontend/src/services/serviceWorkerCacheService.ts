@@ -7,6 +7,22 @@ interface CacheConfig {
   maxCacheAge: number;
 }
 
+interface CacheStrategy {
+  name: 'NetworkFirst' | 'CacheFirst' | 'StaleWhileRevalidate' | 'NetworkOnly';
+  cacheName: string;
+  maxAge?: number;
+  maxEntries?: number;
+  tags?: string[];
+}
+
+interface CacheEntry {
+  url: string;
+  timestamp: number;
+  tags: string[];
+  strategy: string;
+  ttl: number;
+}
+
 interface CacheStats {
   totalSize: number;
   entryCount: number;
@@ -18,6 +34,8 @@ export class ServiceWorkerCacheService {
   private config: CacheConfig;
   private stats: CacheStats;
   private cleanupIntervalId?: number;
+  private cacheStrategies: Record<string, CacheStrategy>;
+  private cacheMetadata: Map<string, CacheEntry>;
 
   constructor() {
     this.config = {
@@ -35,6 +53,45 @@ export class ServiceWorkerCacheService {
       hitRate: 0,
       lastCleanup: Date.now()
     };
+
+    // Initialize intelligent caching strategies
+    this.cacheStrategies = {
+      // Feed content - fresh data preferred, fallback to cache
+      feed: {
+        name: 'NetworkFirst',
+        cacheName: 'feed-v1',
+        maxAge: 5 * 60 * 1000, // 5 minutes
+        maxEntries: 100,
+        tags: ['feed', 'posts']
+      },
+      
+      // Community data - can be slightly stale
+      communities: {
+        name: 'StaleWhileRevalidate',
+        cacheName: 'communities-v1',
+        maxAge: 10 * 60 * 1000, // 10 minutes
+        maxEntries: 50,
+        tags: ['communities']
+      },
+      
+      // User profiles - cache first for performance
+      profiles: {
+        name: 'CacheFirst',
+        cacheName: 'profiles-v1',
+        maxAge: 30 * 60 * 1000, // 30 minutes
+        maxEntries: 200,
+        tags: ['profiles', 'users']
+      },
+      
+      // Messages - never cache (privacy)
+      messages: {
+        name: 'NetworkOnly',
+        cacheName: 'no-cache',
+        tags: ['messages', 'private']
+      }
+    };
+
+    this.cacheMetadata = new Map();
   }
 
   // Initialize service worker cache service
@@ -52,13 +109,16 @@ export class ServiceWorkerCacheService {
         console.log('Service Worker registered');
       }
 
+      // Load cache metadata from storage
+      await this.loadMetadataFromStorage();
+
       // Update cache statistics
       await this.updateCacheStats();
 
       // Setup periodic cleanup
       this.setupPeriodicCleanup();
 
-      console.log('Service Worker Cache Service initialized');
+      console.log('Service Worker Cache Service initialized with intelligent strategies');
     } catch (error) {
       console.error('Failed to initialize Service Worker Cache Service:', error);
     }
@@ -471,6 +531,336 @@ export class ServiceWorkerCacheService {
       localStorage.setItem(key, JSON.stringify(existing));
     } catch (error) {
       console.error('Failed to queue offline action:', error);
+    }
+  }
+
+  // Intelligent caching with strategy-based approach
+  async cacheWithStrategy(url: string, strategyKey: string, tags: string[] = []): Promise<Response | null> {
+    const strategy = this.cacheStrategies[strategyKey];
+    if (!strategy) {
+      console.warn(`Unknown cache strategy: ${strategyKey}`);
+      return null;
+    }
+
+    switch (strategy.name) {
+      case 'NetworkFirst':
+        return this.networkFirstStrategy(url, strategy, tags);
+      case 'CacheFirst':
+        return this.cacheFirstStrategy(url, strategy, tags);
+      case 'StaleWhileRevalidate':
+        return this.staleWhileRevalidateStrategy(url, strategy, tags);
+      case 'NetworkOnly':
+        return this.networkOnlyStrategy(url);
+      default:
+        return null;
+    }
+  }
+
+  // NetworkFirst strategy - try network first, fallback to cache
+  private async networkFirstStrategy(url: string, strategy: CacheStrategy, tags: string[]): Promise<Response | null> {
+    try {
+      const networkResponse = await fetch(url);
+      if (networkResponse.ok) {
+        // Cache the response
+        await this.cacheResponseWithMetadata(url, networkResponse.clone(), strategy, tags);
+        return networkResponse;
+      }
+    } catch (error) {
+      console.warn(`Network request failed for ${url}, trying cache:`, error);
+    }
+
+    // Fallback to cache
+    return this.getCachedResponseWithValidation(url, strategy);
+  }
+
+  // CacheFirst strategy - try cache first, fallback to network
+  private async cacheFirstStrategy(url: string, strategy: CacheStrategy, tags: string[]): Promise<Response | null> {
+    // Try cache first
+    const cachedResponse = await this.getCachedResponseWithValidation(url, strategy);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    // Fallback to network
+    try {
+      const networkResponse = await fetch(url);
+      if (networkResponse.ok) {
+        await this.cacheResponseWithMetadata(url, networkResponse.clone(), strategy, tags);
+        return networkResponse;
+      }
+    } catch (error) {
+      console.error(`Network request failed for ${url}:`, error);
+    }
+
+    return null;
+  }
+
+  // StaleWhileRevalidate strategy - return cache immediately, update in background
+  private async staleWhileRevalidateStrategy(url: string, strategy: CacheStrategy, tags: string[]): Promise<Response | null> {
+    // Get cached response immediately
+    const cachedResponse = await this.getCachedResponseWithValidation(url, strategy);
+    
+    // Update cache in background (don't await)
+    this.updateCacheInBackground(url, strategy, tags);
+
+    // Return cached response if available, otherwise try network
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    try {
+      const networkResponse = await fetch(url);
+      if (networkResponse.ok) {
+        await this.cacheResponseWithMetadata(url, networkResponse.clone(), strategy, tags);
+        return networkResponse;
+      }
+    } catch (error) {
+      console.error(`Network request failed for ${url}:`, error);
+    }
+
+    return null;
+  }
+
+  // NetworkOnly strategy - never cache
+  private async networkOnlyStrategy(url: string): Promise<Response | null> {
+    try {
+      const response = await fetch(url);
+      return response.ok ? response : null;
+    } catch (error) {
+      console.error(`Network request failed for ${url}:`, error);
+      return null;
+    }
+  }
+
+  // Cache response with metadata
+  private async cacheResponseWithMetadata(url: string, response: Response, strategy: CacheStrategy, tags: string[]): Promise<void> {
+    try {
+      const cache = await caches.open(strategy.cacheName);
+      await cache.put(url, response);
+
+      // Store metadata
+      const metadata: CacheEntry = {
+        url,
+        timestamp: Date.now(),
+        tags: [...(strategy.tags || []), ...tags],
+        strategy: strategy.name,
+        ttl: strategy.maxAge || this.config.maxCacheAge
+      };
+      this.cacheMetadata.set(url, metadata);
+
+      // Persist metadata to IndexedDB for persistence across sessions
+      await this.persistMetadata(url, metadata);
+    } catch (error) {
+      console.error(`Failed to cache response for ${url}:`, error);
+    }
+  }
+
+  // Get cached response with TTL validation
+  private async getCachedResponseWithValidation(url: string, strategy: CacheStrategy): Promise<Response | null> {
+    try {
+      const cache = await caches.open(strategy.cacheName);
+      const cachedResponse = await cache.match(url);
+      
+      if (!cachedResponse) {
+        return null;
+      }
+
+      // Check TTL
+      const metadata = this.cacheMetadata.get(url);
+      if (metadata && strategy.maxAge) {
+        const age = Date.now() - metadata.timestamp;
+        if (age > strategy.maxAge) {
+          // Expired, remove from cache
+          await cache.delete(url);
+          this.cacheMetadata.delete(url);
+          return null;
+        }
+      }
+
+      return cachedResponse;
+    } catch (error) {
+      console.error(`Failed to get cached response for ${url}:`, error);
+      return null;
+    }
+  }
+
+  // Update cache in background for StaleWhileRevalidate
+  private async updateCacheInBackground(url: string, strategy: CacheStrategy, tags: string[]): Promise<void> {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        await this.cacheResponseWithMetadata(url, response, strategy, tags);
+      }
+    } catch (error) {
+      console.warn(`Background cache update failed for ${url}:`, error);
+    }
+  }
+
+  // Tag-based cache invalidation
+  async invalidateByTags(tags: string[]): Promise<void> {
+    const urlsToInvalidate: string[] = [];
+
+    // Find URLs with matching tags
+    for (const [url, metadata] of this.cacheMetadata.entries()) {
+      if (tags.some(tag => metadata.tags.includes(tag))) {
+        urlsToInvalidate.push(url);
+      }
+    }
+
+    // Remove from all caches
+    for (const url of urlsToInvalidate) {
+      await this.invalidateUrl(url);
+    }
+
+    console.log(`Invalidated ${urlsToInvalidate.length} cached entries with tags:`, tags);
+  }
+
+  // Invalidate specific URL from all caches
+  private async invalidateUrl(url: string): Promise<void> {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(async (cacheName) => {
+        const cache = await caches.open(cacheName);
+        await cache.delete(url);
+      }));
+
+      this.cacheMetadata.delete(url);
+      await this.removeMetadata(url);
+    } catch (error) {
+      console.error(`Failed to invalidate ${url}:`, error);
+    }
+  }
+
+  // Predictive preloading based on user behavior
+  async predictivePreload(userId: string, currentAction: string, context: any): Promise<void> {
+    const predictions = await this.analyzeUserBehavior(userId, currentAction, context);
+    
+    for (const prediction of predictions) {
+      // Preload with appropriate strategy
+      const strategyKey = this.determineStrategyForUrl(prediction.url);
+      if (strategyKey && prediction.priority > 0.5) {
+        await this.cacheWithStrategy(prediction.url, strategyKey, ['preload']);
+      }
+    }
+  }
+
+  // Analyze user behavior for predictions (simplified implementation)
+  private async analyzeUserBehavior(userId: string, currentAction: string, context: any): Promise<Array<{url: string, priority: number}>> {
+    // This would typically use ML or analytics data
+    // For now, implement basic heuristics
+    const predictions: Array<{url: string, priority: number}> = [];
+
+    if (currentAction === 'viewing_feed') {
+      // Likely to view community pages
+      if (context.communities) {
+        context.communities.forEach((communityId: string) => {
+          predictions.push({
+            url: `/api/communities/${communityId}`,
+            priority: 0.7
+          });
+        });
+      }
+    }
+
+    if (currentAction === 'viewing_community') {
+      // Likely to view posts in community
+      predictions.push({
+        url: `/api/communities/${context.communityId}/posts`,
+        priority: 0.8
+      });
+    }
+
+    return predictions;
+  }
+
+  // Determine appropriate strategy for URL
+  private determineStrategyForUrl(url: string): string | null {
+    if (url.includes('/feed')) return 'feed';
+    if (url.includes('/communities')) return 'communities';
+    if (url.includes('/users') || url.includes('/profiles')) return 'profiles';
+    if (url.includes('/messages')) return 'messages';
+    return 'communities'; // default
+  }
+
+  // Persist metadata to IndexedDB
+  private async persistMetadata(url: string, metadata: CacheEntry): Promise<void> {
+    try {
+      if (!('indexedDB' in window)) return;
+
+      const request = indexedDB.open('CacheMetadata', 1);
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('metadata')) {
+          db.createObjectStore('metadata', { keyPath: 'url' });
+        }
+      };
+
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['metadata'], 'readwrite');
+        const store = transaction.objectStore('metadata');
+        store.put(metadata);
+      };
+    } catch (error) {
+      console.warn('Failed to persist cache metadata:', error);
+    }
+  }
+
+  // Remove metadata from IndexedDB
+  private async removeMetadata(url: string): Promise<void> {
+    try {
+      if (!('indexedDB' in window)) return;
+
+      const request = indexedDB.open('CacheMetadata', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['metadata'], 'readwrite');
+        const store = transaction.objectStore('metadata');
+        store.delete(url);
+      };
+    } catch (error) {
+      console.warn('Failed to remove cache metadata:', error);
+    }
+  }
+
+  // Load metadata from IndexedDB on initialization
+  private async loadMetadataFromStorage(): Promise<void> {
+    try {
+      if (!('indexedDB' in window)) return;
+
+      const request = indexedDB.open('CacheMetadata', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['metadata'], 'readonly');
+        const store = transaction.objectStore('metadata');
+        const getAllRequest = store.getAll();
+
+        getAllRequest.onsuccess = () => {
+          const entries = getAllRequest.result as CacheEntry[];
+          entries.forEach(entry => {
+            this.cacheMetadata.set(entry.url, entry);
+          });
+          console.log(`Loaded ${entries.length} cache metadata entries`);
+        };
+      };
+    } catch (error) {
+      console.warn('Failed to load cache metadata:', error);
+    }
+  }
+
+  // Get cache strategy configuration
+  getCacheStrategy(strategyKey: string): CacheStrategy | null {
+    return this.cacheStrategies[strategyKey] || null;
+  }
+
+  // Update cache strategy configuration
+  updateCacheStrategy(strategyKey: string, updates: Partial<CacheStrategy>): void {
+    if (this.cacheStrategies[strategyKey]) {
+      this.cacheStrategies[strategyKey] = {
+        ...this.cacheStrategies[strategyKey],
+        ...updates
+      };
     }
   }
 

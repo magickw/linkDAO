@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -39,6 +40,7 @@ try {
 }
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 10000;
 
 // Core middleware stack (order matters!)
@@ -102,11 +104,29 @@ app.get('/', (req, res) => {
 // Import post routes
 import postRoutes from './routes/postRoutes';
 
+// Import feed routes
+import feedRoutes from './routes/feedRoutes';
+
+// Import community routes  
+import communityRoutes from './routes/communityRoutes';
+
+// Import messaging routes
+import messagingRoutes from './routes/messagingRoutes';
+
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
 
 // Use post routes
 app.use('/api/posts', postRoutes);
+
+// Use feed routes
+app.use('/api/feed', feedRoutes);
+
+// Use community routes
+app.use('/api/communities', communityRoutes);
+
+// Use messaging routes
+app.use('/api/messaging', messagingRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
@@ -268,12 +288,24 @@ app.use(notFoundHandler);
 import { cacheService } from './services/cacheService';
 import { cacheWarmingService } from './services/cacheWarmingService';
 
+// Initialize WebSocket service
+import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
+
 // Start server
-app.listen(PORT, async () => {
-  console.log(`🚀 LinkDAO Backend with Post Routes Fixed running on port ${PORT}`);
+httpServer.listen(PORT, async () => {
+  console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
+  
+  // Initialize WebSocket service
+  try {
+    const webSocketService = initializeWebSocket(httpServer);
+    console.log('✅ WebSocket service initialized');
+    console.log(`🔌 WebSocket ready for real-time updates`);
+  } catch (error) {
+    console.warn('⚠️ WebSocket service initialization failed:', error);
+  }
   
   // Initialize cache service
   try {
@@ -295,5 +327,29 @@ app.listen(PORT, async () => {
     console.log('📝 Server will continue without caching');
   }
 });
+
+// Graceful shutdown handling
+const gracefulShutdown = (signal: string) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  // Close WebSocket service
+  shutdownWebSocket();
+  
+  // Close HTTP server
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export default app;

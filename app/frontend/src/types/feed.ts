@@ -19,6 +19,12 @@ export interface FeedFilter {
 
 // Enhanced post with engagement metrics
 export interface EnhancedPost extends Post {
+  // Community context
+  communityId?: string;
+  
+  // Content metadata
+  contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
+  
   // Engagement metrics
   reactions: TokenReaction[];
   tips: TipActivity[];
@@ -30,6 +36,10 @@ export interface EnhancedPost extends Post {
   // Social proof
   socialProof: SocialProofData;
   trendingStatus?: TrendingLevel;
+  
+  // Trending metrics
+  trendingScore?: number;
+  trendingReasons?: string[];
   
   // Content previews
   previews: ContentPreview[];
