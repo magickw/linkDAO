@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { posts, reactions, tips, users } from '../db/schema';
-import { eq, desc, asc, and, or, inArray, sql, gt, lt } from 'drizzle-orm';
+import { posts, reactions, tips, users, postTags } from '../db/schema';
+import { eq, desc, and, inArray, sql, gt } from 'drizzle-orm';
 
 interface FeedOptions {
   userAddress: string;
@@ -76,7 +76,7 @@ export class FeedService {
     const sortOrder = this.buildSortOrder(sort);
 
     try {
-      // Get posts with engagement metrics
+      // Get posts with engagement metrics using proper subqueries
       const feedPosts = await db
         .select({
           id: posts.id,
@@ -87,28 +87,12 @@ export class FeedService {
           tags: posts.tags,
           createdAt: posts.createdAt,
           stakedValue: posts.stakedValue,
-          reactionCount: sql<number>`COALESCE(reaction_counts.count, 0)`,
-          tipCount: sql<number>`COALESCE(tip_counts.count, 0)`,
-          walletAddress: users.walletAddress
+          walletAddress: users.walletAddress,
+          handle: users.handle,
+          profileCid: users.profileCid
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
-        .leftJoin(
-          sql`(
-            SELECT post_id, COUNT(*) as count 
-            FROM reactions 
-            GROUP BY post_id
-          ) as reaction_counts`,
-          sql`reaction_counts.post_id = ${posts.id}`
-        )
-        .leftJoin(
-          sql`(
-            SELECT post_id, COUNT(*) as count 
-            FROM tips 
-            GROUP BY post_id
-          ) as tip_counts`,
-          sql`tip_counts.post_id = ${posts.id}`
-        )
         .where(and(
           timeFilter,
           communityFilter
@@ -116,6 +100,35 @@ export class FeedService {
         .orderBy(sortOrder)
         .limit(limit)
         .offset(offset);
+
+      // Get engagement metrics for each post
+      const postsWithMetrics = await Promise.all(
+        feedPosts.map(async (post) => {
+          const [reactionCount, tipCount, tipTotal] = await Promise.all([
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(reactions)
+              .where(eq(reactions.postId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(tips)
+              .where(eq(tips.postId, post.id)),
+            db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
+              .from(tips)
+              .where(eq(tips.postId, post.id))
+          ]);
+
+          return {
+            ...post,
+            reactionCount: reactionCount[0]?.count || 0,
+            tipCount: tipCount[0]?.count || 0,
+            totalTipAmount: tipTotal[0]?.total || 0,
+            engagementScore: this.calculateEngagementScore(
+              reactionCount[0]?.count || 0,
+              tipCount[0]?.count || 0,
+              0 // comments - not implemented yet
+            )
+          };
+        })
+      );
 
       // Get total count for pagination
       const totalCount = await db
@@ -127,7 +140,7 @@ export class FeedService {
         ));
 
       return {
-        posts: feedPosts,
+        posts: postsWithMetrics,
         pagination: {
           page,
           limit,
@@ -148,6 +161,7 @@ export class FeedService {
     const timeFilter = this.buildTimeFilter(timeRange);
 
     try {
+      // Get posts with high engagement within time range
       const trendingPosts = await db
         .select({
           id: posts.id,
@@ -158,24 +172,61 @@ export class FeedService {
           tags: posts.tags,
           createdAt: posts.createdAt,
           stakedValue: posts.stakedValue,
-          walletAddress: users.walletAddress
+          walletAddress: users.walletAddress,
+          handle: users.handle,
+          profileCid: users.profileCid
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
-        .where(and(
-          timeFilter,
-          gt(posts.stakedValue, 0)
-        ))
+        .where(timeFilter)
         .orderBy(desc(posts.stakedValue), desc(posts.createdAt))
         .limit(limit)
         .offset(offset);
 
+      // Calculate trending score based on engagement metrics
+      const postsWithTrendingScore = await Promise.all(
+        trendingPosts.map(async (post) => {
+          const [reactionCount, tipCount] = await Promise.all([
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(reactions)
+              .where(eq(reactions.postId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(tips)
+              .where(eq(tips.postId, post.id))
+          ]);
+
+          const ageInHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60);
+          const trendingScore = this.calculateTrendingScore(
+            reactionCount[0]?.count || 0,
+            tipCount[0]?.count || 0,
+            ageInHours
+          );
+
+          return {
+            ...post,
+            reactionCount: reactionCount[0]?.count || 0,
+            tipCount: tipCount[0]?.count || 0,
+            trendingScore
+          };
+        })
+      );
+
+      // Sort by trending score
+      postsWithTrendingScore.sort((a, b) => b.trendingScore - a.trendingScore);
+
+      // Get total count for pagination
+      const totalCount = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(posts)
+        .where(timeFilter);
+
       return {
-        posts: trendingPosts,
+        posts: postsWithTrendingScore,
         pagination: {
           page,
           limit,
-          total: trendingPosts.length
+          total: totalCount[0]?.count || 0,
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
         }
       };
     } catch (error) {
@@ -186,7 +237,7 @@ export class FeedService {
 
   // Create new post
   async createPost(data: CreatePostData) {
-    const { authorAddress, content, communityId, mediaUrls, tags, pollData } = data;
+    const { authorAddress, content, communityId, mediaUrls, tags } = data;
 
     try {
       // First get or create user
@@ -203,11 +254,12 @@ export class FeedService {
         userId = user[0].id;
       }
 
+      // Create the post
       const newPost = await db
         .insert(posts)
         .values({
           authorId: userId,
-          contentCid: content, // In real implementation, this would be uploaded to IPFS
+          contentCid: content, // In production, upload to IPFS first
           dao: communityId,
           mediaCids: JSON.stringify(mediaUrls),
           tags: JSON.stringify(tags),
@@ -216,9 +268,24 @@ export class FeedService {
         })
         .returning();
 
-      // Community post count would be handled by a separate communities table if it existed
+      // Insert tags into post_tags table for efficient querying
+      if (tags && tags.length > 0) {
+        const tagInserts = tags.map(tag => ({
+          postId: newPost[0].id,
+          tag: tag.toLowerCase(),
+          createdAt: new Date()
+        }));
 
-      return newPost[0];
+        await db.insert(postTags).values(tagInserts);
+      }
+
+      return {
+        ...newPost[0],
+        walletAddress: authorAddress,
+        reactionCount: 0,
+        tipCount: 0,
+        totalTipAmount: 0
+      };
     } catch (error) {
       console.error('Error creating post:', error);
       throw new Error('Failed to create post');
@@ -230,6 +297,8 @@ export class FeedService {
     const { postId, userAddress, content, tags } = data;
 
     try {
+      const postIdInt = parseInt(postId);
+      
       // Get user ID
       const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
       if (user.length === 0) {
@@ -241,7 +310,7 @@ export class FeedService {
         .select()
         .from(posts)
         .where(and(
-          eq(posts.id, postId),
+          eq(posts.id, postIdInt),
           eq(posts.authorId, user[0].id)
         ))
         .limit(1);
@@ -253,17 +322,29 @@ export class FeedService {
       const updateData: any = {};
 
       if (content !== undefined) {
-        updateData.contentCid = content; // In real implementation, upload to IPFS first
+        updateData.contentCid = content; // In production, upload to IPFS first
       }
 
       if (tags !== undefined) {
         updateData.tags = JSON.stringify(tags);
+        
+        // Update post tags table
+        await db.delete(postTags).where(eq(postTags.postId, postIdInt));
+        
+        if (tags.length > 0) {
+          const tagInserts = tags.map(tag => ({
+            postId: postIdInt,
+            tag: tag.toLowerCase(),
+            createdAt: new Date()
+          }));
+          await db.insert(postTags).values(tagInserts);
+        }
       }
 
       const updatedPost = await db
         .update(posts)
         .set(updateData)
-        .where(eq(posts.id, postId))
+        .where(eq(posts.id, postIdInt))
         .returning();
 
       return updatedPost[0];
@@ -278,6 +359,8 @@ export class FeedService {
     const { postId, userAddress } = data;
 
     try {
+      const postIdInt = parseInt(postId);
+      
       // Get user ID
       const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
       if (user.length === 0) {
@@ -289,7 +372,7 @@ export class FeedService {
         .select()
         .from(posts)
         .where(and(
-          eq(posts.id, postId),
+          eq(posts.id, postIdInt),
           eq(posts.authorId, user[0].id)
         ))
         .limit(1);
@@ -298,10 +381,15 @@ export class FeedService {
         return false;
       }
 
-      // Hard delete (or could implement soft delete by adding a deletedAt field)
-      await db
-        .delete(posts)
-        .where(eq(posts.id, postId));
+      // Delete related data first (foreign key constraints)
+      await Promise.all([
+        db.delete(postTags).where(eq(postTags.postId, postIdInt)),
+        db.delete(reactions).where(eq(reactions.postId, postIdInt)),
+        db.delete(tips).where(eq(tips.postId, postIdInt))
+      ]);
+
+      // Delete the post
+      await db.delete(posts).where(eq(posts.id, postIdInt));
 
       return true;
     } catch (error) {
@@ -415,47 +503,52 @@ export class FeedService {
     try {
       const postIdInt = parseInt(postId);
       
-      const engagementData = await db
+      // Get post basic info
+      const post = await db
         .select({
-          postId: posts.id,
-          reactionCount: sql<number>`COALESCE(reaction_counts.count, 0)`,
-          commentCount: sql<number>`0`, // Comments table doesn't exist yet
-          tipCount: sql<number>`COALESCE(tip_counts.count, 0)`,
-          totalTipAmount: sql<number>`COALESCE(tip_amounts.total, 0)`,
-          stakedValue: posts.stakedValue
+          id: posts.id,
+          stakedValue: posts.stakedValue,
+          createdAt: posts.createdAt
         })
         .from(posts)
-        .leftJoin(
-          sql`(
-            SELECT post_id, COUNT(*) as count 
-            FROM reactions 
-            WHERE post_id = ${postIdInt}
-            GROUP BY post_id
-          ) as reaction_counts`,
-          sql`reaction_counts.post_id = ${posts.id}`
-        )
-        .leftJoin(
-          sql`(
-            SELECT post_id, COUNT(*) as count, SUM(CAST(amount AS DECIMAL)) as total
-            FROM tips 
-            WHERE post_id = ${postIdInt}
-            GROUP BY post_id
-          ) as tip_counts`,
-          sql`tip_counts.post_id = ${posts.id}`
-        )
-        .leftJoin(
-          sql`(
-            SELECT post_id, SUM(CAST(amount AS DECIMAL)) as total
-            FROM tips 
-            WHERE post_id = ${postIdInt}
-            GROUP BY post_id
-          ) as tip_amounts`,
-          sql`tip_amounts.post_id = ${posts.id}`
-        )
         .where(eq(posts.id, postIdInt))
         .limit(1);
 
-      return engagementData[0] || null;
+      if (post.length === 0) {
+        return null;
+      }
+
+      // Get engagement metrics
+      const [reactionData, tipData] = await Promise.all([
+        db.select({ 
+          count: sql<number>`COUNT(*)`,
+          totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
+        })
+        .from(reactions)
+        .where(eq(reactions.postId, postIdInt)),
+        
+        db.select({ 
+          count: sql<number>`COUNT(*)`,
+          totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
+        })
+        .from(tips)
+        .where(eq(tips.postId, postIdInt))
+      ]);
+
+      return {
+        postId: post[0].id,
+        reactionCount: reactionData[0]?.count || 0,
+        commentCount: 0, // Comments not implemented yet
+        tipCount: tipData[0]?.count || 0,
+        totalTipAmount: tipData[0]?.totalAmount || 0,
+        totalReactionAmount: reactionData[0]?.totalAmount || 0,
+        stakedValue: post[0].stakedValue,
+        engagementScore: this.calculateEngagementScore(
+          reactionData[0]?.count || 0,
+          tipData[0]?.count || 0,
+          0 // comments
+        )
+      };
     } catch (error) {
       console.error('Error getting engagement data:', error);
       throw new Error('Failed to retrieve engagement data');
@@ -467,14 +560,29 @@ export class FeedService {
     const { postId, userAddress, targetType, targetId, message } = data;
 
     try {
-      // For now, just return share data without updating a shares count
-      // This would need a shares table or field to be properly implemented
+      const postIdInt = parseInt(postId);
       
+      // Verify post exists
+      const post = await db.select().from(posts).where(eq(posts.id, postIdInt)).limit(1);
+      if (post.length === 0) {
+        throw new Error('Post not found');
+      }
+
+      // Get user
+      const user = await db.select().from(users).where(eq(users.walletAddress, userAddress)).limit(1);
+      if (user.length === 0) {
+        throw new Error('User not found');
+      }
+
       // Update engagement score
       await this.updateEngagementScore(postId);
 
+      // Return share data (in production, this might create a share record)
       return {
-        postId,
+        id: `share_${Date.now()}`,
+        postId: postIdInt,
+        userId: user[0].id,
+        userAddress,
         targetType,
         targetId,
         message,
@@ -486,63 +594,55 @@ export class FeedService {
     }
   }
 
-  // Get post comments (simplified - comments table doesn't exist yet)
+  // Get post comments (placeholder - comments table doesn't exist yet)
   async getPostComments(options: { postId: string; page: number; limit: number; sort: string }) {
-    // For now, return empty comments since comments table doesn't exist
-    // This would need to be implemented when comments table is added
+    // TODO: Implement when comments table is added to schema
     return {
       comments: [],
       pagination: {
         page: options.page,
         limit: options.limit,
-        total: 0
+        total: 0,
+        totalPages: 0
       }
     };
   }
 
-  // Add comment to post (simplified - comments table doesn't exist yet)
+  // Add comment to post (placeholder - comments table doesn't exist yet)
   async addComment(data: CommentData) {
-    // For now, return a mock comment since comments table doesn't exist
-    // This would need to be implemented when comments table is added
-    const mockComment = {
-      id: 'mock-comment-id',
-      postId: data.postId,
-      userAddress: data.userAddress,
-      content: data.content,
-      parentCommentId: data.parentCommentId,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // Update engagement score
+    // TODO: Implement when comments table is added to schema
+    // For now, just update engagement score
     await this.updateEngagementScore(data.postId);
 
-    return mockComment;
+    return {
+      id: `comment_${Date.now()}`,
+      postId: parseInt(data.postId),
+      userAddress: data.userAddress,
+      content: data.content,
+      parentCommentId: data.parentCommentId ? parseInt(data.parentCommentId) : null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      replyCount: 0,
+      likeCount: 0
+    };
   }
 
   // Helper method to build time filter
   private buildTimeFilter(timeRange: string) {
     const now = new Date();
-    let timeFilter;
 
     switch (timeRange) {
       case 'hour':
-        timeFilter = gt(posts.createdAt, new Date(now.getTime() - 60 * 60 * 1000));
-        break;
+        return gt(posts.createdAt, new Date(now.getTime() - 60 * 60 * 1000));
       case 'day':
-        timeFilter = gt(posts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000));
-        break;
+        return gt(posts.createdAt, new Date(now.getTime() - 24 * 60 * 60 * 1000));
       case 'week':
-        timeFilter = gt(posts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
-        break;
+        return gt(posts.createdAt, new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000));
       case 'month':
-        timeFilter = gt(posts.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
-        break;
+        return gt(posts.createdAt, new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
       default:
-        timeFilter = sql`1=1`;
+        return sql`1=1`;
     }
-
-    return timeFilter;
   }
 
   // Helper method to build sort order
@@ -561,38 +661,48 @@ export class FeedService {
     }
   }
 
+  // Helper method to calculate engagement score
+  private calculateEngagementScore(reactionCount: number, tipCount: number, commentCount: number): number {
+    // Weighted engagement score calculation
+    return (reactionCount * 1) + (tipCount * 5) + (commentCount * 2);
+  }
+
+  // Helper method to calculate trending score (considers recency)
+  private calculateTrendingScore(reactionCount: number, tipCount: number, ageInHours: number): number {
+    const engagementScore = this.calculateEngagementScore(reactionCount, tipCount, 0);
+    // Decay factor based on age (newer posts get higher scores)
+    const decayFactor = Math.exp(-ageInHours / 24); // Decay over 24 hours
+    return engagementScore * decayFactor;
+  }
+
   // Helper method to update engagement score
   private async updateEngagementScore(postId: string) {
     try {
       const postIdInt = parseInt(postId);
       
-      // Calculate engagement score based on reactions and tips (comments table doesn't exist yet)
-      const result = await db
-        .select({
-          reactionCount: sql<number>`COALESCE(COUNT(DISTINCT r.id), 0)`,
-          tipCount: sql<number>`COALESCE(COUNT(DISTINCT t.id), 0)`,
-          stakedValue: posts.stakedValue
+      // Get current engagement metrics
+      const [reactionData, tipData] = await Promise.all([
+        db.select({ count: sql<number>`COUNT(*)` })
+          .from(reactions)
+          .where(eq(reactions.postId, postIdInt)),
+        db.select({ count: sql<number>`COUNT(*)` })
+          .from(tips)
+          .where(eq(tips.postId, postIdInt))
+      ]);
+
+      const reactionCount = reactionData[0]?.count || 0;
+      const tipCount = tipData[0]?.count || 0;
+      
+      // Calculate new engagement score
+      const engagementScore = this.calculateEngagementScore(reactionCount, tipCount, 0);
+
+      // Update the staked value as engagement score
+      await db
+        .update(posts)
+        .set({ 
+          stakedValue: engagementScore.toString()
         })
-        .from(posts)
-        .leftJoin(reactions, eq(reactions.postId, posts.id))
-        .leftJoin(tips, eq(tips.postId, posts.id))
-        .where(eq(posts.id, postIdInt))
-        .groupBy(posts.id, posts.stakedValue);
-
-      if (result.length > 0) {
-        const { reactionCount, tipCount } = result[0];
-        
-        // Simple engagement score calculation (without comments and shares for now)
-        const engagementScore = (reactionCount * 1) + (tipCount * 5);
-
-        // Update the staked value as a proxy for engagement score
-        await db
-          .update(posts)
-          .set({ 
-            stakedValue: engagementScore.toString()
-          })
-          .where(eq(posts.id, postIdInt));
-      }
+        .where(eq(posts.id, postIdInt));
     } catch (error) {
       console.error('Error updating engagement score:', error);
     }
