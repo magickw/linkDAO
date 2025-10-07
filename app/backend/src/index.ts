@@ -170,6 +170,8 @@ import tokenReactionRoutes from './routes/tokenReactionRoutes';
 import enhancedSearchRoutes from './routes/enhancedSearchRoutes';
 // Import content preview routes
 import contentPreviewRoutes from './routes/contentPreviewRoutes';
+// Import enhanced user routes
+import enhancedUserRoutes from './routes/enhancedUserRoutes';
 // Import engagement analytics routes
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
 // Import authentication routes
@@ -246,6 +248,9 @@ app.use('/api/search', enhancedSearchRoutes);
 
 // Content preview routes
 app.use('/api/preview', contentPreviewRoutes);
+
+// Enhanced user routes
+app.use('/api/users', enhancedUserRoutes);
 
 // Engagement analytics routes
 app.use('/api/analytics', engagementAnalyticsRoutes);

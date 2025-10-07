@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useNavigation } from '@/context/NavigationContext';
 import { mockCommunities } from '@/mocks/communityMockData';
@@ -6,23 +6,15 @@ import WalletSnapshotEmbed from './WalletSnapshotEmbed';
 import DeFiChartEmbed from './DeFiChartEmbed';
 import DAOGovernanceEmbed from './DAOGovernanceEmbed';
 import { SmartRightSidebar } from './SmartRightSidebar';
+import enhancedUserService, { SuggestedUser } from '../services/enhancedUserService';
 
-// Mock DAO data
+// Mock DAO data - TODO: Replace with real DAO service
 const trendingDAOs = [
   { id: '1', name: 'Ethereum Builders', members: 12400, treasuryValue: 2500000 },
   { id: '2', name: 'DeFi Traders', members: 8900, treasuryValue: 1800000 },
   { id: '3', name: 'NFT Collectors', members: 15600, treasuryValue: 3200000 },
   { id: '4', name: 'DAO Governance', members: 7800, treasuryValue: 1500000 },
   { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
-];
-
-import { COMMON_PLACEHOLDERS } from '../utils/placeholderService';
-
-// Mock suggested users
-const suggestedUsers = [
-  { id: '1', handle: 'web3dev', ens: 'dev.web3.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 1200, reputationScore: 650 },
-  { id: '2', handle: 'defiwhale', ens: 'whale.defi.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 8900, reputationScore: 920 },
-  { id: '3', handle: 'nftartist', ens: 'artist.nft.eth', avatarCid: COMMON_PLACEHOLDERS.AVATAR_40, followers: 5600, reputationScore: 780 },
 ];
 
 // Mock marketplace data
@@ -42,6 +34,103 @@ const governanceProposals = [
 export default function DashboardRightSidebar() {
   const { navigationState } = useNavigation();
   const { activeView, activeCommunity } = navigationState;
+  
+  // State for real user data
+  const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Load suggested users when component mounts or user changes
+  useEffect(() => {
+    const loadSuggestedUsers = async () => {
+      // TODO: Get current user ID from authentication context
+      // For now, we'll use a placeholder or skip if no user
+      const userId = getCurrentUserId(); // This would come from auth context
+      
+      if (!userId) {
+        // If no user is logged in, show empty suggestions or trending users
+        try {
+          setLoadingSuggestions(true);
+          const trending = await enhancedUserService.getTrendingUsers(3);
+          // Convert trending users to suggested users format
+          const suggestions: SuggestedUser[] = trending.map(user => ({
+            id: user.id,
+            handle: user.handle,
+            ens: user.ens,
+            avatarCid: user.avatarCid,
+            followers: user.followers,
+            reputationScore: user.reputationScore,
+            mutualConnections: 0,
+            reasonForSuggestion: 'Trending user',
+          }));
+          setSuggestedUsers(suggestions);
+        } catch (error) {
+          console.error('Error loading trending users:', error);
+          setSuggestedUsers([]);
+        } finally {
+          setLoadingSuggestions(false);
+        }
+        return;
+      }
+
+      if (userId === currentUserId) {
+        return; // Already loaded for this user
+      }
+
+      try {
+        setLoadingSuggestions(true);
+        setCurrentUserId(userId);
+        
+        const suggestions = await enhancedUserService.getSuggestedUsers(userId, {
+          maxResults: 3,
+          minReputationScore: 100,
+          excludeFollowed: true,
+        });
+        
+        setSuggestedUsers(suggestions);
+      } catch (error) {
+        console.error('Error loading suggested users:', error);
+        setSuggestedUsers([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    loadSuggestedUsers();
+  }, [currentUserId]);
+
+  // Helper function to get current user ID - this would come from auth context
+  const getCurrentUserId = (): string | null => {
+    // TODO: Replace with actual authentication context
+    // For now, return null to show trending users
+    return null;
+  };
+
+  // Handle following a user
+  const handleFollowUser = async (targetUserId: string) => {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      // TODO: Show login modal or redirect to login
+      console.log('User must be logged in to follow others');
+      return;
+    }
+
+    try {
+      const success = await enhancedUserService.followUser(userId, targetUserId);
+      if (success) {
+        // Remove the followed user from suggestions
+        setSuggestedUsers(prev => prev.filter(user => user.id !== targetUserId));
+        // TODO: Show success toast
+        console.log('Successfully followed user');
+      } else {
+        // TODO: Show error toast
+        console.log('Failed to follow user');
+      }
+    } catch (error) {
+      console.error('Error following user:', error);
+      // TODO: Show error toast
+    }
+  };
 
   // Get current community data if viewing a community
   const currentCommunity = activeCommunity 
@@ -391,33 +480,74 @@ export default function DashboardRightSidebar() {
               <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
               </svg>
-              Suggested Users
+              {currentUserId ? 'Suggested Users' : 'Trending Users'}
             </h3>
           </div>
           <div className="p-4">
-            <div className="space-y-3">
-              {suggestedUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 dark:text-white">{user.handle}</p>
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <span>{formatNumber(user.followers)} followers</span>
-                        <span className="mx-1">•</span>
-                        <span className="inline-flex items-center">
-                          <span className="mr-1">🏆</span>
-                          {user.reputationScore}
-                        </span>
+            {loadingSuggestions ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between animate-pulse">
+                    <div className="flex items-center">
+                      <div className="bg-gray-200 dark:bg-gray-700 rounded-xl w-10 h-10" />
+                      <div className="ml-3">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-1" />
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16" />
                       </div>
                     </div>
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12" />
                   </div>
-                  <button className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300">
-                    Follow
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : suggestedUsers.length > 0 ? (
+              <div className="space-y-3">
+                {suggestedUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <img
+                        src={enhancedUserService.getUserAvatarUrl(user)}
+                        alt={enhancedUserService.formatUserDisplayName(user)}
+                        className="w-10 h-10 rounded-xl object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder on error
+                          (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/identicon/svg?seed=${user.id}`;
+                        }}
+                      />
+                      <div className="ml-3">
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {enhancedUserService.formatUserDisplayName(user)}
+                        </p>
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                          <span>{enhancedUserService.formatFollowerCount(user.followers)} followers</span>
+                          <span className="mx-1">•</span>
+                          <span className="inline-flex items-center">
+                            <span className="mr-1">🏆</span>
+                            {enhancedUserService.formatReputationScore(user.reputationScore)}
+                          </span>
+                        </div>
+                        {user.reasonForSuggestion && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            {user.reasonForSuggestion}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button 
+                      className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 px-3 py-1 rounded-full border border-primary-600 dark:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+                      onClick={() => handleFollowUser(user.id)}
+                    >
+                      Follow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No suggestions available
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
