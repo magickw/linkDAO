@@ -1,9 +1,21 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { db } from '../db/connection';
-import { sellers, users, imageStorage, ensVerifications } from '../db/schema';
+import { 
+  sellers, 
+  users, 
+  imageStorage, 
+  ensVerifications, 
+  sellerActivities,
+  sellerBadges,
+  marketplaceListings,
+  orders,
+  userReputation,
+  reviews
+} from '../db/schema';
 import { ensService } from './ensService';
 import { profileSyncService } from './profileSyncService';
 import { reputationService } from './reputationService';
+import { transactionService } from './transactionService';
 import { Request } from 'express';
 import multer from 'multer';
 import { UploadedFile } from 'express-fileupload';
@@ -579,6 +591,11 @@ class SellerService {
     totalSales: number;
     averageRating: number;
     profileCompleteness: number;
+    totalRevenue: string;
+    completedOrders: number;
+    pendingOrders: number;
+    disputedOrders: number;
+    reputationScore: number;
   }> {
     try {
       // Get basic seller info
@@ -587,23 +604,463 @@ class SellerService {
         throw new Error('Seller profile not found');
       }
 
-      // Get listing counts (placeholder - would need actual listing queries)
-      const totalListings = 0; // TODO: Implement actual query
-      const activeListings = 0; // TODO: Implement actual query
-      const totalSales = 0; // TODO: Implement actual query
-      const averageRating = 0; // TODO: Implement actual query
+      // Get listing counts from marketplace_listings table
+      const listingStats = await db
+        .select({
+          totalListings: sql<number>`count(*)`,
+          activeListings: sql<number>`count(*) filter (where status = 'active')`,
+        })
+        .from(marketplaceListings)
+        .where(eq(marketplaceListings.sellerAddress, walletAddress));
+
+      // Get order statistics
+      const orderStats = await db
+        .select({
+          totalSales: sql<number>`count(*) filter (where status = 'completed')`,
+          totalRevenue: sql<string>`coalesce(sum(total_amount) filter (where status = 'completed'), 0)`,
+          completedOrders: sql<number>`count(*) filter (where status = 'completed')`,
+          pendingOrders: sql<number>`count(*) filter (where status in ('pending', 'processing', 'shipped'))`,
+          disputedOrders: sql<number>`count(*) filter (where status = 'disputed')`,
+        })
+        .from(orders)
+        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .where(eq(marketplaceListings.sellerAddress, walletAddress));
+
+      // Get reputation data
+      const reputationData = await db
+        .select()
+        .from(userReputation)
+        .where(eq(userReputation.walletAddress, walletAddress))
+        .limit(1);
+
+      // Get average rating from reviews
+      const ratingData = await db
+        .select({
+          averageRating: sql<number>`coalesce(avg(rating), 0)`,
+        })
+        .from(reviews)
+        .where(eq(reviews.revieweeId, walletAddress));
 
       const completeness = this.calculateProfileCompleteness(seller);
 
+      const stats = listingStats[0] || { totalListings: 0, activeListings: 0 };
+      const orders = orderStats[0] || { 
+        totalSales: 0, 
+        totalRevenue: '0', 
+        completedOrders: 0, 
+        pendingOrders: 0, 
+        disputedOrders: 0 
+      };
+      const reputation = reputationData[0] || { reputationScore: 0 };
+      const rating = ratingData[0] || { averageRating: 0 };
+
       return {
-        totalListings,
-        activeListings,
-        totalSales,
-        averageRating,
+        totalListings: stats.totalListings,
+        activeListings: stats.activeListings,
+        totalSales: orders.totalSales,
+        averageRating: Number(rating.averageRating),
         profileCompleteness: completeness.score,
+        totalRevenue: orders.totalRevenue,
+        completedOrders: orders.completedOrders,
+        pendingOrders: orders.pendingOrders,
+        disputedOrders: orders.disputedOrders,
+        reputationScore: Number(reputation.reputationScore),
       };
     } catch (error) {
       console.error('Error fetching seller stats:', error);
+      throw error;
+    }
+  }
+
+  // Seller Verification System
+  async verifySellerProfile(walletAddress: string, verificationType: 'email' | 'phone' | 'kyc'): Promise<{
+    success: boolean;
+    verificationId?: string;
+    message: string;
+  }> {
+    try {
+      const seller = await this.getSellerProfile(walletAddress);
+      if (!seller) {
+        throw new Error('Seller profile not found');
+      }
+
+      // Create verification record
+      const verificationId = `${verificationType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Update seller verification status
+      const updateData: any = {};
+      switch (verificationType) {
+        case 'email':
+          updateData.emailVerified = true;
+          break;
+        case 'phone':
+          updateData.phoneVerified = true;
+          break;
+        case 'kyc':
+          updateData.kycStatus = 'approved';
+          break;
+      }
+
+      await db
+        .update(sellers)
+        .set({
+          ...updateData,
+          updatedAt: new Date(),
+        })
+        .where(eq(sellers.walletAddress, walletAddress));
+
+      // Create seller activity record
+      await db.insert(sellerActivities).values({
+        sellerWalletAddress: walletAddress,
+        activityType: 'verification',
+        title: `${verificationType.toUpperCase()} Verification Completed`,
+        description: `Successfully completed ${verificationType} verification`,
+        metadata: JSON.stringify({ verificationType, verificationId }),
+      });
+
+      return {
+        success: true,
+        verificationId,
+        message: `${verificationType} verification completed successfully`,
+      };
+    } catch (error) {
+      console.error('Error verifying seller profile:', error);
+      return {
+        success: false,
+        message: `Failed to verify ${verificationType}: ${error.message}`,
+      };
+    }
+  }
+
+  // Seller Reputation Tracking
+  async updateSellerReputation(
+    walletAddress: string, 
+    action: 'sale_completed' | 'dispute_resolved' | 'review_received',
+    data: any
+  ): Promise<void> {
+    try {
+      // Get current reputation or create new record
+      let reputation = await db
+        .select()
+        .from(userReputation)
+        .where(eq(userReputation.walletAddress, walletAddress))
+        .limit(1);
+
+      if (reputation.length === 0) {
+        // Create new reputation record
+        await db.insert(userReputation).values({
+          walletAddress,
+          reputationScore: 0,
+          totalTransactions: 0,
+          positiveReviews: 0,
+          negativeReviews: 0,
+          successfulSales: 0,
+          successfulPurchases: 0,
+          disputedTransactions: 0,
+          resolvedDisputes: 0,
+          averageResponseTime: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        reputation = await db
+          .select()
+          .from(userReputation)
+          .where(eq(userReputation.walletAddress, walletAddress))
+          .limit(1);
+      }
+
+      const currentRep = reputation[0];
+      const updates: any = { updatedAt: new Date() };
+
+      switch (action) {
+        case 'sale_completed':
+          updates.totalTransactions = Number(currentRep.totalTransactions) + 1;
+          updates.successfulSales = Number(currentRep.successfulSales) + 1;
+          updates.reputationScore = Number(currentRep.reputationScore) + 5; // +5 points for completed sale
+          break;
+        
+        case 'dispute_resolved':
+          updates.resolvedDisputes = Number(currentRep.resolvedDisputes) + 1;
+          if (data.resolution === 'seller_favor') {
+            updates.reputationScore = Number(currentRep.reputationScore) + 3; // +3 points for favorable resolution
+          } else {
+            updates.reputationScore = Math.max(0, Number(currentRep.reputationScore) - 2); // -2 points for unfavorable resolution
+          }
+          break;
+        
+        case 'review_received':
+          if (data.rating >= 4) {
+            updates.positiveReviews = Number(currentRep.positiveReviews) + 1;
+            updates.reputationScore = Number(currentRep.reputationScore) + 2; // +2 points for positive review
+          } else if (data.rating <= 2) {
+            updates.negativeReviews = Number(currentRep.negativeReviews) + 1;
+            updates.reputationScore = Math.max(0, Number(currentRep.reputationScore) - 1); // -1 point for negative review
+          }
+          break;
+      }
+
+      // Update reputation record
+      await db
+        .update(userReputation)
+        .set(updates)
+        .where(eq(userReputation.walletAddress, walletAddress));
+
+      // Create activity record
+      await db.insert(sellerActivities).values({
+        sellerWalletAddress: walletAddress,
+        activityType: 'reputation_update',
+        title: `Reputation Updated: ${action}`,
+        description: `Reputation updated due to ${action.replace('_', ' ')}`,
+        metadata: JSON.stringify({ action, data, reputationChange: updates.reputationScore - Number(currentRep.reputationScore) }),
+      });
+
+    } catch (error) {
+      console.error('Error updating seller reputation:', error);
+      throw error;
+    }
+  }
+
+  // Seller Activities and Timeline
+  async getSellerActivities(walletAddress: string, limit: number = 20): Promise<Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    metadata?: any;
+    createdAt: string;
+  }>> {
+    try {
+      const activities = await db
+        .select()
+        .from(sellerActivities)
+        .where(eq(sellerActivities.sellerWalletAddress, walletAddress))
+        .orderBy(desc(sellerActivities.createdAt))
+        .limit(limit);
+
+      return activities.map(activity => ({
+        id: activity.id.toString(),
+        type: activity.activityType,
+        title: activity.title,
+        description: activity.description || '',
+        metadata: activity.metadata ? JSON.parse(activity.metadata) : undefined,
+        createdAt: activity.createdAt.toISOString(),
+      }));
+    } catch (error) {
+      console.error('Error getting seller activities:', error);
+      throw error;
+    }
+  }
+
+  // Seller Badges Management
+  async getSellerBadges(walletAddress: string): Promise<Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    icon?: string;
+    color?: string;
+    earnedAt: string;
+    isActive: boolean;
+  }>> {
+    try {
+      const badges = await db
+        .select()
+        .from(sellerBadges)
+        .where(and(
+          eq(sellerBadges.sellerWalletAddress, walletAddress),
+          eq(sellerBadges.isActive, true)
+        ))
+        .orderBy(desc(sellerBadges.earnedAt));
+
+      return badges.map(badge => ({
+        id: badge.id.toString(),
+        type: badge.badgeType,
+        title: badge.title,
+        description: badge.description || '',
+        icon: badge.icon || undefined,
+        color: badge.color || undefined,
+        earnedAt: badge.earnedAt.toISOString(),
+        isActive: badge.isActive,
+      }));
+    } catch (error) {
+      console.error('Error getting seller badges:', error);
+      throw error;
+    }
+  }
+
+  async awardSellerBadge(
+    walletAddress: string,
+    badgeType: string,
+    title: string,
+    description: string,
+    icon?: string,
+    color?: string
+  ): Promise<void> {
+    try {
+      // Check if badge already exists
+      const existingBadge = await db
+        .select()
+        .from(sellerBadges)
+        .where(and(
+          eq(sellerBadges.sellerWalletAddress, walletAddress),
+          eq(sellerBadges.badgeType, badgeType),
+          eq(sellerBadges.isActive, true)
+        ))
+        .limit(1);
+
+      if (existingBadge.length > 0) {
+        console.log(`Badge ${badgeType} already exists for seller ${walletAddress}`);
+        return;
+      }
+
+      // Award new badge
+      await db.insert(sellerBadges).values({
+        sellerWalletAddress: walletAddress,
+        badgeType,
+        title,
+        description,
+        icon,
+        color,
+        earnedAt: new Date(),
+        isActive: true,
+      });
+
+      // Create activity record
+      await db.insert(sellerActivities).values({
+        sellerWalletAddress: walletAddress,
+        activityType: 'badge_earned',
+        title: `Badge Earned: ${title}`,
+        description: `Earned the "${title}" badge`,
+        metadata: JSON.stringify({ badgeType, icon, color }),
+      });
+
+    } catch (error) {
+      console.error('Error awarding seller badge:', error);
+      throw error;
+    }
+  }
+
+  // Transaction Integration
+  async getSellerTransactionHistory(walletAddress: string, limit: number = 50): Promise<any[]> {
+    try {
+      return await transactionService.getTransactionHistory(walletAddress, limit);
+    } catch (error) {
+      console.error('Error getting seller transaction history:', error);
+      throw error;
+    }
+  }
+
+  async getSellerTransactionSummary(walletAddress: string, days: number = 30): Promise<any> {
+    try {
+      return await transactionService.getTransactionSummary(walletAddress, days);
+    } catch (error) {
+      console.error('Error getting seller transaction summary:', error);
+      throw error;
+    }
+  }
+
+  // Order Management Integration
+  async getSellerOrders(walletAddress: string, status?: string): Promise<Array<{
+    id: string;
+    listingId: string;
+    listingTitle: string;
+    buyerAddress: string;
+    amount: string;
+    currency: string;
+    status: string;
+    paymentMethod: string;
+    createdAt: string;
+    updatedAt: string;
+  }>> {
+    try {
+      let query = db
+        .select({
+          orderId: orders.id,
+          listingId: orders.listingId,
+          listingTitle: marketplaceListings.title,
+          enhancedData: marketplaceListings.enhancedData,
+          buyerAddress: sql<string>`buyer_user.wallet_address`,
+          amount: orders.totalAmount,
+          currency: orders.currency,
+          status: orders.status,
+          paymentMethod: orders.paymentMethod,
+          createdAt: orders.createdAt,
+          updatedAt: sql<Date>`orders.created_at`, // Using created_at as updated_at placeholder
+        })
+        .from(orders)
+        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .leftJoin(users.as('buyer_user'), eq(orders.buyerId, users.id))
+        .where(eq(marketplaceListings.sellerAddress, walletAddress));
+
+      if (status) {
+        query = query.where(and(
+          eq(marketplaceListings.sellerAddress, walletAddress),
+          eq(orders.status, status)
+        ));
+      }
+
+      const orderResults = await query
+        .orderBy(desc(orders.createdAt))
+        .limit(50);
+
+      return orderResults.map(order => {
+        const enhanced = order.enhancedData as any;
+        return {
+          id: order.orderId.toString(),
+          listingId: order.listingId?.toString() || '',
+          listingTitle: enhanced?.title || order.listingTitle || 'Unknown Item',
+          buyerAddress: order.buyerAddress || '',
+          amount: order.amount || '0',
+          currency: order.currency || 'USD',
+          status: order.status || 'pending',
+          paymentMethod: order.paymentMethod || 'crypto',
+          createdAt: order.createdAt?.toISOString() || new Date().toISOString(),
+          updatedAt: order.updatedAt?.toISOString() || new Date().toISOString(),
+        };
+      });
+    } catch (error) {
+      console.error('Error getting seller orders:', error);
+      throw error;
+    }
+  }
+
+  // Dashboard Data Aggregation
+  async getSellerDashboardData(walletAddress: string): Promise<{
+    profile: SellerProfileData | null;
+    stats: any;
+    recentActivities: any[];
+    badges: any[];
+    transactionSummary: any;
+    recentOrders: any[];
+  }> {
+    try {
+      const [
+        profile,
+        stats,
+        activities,
+        badges,
+        transactionSummary,
+        orders
+      ] = await Promise.all([
+        this.getSellerProfile(walletAddress),
+        this.getSellerStats(walletAddress),
+        this.getSellerActivities(walletAddress, 10),
+        this.getSellerBadges(walletAddress),
+        this.getSellerTransactionSummary(walletAddress, 30),
+        this.getSellerOrders(walletAddress)
+      ]);
+
+      return {
+        profile,
+        stats,
+        recentActivities: activities,
+        badges,
+        transactionSummary,
+        recentOrders: orders.slice(0, 10),
+      };
+    } catch (error) {
+      console.error('Error getting seller dashboard data:', error);
       throw error;
     }
   }

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { marketplaceService, MockProduct } from '../../services/unifiedMarketplaceService';
+import { marketplaceService, MockProduct } from '../../services/marketplaceService';
 import { debounce } from 'lodash';
 
 interface SearchFilters {

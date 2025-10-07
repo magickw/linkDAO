@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { marketplaceService, MockProduct } from '../../services/unifiedMarketplaceService';
+import { marketplaceService, MockProduct } from '../../services/marketplaceService';
 
 interface RealTimeAuctionCardProps {
   auction: MockProduct;

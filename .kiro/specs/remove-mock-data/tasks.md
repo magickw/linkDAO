@@ -113,14 +113,14 @@ This implementation plan systematically removes mock data from the application a
     - Add auction end time management
     - _Requirements: 2.4, 7.4_
 
-- [ ] 7. Implement seller and transaction systems
-  - [ ] 7.1 Add real seller profile management
+- [x] 7. Implement seller and transaction systems
+  - [x] 7.1 Add real seller profile management
     - Replace mock seller data with database operations
     - Implement seller verification system
     - Add seller reputation tracking
     - _Requirements: 2.5, 3.4_
   
-  - [ ] 7.2 Implement transaction history
+  - [x] 7.2 Implement transaction history
     - Add real transaction recording
     - Implement order management system
     - Create transaction analytics

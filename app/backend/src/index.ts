@@ -191,6 +191,12 @@ import { reputationRoutes } from './routes/reputationRoutes';
 // Import monitoring routes
 import monitoringRoutes from './routes/monitoringRoutes';
 
+// Import transaction routes
+import transactionRoutes from './routes/transactionRoutes';
+
+// Import order management routes
+import orderManagementRoutes from './routes/orderManagementRoutes';
+
 // Authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
 
@@ -277,6 +283,12 @@ app.use('/marketplace/reputation', reputationRoutes);
 
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
+
+// Transaction routes
+app.use('/api/transactions', transactionRoutes);
+
+// Order management routes
+app.use('/api/order-management', orderManagementRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 

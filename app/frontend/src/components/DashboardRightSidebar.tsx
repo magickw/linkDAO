@@ -15,7 +15,7 @@ interface TrendingDAO {
   treasuryValue: number;
 }
 
-import { marketplaceService, MockProduct } from '../services/unifiedMarketplaceService';
+import { marketplaceService, MockProduct } from '../services/marketplaceService';
 
 import { governanceService } from '../services/governanceService';
 import { Proposal } from '../types/governance';
