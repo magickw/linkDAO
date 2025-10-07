@@ -48,14 +48,20 @@ export const posts = pgTable("posts", {
   tags: text("tags"), // JSON array of tags
   stakedValue: numeric("staked_value").default('0'), // Total tokens staked on this post
   reputationScore: integer("reputation_score").default(0), // Author's reputation score at time of posting
-  dao: varchar("dao", { length: 64 }), // DAO community this post belongs to
+  dao: varchar("dao", { length: 64 }), // DAO community this post belongs to (legacy)
+  communityId: uuid("community_id"), // New reference to communities table
   pollId: uuid("poll_id"), // Reference to poll if this is a poll post
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   authorFk: foreignKey({
     columns: [t.authorId],
     foreignColumns: [users.id]
-  })
+  }),
+  communityFk: foreignKey({
+    columns: [t.communityId],
+    foreignColumns: [communities.id]
+  }),
+  communityIdIdx: index("idx_posts_community_id").on(t.communityId),
 }));
 
 // Post Tags - for efficient querying of posts by tags
@@ -690,6 +696,94 @@ export const watermarkTemplates = pgTable("watermark_templates", {
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Communities System Tables
+
+// Community categories
+export const communityCategories = pgTable("community_categories", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon", { length: 100 }),
+  color: varchar("color", { length: 7 }), // hex color code
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  slugIdx: index("idx_community_categories_slug").on(t.slug),
+  isActiveIdx: index("idx_community_categories_is_active").on(t.isActive),
+  sortOrderIdx: index("idx_community_categories_sort_order").on(t.sortOrder),
+}));
+
+// Communities
+export const communities = pgTable("communities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  description: text("description"),
+  rules: text("rules"), // JSON array of rules
+  memberCount: integer("member_count").default(0).notNull(),
+  postCount: integer("post_count").default(0).notNull(),
+  avatar: text("avatar"),
+  banner: text("banner"),
+  category: varchar("category", { length: 100 }).notNull(),
+  tags: text("tags"), // JSON array of tags
+  isPublic: boolean("is_public").default(true).notNull(),
+  moderators: text("moderators"), // JSON array of moderator addresses
+  treasuryAddress: varchar("treasury_address", { length: 66 }),
+  governanceToken: varchar("governance_token", { length: 66 }),
+  settings: text("settings"), // JSON CommunitySettings object
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  nameIdx: index("idx_communities_name").on(t.name),
+  categoryIdx: index("idx_communities_category").on(t.category),
+  isPublicIdx: index("idx_communities_is_public").on(t.isPublic),
+  memberCountIdx: index("idx_communities_member_count").on(t.memberCount),
+  createdAtIdx: index("idx_communities_created_at").on(t.createdAt),
+}));
+
+// Community members
+export const communityMembers = pgTable("community_members", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  role: varchar("role", { length: 32 }).default('member').notNull(), // 'member', 'moderator', 'admin'
+  reputation: integer("reputation").default(0).notNull(),
+  contributions: integer("contributions").default(0).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+}, (t) => ({
+  pk: primaryKey(t.communityId, t.userAddress),
+  communityIdIdx: index("idx_community_members_community_id").on(t.communityId),
+  userAddressIdx: index("idx_community_members_user_address").on(t.userAddress),
+  roleIdx: index("idx_community_members_role").on(t.role),
+  isActiveIdx: index("idx_community_members_is_active").on(t.isActive),
+  joinedAtIdx: index("idx_community_members_joined_at").on(t.joinedAt),
+}));
+
+// Community statistics
+export const communityStats = pgTable("community_stats", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull().unique(),
+  activeMembers7d: integer("active_members_7d").default(0).notNull(),
+  activeMembers30d: integer("active_members_30d").default(0).notNull(),
+  posts7d: integer("posts_7d").default(0).notNull(),
+  posts30d: integer("posts_30d").default(0).notNull(),
+  engagementRate: numeric("engagement_rate", { precision: 5, scale: 4 }).default("0").notNull(),
+  growthRate7d: numeric("growth_rate_7d", { precision: 5, scale: 4 }).default("0").notNull(),
+  growthRate30d: numeric("growth_rate_30d", { precision: 5, scale: 4 }).default("0").notNull(),
+  trendingScore: numeric("trending_score", { precision: 10, scale: 4 }).default("0").notNull(),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  trendingScoreIdx: index("idx_community_stats_trending_score").on(t.trendingScore),
+  growthRate7dIdx: index("idx_community_stats_growth_rate_7d").on(t.growthRate7d),
+  lastCalculatedAtIdx: index("idx_community_stats_last_calculated_at").on(t.lastCalculatedAt),
+}));
 
 export const contentVerification = pgTable("content_verification", {
   id: uuid("id").defaultRandom().primaryKey(),

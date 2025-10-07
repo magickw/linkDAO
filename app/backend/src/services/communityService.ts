@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { posts, users } from '../db/schema';
-import { eq, desc, asc, and, or, like, inArray, sql, gt } from 'drizzle-orm';
+import { posts, users, communities, communityMembers, communityStats, communityCategories, reactions } from '../db/schema';
+import { eq, desc, asc, and, or, like, inArray, sql, gt, count, avg, sum, isNull } from 'drizzle-orm';
 import { feedService } from './feedService';
 
 interface ListCommunitiesOptions {
@@ -26,6 +26,7 @@ interface CreateCommunityData {
   governanceEnabled: boolean;
   stakingRequired: boolean;
   minimumStake: number;
+  governanceToken?: string;
 }
 
 interface UpdateCommunityData {
@@ -75,49 +76,131 @@ interface VoteData {
 }
 
 export class CommunityService {
-  // List communities with filtering (using dao field from posts)
+  // List communities with filtering and caching
   async listCommunities(options: ListCommunitiesOptions) {
     const { page, limit, category, search, sort, tags } = options;
     const offset = (page - 1) * limit;
 
     try {
-      // Get unique DAOs from posts with post counts
+      // Build where conditions
+      const whereConditions = [];
+      
+      if (category) {
+        whereConditions.push(eq(communities.category, category));
+      }
+      
+      if (search) {
+        whereConditions.push(
+          or(
+            like(communities.displayName, `%${search}%`),
+            like(communities.description, `%${search}%`),
+            like(communities.name, `%${search}%`)
+          )
+        );
+      }
+      
+      if (tags && tags.length > 0) {
+        // Search in JSON tags array
+        whereConditions.push(
+          sql`EXISTS (
+            SELECT 1 FROM json_array_elements_text(${communities.tags}::json) AS tag 
+            WHERE tag = ANY(${tags})
+          )`
+        );
+      }
+
+      // Add public filter
+      whereConditions.push(eq(communities.isPublic, true));
+
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Determine sort order
+      let orderBy;
+      switch (sort) {
+        case 'newest':
+          orderBy = desc(communities.createdAt);
+          break;
+        case 'oldest':
+          orderBy = asc(communities.createdAt);
+          break;
+        case 'members':
+          orderBy = desc(communities.memberCount);
+          break;
+        case 'posts':
+          orderBy = desc(communities.postCount);
+          break;
+        case 'name':
+          orderBy = asc(communities.displayName);
+          break;
+        default:
+          orderBy = desc(communities.memberCount);
+      }
+
+      // Get communities with stats
       const communityList = await db
         .select({
-          name: posts.dao,
-          postCount: sql<number>`COUNT(*)`,
-          latestPost: sql<Date>`MAX(${posts.createdAt})`
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
+          treasuryAddress: communities.treasuryAddress,
+          governanceToken: communities.governanceToken,
+          // Get trending score from stats
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
         })
-        .from(posts)
-        .where(sql`${posts.dao} IS NOT NULL AND ${posts.dao} != ''`)
-        .groupBy(posts.dao)
-        .orderBy(desc(sql<number>`COUNT(*)`))
+        .from(communities)
+        .leftJoin(communityStats, eq(communities.id, communityStats.communityId))
+        .where(whereClause)
+        .orderBy(orderBy)
         .limit(limit)
         .offset(offset);
 
-      // Transform to match expected format
-      const communities = communityList.map(item => ({
-        id: item.name,
+      // Get total count for pagination
+      const totalResult = await db
+        .select({ count: count() })
+        .from(communities)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform to expected format
+      const transformedCommunities = communityList.map(item => ({
+        id: item.id,
         name: item.name,
-        displayName: item.name,
-        description: `Community for ${item.name}`,
-        category: 'general',
-        tags: [],
-        iconUrl: null,
-        bannerUrl: null,
-        memberCount: 0, // Would need separate tracking
+        displayName: item.displayName,
+        description: item.description || '',
+        category: item.category,
+        tags: item.tags ? JSON.parse(item.tags) : [],
+        avatar: item.avatar,
+        banner: item.banner,
+        memberCount: item.memberCount,
         postCount: item.postCount,
-        createdAt: item.latestPost,
-        governanceEnabled: false
+        isPublic: item.isPublic,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        treasuryAddress: item.treasuryAddress,
+        governanceToken: item.governanceToken,
+        trendingScore: item.trendingScore ? Number(item.trendingScore) : 0,
+        growthRate: item.growthRate7d ? Number(item.growthRate7d) : 0,
       }));
 
       return {
-        communities,
+        communities: transformedCommunities,
         pagination: {
           page,
           limit,
-          total: communities.length,
-          totalPages: Math.ceil(communities.length / limit)
+          total,
+          totalPages: Math.ceil(total / limit)
         }
       };
     } catch (error) {
@@ -126,50 +209,67 @@ export class CommunityService {
     }
   }
 
-  // Get trending communities
+  // Get trending communities with real analytics
   async getTrendingCommunities(options: { page: number; limit: number; timeRange: string }) {
     const { page, limit, timeRange } = options;
     const offset = (page - 1) * limit;
 
     try {
-      // Get trending communities based on recent post activity
-      const timeFilter = this.buildTimeFilter(timeRange);
-      
+      // Get trending communities based on trending score and recent activity
       const trendingCommunities = await db
         .select({
-          name: posts.dao,
-          postCount: sql<number>`COUNT(*)`,
-          latestPost: sql<Date>`MAX(${posts.createdAt})`
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          createdAt: communities.createdAt,
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
+          posts7d: communityStats.posts7d,
+          activeMembers7d: communityStats.activeMembers7d,
         })
-        .from(posts)
-        .where(and(
-          sql`${posts.dao} IS NOT NULL AND ${posts.dao} != ''`,
-          timeFilter
-        ))
-        .groupBy(posts.dao)
-        .orderBy(desc(sql<number>`COUNT(*)`))
+        .from(communities)
+        .leftJoin(communityStats, eq(communities.id, communityStats.communityId))
+        .where(eq(communities.isPublic, true))
+        .orderBy(
+          desc(communityStats.trendingScore),
+          desc(communityStats.growthRate7d),
+          desc(communities.memberCount)
+        )
         .limit(limit)
         .offset(offset);
 
-      // Transform to match expected format
-      const communities = trendingCommunities.map(item => ({
-        id: item.name,
+      // Transform to expected format
+      const transformedCommunities = trendingCommunities.map(item => ({
+        id: item.id,
         name: item.name,
-        displayName: item.name,
-        description: `Community for ${item.name}`,
-        category: 'general',
-        iconUrl: null,
-        memberCount: 0, // Would need separate tracking
+        displayName: item.displayName,
+        description: item.description || '',
+        category: item.category,
+        tags: item.tags ? JSON.parse(item.tags) : [],
+        avatar: item.avatar,
+        banner: item.banner,
+        memberCount: item.memberCount,
         postCount: item.postCount,
-        createdAt: item.latestPost
+        createdAt: item.createdAt,
+        trendingScore: item.trendingScore ? Number(item.trendingScore) : 0,
+        growthRate: item.growthRate7d ? Number(item.growthRate7d) : 0,
+        recentPosts: item.posts7d || 0,
+        activeMembers: item.activeMembers7d || 0,
       }));
 
       return {
-        communities,
+        communities: transformedCommunities,
         pagination: {
           page,
           limit,
-          total: communities.length
+          total: transformedCommunities.length
         }
       };
     } catch (error) {
@@ -178,39 +278,111 @@ export class CommunityService {
     }
   }
 
-  // Get community details
+  // Get community details with membership info
   async getCommunityDetails(communityId: string, userAddress?: string) {
     try {
-      // Get community info from posts with that DAO name
-      const communityPosts = await db
+      // Get community details
+      const communityResult = await db
         .select({
-          postCount: sql<number>`COUNT(*)`,
-          latestPost: sql<Date>`MAX(${posts.createdAt})`,
-          firstPost: sql<Date>`MIN(${posts.createdAt})`
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          rules: communities.rules,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          moderators: communities.moderators,
+          treasuryAddress: communities.treasuryAddress,
+          governanceToken: communities.governanceToken,
+          settings: communities.settings,
+          createdAt: communities.createdAt,
+          updatedAt: communities.updatedAt,
         })
-        .from(posts)
-        .where(eq(posts.dao, communityId))
-        .groupBy(posts.dao);
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
 
-      if (communityPosts.length === 0) {
+      if (communityResult.length === 0) {
         return null;
       }
 
+      const community = communityResult[0];
+
+      // Get user membership if userAddress provided
+      let membership = null;
+      if (userAddress) {
+        const membershipResult = await db
+          .select({
+            role: communityMembers.role,
+            reputation: communityMembers.reputation,
+            contributions: communityMembers.contributions,
+            joinedAt: communityMembers.joinedAt,
+            isActive: communityMembers.isActive,
+          })
+          .from(communityMembers)
+          .where(
+            and(
+              eq(communityMembers.communityId, communityId),
+              eq(communityMembers.userAddress, userAddress)
+            )
+          )
+          .limit(1);
+
+        if (membershipResult.length > 0) {
+          membership = membershipResult[0];
+        }
+      }
+
+      // Get community statistics
+      const statsResult = await db
+        .select()
+        .from(communityStats)
+        .where(eq(communityStats.communityId, communityId))
+        .limit(1);
+
+      const stats = statsResult[0] || null;
+
       const communityData = {
-        id: communityId,
-        name: communityId,
-        displayName: communityId,
-        description: `Community for ${communityId}`,
-        category: 'general',
-        tags: [],
-        iconUrl: null,
-        bannerUrl: null,
-        memberCount: 0, // Would need separate tracking
-        postCount: communityPosts[0].postCount,
-        createdAt: communityPosts[0].firstPost,
-        governanceEnabled: false,
-        isMember: false, // Would need membership tracking
-        memberRole: null
+        id: community.id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description || '',
+        rules: community.rules ? JSON.parse(community.rules) : [],
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        banner: community.banner,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        isPublic: community.isPublic,
+        moderators: community.moderators ? JSON.parse(community.moderators) : [],
+        treasuryAddress: community.treasuryAddress,
+        governanceToken: community.governanceToken,
+        settings: community.settings ? JSON.parse(community.settings) : null,
+        createdAt: community.createdAt,
+        updatedAt: community.updatedAt,
+        // User-specific data
+        isMember: membership !== null,
+        memberRole: membership?.role || null,
+        memberReputation: membership?.reputation || 0,
+        memberContributions: membership?.contributions || 0,
+        memberJoinedAt: membership?.joinedAt || null,
+        // Statistics
+        stats: stats ? {
+          activeMembers7d: stats.activeMembers7d,
+          activeMembers30d: stats.activeMembers30d,
+          posts7d: stats.posts7d,
+          posts30d: stats.posts30d,
+          engagementRate: Number(stats.engagementRate),
+          growthRate7d: Number(stats.growthRate7d),
+          growthRate30d: Number(stats.growthRate30d),
+          trendingScore: Number(stats.trendingScore),
+        } : null,
       };
 
       return communityData;
@@ -220,27 +392,108 @@ export class CommunityService {
     }
   }
 
-  // Create new community (simplified - no communities table)
+  // Create new community with real database operations
   async createCommunity(data: CreateCommunityData) {
-    // For now, return a mock community since communities table doesn't exist
-    // This would need proper implementation when communities table is added
-    const mockCommunity = {
-      id: data.name,
-      name: data.name,
-      displayName: data.displayName,
-      description: data.description,
-      category: data.category,
-      tags: data.tags,
-      isPublic: data.isPublic,
-      iconUrl: data.iconUrl,
-      bannerUrl: data.bannerUrl,
-      memberCount: 1,
-      postCount: 0,
-      createdAt: new Date(),
-      governanceEnabled: data.governanceEnabled
-    };
+    try {
+      // Check if community name already exists
+      const existingCommunity = await db
+        .select({ id: communities.id })
+        .from(communities)
+        .where(eq(communities.name, data.name))
+        .limit(1);
 
-    return mockCommunity;
+      if (existingCommunity.length > 0) {
+        throw new Error('Community name already exists');
+      }
+
+      // Prepare community data
+      const communityData = {
+        name: data.name,
+        displayName: data.displayName,
+        description: data.description,
+        rules: JSON.stringify(data.rules || []),
+        category: data.category,
+        tags: JSON.stringify(data.tags || []),
+        isPublic: data.isPublic,
+        avatar: data.iconUrl || null,
+        banner: data.bannerUrl || null,
+        moderators: JSON.stringify([data.creatorAddress]),
+        treasuryAddress: data.governanceEnabled ? null : null, // Will be set later
+        governanceToken: data.governanceEnabled ? null : null, // Will be set later
+        settings: JSON.stringify({
+          allowedPostTypes: [
+            { id: 'discussion', name: 'Discussion', description: 'General discussion posts', enabled: true },
+            { id: 'news', name: 'News', description: 'News and updates', enabled: true },
+            { id: 'question', name: 'Question', description: 'Ask questions', enabled: true }
+          ],
+          requireApproval: false,
+          minimumReputation: 0,
+          stakingRequirements: data.stakingRequired ? [{
+            action: 'post',
+            tokenAddress: data.governanceToken || '',
+            minimumAmount: data.minimumStake.toString(),
+            lockDuration: 86400 // 24 hours
+          }] : []
+        }),
+        memberCount: 1, // Creator is first member
+        postCount: 0,
+      };
+
+      // Create community
+      const newCommunityResult = await db
+        .insert(communities)
+        .values(communityData)
+        .returning();
+
+      const newCommunity = newCommunityResult[0];
+
+      // Add creator as admin member
+      await db
+        .insert(communityMembers)
+        .values({
+          communityId: newCommunity.id,
+          userAddress: data.creatorAddress,
+          role: 'admin',
+          reputation: 100, // Starting reputation for creator
+          contributions: 1, // Creating community counts as contribution
+          isActive: true,
+        });
+
+      // Initialize community stats
+      await db
+        .insert(communityStats)
+        .values({
+          communityId: newCommunity.id,
+          activeMembers7d: 1,
+          activeMembers30d: 1,
+          posts7d: 0,
+          posts30d: 0,
+          engagementRate: "0",
+          growthRate7d: "0",
+          growthRate30d: "0",
+          trendingScore: "0",
+        });
+
+      return {
+        id: newCommunity.id,
+        name: newCommunity.name,
+        displayName: newCommunity.displayName,
+        description: newCommunity.description,
+        category: newCommunity.category,
+        tags: JSON.parse(newCommunity.tags || '[]'),
+        isPublic: newCommunity.isPublic,
+        avatar: newCommunity.avatar,
+        banner: newCommunity.banner,
+        memberCount: newCommunity.memberCount,
+        postCount: newCommunity.postCount,
+        createdAt: newCommunity.createdAt,
+        governanceEnabled: data.governanceEnabled,
+        creatorAddress: data.creatorAddress,
+      };
+    } catch (error) {
+      console.error('Error creating community:', error);
+      throw new Error('Failed to create community');
+    }
   }
 
   // Update community (simplified)
@@ -250,29 +503,152 @@ export class CommunityService {
     return null;
   }
 
-  // Join community (simplified)
+  // Join community with real membership tracking
   async joinCommunity(data: JoinCommunityData) {
-    // For now, return success since we don't have membership tracking
-    // This would need proper implementation when communities table is added
-    return { 
-      success: true, 
-      data: {
-        communityId: data.communityId,
-        userAddress: data.userAddress,
-        role: 'member',
-        joinedAt: new Date()
+    try {
+      // Check if community exists and is public
+      const communityResult = await db
+        .select({ 
+          id: communities.id, 
+          isPublic: communities.isPublic,
+          memberCount: communities.memberCount 
+        })
+        .from(communities)
+        .where(eq(communities.id, data.communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        return { success: false, message: 'Community not found' };
       }
-    };
+
+      const community = communityResult[0];
+
+      if (!community.isPublic) {
+        return { success: false, message: 'Community is private' };
+      }
+
+      // Check if user is already a member
+      const existingMembership = await db
+        .select({ id: communityMembers.id })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, data.communityId),
+            eq(communityMembers.userAddress, data.userAddress)
+          )
+        )
+        .limit(1);
+
+      if (existingMembership.length > 0) {
+        return { success: false, message: 'Already a member of this community' };
+      }
+
+      // Add membership
+      const membershipResult = await db
+        .insert(communityMembers)
+        .values({
+          communityId: data.communityId,
+          userAddress: data.userAddress,
+          role: 'member',
+          reputation: 0,
+          contributions: 0,
+          isActive: true,
+        })
+        .returning();
+
+      // Update community member count
+      await db
+        .update(communities)
+        .set({ 
+          memberCount: community.memberCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(communities.id, data.communityId));
+
+      // Update community stats
+      await this.updateCommunityStats(data.communityId);
+
+      return { 
+        success: true, 
+        data: {
+          id: membershipResult[0].id,
+          communityId: data.communityId,
+          userAddress: data.userAddress,
+          role: 'member',
+          reputation: 0,
+          contributions: 0,
+          joinedAt: membershipResult[0].joinedAt,
+          isActive: true,
+        }
+      };
+    } catch (error) {
+      console.error('Error joining community:', error);
+      throw new Error('Failed to join community');
+    }
   }
 
-  // Leave community (simplified)
+  // Leave community with real membership tracking
   async leaveCommunity(data: JoinCommunityData) {
-    // For now, return success since we don't have membership tracking
-    // This would need proper implementation when communities table is added
-    return { success: true, data: null };
+    try {
+      // Check if user is a member
+      const membershipResult = await db
+        .select({ 
+          id: communityMembers.id,
+          role: communityMembers.role 
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, data.communityId),
+            eq(communityMembers.userAddress, data.userAddress)
+          )
+        )
+        .limit(1);
+
+      if (membershipResult.length === 0) {
+        return { success: false, message: 'Not a member of this community' };
+      }
+
+      const membership = membershipResult[0];
+
+      // Prevent admin from leaving (they need to transfer ownership first)
+      if (membership.role === 'admin') {
+        return { success: false, message: 'Admin cannot leave community. Transfer ownership first.' };
+      }
+
+      // Remove membership
+      await db
+        .delete(communityMembers)
+        .where(eq(communityMembers.id, membership.id));
+
+      // Update community member count
+      const communityResult = await db
+        .select({ memberCount: communities.memberCount })
+        .from(communities)
+        .where(eq(communities.id, data.communityId))
+        .limit(1);
+
+      if (communityResult.length > 0) {
+        await db
+          .update(communities)
+          .set({ 
+            memberCount: Math.max(0, communityResult[0].memberCount - 1),
+            updatedAt: new Date()
+          })
+          .where(eq(communities.id, data.communityId));
+      }
+
+      // Update community stats
+      await this.updateCommunityStats(data.communityId);
+
+      return { success: true, data: null };
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      throw new Error('Failed to leave community');
+    }
   }
 
-  // Get community posts
+  // Get community posts with enhanced filtering
   async getCommunityPosts(options: {
     communityId: string;
     page: number;
@@ -283,35 +659,140 @@ export class CommunityService {
     const { communityId, page, limit, sort, timeRange } = options;
 
     try {
-      // Use feedService to get posts filtered by community
-      const feedOptions = {
-        userAddress: '', // Not needed for community posts
-        page,
-        limit,
-        sort,
-        communities: [communityId],
-        timeRange
-      };
+      // Get posts for this community using both communityId and dao fields
+      const offset = (page - 1) * limit;
+      const timeFilter = this.buildTimeFilter(timeRange);
 
-      return await feedService.getEnhancedFeed(feedOptions);
+      // Build sort order
+      let orderBy;
+      switch (sort) {
+        case 'newest':
+          orderBy = desc(posts.createdAt);
+          break;
+        case 'oldest':
+          orderBy = asc(posts.createdAt);
+          break;
+        case 'popular':
+          orderBy = desc(posts.stakedValue);
+          break;
+        default:
+          orderBy = desc(posts.createdAt);
+      }
+
+      // Get community name for dao field matching
+      const communityResult = await db
+        .select({ name: communities.name })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      const communityName = communityResult[0]?.name;
+
+      // Build where conditions for posts
+      const whereConditions = [];
+      
+      // Match by community ID or dao name (for backward compatibility)
+      if (communityName) {
+        whereConditions.push(
+          or(
+            eq(posts.communityId, communityId),
+            eq(posts.dao, communityName)
+          )
+        );
+      } else {
+        whereConditions.push(eq(posts.communityId, communityId));
+      }
+
+      if (timeFilter) {
+        whereConditions.push(timeFilter);
+      }
+
+      const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
+
+      // Get posts with author information
+      const postsResult = await db
+        .select({
+          id: posts.id,
+          authorId: posts.authorId,
+          title: posts.title,
+          contentCid: posts.contentCid,
+          parentId: posts.parentId,
+          mediaCids: posts.mediaCids,
+          tags: posts.tags,
+          stakedValue: posts.stakedValue,
+          reputationScore: posts.reputationScore,
+          dao: posts.dao,
+          communityId: posts.communityId,
+          createdAt: posts.createdAt,
+          // Author info
+          authorAddress: users.walletAddress,
+          authorHandle: users.handle,
+        })
+        .from(posts)
+        .leftJoin(users, eq(posts.authorId, users.id))
+        .where(whereClause)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(posts)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform posts to expected format
+      const transformedPosts = postsResult.map(post => ({
+        id: post.id.toString(),
+        authorId: post.authorId,
+        authorAddress: post.authorAddress,
+        authorHandle: post.authorHandle,
+        title: post.title,
+        contentCid: post.contentCid,
+        parentId: post.parentId,
+        mediaCids: post.mediaCids ? JSON.parse(post.mediaCids) : [],
+        tags: post.tags ? JSON.parse(post.tags) : [],
+        stakedValue: post.stakedValue ? Number(post.stakedValue) : 0,
+        reputationScore: post.reputationScore || 0,
+        dao: post.dao,
+        communityId: post.communityId,
+        createdAt: post.createdAt,
+      }));
+
+      return {
+        posts: transformedPosts,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
     } catch (error) {
       console.error('Error getting community posts:', error);
       throw new Error('Failed to get community posts');
     }
   }
 
-  // Create post in community
+  // Create post in community with validation
   async createCommunityPost(data: CreateCommunityPostData) {
     const { communityId, authorAddress, content, mediaUrls, tags, pollData } = data;
 
     try {
       // Check if user is a member of the community
       const membership = await db
-        .select()
+        .select({
+          id: communityMembers.id,
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+        })
         .from(communityMembers)
         .where(and(
           eq(communityMembers.communityId, communityId),
-          eq(communityMembers.userAddress, authorAddress)
+          eq(communityMembers.userAddress, authorAddress),
+          eq(communityMembers.isActive, true)
         ))
         .limit(1);
 
@@ -319,71 +800,379 @@ export class CommunityService {
         return { success: false, message: 'Must be a member to post in this community' };
       }
 
-      // Create post using feedService
-      const post = await feedService.createPost({
-        authorAddress,
-        content,
-        communityId,
-        mediaUrls,
-        tags,
-        pollData
-      });
+      // Get community settings to check posting requirements
+      const communityResult = await db
+        .select({
+          name: communities.name,
+          settings: communities.settings,
+          isPublic: communities.isPublic,
+        })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
 
-      return { success: true, data: post };
+      if (communityResult.length === 0) {
+        return { success: false, message: 'Community not found' };
+      }
+
+      const community = communityResult[0];
+      const settings = community.settings ? JSON.parse(community.settings) : null;
+
+      // Check minimum reputation requirement
+      if (settings?.minimumReputation && membership[0].reputation < settings.minimumReputation) {
+        return { 
+          success: false, 
+          message: `Minimum reputation of ${settings.minimumReputation} required to post` 
+        };
+      }
+
+      // Get user ID for post creation
+      const userResult = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, authorAddress))
+        .limit(1);
+
+      if (userResult.length === 0) {
+        return { success: false, message: 'User not found' };
+      }
+
+      const userId = userResult[0].id;
+
+      // Create the post
+      const postData = {
+        authorId: userId,
+        contentCid: content, // In real implementation, this would be IPFS CID
+        mediaCids: JSON.stringify(mediaUrls || []),
+        tags: JSON.stringify(tags || []),
+        dao: community.name, // For backward compatibility
+        communityId: communityId,
+        reputationScore: membership[0].reputation,
+        stakedValue: "0", // Would be calculated based on staking requirements
+      };
+
+      const newPostResult = await db
+        .insert(posts)
+        .values(postData)
+        .returning();
+
+      const newPost = newPostResult[0];
+
+      // Update community post count
+      await db
+        .update(communities)
+        .set({ 
+          postCount: sql`${communities.postCount} + 1`,
+          updatedAt: new Date()
+        })
+        .where(eq(communities.id, communityId));
+
+      // Update member contributions
+      await db
+        .update(communityMembers)
+        .set({ 
+          contributions: sql`${communityMembers.contributions} + 1`,
+          lastActivityAt: new Date()
+        })
+        .where(eq(communityMembers.id, membership[0].id));
+
+      // Update community stats
+      await this.updateCommunityStats(communityId);
+
+      return { 
+        success: true, 
+        data: {
+          id: newPost.id.toString(),
+          authorId: newPost.authorId,
+          authorAddress,
+          contentCid: newPost.contentCid,
+          mediaCids: JSON.parse(newPost.mediaCids || '[]'),
+          tags: JSON.parse(newPost.tags || '[]'),
+          communityId: newPost.communityId,
+          dao: newPost.dao,
+          createdAt: newPost.createdAt,
+          stakedValue: Number(newPost.stakedValue),
+          reputationScore: newPost.reputationScore,
+        }
+      };
     } catch (error) {
       console.error('Error creating community post:', error);
       throw new Error('Failed to create community post');
     }
   }
 
-  // Get community members (simplified)
+  // Get community members with real data
   async getCommunityMembers(options: {
     communityId: string;
     page: number;
     limit: number;
     role?: string;
   }) {
-    // For now, return empty members since we don't have membership tracking
-    // This would need proper implementation when communities table is added
-    return {
-      members: [],
-      pagination: {
-        page: options.page,
-        limit: options.limit,
-        total: 0
+    const { communityId, page, limit, role } = options;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Build where conditions
+      const whereConditions = [
+        eq(communityMembers.communityId, communityId),
+        eq(communityMembers.isActive, true)
+      ];
+
+      if (role) {
+        whereConditions.push(eq(communityMembers.role, role));
       }
-    };
+
+      const whereClause = and(...whereConditions);
+
+      // Get members with user information
+      const membersResult = await db
+        .select({
+          id: communityMembers.id,
+          userAddress: communityMembers.userAddress,
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+          contributions: communityMembers.contributions,
+          joinedAt: communityMembers.joinedAt,
+          lastActivityAt: communityMembers.lastActivityAt,
+          // User info
+          userHandle: users.handle,
+          userProfileCid: users.profileCid,
+        })
+        .from(communityMembers)
+        .leftJoin(users, eq(communityMembers.userAddress, users.walletAddress))
+        .where(whereClause)
+        .orderBy(
+          desc(communityMembers.reputation),
+          desc(communityMembers.contributions),
+          desc(communityMembers.joinedAt)
+        )
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(communityMembers)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform to expected format
+      const transformedMembers = membersResult.map(member => ({
+        id: member.id,
+        userAddress: member.userAddress,
+        userHandle: member.userHandle,
+        userProfileCid: member.userProfileCid,
+        role: member.role,
+        reputation: member.reputation,
+        contributions: member.contributions,
+        joinedAt: member.joinedAt,
+        lastActivityAt: member.lastActivityAt,
+      }));
+
+      return {
+        members: transformedMembers,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error getting community members:', error);
+      throw new Error('Failed to get community members');
+    }
   }
 
-  // Get community statistics
+  // Get community statistics with real analytics
   async getCommunityStats(communityId: string) {
     try {
-      // Get stats from posts with that DAO name
-      const stats = await db
+      // Get community basic info
+      const communityResult = await db
         .select({
-          postCount: sql<number>`COUNT(*)`,
-          latestPost: sql<Date>`MAX(${posts.createdAt})`,
-          firstPost: sql<Date>`MIN(${posts.createdAt})`
+          id: communities.id,
+          name: communities.name,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          createdAt: communities.createdAt,
         })
-        .from(posts)
-        .where(eq(posts.dao, communityId))
-        .groupBy(posts.dao);
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
 
-      if (stats.length === 0) {
+      if (communityResult.length === 0) {
         return null;
       }
 
+      const community = communityResult[0];
+
+      // Get detailed stats
+      const statsResult = await db
+        .select()
+        .from(communityStats)
+        .where(eq(communityStats.communityId, communityId))
+        .limit(1);
+
+      const stats = statsResult[0];
+
+      // Calculate real-time stats if needed
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get recent post counts
+      const recentPostsResult = await db
+        .select({
+          posts7d: sql<number>`COUNT(CASE WHEN ${posts.createdAt} >= ${weekAgo} THEN 1 END)`,
+          posts30d: sql<number>`COUNT(CASE WHEN ${posts.createdAt} >= ${monthAgo} THEN 1 END)`,
+        })
+        .from(posts)
+        .where(
+          or(
+            eq(posts.communityId, communityId),
+            eq(posts.dao, community.name)
+          )
+        );
+
+      const recentPosts = recentPostsResult[0] || { posts7d: 0, posts30d: 0 };
+
+      // Get active members (members who posted or joined recently)
+      const activeMembersResult = await db
+        .select({
+          activeMembers7d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${weekAgo} THEN 1 END)`,
+          activeMembers30d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${monthAgo} THEN 1 END)`,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      const activeMembers = activeMembersResult[0] || { activeMembers7d: 0, activeMembers30d: 0 };
+
       return {
-        memberCount: 0, // Would need membership tracking
-        postCount: stats[0].postCount,
-        createdAt: stats[0].firstPost,
-        activeMembers: 0,
-        postsThisWeek: 0, // Would need time-based query
-        growthRate: 0
+        communityId,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        createdAt: community.createdAt,
+        // Recent activity
+        posts7d: recentPosts.posts7d,
+        posts30d: recentPosts.posts30d,
+        activeMembers7d: activeMembers.activeMembers7d,
+        activeMembers30d: activeMembers.activeMembers30d,
+        // Analytics (from stats table if available)
+        engagementRate: stats ? Number(stats.engagementRate) : 0,
+        growthRate7d: stats ? Number(stats.growthRate7d) : 0,
+        growthRate30d: stats ? Number(stats.growthRate30d) : 0,
+        trendingScore: stats ? Number(stats.trendingScore) : 0,
+        lastCalculatedAt: stats?.lastCalculatedAt || null,
       };
     } catch (error) {
       console.error('Error getting community stats:', error);
       throw new Error('Failed to get community stats');
+    }
+  }
+
+  // Helper method to update community statistics
+  private async updateCommunityStats(communityId: string) {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      // Get community name for dao field matching
+      const communityResult = await db
+        .select({ name: communities.name, memberCount: communities.memberCount })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) return;
+
+      const community = communityResult[0];
+
+      // Calculate active members
+      const activeMembersResult = await db
+        .select({
+          activeMembers7d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${weekAgo} THEN 1 END)`,
+          activeMembers30d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${monthAgo} THEN 1 END)`,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      const activeMembers = activeMembersResult[0] || { activeMembers7d: 0, activeMembers30d: 0 };
+
+      // Calculate recent posts
+      const recentPostsResult = await db
+        .select({
+          posts7d: sql<number>`COUNT(CASE WHEN ${posts.createdAt} >= ${weekAgo} THEN 1 END)`,
+          posts30d: sql<number>`COUNT(CASE WHEN ${posts.createdAt} >= ${monthAgo} THEN 1 END)`,
+        })
+        .from(posts)
+        .where(
+          or(
+            eq(posts.communityId, communityId),
+            eq(posts.dao, community.name)
+          )
+        );
+
+      const recentPosts = recentPostsResult[0] || { posts7d: 0, posts30d: 0 };
+
+      // Calculate engagement rate (active members / total members)
+      const engagementRate = community.memberCount > 0 
+        ? activeMembers.activeMembers7d / community.memberCount 
+        : 0;
+
+      // Calculate growth rate (simplified - would need historical data for accurate calculation)
+      const growthRate7d = 0; // Would need previous week's member count
+      const growthRate30d = 0; // Would need previous month's member count
+
+      // Calculate trending score (combination of recent activity and growth)
+      const trendingScore = (recentPosts.posts7d * 2) + (activeMembers.activeMembers7d * 1.5) + (engagementRate * 100);
+
+      // Update or insert stats
+      await db
+        .insert(communityStats)
+        .values({
+          communityId,
+          activeMembers7d: activeMembers.activeMembers7d,
+          activeMembers30d: activeMembers.activeMembers30d,
+          posts7d: recentPosts.posts7d,
+          posts30d: recentPosts.posts30d,
+          engagementRate: engagementRate.toString(),
+          growthRate7d: growthRate7d.toString(),
+          growthRate30d: growthRate30d.toString(),
+          trendingScore: trendingScore.toString(),
+          lastCalculatedAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: communityStats.communityId,
+          set: {
+            activeMembers7d: activeMembers.activeMembers7d,
+            activeMembers30d: activeMembers.activeMembers30d,
+            posts7d: recentPosts.posts7d,
+            posts30d: recentPosts.posts30d,
+            engagementRate: engagementRate.toString(),
+            growthRate7d: growthRate7d.toString(),
+            growthRate30d: growthRate30d.toString(),
+            trendingScore: trendingScore.toString(),
+            lastCalculatedAt: now,
+            updatedAt: now,
+          }
+        });
+
+    } catch (error) {
+      console.error('Error updating community stats:', error);
+      // Don't throw error as this is a background operation
     }
   }
 
@@ -434,57 +1223,820 @@ export class CommunityService {
     return { success: false, message: 'Governance not implemented yet' };
   }
 
-  // Search communities
+  // Search communities with enhanced filtering
   async searchCommunities(options: {
     query: string;
     page: number;
     limit: number;
     category?: string;
   }) {
-    const { query, page, limit } = options;
+    const { query, page, limit, category } = options;
     const offset = (page - 1) * limit;
 
     try {
-      // Search communities by DAO name from posts
+      // Build where conditions for search
+      const whereConditions = [eq(communities.isPublic, true)];
+
+      // Add search conditions
+      if (query && query.trim()) {
+        const searchTerm = `%${query.toLowerCase()}%`;
+        whereConditions.push(
+          or(
+            sql`LOWER(${communities.displayName}) LIKE ${searchTerm}`,
+            sql`LOWER(${communities.description}) LIKE ${searchTerm}`,
+            sql`LOWER(${communities.name}) LIKE ${searchTerm}`,
+            sql`EXISTS (
+              SELECT 1 FROM json_array_elements_text(${communities.tags}::json) AS tag 
+              WHERE LOWER(tag) LIKE ${searchTerm}
+            )`
+          )
+        );
+      }
+
+      // Add category filter
+      if (category) {
+        whereConditions.push(eq(communities.category, category));
+      }
+
+      const whereClause = and(...whereConditions);
+
+      // Get search results with stats
       const searchResults = await db
         .select({
-          name: posts.dao,
-          postCount: sql<number>`COUNT(*)`,
-          latestPost: sql<Date>`MAX(${posts.createdAt})`
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          createdAt: communities.createdAt,
+          // Include trending score for relevance
+          trendingScore: communityStats.trendingScore,
         })
-        .from(posts)
-        .where(and(
-          sql`${posts.dao} IS NOT NULL AND ${posts.dao} != ''`,
-          sql`LOWER(${posts.dao}) LIKE LOWER(${'%' + query + '%'})`
-        ))
-        .groupBy(posts.dao)
-        .orderBy(desc(sql<number>`COUNT(*)`))
+        .from(communities)
+        .leftJoin(communityStats, eq(communities.id, communityStats.communityId))
+        .where(whereClause)
+        .orderBy(
+          desc(communityStats.trendingScore),
+          desc(communities.memberCount),
+          desc(communities.postCount)
+        )
         .limit(limit)
         .offset(offset);
 
-      // Transform to match expected format
-      const communities = searchResults.map(item => ({
-        id: item.name,
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(communities)
+        .where(whereClause);
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform to expected format
+      const transformedCommunities = searchResults.map(item => ({
+        id: item.id,
         name: item.name,
-        displayName: item.name,
-        description: `Community for ${item.name}`,
-        category: 'general',
-        iconUrl: null,
-        memberCount: 0,
-        postCount: item.postCount
+        displayName: item.displayName,
+        description: item.description || '',
+        category: item.category,
+        tags: item.tags ? JSON.parse(item.tags) : [],
+        avatar: item.avatar,
+        banner: item.banner,
+        memberCount: item.memberCount,
+        postCount: item.postCount,
+        createdAt: item.createdAt,
+        trendingScore: item.trendingScore ? Number(item.trendingScore) : 0,
       }));
 
       return {
-        communities,
+        communities: transformedCommunities,
         pagination: {
           page,
           limit,
-          total: communities.length
+          total,
+          totalPages: Math.ceil(total / limit)
         }
       };
     } catch (error) {
       console.error('Error searching communities:', error);
       throw new Error('Failed to search communities');
+    }
+  }
+
+  // Get community categories
+  async getCommunityCategories() {
+    try {
+      const categories = await db
+        .select({
+          id: communityCategories.id,
+          name: communityCategories.name,
+          slug: communityCategories.slug,
+          description: communityCategories.description,
+          icon: communityCategories.icon,
+          color: communityCategories.color,
+          sortOrder: communityCategories.sortOrder,
+        })
+        .from(communityCategories)
+        .where(eq(communityCategories.isActive, true))
+        .orderBy(asc(communityCategories.sortOrder), asc(communityCategories.name));
+
+      return categories;
+    } catch (error) {
+      console.error('Error getting community categories:', error);
+      throw new Error('Failed to get community categories');
+    }
+  }
+
+  // Calculate and update trending communities based on engagement metrics
+  async calculateTrendingCommunities(timeRange: '1h' | '6h' | '24h' | '7d' = '24h') {
+    try {
+      const now = new Date();
+      let timeFilter: Date;
+
+      switch (timeRange) {
+        case '1h':
+          timeFilter = new Date(now.getTime() - 60 * 60 * 1000);
+          break;
+        case '6h':
+          timeFilter = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+          break;
+        case '24h':
+          timeFilter = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          timeFilter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+      }
+
+      // Calculate trending scores for all communities
+      const trendingData = await db
+        .select({
+          communityId: communities.id,
+          communityName: communities.name,
+          memberCount: communities.memberCount,
+          // Recent posts count
+          recentPosts: sql<number>`COUNT(CASE WHEN ${posts.createdAt} >= ${timeFilter} THEN 1 END)`,
+          // Recent reactions/engagement
+          recentReactions: sql<number>`COUNT(CASE WHEN ${reactions.createdAt} >= ${timeFilter} THEN 1 END)`,
+          // Total staked value in recent posts
+          recentStakedValue: sql<number>`COALESCE(SUM(CASE WHEN ${posts.createdAt} >= ${timeFilter} THEN ${posts.stakedValue}::numeric ELSE 0 END), 0)`,
+          // Active members (posted or reacted recently)
+          activeMembersCount: sql<number>`COUNT(DISTINCT CASE WHEN ${communityMembers.lastActivityAt} >= ${timeFilter} THEN ${communityMembers.userAddress} END)`,
+        })
+        .from(communities)
+        .leftJoin(posts, or(eq(posts.communityId, communities.id), eq(posts.dao, communities.name)))
+        .leftJoin(reactions, eq(reactions.postId, posts.id))
+        .leftJoin(communityMembers, eq(communityMembers.communityId, communities.id))
+        .where(eq(communities.isPublic, true))
+        .groupBy(communities.id, communities.name, communities.memberCount);
+
+      // Calculate trending scores and update stats
+      for (const community of trendingData) {
+        const engagementRate = community.memberCount > 0 
+          ? community.activeMembersCount / community.memberCount 
+          : 0;
+
+        // Trending score formula: combines recent activity, engagement, and staked value
+        const trendingScore = 
+          (community.recentPosts * 10) + 
+          (community.recentReactions * 5) + 
+          (Number(community.recentStakedValue) * 0.1) + 
+          (engagementRate * 100) +
+          (community.activeMembersCount * 15);
+
+        // Update community stats
+        await db
+          .insert(communityStats)
+          .values({
+            communityId: community.communityId,
+            trendingScore: trendingScore.toString(),
+            engagementRate: engagementRate.toString(),
+            lastCalculatedAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: communityStats.communityId,
+            set: {
+              trendingScore: trendingScore.toString(),
+              engagementRate: engagementRate.toString(),
+              lastCalculatedAt: now,
+              updatedAt: now,
+            }
+          });
+      }
+
+      return { success: true, calculatedAt: now, communitiesProcessed: trendingData.length };
+    } catch (error) {
+      console.error('Error calculating trending communities:', error);
+      throw new Error('Failed to calculate trending communities');
+    }
+  }
+
+  // Get detailed community analytics
+  async getCommunityAnalytics(communityId: string, timeRange: '7d' | '30d' | '90d' = '30d') {
+    try {
+      const now = new Date();
+      let startDate: Date;
+
+      switch (timeRange) {
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+      }
+
+      // Get community name for dao field matching
+      const communityResult = await db
+        .select({ name: communities.name, memberCount: communities.memberCount })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (communityResult.length === 0) {
+        throw new Error('Community not found');
+      }
+
+      const community = communityResult[0];
+
+      // Get post analytics
+      const postAnalytics = await db
+        .select({
+          totalPosts: sql<number>`COUNT(*)`,
+          totalStakedValue: sql<number>`COALESCE(SUM(${posts.stakedValue}::numeric), 0)`,
+          avgStakedValue: sql<number>`COALESCE(AVG(${posts.stakedValue}::numeric), 0)`,
+          uniqueAuthors: sql<number>`COUNT(DISTINCT ${posts.authorId})`,
+        })
+        .from(posts)
+        .where(
+          and(
+            or(
+              eq(posts.communityId, communityId),
+              eq(posts.dao, community.name)
+            ),
+            gt(posts.createdAt, startDate)
+          )
+        );
+
+      // Get member analytics
+      const memberAnalytics = await db
+        .select({
+          newMembers: sql<number>`COUNT(CASE WHEN ${communityMembers.joinedAt} >= ${startDate} THEN 1 END)`,
+          activeMembers: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${startDate} THEN 1 END)`,
+          totalContributions: sql<number>`COALESCE(SUM(${communityMembers.contributions}), 0)`,
+          avgReputation: sql<number>`COALESCE(AVG(${communityMembers.reputation}), 0)`,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      // Get engagement analytics
+      const engagementAnalytics = await db
+        .select({
+          totalReactions: sql<number>`COUNT(*)`,
+          totalReactionValue: sql<number>`COALESCE(SUM(${reactions.amount}::numeric), 0)`,
+          uniqueReactors: sql<number>`COUNT(DISTINCT ${reactions.userId})`,
+        })
+        .from(reactions)
+        .innerJoin(posts, eq(reactions.postId, posts.id))
+        .where(
+          and(
+            or(
+              eq(posts.communityId, communityId),
+              eq(posts.dao, community.name)
+            ),
+            gt(reactions.createdAt, startDate)
+          )
+        );
+
+      // Get daily activity breakdown
+      const dailyActivity = await db
+        .select({
+          date: sql<string>`DATE(${posts.createdAt})`,
+          postCount: sql<number>`COUNT(*)`,
+          uniqueAuthors: sql<number>`COUNT(DISTINCT ${posts.authorId})`,
+        })
+        .from(posts)
+        .where(
+          and(
+            or(
+              eq(posts.communityId, communityId),
+              eq(posts.dao, community.name)
+            ),
+            gt(posts.createdAt, startDate)
+          )
+        )
+        .groupBy(sql`DATE(${posts.createdAt})`)
+        .orderBy(sql`DATE(${posts.createdAt})`);
+
+      // Calculate growth metrics
+      const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
+      
+      const previousPeriodPosts = await db
+        .select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(posts)
+        .where(
+          and(
+            or(
+              eq(posts.communityId, communityId),
+              eq(posts.dao, community.name)
+            ),
+            gt(posts.createdAt, previousPeriodStart),
+            sql`${posts.createdAt} <= ${startDate}`
+          )
+        );
+
+      const currentPosts = postAnalytics[0]?.totalPosts || 0;
+      const previousPosts = previousPeriodPosts[0]?.count || 0;
+      const postGrowthRate = previousPosts > 0 ? ((currentPosts - previousPosts) / previousPosts) * 100 : 0;
+
+      return {
+        communityId,
+        timeRange,
+        period: {
+          startDate,
+          endDate: now,
+        },
+        posts: {
+          total: postAnalytics[0]?.totalPosts || 0,
+          totalStakedValue: Number(postAnalytics[0]?.totalStakedValue || 0),
+          averageStakedValue: Number(postAnalytics[0]?.avgStakedValue || 0),
+          uniqueAuthors: postAnalytics[0]?.uniqueAuthors || 0,
+          growthRate: postGrowthRate,
+        },
+        members: {
+          total: community.memberCount,
+          newMembers: memberAnalytics[0]?.newMembers || 0,
+          activeMembers: memberAnalytics[0]?.activeMembers || 0,
+          totalContributions: memberAnalytics[0]?.totalContributions || 0,
+          averageReputation: Number(memberAnalytics[0]?.avgReputation || 0),
+          engagementRate: community.memberCount > 0 
+            ? (memberAnalytics[0]?.activeMembers || 0) / community.memberCount 
+            : 0,
+        },
+        engagement: {
+          totalReactions: engagementAnalytics[0]?.totalReactions || 0,
+          totalReactionValue: Number(engagementAnalytics[0]?.totalReactionValue || 0),
+          uniqueReactors: engagementAnalytics[0]?.uniqueReactors || 0,
+          averageReactionsPerPost: currentPosts > 0 
+            ? (engagementAnalytics[0]?.totalReactions || 0) / currentPosts 
+            : 0,
+        },
+        dailyActivity: dailyActivity.map(day => ({
+          date: day.date,
+          posts: day.postCount,
+          uniqueAuthors: day.uniqueAuthors,
+        })),
+      };
+    } catch (error) {
+      console.error('Error getting community analytics:', error);
+      throw new Error('Failed to get community analytics');
+    }
+  }
+
+  // Get member count calculations with real data
+  async calculateMemberCounts(communityId: string) {
+    try {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const memberStats = await db
+        .select({
+          totalMembers: sql<number>`COUNT(*)`,
+          activeMembers7d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${weekAgo} THEN 1 END)`,
+          activeMembers30d: sql<number>`COUNT(CASE WHEN ${communityMembers.lastActivityAt} >= ${monthAgo} THEN 1 END)`,
+          newMembers7d: sql<number>`COUNT(CASE WHEN ${communityMembers.joinedAt} >= ${weekAgo} THEN 1 END)`,
+          newMembers30d: sql<number>`COUNT(CASE WHEN ${communityMembers.joinedAt} >= ${monthAgo} THEN 1 END)`,
+          moderatorCount: sql<number>`COUNT(CASE WHEN ${communityMembers.role} IN ('moderator', 'admin') THEN 1 END)`,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      const stats = memberStats[0];
+
+      return {
+        total: stats?.totalMembers || 0,
+        active7d: stats?.activeMembers7d || 0,
+        active30d: stats?.activeMembers30d || 0,
+        new7d: stats?.newMembers7d || 0,
+        new30d: stats?.newMembers30d || 0,
+        moderators: stats?.moderatorCount || 0,
+        engagementRate7d: stats?.totalMembers > 0 ? (stats.activeMembers7d / stats.totalMembers) : 0,
+        engagementRate30d: stats?.totalMembers > 0 ? (stats.activeMembers30d / stats.totalMembers) : 0,
+        growthRate7d: stats?.totalMembers > 0 ? (stats.newMembers7d / stats.totalMembers) : 0,
+        growthRate30d: stats?.totalMembers > 0 ? (stats.newMembers30d / stats.totalMembers) : 0,
+      };
+    } catch (error) {
+      console.error('Error calculating member counts:', error);
+      throw new Error('Failed to calculate member counts');
+    }
+  }
+
+  // Get related communities based on shared members and similar content
+  async getRelatedCommunities(communityId: string, limit: number = 5) {
+    try {
+      // Get communities that share members with the target community
+      const relatedByMembers = await db
+        .select({
+          communityId: communities.id,
+          communityName: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          sharedMembers: sql<number>`COUNT(DISTINCT ${communityMembers.userAddress})`,
+          trendingScore: communityStats.trendingScore,
+        })
+        .from(communities)
+        .innerJoin(communityMembers, eq(communityMembers.communityId, communities.id))
+        .leftJoin(communityStats, eq(communityStats.communityId, communities.id))
+        .where(
+          and(
+            sql`${communityMembers.userAddress} IN (
+              SELECT user_address FROM community_members 
+              WHERE community_id = ${communityId} AND is_active = true
+            )`,
+            sql`${communities.id} != ${communityId}`,
+            eq(communities.isPublic, true)
+          )
+        )
+        .groupBy(
+          communities.id, 
+          communities.name, 
+          communities.displayName,
+          communities.description,
+          communities.category,
+          communities.tags,
+          communities.avatar,
+          communities.memberCount,
+          communities.postCount,
+          communityStats.trendingScore
+        )
+        .orderBy(desc(sql<number>`COUNT(DISTINCT ${communityMembers.userAddress})`))
+        .limit(limit);
+
+      // Get the target community's category and tags for similarity matching
+      const targetCommunity = await db
+        .select({
+          category: communities.category,
+          tags: communities.tags,
+        })
+        .from(communities)
+        .where(eq(communities.id, communityId))
+        .limit(1);
+
+      if (targetCommunity.length === 0) {
+        return [];
+      }
+
+      const targetTags = targetCommunity[0].tags ? JSON.parse(targetCommunity[0].tags) : [];
+      const targetCategory = targetCommunity[0].category;
+
+      // Get communities in the same category (if we need more recommendations)
+      const relatedByCategory = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          trendingScore: communityStats.trendingScore,
+        })
+        .from(communities)
+        .leftJoin(communityStats, eq(communityStats.communityId, communities.id))
+        .where(
+          and(
+            eq(communities.category, targetCategory),
+            sql`${communities.id} != ${communityId}`,
+            eq(communities.isPublic, true),
+            // Exclude communities already found by shared members
+            sql`${communities.id} NOT IN (${relatedByMembers.map(c => `'${c.communityId}'`).join(',') || "''"})`,
+          )
+        )
+        .orderBy(desc(communityStats.trendingScore), desc(communities.memberCount))
+        .limit(Math.max(0, limit - relatedByMembers.length));
+
+      // Combine and score recommendations
+      const allRecommendations = [
+        ...relatedByMembers.map(c => ({
+          id: c.communityId,
+          name: c.communityName,
+          displayName: c.displayName,
+          description: c.description || '',
+          category: c.category,
+          tags: c.tags ? JSON.parse(c.tags) : [],
+          avatar: c.avatar,
+          memberCount: c.memberCount,
+          postCount: c.postCount,
+          trendingScore: c.trendingScore ? Number(c.trendingScore) : 0,
+          recommendationScore: (c.sharedMembers * 10) + (c.trendingScore ? Number(c.trendingScore) : 0),
+          recommendationReason: `${c.sharedMembers} shared members`,
+        })),
+        ...relatedByCategory.map(c => {
+          const communityTags = c.tags ? JSON.parse(c.tags) : [];
+          const tagOverlap = targetTags.filter(tag => communityTags.includes(tag)).length;
+          const score = (tagOverlap * 5) + (c.trendingScore ? Number(c.trendingScore) : 0);
+          
+          return {
+            id: c.id,
+            name: c.name,
+            displayName: c.displayName,
+            description: c.description || '',
+            category: c.category,
+            tags: communityTags,
+            avatar: c.avatar,
+            memberCount: c.memberCount,
+            postCount: c.postCount,
+            trendingScore: c.trendingScore ? Number(c.trendingScore) : 0,
+            recommendationScore: score,
+            recommendationReason: tagOverlap > 0 
+              ? `Similar interests (${tagOverlap} shared tags)` 
+              : `Same category: ${c.category}`,
+          };
+        })
+      ];
+
+      // Sort by recommendation score and return top results
+      return allRecommendations
+        .sort((a, b) => b.recommendationScore - a.recommendationScore)
+        .slice(0, limit);
+
+    } catch (error) {
+      console.error('Error getting related communities:', error);
+      throw new Error('Failed to get related communities');
+    }
+  }
+
+  // Get personalized community recommendations for a user
+  async getPersonalizedRecommendations(userAddress: string, limit: number = 10) {
+    try {
+      // Get user's current communities and their categories/tags
+      const userCommunities = await db
+        .select({
+          communityId: communities.id,
+          category: communities.category,
+          tags: communities.tags,
+        })
+        .from(communityMembers)
+        .innerJoin(communities, eq(communityMembers.communityId, communities.id))
+        .where(
+          and(
+            eq(communityMembers.userAddress, userAddress),
+            eq(communityMembers.isActive, true)
+          )
+        );
+
+      const userCommunityIds = userCommunities.map(c => c.communityId);
+      const userCategories = [...new Set(userCommunities.map(c => c.category))];
+      const userTags = userCommunities.reduce((allTags, community) => {
+        const tags = community.tags ? JSON.parse(community.tags) : [];
+        return [...allTags, ...tags];
+      }, [] as string[]);
+
+      // Get user's posting activity to understand interests
+      const userPosts = await db
+        .select({
+          dao: posts.dao,
+          communityId: posts.communityId,
+          tags: posts.tags,
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.authorId, users.id))
+        .where(eq(users.walletAddress, userAddress))
+        .limit(50); // Recent posts to analyze interests
+
+      const postTags = userPosts.reduce((allTags, post) => {
+        const tags = post.tags ? JSON.parse(post.tags) : [];
+        return [...allTags, ...tags];
+      }, [] as string[]);
+
+      const allUserTags = [...new Set([...userTags, ...postTags])];
+
+      // Find communities the user is not a member of
+      const recommendations = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          createdAt: communities.createdAt,
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
+        })
+        .from(communities)
+        .leftJoin(communityStats, eq(communityStats.communityId, communities.id))
+        .where(
+          and(
+            eq(communities.isPublic, true),
+            // Exclude communities user is already a member of
+            userCommunityIds.length > 0 
+              ? sql`${communities.id} NOT IN (${userCommunityIds.map(id => `'${id}'`).join(',')})`
+              : sql`1=1`
+          )
+        )
+        .orderBy(desc(communityStats.trendingScore), desc(communities.memberCount));
+
+      // Score recommendations based on user preferences
+      const scoredRecommendations = recommendations.map(community => {
+        const communityTags = community.tags ? JSON.parse(community.tags) : [];
+        
+        let score = 0;
+        
+        // Category match bonus
+        if (userCategories.includes(community.category)) {
+          score += 20;
+        }
+        
+        // Tag overlap bonus
+        const tagOverlap = allUserTags.filter(tag => communityTags.includes(tag)).length;
+        score += tagOverlap * 10;
+        
+        // Trending score bonus
+        score += community.trendingScore ? Number(community.trendingScore) * 0.1 : 0;
+        
+        // Growth rate bonus (growing communities)
+        score += community.growthRate7d ? Number(community.growthRate7d) * 5 : 0;
+        
+        // Member count bonus (but not too large - sweet spot)
+        const memberBonus = Math.min(community.memberCount / 100, 10);
+        score += memberBonus;
+        
+        // Post activity bonus
+        const postBonus = Math.min(community.postCount / 50, 5);
+        score += postBonus;
+
+        // Determine recommendation reason
+        let reason = 'Trending community';
+        if (tagOverlap > 0) {
+          reason = `Matches your interests (${tagOverlap} shared tags)`;
+        } else if (userCategories.includes(community.category)) {
+          reason = `Similar to your other communities`;
+        } else if (community.growthRate7d && Number(community.growthRate7d) > 0.1) {
+          reason = 'Fast growing community';
+        }
+
+        return {
+          id: community.id,
+          name: community.name,
+          displayName: community.displayName,
+          description: community.description || '',
+          category: community.category,
+          tags: communityTags,
+          avatar: community.avatar,
+          banner: community.banner,
+          memberCount: community.memberCount,
+          postCount: community.postCount,
+          createdAt: community.createdAt,
+          trendingScore: community.trendingScore ? Number(community.trendingScore) : 0,
+          growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
+          recommendationScore: score,
+          recommendationReason: reason,
+        };
+      });
+
+      // Return top recommendations
+      return scoredRecommendations
+        .sort((a, b) => b.recommendationScore - a.recommendationScore)
+        .slice(0, limit);
+
+    } catch (error) {
+      console.error('Error getting personalized recommendations:', error);
+      throw new Error('Failed to get personalized recommendations');
+    }
+  }
+
+  // Get communities by category with filtering
+  async getCommunitiesByCategory(category: string, options: {
+    page?: number;
+    limit?: number;
+    sort?: 'trending' | 'members' | 'newest' | 'posts';
+  } = {}) {
+    const { page = 1, limit = 20, sort = 'trending' } = options;
+    const offset = (page - 1) * limit;
+
+    try {
+      // Build sort order
+      let orderBy;
+      switch (sort) {
+        case 'trending':
+          orderBy = [desc(communityStats.trendingScore), desc(communities.memberCount)];
+          break;
+        case 'members':
+          orderBy = [desc(communities.memberCount)];
+          break;
+        case 'newest':
+          orderBy = [desc(communities.createdAt)];
+          break;
+        case 'posts':
+          orderBy = [desc(communities.postCount)];
+          break;
+        default:
+          orderBy = [desc(communityStats.trendingScore)];
+      }
+
+      const communitiesResult = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          banner: communities.banner,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          createdAt: communities.createdAt,
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
+        })
+        .from(communities)
+        .leftJoin(communityStats, eq(communityStats.communityId, communities.id))
+        .where(
+          and(
+            eq(communities.category, category),
+            eq(communities.isPublic, true)
+          )
+        )
+        .orderBy(...orderBy)
+        .limit(limit)
+        .offset(offset);
+
+      // Get total count
+      const totalResult = await db
+        .select({ count: count() })
+        .from(communities)
+        .where(
+          and(
+            eq(communities.category, category),
+            eq(communities.isPublic, true)
+          )
+        );
+
+      const total = totalResult[0]?.count || 0;
+
+      // Transform results
+      const transformedCommunities = communitiesResult.map(community => ({
+        id: community.id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description || '',
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        banner: community.banner,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        createdAt: community.createdAt,
+        trendingScore: community.trendingScore ? Number(community.trendingScore) : 0,
+        growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
+      }));
+
+      return {
+        communities: transformedCommunities,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      console.error('Error getting communities by category:', error);
+      throw new Error('Failed to get communities by category');
     }
   }
 
