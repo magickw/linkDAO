@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAccount, useBalance } from 'wagmi';
 import { 
   MarketplaceListing,
-  MarketplaceService,
+  UnifiedMarketplaceService,
   PlaceBidInput
 } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
@@ -24,7 +24,7 @@ const BidModal: React.FC<BidModalProps> = ({ listing, isOpen, onClose, onSuccess
   const [loading, setLoading] = useState(false);
   
   // Memoize the marketplace service to prevent recreation on every render
-  const marketplaceService = useMemo(() => new MarketplaceService(), []);
+  const marketplaceService = useMemo(() => new UnifiedMarketplaceService(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

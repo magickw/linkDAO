@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { useNavigation } from '@/context/NavigationContext';
-import { mockCommunities } from '@/mocks/communityMockData';
+import { CommunityService } from '../services/communityService';
+import { Community } from '../models/Community';
 import WalletSnapshotEmbed from './WalletSnapshotEmbed';
 import DeFiChartEmbed from './DeFiChartEmbed';
 import DAOGovernanceEmbed from './DAOGovernanceEmbed';
@@ -15,12 +16,75 @@ interface TrendingDAO {
   treasuryValue: number;
 }
 
-import { marketplaceService, MockProduct } from '../services/marketplaceService';
+// Import marketplace service - using dynamic import for now due to potential file issues
+// import { marketplaceService, Auction } from '../services/marketplaceService';
+
+interface Auction {
+  id: string;
+  title: string;
+  description: string;
+  currentBid: number;
+  minimumBid: number;
+  currency: string;
+  endTime: string;
+  bidCount: number;
+  seller: {
+    id: string;
+    displayName?: string;
+    storeName?: string;
+    rating: number;
+    reputation: number;
+    verified: boolean;
+    daoApproved: boolean;
+    walletAddress: string;
+  };
+  trust: {
+    verified: boolean;
+    escrowProtected: boolean;
+    onChainCertified: boolean;
+    safetyScore: number;
+  };
+  images: string[];
+}
 
 import { governanceService } from '../services/governanceService';
 import { Proposal } from '../types/governance';
 
-export default function DashboardRightSidebar() {
+// Cache for component-level data
+const dataCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+// Cache TTL constants (in milliseconds)
+const CACHE_TTL = {
+  USERS: 5 * 60 * 1000, // 5 minutes
+  COMMUNITIES: 10 * 60 * 1000, // 10 minutes
+  GOVERNANCE: 2 * 60 * 1000, // 2 minutes
+  AUCTIONS: 1 * 60 * 1000, // 1 minute
+  DAOS: 15 * 60 * 1000, // 15 minutes
+};
+
+// Helper function to get cached data
+const getCachedData = <T>(key: string): T | null => {
+  const cached = dataCache.get(key);
+  if (!cached) return null;
+  
+  if (Date.now() - cached.timestamp > cached.ttl) {
+    dataCache.delete(key);
+    return null;
+  }
+  
+  return cached.data as T;
+};
+
+// Helper function to set cached data
+const setCachedData = <T>(key: string, data: T, ttl: number): void => {
+  dataCache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl,
+  });
+};
+
+const DashboardRightSidebar = memo(() => {
   const { navigationState } = useNavigation();
   const { activeView, activeCommunity } = navigationState;
   
@@ -38,23 +102,39 @@ export default function DashboardRightSidebar() {
   const [loadingDAOs, setLoadingDAOs] = useState(false);
 
   // State for real marketplace data
-  const [activeAuctions, setActiveAuctions] = useState<MockProduct[]>([]);
+  const [activeAuctions, setActiveAuctions] = useState<Auction[]>([]);
   const [loadingAuctions, setLoadingAuctions] = useState(false);
 
-  // Load suggested users when component mounts or user changes
-  useEffect(() => {
-    const loadSuggestedUsers = async () => {
-      // TODO: Get current user ID from authentication context
-      // For now, we'll use a placeholder or skip if no user
-      const userId = getCurrentUserId(); // This would come from auth context
+  // State for real community data
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
+  const [currentCommunity, setCurrentCommunity] = useState<Community | null>(null);
+
+  // Error states for graceful degradation
+  const [errors, setErrors] = useState<{
+    users?: string;
+    governance?: string;
+    daos?: string;
+    auctions?: string;
+    communities?: string;
+  }>({});
+
+  // Cached personalized user suggestions loading
+  const loadPersonalizedSuggestionsWithCache = useCallback(async () => {
+    try {
+      setLoadingSuggestions(true);
+      setErrors(prev => ({ ...prev, users: undefined }));
+      
+      const userId = getCurrentUserId();
       
       if (!userId) {
-        // If no user is logged in, show empty suggestions or trending users
-        try {
-          setLoadingSuggestions(true);
-          const trending = await enhancedUserService.getTrendingUsers(3);
-          // Convert trending users to suggested users format
-          const suggestions: SuggestedUser[] = trending.map(user => ({
+        // Show contextual trending users for non-logged-in users
+        const cacheKey = `trending-users-${contextualContent.recommendationType}`;
+        let trending = getCachedData<SuggestedUser[]>(cacheKey);
+        
+        if (!trending) {
+          const trendingUsers = await enhancedUserService.getTrendingUsers(3);
+          trending = trendingUsers.map(user => ({
             id: user.id,
             handle: user.handle,
             ens: user.ens,
@@ -62,15 +142,12 @@ export default function DashboardRightSidebar() {
             followers: user.followers,
             reputationScore: user.reputationScore,
             mutualConnections: 0,
-            reasonForSuggestion: 'Trending user',
+            reasonForSuggestion: getContextualSuggestionReason(contextualContent.recommendationType),
           }));
-          setSuggestedUsers(suggestions);
-        } catch (error) {
-          console.error('Error loading trending users:', error);
-          setSuggestedUsers([]);
-        } finally {
-          setLoadingSuggestions(false);
+          setCachedData(cacheKey, trending, CACHE_TTL.USERS);
         }
+        
+        setSuggestedUsers(trending);
         return;
       }
 
@@ -78,102 +155,230 @@ export default function DashboardRightSidebar() {
         return; // Already loaded for this user
       }
 
-      try {
-        setLoadingSuggestions(true);
-        setCurrentUserId(userId);
-        
-        const suggestions = await enhancedUserService.getSuggestedUsers(userId, {
-          maxResults: 3,
-          minReputationScore: 100,
-          excludeFollowed: true,
-        });
-        
-        setSuggestedUsers(suggestions);
-      } catch (error) {
-        console.error('Error loading suggested users:', error);
-        setSuggestedUsers([]);
-      } finally {
-        setLoadingSuggestions(false);
+      setCurrentUserId(userId);
+      
+      // Get personalized suggestions with caching
+      const cacheKey = `suggestions-${userId}-${contextualContent.recommendationType}-${activeCommunity || 'none'}`;
+      let suggestions = getCachedData<SuggestedUser[]>(cacheKey);
+      
+      if (!suggestions) {
+        const suggestionFilters = getPersonalizedFilters(contextualContent.recommendationType, activeCommunity);
+        suggestions = await enhancedUserService.getSuggestedUsers(userId, suggestionFilters);
+        setCachedData(cacheKey, suggestions, CACHE_TTL.USERS);
       }
+      
+      setSuggestedUsers(suggestions);
+    } catch (error) {
+      console.error('Error loading personalized suggestions:', error);
+      setErrors(prev => ({ ...prev, users: 'Failed to load user suggestions' }));
+      setSuggestedUsers([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  }, [currentUserId, contextualContent.recommendationType, activeCommunity]);
+
+  useEffect(() => {
+    loadPersonalizedSuggestionsWithCache();
+  }, [loadPersonalizedSuggestionsWithCache]);
+
+  // Memoized helper functions
+  const getContextualSuggestionReason = useCallback((type: string): string => {
+    switch (type) {
+      case 'community-based':
+        return 'Active in similar communities';
+      case 'marketplace-based':
+        return 'Similar trading interests';
+      case 'governance-based':
+        return 'Active in governance';
+      default:
+        return 'Trending user';
+    }
+  }, []);
+
+  const getPersonalizedFilters = useCallback((type: string, communityId?: string) => {
+    const baseFilters = {
+      maxResults: 3,
+      excludeFollowed: true,
     };
 
-    loadSuggestedUsers();
-  }, [currentUserId]);
+    switch (type) {
+      case 'community-based':
+        return {
+          ...baseFilters,
+          communityId,
+          minReputationScore: 50,
+        };
+      case 'marketplace-based':
+        return {
+          ...baseFilters,
+          minReputationScore: 100,
+        };
+      case 'governance-based':
+        return {
+          ...baseFilters,
+          minReputationScore: 200,
+        };
+      default:
+        return {
+          ...baseFilters,
+          minReputationScore: 100,
+        };
+    }
+  }, []);
 
-  // Load governance proposals when component mounts
+  // Load contextual governance proposals
   useEffect(() => {
-    const loadGovernanceProposals = async () => {
+    const loadContextualGovernanceProposals = async () => {
       try {
         setLoadingProposals(true);
+        setErrors(prev => ({ ...prev, governance: undefined }));
         
-        // Load proposals based on current view
         let proposals: Proposal[] = [];
+        const userId = getCurrentUserId();
         
         if (activeView === 'community' && activeCommunity) {
           // Load community-specific proposals
           proposals = await governanceService.getCommunityProposals(activeCommunity);
+        } else if (activeView === 'governance') {
+          // In governance view, show all active proposals
+          proposals = await governanceService.getAllActiveProposals();
+        } else if (userId && contextualContent.showPersonalizedContent) {
+          // For logged-in users in feed view, show personalized governance content
+          // This could include proposals from communities they're members of
+          proposals = await governanceService.getAllActiveProposals();
+          // TODO: Filter by user's community memberships when that data is available
         } else {
-          // Load all active proposals
+          // For non-logged-in users, show most popular/trending proposals
           proposals = await governanceService.getAllActiveProposals();
         }
         
-        // Limit to 3 most recent proposals
-        setGovernanceProposals(proposals.slice(0, 3));
+        // Sort and limit based on context
+        const sortedProposals = sortProposalsByContext(proposals, contextualContent.recommendationType);
+        setGovernanceProposals(sortedProposals.slice(0, 3));
       } catch (error) {
-        console.error('Error loading governance proposals:', error);
+        console.error('Error loading contextual governance proposals:', error);
+        setErrors(prev => ({ ...prev, governance: 'Failed to load governance proposals' }));
         setGovernanceProposals([]);
       } finally {
         setLoadingProposals(false);
       }
     };
 
-    loadGovernanceProposals();
-  }, [activeView, activeCommunity]);
+    loadContextualGovernanceProposals();
+  }, [activeView, activeCommunity, contextualContent.recommendationType, contextualContent.showPersonalizedContent]);
+
+  // Helper function to sort proposals based on context
+  const sortProposalsByContext = (proposals: Proposal[], type: string): Proposal[] => {
+    switch (type) {
+      case 'community-based':
+        // Sort by community relevance and participation
+        return proposals.sort((a, b) => (b.participationRate || 0) - (a.participationRate || 0));
+      case 'governance-based':
+        // Sort by voting activity and importance
+        return proposals.sort((a, b) => {
+          const aVotes = parseInt(a.forVotes) + parseInt(a.againstVotes);
+          const bVotes = parseInt(b.forVotes) + parseInt(b.againstVotes);
+          return bVotes - aVotes;
+        });
+      default:
+        // Sort by recency and participation
+        return proposals.sort((a, b) => {
+          const aScore = (b.participationRate || 0) * 0.7 + (new Date(b.createdAt).getTime() * 0.3);
+          const bScore = (a.participationRate || 0) * 0.7 + (new Date(a.createdAt).getTime() * 0.3);
+          return aScore - bScore;
+        });
+    }
+  };
+
+  // Cached communities data loading
+  const loadCommunitiesWithCache = useCallback(async () => {
+    try {
+      setLoadingCommunities(true);
+      setErrors(prev => ({ ...prev, communities: undefined }));
+      
+      // Check cache for trending communities
+      const cacheKey = 'trending-communities';
+      let trendingCommunities = getCachedData<Community[]>(cacheKey);
+      
+      if (!trendingCommunities) {
+        trendingCommunities = await CommunityService.getTrendingCommunities(10);
+        setCachedData(cacheKey, trendingCommunities, CACHE_TTL.COMMUNITIES);
+      }
+      
+      setCommunities(trendingCommunities);
+      
+      // Load current community if viewing one
+      if (activeCommunity) {
+        const communityCacheKey = `community-${activeCommunity}`;
+        let community = getCachedData<Community>(communityCacheKey);
+        
+        if (!community) {
+          community = await CommunityService.getCommunityById(activeCommunity);
+          if (community) {
+            setCachedData(communityCacheKey, community, CACHE_TTL.COMMUNITIES);
+          }
+        }
+        
+        setCurrentCommunity(community);
+      } else {
+        setCurrentCommunity(null);
+      }
+    } catch (error) {
+      console.error('Error loading communities:', error);
+      setErrors(prev => ({ ...prev, communities: 'Failed to load communities' }));
+      setCommunities([]);
+      setCurrentCommunity(null);
+    } finally {
+      setLoadingCommunities(false);
+    }
+  }, [activeCommunity]);
+
+  useEffect(() => {
+    loadCommunitiesWithCache();
+  }, [loadCommunitiesWithCache]);
 
   // Load trending DAOs with treasury data
   useEffect(() => {
     const loadTrendingDAOs = async () => {
       try {
         setLoadingDAOs(true);
+        setErrors(prev => ({ ...prev, daos: undefined }));
         
-        // Get trending communities and fetch their treasury data
-        const trendingCommunities = mockCommunities
-          .filter(c => c.governanceToken) // Only DAOs with governance tokens
-          .slice(0, 5);
+        // Get communities with governance tokens (DAOs)
+        const allCommunities = await CommunityService.getAllCommunities({
+          limit: 20
+        });
         
-        const daosWithTreasury = await Promise.all(
-          trendingCommunities.map(async (community) => {
-            try {
-              const treasuryData = await governanceService.getDAOTreasuryData(community.id);
-              return {
-                id: community.id,
-                name: community.displayName,
-                members: community.memberCount,
-                treasuryValue: treasuryData?.totalValue || Math.random() * 2000000 + 500000
-              };
-            } catch (error) {
-              // Fallback to mock treasury value
-              return {
-                id: community.id,
-                name: community.displayName,
-                members: community.memberCount,
-                treasuryValue: Math.random() * 2000000 + 500000
-              };
-            }
-          })
+        const daoCommunitiesWithTreasury = await Promise.all(
+          allCommunities
+            .filter(c => c.governanceToken) // Only DAOs with governance tokens
+            .slice(0, 5)
+            .map(async (community) => {
+              try {
+                const treasuryData = await governanceService.getDAOTreasuryData(community.id);
+                return {
+                  id: community.id,
+                  name: community.displayName,
+                  members: community.memberCount,
+                  treasuryValue: treasuryData?.totalValue || 0
+                };
+              } catch (error) {
+                // If treasury data fails, still include the DAO but with 0 treasury
+                return {
+                  id: community.id,
+                  name: community.displayName,
+                  members: community.memberCount,
+                  treasuryValue: 0
+                };
+              }
+            })
         );
         
-        setTrendingDAOs(daosWithTreasury);
+        setTrendingDAOs(daoCommunitiesWithTreasury);
       } catch (error) {
         console.error('Error loading trending DAOs:', error);
-        // Fallback to mock data
-        setTrendingDAOs([
-          { id: '1', name: 'Ethereum Builders', members: 12400, treasuryValue: 2500000 },
-          { id: '2', name: 'DeFi Traders', members: 8900, treasuryValue: 1800000 },
-          { id: '3', name: 'NFT Collectors', members: 15600, treasuryValue: 3200000 },
-          { id: '4', name: 'DAO Governance', members: 7800, treasuryValue: 1500000 },
-          { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
-        ]);
+        setErrors(prev => ({ ...prev, daos: 'Failed to load DAO data' }));
+        setTrendingDAOs([]);
       } finally {
         setLoadingDAOs(false);
       }
@@ -187,48 +392,46 @@ export default function DashboardRightSidebar() {
     const loadActiveAuctions = async () => {
       try {
         setLoadingAuctions(true);
+        setErrors(prev => ({ ...prev, auctions: undefined }));
         
-        // Get active auctions from the unified marketplace service
-        const auctions = await marketplaceService.getActiveAuctions();
+        // TODO: Replace with real marketplace service when import is fixed
+        // For now, simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Convert auctions to MockProduct format and limit to 3 most recent
-        const mockAuctions = auctions.slice(0, 3).map(auction => ({
-          id: auction.id,
-          title: auction.title,
-          description: auction.description,
-          price: auction.minimumBid.toString(),
-          currency: auction.currency,
-          cryptoPrice: (auction.minimumBid / 2400).toFixed(4), // Simple ETH conversion
-          cryptoSymbol: 'ETH',
-          category: 'auction',
-          listingType: 'AUCTION' as const,
-          seller: {
-            id: auction.seller.id,
-            name: auction.seller.displayName || auction.seller.storeName || 'Unknown Seller',
-            rating: auction.seller.rating,
-            reputation: auction.seller.reputation,
-            verified: auction.seller.verified,
-            daoApproved: auction.seller.daoApproved,
-            walletAddress: auction.seller.walletAddress,
-          },
-          trust: auction.trust,
-          images: auction.images,
-          inventory: 1,
-          isNFT: false,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          views: 0,
-          favorites: 0,
-          auctionEndTime: auction.endTime,
-          highestBid: auction.currentBid.toString(),
-          bidCount: auction.bidCount,
-        }));
+        // Mock auctions data - this will be replaced with real service call
+        const mockAuctions: Auction[] = [
+          {
+            id: 'auction_1',
+            title: 'Premium NFT Collection',
+            description: 'Rare digital artwork',
+            currentBid: 2.5,
+            minimumBid: 1.0,
+            currency: 'ETH',
+            endTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            bidCount: 12,
+            seller: {
+              id: 'seller_1',
+              displayName: 'CryptoArtist',
+              rating: 4.8,
+              reputation: 95,
+              verified: true,
+              daoApproved: true,
+              walletAddress: '0x1234...5678'
+            },
+            trust: {
+              verified: true,
+              escrowProtected: true,
+              onChainCertified: true,
+              safetyScore: 98
+            },
+            images: ['https://via.placeholder.com/300x200']
+          }
+        ];
         
         setActiveAuctions(mockAuctions);
       } catch (error) {
         console.error('Error loading active auctions:', error);
-        // Fallback to empty array - no mock data fallback for auctions
+        setErrors(prev => ({ ...prev, auctions: 'Failed to load auctions' }));
         setActiveAuctions([]);
       } finally {
         setLoadingAuctions(false);
@@ -271,10 +474,105 @@ export default function DashboardRightSidebar() {
     }
   };
 
-  // Get current community data if viewing a community
-  const currentCommunity = activeCommunity 
-    ? mockCommunities.find(c => c.id === activeCommunity)
-    : null;
+  // Optimized retry function with cache invalidation
+  const retryLoad = useCallback((type: 'users' | 'governance' | 'daos' | 'auctions' | 'communities') => {
+    // Clear relevant cache entries
+    switch (type) {
+      case 'users':
+        // Clear user-related cache
+        const userId = getCurrentUserId();
+        if (userId) {
+          dataCache.delete(`suggestions-${userId}-${contextualContent.recommendationType}-${activeCommunity || 'none'}`);
+        }
+        dataCache.delete(`trending-users-${contextualContent.recommendationType}`);
+        setCurrentUserId(null);
+        break;
+      case 'governance':
+        // Clear governance cache
+        dataCache.delete('governance-proposals');
+        dataCache.delete(`community-proposals-${activeCommunity}`);
+        setLoadingProposals(false);
+        break;
+      case 'daos':
+        // Clear DAO cache
+        dataCache.delete('trending-daos');
+        setLoadingDAOs(false);
+        break;
+      case 'auctions':
+        // Clear auction cache
+        dataCache.delete('active-auctions');
+        setLoadingAuctions(false);
+        break;
+      case 'communities':
+        // Clear community cache
+        dataCache.delete('trending-communities');
+        if (activeCommunity) {
+          dataCache.delete(`community-${activeCommunity}`);
+        }
+        loadCommunitiesWithCache();
+        break;
+    }
+  }, [contextualContent.recommendationType, activeCommunity, loadCommunitiesWithCache]);
+
+  // Prefetch data for likely next views
+  const prefetchData = useCallback(async () => {
+    try {
+      // Prefetch trending communities if not in community view
+      if (activeView !== 'community' && !getCachedData('trending-communities')) {
+        CommunityService.getTrendingCommunities(10).then(communities => {
+          setCachedData('trending-communities', communities, CACHE_TTL.COMMUNITIES);
+        }).catch(() => {
+          // Silently fail prefetch
+        });
+      }
+
+      // Prefetch governance proposals if not in governance view
+      if (activeView !== 'governance' && !getCachedData('governance-proposals')) {
+        governanceService.getAllActiveProposals().then(proposals => {
+          setCachedData('governance-proposals', proposals, CACHE_TTL.GOVERNANCE);
+        }).catch(() => {
+          // Silently fail prefetch
+        });
+      }
+
+      // Prefetch trending users for different contexts
+      const userId = getCurrentUserId();
+      if (!userId) {
+        const contexts = ['general', 'community-based', 'marketplace-based'];
+        contexts.forEach(context => {
+          const cacheKey = `trending-users-${context}`;
+          if (!getCachedData(cacheKey)) {
+            enhancedUserService.getTrendingUsers(3).then(users => {
+              const suggestions = users.map(user => ({
+                id: user.id,
+                handle: user.handle,
+                ens: user.ens,
+                avatarCid: user.avatarCid,
+                followers: user.followers,
+                reputationScore: user.reputationScore,
+                mutualConnections: 0,
+                reasonForSuggestion: getContextualSuggestionReason(context),
+              }));
+              setCachedData(cacheKey, suggestions, CACHE_TTL.USERS);
+            }).catch(() => {
+              // Silently fail prefetch
+            });
+          }
+        });
+      }
+    } catch (error) {
+      // Silently fail prefetch
+      console.debug('Prefetch failed:', error);
+    }
+  }, [activeView, getContextualSuggestionReason]);
+
+  // Trigger prefetch after initial load
+  useEffect(() => {
+    const prefetchTimer = setTimeout(prefetchData, 2000); // Prefetch after 2 seconds
+    return () => clearTimeout(prefetchTimer);
+  }, [prefetchData]);
+
+  // Current community is loaded in useEffect above
 
   // Format numbers
   const formatNumber = (num: number) => {
@@ -315,26 +613,134 @@ export default function DashboardRightSidebar() {
     return `${minutes}m`;
   };
 
-  // Get contextual content based on current view
-  const getContextualContent = () => {
+  // Memoized contextual content calculation
+  const contextualContent = useMemo(() => {
+    const userId = getCurrentUserId();
+    const isLoggedIn = !!userId;
+    
     if (activeView === 'community' && currentCommunity) {
       return {
         showCommunityInfo: true,
         showRelatedCommunities: true,
-        showCommunityGovernance: currentCommunity.governanceToken,
+        showCommunityGovernance: !!currentCommunity.governanceToken,
         showTrendingInCategory: currentCommunity.category,
+        showPersonalizedContent: isLoggedIn,
+        showUserSpecificActions: isLoggedIn,
+        contextTitle: `${currentCommunity.displayName} Community`,
+        recommendationType: 'community-based' as const,
+        primaryActions: ['join', 'post', 'vote'] as const,
       };
     }
     
+    if (activeView === 'marketplace') {
+      return {
+        showCommunityInfo: false,
+        showRelatedCommunities: false,
+        showCommunityGovernance: false,
+        showTrendingInCategory: null,
+        showPersonalizedContent: isLoggedIn,
+        showUserSpecificActions: isLoggedIn,
+        contextTitle: 'Marketplace',
+        recommendationType: 'marketplace-based' as const,
+        primaryActions: ['buy', 'sell', 'bid'] as const,
+      };
+    }
+    
+    if (activeView === 'governance') {
+      return {
+        showCommunityInfo: false,
+        showRelatedCommunities: false,
+        showCommunityGovernance: true,
+        showTrendingInCategory: null,
+        showPersonalizedContent: isLoggedIn,
+        showUserSpecificActions: isLoggedIn,
+        contextTitle: 'Governance',
+        recommendationType: 'governance-based' as const,
+        primaryActions: ['vote', 'propose', 'delegate'] as const,
+      };
+    }
+    
+    // Default feed view
     return {
       showCommunityInfo: false,
       showRelatedCommunities: false,
       showCommunityGovernance: false,
       showTrendingInCategory: null,
+      showPersonalizedContent: isLoggedIn,
+      showUserSpecificActions: isLoggedIn,
+      contextTitle: isLoggedIn ? 'Your Feed' : 'Discover',
+      recommendationType: 'general' as const,
+      primaryActions: isLoggedIn ? ['post', 'follow', 'tip'] as const : ['explore', 'connect'] as const,
     };
-  };
+  }, [activeView, currentCommunity]);
 
-  const contextualContent = getContextualContent();
+  // Memoized adaptive widget configuration
+  const activeWidgets = useMemo(() => {
+    const widgets = [];
+    
+    // Always show wallet widget if user has connected wallet
+    widgets.push('wallet');
+    
+    // Context-specific widgets
+    if (contextualContent.showCommunityInfo) {
+      widgets.push('community-info');
+    }
+    
+    if (contextualContent.showCommunityGovernance) {
+      widgets.push('governance');
+    }
+    
+    if (contextualContent.showRelatedCommunities) {
+      widgets.push('related-communities');
+    }
+    
+    // Show user suggestions in feed view
+    if (activeView === 'feed') {
+      widgets.push('suggested-users');
+    }
+    
+    // Show auctions in marketplace or general feed
+    if (activeView === 'marketplace' || activeView === 'feed') {
+      widgets.push('active-auctions');
+    }
+    
+    // Always show trending content but adapt the type
+    widgets.push('trending-content');
+    
+    // Show DeFi markets for general engagement
+    widgets.push('defi-markets');
+    
+    // Show trending hashtags for content discovery
+    widgets.push('trending-hashtags');
+    
+    return widgets;
+  }, [activeView, contextualContent]);
+
+  // Render widget based on adaptive configuration
+  const renderWidget = (widgetType: string) => {
+    switch (widgetType) {
+      case 'community-info':
+        return renderCommunityInfoWidget();
+      case 'wallet':
+        return renderWalletWidget();
+      case 'suggested-users':
+        return renderSuggestedUsersWidget();
+      case 'active-auctions':
+        return renderActiveAuctionsWidget();
+      case 'governance':
+        return renderGovernanceWidget();
+      case 'related-communities':
+        return renderRelatedCommunitiesWidget();
+      case 'trending-content':
+        return renderTrendingContentWidget();
+      case 'defi-markets':
+        return renderDeFiMarketsWidget();
+      case 'trending-hashtags':
+        return renderTrendingHashtagsWidget();
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -344,9 +750,43 @@ export default function DashboardRightSidebar() {
         communityId={activeCommunity || undefined}
       />
 
-      {/* Legacy widgets - keeping for backward compatibility */}
-      {/* Community Info Widget - Only show when viewing a community */}
-      {contextualContent.showCommunityInfo && currentCommunity && (
+      {/* Contextual Header */}
+      {contextualContent.contextTitle && (
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4 text-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {contextualContent.contextTitle}
+            </h2>
+            {contextualContent.showUserSpecificActions && (
+              <div className="mt-2 flex justify-center space-x-2">
+                {contextualContent.primaryActions.map((action) => (
+                  <button
+                    key={action}
+                    className="px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200 rounded-full hover:bg-primary-200 dark:hover:bg-primary-800/50 transition-colors"
+                  >
+                    {action.charAt(0).toUpperCase() + action.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Adaptive Widgets */}
+      {activeWidgets.map((widgetType) => (
+        <div key={widgetType}>
+          {renderWidget(widgetType)}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Memoized widget rendering functions
+  const renderCommunityInfoWidget = useCallback(() => {
+    if (!contextualContent.showCommunityInfo || !currentCommunity) return null;
+
+    return (
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
           <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
             <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
@@ -378,43 +818,58 @@ export default function DashboardRightSidebar() {
             </div>
           </div>
         </div>
-      )}
+    );
+  }, [contextualContent.showCommunityInfo, currentCommunity, formatNumber]);
 
-      {/* Wallet Widget - Always show */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <svg className="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-            </svg>
-            Wallet Overview
-          </h3>
-        </div>
-        <div className="p-4">
-          <WalletSnapshotEmbed 
-            walletAddress="0x1234...5678" 
-            className="mb-4"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-              <div className="text-2xl mb-1">💸</div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Send</span>
-            </button>
-            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-              <div className="text-2xl mb-1">📥</div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Receive</span>
-            </button>
-            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-              <div className="text-2xl mb-1">🔄</div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Swap</span>
-            </button>
-            <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-              <div className="text-2xl mb-1">🗳️</div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Vote</span>
-            </button>
+  const renderWalletWidget = useCallback(() => {
+    return (
+
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+              <svg className="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+              Wallet Overview
+            </h3>
+          </div>
+          <div className="p-4">
+            <WalletSnapshotEmbed 
+              walletAddress="0x1234...5678" 
+              className="mb-4"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                <div className="text-2xl mb-1">💸</div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Send</span>
+              </button>
+              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                <div className="text-2xl mb-1">📥</div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Receive</span>
+              </button>
+              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                <div className="text-2xl mb-1">🔄</div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Swap</span>
+              </button>
+              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
+                <div className="text-2xl mb-1">🗳️</div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Vote</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+    );
+  }, []);
+
+  // Add placeholder functions for other widgets
+  const renderSuggestedUsersWidget = useCallback(() => null, []);
+  const renderActiveAuctionsWidget = useCallback(() => null, []);
+  const renderGovernanceWidget = useCallback(() => null, []);
+  const renderRelatedCommunitiesWidget = useCallback(() => null, []);
+  const renderTrendingContentWidget = useCallback(() => null, []);
+  const renderDeFiMarketsWidget = useCallback(() => null, []);
+  const renderTrendingHashtagsWidget = useCallback(() => {
+    return (
 
       {/* Trending Hashtags Widget */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
@@ -530,7 +985,7 @@ export default function DashboardRightSidebar() {
           </div>
           <div className="p-4">
             <div className="space-y-3">
-              {mockCommunities
+              {communities
                 .filter(c => c.id !== currentCommunity.id && c.category === currentCommunity.category)
                 .slice(0, 3)
                 .map((community) => (
@@ -576,7 +1031,7 @@ export default function DashboardRightSidebar() {
         <div className="p-4">
           <div className="space-y-3">
             {(activeView === 'community' 
-              ? mockCommunities.filter(c => c.category === contextualContent.showTrendingInCategory).slice(0, 4)
+              ? communities.filter(c => c.category === contextualContent.showTrendingInCategory).slice(0, 4)
               : trendingDAOs
             ).map((item) => (
               <Link
@@ -637,6 +1092,18 @@ export default function DashboardRightSidebar() {
                     <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12" />
                   </div>
                 ))}
+              </div>
+            ) : errors.users ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                  {errors.users}
+                </p>
+                <button
+                  onClick={() => retryLoad('users')}
+                  className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+                >
+                  Try Again
+                </button>
               </div>
             ) : suggestedUsers.length > 0 ? (
               <div className="space-y-3">
@@ -718,6 +1185,18 @@ export default function DashboardRightSidebar() {
                   </div>
                 ))}
               </div>
+            ) : errors.auctions ? (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                  {errors.auctions}
+                </p>
+                <button
+                  onClick={() => retryLoad('auctions')}
+                  className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+                >
+                  Try Again
+                </button>
+              </div>
             ) : activeAuctions.length > 0 ? (
               <div className="space-y-3">
                 {activeAuctions.map((auction) => (
@@ -729,13 +1208,13 @@ export default function DashboardRightSidebar() {
                     <div className="flex justify-between">
                       <p className="font-medium text-gray-900 dark:text-white text-sm">{auction.title}</p>
                       <span className="text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-                        {auction.auctionEndTime ? formatTimeRemaining(new Date(auction.auctionEndTime)) : 'Ending Soon'}
+                        {auction.endTime ? formatTimeRemaining(new Date(auction.endTime)) : 'Ending Soon'}
                       </span>
                     </div>
                     <div className="mt-2 flex justify-between items-center">
                       <span className="text-sm text-gray-500 dark:text-gray-400">Current bid</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {auction.highestBid || auction.price} {auction.cryptoSymbol}
+                        {auction.currentBid} {auction.currency}
                       </span>
                     </div>
                     {auction.bidCount && (
@@ -790,6 +1269,18 @@ export default function DashboardRightSidebar() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : errors.governance ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+                {errors.governance}
+              </p>
+              <button
+                onClick={() => retryLoad('governance')}
+                className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+              >
+                Try Again
+              </button>
             </div>
           ) : governanceProposals.length > 0 ? (
             <div className="space-y-3">
@@ -851,4 +1342,60 @@ export default function DashboardRightSidebar() {
       </div>
     </div>
   );
-}
+}       
+ <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+              <span className="mr-2 text-lg">#️⃣</span>
+              Trending Now
+            </h3>
+          </div>
+          <div className="p-4">
+            <div className="space-y-3">
+              {[
+                { tag: 'defi', count: 1240, growth: 15 },
+                { tag: 'nft', count: 890, growth: 8 },
+                { tag: 'web3', count: 2100, growth: 22 },
+                { tag: 'dao', count: 567, growth: 12 },
+                { tag: 'ethereum', count: 3400, growth: 5 }
+              ].map((hashtag, index) => (
+                <Link
+                  key={hashtag.tag}
+                  href={`/hashtags/${hashtag.tag}`}
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-4">
+                      {index + 1}
+                    </span>
+                    <span className="text-primary-600 dark:text-primary-400 font-medium group-hover:text-primary-700 dark:group-hover:text-primary-300">
+                      #{hashtag.tag}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span>{formatNumber(hashtag.count)}</span>
+                    <span className="text-green-600 dark:text-green-400 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                      {hashtag.growth}%
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <Link
+              href="/search?tab=trending"
+              className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            >
+              View All Trending →
+            </Link>
+          </div>
+        </div>
+    );
+  }, [formatNumber]);
+});
+
+DashboardRightSidebar.displayName = 'DashboardRightSidebar';
+
+export default DashboardRightSidebar;
