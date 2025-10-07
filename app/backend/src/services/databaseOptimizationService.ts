@@ -1,476 +1,707 @@
+/**
+ * Database Optimization Service
+ * Query optimization, indexing, and performance monitoring for PostgreSQL
+ */
+
 import { Pool, PoolClient } from 'pg';
-import { dbPool } from '../db/connectionPool';
-import { cacheService } from './cacheService';
-import { logger } from '../utils/logger';
+import { performance } from 'perf_hooks';
 
 interface QueryPerformanceMetrics {
   query: string;
   executionTime: number;
   rowsReturned: number;
-  timestamp: Date;
+  timestamp: number;
+  planningTime?: number;
+  executionTime_actual?: number;
+  bufferHits?: number;
+  bufferReads?: number;
+  tempFileSize?: number;
 }
 
 interface IndexRecommendation {
   table: string;
   columns: string[];
+  type: 'btree' | 'hash' | 'gin' | 'gist';
   reason: string;
-  estimatedImpact: 'high' | 'medium' | 'low';
+  estimatedImprovement: number;
+  priority: 'high' | 'medium' | 'low';
+  createStatement: string;
 }
 
+interface DatabaseStats {
+  connectionCount: number;
+  activeQueries: number;
+  slowQueries: number;
+  cacheHitRatio: number;
+  indexUsage: number;
+  tableStats: Array<{
+    tableName: string;
+    rowCount: number;
+    tableSize: string;
+    indexSize: string;
+    totalSize: string;
+  }>;
+  topSlowQueries: QueryPerformanceMetrics[];
+}
+
+interface OptimizationRule {
+  name: string;
+  description: string;
+  check: (query: string, metrics: QueryPerformanceMetrics) => boolean;
+  recommendation: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Database Optimization Service for PostgreSQL performance tuning
+ */
 export class DatabaseOptimizationService {
+  private pool: Pool;
   private queryMetrics: QueryPerformanceMetrics[] = [];
-  private slowQueryThreshold = 1000; // 1 second
-  private readReplicas: Pool[] = [];
+  private indexRecommendations: IndexRecommendation[] = [];
+  private optimizationRules: OptimizationRule[] = [];
+  private monitoringInterval?: NodeJS.Timeout;
 
-  constructor() {
-    this.initializeReadReplicas();
-    this.startQueryMonitoring();
+  constructor(pool: Pool) {
+    this.pool = pool;
+    this.initializeOptimizationRules();
+    this.startPerformanceMonitoring();
   }
 
   /**
-   * Initialize read replica connections for heavy read operations
+   * Initialize optimization rules
    */
-  private initializeReadReplicas(): void {
-    const readReplicaUrls = process.env.READ_REPLICA_URLS?.split(',') || [];
-    
-    readReplicaUrls.forEach((url, index) => {
-      try {
-        const replica = new Pool({
-          connectionString: url.trim(),
-          max: 10, // Smaller pool for read replicas
-          idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 10000,
-        });
-        
-        this.readReplicas.push(replica);
-        logger.info(`Read replica ${index + 1} initialized`);
-      } catch (error) {
-        logger.error(`Failed to initialize read replica ${index + 1}:`, error);
-      }
-    });
-  }
-
-  /**
-   * Get a read replica connection for heavy read operations
-   */
-  public getReadConnection(): Pool {
-    if (this.readReplicas.length === 0) {
-      // Fallback to main connection if no read replicas
-      return dbPool.getConnection() as any;
-    }
-    
-    // Simple round-robin selection
-    const index = Math.floor(Math.random() * this.readReplicas.length);
-    return this.readReplicas[index];
-  }
-
-  /**
-   * Execute optimized query with performance monitoring
-   */
-  public async executeOptimizedQuery<T>(
-    query: string,
-    params: any[] = [],
-    useReadReplica: boolean = false
-  ): Promise<T[]> {
-    const startTime = Date.now();
-    const connection = useReadReplica ? this.getReadConnection() : dbPool.getConnection();
-    
-    try {
-      const result = await (connection as any).unsafe(query, params);
-      const executionTime = Date.now() - startTime;
-      
-      // Track query performance
-      this.trackQueryPerformance({
-        query: this.sanitizeQuery(query),
-        executionTime,
-        rowsReturned: Array.isArray(result) ? result.length : 0,
-        timestamp: new Date()
-      });
-      
-      // Log slow queries
-      if (executionTime > this.slowQueryThreshold) {
-        logger.warn('Slow query detected', {
-          query: this.sanitizeQuery(query),
-          executionTime,
-          params: params.length
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      logger.error('Query execution failed', {
-        query: this.sanitizeQuery(query),
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Create database indexes for frequently queried fields
-   */
-  public async createOptimizationIndexes(): Promise<void> {
-    const indexes = [
-      // Seller profile indexes
+  private initializeOptimizationRules(): void {
+    this.optimizationRules = [
       {
-        name: 'idx_sellers_wallet_address_btree',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_wallet_address_btree ON sellers USING btree(wallet_address)',
-        table: 'sellers'
+        name: 'Slow Query Detection',
+        description: 'Detect queries taking longer than 1 second',
+        check: (query, metrics) => metrics.executionTime > 1000,
+        recommendation: 'Consider adding indexes or optimizing the query structure',
+        severity: 'high'
       },
       {
-        name: 'idx_sellers_created_at_desc',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_created_at_desc ON sellers(created_at DESC)',
-        table: 'sellers'
+        name: 'Sequential Scan Detection',
+        description: 'Detect queries performing sequential scans on large tables',
+        check: (query) => query.toLowerCase().includes('seq scan') && 
+                          (query.includes('posts') || query.includes('users') || query.includes('communities')),
+        recommendation: 'Add appropriate indexes to avoid sequential scans',
+        severity: 'high'
       },
       {
-        name: 'idx_sellers_onboarding_completed',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_onboarding_completed ON sellers(onboarding_completed) WHERE onboarding_completed = true',
-        table: 'sellers'
-      },
-      
-      // Marketplace listings indexes
-      {
-        name: 'idx_marketplace_listings_seller_address',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_seller_address ON marketplace_listings(seller_address)',
-        table: 'marketplace_listings'
-      },
-      {
-        name: 'idx_marketplace_listings_created_at_desc',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_created_at_desc ON marketplace_listings(created_at DESC)',
-        table: 'marketplace_listings'
+        name: 'Missing WHERE Clause',
+        description: 'Detect SELECT queries without WHERE clauses',
+        check: (query) => {
+          const normalized = query.toLowerCase().trim();
+          return normalized.startsWith('select') && 
+                 !normalized.includes('where') && 
+                 !normalized.includes('limit') &&
+                 (normalized.includes('posts') || normalized.includes('users'));
+        },
+        recommendation: 'Add WHERE clause to limit result set',
+        severity: 'medium'
       },
       {
-        name: 'idx_marketplace_listings_status_created_at',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_status_created_at ON marketplace_listings(status, created_at DESC)',
-        table: 'marketplace_listings'
+        name: 'N+1 Query Pattern',
+        description: 'Detect potential N+1 query patterns',
+        check: (query, metrics) => {
+          // Simple heuristic: many similar queries in short time
+          const recentSimilar = this.queryMetrics.filter(m => 
+            m.timestamp > Date.now() - 5000 && // Last 5 seconds
+            this.querySimilarity(m.query, query) > 0.8
+          );
+          return recentSimilar.length > 10;
+        },
+        recommendation: 'Use JOIN or batch queries to avoid N+1 pattern',
+        severity: 'high'
       },
       {
-        name: 'idx_marketplace_listings_price_range',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_marketplace_listings_price_range ON marketplace_listings(price) WHERE status = \'active\'',
-        table: 'marketplace_listings'
-      },
-      
-      // Authentication sessions indexes
-      {
-        name: 'idx_auth_sessions_wallet_address',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_wallet_address ON auth_sessions(wallet_address)',
-        table: 'auth_sessions'
+        name: 'Large Result Set',
+        description: 'Detect queries returning large result sets',
+        check: (query, metrics) => metrics.rowsReturned > 1000,
+        recommendation: 'Add pagination or limit result set size',
+        severity: 'medium'
       },
       {
-        name: 'idx_auth_sessions_expires_at',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_expires_at ON auth_sessions(expires_at) WHERE expires_at > NOW()',
-        table: 'auth_sessions'
-      },
-      {
-        name: 'idx_auth_sessions_session_token_hash',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_auth_sessions_session_token_hash ON auth_sessions USING hash(session_token)',
-        table: 'auth_sessions'
-      },
-      
-      // User reputation indexes
-      {
-        name: 'idx_user_reputation_wallet_address',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_wallet_address ON user_reputation(wallet_address)',
-        table: 'user_reputation'
-      },
-      {
-        name: 'idx_user_reputation_score_desc',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_score_desc ON user_reputation(reputation_score DESC)',
-        table: 'user_reputation'
-      },
-      {
-        name: 'idx_user_reputation_last_calculated',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_reputation_last_calculated ON user_reputation(last_calculated DESC)',
-        table: 'user_reputation'
-      },
-      
-      // Products table optimization indexes
-      {
-        name: 'idx_products_seller_status_created',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_seller_status_created ON products(seller_id, status, created_at DESC)',
-        table: 'products'
-      },
-      {
-        name: 'idx_products_category_price',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_category_price ON products(category_id, price_amount) WHERE status = \'active\'',
-        table: 'products'
-      },
-      {
-        name: 'idx_products_search_vector',
-        query: 'CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_search_vector ON products USING gin(to_tsvector(\'english\', title || \' \' || description))',
-        table: 'products'
+        name: 'Inefficient JOIN',
+        description: 'Detect potentially inefficient JOIN operations',
+        check: (query, metrics) => {
+          const hasJoin = query.toLowerCase().includes('join');
+          const isSlowWithJoin = hasJoin && metrics.executionTime > 500;
+          return isSlowWithJoin;
+        },
+        recommendation: 'Optimize JOIN conditions and ensure proper indexing',
+        severity: 'medium'
       }
     ];
+  }
 
-    for (const index of indexes) {
+  /**
+   * Start performance monitoring
+   */
+  private startPerformanceMonitoring(): void {
+    // Monitor every 30 seconds
+    this.monitoringInterval = setInterval(async () => {
       try {
-        await this.executeOptimizedQuery(index.query);
-        logger.info(`Created index ${index.name} on table ${index.table}`);
+        await this.collectDatabaseStats();
+        await this.analyzeSlowQueries();
+        await this.generateIndexRecommendations();
       } catch (error) {
-        // Index might already exist, log but don't fail
-        logger.warn(`Failed to create index ${index.name}:`, error);
+        console.error('Database monitoring error:', error);
+      }
+    }, 30000);
+  }
+
+  /**
+   * Execute query with performance monitoring
+   */
+  async executeQuery<T = any>(
+    query: string, 
+    params: any[] = [], 
+    options: { 
+      explain?: boolean;
+      analyze?: boolean;
+      buffers?: boolean;
+    } = {}
+  ): Promise<{
+    rows: T[];
+    metrics: QueryPerformanceMetrics;
+    plan?: any;
+  }> {
+    const client = await this.pool.connect();
+    const startTime = performance.now();
+    
+    try {
+      let result;
+      let plan;
+
+      // Get query plan if requested
+      if (options.explain) {
+        const explainQuery = `EXPLAIN ${options.analyze ? 'ANALYZE ' : ''}${options.buffers ? 'BUFFERS ' : ''}${query}`;
+        const planResult = await client.query(explainQuery, params);
+        plan = planResult.rows;
+      }
+
+      // Execute the actual query
+      result = await client.query(query, params);
+      
+      const endTime = performance.now();
+      const executionTime = endTime - startTime;
+
+      // Create performance metrics
+      const metrics: QueryPerformanceMetrics = {
+        query: this.normalizeQuery(query),
+        executionTime,
+        rowsReturned: result.rowCount || 0,
+        timestamp: Date.now()
+      };
+
+      // Extract additional metrics from plan if available
+      if (plan && options.analyze) {
+        this.extractPlanMetrics(plan, metrics);
+      }
+
+      // Store metrics
+      this.queryMetrics.push(metrics);
+      
+      // Keep only recent metrics (last 1000)
+      if (this.queryMetrics.length > 1000) {
+        this.queryMetrics = this.queryMetrics.slice(-1000);
+      }
+
+      // Check optimization rules
+      this.checkOptimizationRules(query, metrics);
+
+      return {
+        rows: result.rows,
+        metrics,
+        plan
+      };
+
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Normalize query for comparison
+   */
+  private normalizeQuery(query: string): string {
+    return query
+      .replace(/\s+/g, ' ')
+      .replace(/\$\d+/g, '?')
+      .replace(/\d+/g, 'N')
+      .replace(/'[^']*'/g, "'?'")
+      .trim()
+      .toLowerCase();
+  }
+
+  /**
+   * Extract metrics from query plan
+   */
+  private extractPlanMetrics(plan: any[], metrics: QueryPerformanceMetrics): void {
+    // This is a simplified extraction - in practice, you'd parse the EXPLAIN output more thoroughly
+    const planText = plan.map(row => row['QUERY PLAN']).join('\n');
+    
+    // Extract planning time
+    const planningTimeMatch = planText.match(/Planning Time: ([\d.]+) ms/);
+    if (planningTimeMatch) {
+      metrics.planningTime = parseFloat(planningTimeMatch[1]);
+    }
+
+    // Extract execution time
+    const executionTimeMatch = planText.match(/Execution Time: ([\d.]+) ms/);
+    if (executionTimeMatch) {
+      metrics.executionTime_actual = parseFloat(executionTimeMatch[1]);
+    }
+
+    // Extract buffer statistics
+    const bufferHitsMatch = planText.match(/shared hit=(\d+)/);
+    if (bufferHitsMatch) {
+      metrics.bufferHits = parseInt(bufferHitsMatch[1]);
+    }
+
+    const bufferReadsMatch = planText.match(/read=(\d+)/);
+    if (bufferReadsMatch) {
+      metrics.bufferReads = parseInt(bufferReadsMatch[1]);
+    }
+  }
+
+  /**
+   * Check optimization rules against query
+   */
+  private checkOptimizationRules(query: string, metrics: QueryPerformanceMetrics): void {
+    for (const rule of this.optimizationRules) {
+      if (rule.check(query, metrics)) {
+        console.warn(`Database Optimization Alert [${rule.severity.toUpperCase()}]: ${rule.name}`);
+        console.warn(`Query: ${query.substring(0, 100)}...`);
+        console.warn(`Recommendation: ${rule.recommendation}`);
+        
+        // Emit event for monitoring systems
+        process.emit('database-optimization-alert' as any, {
+          rule: rule.name,
+          severity: rule.severity,
+          query: query.substring(0, 200),
+          metrics,
+          recommendation: rule.recommendation
+        });
       }
     }
   }
 
   /**
-   * Analyze query performance and provide optimization recommendations
+   * Calculate query similarity
    */
-  public async analyzeQueryPerformance(): Promise<{
-    slowQueries: QueryPerformanceMetrics[];
-    indexRecommendations: IndexRecommendation[];
-    performanceStats: {
-      averageExecutionTime: number;
-      slowQueryCount: number;
-      totalQueries: number;
-    };
-  }> {
-    const slowQueries = this.queryMetrics.filter(
-      metric => metric.executionTime > this.slowQueryThreshold
+  private querySimilarity(query1: string, query2: string): number {
+    const normalized1 = this.normalizeQuery(query1);
+    const normalized2 = this.normalizeQuery(query2);
+    
+    if (normalized1 === normalized2) return 1.0;
+    
+    // Simple Levenshtein distance-based similarity
+    const maxLength = Math.max(normalized1.length, normalized2.length);
+    if (maxLength === 0) return 1.0;
+    
+    const distance = this.levenshteinDistance(normalized1, normalized2);
+    return 1 - (distance / maxLength);
+  }
+
+  /**
+   * Calculate Levenshtein distance
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + indicator
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * Collect database statistics
+   */
+  private async collectDatabaseStats(): Promise<DatabaseStats> {
+    const client = await this.pool.connect();
+    
+    try {
+      // Get connection count
+      const connectionResult = await client.query(`
+        SELECT count(*) as connection_count 
+        FROM pg_stat_activity 
+        WHERE state = 'active'
+      `);
+
+      // Get cache hit ratio
+      const cacheResult = await client.query(`
+        SELECT 
+          sum(heap_blks_hit) / (sum(heap_blks_hit) + sum(heap_blks_read)) as cache_hit_ratio
+        FROM pg_statio_user_tables
+      `);
+
+      // Get table statistics
+      const tableStatsResult = await client.query(`
+        SELECT 
+          schemaname,
+          tablename,
+          n_tup_ins + n_tup_upd + n_tup_del as total_operations,
+          n_tup_ins as inserts,
+          n_tup_upd as updates,
+          n_tup_del as deletes,
+          n_live_tup as live_tuples,
+          n_dead_tup as dead_tuples,
+          last_vacuum,
+          last_autovacuum,
+          last_analyze,
+          last_autoanalyze
+        FROM pg_stat_user_tables
+        ORDER BY total_operations DESC
+        LIMIT 20
+      `);
+
+      // Get table sizes
+      const tableSizeResult = await client.query(`
+        SELECT 
+          tablename,
+          pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as total_size,
+          pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) as table_size,
+          pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) as index_size
+        FROM pg_tables 
+        WHERE schemaname = 'public'
+        ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+        LIMIT 20
+      `);
+
+      // Get slow queries from current metrics
+      const slowQueries = this.queryMetrics
+        .filter(m => m.executionTime > 100)
+        .sort((a, b) => b.executionTime - a.executionTime)
+        .slice(0, 10);
+
+      const stats: DatabaseStats = {
+        connectionCount: parseInt(connectionResult.rows[0].connection_count),
+        activeQueries: this.queryMetrics.filter(m => Date.now() - m.timestamp < 60000).length,
+        slowQueries: slowQueries.length,
+        cacheHitRatio: parseFloat(cacheResult.rows[0]?.cache_hit_ratio || '0'),
+        indexUsage: 0, // Would need more complex query
+        tableStats: tableSizeResult.rows.map(row => ({
+          tableName: row.tablename,
+          rowCount: 0, // Would need additional query
+          tableSize: row.table_size,
+          indexSize: row.index_size,
+          totalSize: row.total_size
+        })),
+        topSlowQueries: slowQueries
+      };
+
+      return stats;
+
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Analyze slow queries and generate recommendations
+   */
+  private async analyzeSlowQueries(): Promise<void> {
+    const slowQueries = this.queryMetrics
+      .filter(m => m.executionTime > 500) // Queries slower than 500ms
+      .slice(-50); // Last 50 slow queries
+
+    for (const queryMetric of slowQueries) {
+      try {
+        // Get query plan for analysis
+        const result = await this.executeQuery(
+          queryMetric.query, 
+          [], 
+          { explain: true, analyze: false }
+        );
+
+        if (result.plan) {
+          this.analyzePlanForOptimizations(queryMetric.query, result.plan);
+        }
+      } catch (error) {
+        // Skip queries that can't be analyzed
+        continue;
+      }
+    }
+  }
+
+  /**
+   * Analyze query plan for optimization opportunities
+   */
+  private analyzePlanForOptimizations(query: string, plan: any[]): void {
+    const planText = plan.map(row => row['QUERY PLAN']).join('\n').toLowerCase();
+
+    // Check for sequential scans
+    if (planText.includes('seq scan')) {
+      const tableMatch = planText.match(/seq scan on (\w+)/);
+      if (tableMatch) {
+        const tableName = tableMatch[1];
+        
+        // Extract WHERE conditions to suggest indexes
+        const whereMatch = query.toLowerCase().match(/where\s+(.+?)(?:\s+order|\s+group|\s+limit|$)/);
+        if (whereMatch) {
+          const whereClause = whereMatch[1];
+          const columns = this.extractColumnsFromWhere(whereClause);
+          
+          if (columns.length > 0) {
+            this.addIndexRecommendation({
+              table: tableName,
+              columns,
+              type: 'btree',
+              reason: 'Sequential scan detected in WHERE clause',
+              estimatedImprovement: 0.7,
+              priority: 'high',
+              createStatement: `CREATE INDEX idx_${tableName}_${columns.join('_')} ON ${tableName} (${columns.join(', ')});`
+            });
+          }
+        }
+      }
+    }
+
+    // Check for sort operations without indexes
+    if (planText.includes('sort') && planText.includes('sort key:')) {
+      const sortMatch = planText.match(/sort key: (.+)/);
+      if (sortMatch) {
+        const sortColumns = sortMatch[1].split(',').map(col => col.trim().replace(/\w+\./, ''));
+        const tableMatch = planText.match(/on (\w+)/);
+        
+        if (tableMatch && sortColumns.length > 0) {
+          this.addIndexRecommendation({
+            table: tableMatch[1],
+            columns: sortColumns,
+            type: 'btree',
+            reason: 'Sort operation without index detected',
+            estimatedImprovement: 0.5,
+            priority: 'medium',
+            createStatement: `CREATE INDEX idx_${tableMatch[1]}_sort_${sortColumns.join('_')} ON ${tableMatch[1]} (${sortColumns.join(', ')});`
+          });
+        }
+      }
+    }
+
+    // Check for hash joins that could benefit from indexes
+    if (planText.includes('hash join')) {
+      // This would require more sophisticated plan parsing
+      // For now, we'll just note that hash joins are occurring
+    }
+  }
+
+  /**
+   * Extract column names from WHERE clause
+   */
+  private extractColumnsFromWhere(whereClause: string): string[] {
+    const columns: string[] = [];
+    
+    // Simple regex to extract column names (this could be more sophisticated)
+    const columnMatches = whereClause.match(/(\w+)\s*[=<>!]/g);
+    
+    if (columnMatches) {
+      columnMatches.forEach(match => {
+        const column = match.replace(/\s*[=<>!].*/, '').trim();
+        if (!columns.includes(column) && !['and', 'or', 'not'].includes(column.toLowerCase())) {
+          columns.push(column);
+        }
+      });
+    }
+
+    return columns;
+  }
+
+  /**
+   * Add index recommendation
+   */
+  private addIndexRecommendation(recommendation: IndexRecommendation): void {
+    // Check if similar recommendation already exists
+    const existing = this.indexRecommendations.find(rec => 
+      rec.table === recommendation.table && 
+      JSON.stringify(rec.columns.sort()) === JSON.stringify(recommendation.columns.sort())
     );
 
-    const indexRecommendations = await this.generateIndexRecommendations();
-
-    const totalQueries = this.queryMetrics.length;
-    const averageExecutionTime = totalQueries > 0 
-      ? this.queryMetrics.reduce((sum, metric) => sum + metric.executionTime, 0) / totalQueries
-      : 0;
-
-    return {
-      slowQueries: slowQueries.slice(-10), // Last 10 slow queries
-      indexRecommendations,
-      performanceStats: {
-        averageExecutionTime,
-        slowQueryCount: slowQueries.length,
-        totalQueries
+    if (!existing) {
+      this.indexRecommendations.push(recommendation);
+      
+      // Keep only recent recommendations (last 100)
+      if (this.indexRecommendations.length > 100) {
+        this.indexRecommendations = this.indexRecommendations.slice(-100);
       }
-    };
+    }
   }
 
   /**
    * Generate index recommendations based on query patterns
    */
-  private async generateIndexRecommendations(): Promise<IndexRecommendation[]> {
-    const recommendations: IndexRecommendation[] = [];
-
-    try {
-      // Analyze missing indexes from PostgreSQL stats
-      const missingIndexes = await this.executeOptimizedQuery(`
-        SELECT 
-          schemaname,
-          tablename,
-          attname as column_name,
-          n_distinct,
-          correlation
-        FROM pg_stats 
-        WHERE schemaname = 'public' 
-        AND tablename IN ('sellers', 'marketplace_listings', 'auth_sessions', 'user_reputation')
-        AND n_distinct > 100
-        ORDER BY n_distinct DESC
-      `);
-
-      for (const stat of missingIndexes as any[]) {
-        if (stat.n_distinct > 1000) {
-          recommendations.push({
-            table: stat.tablename,
-            columns: [stat.column_name],
-            reason: `High cardinality column (${stat.n_distinct} distinct values) frequently used in WHERE clauses`,
-            estimatedImpact: 'high'
-          });
-        }
-      }
-
-      // Add specific recommendations based on common query patterns
-      recommendations.push(
-        {
-          table: 'marketplace_listings',
-          columns: ['seller_address', 'created_at'],
-          reason: 'Composite index for seller listing queries with date sorting',
-          estimatedImpact: 'high'
-        },
-        {
-          table: 'auth_sessions',
-          columns: ['wallet_address', 'expires_at'],
-          reason: 'Composite index for active session lookups',
-          estimatedImpact: 'medium'
-        },
-        {
-          table: 'user_reputation',
-          columns: ['reputation_score'],
-          reason: 'Index for reputation-based sorting and filtering',
-          estimatedImpact: 'medium'
-        }
-      );
-
-    } catch (error) {
-      logger.error('Failed to generate index recommendations:', error);
-    }
-
-    return recommendations;
-  }
-
-  /**
-   * Optimize database connection settings
-   */
-  public async optimizeConnectionSettings(): Promise<void> {
-    const optimizationQueries = [
-      // Increase work memory for complex queries
-      "SET work_mem = '256MB'",
-      
-      // Optimize for read-heavy workloads
-      "SET random_page_cost = 1.1",
-      
-      // Increase effective cache size
-      "SET effective_cache_size = '2GB'",
-      
-      // Optimize checkpoint settings
-      "SET checkpoint_completion_target = 0.9",
-      
-      // Enable query plan caching
-      "SET plan_cache_mode = 'auto'"
-    ];
-
-    for (const query of optimizationQueries) {
-      try {
-        await this.executeOptimizedQuery(query);
-      } catch (error) {
-        logger.warn(`Failed to apply optimization setting: ${query}`, error);
-      }
-    }
-  }
-
-  /**
-   * Clean up old query metrics to prevent memory leaks
-   */
-  private cleanupOldMetrics(): void {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    this.queryMetrics = this.queryMetrics.filter(
-      metric => metric.timestamp > oneHourAgo
-    );
-  }
-
-  /**
-   * Track query performance metrics
-   */
-  private trackQueryPerformance(metrics: QueryPerformanceMetrics): void {
-    this.queryMetrics.push(metrics);
+  private async generateIndexRecommendations(): Promise<void> {
+    // Analyze query patterns for common WHERE clauses
+    const queryPatterns = new Map<string, number>();
     
-    // Keep only recent metrics to prevent memory issues
-    if (this.queryMetrics.length > 1000) {
-      this.queryMetrics = this.queryMetrics.slice(-500);
+    this.queryMetrics.forEach(metric => {
+      const normalized = this.normalizeQuery(metric.query);
+      const count = queryPatterns.get(normalized) || 0;
+      queryPatterns.set(normalized, count + 1);
+    });
+
+    // Find frequently executed queries that might benefit from indexes
+    for (const [query, frequency] of queryPatterns.entries()) {
+      if (frequency >= 5) { // Query executed at least 5 times
+        // This would analyze the query structure and suggest indexes
+        // For now, we'll use the existing plan analysis
+      }
     }
-  }
-
-  /**
-   * Sanitize query for logging (remove sensitive data)
-   */
-  private sanitizeQuery(query: string): string {
-    return query
-      .replace(/\$\d+/g, '?') // Replace parameter placeholders
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim()
-      .substring(0, 200); // Limit length
-  }
-
-  /**
-   * Start monitoring query performance
-   */
-  private startQueryMonitoring(): void {
-    // Clean up old metrics every hour
-    setInterval(() => {
-      this.cleanupOldMetrics();
-    }, 60 * 60 * 1000);
-
-    logger.info('Database optimization service initialized');
   }
 
   /**
    * Get database performance statistics
    */
-  public async getDatabaseStats(): Promise<{
-    connectionStats: any;
-    queryStats: any;
-    indexUsage: any[];
-    tableStats: any[];
-  }> {
-    try {
-      const [connectionStats, queryStats, indexUsage, tableStats] = await Promise.all([
-        this.getConnectionStats(),
-        this.getQueryStats(),
-        this.getIndexUsageStats(),
-        this.getTableStats()
-      ]);
+  async getDatabaseStats(): Promise<DatabaseStats> {
+    return await this.collectDatabaseStats();
+  }
 
-      return {
-        connectionStats,
-        queryStats,
-        indexUsage,
-        tableStats
-      };
+  /**
+   * Get query performance metrics
+   */
+  getQueryMetrics(limit: number = 100): QueryPerformanceMetrics[] {
+    return this.queryMetrics.slice(-limit);
+  }
+
+  /**
+   * Get index recommendations
+   */
+  getIndexRecommendations(): IndexRecommendation[] {
+    return [...this.indexRecommendations].sort((a, b) => {
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+      return priorityOrder[b.priority] - priorityOrder[a.priority];
+    });
+  }
+
+  /**
+   * Get slow queries
+   */
+  getSlowQueries(threshold: number = 500, limit: number = 20): QueryPerformanceMetrics[] {
+    return this.queryMetrics
+      .filter(metric => metric.executionTime > threshold)
+      .sort((a, b) => b.executionTime - a.executionTime)
+      .slice(0, limit);
+  }
+
+  /**
+   * Execute index creation
+   */
+  async createIndex(recommendation: IndexRecommendation): Promise<boolean> {
+    const client = await this.pool.connect();
+    
+    try {
+      await client.query(recommendation.createStatement);
+      
+      // Remove the recommendation since it's been implemented
+      this.indexRecommendations = this.indexRecommendations.filter(rec => rec !== recommendation);
+      
+      console.log(`Index created: ${recommendation.createStatement}`);
+      return true;
     } catch (error) {
-      logger.error('Failed to get database stats:', error);
-      throw error;
+      console.error(`Failed to create index: ${error}`);
+      return false;
+    } finally {
+      client.release();
     }
   }
 
-  private async getConnectionStats(): Promise<any> {
-    const result = await this.executeOptimizedQuery(`
-      SELECT 
-        count(*) as total_connections,
-        count(*) FILTER (WHERE state = 'active') as active_connections,
-        count(*) FILTER (WHERE state = 'idle') as idle_connections
-      FROM pg_stat_activity 
-      WHERE datname = current_database()
-    `);
-    return result[0];
+  /**
+   * Analyze table for optimization opportunities
+   */
+  async analyzeTable(tableName: string): Promise<{
+    rowCount: number;
+    tableSize: string;
+    indexSize: string;
+    unusedIndexes: string[];
+    missingIndexes: IndexRecommendation[];
+    vacuumNeeded: boolean;
+    analyzeNeeded: boolean;
+  }> {
+    const client = await this.pool.connect();
+    
+    try {
+      // Get table statistics
+      const statsResult = await client.query(`
+        SELECT 
+          n_live_tup as row_count,
+          n_dead_tup as dead_tuples,
+          last_vacuum,
+          last_autovacuum,
+          last_analyze,
+          last_autoanalyze
+        FROM pg_stat_user_tables 
+        WHERE tablename = $1
+      `, [tableName]);
+
+      // Get table size
+      const sizeResult = await client.query(`
+        SELECT 
+          pg_size_pretty(pg_total_relation_size($1)) as total_size,
+          pg_size_pretty(pg_relation_size($1)) as table_size,
+          pg_size_pretty(pg_total_relation_size($1) - pg_relation_size($1)) as index_size
+        FROM pg_tables 
+        WHERE tablename = $1
+      `, [tableName]);
+
+      // Get unused indexes
+      const unusedIndexesResult = await client.query(`
+        SELECT indexname
+        FROM pg_stat_user_indexes 
+        WHERE schemaname = 'public' 
+          AND relname = $1
+          AND idx_scan = 0
+      `, [tableName]);
+
+      const stats = statsResult.rows[0];
+      const sizes = sizeResult.rows[0];
+      
+      return {
+        rowCount: parseInt(stats?.row_count || '0'),
+        tableSize: sizes?.table_size || '0 bytes',
+        indexSize: sizes?.index_size || '0 bytes',
+        unusedIndexes: unusedIndexesResult.rows.map(row => row.indexname),
+        missingIndexes: this.indexRecommendations.filter(rec => rec.table === tableName),
+        vacuumNeeded: stats ? (parseInt(stats.dead_tuples) > parseInt(stats.row_count) * 0.1) : false,
+        analyzeNeeded: stats ? (!stats.last_analyze && !stats.last_autoanalyze) : true
+      };
+
+    } finally {
+      client.release();
+    }
   }
 
-  private async getQueryStats(): Promise<any> {
-    const result = await this.executeOptimizedQuery(`
-      SELECT 
-        calls,
-        total_time,
-        mean_time,
-        rows
-      FROM pg_stat_statements 
-      ORDER BY total_time DESC 
-      LIMIT 1
-    `);
-    return result[0] || {};
+  /**
+   * Stop monitoring
+   */
+  stopMonitoring(): void {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = undefined;
+    }
   }
 
-  private async getIndexUsageStats(): Promise<any[]> {
-    return this.executeOptimizedQuery(`
-      SELECT 
-        schemaname,
-        tablename,
-        indexname,
-        idx_tup_read,
-        idx_tup_fetch
-      FROM pg_stat_user_indexes 
-      ORDER BY idx_tup_read DESC 
-      LIMIT 10
-    `);
-  }
-
-  private async getTableStats(): Promise<any[]> {
-    return this.executeOptimizedQuery(`
-      SELECT 
-        schemaname,
-        tablename,
-        n_tup_ins,
-        n_tup_upd,
-        n_tup_del,
-        seq_scan,
-        seq_tup_read,
-        idx_scan,
-        idx_tup_fetch
-      FROM pg_stat_user_tables 
-      WHERE schemaname = 'public'
-      ORDER BY seq_scan DESC 
-      LIMIT 10
-    `);
+  /**
+   * Clear metrics
+   */
+  clearMetrics(): void {
+    this.queryMetrics.length = 0;
+    this.indexRecommendations.length = 0;
   }
 }
 
-export const databaseOptimizationService = new DatabaseOptimizationService();
+// Export the service class
+export default DatabaseOptimizationService;
