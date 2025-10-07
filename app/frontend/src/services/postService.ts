@@ -43,19 +43,10 @@ export class PostService {
         throw new Error('Request timeout');
       }
       
-      // If backend is unavailable, return a mock post
+      // If backend is unavailable, throw error instead of returning mock data
       if (error instanceof Error && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
-        console.log('Backend unavailable, returning mock post data');
-        return {
-          id: `mock-${Date.now()}`,
-          author: data.author,
-          parentId: data.parentId || null,
-          contentCid: data.content,
-          mediaCids: data.media || [],
-          tags: data.tags || [],
-          createdAt: new Date(),
-          onchainRef: data.onchainRef || ''
-        };
+        console.log('Backend unavailable for post creation');
+        throw new Error('Service temporarily unavailable. Please try again later.');
       }
       
       throw error;
@@ -324,31 +315,10 @@ export class PostService {
         name: error.name
       });
       
-      // If backend is unavailable, return mock data
+      // If backend is unavailable, return empty array instead of mock data
       if (error.isServiceUnavailable || error.status === 503 || error.message?.includes('Service temporarily unavailable')) {
-        console.log('Backend unavailable, returning mock feed data');
-        return [
-          {
-            id: 'mock-1',
-            author: '0x1234567890123456789012345678901234567890',
-            parentId: null,
-            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z4',
-            mediaCids: [],
-            tags: ['welcome', 'mock'],
-            createdAt: new Date(),
-            onchainRef: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
-          },
-          {
-            id: 'mock-2',
-            author: '0x0987654321098765432109876543210987654321',
-            parentId: null,
-            contentCid: 'bafybeicg6vkh5j5n5z4y4vzgq3v3z4vzgq3v3z4vzgq3v3z4vzgq3v3z5',
-            mediaCids: [],
-            tags: ['backend', 'status'],
-            createdAt: new Date(Date.now() - 60000),
-            onchainRef: '0x0987654321abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
-          }
-        ];
+        console.log('Backend unavailable, returning empty feed');
+        return [];
       }
       
       throw error;

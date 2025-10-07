@@ -1,10 +1,11 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 import { feedService } from '../services/feedService';
 import { apiResponse } from '../utils/apiResponse';
 
 export class FeedController {
   // Get enhanced personalized feed
-  async getEnhancedFeed(req: Request, res: Response): Promise<void> {
+  async getEnhancedFeed(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -37,7 +38,7 @@ export class FeedController {
   }
 
   // Get trending posts
-  async getTrendingPosts(req: Request, res: Response): Promise<void> {
+  async getTrendingPosts(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const {
         page = 1,
@@ -59,7 +60,7 @@ export class FeedController {
   }
 
   // Create new post
-  async createPost(req: Request, res: Response): Promise<void> {
+  async createPost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -92,7 +93,7 @@ export class FeedController {
   }
 
   // Update post
-  async updatePost(req: Request, res: Response): Promise<void> {
+  async updatePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -123,7 +124,7 @@ export class FeedController {
   }
 
   // Delete post
-  async deletePost(req: Request, res: Response): Promise<void> {
+  async deletePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -151,7 +152,7 @@ export class FeedController {
   }
 
   // Add reaction to post
-  async addReaction(req: Request, res: Response): Promise<void> {
+  async addReaction(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -177,7 +178,7 @@ export class FeedController {
   }
 
   // Send tip to post author
-  async sendTip(req: Request, res: Response): Promise<void> {
+  async sendTip(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -204,7 +205,7 @@ export class FeedController {
   }
 
   // Get detailed engagement data
-  async getEngagementData(req: Request, res: Response): Promise<void> {
+  async getEngagementData(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
 
@@ -223,7 +224,7 @@ export class FeedController {
   }
 
   // Share post
-  async sharePost(req: Request, res: Response): Promise<void> {
+  async sharePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -250,7 +251,7 @@ export class FeedController {
   }
 
   // Get post comments
-  async getPostComments(req: Request, res: Response): Promise<void> {
+  async getPostComments(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const {
@@ -274,7 +275,7 @@ export class FeedController {
   }
 
   // Add comment to post
-  async addComment(req: Request, res: Response): Promise<void> {
+  async addComment(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
       if (!userAddress) {
@@ -296,6 +297,182 @@ export class FeedController {
     } catch (error) {
       console.error('Error adding comment:', error);
       res.status(500).json(apiResponse.error('Failed to add comment'));
+    }
+  }
+
+  // Get community engagement metrics
+  async getCommunityEngagementMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { communityId } = req.params;
+      const { timeRange = 'week' } = req.query;
+
+      const metrics = await feedService.getCommunityEngagementMetrics(
+        communityId,
+        timeRange as string
+      );
+
+      res.json(apiResponse.success(metrics, 'Community engagement metrics retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting community engagement metrics:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve community engagement metrics'));
+    }
+  }
+
+  // Get community leaderboard
+  async getCommunityLeaderboard(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { communityId } = req.params;
+      const { metric, limit = 10 } = req.query;
+
+      const leaderboard = await feedService.getCommunityLeaderboard(
+        communityId,
+        metric as 'posts' | 'engagement' | 'tips_received' | 'tips_given',
+        Number(limit)
+      );
+
+      res.json(apiResponse.success(leaderboard, 'Community leaderboard retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting community leaderboard:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve community leaderboard'));
+    }
+  }
+
+  // Get liked by data for post
+  async getLikedByData(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+
+      const likedByData = await feedService.getLikedByData(postId);
+
+      res.json(apiResponse.success(likedByData, 'Liked by data retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting liked by data:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve liked by data'));
+    }
+  }
+
+  // Get trending hashtags
+  async getTrendingHashtags(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const {
+        limit = 10,
+        timeRange = 'day'
+      } = req.query;
+
+      const trendingHashtags = await feedService.getTrendingHashtags({
+        limit: Number(limit),
+        timeRange: timeRange as string
+      });
+
+      res.json(apiResponse.success(trendingHashtags, 'Trending hashtags retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting trending hashtags:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve trending hashtags'));
+    }
+  }
+
+  // Get content popularity metrics
+  async getContentPopularityMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+
+      const popularityMetrics = await feedService.getContentPopularityMetrics(postId);
+
+      if (!popularityMetrics) {
+        res.status(404).json(apiResponse.error('Post not found', 404));
+        return;
+      }
+
+      res.json(apiResponse.success(popularityMetrics, 'Content popularity metrics retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting content popularity metrics:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve content popularity metrics'));
+    }
+  }
+
+  // Get comment replies
+  async getCommentReplies(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { commentId } = req.params;
+      const {
+        page = 1,
+        limit = 10,
+        sort = 'newest'
+      } = req.query;
+
+      const replies = await feedService.getCommentReplies(commentId, {
+        page: Number(page),
+        limit: Number(limit),
+        sort: sort as string
+      });
+
+      res.json(apiResponse.success(replies, 'Comment replies retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting comment replies:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve comment replies'));
+    }
+  }
+
+  // Get post reactions
+  async getPostReactions(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+
+      const reactions = await feedService.getPostReactions(postId);
+
+      res.json(apiResponse.success(reactions, 'Post reactions retrieved successfully'));
+    } catch (error) {
+      console.error('Error getting post reactions:', error);
+      res.status(500).json(apiResponse.error('Failed to retrieve post reactions'));
+    }
+  }
+
+  // Share post
+  async sharePostEnhanced(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const { postId } = req.params;
+      const { platform, message } = req.body;
+
+      const shareResult = await feedService.addPostShare({
+        postId,
+        userAddress,
+        platform,
+        message
+      });
+
+      res.json(apiResponse.success(shareResult, 'Post shared successfully'));
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      res.status(500).json(apiResponse.error('Failed to share post'));
+    }
+  }
+
+  // Toggle bookmark
+  async toggleBookmark(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userAddress = req.user?.address;
+      if (!userAddress) {
+        res.status(401).json(apiResponse.error('Authentication required', 401));
+        return;
+      }
+
+      const { postId } = req.params;
+
+      const bookmarkResult = await feedService.toggleBookmark({
+        postId,
+        userAddress
+      });
+
+      res.json(apiResponse.success(bookmarkResult, 'Bookmark toggled successfully'));
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      res.status(500).json(apiResponse.error('Failed to toggle bookmark'));
     }
   }
 }

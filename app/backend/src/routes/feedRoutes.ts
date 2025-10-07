@@ -1,7 +1,7 @@
 import express from 'express';
 import { feedController } from '../controllers/feedController';
 import { validateRequest } from '../middleware/validation';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();
@@ -161,6 +161,113 @@ router.post('/:id/comments',
     }
   }),
   feedController.addComment
+);
+
+// Get community engagement metrics
+router.get('/community/:communityId/metrics',
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    query: {
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month'] }
+    }
+  }),
+  feedController.getCommunityEngagementMetrics
+);
+
+// Get community leaderboard
+router.get('/community/:communityId/leaderboard',
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    query: {
+      metric: { type: 'string', required: true, enum: ['posts', 'engagement', 'tips_received', 'tips_given'] },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  feedController.getCommunityLeaderboard
+);
+
+// Get liked by data for post
+router.get('/posts/:postId/engagement',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getLikedByData
+);
+
+// Get trending hashtags
+router.get('/hashtags/trending',
+  validateRequest({
+    query: {
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      timeRange: { type: 'string', optional: true, enum: ['hour', 'day', 'week', 'month'] }
+    }
+  }),
+  feedController.getTrendingHashtags
+);
+
+// Get content popularity metrics
+router.get('/posts/:postId/popularity',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getContentPopularityMetrics
+);
+
+// Get comment replies
+router.get('/comments/:commentId/replies',
+  validateRequest({
+    params: {
+      commentId: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      sort: { type: 'string', optional: true, enum: ['newest', 'oldest', 'top'] }
+    }
+  }),
+  feedController.getCommentReplies
+);
+
+// Get post reactions
+router.get('/posts/:postId/reactions',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.getPostReactions
+);
+
+// Enhanced post sharing
+router.post('/posts/:postId/share',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    },
+    body: {
+      platform: { type: 'string', required: true, enum: ['twitter', 'discord', 'telegram', 'copy_link'] },
+      message: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  feedController.sharePostEnhanced
+);
+
+// Toggle bookmark
+router.post('/posts/:postId/bookmark',
+  validateRequest({
+    params: {
+      postId: { type: 'string', required: true }
+    }
+  }),
+  feedController.toggleBookmark
 );
 
 export default router;
