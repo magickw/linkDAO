@@ -172,6 +172,8 @@ import enhancedSearchRoutes from './routes/enhancedSearchRoutes';
 import contentPreviewRoutes from './routes/contentPreviewRoutes';
 // Import enhanced user routes
 import enhancedUserRoutes from './routes/enhancedUserRoutes';
+// Import governance routes
+import governanceRoutes from './routes/governanceRoutes';
 // Import engagement analytics routes
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
 // Import authentication routes
@@ -251,6 +253,9 @@ app.use('/api/preview', contentPreviewRoutes);
 
 // Enhanced user routes
 app.use('/api/users', enhancedUserRoutes);
+
+// Governance routes
+app.use('/api/governance', governanceRoutes);
 
 // Engagement analytics routes
 app.use('/api/analytics', engagementAnalyticsRoutes);

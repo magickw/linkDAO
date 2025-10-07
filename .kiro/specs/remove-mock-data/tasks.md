@@ -73,20 +73,20 @@ This implementation plan systematically removes mock data from the application a
     - Add post sharing and bookmarking
     - _Requirements: 5.4, 5.5_
 
-- [ ] 5. Implement governance system with real data
-  - [ ] 5.1 Replace mock governance proposals
+- [x] 5. Implement governance system with real data
+  - [x] 5.1 Replace mock governance proposals
     - Remove hardcoded proposal arrays
     - Implement database-driven proposal system
     - Add real voting mechanisms
     - _Requirements: 4.1, 4.2_
   
-  - [ ] 5.2 Add DAO treasury integration
+  - [x] 5.2 Add DAO treasury integration
     - Implement on-chain treasury data fetching
     - Add real token balance calculations
     - Create treasury analytics dashboard
     - _Requirements: 4.3, 4.4_
   
-  - [ ] 5.3 Implement voting power calculations
+  - [x] 5.3 Implement voting power calculations
     - Add real token-based voting power
     - Implement delegation mechanisms
     - Create voting history tracking

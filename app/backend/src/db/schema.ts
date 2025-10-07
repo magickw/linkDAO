@@ -165,7 +165,91 @@ export const proposals = pgTable("proposals", {
   startBlock: integer("start_block"),
   endBlock: integer("end_block"),
   status: varchar("status", { length: 32 }).default("pending"),
+  yesVotes: numeric("yes_votes", { precision: 20, scale: 8 }).default("0"),
+  noVotes: numeric("no_votes", { precision: 20, scale: 8 }).default("0"),
+  abstainVotes: numeric("abstain_votes", { precision: 20, scale: 8 }).default("0"),
+  totalVotes: numeric("total_votes", { precision: 20, scale: 8 }).default("0"),
+  quorumReached: boolean("quorum_reached").default(false),
+  proposerId: uuid("proposer_id").references(() => users.id),
+  executionEta: timestamp("execution_eta"),
+  executedAt: timestamp("executed_at"),
+  cancelledAt: timestamp("cancelled_at"),
 });
+
+// Votes
+export const votes = pgTable("votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "cascade" }).notNull(),
+  voterId: uuid("voter_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  voteChoice: varchar("vote_choice", { length: 10 }).notNull(),
+  votingPower: numeric("voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  delegatedPower: numeric("delegated_power", { precision: 20, scale: 8 }).default("0"),
+  totalPower: numeric("total_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  uniqueVote: primaryKey(t.proposalId, t.voterId),
+  proposalIdx: index("idx_votes_proposal_id").on(t.proposalId),
+  voterIdx: index("idx_votes_voter_id").on(t.voterId),
+  createdAtIdx: index("idx_votes_created_at").on(t.createdAt),
+}));
+
+// Voting Delegations
+export const votingDelegations = pgTable("voting_delegations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  delegatorId: uuid("delegator_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  delegateId: uuid("delegate_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  daoId: uuid("dao_id"),
+  votingPower: numeric("voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+}, (t) => ({
+  uniqueDelegation: primaryKey(t.delegatorId, t.delegateId, t.daoId),
+  delegatorIdx: index("idx_voting_delegations_delegator").on(t.delegatorId),
+  delegateIdx: index("idx_voting_delegations_delegate").on(t.delegateId),
+  daoIdx: index("idx_voting_delegations_dao").on(t.daoId),
+  activeIdx: index("idx_voting_delegations_active").on(t.active),
+}));
+
+// Voting Power Snapshots
+export const votingPowerSnapshots = pgTable("voting_power_snapshots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  daoId: uuid("dao_id"),
+  proposalId: integer("proposal_id").references(() => proposals.id, { onDelete: "cascade" }),
+  tokenBalance: numeric("token_balance", { precision: 20, scale: 8 }).notNull().default("0"),
+  stakingMultiplier: numeric("staking_multiplier", { precision: 5, scale: 2 }).default("1.0"),
+  delegatedPower: numeric("delegated_power", { precision: 20, scale: 8 }).default("0"),
+  totalVotingPower: numeric("total_voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  snapshotBlock: integer("snapshot_block"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdx: index("idx_voting_power_snapshots_user").on(t.userId),
+  daoIdx: index("idx_voting_power_snapshots_dao").on(t.daoId),
+  proposalIdx: index("idx_voting_power_snapshots_proposal").on(t.proposalId),
+  blockIdx: index("idx_voting_power_snapshots_block").on(t.snapshotBlock),
+}));
+
+// Governance Settings
+export const governanceSettings = pgTable("governance_settings", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  daoId: uuid("dao_id").unique(),
+  votingTokenAddress: varchar("voting_token_address", { length: 66 }),
+  votingDelay: integer("voting_delay").default(86400), // 1 day
+  votingPeriod: integer("voting_period").default(604800), // 7 days
+  proposalThreshold: numeric("proposal_threshold", { precision: 20, scale: 8 }).default("1000"),
+  quorumPercentage: integer("quorum_percentage").default(10),
+  executionDelay: integer("execution_delay").default(172800), // 2 days
+  requiredMajority: integer("required_majority").default(50),
+  allowDelegation: boolean("allow_delegation").default(true),
+  stakingEnabled: boolean("staking_enabled").default(false),
+  stakingMultiplierMax: numeric("staking_multiplier_max", { precision: 5, scale: 2 }).default("2.0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  daoIdx: index("idx_governance_settings_dao").on(t.daoId),
+}));
 
 // AI Bot Configs
 export const bots = pgTable("bots", {

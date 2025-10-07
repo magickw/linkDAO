@@ -1,45 +1,42 @@
 import { Router } from 'express';
-import { GovernanceController } from '../controllers/governanceController';
+import { governanceController } from '../controllers/governanceController';
 
 const router = Router();
-const governanceController = new GovernanceController();
 
-/**
- * Governance and Reputation Routes
- */
+// Get all active proposals
+router.get('/proposals/active', governanceController.getAllActiveProposals);
 
-// Voting Power
-router.get('/governance/voting-power', (req, res, next) => {
-  governanceController.getVotingPower(req, res).catch(next);
-});
+// Search proposals
+router.get('/proposals/search', governanceController.searchProposals);
 
-// Cast Vote
-router.post('/governance/vote', (req, res, next) => {
-  governanceController.castVote(req, res).catch(next);
-});
+// Get proposals by DAO
+router.get('/dao/:daoId/proposals', governanceController.getProposalsByDao);
 
-// User Reputation
-router.get('/governance/reputation/:address', (req, res, next) => {
-  governanceController.getUserReputation(req, res).catch(next);
-});
+// Get proposals by Snapshot space
+router.get('/space/:spaceId/proposals', governanceController.getProposalsBySpace);
 
-router.put('/governance/reputation/:address', (req, res, next) => {
-  governanceController.updateUserReputation(req, res).catch(next);
-});
+// Get specific proposal
+router.get('/proposals/:proposalId', governanceController.getProposal);
 
-// Proposal Evaluation
-router.post('/governance/proposals/evaluate', (req, res, next) => {
-  governanceController.evaluateProposal(req, res).catch(next);
-});
+// Create new proposal
+router.post('/proposals', governanceController.createProposal);
 
-// Voting Guidance
-router.post('/governance/proposals/guidance', (req, res, next) => {
-  governanceController.getVotingGuidance(req, res).catch(next);
-});
+// Vote on proposal
+router.post('/proposals/:proposalId/vote', governanceController.voteOnProposal);
 
-// Proposal Outcome Prediction
-router.post('/governance/proposals/predict', (req, res, next) => {
-  governanceController.predictProposalOutcome(req, res).catch(next);
-});
+// Get DAO treasury data
+router.get('/dao/:daoId/treasury', governanceController.getDAOTreasuryData);
+
+// Get user voting power
+router.get('/dao/:daoId/users/:userId/voting-power', governanceController.getVotingPower);
+
+// Delegate voting power
+router.post('/delegate', governanceController.delegateVotingPower);
+
+// Revoke delegation
+router.post('/revoke-delegation', governanceController.revokeDelegation);
+
+// Get user voting history
+router.get('/users/:userId/voting-history', governanceController.getUserVotingHistory);
 
 export default router;

@@ -1,202 +1,232 @@
 import { Request, Response } from 'express';
-import { GovernanceService } from '../services/governanceService';
-import { ReputationService } from '../services/reputationService';
-import { ProposalEvaluationService } from '../services/proposalEvaluationService';
-import { AppError, ValidationError } from '../middleware/errorHandler';
-
-// Initialize services
-const governanceService = new GovernanceService(
-  process.env.RPC_URL || 'http://localhost:8545',
-  '0x0000000000000000000000000000000000000000' // Placeholder contract address
-);
-
-const reputationService = new ReputationService();
-const proposalEvaluationService = new ProposalEvaluationService();
+import { governanceService } from '../services/governanceService';
 
 export class GovernanceController {
-  /**
-   * Get user's voting power
-   */
-  async getVotingPower(req: Request, res: Response): Promise<Response> {
+  async getProposal(req: Request, res: Response) {
     try {
-      const { userAddress, tokenBalance, totalSupply } = req.query as {
-        userAddress: string;
-        tokenBalance: string;
-        totalSupply: string;
-      };
-
-      if (!userAddress || !tokenBalance || !totalSupply) {
-        throw new ValidationError('Missing required parameters: userAddress, tokenBalance, totalSupply');
+      const { proposalId } = req.params;
+      
+      if (!proposalId) {
+        return res.status(400).json({ error: 'Proposal ID is required' });
       }
 
-      const votingPower = await governanceService.calculateVotingPower(
-        userAddress,
-        tokenBalance,
-        totalSupply
-      );
-
-      return res.json(votingPower);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'VOTING_POWER_ERROR');
+      const proposal = await governanceService.getProposal(proposalId);
+      res.json(proposal);
+    } catch (error) {
+      console.error('Error fetching proposal:', error);
+      res.status(500).json({ error: 'Failed to fetch proposal' });
     }
   }
 
-  /**
-   * Cast a vote
-   */
-  async castVote(req: Request, res: Response): Promise<Response> {
+  async getProposalsByDao(req: Request, res: Response) {
     try {
-      const { voterAddress, proposalId, support, reason, tokenBalance, totalSupply } = req.body;
-
-      if (!voterAddress || proposalId === undefined || support === undefined || !tokenBalance || !totalSupply) {
-        throw new ValidationError('Missing required fields: voterAddress, proposalId, support, tokenBalance, totalSupply');
+      const { daoId } = req.params;
+      const { limit = '20' } = req.query;
+      
+      if (!daoId) {
+        return res.status(400).json({ error: 'DAO ID is required' });
       }
 
-      const vote = await governanceService.castVote(
-        voterAddress,
+      const proposals = await governanceService.getProposalsByDao(daoId, parseInt(limit as string));
+      res.json(proposals);
+    } catch (error) {
+      console.error('Error fetching DAO proposals:', error);
+      res.status(500).json({ error: 'Failed to fetch DAO proposals' });
+    }
+  }
+
+  async getAllActiveProposals(req: Request, res: Response) {
+    try {
+      const { limit = '20' } = req.query;
+      
+      const proposals = await governanceService.getAllActiveProposals(parseInt(limit as string));
+      res.json(proposals);
+    } catch (error) {
+      console.error('Error fetching active proposals:', error);
+      res.status(500).json({ error: 'Failed to fetch active proposals' });
+    }
+  }
+
+  async createProposal(req: Request, res: Response) {
+    try {
+      const { title, description, daoId, proposerId, votingDuration, category, executionDelay, requiredMajority } = req.body;
+      
+      if (!title || !description || !proposerId) {
+        return res.status(400).json({ error: 'Title, description, and proposer ID are required' });
+      }
+
+      const proposal = await governanceService.createProposal({
+        title,
+        description,
+        daoId,
+        proposerId,
+        votingDuration,
+        category,
+        executionDelay,
+        requiredMajority
+      });
+
+      res.status(201).json(proposal);
+    } catch (error) {
+      console.error('Error creating proposal:', error);
+      res.status(500).json({ error: 'Failed to create proposal' });
+    }
+  }
+
+  async voteOnProposal(req: Request, res: Response) {
+    try {
+      const { proposalId } = req.params;
+      const { userId, vote, votingPower } = req.body;
+      
+      if (!proposalId || !userId || !vote) {
+        return res.status(400).json({ error: 'Proposal ID, user ID, and vote are required' });
+      }
+
+      if (!['yes', 'no', 'abstain'].includes(vote)) {
+        return res.status(400).json({ error: 'Vote must be yes, no, or abstain' });
+      }
+
+      const success = await governanceService.voteOnProposal({
         proposalId,
-        support,
-        reason || '',
-        tokenBalance,
-        totalSupply
-      );
+        userId,
+        vote,
+        votingPower
+      });
 
-      return res.json(vote);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
+      if (success) {
+        res.json({ success: true, message: 'Vote recorded successfully' });
+      } else {
+        res.status(400).json({ error: 'Failed to record vote' });
       }
-      throw new AppError(error.message, 500, 'CAST_VOTE_ERROR');
+    } catch (error) {
+      console.error('Error voting on proposal:', error);
+      res.status(500).json({ error: 'Failed to record vote' });
     }
   }
 
-  /**
-   * Get user reputation
-   */
-  async getUserReputation(req: Request, res: Response): Promise<Response> {
+  async searchProposals(req: Request, res: Response) {
     try {
-      const { address } = req.params;
-
-      if (!address) {
-        throw new ValidationError('Missing required parameter: address');
+      const { query, limit = '20' } = req.query;
+      
+      if (!query) {
+        return res.status(400).json({ error: 'Search query is required' });
       }
 
-      const reputation = await reputationService.getUserReputation(address);
-
-      if (!reputation) {
-        return res.json({
-          address,
-          totalScore: 0,
-          tier: 'Novice',
-          factors: {
-            daoProposalSuccessRate: 0,
-            votingParticipation: 0,
-            investmentAdviceAccuracy: 0,
-            communityContribution: 0,
-            onchainActivity: 0
-          },
-          lastUpdated: new Date()
-        });
-      }
-
-      return res.json(reputation);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'REPUTATION_ERROR');
+      const proposals = await governanceService.searchProposals(query as string, parseInt(limit as string));
+      res.json(proposals);
+    } catch (error) {
+      console.error('Error searching proposals:', error);
+      res.status(500).json({ error: 'Failed to search proposals' });
     }
   }
 
-  /**
-   * Update user reputation
-   */
-  async updateUserReputation(req: Request, res: Response): Promise<Response> {
+  async getProposalsBySpace(req: Request, res: Response) {
     try {
-      const { address } = req.params;
-      const factors = req.body;
-
-      if (!address) {
-        throw new ValidationError('Missing required parameter: address');
+      const { spaceId } = req.params;
+      const { limit = '20' } = req.query;
+      
+      if (!spaceId) {
+        return res.status(400).json({ error: 'Space ID is required' });
       }
 
-      const reputation = await reputationService.updateUserReputation(address, factors);
-
-      return res.json(reputation);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'UPDATE_REPUTATION_ERROR');
+      const proposals = await governanceService.getProposalsBySpace(spaceId, parseInt(limit as string));
+      res.json(proposals);
+    } catch (error) {
+      console.error('Error fetching space proposals:', error);
+      res.status(500).json({ error: 'Failed to fetch space proposals' });
     }
   }
 
-  /**
-   * Evaluate a proposal
-   */
-  async evaluateProposal(req: Request, res: Response): Promise<Response> {
+  async getDAOTreasuryData(req: Request, res: Response) {
     try {
-      const proposalData = req.body;
-
-      if (!proposalData.id || !proposalData.title || !proposalData.description) {
-        throw new ValidationError('Missing required proposal fields: id, title, description');
+      const { daoId } = req.params;
+      
+      if (!daoId) {
+        return res.status(400).json({ error: 'DAO ID is required' });
       }
 
-      const evaluation = await proposalEvaluationService.evaluateProposal(proposalData);
-
-      return res.json(evaluation);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'EVALUATE_PROPOSAL_ERROR');
+      const treasuryData = await governanceService.getDAOTreasuryData(daoId);
+      res.json(treasuryData);
+    } catch (error) {
+      console.error('Error fetching treasury data:', error);
+      res.status(500).json({ error: 'Failed to fetch treasury data' });
     }
   }
 
-  /**
-   * Get voting guidance
-   */
-  async getVotingGuidance(req: Request, res: Response): Promise<Response> {
+  async getVotingPower(req: Request, res: Response) {
     try {
-      const { proposal, userAddress } = req.body;
-
-      if (!proposal || !userAddress) {
-        throw new ValidationError('Missing required fields: proposal, userAddress');
+      const { userId, daoId } = req.params;
+      
+      if (!userId || !daoId) {
+        return res.status(400).json({ error: 'User ID and DAO ID are required' });
       }
 
-      const guidance = await proposalEvaluationService.getVotingGuidance(proposal, userAddress);
-
-      return res.json({ guidance });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(error.message, 500, 'VOTING_GUIDANCE_ERROR');
+      const votingPower = await governanceService.getVotingPower(userId, daoId);
+      res.json(votingPower);
+    } catch (error) {
+      console.error('Error fetching voting power:', error);
+      res.status(500).json({ error: 'Failed to fetch voting power' });
     }
   }
 
-  /**
-   * Get proposal outcome prediction
-   */
-  async predictProposalOutcome(req: Request, res: Response): Promise<Response> {
+  async delegateVotingPower(req: Request, res: Response) {
     try {
-      const proposalData = req.body;
-
-      if (!proposalData.id) {
-        throw new ValidationError('Missing required proposal field: id');
+      const { delegatorId, delegateId, daoId, votingPower } = req.body;
+      
+      if (!delegatorId || !delegateId || !daoId || votingPower === undefined) {
+        return res.status(400).json({ error: 'Delegator ID, delegate ID, DAO ID, and voting power are required' });
       }
 
-      const prediction = await proposalEvaluationService.predictOutcome(proposalData);
-
-      return res.json(prediction);
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
+      const success = await governanceService.delegateVotingPower(delegatorId, delegateId, daoId, votingPower);
+      
+      if (success) {
+        res.json({ success: true, message: 'Voting power delegated successfully' });
+      } else {
+        res.status(400).json({ error: 'Failed to delegate voting power' });
       }
-      throw new AppError(error.message, 500, 'PROPOSAL_PREDICTION_ERROR');
+    } catch (error) {
+      console.error('Error delegating voting power:', error);
+      res.status(500).json({ error: 'Failed to delegate voting power' });
+    }
+  }
+
+  async revokeDelegation(req: Request, res: Response) {
+    try {
+      const { delegatorId, delegateId, daoId } = req.body;
+      
+      if (!delegatorId || !delegateId || !daoId) {
+        return res.status(400).json({ error: 'Delegator ID, delegate ID, and DAO ID are required' });
+      }
+
+      const success = await governanceService.revokeDelegation(delegatorId, delegateId, daoId);
+      
+      if (success) {
+        res.json({ success: true, message: 'Delegation revoked successfully' });
+      } else {
+        res.status(400).json({ error: 'Failed to revoke delegation' });
+      }
+    } catch (error) {
+      console.error('Error revoking delegation:', error);
+      res.status(500).json({ error: 'Failed to revoke delegation' });
+    }
+  }
+
+  async getUserVotingHistory(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+      const { daoId } = req.query;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const history = await governanceService.getUserVotingHistory(userId, daoId as string);
+      res.json(history);
+    } catch (error) {
+      console.error('Error fetching voting history:', error);
+      res.status(500).json({ error: 'Failed to fetch voting history' });
     }
   }
 }
+
+export const governanceController = new GovernanceController();

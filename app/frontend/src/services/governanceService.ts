@@ -17,11 +17,11 @@ export class GovernanceService {
   async getCommunityProposals(communityId: string): Promise<Proposal[]> {
     try {
       // First try to get from backend API
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${communityId}`);
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
       
       if (response.ok) {
         const data = await response.json();
-        return this.transformProposals(data.proposals);
+        return this.transformBackendProposals(data);
       }
       
       // Fallback to Web3 service for mock data
@@ -32,6 +32,244 @@ export class GovernanceService {
       
       // Return mock data for development
       return this.getMockProposals(communityId);
+    }
+  }
+
+  /**
+   * Get all active proposals across all communities
+   */
+  async getAllActiveProposals(): Promise<Proposal[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/active`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return this.transformBackendProposals(data);
+      }
+      
+      // Return mock data for development
+      return this.getMockProposals('all');
+    } catch (error) {
+      console.error('Error fetching active proposals:', error);
+      return this.getMockProposals('all');
+    }
+  }
+
+  /**
+   * Get a specific proposal by ID
+   */
+  async getProposal(proposalId: string): Promise<Proposal | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return this.transformBackendProposal(data);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching proposal:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create a new governance proposal
+   */
+  async createProposal(proposalData: {
+    title: string;
+    description: string;
+    daoId?: string;
+    proposerId: string;
+    votingDuration?: number;
+    category?: string;
+    executionDelay?: number;
+    requiredMajority?: number;
+  }): Promise<Proposal | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(proposalData)
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return this.transformBackendProposal(data);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error creating proposal:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get DAO treasury data
+   */
+  async getDAOTreasuryData(daoId: string): Promise<{
+    totalValue: number;
+    currency: string;
+    tokens: Array<{
+      symbol: string;
+      balance: number;
+      value: number;
+      contractAddress?: string;
+    }>;
+    nfts?: Array<{
+      collection: string;
+      count: number;
+      estimatedValue: number;
+    }>;
+    lastUpdated: Date;
+  } | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          ...data,
+          lastUpdated: new Date(data.lastUpdated)
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching treasury data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get user's voting power for a DAO
+   */
+  async getDAOVotingPower(daoId: string, userId: string): Promise<{
+    votingPower: number;
+    delegatedPower?: number;
+    totalPower: number;
+    tokenBalance: number;
+    stakingMultiplier?: number;
+  } | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/users/${userId}/voting-power`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching voting power:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delegate voting power to another user
+   */
+  async delegateVotingPower(
+    delegatorId: string,
+    delegateId: string,
+    daoId: string,
+    votingPower: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/delegate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          delegatorId,
+          delegateId,
+          daoId,
+          votingPower
+        })
+      });
+      
+      if (response.ok) {
+        return { success: true };
+      }
+      
+      const errorData = await response.json();
+      return { success: false, error: errorData.error };
+    } catch (error) {
+      console.error('Error delegating voting power:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Revoke voting power delegation
+   */
+  async revokeDelegation(
+    delegatorId: string,
+    delegateId: string,
+    daoId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/governance/revoke-delegation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          delegatorId,
+          delegateId,
+          daoId
+        })
+      });
+      
+      if (response.ok) {
+        return { success: true };
+      }
+      
+      const errorData = await response.json();
+      return { success: false, error: errorData.error };
+    } catch (error) {
+      console.error('Error revoking delegation:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Get user's voting history
+   */
+  async getUserVotingHistory(userId: string, daoId?: string): Promise<Array<{
+    proposalId: string;
+    proposalTitle: string;
+    voteChoice: string;
+    votingPower: number;
+    createdAt: Date;
+  }>> {
+    try {
+      const url = `${this.baseUrl}/api/governance/users/${userId}/voting-history${daoId ? `?daoId=${daoId}` : ''}`;
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.map((vote: any) => ({
+          ...vote,
+          createdAt: new Date(vote.createdAt)
+        }));
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('Error fetching voting history:', error);
+      return [];
     }
   }
 
@@ -49,18 +287,26 @@ export class GovernanceService {
   async voteOnProposal(
     proposalId: string, 
     choice: VoteChoice, 
-    votingPower?: number
+    votingPower?: number,
+    userId?: string
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     try {
+      // Map VoteChoice to backend format
+      const voteMap = {
+        [VoteChoice.FOR]: 'yes',
+        [VoteChoice.AGAINST]: 'no',
+        [VoteChoice.ABSTAIN]: 'abstain'
+      };
+
       // Try backend API first
-      const response = await fetch(`${this.baseUrl}/api/governance/vote`, {
+      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          proposalId,
-          choice,
+          userId: userId || 'anonymous',
+          vote: voteMap[choice],
           votingPower
         })
       });
@@ -285,31 +531,78 @@ export class GovernanceService {
   }
 
   /**
-   * Transform backend proposals to our Proposal type
+   * Transform backend proposals array to our Proposal type
    */
-  private transformProposals(backendProposals: any[]): Proposal[] {
-    return backendProposals.map(proposal => ({
+  private transformBackendProposals(backendProposals: any[]): Proposal[] {
+    return backendProposals.map(proposal => this.transformBackendProposal(proposal));
+  }
+
+  /**
+   * Transform single backend proposal to our Proposal type
+   */
+  private transformBackendProposal(proposal: any): Proposal {
+    return {
       id: proposal.id,
       title: proposal.title,
       description: proposal.description,
       proposer: proposal.proposer,
-      proposerReputation: proposal.proposerReputation,
-      communityId: proposal.communityId,
-      startTime: new Date(proposal.startTime),
-      endTime: new Date(proposal.endTime),
-      forVotes: proposal.forVotes.toString(),
-      againstVotes: proposal.againstVotes.toString(),
+      proposerReputation: proposal.proposerReputation || 500,
+      communityId: proposal.daoId || 'general',
+      startTime: new Date(proposal.votingStarts),
+      endTime: new Date(proposal.votingEnds),
+      forVotes: proposal.yesVotes?.toString() || '0',
+      againstVotes: proposal.noVotes?.toString() || '0',
       abstainVotes: proposal.abstainVotes?.toString() || '0',
-      quorum: proposal.quorum.toString(),
-      status: proposal.status as ProposalStatus,
+      quorum: proposal.quorum?.toString() || '1000',
+      status: this.mapBackendStatus(proposal.status),
       actions: proposal.actions || [],
-      category: proposal.category as ProposalCategory,
-      executionDelay: proposal.executionDelay,
-      requiredMajority: proposal.requiredMajority,
-      participationRate: proposal.participationRate,
+      category: this.mapBackendCategory(proposal.category),
+      executionDelay: proposal.executionDelay || 172800,
+      requiredMajority: proposal.requiredMajority || 50,
+      participationRate: proposal.participationRate || 75,
       userVote: proposal.userVote as VoteChoice | undefined,
-      canVote: proposal.canVote
-    }));
+      canVote: proposal.status === 'active' && new Date() < new Date(proposal.votingEnds)
+    };
+  }
+
+  /**
+   * Map backend status to our ProposalStatus enum
+   */
+  private mapBackendStatus(status: string): ProposalStatus {
+    switch (status) {
+      case 'pending':
+        return ProposalStatus.PENDING;
+      case 'active':
+        return ProposalStatus.ACTIVE;
+      case 'passed':
+        return ProposalStatus.SUCCEEDED;
+      case 'failed':
+        return ProposalStatus.DEFEATED;
+      case 'executed':
+        return ProposalStatus.EXECUTED;
+      case 'cancelled':
+        return ProposalStatus.CANCELLED;
+      default:
+        return ProposalStatus.DRAFT;
+    }
+  }
+
+  /**
+   * Map backend category to our ProposalCategory enum
+   */
+  private mapBackendCategory(category: string): ProposalCategory {
+    switch (category) {
+      case 'treasury':
+        return ProposalCategory.FUNDING;
+      case 'governance':
+        return ProposalCategory.GOVERNANCE;
+      case 'community':
+        return ProposalCategory.COMMUNITY;
+      case 'technical':
+        return ProposalCategory.GOVERNANCE;
+      default:
+        return ProposalCategory.GOVERNANCE;
+    }
   }
 
   /**

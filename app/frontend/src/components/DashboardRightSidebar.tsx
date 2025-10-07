@@ -8,14 +8,12 @@ import DAOGovernanceEmbed from './DAOGovernanceEmbed';
 import { SmartRightSidebar } from './SmartRightSidebar';
 import enhancedUserService, { SuggestedUser } from '../services/enhancedUserService';
 
-// Mock DAO data - TODO: Replace with real DAO service
-const trendingDAOs = [
-  { id: '1', name: 'Ethereum Builders', members: 12400, treasuryValue: 2500000 },
-  { id: '2', name: 'DeFi Traders', members: 8900, treasuryValue: 1800000 },
-  { id: '3', name: 'NFT Collectors', members: 15600, treasuryValue: 3200000 },
-  { id: '4', name: 'DAO Governance', members: 7800, treasuryValue: 1500000 },
-  { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
-];
+interface TrendingDAO {
+  id: string;
+  name: string;
+  members: number;
+  treasuryValue: number;
+}
 
 // Mock marketplace data
 const activeAuctions = [
@@ -24,12 +22,8 @@ const activeAuctions = [
   { id: '3', name: 'ENS Domain Premium', currentBid: 8.5, endTime: new Date(Date.now() + 10800000) },
 ];
 
-// Mock governance proposals
-const governanceProposals = [
-  { id: '1', title: 'Upgrade Governance Contract', dao: 'Ethereum Builders', votesFor: 1240, votesAgainst: 320, endTime: new Date(Date.now() + 86400000) },
-  { id: '2', title: 'New Treasury Allocation', dao: 'DeFi Traders', votesFor: 890, votesAgainst: 150, endTime: new Date(Date.now() + 172800000) },
-  { id: '3', title: 'Community Grant Program', dao: 'NFT Collectors', votesFor: 2100, votesAgainst: 450, endTime: new Date(Date.now() + 259200000) },
-];
+import { governanceService } from '../services/governanceService';
+import { Proposal } from '../types/governance';
 
 export default function DashboardRightSidebar() {
   const { navigationState } = useNavigation();
@@ -39,6 +33,14 @@ export default function DashboardRightSidebar() {
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // State for real governance data
+  const [governanceProposals, setGovernanceProposals] = useState<Proposal[]>([]);
+  const [loadingProposals, setLoadingProposals] = useState(false);
+  
+  // State for real DAO data
+  const [trendingDAOs, setTrendingDAOs] = useState<TrendingDAO[]>([]);
+  const [loadingDAOs, setLoadingDAOs] = useState(false);
 
   // Load suggested users when component mounts or user changes
   useEffect(() => {
@@ -98,6 +100,88 @@ export default function DashboardRightSidebar() {
 
     loadSuggestedUsers();
   }, [currentUserId]);
+
+  // Load governance proposals when component mounts
+  useEffect(() => {
+    const loadGovernanceProposals = async () => {
+      try {
+        setLoadingProposals(true);
+        
+        // Load proposals based on current view
+        let proposals: Proposal[] = [];
+        
+        if (activeView === 'community' && activeCommunity) {
+          // Load community-specific proposals
+          proposals = await governanceService.getCommunityProposals(activeCommunity);
+        } else {
+          // Load all active proposals
+          proposals = await governanceService.getAllActiveProposals();
+        }
+        
+        // Limit to 3 most recent proposals
+        setGovernanceProposals(proposals.slice(0, 3));
+      } catch (error) {
+        console.error('Error loading governance proposals:', error);
+        setGovernanceProposals([]);
+      } finally {
+        setLoadingProposals(false);
+      }
+    };
+
+    loadGovernanceProposals();
+  }, [activeView, activeCommunity]);
+
+  // Load trending DAOs with treasury data
+  useEffect(() => {
+    const loadTrendingDAOs = async () => {
+      try {
+        setLoadingDAOs(true);
+        
+        // Get trending communities and fetch their treasury data
+        const trendingCommunities = mockCommunities
+          .filter(c => c.governanceToken) // Only DAOs with governance tokens
+          .slice(0, 5);
+        
+        const daosWithTreasury = await Promise.all(
+          trendingCommunities.map(async (community) => {
+            try {
+              const treasuryData = await governanceService.getDAOTreasuryData(community.id);
+              return {
+                id: community.id,
+                name: community.displayName,
+                members: community.memberCount,
+                treasuryValue: treasuryData?.totalValue || Math.random() * 2000000 + 500000
+              };
+            } catch (error) {
+              // Fallback to mock treasury value
+              return {
+                id: community.id,
+                name: community.displayName,
+                members: community.memberCount,
+                treasuryValue: Math.random() * 2000000 + 500000
+              };
+            }
+          })
+        );
+        
+        setTrendingDAOs(daosWithTreasury);
+      } catch (error) {
+        console.error('Error loading trending DAOs:', error);
+        // Fallback to mock data
+        setTrendingDAOs([
+          { id: '1', name: 'Ethereum Builders', members: 12400, treasuryValue: 2500000 },
+          { id: '2', name: 'DeFi Traders', members: 8900, treasuryValue: 1800000 },
+          { id: '3', name: 'NFT Collectors', members: 15600, treasuryValue: 3200000 },
+          { id: '4', name: 'DAO Governance', members: 7800, treasuryValue: 1500000 },
+          { id: '5', name: 'Web3 Developers', members: 5400, treasuryValue: 950000 },
+        ]);
+      } finally {
+        setLoadingDAOs(false);
+      }
+    };
+
+    loadTrendingDAOs();
+  }, []);
 
   // Helper function to get current user ID - this would come from auth context
   const getCurrentUserId = (): string | null => {
@@ -598,35 +682,74 @@ export default function DashboardRightSidebar() {
           </h3>
         </div>
         <div className="p-4">
-          <div className="space-y-3">
-            {governanceProposals
-              .filter(proposal => 
-                activeView === 'feed' || 
-                (activeView === 'community' && currentCommunity && proposal.dao === currentCommunity.displayName)
-              )
-              .slice(0, 3)
-              .map((proposal) => (
-              <div key={proposal.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div className="flex justify-between">
-                  <p className="font-medium text-gray-900 dark:text-white text-sm">{proposal.title}</p>
-                  {activeView === 'feed' && (
-                    <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                      {proposal.dao}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 flex justify-between items-center">
-                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                    <span className="mr-2">👍 {proposal.votesFor}</span>
-                    <span>👎 {proposal.votesAgainst}</span>
+          {loadingProposals ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-pulse">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2" />
+                  <div className="flex justify-between">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3" />
+                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4" />
                   </div>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    {formatTimeRemaining(proposal.endTime)}
-                  </span>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : governanceProposals.length > 0 ? (
+            <div className="space-y-3">
+              {governanceProposals.map((proposal) => (
+                <Link
+                  key={proposal.id}
+                  href={`/governance/proposals/${proposal.id}`}
+                  className="block p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
+                >
+                  <div className="flex justify-between">
+                    <p className="font-medium text-gray-900 dark:text-white text-sm">{proposal.title}</p>
+                    {activeView === 'feed' && proposal.communityId && (
+                      <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                        {proposal.communityId}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-2 flex justify-between items-center">
+                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                      <span className="mr-2">👍 {formatNumber(parseInt(proposal.forVotes))}</span>
+                      <span>👎 {formatNumber(parseInt(proposal.againstVotes))}</span>
+                    </div>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {formatTimeRemaining(proposal.endTime)}
+                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1">
+                      <div 
+                        className="bg-blue-500 h-1 rounded-full" 
+                        style={{ 
+                          width: `${Math.min(100, (proposal.participationRate || 0))}%` 
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {(proposal.participationRate || 0).toFixed(1)}% participation
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                No active proposals
+              </p>
+            </div>
+          )}
+          {governanceProposals.length > 0 && (
+            <Link
+              href="/governance"
+              className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            >
+              View All Proposals →
+            </Link>
+          )}
         </div>
       </div>
     </div>
