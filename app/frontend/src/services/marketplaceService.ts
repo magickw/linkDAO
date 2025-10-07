@@ -1,6 +1,191 @@
-// Marketplace service for interacting with the backend API
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+/**
+ * Unified Marketplace Service
+ * Consolidates all marketplace functionality into a single, comprehensive service
+ * Replaces: marketplaceService.ts, enhancedMarketplaceService.ts, realMarketplaceService.ts
+ */
 
+// Core interfaces
+export interface Product {
+  id: string;
+  sellerId: string;
+  title: string;
+  description: string;
+  priceAmount: number;
+  priceCurrency: string;
+  categoryId: string;
+  images: string[];
+  metadata: ProductMetadata;
+  inventory: number;
+  status: 'active' | 'inactive' | 'sold_out' | 'suspended' | 'draft';
+  tags: string[];
+  shipping?: ShippingInfo;
+  nft?: NFTInfo;
+  views: number;
+  favorites: number;
+  listingStatus: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  seller?: SellerInfo;
+  category?: CategoryInfo;
+  trust?: TrustIndicators;
+}
+
+export interface ProductMetadata {
+  specifications?: Record<string, string>;
+  condition?: string;
+  brand?: string;
+  model?: string;
+  year?: string;
+  dimensions?: string;
+  weight?: string;
+  materials?: string[];
+  colors?: string[];
+  sizes?: string[];
+}
+
+export interface ShippingInfo {
+  free: boolean;
+  cost: string;
+  estimatedDays: string;
+  regions: string[];
+  expedited: boolean;
+  weight?: string;
+  dimensions?: string;
+}
+
+export interface NFTInfo {
+  contractAddress: string;
+  tokenId: string;
+  standard: 'ERC721' | 'ERC1155';
+  blockchain: string;
+  royalties?: number;
+}
+
+export interface SellerInfo {
+  id: string;
+  walletAddress: string;
+  displayName?: string;
+  storeName?: string;
+  rating: number;
+  reputation: number;
+  verified: boolean;
+  daoApproved: boolean;
+  profileImageUrl?: string;
+  isOnline: boolean;
+}
+
+export interface CategoryInfo {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  imageUrl?: string;
+}
+
+export interface TrustIndicators {
+  verified: boolean;
+  escrowProtected: boolean;
+  onChainCertified: boolean;
+  safetyScore: number;
+}
+
+export interface Auction {
+  id: string;
+  productId: string;
+  title: string;
+  description: string;
+  currentBid: number;
+  minimumBid: number;
+  reservePrice?: number;
+  bidCount: number;
+  endTime: string;
+  seller: SellerInfo;
+  images: string[];
+  currency: string;
+  status: 'active' | 'ended' | 'cancelled';
+  highestBidder?: string;
+  trust: TrustIndicators;
+}
+
+export interface ProductFilters {
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  currency?: string;
+  condition?: string;
+  location?: string;
+  shipping?: 'free' | 'paid' | 'any';
+  seller?: string;
+  tags?: string[];
+  status?: string;
+  listingType?: 'FIXED_PRICE' | 'AUCTION';
+  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'oldest' | 'popular' | 'ending_soon';
+  limit?: number;
+  offset?: number;
+}
+
+export interface SearchFilters extends ProductFilters {
+  query: string;
+  searchIn?: ('title' | 'description' | 'tags')[];
+}
+
+export interface ProductPage {
+  products: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+// Legacy interface for backward compatibility
+export interface MockProduct {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  currency: string;
+  cryptoPrice: string;
+  cryptoSymbol: string;
+  category: string;
+  listingType: 'FIXED_PRICE' | 'AUCTION';
+  seller: {
+    id: string;
+    name: string;
+    rating: number;
+    reputation: number;
+    verified: boolean;
+    daoApproved: boolean;
+    walletAddress: string;
+  };
+  trust: {
+    verified: boolean;
+    escrowProtected: boolean;
+    onChainCertified: boolean;
+    safetyScore: number;
+  };
+  images: string[];
+  inventory: number;
+  isNFT: boolean;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  views: number;
+  favorites: number;
+  auctionEndTime?: string;
+  highestBid?: string;
+  bidCount?: number;
+  specifications?: Record<string, string>;
+  shipping?: {
+    free: boolean;
+    cost: string;
+    estimatedDays: string;
+    regions: string[];
+    expedited: boolean;
+  };
+}
+
+// Blockchain marketplace interfaces
 export interface CreateListingInput {
   sellerWalletAddress: string;
   tokenAddress: string;
@@ -10,24 +195,8 @@ export interface CreateListingInput {
   listingType: 'FIXED_PRICE' | 'AUCTION';
   duration?: number;
   metadataURI: string;
-  // NFT specific fields
-  nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
-  tokenId?: string; // Only for NFT items
-}
-
-export interface UpdateListingInput {
-  price?: string;
-  quantity?: number;
-}
-
-export interface PlaceBidInput {
-  bidderWalletAddress: string;
-  amount: string;
-}
-
-export interface MakeOfferInput {
-  buyerWalletAddress: string;
-  amount: string;
+  nftStandard?: 'ERC721' | 'ERC1155';
+  tokenId?: string;
 }
 
 export interface MarketplaceListing {
@@ -45,326 +214,500 @@ export interface MarketplaceListing {
   highestBidderWalletAddress?: string;
   metadataURI: string;
   isEscrowed: boolean;
-  // NFT specific fields
-  nftStandard?: 'ERC721' | 'ERC1155'; // Only for NFT items
-  tokenId?: string; // Only for NFT items
+  nftStandard?: 'ERC721' | 'ERC1155';
+  tokenId?: string;
   createdAt: string;
   updatedAt: string;
-  // Enhanced marketplace data
-  enhancedData?: {
-    title?: string;
-    description?: string;
-    images?: string[];
-    price?: {
-      crypto: string;
-      cryptoSymbol: string;
-      fiat: string;
-      fiatSymbol: string;
-    };
-    seller?: {
-      id: string;
-      name: string;
-      rating: number;
-      verified: boolean;
-      daoApproved: boolean;
-      walletAddress: string;
-    };
-    trust?: {
-      verified: boolean;
-      escrowProtected: boolean;
-      onChainCertified: boolean;
-      safetyScore: number;
-    };
-    category?: string;
-    tags?: string[];
-    condition?: string;
-    escrowEnabled?: boolean;
-    views?: number;
-    favorites?: number;
-  };
 }
 
-export interface MarketplaceBid {
-  id: string;
-  listingId: string;
-  bidderWalletAddress: string;
-  amount: string;
-  timestamp: string;
-}
+export class UnifiedMarketplaceService {
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
-export interface MarketplaceOffer {
-  id: string;
-  listingId: string;
-  buyerWalletAddress: string;
-  amount: string;
-  createdAt: string;
-  accepted: boolean;
-}
+  // ============================================================================
+  // CORE PRODUCT MANAGEMENT
+  // ============================================================================
 
-export interface MarketplaceEscrow {
-  id: string;
-  listingId: string;
-  buyerWalletAddress: string;
-  sellerWalletAddress: string;
-  amount: string;
-  buyerApproved: boolean;
-  sellerApproved: boolean;
-  disputeOpened: boolean;
-  resolverWalletAddress?: string;
-  createdAt: string;
-  resolvedAt?: string;
-  // Delivery tracking
-  deliveryInfo?: string;
-  deliveryConfirmed: boolean;
-}
-
-export interface MarketplaceOrder {
-  id: string;
-  listingId: string;
-  buyerWalletAddress: string;
-  sellerWalletAddress: string;
-  escrowId?: string;
-  amount: string;
-  paymentToken: string;
-  status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED';
-  createdAt: string;
-}
-
-export interface MarketplaceDispute {
-  id: string;
-  escrowId: string;
-  reporterWalletAddress: string;
-  reason: string;
-  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED';
-  createdAt: string;
-  resolvedAt?: string;
-  resolution?: string;
-}
-
-export interface UserReputation {
-  walletAddress: string;
-  score: number;
-  daoApproved: boolean;
-}
-
-export class MarketplaceService {
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
-    
-    // Add timeout to fetch requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-      signal: controller.signal,
-    };
-    
+  async getProducts(filters?: ProductFilters): Promise<ProductPage> {
     try {
-      console.log(`Making request to: ${url}`);
-      const response = await fetch(url, config);
-      clearTimeout(timeoutId);
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            if (Array.isArray(value)) {
+              params.append(key, value.join(','));
+            } else {
+              params.append(key, value.toString());
+            }
+          }
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/products?${params.toString()}`, {
+        signal: AbortSignal.timeout(10000)
+      });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`HTTP error! status: ${response.status}`, errorData);
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch products');
       }
-      
-      return response.json();
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to fetch products');
+      }
     } catch (error) {
-      clearTimeout(timeoutId);
-      console.error(`Request failed: ${url}`, error);
-      
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Request timeout');
-        }
-        throw error;
-      }
-      
-      throw new Error('Network error occurred');
+      console.error('Error fetching products:', error);
+      return {
+        products: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        hasMore: false
+      };
     }
   }
 
-  // Listings
+  async getProductById(id: string): Promise<Product | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/products/${id}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error('Failed to fetch product');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to fetch product');
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      return null;
+    }
+  }
+
+  async getProductsByCategory(category: string, limit: number = 20): Promise<Product[]> {
+    try {
+      const filters: ProductFilters = {
+        category,
+        limit,
+        status: 'active'
+      };
+      
+      const result = await this.getProducts(filters);
+      return result.products;
+    } catch (error) {
+      console.error('Error fetching products by category:', error);
+      return [];
+    }
+  }
+
+  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+    try {
+      const filters: ProductFilters = {
+        limit,
+        status: 'active',
+        sortBy: 'popular'
+      };
+      
+      const result = await this.getProducts(filters);
+      return result.products.filter(product => 
+        product.seller?.daoApproved && 
+        product.trust?.safetyScore && 
+        product.trust.safetyScore > 90
+      );
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // SEARCH AND FILTERING
+  // ============================================================================
+
+  async searchProducts(query: string, filters?: SearchFilters): Promise<Product[]> {
+    try {
+      const searchFilters: SearchFilters = {
+        query,
+        ...filters,
+        status: 'active'
+      };
+
+      const params = new URLSearchParams();
+      Object.entries(searchFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            params.append(key, value.join(','));
+          } else {
+            params.append(key, value.toString());
+          }
+        }
+      });
+
+      const response = await fetch(`${this.baseUrl}/api/products/search?${params.toString()}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to search products');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data.products || [];
+      } else {
+        throw new Error(result.message || 'Failed to search products');
+      }
+    } catch (error) {
+      console.error('Error searching products:', error);
+      return [];
+    }
+  }
+
+  async getSearchSuggestions(query: string, limit: number = 10): Promise<string[]> {
+    try {
+      const params = new URLSearchParams({
+        query,
+        limit: limit.toString()
+      });
+
+      const response = await fetch(`${this.baseUrl}/api/products/search-suggestions?${params.toString()}`, {
+        signal: AbortSignal.timeout(5000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get search suggestions');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to get search suggestions');
+      }
+    } catch (error) {
+      console.error('Error getting search suggestions:', error);
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // AUCTION MANAGEMENT
+  // ============================================================================
+
+  async getActiveAuctions(limit: number = 10): Promise<Auction[]> {
+    try {
+      const filters: ProductFilters = {
+        listingType: 'AUCTION',
+        status: 'active',
+        limit,
+        sortBy: 'ending_soon'
+      };
+
+      const response = await fetch(`${this.baseUrl}/api/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch active auctions');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to fetch active auctions');
+      }
+    } catch (error) {
+      console.error('Error fetching active auctions:', error);
+      return [];
+    }
+  }
+
+  async placeBid(auctionId: string, bidAmount: number, bidderAddress: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auctions/${auctionId}/bid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: bidAmount,
+          bidderAddress
+        }),
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to place bid');
+      }
+
+      const result = await response.json();
+      return result.success;
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      return false;
+    }
+  }
+
+  async subscribeToAuctionUpdates(auctionId: string, callback: (update: {
+    type: 'bid' | 'end' | 'extend';
+    data: any;
+  }) => void): Promise<() => void> {
+    try {
+      const eventSource = new EventSource(`${this.baseUrl}/api/auctions/${auctionId}/stream`);
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const update = JSON.parse(event.data);
+          callback(update);
+        } catch (error) {
+          console.error('Error parsing auction update:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('Auction stream error:', error);
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    } catch (error) {
+      console.error('Error subscribing to auction updates:', error);
+      return () => {};
+    }
+  }
+
+  // ============================================================================
+  // BLOCKCHAIN MARKETPLACE OPERATIONS
+  // ============================================================================
+
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
-    return this.request('/marketplace/seller/listings', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      throw error;
+    }
   }
 
-  async getListingById(id: string): Promise<MarketplaceListing> {
-    return this.request(`/marketplace/listings/${id}`);
+  async getMarketplaceListings(filters?: any): Promise<MarketplaceListing[]> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, value.toString());
+          }
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch marketplace listings');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to fetch marketplace listings');
+      }
+    } catch (error) {
+      console.error('Error fetching marketplace listings:', error);
+      return [];
+    }
   }
 
-  async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
-    const response = await this.request<{success: boolean, data: MarketplaceListing[]}>(`/marketplace/seller/listings/${sellerAddress}`);
-    return response.data || [];
+  // ============================================================================
+  // LEGACY COMPATIBILITY METHODS
+  // ============================================================================
+
+  private convertToMockProduct(product: Product): MockProduct {
+    return {
+      id: product.id,
+      title: product.title,
+      description: product.description,
+      price: product.priceAmount.toString(),
+      currency: product.priceCurrency,
+      cryptoPrice: this.convertToCrypto(product.priceAmount, product.priceCurrency),
+      cryptoSymbol: 'ETH',
+      category: product.category?.slug || 'general',
+      listingType: 'FIXED_PRICE',
+      seller: {
+        id: product.seller?.id || product.sellerId,
+        name: product.seller?.displayName || product.seller?.storeName || 'Unknown Seller',
+        rating: product.seller?.rating || 0,
+        reputation: product.seller?.reputation || 0,
+        verified: product.seller?.verified || false,
+        daoApproved: product.seller?.daoApproved || false,
+        walletAddress: product.seller?.walletAddress || '',
+      },
+      trust: {
+        verified: product.trust?.verified || false,
+        escrowProtected: product.trust?.escrowProtected || false,
+        onChainCertified: product.trust?.onChainCertified || false,
+        safetyScore: product.trust?.safetyScore || 0,
+      },
+      images: product.images || [],
+      inventory: product.inventory,
+      isNFT: !!product.nft,
+      tags: product.tags || [],
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      views: product.views,
+      favorites: product.favorites,
+      specifications: product.metadata?.specifications,
+      shipping: product.shipping ? {
+        free: product.shipping.free,
+        cost: product.shipping.cost,
+        estimatedDays: product.shipping.estimatedDays,
+        regions: product.shipping.regions,
+        expedited: product.shipping.expedited,
+      } : undefined,
+    };
   }
 
-  async getAllListings(): Promise<MarketplaceListing[]> {
-    return this.request('/marketplace/listings/all');
+  private convertToCrypto(amount: number, currency: string): string {
+    const ethPrice = 2400; // Placeholder ETH price in USD
+    if (currency === 'USD') {
+      return (amount / ethPrice).toFixed(4);
+    }
+    return amount.toString();
   }
 
-  async getActiveListings(): Promise<MarketplaceListing[]> {
-    return this.request('/marketplace/listings');
+  // Legacy methods for backward compatibility
+  async getAllProducts(): Promise<MockProduct[]> {
+    const result = await this.getProducts({ status: 'active', limit: 100 });
+    return result.products.map(product => this.convertToMockProduct(product));
   }
 
-  async updateListing(id: string, input: UpdateListingInput): Promise<MarketplaceListing> {
-    return this.request(`/marketplace/listings/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(input),
-    });
+  async getProductsByListingType(listingType: 'FIXED_PRICE' | 'AUCTION'): Promise<MockProduct[]> {
+    if (listingType === 'AUCTION') {
+      const auctions = await this.getActiveAuctions(50);
+      return auctions.map(auction => this.convertAuctionToMockProduct(auction));
+    } else {
+      const result = await this.getProducts({
+        listingType: 'FIXED_PRICE',
+        status: 'active',
+        limit: 50
+      });
+      return result.products.map(product => this.convertToMockProduct(product));
+    }
   }
 
-  async cancelListing(id: string): Promise<void> {
-    await this.request(`/marketplace/listings/${id}`, {
-      method: 'DELETE',
-    });
+  private convertAuctionToMockProduct(auction: Auction): MockProduct {
+    const mockProduct = this.convertToMockProduct({
+      id: auction.id,
+      sellerId: auction.seller.id,
+      title: auction.title,
+      description: auction.description,
+      priceAmount: auction.currentBid,
+      priceCurrency: auction.currency,
+      categoryId: '',
+      images: auction.images,
+      metadata: {},
+      inventory: 1,
+      status: 'active',
+      tags: [],
+      views: 0,
+      favorites: 0,
+      listingStatus: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      seller: auction.seller,
+      trust: auction.trust,
+    } as Product);
+
+    mockProduct.listingType = 'AUCTION';
+    mockProduct.auctionEndTime = auction.endTime;
+    mockProduct.highestBid = auction.currentBid.toString();
+    mockProduct.bidCount = auction.bidCount;
+    mockProduct.price = auction.minimumBid.toString();
+
+    return mockProduct;
   }
 
-  // Bids
-  async placeBid(listingId: string, input: PlaceBidInput): Promise<MarketplaceBid> {
-    return this.request(`/marketplace/bids/listing/${listingId}`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/health`);
+      return response.ok;
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return false;
+    }
   }
 
-  async getBidsByListing(listingId: string): Promise<MarketplaceBid[]> {
-    return this.request(`/marketplace/bids/listing/${listingId}`);
-  }
+  async getCategories(): Promise<CategoryInfo[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/categories`, {
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
 
-  async getBidsByBidder(bidderAddress: string): Promise<MarketplaceBid[]> {
-    return this.request(`/marketplace/bids/bidder/${bidderAddress}`);
-  }
-
-  // Offers
-  async makeOffer(listingId: string, input: MakeOfferInput): Promise<MarketplaceOffer> {
-    return this.request(`/marketplace/offers/listing/${listingId}`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    });
-  }
-
-  async getOffersByListing(listingId: string): Promise<MarketplaceOffer[]> {
-    return this.request(`/marketplace/offers/listing/${listingId}`);
-  }
-
-  async getOffersByBuyer(buyerAddress: string): Promise<MarketplaceOffer[]> {
-    return this.request(`/marketplace/offers/buyer/${buyerAddress}`);
-  }
-
-  async acceptOffer(offerId: string): Promise<void> {
-    await this.request(`/marketplace/offers/${offerId}/accept`, {
-      method: 'POST',
-    });
-  }
-
-  // Escrow
-  async createEscrow(listingId: string, buyerAddress: string, deliveryInfo?: string): Promise<MarketplaceEscrow> {
-    return this.request(`/marketplace/escrows/listing/${listingId}`, {
-      method: 'POST',
-      body: JSON.stringify({ buyerAddress, deliveryInfo }),
-    });
-  }
-
-  async approveEscrow(escrowId: string, userAddress: string): Promise<void> {
-    await this.request(`/marketplace/escrows/${escrowId}/approve`, {
-      method: 'POST',
-      body: JSON.stringify({ userAddress }),
-    });
-  }
-
-  async openDispute(escrowId: string, userAddress: string): Promise<void> {
-    await this.request(`/marketplace/escrows/${escrowId}/dispute`, {
-      method: 'POST',
-      body: JSON.stringify({ userAddress }),
-    });
-  }
-
-  async confirmDelivery(escrowId: string, deliveryInfo: string): Promise<void> {
-    await this.request(`/marketplace/escrows/${escrowId}/confirm-delivery`, {
-      method: 'POST',
-      body: JSON.stringify({ deliveryInfo }),
-    });
-  }
-
-  async getEscrowById(id: string): Promise<MarketplaceEscrow> {
-    return this.request(`/marketplace/escrows/${id}`);
-  }
-
-  async getEscrowsByUser(userAddress: string): Promise<MarketplaceEscrow[]> {
-    return this.request(`/marketplace/escrows/user/${userAddress}`);
-  }
-
-  // Orders
-  async createOrder(listingId: string, buyerAddress: string, sellerAddress: string, 
-                    amount: string, paymentToken: string, escrowId?: string): Promise<MarketplaceOrder> {
-    return this.request('/marketplace/orders', {
-      method: 'POST',
-      body: JSON.stringify({ listingId, buyerAddress, sellerAddress, amount, paymentToken, escrowId }),
-    });
-  }
-
-  async getOrderById(id: string): Promise<MarketplaceOrder> {
-    return this.request(`/marketplace/orders/${id}`);
-  }
-
-  async getOrdersByUser(userAddress: string): Promise<MarketplaceOrder[]> {
-    return this.request(`/marketplace/orders/user/${userAddress}`);
-  }
-
-  async updateOrderStatus(orderId: string, status: 'PENDING' | 'COMPLETED' | 'DISPUTED' | 'REFUNDED'): Promise<void> {
-    await this.request(`/marketplace/orders/${orderId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  // Disputes
-  async createDispute(escrowId: string, reporterAddress: string, reason: string): Promise<MarketplaceDispute> {
-    return this.request('/marketplace/disputes', {
-      method: 'POST',
-      body: JSON.stringify({ escrowId, reporterAddress, reason }),
-    });
-  }
-
-  async getDisputeById(id: string): Promise<MarketplaceDispute> {
-    return this.request(`/marketplace/disputes/${id}`);
-  }
-
-  async getDisputesByUser(userAddress: string): Promise<MarketplaceDispute[]> {
-    return this.request(`/marketplace/disputes/user/${userAddress}`);
-  }
-
-  async updateDisputeStatus(disputeId: string, status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'ESCALATED', 
-                            resolution?: string): Promise<void> {
-    await this.request(`/marketplace/disputes/${disputeId}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ status, resolution }),
-    });
-  }
-
-  // Reputation
-  async getUserReputation(address: string): Promise<UserReputation> {
-    return this.request(`/marketplace/reputation/${address}`);
-  }
-
-  async updateUserReputation(address: string, score: number, daoApproved: boolean): Promise<UserReputation> {
-    return this.request(`/marketplace/reputation/${address}`, {
-      method: 'PUT',
-      body: JSON.stringify({ score, daoApproved }),
-    });
-  }
-
-  async getDAOApprovedVendors(): Promise<UserReputation[]> {
-    return this.request('/marketplace/vendors/dao-approved');
+      const result = await response.json();
+      if (result.success) {
+        return result.data || [];
+      } else {
+        throw new Error(result.message || 'Failed to fetch categories');
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
   }
 }
+
+// Export singleton instance
+export const marketplaceService = new UnifiedMarketplaceService();
+
+// Export legacy functions for backward compatibility
+export const getProductsByCategory = (category: string): Promise<MockProduct[]> => 
+  marketplaceService.getProductsByListingType('FIXED_PRICE');
+
+export const getProductsByListingType = (listingType: 'FIXED_PRICE' | 'AUCTION'): Promise<MockProduct[]> => 
+  marketplaceService.getProductsByListingType(listingType);
+
+export const getFeaturedProducts = (): Promise<MockProduct[]> => 
+  marketplaceService.getAllProducts();
+
+export const getProductById = (id: string): Promise<MockProduct | undefined> => 
+  marketplaceService.getProductById(id).then(p => p ? marketplaceService['convertToMockProduct'](p) : undefined);
+
+export const searchProducts = (query: string): Promise<MockProduct[]> => 
+  marketplaceService.searchProducts(query).then(products => 
+    products.map(p => marketplaceService['convertToMockProduct'](p))
+  );
+
+export default marketplaceService;

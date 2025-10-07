@@ -15,12 +15,7 @@ interface TrendingDAO {
   treasuryValue: number;
 }
 
-// Mock marketplace data
-const activeAuctions = [
-  { id: '1', name: 'Rare CryptoPunk', currentBid: 45.2, endTime: new Date(Date.now() + 3600000) },
-  { id: '2', name: 'DeFi Art Collection', currentBid: 12.8, endTime: new Date(Date.now() + 7200000) },
-  { id: '3', name: 'ENS Domain Premium', currentBid: 8.5, endTime: new Date(Date.now() + 10800000) },
-];
+import { marketplaceService, MockProduct } from '../services/unifiedMarketplaceService';
 
 import { governanceService } from '../services/governanceService';
 import { Proposal } from '../types/governance';
@@ -41,6 +36,10 @@ export default function DashboardRightSidebar() {
   // State for real DAO data
   const [trendingDAOs, setTrendingDAOs] = useState<TrendingDAO[]>([]);
   const [loadingDAOs, setLoadingDAOs] = useState(false);
+
+  // State for real marketplace data
+  const [activeAuctions, setActiveAuctions] = useState<MockProduct[]>([]);
+  const [loadingAuctions, setLoadingAuctions] = useState(false);
 
   // Load suggested users when component mounts or user changes
   useEffect(() => {
@@ -181,6 +180,62 @@ export default function DashboardRightSidebar() {
     };
 
     loadTrendingDAOs();
+  }, []);
+
+  // Load active auctions from real marketplace service
+  useEffect(() => {
+    const loadActiveAuctions = async () => {
+      try {
+        setLoadingAuctions(true);
+        
+        // Get active auctions from the unified marketplace service
+        const auctions = await marketplaceService.getActiveAuctions();
+        
+        // Convert auctions to MockProduct format and limit to 3 most recent
+        const mockAuctions = auctions.slice(0, 3).map(auction => ({
+          id: auction.id,
+          title: auction.title,
+          description: auction.description,
+          price: auction.minimumBid.toString(),
+          currency: auction.currency,
+          cryptoPrice: (auction.minimumBid / 2400).toFixed(4), // Simple ETH conversion
+          cryptoSymbol: 'ETH',
+          category: 'auction',
+          listingType: 'AUCTION' as const,
+          seller: {
+            id: auction.seller.id,
+            name: auction.seller.displayName || auction.seller.storeName || 'Unknown Seller',
+            rating: auction.seller.rating,
+            reputation: auction.seller.reputation,
+            verified: auction.seller.verified,
+            daoApproved: auction.seller.daoApproved,
+            walletAddress: auction.seller.walletAddress,
+          },
+          trust: auction.trust,
+          images: auction.images,
+          inventory: 1,
+          isNFT: false,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          views: 0,
+          favorites: 0,
+          auctionEndTime: auction.endTime,
+          highestBid: auction.currentBid.toString(),
+          bidCount: auction.bidCount,
+        }));
+        
+        setActiveAuctions(mockAuctions);
+      } catch (error) {
+        console.error('Error loading active auctions:', error);
+        // Fallback to empty array - no mock data fallback for auctions
+        setActiveAuctions([]);
+      } finally {
+        setLoadingAuctions(false);
+      }
+    };
+
+    loadActiveAuctions();
   }, []);
 
   // Helper function to get current user ID - this would come from auth context
@@ -648,22 +703,64 @@ export default function DashboardRightSidebar() {
             </h3>
           </div>
           <div className="p-4">
-            <div className="space-y-3">
-              {activeAuctions.map((auction) => (
-                <div key={auction.id} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div className="flex justify-between">
-                    <p className="font-medium text-gray-900 dark:text-white">{auction.name}</p>
-                    <span className="text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-                      {formatTimeRemaining(auction.endTime)}
-                    </span>
+            {loadingAuctions ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-pulse">
+                    <div className="flex justify-between mb-2">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-2/3" />
+                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16" />
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3" />
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4" />
+                    </div>
                   </div>
-                  <div className="mt-2 flex justify-between items-center">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Current bid</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{auction.currentBid} ETH</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : activeAuctions.length > 0 ? (
+              <div className="space-y-3">
+                {activeAuctions.map((auction) => (
+                  <Link
+                    key={auction.id}
+                    href={`/marketplace/product/${auction.id}`}
+                    className="block p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
+                  >
+                    <div className="flex justify-between">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">{auction.title}</p>
+                      <span className="text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
+                        {auction.auctionEndTime ? formatTimeRemaining(new Date(auction.auctionEndTime)) : 'Ending Soon'}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex justify-between items-center">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Current bid</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {auction.highestBid || auction.price} {auction.cryptoSymbol}
+                      </span>
+                    </div>
+                    {auction.bidCount && (
+                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {auction.bidCount} bid{auction.bidCount !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No active auctions
+                </p>
+              </div>
+            )}
+            {activeAuctions.length > 0 && (
+              <Link
+                href="/marketplace?type=auction"
+                className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+              >
+                View All Auctions →
+              </Link>
+            )}
           </div>
         </div>
       )}
