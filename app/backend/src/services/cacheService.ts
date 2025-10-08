@@ -9,7 +9,6 @@ interface CacheConfig {
     db: number;
     keyPrefix: string;
     maxRetriesPerRequest: number;
-    retryDelayOnFailover: number;
     connectTimeout: number;
     commandTimeout: number;
   };
@@ -58,7 +57,6 @@ export class CacheService {
         db: parseInt(process.env.REDIS_DB || '0'),
         keyPrefix: process.env.REDIS_KEY_PREFIX || 'marketplace:',
         maxRetriesPerRequest: 3,
-        retryDelayOnFailover: 100,
         connectTimeout: 10000,
         commandTimeout: 5000
       },
@@ -79,7 +77,6 @@ export class CacheService {
       if (process.env.REDIS_URL) {
         this.redis = new Redis(process.env.REDIS_URL, {
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
-          retryDelayOnFailover: this.config.redis.retryDelayOnFailover,
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
           keyPrefix: this.config.redis.keyPrefix
@@ -92,7 +89,6 @@ export class CacheService {
           db: this.config.redis.db,
           keyPrefix: this.config.redis.keyPrefix,
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
-          retryDelayOnFailover: this.config.redis.retryDelayOnFailover,
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
           lazyConnect: true

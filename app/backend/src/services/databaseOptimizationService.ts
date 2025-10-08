@@ -277,8 +277,8 @@ export class DatabaseOptimizationService {
         console.warn(`Query: ${query.substring(0, 100)}...`);
         console.warn(`Recommendation: ${rule.recommendation}`);
         
-        // Emit event for monitoring systems
-        process.emit('database-optimization-alert' as any, {
+        // Log event for monitoring systems (could be sent to external monitoring)
+        console.log('Database Optimization Alert:', {
           rule: rule.name,
           severity: rule.severity,
           query: query.substring(0, 200),
