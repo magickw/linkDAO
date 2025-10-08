@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Community } from '../../models/Community';
 import { formatNumber } from '../../utils/formatters';
+import CommunityJoinButton from './CommunityJoinButton';
 
 interface CommunityStats {
   memberCount: number;
@@ -171,19 +172,16 @@ export const CommunityHeader: React.FC<CommunityHeaderProps> = ({
 
           {/* Action Buttons */}
           <div className="action-buttons">
-            <button
-              onClick={handleJoinLeave}
-              disabled={isJoining}
-              className={`btn ${membershipStatus.isMember ? 'btn-secondary' : 'btn-primary'}`}
-            >
-              {isJoining ? (
-                <span className="loading-spinner"></span>
-              ) : membershipStatus.isMember ? (
-                'Leave'
-              ) : (
-                'Join'
-              )}
-            </button>
+            <CommunityJoinButton
+              communityId={community.id}
+              communityName={community.displayName}
+              memberCount={stats?.memberCount || community.memberCount || 0}
+              isPublic={community.isPublic}
+              onMembershipChange={(isMember) => {
+                // Update local state if needed
+                console.log('Membership changed:', isMember);
+              }}
+            />
 
             {canModerate && (
               <button

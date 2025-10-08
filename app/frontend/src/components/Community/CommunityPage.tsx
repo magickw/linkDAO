@@ -13,6 +13,9 @@ import { CommunityPostList } from './CommunityPostList';
 import { CommunitySidebar } from './CommunitySidebar';
 import { CommunityRules } from './CommunityRules';
 import { CommunityMembers } from './CommunityMembers';
+import CommunityJoinButton from './CommunityJoinButton';
+import CommunityPostCreator from './CommunityPostCreator';
+import CommunityModerationDashboard from './CommunityModerationDashboard';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorBoundary } from '../ErrorHandling/ErrorBoundary';
 import { useWebSocket } from '../../hooks/useWebSocket';
@@ -54,9 +57,11 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   });
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'rules' | 'members'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'rules' | 'members' | 'moderation'>('posts');
   const [postSort, setPostSort] = useState<'hot' | 'new' | 'top'>('hot');
   const [postFilter, setPostFilter] = useState<string>('all');
+  const [showPostCreator, setShowPostCreator] = useState(false);
+  const [showModerationDashboard, setShowModerationDashboard] = useState(false);
 
   // WebSocket connection for real-time updates
   const { isConnected, send, on, off } = useWebSocket({
@@ -289,15 +294,43 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
           {/* Main Content */}
           <main className="community-main">
             {activeTab === 'posts' && (
-              <CommunityPostList
-                communityId={community.id}
-                canPost={canUserPost}
-                canModerate={canUserModerate}
-                sort={postSort}
-                filter={postFilter}
-                onSortChange={handlePostSortChange}
-                onFilterChange={handlePostFilterChange}
-              />
+              <div className="space-y-6">
+                {/* Post Creator */}
+                {canUserPost && (
+                  <div className="mb-6">
+                    {showPostCreator ? (
+                      <CommunityPostCreator
+                        communityId={community.id}
+                        communityName={community.displayName}
+                        allowedPostTypes={community.settings?.allowedPostTypes}
+                        onPostCreated={() => {
+                          setShowPostCreator(false);
+                          // Refresh posts list
+                        }}
+                        onCancel={() => setShowPostCreator(false)}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => setShowPostCreator(true)}
+                        className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                      >
+                        Create a new post in {community.displayName}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Posts List */}
+                <CommunityPostList
+                  communityId={community.id}
+                  canPost={canUserPost}
+                  canModerate={canUserModerate}
+                  sort={postSort}
+                  filter={postFilter}
+                  onSortChange={handlePostSortChange}
+                  onFilterChange={handlePostFilterChange}
+                />
+              </div>
             )}
 
             {activeTab === 'rules' && (
@@ -316,6 +349,13 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                 communityId={community.id}
                 canModerate={canUserModerate}
                 memberCount={stats?.memberCount || 0}
+              />
+            )}
+
+            {activeTab === 'moderation' && canUserModerate && (
+              <CommunityModerationDashboard
+                communityId={community.id}
+                onClose={() => setActiveTab('posts')}
               />
             )}
           </main>

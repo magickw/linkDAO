@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSeller } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
+import { sellerService } from '../../../services/sellerService';
 
 interface FormData {
   displayName: string;
@@ -181,9 +182,8 @@ export function SellerProfilePage() {
     setEnsValidation(prev => ({ ...prev, isValidating: true }));
 
     try {
-      // Use the enhanced marketplace service for ENS validation
-      const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
-      const result = await enhancedMarketplaceService.validateENSHandle(ensHandle);
+      // Use the seller service for ENS validation
+      const result = await sellerService.validateENSHandle(ensHandle);
       
       setEnsValidation({
         isValidating: false,
@@ -284,24 +284,36 @@ export function SellerProfilePage() {
           formDataWithImages.append('coverImage', imageUpload.coverImage);
         }
         
-        // Use enhanced marketplace service for profile update with images
+        // Use enhanced seller service for profile update with images
         if (!walletAddress) {
           throw new Error('Wallet not connected');
         }
         
-        const { enhancedMarketplaceService } = await import('../../../services/enhancedMarketplaceService');
-        const profileUpdateData = {
+        // Build the update request with proper types
+        const profileUpdateData: any = {
           ...formData,
-          profileImage: imageUpload.profileImage,
-          coverImage: imageUpload.coverImage
         };
         
-        const result = await enhancedMarketplaceService.updateSellerProfileEnhanced(walletAddress, profileUpdateData);
+        // Only include image files if they exist (and are not null)
+        if (imageUpload.profileImage) {
+          profileUpdateData.profileImage = imageUpload.profileImage;
+        }
+        if (imageUpload.coverImage) {
+          profileUpdateData.coverImage = imageUpload.coverImage;
+        }
+        
+        const result = await sellerService.updateSellerProfileEnhanced(walletAddress, profileUpdateData);
         console.log('Profile updated successfully:', result);
         
         // Update profile completeness if returned
         if (result.completenessUpdate) {
-          setProfileCompleteness(result.completenessUpdate);
+          // Transform the completeness data to match the expected state structure
+          const transformedCompleteness = {
+            score: result.completenessUpdate.score,
+            missingFields: result.completenessUpdate.missingFields.map(field => field.field),
+            recommendations: result.completenessUpdate.recommendations
+          };
+          setProfileCompleteness(transformedCompleteness);
         }
       } else {
         // Use regular update method

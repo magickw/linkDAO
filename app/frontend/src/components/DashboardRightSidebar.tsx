@@ -63,26 +63,26 @@ const CACHE_TTL = {
 };
 
 // Helper function to get cached data
-const getCachedData = <T>(key: string): T | null => {
+function getCachedData<T>(key: string): T | null {
   const cached = dataCache.get(key);
   if (!cached) return null;
-  
+
   if (Date.now() - cached.timestamp > cached.ttl) {
     dataCache.delete(key);
     return null;
   }
-  
+
   return cached.data as T;
-};
+}
 
 // Helper function to set cached data
-const setCachedData = <T>(key: string, data: T, ttl: number): void => {
+function setCachedData<T>(key: string, data: T, ttl: number): void {
   dataCache.set(key, {
     data,
     timestamp: Date.now(),
     ttl,
   });
-};
+}
 
 const DashboardRightSidebar = memo(() => {
   const { navigationState } = useNavigation();
@@ -175,7 +175,7 @@ const DashboardRightSidebar = memo(() => {
     } finally {
       setLoadingSuggestions(false);
     }
-  }, [currentUserId, contextualContent.recommendationType, activeCommunity]);
+  }, [currentUserId, activeCommunity]);
 
   useEffect(() => {
     loadPersonalizedSuggestionsWithCache();
@@ -239,8 +239,8 @@ const DashboardRightSidebar = memo(() => {
         if (activeView === 'community' && activeCommunity) {
           // Load community-specific proposals
           proposals = await governanceService.getCommunityProposals(activeCommunity);
-        } else if (activeView === 'governance') {
-          // In governance view, show all active proposals
+        } else if (activeView === 'community') {
+          // In community view, show all active proposals
           proposals = await governanceService.getAllActiveProposals();
         } else if (userId && contextualContent.showPersonalizedContent) {
           // For logged-in users in feed view, show personalized governance content
@@ -265,7 +265,7 @@ const DashboardRightSidebar = memo(() => {
     };
 
     loadContextualGovernanceProposals();
-  }, [activeView, activeCommunity, contextualContent.recommendationType, contextualContent.showPersonalizedContent]);
+  }, [activeView, activeCommunity]);
 
   // Helper function to sort proposals based on context
   const sortProposalsByContext = (proposals: Proposal[], type: string): Proposal[] => {
@@ -283,8 +283,8 @@ const DashboardRightSidebar = memo(() => {
       default:
         // Sort by recency and participation
         return proposals.sort((a, b) => {
-          const aScore = (b.participationRate || 0) * 0.7 + (new Date(b.createdAt).getTime() * 0.3);
-          const bScore = (a.participationRate || 0) * 0.7 + (new Date(a.createdAt).getTime() * 0.3);
+          const aScore = (b.participationRate || 0) * 0.7 + (new Date(b.startTime).getTime() * 0.3);
+          const bScore = (a.participationRate || 0) * 0.7 + (new Date(a.startTime).getTime() * 0.3);
           return aScore - bScore;
         });
     }
@@ -512,7 +512,7 @@ const DashboardRightSidebar = memo(() => {
         loadCommunitiesWithCache();
         break;
     }
-  }, [contextualContent.recommendationType, activeCommunity, loadCommunitiesWithCache]);
+  }, [activeCommunity, loadCommunitiesWithCache]);
 
   // Prefetch data for likely next views
   const prefetchData = useCallback(async () => {
@@ -527,7 +527,7 @@ const DashboardRightSidebar = memo(() => {
       }
 
       // Prefetch governance proposals if not in governance view
-      if (activeView !== 'governance' && !getCachedData('governance-proposals')) {
+      if (activeView !== 'community' && !getCachedData('governance-proposals')) {
         governanceService.getAllActiveProposals().then(proposals => {
           setCachedData('governance-proposals', proposals, CACHE_TTL.GOVERNANCE);
         }).catch(() => {
@@ -632,33 +632,9 @@ const DashboardRightSidebar = memo(() => {
       };
     }
     
-    if (activeView === 'marketplace') {
-      return {
-        showCommunityInfo: false,
-        showRelatedCommunities: false,
-        showCommunityGovernance: false,
-        showTrendingInCategory: null,
-        showPersonalizedContent: isLoggedIn,
-        showUserSpecificActions: isLoggedIn,
-        contextTitle: 'Marketplace',
-        recommendationType: 'marketplace-based' as const,
-        primaryActions: ['buy', 'sell', 'bid'] as const,
-      };
-    }
+    // Marketplace view removed as it's not supported in NavigationContext
     
-    if (activeView === 'governance') {
-      return {
-        showCommunityInfo: false,
-        showRelatedCommunities: false,
-        showCommunityGovernance: true,
-        showTrendingInCategory: null,
-        showPersonalizedContent: isLoggedIn,
-        showUserSpecificActions: isLoggedIn,
-        contextTitle: 'Governance',
-        recommendationType: 'governance-based' as const,
-        primaryActions: ['vote', 'propose', 'delegate'] as const,
-      };
-    }
+    // Governance view removed as it's not supported in NavigationContext
     
     // Default feed view
     return {
@@ -700,7 +676,7 @@ const DashboardRightSidebar = memo(() => {
     }
     
     // Show auctions in marketplace or general feed
-    if (activeView === 'marketplace' || activeView === 'feed') {
+    if (activeView === 'feed') {
       widgets.push('active-auctions');
     }
     
@@ -870,8 +846,6 @@ const DashboardRightSidebar = memo(() => {
   const renderDeFiMarketsWidget = useCallback(() => null, []);
   const renderTrendingHashtagsWidget = useCallback(() => {
     return (
-
-      {/* Trending Hashtags Widget */}
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
         <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
@@ -921,477 +895,6 @@ const DashboardRightSidebar = memo(() => {
           </Link>
         </div>
       </div>
-
-      {/* DeFi Market Widget - Always show */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <svg className="h-5 w-5 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-            DeFi Markets
-          </h3>
-        </div>
-        <div className="p-4">
-          <DeFiChartEmbed 
-            tokenSymbol="ETH" 
-            tokenName="Ethereum"
-            className="mb-4"
-          />
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Total Value Locked</span>
-              <span className="font-medium text-gray-900 dark:text-white">$45.2B</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600 dark:text-gray-400">24h Volume</span>
-              <span className="font-medium text-gray-900 dark:text-white">$12.8B</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Community Governance - Show when viewing community with governance token */}
-      {contextualContent.showCommunityGovernance && currentCommunity && (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Community Governance
-            </h3>
-          </div>
-          <div className="p-4">
-            <DAOGovernanceEmbed 
-              daoName={currentCommunity.displayName}
-              daoToken={currentCommunity.governanceToken || 'COMM'}
-              className="mb-4"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Related Communities - Show when viewing community */}
-      {contextualContent.showRelatedCommunities && currentCommunity && (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              Related Communities
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              {communities
-                .filter(c => c.id !== currentCommunity.id && c.category === currentCommunity.category)
-                .slice(0, 3)
-                .map((community) => (
-                <Link
-                  key={community.id}
-                  href={`/dao/${community.name}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center">
-                    <img 
-                      src={community.avatar} 
-                      alt={community.displayName}
-                      className="w-8 h-8 rounded-lg"
-                    />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{community.displayName}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{formatNumber(community.memberCount)} members</p>
-                    </div>
-                  </div>
-                  <button className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300">
-                    Join
-                  </button>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Trending Content - Show different content based on view */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <svg className="h-5 w-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            {activeView === 'community' && contextualContent.showTrendingInCategory 
-              ? `Trending in ${contextualContent.showTrendingInCategory}`
-              : 'Trending Communities'
-            }
-          </h3>
-        </div>
-        <div className="p-4">
-          <div className="space-y-3">
-            {(activeView === 'community' 
-              ? communities.filter(c => c.category === contextualContent.showTrendingInCategory).slice(0, 4)
-              : trendingDAOs
-            ).map((item) => (
-              <Link
-                key={item.id}
-                href={activeView === 'community' ? `/dao/${item.name}` : `/dao/${item.id}`}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
-              >
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {activeView === 'community' ? (item as any).displayName || (item as any).name : (item as any).name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatNumber(activeView === 'community' ? (item as any).memberCount || (item as any).members : (item as any).members)} members
-                  </p>
-                </div>
-                <div className="text-right">
-                  {activeView === 'feed' && (item as any).treasuryValue && (
-                    <>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency((item as any).treasuryValue)}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Treasury</p>
-                    </>
-                  )}
-                  {activeView === 'community' && (
-                    <button className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300">
-                      Join
-                    </button>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Suggested Users - Show when in feed view */}
-      {activeView === 'feed' && (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
-              {currentUserId ? 'Suggested Users' : 'Trending Users'}
-            </h3>
-          </div>
-          <div className="p-4">
-            {loadingSuggestions ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between animate-pulse">
-                    <div className="flex items-center">
-                      <div className="bg-gray-200 dark:bg-gray-700 rounded-xl w-10 h-10" />
-                      <div className="ml-3">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-1" />
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-                      </div>
-                    </div>
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-12" />
-                  </div>
-                ))}
-              </div>
-            ) : errors.users ? (
-              <div className="text-center py-4">
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                  {errors.users}
-                </p>
-                <button
-                  onClick={() => retryLoad('users')}
-                  className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : suggestedUsers.length > 0 ? (
-              <div className="space-y-3">
-                {suggestedUsers.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <img
-                        src={enhancedUserService.getUserAvatarUrl(user)}
-                        alt={enhancedUserService.formatUserDisplayName(user)}
-                        className="w-10 h-10 rounded-xl object-cover"
-                        onError={(e) => {
-                          // Fallback to placeholder on error
-                          (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/identicon/svg?seed=${user.id}`;
-                        }}
-                      />
-                      <div className="ml-3">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {enhancedUserService.formatUserDisplayName(user)}
-                        </p>
-                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          <span>{enhancedUserService.formatFollowerCount(user.followers)} followers</span>
-                          <span className="mx-1">•</span>
-                          <span className="inline-flex items-center">
-                            <span className="mr-1">🏆</span>
-                            {enhancedUserService.formatReputationScore(user.reputationScore)}
-                          </span>
-                        </div>
-                        {user.reasonForSuggestion && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                            {user.reasonForSuggestion}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <button 
-                      className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 px-3 py-1 rounded-full border border-primary-600 dark:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
-                      onClick={() => handleFollowUser(user.id)}
-                    >
-                      Follow
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  No suggestions available
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Active Auctions - Show when in feed view */}
-      {activeView === 'feed' && (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Active Auctions
-            </h3>
-          </div>
-          <div className="p-4">
-            {loadingAuctions ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-pulse">
-                    <div className="flex justify-between mb-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-2/3" />
-                      <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16" />
-                    </div>
-                    <div className="flex justify-between">
-                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3" />
-                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : errors.auctions ? (
-              <div className="text-center py-4">
-                <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                  {errors.auctions}
-                </p>
-                <button
-                  onClick={() => retryLoad('auctions')}
-                  className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-                >
-                  Try Again
-                </button>
-              </div>
-            ) : activeAuctions.length > 0 ? (
-              <div className="space-y-3">
-                {activeAuctions.map((auction) => (
-                  <Link
-                    key={auction.id}
-                    href={`/marketplace/product/${auction.id}`}
-                    className="block p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
-                  >
-                    <div className="flex justify-between">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm">{auction.title}</p>
-                      <span className="text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-                        {auction.endTime ? formatTimeRemaining(new Date(auction.endTime)) : 'Ending Soon'}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex justify-between items-center">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Current bid</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {auction.currentBid} {auction.currency}
-                      </span>
-                    </div>
-                    {auction.bidCount && (
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {auction.bidCount} bid{auction.bidCount !== 1 ? 's' : ''}
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  No active auctions
-                </p>
-              </div>
-            )}
-            {activeAuctions.length > 0 && (
-              <Link
-                href="/marketplace?type=auction"
-                className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-              >
-                View All Auctions →
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Governance Proposals - Always show but adapt content */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <svg className="h-5 w-5 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {activeView === 'community' && currentCommunity 
-              ? `${currentCommunity.displayName} Proposals`
-              : 'Governance Proposals'
-            }
-          </h3>
-        </div>
-        <div className="p-4">
-          {loadingProposals ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-pulse">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-2" />
-                  <div className="flex justify-between">
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3" />
-                    <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : errors.governance ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-                {errors.governance}
-              </p>
-              <button
-                onClick={() => retryLoad('governance')}
-                className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-              >
-                Try Again
-              </button>
-            </div>
-          ) : governanceProposals.length > 0 ? (
-            <div className="space-y-3">
-              {governanceProposals.map((proposal) => (
-                <Link
-                  key={proposal.id}
-                  href={`/governance/proposals/${proposal.id}`}
-                  className="block p-3 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-lg transition-colors"
-                >
-                  <div className="flex justify-between">
-                    <p className="font-medium text-gray-900 dark:text-white text-sm">{proposal.title}</p>
-                    {activeView === 'feed' && proposal.communityId && (
-                      <span className="text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
-                        {proposal.communityId}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex justify-between items-center">
-                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                      <span className="mr-2">👍 {formatNumber(parseInt(proposal.forVotes))}</span>
-                      <span>👎 {formatNumber(parseInt(proposal.againstVotes))}</span>
-                    </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {formatTimeRemaining(proposal.endTime)}
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1">
-                      <div 
-                        className="bg-blue-500 h-1 rounded-full" 
-                        style={{ 
-                          width: `${Math.min(100, (proposal.participationRate || 0))}%` 
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {(proposal.participationRate || 0).toFixed(1)}% participation
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                No active proposals
-              </p>
-            </div>
-          )}
-          {governanceProposals.length > 0 && (
-            <Link
-              href="/governance"
-              className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-            >
-              View All Proposals →
-            </Link>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}       
- <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <span className="mr-2 text-lg">#️⃣</span>
-              Trending Now
-            </h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              {[
-                { tag: 'defi', count: 1240, growth: 15 },
-                { tag: 'nft', count: 890, growth: 8 },
-                { tag: 'web3', count: 2100, growth: 22 },
-                { tag: 'dao', count: 567, growth: 12 },
-                { tag: 'ethereum', count: 3400, growth: 5 }
-              ].map((hashtag, index) => (
-                <Link
-                  key={hashtag.tag}
-                  href={`/hashtags/${hashtag.tag}`}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-4">
-                      {index + 1}
-                    </span>
-                    <span className="text-primary-600 dark:text-primary-400 font-medium group-hover:text-primary-700 dark:group-hover:text-primary-300">
-                      #{hashtag.tag}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                    <span>{formatNumber(hashtag.count)}</span>
-                    <span className="text-green-600 dark:text-green-400 flex items-center">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                      {hashtag.growth}%
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <Link
-              href="/search?tab=trending"
-              className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-            >
-              View All Trending →
-            </Link>
-          </div>
-        </div>
     );
   }, [formatNumber]);
 });
@@ -1399,3 +902,4 @@ const DashboardRightSidebar = memo(() => {
 DashboardRightSidebar.displayName = 'DashboardRightSidebar';
 
 export default DashboardRightSidebar;
+

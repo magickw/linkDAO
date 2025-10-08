@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { MarketplaceListing, MarketplaceService } from '@/services/marketplaceService';
+import { MarketplaceListing } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';

@@ -156,18 +156,48 @@ const mockPosts = [
 
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
-  const [communities, setCommunities] = useState<Community[]>(mockCommunities);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState(mockPosts);
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
-  const [joinedCommunities, setJoinedCommunities] = useState<string[]>(['ethereum-builders', 'defi-traders']);
+  const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
 
-  const handleJoinCommunity = (communityId: string) => {
-    if (joinedCommunities.includes(communityId)) {
-      setJoinedCommunities(prev => prev.filter(id => id !== communityId));
-    } else {
-      setJoinedCommunities(prev => [...prev, communityId]);
+  // Load communities on component mount
+  useEffect(() => {
+    const loadCommunities = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const communitiesData = await CommunityService.getAllCommunities({
+          isPublic: true,
+          limit: 50
+        });
+        setCommunities(communitiesData);
+      } catch (err) {
+        console.error('Error loading communities:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load communities');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCommunities();
+  }, []);
+
+  const handleJoinCommunity = async (communityId: string) => {
+    try {
+      if (joinedCommunities.includes(communityId)) {
+        // Leave community - would need user address from wallet context
+        setJoinedCommunities(prev => prev.filter(id => id !== communityId));
+      } else {
+        // Join community - would need user address from wallet context
+        setJoinedCommunities(prev => [...prev, communityId]);
+      }
+    } catch (err) {
+      console.error('Error joining/leaving community:', err);
     }
   };
 

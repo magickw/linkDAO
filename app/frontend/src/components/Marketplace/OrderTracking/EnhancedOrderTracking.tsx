@@ -24,7 +24,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { useToast } from '@/context/ToastContext';
 import { orderService } from '@/services/orderService';
-import { enhancedMarketplaceService } from '@/services/enhancedMarketplaceService';
+import { marketplaceService } from '@/services/marketplaceService';
 import { Order, OrderStatus } from '@/types/order';
 
 interface EnhancedOrderTrackingProps {
@@ -166,7 +166,11 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
           addToast('Delivery confirmed', 'success');
           break;
         case 'track_package':
-          const trackingInfo = await enhancedMarketplaceService.getOrderTrackingInfo(order.id);
+          // TODO: Implement tracking info in marketplaceService
+          const trackingInfo = {
+            trackingNumber: order.trackingNumber,
+            status: 'In Transit'
+          };
           if (trackingInfo) {
             addToast(`Tracking: ${trackingInfo.trackingNumber} - ${trackingInfo.status}`, 'info');
           }

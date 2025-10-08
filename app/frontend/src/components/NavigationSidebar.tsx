@@ -26,45 +26,8 @@ interface Community {
   unreadCount?: number;
 }
 
-// Mock communities data
-const mockCommunities: Community[] = [
-  {
-    id: 'ethereum-builders',
-    name: 'ethereum-builders',
-    displayName: 'Ethereum Builders',
-    memberCount: 1240,
-    avatar: '🔷',
-    isJoined: true,
-    unreadCount: 3
-  },
-  {
-    id: 'defi-traders',
-    name: 'defi-traders', 
-    displayName: 'DeFi Traders',
-    memberCount: 890,
-    avatar: '💰',
-    isJoined: true,
-    unreadCount: 0
-  },
-  {
-    id: 'nft-collectors',
-    name: 'nft-collectors',
-    displayName: 'NFT Collectors', 
-    memberCount: 2100,
-    avatar: '🎨',
-    isJoined: true,
-    unreadCount: 1
-  },
-  {
-    id: 'dao-governance',
-    name: 'dao-governance',
-    displayName: 'DAO Governance',
-    memberCount: 567,
-    avatar: '🏛️',
-    isJoined: false,
-    unreadCount: 0
-  }
-];
+import { CommunityService } from '../services/communityService';
+import { CommunityMembershipService } from '../services/communityMembershipService';
 
 interface NavigationSidebarProps {
   className?: string;
@@ -72,9 +35,58 @@ interface NavigationSidebarProps {
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: profile } = useProfile(address);
   const { getCommunityUnreadCount } = useNotifications();
+  // Load user's communities on component mount
+  useEffect(() => {
+    const loadUserCommunities = async () => {
+      if (!address) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get user's memberships
+        const memberships = await CommunityMembershipService.getUserMemberships(address, {
+          isActive: true,
+          limit: 20
+        });
+        
+        // Get community details for each membership
+        const communityPromises = memberships.map(membership => 
+          CommunityService.getCommunityById(membership.communityId)
+        );
+        
+        const communityResults = await Promise.all(communityPromises);
+        const validCommunities = communityResults.filter(c => c !== null);
+        
+        // Transform to expected format with membership info
+        const communitiesWithMembership = validCommunities.map((community, index) => ({
+          ...community,
+          isJoined: true,
+          unreadCount: 0, // Would be calculated from notifications
+          membershipRole: memberships[index]?.role
+        }));
+        
+        setCommunities(communitiesWithMembership);
+      } catch (err) {
+        console.error('Error loading user communities:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load communities');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserCommunities();
+  }, [address]);
+
   const { 
     navigationState, 
     navigateToFeed,
@@ -86,7 +98,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   const {
     quickFilters,
     handleFilterChange,
-    communities,
+    communities: enhancedCommunities,
     showAllCommunities,
     toggleShowAllCommunities,
     handleCommunitySelect,
@@ -268,7 +280,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </div>
                 
                 <CommunityIconList
-                  communities={communities as any}
+                  communities={enhancedCommunities as any}
                   onCommunitySelect={handleCommunitySelectWithContext}
                 />
               </div>
@@ -299,7 +311,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </Link>
 
               {/* Collapsed joined communities */}
-              {communities.filter(c => c.isJoined).slice(0, 3).map((community) => (
+              {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 3).map((community: any) => (
                 <button
                   key={community.id}
                   onClick={() => handleCommunitySelectWithContext(community.id)}

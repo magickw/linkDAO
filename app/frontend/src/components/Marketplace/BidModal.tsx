@@ -3,7 +3,7 @@ import { useAccount, useBalance } from 'wagmi';
 import { 
   MarketplaceListing,
   UnifiedMarketplaceService,
-  PlaceBidInput
+  marketplaceService
 } from '@/services/marketplaceService';
 import { useToast } from '@/context/ToastContext';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -23,8 +23,8 @@ const BidModal: React.FC<BidModalProps> = ({ listing, isOpen, onClose, onSuccess
   const [bidAmount, setBidAmount] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Memoize the marketplace service to prevent recreation on every render
-  const marketplaceService = useMemo(() => new UnifiedMarketplaceService(), []);
+  // Use the singleton marketplace service
+  const service = useMemo(() => marketplaceService, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,12 +63,8 @@ const BidModal: React.FC<BidModalProps> = ({ listing, isOpen, onClose, onSuccess
     try {
       setLoading(true);
       
-      const bidInput: PlaceBidInput = {
-        bidderWalletAddress: address,
-        amount: bidAmount
-      };
-      
-      await marketplaceService.placeBid(listing.id, bidInput);
+      const bidAmountNum = parseFloat(bidAmount);
+      await service.placeBid(listing.id, bidAmountNum, address!);
       
       addToast('Bid placed successfully!', 'success');
       onSuccess();

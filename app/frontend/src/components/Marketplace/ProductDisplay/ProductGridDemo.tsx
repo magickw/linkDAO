@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { mockProducts, MockProduct } from '../../../data/mockProducts';
+import { MarketplaceListing, marketplaceService } from '../../../services/marketplaceService';
 import DemoProductCard from './DemoProductCard';
 
 interface ProductGridDemoProps {
@@ -12,21 +12,33 @@ interface ProductGridDemoProps {
 }
 
 const ProductGridDemo: React.FC<ProductGridDemoProps> = ({ className = '' }) => {
-  const [products, setProducts] = useState<MockProduct[]>([]);
+  const [products, setProducts] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedListingType, setSelectedListingType] = useState<string>('all');
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setProducts(mockProducts);
-      setLoading(false);
-    }, 1000);
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const listings = await marketplaceService.getMarketplaceListings({});
+        setProducts(listings);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Failed to load products. Please try again.');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
   }, []);
 
   const filteredProducts = products.filter(product => {
-    const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory;
+    const categoryMatch = selectedCategory === 'all' || product.itemType.toLowerCase() === selectedCategory;
     const listingTypeMatch = selectedListingType === 'all' || product.listingType === selectedListingType;
     return categoryMatch && listingTypeMatch;
   });
@@ -57,7 +69,7 @@ const ProductGridDemo: React.FC<ProductGridDemoProps> = ({ className = '' }) => 
           Enhanced Marketplace Demo
         </h1>
         <p className="text-gray-300 max-w-2xl mx-auto">
-          Showcasing improved grid layout (3-5 desktop columns), conditional CTA buttons, 
+          Showcasing improved grid layout (3-5 desktop columns), conditional CTA buttons,
           trust indicators, and multi-seller escrow integration.
         </p>
       </div>
@@ -115,11 +127,24 @@ const ProductGridDemo: React.FC<ProductGridDemoProps> = ({ className = '' }) => 
         </div>
         <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-yellow-400">
-            {filteredProducts.filter(p => p.isNFT).length}
+            {filteredProducts.filter(p => p.itemType === 'NFT').length}
           </div>
           <div className="text-sm text-gray-300">NFTs</div>
         </div>
       </div>
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center">
+          <p className="text-red-200">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg text-red-100 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Enhanced Grid Layout */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
@@ -128,7 +153,7 @@ const ProductGridDemo: React.FC<ProductGridDemoProps> = ({ className = '' }) => 
           Array.from({ length: 8 }, (_, i) => (
             <SkeletonCard key={i} />
           ))
-        ) : (
+        ) : filteredProducts.length > 0 ? (
           // Show actual products
           filteredProducts.map((product) => (
             <DemoProductCard
@@ -148,13 +173,20 @@ const ProductGridDemo: React.FC<ProductGridDemoProps> = ({ className = '' }) => 
               }}
             />
           ))
-        )}
+        ) : !error ? (
+          // Empty state
+          <div className="col-span-full text-center py-12">
+            <div className="text-6xl mb-4">🛍️</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No products found</h3>
+            <p className="text-gray-300">Try adjusting your filters or check back later.</p>
+          </div>
+        ) : null}
       </div>
 
       {/* Feature Highlights */}
       <div className="mt-12 space-y-6">
         <h2 className="text-2xl font-bold text-center text-white">✨ Enhanced Features</h2>
-        
+
         <div className="grid md:grid-cols-3 gap-6">
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
             <div className="text-blue-400 text-2xl mb-3">📱</div>

@@ -1,14 +1,14 @@
 /**
  * DemoProductCard - Product card component for marketplace demo
- * Compatible with MockProduct interface and showcases enhanced features
+ * Compatible with MarketplaceListing interface and showcases enhanced features
  */
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MockProduct } from '../../../data/mockProducts';
+import { MarketplaceListing } from '../../../services/marketplaceService';
 
 interface DemoProductCardProps {
-  product: MockProduct;
+  product: MarketplaceListing;
   onAddToCart?: (productId: string) => void;
   onBidNow?: (productId: string) => void;
   onFavorite?: (productId: string) => void;
@@ -50,28 +50,24 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
     return `${symbol === 'USD' ? '$' : ''}${numPrice.toLocaleString()}${symbol !== 'USD' ? ` ${symbol}` : ''}`;
   };
 
-  const getSellerBadges = () => {
-    const badges = [];
-    if (product.seller.verified) badges.push('✅');
-    if (product.seller.daoApproved) badges.push('🗳');
+  // Simplified seller badges since MarketplaceListing doesn't have enhancedData
+  const getSellerBadges = (): string[] => {
+    const badges: string[] = [];
+    // We don't have verified or daoApproved info in MarketplaceListing
     return badges;
   };
 
+  // Simplified trust score calculation
   const getTrustScore = () => {
-    if (!product.trust) return 0;
-    let score = 0;
-    if (product.trust.verified) score += 25;
-    if (product.trust.escrowProtected) score += 25;
-    if (product.trust.onChainCertified) score += 25;
-    if (product.seller.verified) score += 15;
-    if (product.seller.daoApproved) score += 10;
-    return Math.min(score, 100);
+    // MarketplaceListing doesn't have enhancedData.trust
+    // Return a default score for demo purposes
+    return 85;
   };
 
   const trustScore = getTrustScore();
   const isAuction = product.listingType === 'AUCTION';
-  const timeLeft = isAuction && product.auctionEndTime 
-    ? Math.max(0, new Date(product.auctionEndTime).getTime() - Date.now())
+  const timeLeft = isAuction && product.endTime 
+    ? Math.max(0, new Date(product.endTime).getTime() - Date.now())
     : 0;
 
   const formatTimeLeft = (ms: number) => {
@@ -102,16 +98,9 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
 
         {/* Main Image */}
         {!imageError ? (
-          <img
-            src={product.images[0]}
-            alt={product.title}
-            className={`w-full h-full object-cover transition-all duration-300 group-hover:scale-105 ${
-              isImageLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
-            onLoad={() => setIsImageLoaded(true)}
-            onError={() => setImageError(true)}
-            loading="lazy"
-          />
+          <div className="w-full h-full bg-gradient-to-br from-gray-400/20 to-gray-600/20 flex items-center justify-center">
+            <span className="text-white/60 text-sm">Demo Image</span>
+          </div>
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-gray-400/20 to-gray-600/20 flex items-center justify-center">
             <span className="text-white/60 text-sm">Image unavailable</span>
@@ -120,7 +109,7 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
 
         {/* Overlay badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {product.isNFT && (
+          {product.itemType === 'NFT' && (
             <span className="px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold rounded-full">
               NFT
             </span>
@@ -130,9 +119,9 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
               AUCTION
             </span>
           )}
-          {product.inventory && product.inventory < 5 && (
+          {product.quantity && product.quantity < 5 && (
             <span className="px-2 py-1 bg-yellow-500/90 text-white text-xs font-bold rounded-full">
-              {product.inventory} left
+              {product.quantity} left
             </span>
           )}
         </div>
@@ -161,33 +150,30 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
       <div className="p-4 space-y-3">
         {/* Title */}
         <h3 className="font-semibold text-white text-lg leading-tight line-clamp-2 group-hover:text-blue-300 transition-colors">
-          {product.title}
+          {product.metadataURI || `${product.itemType} Listing`}
         </h3>
 
         {/* Seller info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-gray-300 text-sm">{product.seller.name}</span>
+            <span className="text-gray-300 text-sm">
+              {`${product.sellerWalletAddress.slice(0, 6)}...${product.sellerWalletAddress.slice(-4)}`}
+            </span>
             <div className="flex gap-1">
               {getSellerBadges().map((badge, index) => (
                 <span key={index} className="text-sm">{badge}</span>
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-yellow-400">⭐</span>
-            <span className="text-gray-300 text-sm">{product.seller.rating}</span>
-          </div>
+          {/* No rating info in MarketplaceListing */}
         </div>
 
         {/* Price */}
         <div className="space-y-1">
           <div className="text-xl font-bold text-white">
-            {formatPrice(product.cryptoPrice, product.cryptoSymbol)}
+            {formatPrice(product.price, 'ETH')}
           </div>
-          <div className="text-sm text-gray-400">
-            ≈ {formatPrice(product.price, product.currency)}
-          </div>
+          {/* No fiat price in MarketplaceListing */}
         </div>
 
         {/* Auction info */}
@@ -196,7 +182,7 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
             {product.highestBid && (
               <div className="text-sm text-gray-300">
                 Highest bid: <span className="text-green-400 font-medium">
-                  {formatPrice(product.highestBid, product.cryptoSymbol)}
+                  {formatPrice(product.highestBid, 'ETH')}
                 </span>
               </div>
             )}
@@ -205,26 +191,17 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
                 ⏰ {formatTimeLeft(timeLeft)} left
               </div>
             )}
-            {product.bidCount && (
-              <div className="text-xs text-gray-400">
-                {product.bidCount} bid{product.bidCount !== 1 ? 's' : ''}
-              </div>
-            )}
           </div>
         )}
 
         {/* Trust indicators */}
         <div className="flex items-center gap-2 text-xs">
-          {product.trust?.escrowProtected && (
+          {product.isEscrowed && (
             <span className="flex items-center gap-1 text-green-400">
               🔒 Escrow Protected
             </span>
           )}
-          {product.trust?.verified && (
-            <span className="flex items-center gap-1 text-blue-400">
-              ✅ Verified
-            </span>
-          )}
+          {/* No verified info in MarketplaceListing */}
         </div>
 
         {/* Action buttons */}
@@ -252,8 +229,8 @@ const DemoProductCard: React.FC<DemoProductCardProps> = ({
 
         {/* Additional info */}
         <div className="flex items-center justify-between text-xs text-gray-400 pt-1">
-          <span>{product.views} views</span>
-          <span>{product.favorites} favorites</span>
+          <span>{product.quantity} available</span>
+          {/* No views/favorites in MarketplaceListing */}
         </div>
       </div>
     </motion.div>

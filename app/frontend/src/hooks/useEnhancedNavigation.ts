@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
+import { CommunityService } from '../services/communityService';
 import { 
   QuickFilter, 
   CommunityWithIcons, 
@@ -135,65 +136,41 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
     }
   }, [address]);
 
-  // Mock communities data - replace with real API call
+  // Load real communities data
   useEffect(() => {
-    const mockCommunities: CommunityWithIcons[] = [
-      {
-        id: 'ethereum-builders',
-        name: 'ethereum-builders',
-        displayName: 'Ethereum Builders',
-        memberCount: 1240,
-        avatar: '🔷',
-        icon: '🔷',
-        unreadCount: 3,
-        lastActivity: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-        userRole: { type: 'member', permissions: ['read', 'write'] },
-        isJoined: true,
-        activityLevel: 'high'
-      },
-      {
-        id: 'defi-traders',
-        name: 'defi-traders',
-        displayName: 'DeFi Traders',
-        memberCount: 890,
-        avatar: '💰',
-        icon: '💰',
-        unreadCount: 0,
-        lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-        userRole: { type: 'moderator', permissions: ['read', 'write', 'moderate'] },
-        isJoined: true,
-        activityLevel: 'medium'
-      },
-      {
-        id: 'nft-collectors',
-        name: 'nft-collectors',
-        displayName: 'NFT Collectors',
-        memberCount: 2100,
-        avatar: '🎨',
-        icon: '🎨',
-        unreadCount: 1,
-        lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 6), // 6 hours ago
-        userRole: { type: 'member', permissions: ['read', 'write'] },
-        isJoined: true,
-        activityLevel: 'low'
-      },
-      {
-        id: 'dao-governance',
-        name: 'dao-governance',
-        displayName: 'DAO Governance',
-        memberCount: 567,
-        avatar: '🏛️',
-        icon: '🏛️',
-        unreadCount: 0,
-        lastActivity: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-        userRole: { type: 'member', permissions: ['read', 'write'] },
-        isJoined: false,
-        activityLevel: 'medium'
+    const loadCommunities = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get trending communities for discovery
+        const trendingCommunities = await CommunityService.getTrendingCommunities(10);
+        
+        // Transform to expected format
+        const communitiesWithIcons: CommunityWithIcons[] = trendingCommunities.map(community => ({
+          id: community.id,
+          name: community.name,
+          displayName: community.displayName,
+          memberCount: community.memberCount,
+          avatar: community.avatar || '🏛️', // Default avatar if none provided
+          icon: community.avatar || '🏛️',
+          unreadCount: 0, // Would be calculated from notifications
+          lastActivity: community.updatedAt || new Date(),
+          userRole: { type: 'member', permissions: ['read', 'write'] },
+          isJoined: false, // Would need to check user membership
+          activityLevel: 'medium' as const
+        }));
+        
+        setCommunities(communitiesWithIcons);
+      } catch (error) {
+        console.error('Error loading communities:', error);
+        // Fallback to empty array on error
+        setCommunities([]);
+      } finally {
+        setIsLoading(false);
       }
-    ];
-    
-    setCommunities(mockCommunities);
-    setIsLoading(false);
+    };
+
+    loadCommunities();
   }, []);
 
   // Mock activity indicators - replace with real data

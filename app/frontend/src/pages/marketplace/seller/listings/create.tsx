@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
-import { MarketplaceService, type MarketplaceListing } from '@/services/marketplaceService';
+import { marketplaceService, type MarketplaceListing } from '@/services/marketplaceService';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout';
@@ -126,8 +126,8 @@ const CreateListingPage: React.FC = () => {
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
   
-  // Memoize the marketplace service to prevent recreation on every render
-  const marketplaceService = useMemo(() => new MarketplaceService(), []);
+  // Use the singleton marketplace service
+  const service = useMemo(() => marketplaceService, []);
 
   // Mock ETH price fetching (in real app, use CoinGecko API)
   useEffect(() => {

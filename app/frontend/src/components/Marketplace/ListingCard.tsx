@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
 import { 
-  MarketplaceListing,
-  MarketplaceService
+  MarketplaceListing
 } from '@/services/marketplaceService';
 
 interface ListingCardProps {
@@ -11,9 +10,6 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({ listing, onAction }) => {
-  // Memoize the marketplace service to prevent recreation on every render
-  const marketplaceService = useMemo(() => new MarketplaceService(), []);
-  
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };

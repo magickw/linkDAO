@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { MarketplaceService, MarketplaceListing as ServiceMarketplaceListing } from '@/services/marketplaceService';
+import { marketplaceService, MarketplaceListing as ServiceMarketplaceListing } from '@/services/marketplaceService';
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { 
   Star, 
@@ -217,15 +217,15 @@ interface DisplayMarketplaceListing {
 const transformListing = (serviceListing: ServiceMarketplaceListing): DisplayMarketplaceListing => {
   return {
     id: serviceListing.id,
-    title: serviceListing.enhancedData?.title || serviceListing.metadataURI || 'Untitled Listing',
+    title: serviceListing.metadataURI || 'Untitled Listing',
     price: parseFloat(serviceListing.price) || 0,
     currency: 'ETH', // Default currency
-    image: serviceListing.enhancedData?.images?.[0] || '',
-    category: serviceListing.enhancedData?.category || serviceListing.itemType.toLowerCase(),
+    image: '', // MarketplaceListing doesn't have image info
+    category: serviceListing.itemType.toLowerCase(),
     status: serviceListing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
-    createdAt: new Date(serviceListing.createdAt),
-    views: serviceListing.enhancedData?.views || 0,
-    likes: serviceListing.enhancedData?.favorites || 0,
+    createdAt: new Date(serviceListing.startTime || serviceListing.createdAt),
+    views: 0, // MarketplaceListing doesn't have views
+    likes: 0, // MarketplaceListing doesn't have favorites
     isEscrowProtected: serviceListing.isEscrowed
   };
 };
@@ -264,8 +264,8 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   const [reviewFilter, setReviewFilter] = useState<'recent' | 'highest' | 'verified'>('recent');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Memoize the marketplace service to prevent recreation on every render
-  const marketplaceService = useMemo(() => new MarketplaceService(), []);
+  // Use the singleton marketplace service
+  const service = useMemo(() => marketplaceService, []);
 
   // Function to refresh seller data
   const refreshSellerData = async () => {

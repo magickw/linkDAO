@@ -27,8 +27,8 @@ interface CommunitySidebarProps {
   community: Community;
   stats: CommunityStats | null;
   membershipStatus: MembershipStatus;
-  activeTab: 'posts' | 'rules' | 'members';
-  onTabChange: (tab: 'posts' | 'rules' | 'members') => void;
+  activeTab: 'posts' | 'rules' | 'members' | 'moderation';
+  onTabChange: (tab: 'posts' | 'rules' | 'members' | 'moderation') => void;
 }
 
 export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
@@ -117,6 +117,18 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
             <span className="tab-count">{formatNumber(stats.memberCount)}</span>
           )}
         </button>
+        
+        {membershipStatus.canModerate && (
+          <button
+            onClick={() => onTabChange('moderation')}
+            className={`nav-tab ${activeTab === 'moderation' ? 'active' : ''}`}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+            </svg>
+            <span>Moderation</span>
+          </button>
+        )}
       </nav>
 
       {/* Community Info Card */}
