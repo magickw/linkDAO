@@ -99,7 +99,7 @@ export default function Home() {
     return (
       <Layout title="LinkDAO - The Web3 Social Network">
         {/* Hero Section */}
-        <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
           {/* Background with glassmorphism shapes */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600">
             <div className="absolute inset-0 bg-black/20"></div>
@@ -144,7 +144,7 @@ export default function Home() {
         </div>
 
         {/* Key Features Grid */}
-        <div id="features" className="py-24 bg-white dark:bg-gray-900">
+        <div id="features" className="py-16 md:py-24 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -431,7 +431,7 @@ export default function Home() {
   // Connected user experience - Main Social Dashboard/Feed
   return (
     <Layout title="LinkDAO - Home">
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar - Navigation */}
         <div className="hidden lg:flex lg:flex-shrink-0">
           <div className="flex flex-col w-64">
@@ -440,11 +440,11 @@ export default function Home() {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-screen">
           {/* Main Feed Content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex">
             {/* Center Feed */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-20">
               <div className="max-w-2xl mx-auto py-6 px-4">
                 {/* Facebook-style Post Composer */}
                 <FacebookStylePostComposer

@@ -6,6 +6,7 @@ import ProductDetailPage from '@/components/Marketplace/ProductDisplay/ProductDe
 import { designTokens } from '@/design-system/tokens';
 import { useToast } from '@/context/ToastContext';
 import { Button, GlassPanel } from '@/design-system';
+import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 interface ProductDetail {
   id: string;
@@ -62,6 +63,7 @@ const ProductPage: React.FC = () => {
   const { id } = router.query;
   const { address, isConnected } = useAccount();
   const { addToast } = useToast();
+  const cart = useEnhancedCart();
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,18 +145,84 @@ const ProductPage: React.FC = () => {
     }
   };
 
+  const buildCartProduct = () => {
+    if (!product) return null;
+
+    return {
+      id: product.id,
+      title: product.title,
+      description: product.longDescription || product.description,
+      image: product.media[0]?.url || '/api/placeholder/400/400',
+      price: {
+        crypto: product.price.crypto,
+        cryptoSymbol: product.price.cryptoSymbol,
+        fiat: product.price.fiat,
+        fiatSymbol: product.price.fiatSymbol,
+      },
+      seller: {
+        id: product.seller.id,
+        name: product.seller.name,
+        avatar: product.seller.avatar,
+        verified: product.seller.verified,
+        daoApproved: product.seller.daoApproved,
+        escrowSupported: product.trust.escrowProtected,
+      },
+      category: product.category,
+      isDigital: product.isNFT ?? false,
+      isNFT: product.isNFT ?? false,
+      inventory: product.inventory,
+      shipping: {
+        cost: product.shipping.cost ?? '0',
+        freeShipping: product.shipping.freeShipping,
+        estimatedDays: product.shipping.estimatedDays,
+        regions: ['Global'],
+      },
+      trust: {
+        escrowProtected: product.trust.escrowProtected,
+        onChainCertified: product.trust.onChainCertified,
+        safetyScore: 95,
+      },
+    };
+  };
+
   const handleAddToCart = (productId: string, quantity: number) => {
-    addToast(`Added ${quantity} item(s) to cart`, 'success');
-    console.log('Added to cart:', { productId, quantity });
+    const cartProduct = buildCartProduct();
+    if (!cartProduct) {
+      addToast('Unable to add this item to the cart right now.', 'error');
+      return;
+    }
+
+    const currentQuantity = cart.getItemQuantity(productId);
+    if (cart.isInCart(productId)) {
+      cart.updateQuantity(productId, currentQuantity + quantity);
+    } else {
+      cart.addItem(cartProduct, quantity);
+    }
+
+    addToast('Added to cart. Review in your cart.', 'success');
+    router.push('/cart');
   };
 
   const handleBuyNow = (productId: string, quantity: number) => {
-    console.log('Buy now:', { productId, quantity });
+    const cartProduct = buildCartProduct();
+    if (!cartProduct) {
+      addToast('Unable to start checkout for this item right now.', 'error');
+      return;
+    }
+
+    if (!cart.isInCart(productId)) {
+      cart.addItem(cartProduct, quantity);
+    } else {
+      cart.updateQuantity(productId, quantity);
+    }
+
+    addToast('Redirecting to secure checkout…', 'info');
+    router.push('/checkout');
   };
 
   const handleAddToWishlist = (productId: string) => {
-    addToast('Added to wishlist', 'success');
-    console.log('Added to wishlist:', productId);
+    cart.addToWishlist(productId);
+    addToast('Saved to wishlist.', 'success');
   };
 
   const handleContactSeller = (sellerId: string) => {

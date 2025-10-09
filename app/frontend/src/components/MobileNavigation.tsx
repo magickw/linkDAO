@@ -85,28 +85,6 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       path: '/marketplace'
     },
     {
-      id: 'cart',
-      label: 'Cart',
-      icon: ShoppingCartIcon,
-      iconSolid: ShoppingCartIconSolid,
-      path: '/cart',
-      badge: cartBadge
-    },
-    {
-      id: 'orders',
-      label: 'Orders',
-      icon: TruckIcon,
-      iconSolid: TruckIconSolid,
-      path: '/orders'
-    },
-    {
-      id: 'support',
-      label: 'Support',
-      icon: ShieldCheckIcon,
-      iconSolid: ShieldCheckIconSolid,
-      path: '/support/disputes'
-    },
-    {
       id: 'governance',
       label: 'Governance',
       icon: ClipboardDocumentListIcon,

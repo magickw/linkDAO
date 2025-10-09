@@ -214,32 +214,70 @@ class AnalyticsService {
    * Get market trends and seasonal patterns
    */
   async getMarketTrends(): Promise<MarketTrends> {
-    const response = await requestManager.request<{data: MarketTrends}>(`${this.baseUrl}/market-trends`);
-    return response.data;
+    try {
+      const response = await requestManager.request<{data: MarketTrends}>(`${this.baseUrl}/market-trends`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching market trends:', error);
+      return {
+        trending: [],
+        seasonal: [],
+        priceAnalysis: [],
+        demandForecast: []
+      };
+    }
   }
 
   /**
    * Get anomaly detection alerts
    */
   async getAnomalies(): Promise<AnomalyAlert[]> {
-    const response = await requestManager.request<{data: AnomalyAlert[]}>(`${this.baseUrl}/anomalies`);
-    return response.data;
+    try {
+      const response = await requestManager.request<{data: AnomalyAlert[]}>(`${this.baseUrl}/anomalies`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching anomaly alerts:', error);
+      return [];
+    }
   }
 
   /**
    * Get real-time dashboard metrics
    */
   async getRealTimeStats(): Promise<RealTimeStats> {
-    const response = await requestManager.request<{data: RealTimeStats}>(`${this.baseUrl}/dashboard`);
-    return response.data;
+    try {
+      const response = await requestManager.request<{data: RealTimeStats}>(`${this.baseUrl}/dashboard`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching real-time stats:', error);
+      const fallbackTimestamp = new Date().toISOString();
+      return {
+        activeUsers: 0,
+        currentTransactions: 0,
+        systemLoad: 0,
+        responseTime: 0,
+        errorRate: 0,
+        throughput: 0,
+        lastUpdated: fallbackTimestamp
+      };
+    }
   }
 
   /**
    * Get platform health metrics
    */
   async getPlatformHealth(): Promise<any> {
-    const response = await requestManager.request<{data: any}>(`${this.baseUrl}/health`);
-    return response.data;
+    try {
+      const response = await requestManager.request<{data: any}>(`${this.baseUrl}/health`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching platform health:', error);
+      return {
+        status: 'unavailable',
+        message: 'Platform health metrics are currently unavailable.',
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 
   /**
@@ -330,17 +368,27 @@ class AnalyticsService {
    * Generate custom analytics reports
    */
   async generateReport(reportType: string, parameters: any = {}): Promise<any> {
-    const response = await requestManager.request<{data: any}>(`${this.baseUrl}/report`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    try {
+      const response = await requestManager.request<{data: any}>(`${this.baseUrl}/report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reportType,
+          parameters
+        })
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error generating analytics report:', error);
+      return {
+        status: 'unavailable',
+        message: 'Unable to generate report at this time.',
         reportType,
         parameters
-      })
-    });
-    return response.data;
+      };
+    }
   }
 
   /**
@@ -356,8 +404,19 @@ class AnalyticsService {
     if (endDate) params.append('endDate', endDate.toISOString());
     params.append('format', format);
 
-    const response = await requestManager.request<any>(`${this.baseUrl}/export?${params}`);
-    return response;
+    try {
+      const response = await requestManager.request<any>(`${this.baseUrl}/export?${params}`);
+      return response;
+    } catch (error) {
+      console.error('Error exporting analytics data:', error);
+      return {
+        status: 'unavailable',
+        message: 'Analytics export is currently unavailable.',
+        format,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString()
+      };
+    }
   }
 
   // Utility methods for tracking

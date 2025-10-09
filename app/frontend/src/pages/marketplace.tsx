@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
 import { useSeller } from '@/hooks/useSeller';
 import { getFallbackImage } from '@/utils/imageUtils';
 import { marketplaceService } from '@/services/marketplaceService';
 import type { MarketplaceListing } from '@/services/marketplaceService';
-import {
-  HeroSection,
-  CategoryGrid
-} from '@/components/Marketplace/Homepage';
 import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
@@ -18,56 +14,98 @@ import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
 // New redesigned components
-import { EnhancedProductCard } from '@/components/Marketplace/ProductDisplay/EnhancedProductCard';
+import { SimpleProductCard } from '@/components/Marketplace/ProductDisplay/SimpleProductCard';
 import { FilterBar, type FilterOptions } from '@/components/Marketplace/ProductDisplay/FilterBar';
 import { ViewDensityToggle, useDensityPreference } from '@/components/Marketplace/ProductDisplay/ViewDensityToggle';
 import { SortingControls, type SortField, type SortDirection } from '@/components/Marketplace/ProductDisplay/SortingControls';
 import { SearchBar } from '@/components/Marketplace/ProductDisplay/SearchBar';
+import { ActiveFilterChips } from '@/components/Marketplace/ProductDisplay/ActiveFilterChips';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 
-import { ShoppingCart } from 'lucide-react';
-import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout'; // Import the standard Layout component
 
+// Define design tokens for fallback
+const designTokens = {
+  glassmorphism: {
+    secondary: {
+      background: 'rgba(255, 255, 255, 0.05)'
+    }
+  }
+};
+
 const MarketplaceContent: React.FC = () => {
   const { address, isConnected } = useAccount();
-  const { data: balance } = useBalance({ address });
   const { addToast } = useToast();
   const router = useRouter();
   const { profile } = useSeller();
   const { density, setDensity } = useDensityPreference();
 
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings'>('browse');
   const [loading, setLoading] = useState(true);
-  const [reputation, setReputation] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [filters, setFilters] = useState<FilterOptions>({});
   const [sortField, setSortField] = useState<SortField>('relevance');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const ITEMS_PER_PAGE = 24;
   const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [showBidModal, setShowBidModal] = useState(false);
-  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
 
   const cart = useEnhancedCart();
+  const browseSectionRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   
-  // Memoize the marketplace service to prevent recreation on every render
-  const service = useMemo(() => marketplaceService, []);
+  const marketplaceActions = useMemo(() => {
+    const cartCount = cart.state.totals.itemCount;
+    return [
+      {
+        label: cartCount > 0 ? `View cart (${cartCount})` : 'View cart',
+        description: 'Review items before checkout',
+        href: '/marketplace/cart',
+      },
+      {
+        label: 'Secure checkout',
+        description: 'Complete escrow-backed purchases',
+        href: '/marketplace/checkout',
+      },
+      {
+        label: 'Orders & tracking',
+        description: 'View your purchase history',
+        href: '/orders',
+      },
+      {
+        label: 'Support & disputes',
+        description: 'Escalate issues with sellers',
+        href: '/marketplace/disputes',
+      },
+    ];
+  }, [cart.state.totals.itemCount]);
 
-  const fetchListings = useCallback(async () => {
+  const fetchListings = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     try {
-      setLoading(true);
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
       
       // Use the marketplace service
-      console.log('Fetching listings using marketplace service...');
+      console.log('Fetching listings using marketplace service...', { page: pageNum });
       
       const data = await marketplaceService.getMarketplaceListings({
-        limit: 20, // Reduced limit for faster initial load
+        limit: ITEMS_PER_PAGE,
+        offset: (pageNum - 1) * ITEMS_PER_PAGE,
         sortBy: 'createdAt',
         sortOrder: 'desc'
       });
@@ -169,9 +207,18 @@ const MarketplaceContent: React.FC = () => {
         });
         
         console.log('Transformed listings:', transformedListings);
-        setListings(transformedListings);
         
-        addToast(`Loaded ${transformedListings.length} listings from marketplace`, 'success');
+        if (append) {
+          setListings(prev => [...prev, ...transformedListings]);
+        } else {
+          setListings(transformedListings);
+        }
+        
+        setHasMore(transformedListings.length === ITEMS_PER_PAGE);
+        
+        if (!append) {
+          addToast(`Loaded ${transformedListings.length} listings from marketplace`, 'success');
+        }
       } else {
         console.log('No listings returned from enhanced service, using fallback data');
         // Enhanced fallback data that matches our backend structure
@@ -254,51 +301,74 @@ const MarketplaceContent: React.FC = () => {
         }
       ]);
     } finally {
-      setLoading(false);
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
-  }, [addToast]);
-
-  const fetchReputation = useCallback(async (userAddress: string) => {
-    // Skip if already loading or if we already have reputation data
-    if (reputation?.walletAddress === userAddress) return;
-    
-    try {
-      console.log('Making request to:', `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/marketplace/reputation/${userAddress}`);
-      // TODO: Implement getUserReputation in marketplaceService
-      const userReputation = {
-        walletAddress: userAddress,
-        score: 750,
-        daoApproved: true
-      };
-      setReputation(userReputation);
-    } catch (error) {
-      console.error('Error fetching reputation:', error);
-      // Use mock data as fallback
-      setReputation({
-        walletAddress: userAddress,
-        score: 750,
-        daoApproved: true
-      });
-    }
-  }, [reputation?.walletAddress]);
+  }, [addToast, ITEMS_PER_PAGE]);
 
   useEffect(() => {
     let mounted = true;
     
     const timer = setTimeout(async () => {
       if (mounted) {
-        await fetchListings();
-        if (address && mounted) {
-          await fetchReputation(address);
-        }
+        setPage(1);
+        await fetchListings(1, false);
       }
-    }, 1500); // Increase debounce to 1.5 seconds to prevent rapid calls
+    }, 1000);
     
     return () => {
       clearTimeout(timer);
       mounted = false;
     };
-  }, [address, debouncedSearchTerm, fetchListings, fetchReputation]); // Include fetchListings and fetchReputation in dependencies
+  }, [debouncedSearchTerm, filters, sortField, sortDirection]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      await fetchListings(nextPage, true);
+    }
+  }, [page, loadingMore, hasMore, fetchListings]);
+
+  const { sentinelRef } = useInfiniteScroll({
+    onLoadMore: handleLoadMore,
+    hasMore,
+    isLoading: loadingMore,
+    threshold: 0.8,
+  });
+
+  const handleRemoveFilter = useCallback((filterKey: keyof FilterOptions) => {
+    setFilters(prev => {
+      const newFilters = { ...prev };
+      delete newFilters[filterKey];
+      return newFilters;
+    });
+  }, []);
+
+  const handleClearAllFilters = useCallback(() => {
+    setFilters({});
+  }, []);
+
+  const handleStartSelling = useCallback(() => {
+    if (!isConnected) {
+      addToast('Please connect your wallet first', 'warning');
+      return;
+    }
+    if (!profile) {
+      router.push('/marketplace/seller/onboarding');
+    } else {
+      router.push('/marketplace/seller/dashboard');
+    }
+  }, [addToast, isConnected, profile, router]);
+
+  const handleBrowseMarketplace = useCallback(() => {
+    if (browseSectionRef.current) {
+      browseSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -398,183 +468,172 @@ const MarketplaceContent: React.FC = () => {
     return result;
   }, [listings, debouncedSearchTerm, filters, sortField, sortDirection]);
 
-  // Grid columns based on density
+  // Grid columns based on density - optimized for product browsing
   const gridColumns =
     density === 'comfortable'
       ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6';
+      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   return (
     <Layout title="Marketplace - LinkDAO">
-      {/* Background */}
-      <div 
-        className="fixed inset-0 z-0"
-        style={{
-          background: designTokens.gradients.heroMain,
-        }}
-      />
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+        <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-      {/* Content */}
-      <div className="relative z-10">
-        {/* Hero Section */}
-        <HeroSection
-          onStartSelling={() => {
-            if (!isConnected) {
-              addToast('Please connect your wallet first', 'warning');
-              return;
-            }
-            if (!profile) {
-              // Redirect to seller onboarding API endpoint
-              router.push('/marketplace/seller/onboarding');
-            } else {
-              router.push('/marketplace/seller/dashboard');
-            }
-          }}
-          onBrowseMarketplace={() => setActiveTab('browse')}
-        />
-
-        {/* Category Grid */}
-        <CategoryGrid />
-
-        {/* Main Marketplace Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-
-          {/* Tab Navigation */}
-          <div className="flex justify-center mb-8">
-            <div className="flex space-x-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
-              <button
-                onClick={() => setActiveTab('browse')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'browse'
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Browse
-              </button>
-              <button
-                onClick={() => setActiveTab('my-listings')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'my-listings'
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-                disabled={!isConnected}
-              >
-                My Listings
-              </button>
-              <button
-                onClick={() => router.push('/cart')}
-                className="px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 text-white/80 hover:text-white hover:bg-white/10"
-              >
-                <ShoppingCart size={16} />
-                Cart ({cart.state.totals.itemCount})
-              </button>
-              <button
-                onClick={() => router.push('/orders')}
-                className="px-6 py-2 rounded-md text-sm font-medium transition-all text-white/80 hover:text-white hover:bg-white/10"
-              >
-                Orders
-              </button>
-              <button
-                onClick={() => router.push('/support/disputes')}
-                className="px-6 py-2 rounded-md text-sm font-medium transition-all text-white/80 hover:text-white hover:bg-white/10"
-              >
-                Disputes
-              </button>
-            </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Web3 Marketplace</h1>
+            <p className="text-gray-600 dark:text-gray-300 text-base">
+              Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
+            </p>
           </div>
 
-          {activeTab === 'browse' && (
-            <>
-              {/* New Filter Bar with Chips */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative" ref={actionsMenuRef}>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                onClick={() => setActionsMenuOpen((prev) => !prev)}
+                aria-haspopup="true"
+                aria-expanded={actionsMenuOpen}
+              >
+                Marketplace actions
+                <ChevronDown size={16} />
+              </Button>
+              {actionsMenuOpen && (
+                <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
+                  <ul className="py-2">
+                    {marketplaceActions.map((action) => (
+                      <li key={action.href}>
+                        <button
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          onClick={() => {
+                            setActionsMenuOpen(false);
+                            router.push(action.href);
+                          }}
+                        >
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <Button variant="primary" onClick={handleStartSelling}>
+              {profile ? 'Seller dashboard' : 'Become a seller'}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          <aside className="space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm space-y-4 sticky top-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Search</h2>
+              <SearchBar
+                value={searchTerm}
+                onChange={setSearchTerm}
+                resultCount={filteredAndSortedListings.length}
+                placeholder="Search collections, sellers, tokens..."
+              />
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
               <FilterBar
                 filters={filters}
                 onFiltersChange={setFilters}
-                className="mb-6"
+                className="space-y-3"
               />
+            </div>
+          </aside>
 
-              {/* Search, Sort, and Density Controls */}
-              <div className="mb-6 space-y-4">
-                <SearchBar
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  resultCount={filteredAndSortedListings.length}
-                  placeholder="Search products, categories..."
-                />
+          <section className="space-y-6">
+            {/* Active Filter Chips */}
+            <ActiveFilterChips
+              filters={filters}
+              onRemoveFilter={handleRemoveFilter}
+              onClearAll={handleClearAllFilters}
+            />
 
-                <div className="flex items-center justify-between">
-                  <SortingControls
-                    currentSort={{ field: sortField, direction: sortDirection }}
-                    onSortChange={(field, direction) => {
-                      setSortField(field);
-                      setSortDirection(direction);
-                    }}
-                  />
-                  <ViewDensityToggle density={density} onDensityChange={setDensity} />
-                </div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center gap-3 text-sm">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Escrow-backed
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 text-cyan-700 dark:text-cyan-300 font-medium">
+                  <span className="h-2 w-2 rounded-full bg-cyan-500" />
+                  DAO reviewed sellers
+                </span>
               </div>
-            </>
-          )}
+              <div className="flex flex-wrap items-center gap-3">
+                <SortingControls
+                  currentSort={{ field: sortField, direction: sortDirection }}
+                  onSortChange={(field, direction) => {
+                    setSortField(field);
+                    setSortDirection(direction);
+                  }}
+                />
+                <ViewDensityToggle density={density} onDensityChange={setDensity} />
+              </div>
+            </div>
 
-          {loading ? (
+            {loading ? (
             <div className={`grid ${gridColumns} gap-4`}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-96 rounded-lg animate-pulse"
-                  style={{ background: designTokens.glassmorphism.secondary.background }}
+                  className="h-96 rounded-lg animate-pulse bg-gray-200 dark:bg-gray-700"
                 />
               ))}
             </div>
           ) : (
-          <>
-            {activeTab === 'browse' && (
-              <div>
-                {filteredAndSortedListings.length === 0 ? (
-                  <GlassPanel variant="primary" className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                    <h3 className="mt-2 text-lg font-medium text-white">No items found</h3>
-                    <p className="mt-1 text-white/70">
-                      {searchTerm || Object.keys(filters).length > 0
-                        ? 'No items match your search criteria.'
-                        : 'No listings available at the moment.'}
-                    </p>
-                    {isConnected && (
-                      <div className="mt-6">
-                        <Button
-                          variant="primary"
-                          onClick={() => {
-                            if (!profile) {
-                              router.push('/marketplace/seller/onboarding');
-                            } else {
-                              router.push('/marketplace/seller/listings/create');
-                            }
-                          }}
-                        >
-                          {!profile ? 'Become a Seller' : 'Create First Listing'}
-                        </Button>
-                      </div>
-                    )}
-                  </GlassPanel>
-                ) : (
-                  <motion.div
-                    className={`grid ${gridColumns} gap-4`}
-                    initial="hidden"
-                    animate="visible"
-                    variants={{
-                      visible: {
-                        transition: {
-                          staggerChildren: 0.05,
-                        },
+            <div>
+              {filteredAndSortedListings.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center py-12 px-6">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No items found</h3>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">
+                    {searchTerm || Object.keys(filters).length > 0
+                      ? 'No items match your search criteria. Try adjusting your filters.'
+                      : 'No listings available at the moment. Check back soon!'}
+                  </p>
+                  {isConnected && (
+                    <div className="mt-6">
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          if (!profile) {
+                            router.push('/marketplace/seller/onboarding');
+                          } else {
+                            router.push('/marketplace/seller/listings/create');
+                          }
+                        }}
+                      >
+                        {!profile ? 'Become a Seller' : 'Create First Listing'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <motion.div
+                  className={`grid ${gridColumns} gap-4`}
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    visible: {
+                      transition: {
+                        staggerChildren: 0.05,
                       },
-                    }}
-                  >
-                    <AnimatePresence mode="popLayout">
-                      {filteredAndSortedListings.map((listing) => {
-                        // Transform listing to product format for EnhancedProductCard
+                    },
+                  }}
+                >
+                  <AnimatePresence mode="popLayout">
+                    {filteredAndSortedListings.map((listing) => {
+                        // Transform listing to product format for SimpleProductCard
                         const product = {
                           id: listing.id,
                           title: listing.metadataURI || 'Unnamed Item',
@@ -620,11 +679,10 @@ const MarketplaceContent: React.FC = () => {
                             exit={{ opacity: 0, scale: 0.9 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <EnhancedProductCard
+                            <SimpleProductCard
                               product={product}
                               density={density}
                               onProductClick={(id) => router.push(`/marketplace/listing/${id}`)}
-                              onSellerClick={(id) => router.push(`/seller/${id}`)}
                               onAddToCart={(id) => {
                                 // Add to cart logic
                                 const cartProduct = {
@@ -677,46 +735,38 @@ const MarketplaceContent: React.FC = () => {
                           </motion.div>
                         );
                       })}
-                    </AnimatePresence>
-                  </motion.div>
+                  </AnimatePresence>
+                </motion.div>
                 )}
-              </div>
-            )}
-            
 
-            
-            {activeTab === 'my-listings' && (
-              <div>
-                {isConnected ? (
-                  <MyListingsTab address={address} onCreateClick={() => router.push('/marketplace/seller/listings/create')} />
-                ) : (
-                  <GlassPanel variant="primary" className="text-center py-12">
-                    <p className="text-white/70">Please connect your wallet to view your listings.</p>
-                  </GlassPanel>
-                )}
-              </div>
-            )}
-          </>
-          )}
+              {/* Infinite Scroll Sentinel */}
+              {hasMore && (
+                <div ref={sentinelRef} className="col-span-full py-8 flex justify-center">
+                  {loadingMore && (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Loading more products...</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        </div>
-
-        {/* Footer */}
-        <footer className="py-12 border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <p className="text-white/60 mb-4">
-                © 2025 LinkDAO. Powered by blockchain technology.
-              </p>
-              <div className="flex justify-center space-x-6 text-sm text-white/40">
-                <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
-                <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
-                <a href="/docs" className="hover:text-white/60 transition-colors">Docs</a>
-                <a href="/support" className="hover:text-white/60 transition-colors">Support</a>
-              </div>
+              {/* Load More Button (fallback) */}
+              {hasMore && !loadingMore && filteredAndSortedListings.length >= ITEMS_PER_PAGE && (
+                <div className="col-span-full py-8 flex justify-center">
+                  <button
+                    onClick={handleLoadMore}
+                    className="px-6 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                  >
+                    Load more products
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
-        </footer>
+            )}
+          </section>
+        </div>
+        </div>
 
         {/* Modals */}
         {selectedListing && (
@@ -862,25 +912,32 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
       ) : (
         <>
           {listings.length === 0 ? (
-            <GlassPanel variant="primary" className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <h3 className="mt-2 text-lg font-medium text-white">No listings yet</h3>
-              <p className="mt-1 text-white/70">Get started by creating a new listing.</p>
-              <div className="mt-6">
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    if (!profile) {
-                      router.push('/marketplace/seller/onboarding');
-                    } else {
-                      onCreateClick();
-                    }
-                  }}
-                >
-                  Create Your First Listing
-                </Button>
+            <GlassPanel variant="secondary" className="p-6">
+              <div className="flex flex-col gap-6">
+                <h3 className="text-2xl font-semibold text-white">No active listings yet</h3>
+                <p className="text-white/70 max-w-2xl">
+                  Use the marketplace actions below to manage your buying journey or create your first seller listing.
+                </p>
+
+                <div className="space-y-4 text-center">
+                  <p className="text-white/70">
+                    Use the <span className="font-semibold text-white">Marketplace actions</span> menu above to access your cart, checkout, order history, or disputes without leaving the listings view.
+                  </p>
+                  <div>
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        if (!profile) {
+                          router.push('/marketplace/seller/onboarding');
+                        } else {
+                          onCreateClick();
+                        }
+                      }}
+                    >
+                      Create Your First Listing
+                    </Button>
+                  </div>
+                </div>
               </div>
             </GlassPanel>
           ) : (

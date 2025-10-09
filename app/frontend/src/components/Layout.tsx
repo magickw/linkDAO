@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import dynamic from 'next/dynamic';
-import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -31,7 +30,6 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const cart = useEnhancedCart();
 
   // For demo purposes, we'll consider a specific address as admin
   // In a real implementation, this would be checked against a backend service
@@ -71,8 +69,6 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const cartItemCount = cart.state.totals.itemCount;
-
   // Navigation items with icons - Home now serves as the main Feed/Dashboard
   const navItems: NavItem[] = useMemo(() => ([
     { name: 'Home', href: '/', icon: '🏠' },
@@ -80,10 +76,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
-    { name: 'Cart', href: '/cart', icon: '🛍️', badge: cartItemCount },
-    { name: 'Orders', href: '/orders', icon: '📦' },
-    { name: 'Support', href: '/support/disputes', icon: '🛡️' },
-  ]), [cartItemCount]);
+  ]), []);
 
   // User-specific navigation items (only for authenticated users)
   const userNavItems: NavItem[] = isConnected ? [

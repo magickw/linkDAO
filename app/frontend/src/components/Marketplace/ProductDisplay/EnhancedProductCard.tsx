@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, ShoppingCart, Eye, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, Shield, CheckCircle, Clock } from 'lucide-react';
 import { designTokens } from '@/design-system/tokens';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
@@ -72,6 +72,7 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
   const [isFavorited, setIsFavorited] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+  const [imageError, setImageError] = useState(false);
 
   // Countdown timer for auctions
   React.useEffect(() => {
@@ -106,10 +107,14 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
     }
   }, [product.listingType, product.endTime]);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsFavorited(!isFavorited);
-    onToggleFavorite?.(product.id);
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't trigger if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    onProductClick?.(product.id);
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -117,7 +122,14 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
     onAddToCart?.(product.id);
   };
 
-  const handleCardClick = () => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFavorited(!isFavorited);
+    onToggleFavorite?.(product.id);
+  };
+
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onProductClick?.(product.id);
   };
 
@@ -126,7 +138,12 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
     onSellerClick?.(product.seller.id);
   };
 
-  // Comfortable mode (default)
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFavorited(!isFavorited);
+    onToggleFavorite?.(product.id);
+  };
+
   if (density === 'comfortable') {
     return (
       <motion.div
@@ -353,26 +370,48 @@ export const EnhancedProductCard: React.FC<ProductCardProps> = ({
         onClick={handleCardClick}
       >
         <div className="flex gap-2 p-2">
-          {/* Compact Image - 1:1 aspect ratio */}
-          <div className="relative w-16 h-16 flex-shrink-0 bg-gray-800/50 rounded overflow-hidden">
-            {!isImageLoaded && (
-              <div className="absolute inset-0 animate-pulse bg-gray-700/50" />
-            )}
+        {/* Compact Image - 1:1 aspect ratio */}
+        <div className="relative w-full aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
+          {!isImageLoaded && !imageError && (
+            <div className="absolute inset-0 animate-pulse bg-gray-200 dark:bg-gray-600" />
+          )}
+          {imageError ? (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500">
+              <ShoppingCart size={32} />
+            </div>
+          ) : (
             <img
               src={product.images[0]}
               alt={product.title}
-              className={`w-full h-full object-cover transition-opacity ${
+              className={`w-full h-full object-cover transition-all ${
+                isHovered ? 'scale-105' : 'scale-100'
+              } ${
                 isImageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               loading="lazy"
               onLoad={() => setIsImageLoaded(true)}
+              onError={handleImageError}
             />
-            {product.discount && (
-              <div className="absolute top-0 left-0 bg-red-500 text-white text-[8px] font-bold px-1 rounded-br">
-                -{product.discount}%
-              </div>
-            )}
-          </div>
+          )}
+          
+          {/* Badges */}
+          {product.discount && (
+            <div className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+              -{product.discount}%
+            </div>
+          )}
+          
+          {/* Favorite */}
+          <button
+            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-colors shadow-sm"
+            onClick={handleToggleFavorite}
+          >
+            <Heart
+              size={12}
+              className={isFavorited ? 'text-red-500 fill-red-500' : 'text-gray-700'}
+            />
+          </button>
+        </div>
 
           {/* Compact Content */}
           <div className="flex-1 min-w-0 flex flex-col justify-between">

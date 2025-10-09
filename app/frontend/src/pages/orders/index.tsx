@@ -4,13 +4,14 @@ import { orderService } from '@/services/orderService';
 import type { OrderStatus, OrderStatistics } from '@/types/order';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/router';
-import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
-import { BadgeCheck, Clock, Package, ShieldAlert, ShoppingBag, Truck } from 'lucide-react';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { BadgeCheck, Clock, Package, ShieldAlert, ShoppingBag, Truck, Search, Filter } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 
 const RECENT_ORDERS_KEY = 'linkdao_recent_orders';
 
+type TabKey = 'all' | 'processing' | 'shipped' | 'delivered' | 'disputed';
 type FilterKey = 'all' | 'active' | 'completed' | 'disputed';
 
 type OrderSummary = {
@@ -35,15 +36,13 @@ type OrderSummary = {
   sellerName?: string;
 };
 
-const filterConfig: Array<{ key: FilterKey; label: string }> = [
-  { key: 'all', label: 'All Orders' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'disputed', label: 'Disputed' },
+const tabConfig: Array<{ key: TabKey; label: string; statuses: OrderStatus[] }> = [
+  { key: 'all', label: 'All', statuses: [] },
+  { key: 'processing', label: 'Processing', statuses: ['PROCESSING', 'PAYMENT_PENDING', 'PAID'] },
+  { key: 'shipped', label: 'Shipped', statuses: ['SHIPPED'] },
+  { key: 'delivered', label: 'Delivered', statuses: ['DELIVERED', 'COMPLETED'] },
+  { key: 'disputed', label: 'Disputed', statuses: ['DISPUTED'] },
 ];
-
-const activeStatuses: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'PAYMENT_PENDING', 'PAID'];
-const completedStatuses: OrderStatus[] = ['COMPLETED', 'REFUNDED'];
 
 const FALLBACK_ORDERS: OrderSummary[] = [
   {
@@ -102,6 +101,16 @@ const statusColors: Record<OrderStatus, string> = {
   CANCELLED: 'bg-gray-600/30 text-gray-200 border border-gray-400/30',
   REFUNDED: 'bg-purple-500/20 text-purple-200 border border-purple-400/30',
 };
+
+const activeStatuses: OrderStatus[] = ['CREATED', 'PAYMENT_PENDING', 'PAID', 'PROCESSING', 'SHIPPED'];
+const completedStatuses: OrderStatus[] = ['DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED'];
+
+const filterConfig: Array<{ key: FilterKey; label: string }> = [
+  { key: 'all', label: 'All Orders' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'disputed', label: 'Disputed' },
+];
 
 const OrdersPage: React.FC = () => {
   const { address } = useAccount();

@@ -147,6 +147,9 @@ describe('Marketplace flow integration', () => {
     );
 
     expect(screen.getByText(/Your cart is empty/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Marketplace/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Cart/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Support & Disputes/i })[0]).toBeInTheDocument();
 
     sessionStorage.setItem(
       'linkdao_recent_orders',

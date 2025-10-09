@@ -174,23 +174,30 @@ const DashboardRightSidebar = memo(() => {
 
   // Helper function to sort proposals based on context
   const sortProposalsByContext = (proposals: Proposal[], type: string): Proposal[] => {
+    const list = [...proposals];
     switch (type) {
       case 'community-based':
         // Sort by community relevance and participation
-        return proposals.sort((a, b) => (b.participationRate || 0) - (a.participationRate || 0));
+        return list.sort((a, b) => (b.participationRate || 0) - (a.participationRate || 0));
       case 'governance-based':
         // Sort by voting activity and importance
-        return proposals.sort((a, b) => {
-          const aVotes = parseInt(a.forVotes) + parseInt(a.againstVotes);
-          const bVotes = parseInt(b.forVotes) + parseInt(b.againstVotes);
+        return list.sort((a, b) => {
+          const aVotes = (parseInt(a.forVotes, 10) || 0) + (parseInt(a.againstVotes, 10) || 0);
+          const bVotes = (parseInt(b.forVotes, 10) || 0) + (parseInt(b.againstVotes, 10) || 0);
           return bVotes - aVotes;
         });
       default:
         // Sort by recency and participation
-        return proposals.sort((a, b) => {
-          const aScore = (b.participationRate || 0) * 0.7 + (new Date(b.startTime).getTime() * 0.3);
-          const bScore = (a.participationRate || 0) * 0.7 + (new Date(a.startTime).getTime() * 0.3);
-          return aScore - bScore;
+        return list.sort((a, b) => {
+          const aParticipation = a.participationRate || 0;
+          const bParticipation = b.participationRate || 0;
+          const aStart = new Date(a.startTime).getTime();
+          const bStart = new Date(b.startTime).getTime();
+
+          const aScore = aParticipation * 0.7 + aStart * 0.3;
+          const bScore = bParticipation * 0.7 + bStart * 0.3;
+
+          return bScore - aScore;
         });
     }
   };

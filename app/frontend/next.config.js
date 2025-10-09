@@ -3,10 +3,9 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   trailingSlash: false,
   // output: 'standalone', // Temporarily disable standalone output to fix build issue
-  
+
   // Performance optimizations
   experimental: {
     optimizeCss: true,
@@ -79,14 +78,28 @@ const nextConfig = {
   },
   
   webpack: (config, { dev, isServer }) => {
-    config.resolve.fallback = { 
-      fs: false, 
-      net: false, 
+    // Fix for Watchpack ERR_INVALID_ARG_TYPE error
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        '**/node_modules/**',
+        '**/.git/**',
+        '**/.next/**',
+        '**/coverage/**',
+        // Ignore deleted files that may be cached
+        '**/marketplace-demo.tsx',
+        '**/marketplace-redesigned.tsx',
+      ],
+    };
+
+    config.resolve.fallback = {
+      fs: false,
+      net: false,
       tls: false,
       '@react-native-async-storage/async-storage': false,
       'react-native': false,
     };
-    
+
     // Add path aliases
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -128,16 +141,17 @@ const nextConfig = {
     });
 
     // Bundle analyzer in development
-    if (dev && !isServer) {
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-      config.plugins.push(
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'disabled',
-          generateStatsFile: true,
-          statsOptions: { source: false },
-        })
-      );
-    }
+    // Temporarily disabled due to Watchpack error
+    // if (dev && !isServer) {
+    //   const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+    //   config.plugins.push(
+    //     new BundleAnalyzerPlugin({
+    //       analyzerMode: 'disabled',
+    //       generateStatsFile: true,
+    //       statsOptions: { source: false },
+    //     })
+    //   );
+    // }
     
     // Optimize chunks
     if (!dev && !isServer) {
@@ -168,6 +182,23 @@ const nextConfig = {
   
   async rewrites() {
     return [
+      // Frontend routes for marketplace flows
+      {
+        source: '/marketplace/cart',
+        destination: '/cart',
+      },
+      {
+        source: '/marketplace/checkout',
+        destination: '/checkout',
+      },
+      {
+        source: '/marketplace/orders',
+        destination: '/orders',
+      },
+      {
+        source: '/marketplace/disputes',
+        destination: '/support/disputes',
+      },
       // Proxy marketplace requests to the backend service, but exclude Next.js API routes
       {
         source: '/marketplace/:path*',
