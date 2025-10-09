@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
@@ -9,7 +9,10 @@ import {
   ChatBubbleLeftRightIcon, 
   ClipboardDocumentListIcon, 
   ShoppingBagIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ShoppingCartIcon,
+  TruckIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -17,8 +20,12 @@ import {
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
   ClipboardDocumentListIcon as ClipboardDocumentListIconSolid,
   ShoppingBagIcon as ShoppingBagIconSolid,
-  Cog6ToothIcon as Cog6ToothIconSolid
+  Cog6ToothIcon as Cog6ToothIconSolid,
+  ShoppingCartIcon as ShoppingCartIconSolid,
+  TruckIcon as TruckIconSolid,
+  ShieldCheckIcon as ShieldCheckIconSolid
 } from '@heroicons/react/24/solid';
+import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 interface NavItem {
   id: string;
@@ -43,8 +50,11 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const [activeItem, setActiveItem] = useState<string>('home');
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const cart = useEnhancedCart();
 
-  const navItems: NavItem[] = [
+  const cartBadge = cart.state.totals.itemCount;
+
+  const navItems: NavItem[] = useMemo(() => ([
     {
       id: 'home',
       label: 'Home',
@@ -68,6 +78,35 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       badge: 3
     },
     {
+      id: 'marketplace',
+      label: 'Marketplace',
+      icon: ShoppingBagIcon,
+      iconSolid: ShoppingBagIconSolid,
+      path: '/marketplace'
+    },
+    {
+      id: 'cart',
+      label: 'Cart',
+      icon: ShoppingCartIcon,
+      iconSolid: ShoppingCartIconSolid,
+      path: '/cart',
+      badge: cartBadge
+    },
+    {
+      id: 'orders',
+      label: 'Orders',
+      icon: TruckIcon,
+      iconSolid: TruckIconSolid,
+      path: '/orders'
+    },
+    {
+      id: 'support',
+      label: 'Support',
+      icon: ShieldCheckIcon,
+      iconSolid: ShieldCheckIconSolid,
+      path: '/support/disputes'
+    },
+    {
       id: 'governance',
       label: 'Governance',
       icon: ClipboardDocumentListIcon,
@@ -75,13 +114,13 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       path: '/governance'
     },
     {
-      id: 'marketplace',
-      label: 'Marketplace',
-      icon: ShoppingBagIcon,
-      iconSolid: ShoppingBagIconSolid,
-      path: '/marketplace'
+      id: 'settings',
+      label: 'Settings',
+      icon: Cog6ToothIcon,
+      iconSolid: Cog6ToothIconSolid,
+      path: '/settings'
     }
-  ];
+  ]), [cartBadge]);
 
   // Handle scroll to show/hide navigation
   useEffect(() => {

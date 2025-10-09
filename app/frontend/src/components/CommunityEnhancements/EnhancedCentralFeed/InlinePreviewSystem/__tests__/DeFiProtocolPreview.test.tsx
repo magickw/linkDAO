@@ -10,55 +10,9 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import DeFiProtocolPreview from '../DeFiProtocolPreview';
 import { DeFiPreview } from '../../../../../types/communityEnhancements';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { it } from 'date-fns/locale';
-import { describe } from 'node:test';
-import { beforeEach } from 'node:test';
-import { describe } from 'node:test';
 
-// Mock data
-const mockDeFiPreview: DeFiPreview = {
+// Test data
+const testDeFiPreview: DeFiPreview = {
   protocol: 'Compound Finance',
   apy: 8.45,
   tvl: 12500000000, // $12.5B
@@ -69,7 +23,7 @@ const mockDeFiPreview: DeFiPreview = {
   }
 };
 
-const mockHighRiskDeFi: DeFiPreview = {
+const testHighRiskDeFi: DeFiPreview = {
   protocol: 'New Protocol',
   apy: 25.67,
   tvl: 50000000, // $50M
@@ -80,9 +34,9 @@ const mockHighRiskDeFi: DeFiPreview = {
   }
 };
 
-// Mock functions
-const mockOnInteract = jest.fn();
-const mockOnExpand = jest.fn();
+// Test functions
+const testOnInteract = jest.fn();
+const testOnExpand = jest.fn();
 
 describe('DeFiProtocolPreview', () => {
   beforeEach(() => {
@@ -91,7 +45,7 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Basic Rendering', () => {
     it('renders protocol name and basic information', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       expect(screen.getByText('Compound Finance')).toBeInTheDocument();
       expect(screen.getByText('8.45%')).toBeInTheDocument();
@@ -99,7 +53,7 @@ describe('DeFiProtocolPreview', () => {
     });
 
     it('displays TVL and current yield metrics', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       expect(screen.getByText('Total Value Locked')).toBeInTheDocument();
       expect(screen.getByText('$12.5B')).toBeInTheDocument();
@@ -107,7 +61,7 @@ describe('DeFiProtocolPreview', () => {
     });
 
     it('shows risk level badge with appropriate styling', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       const riskBadge = screen.getByText('Low Risk');
       expect(riskBadge).toBeInTheDocument();
@@ -115,7 +69,7 @@ describe('DeFiProtocolPreview', () => {
     });
 
     it('renders high risk protocol with appropriate styling', () => {
-      render(<DeFiProtocolPreview defi={mockHighRiskDeFi} />);
+      render(<DeFiProtocolPreview defi={testHighRiskDeFi} />);
 
       const riskBadge = screen.getByText('High Risk');
       expect(riskBadge).toBeInTheDocument();
@@ -125,21 +79,21 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Chart Visualization', () => {
     it('renders mini chart for historical yields', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       const svg = document.querySelector('svg'); // SVG elements
       expect(svg).toBeInTheDocument();
     });
 
     it('does not render chart in compact mode', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} compact />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} compact />);
 
       const svg = document.querySelector('svg');
       expect(svg).not.toBeInTheDocument();
     });
 
     it('shows yield trend indicator', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       // Should show trend indicator (up, down, or stable)
       expect(screen.getByText(/Rising|Falling|Stable/)).toBeInTheDocument();
@@ -150,7 +104,7 @@ describe('DeFiProtocolPreview', () => {
     it('shows user staked amount when provided', () => {
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
+          defi={testDeFiPreview}
           userStaked={5000}
         />
       );
@@ -162,7 +116,7 @@ describe('DeFiProtocolPreview', () => {
     it('shows user rewards when available', () => {
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
+          defi={testDeFiPreview}
           userRewards={250}
         />
       );
@@ -174,101 +128,101 @@ describe('DeFiProtocolPreview', () => {
     it('shows additional action buttons for users with positions', () => {
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
+          defi={testDeFiPreview}
           userStaked={5000}
           userRewards={250}
-          onInteract={mockOnInteract}
+          onInteract={testOnInteract}
         />
       );
 
-      expect(screen.getByLabelText(`Unstake from ${mockDeFiPreview.protocol}`)).toBeInTheDocument();
-      expect(screen.getByLabelText(`Claim rewards from ${mockDeFiPreview.protocol}`)).toBeInTheDocument();
+      expect(screen.getByLabelText(`Unstake from ${testDeFiPreview.protocol}`)).toBeInTheDocument();
+      expect(screen.getByLabelText(`Claim rewards from ${testDeFiPreview.protocol}`)).toBeInTheDocument();
     });
   });
 
   describe('Quick Actions', () => {
     it('renders default quick action buttons', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onInteract={mockOnInteract} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onInteract={testOnInteract} />);
 
-      expect(screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`)).toBeInTheDocument();
-      expect(screen.getByLabelText(`View ${mockDeFiPreview.protocol} details`)).toBeInTheDocument();
+      expect(screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`)).toBeInTheDocument();
+      expect(screen.getByLabelText(`View ${testDeFiPreview.protocol} details`)).toBeInTheDocument();
     });
 
     it('does not render quick actions when disabled', () => {
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
-          onInteract={mockOnInteract}
+          defi={testDeFiPreview}
+          onInteract={testOnInteract}
           showQuickActions={false}
         />
       );
 
-      expect(screen.queryByLabelText(`Stake in ${mockDeFiPreview.protocol}`)).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(`View ${mockDeFiPreview.protocol} details`)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(`Stake in ${testDeFiPreview.protocol}`)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(`View ${testDeFiPreview.protocol} details`)).not.toBeInTheDocument();
     });
 
     it('calls onInteract when stake button is clicked', async () => {
       const user = userEvent.setup();
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onInteract={mockOnInteract} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onInteract={testOnInteract} />);
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
       await user.click(stakeButton);
 
-      expect(mockOnInteract).toHaveBeenCalledWith(mockDeFiPreview.protocol, 'stake');
+      expect(testOnInteract).toHaveBeenCalledWith(testDeFiPreview.protocol, 'stake');
     });
 
     it('calls onInteract when view details button is clicked', async () => {
       const user = userEvent.setup();
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onInteract={mockOnInteract} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onInteract={testOnInteract} />);
 
-      const viewButton = screen.getByLabelText(`View ${mockDeFiPreview.protocol} details`);
+      const viewButton = screen.getByLabelText(`View ${testDeFiPreview.protocol} details`);
       await user.click(viewButton);
 
-      expect(mockOnInteract).toHaveBeenCalledWith(mockDeFiPreview.protocol, 'view');
+      expect(testOnInteract).toHaveBeenCalledWith(testDeFiPreview.protocol, 'view');
     });
 
     it('prevents event propagation on button clicks', async () => {
       const user = userEvent.setup();
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
-          onInteract={mockOnInteract}
-          onExpand={mockOnExpand}
+          defi={testDeFiPreview}
+          onInteract={testOnInteract}
+          onExpand={testOnExpand}
         />
       );
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
       await user.click(stakeButton);
 
-      expect(mockOnInteract).toHaveBeenCalledWith(mockDeFiPreview.protocol, 'stake');
-      expect(mockOnExpand).not.toHaveBeenCalled();
+      expect(testOnInteract).toHaveBeenCalledWith(testDeFiPreview.protocol, 'stake');
+      expect(testOnExpand).not.toHaveBeenCalled();
     });
   });
 
   describe('Expand Functionality', () => {
     it('calls onExpand when card is clicked', async () => {
       const user = userEvent.setup();
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onExpand={mockOnExpand} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onExpand={testOnExpand} />);
 
       const card = screen.getByRole('button');
       await user.click(card);
 
-      expect(mockOnExpand).toHaveBeenCalledWith(mockDeFiPreview);
+      expect(testOnExpand).toHaveBeenCalledWith(testDeFiPreview);
     });
 
     it('supports keyboard navigation for expand', async () => {
       const user = userEvent.setup();
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onExpand={mockOnExpand} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onExpand={testOnExpand} />);
 
       const card = screen.getByRole('button', { name: /DeFi protocol: Compound Finance/ });
       card.focus();
       await user.keyboard('{Enter}');
 
-      expect(mockOnExpand).toHaveBeenCalledWith(mockDeFiPreview);
+      expect(testOnExpand).toHaveBeenCalledWith(testDeFiPreview);
     });
 
     it('shows expand indicator on hover', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onExpand={mockOnExpand} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onExpand={testOnExpand} />);
 
       const expandIcon = document.querySelector('.absolute.top-2.right-2 svg');
       expect(expandIcon).toBeInTheDocument();
@@ -277,7 +231,7 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Loading States', () => {
     it('shows loading overlay when isLoading is true', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} isLoading />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} isLoading />);
 
       const loadingSpinner = document.querySelector('.animate-spin');
       expect(loadingSpinner).toBeInTheDocument();
@@ -287,36 +241,36 @@ describe('DeFiProtocolPreview', () => {
       const user = userEvent.setup();
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
-          onInteract={mockOnInteract}
-          onExpand={mockOnExpand}
+          defi={testDeFiPreview}
+          onInteract={testOnInteract}
+          onExpand={testOnExpand}
           isLoading
         />
       );
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
       expect(stakeButton).toBeDisabled();
 
       const card = screen.getByRole('button', { name: /DeFi protocol: Compound Finance/ });
       await user.click(card);
 
-      expect(mockOnExpand).not.toHaveBeenCalled();
+      expect(testOnExpand).not.toHaveBeenCalled();
     });
 
     it('shows loading state in buttons during interaction', async () => {
       const user = userEvent.setup();
 
-      // Mock a slow interaction
+      // Test a slow interaction
       const slowOnInteract = jest.fn(() => new Promise(resolve => setTimeout(resolve, 100)));
 
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
+          defi={testDeFiPreview}
           onInteract={slowOnInteract}
         />
       );
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
       await user.click(stakeButton);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
@@ -326,7 +280,7 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Real-time Updates', () => {
     it('updates yield values over time', async () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       const initialYieldElements = screen.getAllByText('8.45%');
       expect(initialYieldElements.length).toBeGreaterThan(0);
@@ -339,7 +293,7 @@ describe('DeFiProtocolPreview', () => {
     });
 
     it('updates chart data with new yield values', async () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       // Chart should be present
       await waitFor(() => {
@@ -351,7 +305,7 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Accessibility', () => {
     it('provides comprehensive screen reader information', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       const srInfo = screen.getByText(/DeFi protocol: Compound Finance/);
       expect(srInfo).toBeInTheDocument();
@@ -359,10 +313,10 @@ describe('DeFiProtocolPreview', () => {
     });
 
     it('includes proper ARIA labels for interactive elements', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} onInteract={mockOnInteract} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} onInteract={testOnInteract} />);
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
-      const viewButton = screen.getByLabelText(`View ${mockDeFiPreview.protocol} details`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
+      const viewButton = screen.getByLabelText(`View ${testDeFiPreview.protocol} details`);
 
       expect(stakeButton).toBeInTheDocument();
       expect(viewButton).toBeInTheDocument();
@@ -372,9 +326,9 @@ describe('DeFiProtocolPreview', () => {
       const user = userEvent.setup();
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
-          onInteract={mockOnInteract}
-          onExpand={mockOnExpand}
+          defi={testDeFiPreview}
+          onInteract={testOnInteract}
+          onExpand={testOnExpand}
         />
       );
 
@@ -384,13 +338,13 @@ describe('DeFiProtocolPreview', () => {
       expect(expandButton).toHaveFocus();
 
       await user.tab();
-      expect(screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`)).toHaveFocus();
+      expect(screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`)).toHaveFocus();
     });
   });
 
   describe('Responsive Design', () => {
     it('applies compact styling when compact prop is true', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} compact />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} compact />);
 
       const card = screen.getByRole('article');
       expect(card).toHaveClass('max-w-xs');
@@ -398,7 +352,7 @@ describe('DeFiProtocolPreview', () => {
 
     it('applies custom className when provided', () => {
       const customClass = 'custom-defi-preview';
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} className={customClass} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} className={customClass} />);
 
       const card = screen.getByRole('article');
       expect(card).toHaveClass(customClass);
@@ -407,20 +361,20 @@ describe('DeFiProtocolPreview', () => {
 
   describe('Number Formatting', () => {
     it('formats large TVL numbers correctly', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       expect(screen.getByText('$12.5B')).toBeInTheDocument();
     });
 
     it('formats medium numbers with K suffix', () => {
-      const mediumTvlDefi = { ...mockDeFiPreview, tvl: 1500000 };
+      const mediumTvlDefi = { ...testDeFiPreview, tvl: 1500000 };
       render(<DeFiProtocolPreview defi={mediumTvlDefi} />);
 
       expect(screen.getByText('$1.5M')).toBeInTheDocument();
     });
 
     it('formats percentages with two decimal places', () => {
-      render(<DeFiProtocolPreview defi={mockDeFiPreview} />);
+      render(<DeFiProtocolPreview defi={testDeFiPreview} />);
 
       const percentageElements = screen.getAllByText('8.45%');
       expect(percentageElements.length).toBeGreaterThan(0);
@@ -430,7 +384,7 @@ describe('DeFiProtocolPreview', () => {
   describe('Error Handling', () => {
     it('handles missing historical data gracefully', () => {
       const noHistoryDefi = {
-        ...mockDeFiPreview,
+        ...testDeFiPreview,
         yields: { current: 8.45, historical: [] }
       };
 
@@ -448,12 +402,12 @@ describe('DeFiProtocolPreview', () => {
 
       render(
         <DeFiProtocolPreview
-          defi={mockDeFiPreview}
+          defi={testDeFiPreview}
           onInteract={errorOnInteract}
         />
       );
 
-      const stakeButton = screen.getByLabelText(`Stake in ${mockDeFiPreview.protocol}`);
+      const stakeButton = screen.getByLabelText(`Stake in ${testDeFiPreview.protocol}`);
       await user.click(stakeButton);
 
       // Should not crash and should re-enable button

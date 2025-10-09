@@ -149,8 +149,8 @@ export class UserReputationService {
       }
     ];
   }
-}  
-/**
+
+  /**
    * Calculate content-based reputation score
    */
   private async calculateContentScore(userId: string): Promise<number> {
@@ -163,8 +163,8 @@ export class UserReputationService {
         .where(eq(posts.authorId, userId));
 
       // Score based on post count with diminishing returns
-      const posts = postCount.count || 0;
-      return Math.floor(Math.sqrt(posts) * 10);
+      const postTotal = postCount.count || 0;
+      return Math.floor(Math.sqrt(postTotal) * 10);
     } catch (error) {
       console.error('Error calculating content score:', error);
       return 0;
@@ -193,7 +193,7 @@ export class UserReputationService {
 
       const received = reactionsReceived.count || 0;
       const given = reactionsGiven.count || 0;
-      
+
       // Balance between receiving and giving engagement
       return Math.floor((received * 2 + given) * 0.5);
     } catch (error) {
@@ -223,7 +223,7 @@ export class UserReputationService {
 
       const received = Number(tipsReceived.total || 0);
       const given = Number(tipsGiven.total || 0);
-      
+
       // Score based on economic contribution
       return Math.floor((received * 0.1) + (given * 0.05));
     } catch (error) {

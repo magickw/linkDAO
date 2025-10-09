@@ -10,6 +10,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
+import { EnhancedCartProvider } from '@/hooks/useEnhancedCart';
 import { ServiceWorkerUtil } from '@/utils/serviceWorker';
 import { performanceMonitor, memoryMonitor } from '@/utils/performanceMonitor';
 import { initializeExtensionErrorSuppression, debugExtensionErrors } from '@/utils/extensionErrorHandler';
@@ -271,11 +272,13 @@ export default function App({ Component, pageProps, router }: AppProps) {
                   <WalletLoginBridgeWithToast />
                   <NavigationProvider>
                     <EnhancedThemeProvider defaultTheme="system">
-                      <AppContent
-                        Component={Component}
-                        pageProps={pageProps}
-                        router={router}
-                      />
+                      <EnhancedCartProvider>
+                        <AppContent
+                          Component={Component}
+                          pageProps={pageProps}
+                          router={router}
+                        />
+                      </EnhancedCartProvider>
                     </EnhancedThemeProvider>
                   </NavigationProvider>
                 </ToastProvider>

@@ -1,10 +1,11 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import dynamic from 'next/dynamic';
+import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -18,11 +19,19 @@ interface LayoutProps {
   title?: string;
 }
 
+type NavItem = {
+  name: string;
+  href: string;
+  icon: string;
+  badge?: number;
+};
+
 export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
   const { address, isConnected } = useAccount();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const cart = useEnhancedCart();
 
   // For demo purposes, we'll consider a specific address as admin
   // In a real implementation, this would be checked against a backend service
@@ -62,17 +71,22 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const cartItemCount = cart.state.totals.itemCount;
+
   // Navigation items with icons - Home now serves as the main Feed/Dashboard
-  const navItems = [
+  const navItems: NavItem[] = useMemo(() => ([
     { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Communities', href: '/communities', icon: '👥' },
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
-  ];
+    { name: 'Cart', href: '/cart', icon: '🛍️', badge: cartItemCount },
+    { name: 'Orders', href: '/orders', icon: '📦' },
+    { name: 'Support', href: '/support/disputes', icon: '🛡️' },
+  ]), [cartItemCount]);
 
   // User-specific navigation items (only for authenticated users)
-  const userNavItems = isConnected ? [
+  const userNavItems: NavItem[] = isConnected ? [
     { name: 'Settings', href: '/settings', icon: '⚙️' },
   ] : [];
 
@@ -108,7 +122,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                         }`}
                     >
                       <span className="mr-1">{item.icon}</span>
-                      {item.name}
+                      <span>{item.name}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}
@@ -203,7 +222,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <span className="mr-2">{item.icon}</span>
-                      {item.name}
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge !== undefined && item.badge > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}

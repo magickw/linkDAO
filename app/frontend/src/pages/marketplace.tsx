@@ -3,24 +3,18 @@ import { useAccount, useBalance } from 'wagmi';
 import { useRouter } from 'next/router';
 import { useToast } from '@/context/ToastContext';
 import { useSeller } from '@/hooks/useSeller';
-import { ImageWithFallback } from '@/utils/imageUtils';
 import { getFallbackImage } from '@/utils/imageUtils';
 import { marketplaceService } from '@/services/marketplaceService';
 import type { MarketplaceListing } from '@/services/marketplaceService';
 import {
   HeroSection,
-  CategoryGrid,
-  FeaturedProductCarousel
+  CategoryGrid
 } from '@/components/Marketplace/Homepage';
-import { SellerQuickAccessPanel } from '@/components/Marketplace/Seller';
 import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
-import { EnhancedCartProvider, useEnhancedCart } from '@/hooks/useEnhancedCart';
-import { EnhancedCheckoutFlow } from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
-import { OrderTrackingDashboard } from '@/components/Marketplace/OrderTracking/OrderTrackingDashboard';
-import { DisputeResolutionPanel } from '@/components/Marketplace/DisputeResolution/DisputeResolutionPanel';
+import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
 // New redesigned components
@@ -46,7 +40,7 @@ const MarketplaceContent: React.FC = () => {
   const { density, setDensity } = useDensityPreference();
 
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings' | 'orders' | 'disputes'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'my-listings'>('browse');
   const [loading, setLoading] = useState(true);
   const [reputation, setReputation] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,8 +53,6 @@ const MarketplaceContent: React.FC = () => {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showCart, setShowCart] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
 
   const cart = useEnhancedCart();
   
@@ -451,62 +443,44 @@ const MarketplaceContent: React.FC = () => {
           <div className="flex justify-center mb-8">
             <div className="flex space-x-1 bg-white/10 rounded-lg p-1 backdrop-blur-sm">
               <button
-                onClick={() => { setActiveTab('browse'); setShowCart(false); setShowCheckout(false); }}
+                onClick={() => setActiveTab('browse')}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'browse' && !showCart && !showCheckout
+                  activeTab === 'browse'
                     ? 'bg-white text-gray-900'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
               >
                 Browse
               </button>
-
               <button
-                onClick={() => { setShowCart(true); setShowCheckout(false); setActiveTab('browse'); }}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  showCart && !showCheckout
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <ShoppingCart size={16} />
-                Cart ({cart.state.totals.itemCount})
-                {cart.state.totals.itemCount > 0 && (
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                )}
-              </button>
-              <button
-                onClick={() => { setActiveTab('orders'); setShowCart(false); setShowCheckout(false); }}
+                onClick={() => setActiveTab('my-listings')}
                 className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'orders' && !showCart && !showCheckout
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-                disabled={!isConnected}
-              >
-                Orders
-              </button>
-              <button
-                onClick={() => { setActiveTab('disputes'); setShowCart(false); setShowCheckout(false); }}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'disputes' && !showCart && !showCheckout
-                    ? 'bg-white text-gray-900'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-                disabled={!isConnected}
-              >
-                Disputes
-              </button>
-              <button
-                onClick={() => { setActiveTab('my-listings'); setShowCart(false); setShowCheckout(false); }}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                  activeTab === 'my-listings' && !showCart && !showCheckout
+                  activeTab === 'my-listings'
                     ? 'bg-white text-gray-900'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
                 disabled={!isConnected}
               >
                 My Listings
+              </button>
+              <button
+                onClick={() => router.push('/cart')}
+                className="px-6 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <ShoppingCart size={16} />
+                Cart ({cart.state.totals.itemCount})
+              </button>
+              <button
+                onClick={() => router.push('/orders')}
+                className="px-6 py-2 rounded-md text-sm font-medium transition-all text-white/80 hover:text-white hover:bg-white/10"
+              >
+                Orders
+              </button>
+              <button
+                onClick={() => router.push('/support/disputes')}
+                className="px-6 py-2 rounded-md text-sm font-medium transition-all text-white/80 hover:text-white hover:bg-white/10"
+              >
+                Disputes
               </button>
             </div>
           </div>
@@ -555,7 +529,7 @@ const MarketplaceContent: React.FC = () => {
             </div>
           ) : (
           <>
-            {(activeTab === 'browse' && !showCart && !showCheckout) && (
+            {activeTab === 'browse' && (
               <div>
                 {filteredAndSortedListings.length === 0 ? (
                   <GlassPanel variant="primary" className="text-center py-12">
@@ -722,187 +696,9 @@ const MarketplaceContent: React.FC = () => {
                 )}
               </div>
             )}
-            
-            {activeTab === 'orders' && (
-              <div>
-                {isConnected ? (
-                  <div>
-                    <div className="text-center mb-8">
-                      <h2 className="text-4xl font-bold text-white mb-4">Order Management</h2>
-                      <p className="text-xl text-white/80">Track your orders and manage deliveries with enhanced features</p>
-                    </div>
-                    {React.createElement(
-                      'div',
-                      { className: 'text-center text-white/70 py-8' },
-                      'Order tracking feature coming soon...'
-                    )}
-                    {/* TODO: Re-enable when component is stable
-                    {React.createElement(
-                      EnhancedOrderTracking,
-                      { 
-                        userType: profile ? 'seller' : 'buyer',
-                        className: 'text-white'
-                      }
-                    )}
-                    */}
-                  </div>
-                ) : (
-                  <GlassPanel variant="primary" className="text-center py-12">
-                    <p className="text-white/70">Please connect your wallet to view your orders.</p>
-                  </GlassPanel>
-                )}
-              </div>
-            )}
-            
-            {activeTab === 'disputes' && (
-              <div>
-                {isConnected ? (
-                  <div>
-                    <div className="text-center mb-8">
-                      <h2 className="text-4xl font-bold text-white mb-4">Dispute Resolution</h2>
-                      <p className="text-xl text-white/80">Community-driven dispute arbitration with DAO integration</p>
-                    </div>
-                    <DisputeResolutionPanel
-                      userRole={profile ? 'seller' : 'buyer'}
-                      className="text-white"
-                    />
-                  </div>
-                ) : (
-                  <GlassPanel variant="primary" className="text-center py-12">
-                    <p className="text-white/70">Please connect your wallet to access dispute resolution.</p>
-                  </GlassPanel>
-                )}
-              </div>
-            )}
           </>
           )}
 
-          {/* Cart View */}
-          {showCart && !showCheckout && (
-            <div>
-              <div className="text-center mb-8">
-                <h2 className="text-4xl font-bold text-white mb-4">Shopping Cart</h2>
-                <p className="text-xl text-white/80">Review your items and proceed to checkout</p>
-              </div>
-
-              {cart.state.items.length === 0 ? (
-                <GlassPanel variant="primary" className="text-center py-12">
-                  <ShoppingCart size={48} className="mx-auto text-white/60 mb-4" />
-                  <h3 className="text-2xl font-bold text-white mb-2">Your cart is empty</h3>
-                  <p className="text-white/80 mb-6 text-lg">Start shopping to add items to your cart</p>
-                  <Button
-                    variant="primary"
-                    onClick={() => setShowCart(false)}
-                    className="px-6 py-3 text-lg font-medium"
-                  >
-                    Continue Shopping
-                  </Button>
-                </GlassPanel>
-              ) : (
-                <div className="space-y-6">
-                  {/* Cart Items */}
-                  <div className="space-y-4">
-                    {cart.state.items.map((item) => (
-                      <GlassPanel key={item.id} variant="secondary" className="p-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 bg-gray-800/50 rounded-lg flex items-center justify-center">
-                            <ShoppingCart className="text-white/60" size={24} />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-medium text-white">{item.title}</h3>
-                            <p className="text-sm text-white/70 mt-1 line-clamp-2">
-                              {item.seller.name}
-                            </p>
-                            <div className="flex items-center gap-4 mt-2">
-                              <span className="text-white font-medium">
-                                {item.price.crypto} {item.price.cryptoSymbol}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => cart.updateQuantity(item.id, item.quantity - 1)}
-                                  className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
-                                >
-                                  -
-                                </button>
-                                <span className="text-white w-8 text-center">{item.quantity}</span>
-                                <button
-                                  onClick={() => cart.updateQuantity(item.id, item.quantity + 1)}
-                                  className="w-8 h-8 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => cart.removeItem(item.id)}
-                            className="text-red-400 hover:text-red-300 p-2"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </GlassPanel>
-                    ))}
-                  </div>
-
-                  {/* Cart Summary */}
-                  <GlassPanel variant="primary" className="p-6">
-                    <h3 className="text-xl font-semibold text-white mb-4">Order Summary</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-white/70">Subtotal:</span>
-                        <span className="text-white">{cart.state.totals.subtotal.toFixed(4)} ETH</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/70">Shipping:</span>
-                        <span className="text-white">{cart.state.totals.shipping.toFixed(4)} ETH</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/70">Escrow Fee:</span>
-                        <span className="text-white">{cart.state.totals.escrowFees.toFixed(4)} ETH</span>
-                      </div>
-                      <div className="border-t border-white/20 pt-2 flex justify-between font-medium">
-                        <span className="text-white">Total:</span>
-                        <span className="text-white">{cart.state.totals.total.toFixed(4)} ETH</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="primary"
-                      className="w-full mt-6"
-                      onClick={() => setShowCheckout(true)}
-                    >
-                      Proceed to Checkout
-                    </Button>
-                  </GlassPanel>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Checkout Flow */}
-          {showCheckout && (
-            <EnhancedCheckoutFlow
-              cartItems={cart.state.items.map(item => ({
-                id: item.id,
-                title: item.title,
-                price: item.price,
-                seller: item.seller,
-                image: item.image || '',
-                quantity: item.quantity,
-                isDigital: item.isDigital,
-                escrowProtected: item.trust.escrowProtected,
-                shippingCost: item.shipping.cost,
-                estimatedDelivery: item.shipping.estimatedDays
-              }))}
-              onComplete={(orderData) => {
-                addToast('Order completed successfully!', 'success');
-                cart.clearCart();
-                setShowCheckout(false);
-                setShowCart(false);
-              }}
-              onCancel={() => setShowCheckout(false)}
-            />
-          )}
         </div>
 
         {/* Footer */}
@@ -1173,12 +969,12 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
 
 const MarketplacePage: React.FC = () => {
   return (
-    <EnhancedCartProvider>
+    <>
       <MarketplaceContent />
       
       {/* Floating Seller Action Button - Always accessible */}
       <SellerFloatingActionButton />
-    </EnhancedCartProvider>
+    </>
   );
 };
 

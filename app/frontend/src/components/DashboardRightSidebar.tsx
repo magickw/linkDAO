@@ -110,6 +110,14 @@ const DashboardRightSidebar = memo(() => {
   const [loadingCommunities, setLoadingCommunities] = useState(false);
   const [currentCommunity, setCurrentCommunity] = useState<Community | null>(null);
 
+  // Helper function to get current user ID - this would come from auth context
+  // MOVED THIS FUNCTION DECLARATION BEFORE ITS USAGE TO FIX REFERENCE ERROR
+  const getCurrentUserId = (): string | null => {
+    // TODO: Replace with actual authentication context
+    // For now, return null to show trending users
+    return null;
+  };
+
   // Error states for graceful degradation
   const [errors, setErrors] = useState<{
     users?: string;
@@ -477,13 +485,6 @@ const DashboardRightSidebar = memo(() => {
 
     loadActiveAuctions();
   }, []);
-
-  // Helper function to get current user ID - this would come from auth context
-  const getCurrentUserId = (): string | null => {
-    // TODO: Replace with actual authentication context
-    // For now, return null to show trending users
-    return null;
-  };
 
   // Handle following a user
   const handleFollowUser = async (targetUserId: string) => {

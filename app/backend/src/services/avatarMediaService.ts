@@ -279,8 +279,8 @@ export class AvatarMediaService {
     const extension = path.extname(originalFilename);
     return `avatar_${userId}_${hash}${extension}`;
   }
-}  pr
-ivate async uploadToIPFS(buffer: Buffer, filename: string): Promise<{ success: boolean; hash?: string }> {
+
+  private async uploadToIPFS(buffer: Buffer, filename: string): Promise<{ success: boolean; hash?: string }> {
     try {
       // This would integrate with IPFS client
       // For now, simulate IPFS upload
