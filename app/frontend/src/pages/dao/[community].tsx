@@ -280,7 +280,7 @@ export default function CommunityPage() {
 
   if (!communityData) {
     return (
-      <Layout title="Community Not Found - LinkDAO">
+      <Layout title="Community Not Found - LinkDAO" fullWidth={true}>
         <div className="flex items-center justify-center min-h-96">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Community Not Found</h1>
@@ -294,7 +294,7 @@ export default function CommunityPage() {
   }
 
   return (
-    <Layout title={`${communityData.displayName} - LinkDAO`}>
+    <Layout title={`${communityData.displayName} - LinkDAO`} fullWidth={true}>
       <Head>
         <meta name="description" content={communityData.description} />
       </Head>

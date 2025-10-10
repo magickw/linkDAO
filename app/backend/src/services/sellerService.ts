@@ -644,7 +644,7 @@ class SellerService {
       const completeness = this.calculateProfileCompleteness(seller);
 
       const stats = listingStats[0] || { totalListings: 0, activeListings: 0 };
-      const orders = orderStats[0] || { 
+      const orderAgg = orderStats[0] || { 
         totalSales: 0, 
         totalRevenue: '0', 
         completedOrders: 0, 
@@ -657,13 +657,13 @@ class SellerService {
       return {
         totalListings: stats.totalListings,
         activeListings: stats.activeListings,
-        totalSales: orders.totalSales,
+        totalSales: orderAgg.totalSales,
         averageRating: Number(rating.averageRating),
         profileCompleteness: completeness.score,
-        totalRevenue: orders.totalRevenue,
-        completedOrders: orders.completedOrders,
-        pendingOrders: orders.pendingOrders,
-        disputedOrders: orders.disputedOrders,
+        totalRevenue: orderAgg.totalRevenue,
+        completedOrders: orderAgg.completedOrders,
+        pendingOrders: orderAgg.pendingOrders,
+        disputedOrders: orderAgg.disputedOrders,
         reputationScore: Number(reputation.reputationScore),
       };
     } catch (error) {
@@ -761,7 +761,7 @@ class SellerService {
           averageResponseTime: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
-        });
+        } as any);
 
         reputation = await db
           .select()
@@ -974,13 +974,12 @@ class SellerService {
     updatedAt: string;
   }>> {
     try {
-      let query = db
+      const query = db
         .select({
           orderId: orders.id,
           listingId: orders.listingId,
           listingTitle: marketplaceListings.title,
-          enhancedData: marketplaceListings.enhancedData,
-          buyerAddress: sql<string>`buyer_user.wallet_address`,
+          buyerAddress: sql<string>`orders.buyer_id::text`,
           amount: orders.totalAmount,
           currency: orders.currency,
           status: orders.status,
@@ -990,26 +989,20 @@ class SellerService {
         })
         .from(orders)
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
-        .leftJoin(users.as('buyer_user'), eq(orders.buyerId, users.id))
-        .where(eq(marketplaceListings.sellerAddress, walletAddress));
-
-      if (status) {
-        query = query.where(and(
+        .where(and(
           eq(marketplaceListings.sellerAddress, walletAddress),
-          eq(orders.status, status)
+          status ? eq(orders.status, status) : sql<boolean>`true`
         ));
-      }
 
       const orderResults = await query
         .orderBy(desc(orders.createdAt))
         .limit(50);
 
       return orderResults.map(order => {
-        const enhanced = order.enhancedData as any;
         return {
           id: order.orderId.toString(),
           listingId: order.listingId?.toString() || '',
-          listingTitle: enhanced?.title || order.listingTitle || 'Unknown Item',
+          listingTitle: order.listingTitle || 'Unknown Item',
           buyerAddress: order.buyerAddress || '',
           amount: order.amount || '0',
           currency: order.currency || 'USD',

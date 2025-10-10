@@ -8,7 +8,7 @@ export const physicalAddressSchema = z.object({
   postalCode: z.string().min(1, 'Postal code is required').max(20, 'Postal code too long'),
   country: z.string().min(1, 'Country is required').max(100, 'Country name too long'),
   isDefault: z.boolean().optional(),
-  type: z.enum(['shipping', 'billing']).optional()
+  type: z.enum(['shipping', 'billing'] as const).optional()
 });
 
 // User validation schemas
@@ -50,12 +50,8 @@ export const createListingSchema = z.object({
     .int('Quantity must be an integer')
     .min(1, 'Quantity must be at least 1')
     .max(1000000, 'Quantity too large'),
-  itemType: z.enum(['PHYSICAL', 'DIGITAL', 'NFT', 'SERVICE'], {
-    errorMap: () => ({ message: 'Item type must be PHYSICAL, DIGITAL, NFT, or SERVICE' })
-  }),
-  listingType: z.enum(['FIXED_PRICE', 'AUCTION'], {
-    errorMap: () => ({ message: 'Listing type must be FIXED_PRICE or AUCTION' })
-  }),
+  itemType: z.enum(['PHYSICAL', 'DIGITAL', 'NFT', 'SERVICE'] as const),
+  listingType: z.enum(['FIXED_PRICE', 'AUCTION'] as const),
   duration: z.number()
     .int('Duration must be an integer')
     .min(3600, 'Duration must be at least 1 hour')
@@ -64,7 +60,7 @@ export const createListingSchema = z.object({
   metadataURI: z.string()
     .url('Metadata URI must be a valid URL')
     .max(500, 'Metadata URI too long'),
-  nftStandard: z.enum(['ERC721', 'ERC1155'])
+  nftStandard: z.enum(['ERC721', 'ERC1155'] as const)
     .optional(),
   tokenId: z.string()
     .max(78, 'Token ID too long')
@@ -265,7 +261,7 @@ export function validateSchema<T>(schema: z.ZodSchema<T>) {
       return schema.parse(data);
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-        const firstError = error.errors[0];
+        const firstError = error.issues[0];
         throw new ValidationError(
           firstError.message,
           firstError.path.join('.'),

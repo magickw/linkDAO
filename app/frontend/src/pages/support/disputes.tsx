@@ -49,7 +49,7 @@ const DisputesSupportPage: React.FC = () => {
   }, [addToast]);
 
   return (
-    <Layout title="Support & Disputes - LinkDAO Marketplace">
+    <Layout title="Support & Disputes - LinkDAO Marketplace" fullWidth={true}>
       <div className="space-y-10">
         <div className="flex flex-col gap-4">
           <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>

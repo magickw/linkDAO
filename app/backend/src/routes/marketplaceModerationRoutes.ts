@@ -1,29 +1,17 @@
 import { Router } from 'express';
 import { MarketplaceModerationController } from '../controllers/marketplaceModerationController';
-import { authMiddleware } from '../middleware/auth';
-import { rateLimiter } from '../middleware/rateLimiter';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = Router();
 const controller = new MarketplaceModerationController();
 
 // Rate limiting configurations
-const standardLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
-  message: 'Too many requests, please try again later'
-});
+const standardLimiter = apiLimiter;
 
-const bulkLimiter = rateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 bulk requests per hour
-  message: 'Too many bulk requests, please try again later'
-});
+const bulkLimiter = apiLimiter;
 
-const verificationLimiter = rateLimiter({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 20, // 20 verification requests per 5 minutes
-  message: 'Too many verification requests, please try again later'
-});
+const verificationLimiter = apiLimiter;
 
 /**
  * @route POST /api/marketplace-moderation/moderate

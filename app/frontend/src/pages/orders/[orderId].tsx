@@ -129,7 +129,7 @@ const OrderDetailPage: React.FC = () => {
 
   if (!order) {
     return (
-      <Layout title="Order details - LinkDAO Marketplace">
+      <Layout title="Order details - LinkDAO Marketplace" fullWidth={true}>
         <div className="max-w-3xl mx-auto space-y-6">
           <GlassPanel variant="primary" className="p-12 text-center space-y-5">
             <div className="flex flex-col items-center gap-3">
@@ -158,7 +158,7 @@ const OrderDetailPage: React.FC = () => {
   }
 
   return (
-    <Layout title={`Order ${order.id} - LinkDAO Marketplace`}>
+    <Layout title={`Order ${order.id} - LinkDAO Marketplace`} fullWidth={true}>
       <div className="max-w-5xl mx-auto space-y-10">
         <div className="flex flex-col gap-4">
           <button

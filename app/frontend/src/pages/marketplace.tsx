@@ -475,7 +475,7 @@ const MarketplaceContent: React.FC = () => {
       : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   return (
-    <Layout title="Marketplace - LinkDAO">
+    <Layout title="Marketplace - LinkDAO" fullWidth={true}>
       <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
@@ -832,7 +832,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
   // Memoize the marketplace service to prevent recreation on every render
   const service = useMemo(() => marketplaceService, []);
 
-  const fetchMyListings = useCallback(async (mounted = true) => {
+  const fetchMyListings = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Fetching listings for wallet address:', address);
@@ -861,10 +861,8 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
               ...listing,
               sellerWalletAddress: address!
             }));
-            if (mounted) {
-              setListings(updatedDemoListings);
-              addToast('Displaying demo listings for development purposes', 'info');
-            }
+            setListings(updatedDemoListings);
+            addToast('Displaying demo listings for development purposes', 'info');
             return;
           }
         } catch (demoError) {
@@ -872,27 +870,21 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
         }
       }
       
-      if (mounted) {
-        setListings(validListings);
-      }
+      setListings(validListings);
     } catch (error) {
       console.error('Error fetching listings:', error);
-      if (mounted) {
-        addToast('Failed to fetch your listings. Please try again.', 'error');
-        setListings([]);
-      }
+      addToast('Failed to fetch your listings. Please try again.', 'error');
+      setListings([]);
     } finally {
-      if (mounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [address, addToast, marketplaceService]);
+  }, [address, addToast, marketplaceService, service]);
 
   useEffect(() => {
     let mounted = true;
     const fetchListings = async () => {
       if (address) {
-        await fetchMyListings(mounted);
+        await fetchMyListings();
       }
     };
     fetchListings();
@@ -954,7 +946,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
                         listing.status === 'ACTIVE' 
                           ? 'bg-green-500/20 text-green-300 border-green-400/30' 
-                          : 'bg-gray-500/20 text-gray-300 border-gray-400/30'
+                          : 'bg-gray-500/20 text-gray-330 border-gray-400/30'
                       }`}>
                         {listing.status}
                       </span>

@@ -9,7 +9,7 @@ export default function SellerStorePageRoute() {
 
   if (!sellerId || typeof sellerId !== 'string') {
     return (
-      <Layout title="Seller Store - LinkDAO Marketplace">
+      <Layout title="Seller Store - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
           <div className="text-white text-xl">Loading seller store...</div>
         </div>
@@ -18,7 +18,7 @@ export default function SellerStorePageRoute() {
   }
 
   return (
-    <Layout title="Seller Store - LinkDAO Marketplace">
+    <Layout title="Seller Store - LinkDAO Marketplace" fullWidth={true}>
       <SellerStorePage sellerId={sellerId} />
     </Layout>
   );

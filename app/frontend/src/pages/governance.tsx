@@ -110,9 +110,9 @@ export default function Governance() {
 
   if (!isConnected) {
     return (
-      <Layout title="Governance - LinkDAO">
+      <Layout title="Governance - LinkDAO" fullWidth={true}>
         <div className="px-4 py-6 sm:px-0">
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Governance</h1>
             <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to participate in governance.</p>
           </div>
@@ -122,7 +122,7 @@ export default function Governance() {
   }
 
   return (
-    <Layout title="Governance - LinkDAO">
+    <Layout title="Governance - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Governance</h1>

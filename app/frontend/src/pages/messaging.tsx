@@ -21,6 +21,7 @@ export default function MessagingPage() {
     return (
       <Layout 
         title="Messages - LinkDAO"
+        fullWidth={true}
       >
         <div className="flex items-center justify-center h-full">
           <GlassPanel className="text-center p-8 max-w-md">
@@ -48,6 +49,7 @@ export default function MessagingPage() {
       
       <Layout 
         title="Messages - LinkDAO"
+        fullWidth={true}
       >
         <ContactProvider>
           <div className="h-full">

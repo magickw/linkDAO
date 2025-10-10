@@ -1,7 +1,7 @@
 import express from 'express';
 import { communityController } from '../controllers/communityController';
 import { validateRequest } from '../middleware/validation';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware } from '../middleware/authMiddleware';
 import { rateLimitingMiddleware } from '../middleware/rateLimitingMiddleware';
 
 const router = express.Router();

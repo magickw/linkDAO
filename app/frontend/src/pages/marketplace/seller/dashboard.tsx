@@ -7,7 +7,7 @@ export default function SellerDashboardPage() {
   const router = useRouter();
   
   return (
-    <Layout title="Seller Dashboard - LinkDAO Marketplace">
+    <Layout title="Seller Dashboard - LinkDAO Marketplace" fullWidth={true}>
       <SellerDashboard />
     </Layout>
   );

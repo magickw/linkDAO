@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
+import './types';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,52 @@ import {
 import { globalErrorHandler, notFoundHandler } from './middleware/globalErrorHandler';
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
+
+// Import services
+import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
+
+// Use dynamic imports to avoid circular dependencies
+let cacheService: any = null;
+let cacheWarmingService: any = null;
+
+async function initializeServices() {
+  if (!cacheService) {
+    try {
+      // Explicitly import the JavaScript version
+      const cacheModule: any = await import('./services/cacheService.js');
+      if (cacheModule.default) {
+        // If it's a class, we need to create an instance
+        if (typeof cacheModule.default === 'function') {
+          cacheService = new cacheModule.default();
+        } else {
+          cacheService = cacheModule.default;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to import cacheService:', error);
+    }
+  }
+  
+  if (!cacheWarmingService) {
+    try {
+      const warmingModule: any = await import('./services/cacheWarmingService');
+      if (warmingModule.cacheWarmingService) {
+        cacheWarmingService = warmingModule.cacheWarmingService;
+      } else if (warmingModule.default) {
+        // If it's a class, we need to create an instance
+        if (typeof warmingModule.default === 'function') {
+          cacheWarmingService = new warmingModule.default();
+        } else {
+          cacheWarmingService = warmingModule.default;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to import cacheWarmingService:', error);
+    }
+  }
+  
+  return { cacheService, cacheWarmingService };
+}
 
 // Validate security configuration on startup
 try {
@@ -306,19 +353,15 @@ app.use(errorCorrelationMiddleware);
 app.use(globalErrorHandler);
 app.use(notFoundHandler);
 
-// Initialize cache service
-import { cacheService } from './services/cacheService';
-import { cacheWarmingService } from './services/cacheWarmingService';
-
-// Initialize WebSocket service
-import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
-
 // Start server
 httpServer.listen(PORT, async () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
+  
+  // Initialize services
+  const { cacheService, cacheWarmingService } = await initializeServices();
   
   // Initialize WebSocket service
   try {
@@ -331,8 +374,19 @@ httpServer.listen(PORT, async () => {
   
   // Initialize cache service
   try {
-    await cacheService.connect();
-    console.log('✅ Cache service initialized');
+    // Check if cacheService has connect method or if it's already connected
+    if (cacheService) {
+      if (typeof cacheService.connect === 'function') {
+        await cacheService.connect();
+        console.log('✅ Cache service initialized via connect method');
+      } else if (cacheService.isConnected) {
+        console.log('✅ Cache service already connected');
+      } else {
+        console.log('⚠️ Cache service available but not connected');
+      }
+    } else {
+      console.log('⚠️ Cache service not available');
+    }
     
     // Trigger initial cache warming
     setTimeout(async () => {

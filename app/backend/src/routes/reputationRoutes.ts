@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { reputationController } from '../controllers/reputationController';
-import { requestLogging } from '../middleware/requestLogging';
-import { marketplaceSecurity } from '../middleware/marketplaceSecurity';
+import { requestLoggingMiddleware } from '../middleware/requestLogging';
+import { generalRateLimit } from '../middleware/marketplaceSecurity';
 import { cachingMiddleware } from '../middleware/cachingMiddleware';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
 
 // Apply middleware to all reputation routes
-router.use(requestLogging);
-router.use(marketplaceSecurity.corsHandler);
+router.use(requestLoggingMiddleware);
 
 // Rate limiting for reputation endpoints
-const reputationRateLimit = marketplaceSecurity.createRateLimit({
+const reputationRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute for general reputation queries
   message: {
@@ -23,7 +23,7 @@ const reputationRateLimit = marketplaceSecurity.createRateLimit({
   }
 });
 
-const reputationUpdateRateLimit = marketplaceSecurity.createRateLimit({
+const reputationUpdateRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 20, // 20 updates per minute
   message: {

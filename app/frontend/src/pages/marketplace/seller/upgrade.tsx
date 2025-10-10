@@ -11,7 +11,7 @@ export default function SellerUpgradePage() {
 
   if (!profile) {
     return (
-      <Layout title="Upgrade Seller Account - LinkDAO Marketplace">
+      <Layout title="Upgrade Seller Account - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
           <GlassPanel className="max-w-md w-full text-center">
             <div className="mb-6">
@@ -38,7 +38,7 @@ export default function SellerUpgradePage() {
   const nextTiers = tiers.slice(currentTierIndex + 1);
 
   return (
-    <Layout title="Upgrade Seller Account - LinkDAO Marketplace">
+    <Layout title="Upgrade Seller Account - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">

@@ -79,7 +79,8 @@ export class CacheService {
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
-          keyPrefix: this.config.redis.keyPrefix
+          keyPrefix: this.config.redis.keyPrefix,
+          lazyConnect: true  // Add this to ensure consistent behavior
         });
       } else {
         this.redis = new Redis({
@@ -129,13 +130,23 @@ export class CacheService {
   }
 
   async connect(): Promise<void> {
-    if (!this.isConnected) {
-      try {
+    if (this.isConnected) {
+      return;
+    }
+    
+    try {
+      // Check if redis client has connect method (ioredis)
+      if (this.redis && typeof this.redis.connect === 'function') {
         await this.redis.connect();
-      } catch (error) {
-        console.error('Failed to connect to Redis:', error);
-        throw error;
+      } else {
+        // If no connect method, assume already connected or connectionless client
+        // Check connection status by pinging
+        await this.redis.ping();
+        this.isConnected = true;
       }
+    } catch (error) {
+      console.error('Failed to connect to Redis:', error);
+      throw error;
     }
   }
 

@@ -9,7 +9,7 @@ export default function ListingPageRoute() {
 
   if (!id || typeof id !== 'string') {
     return (
-      <Layout title="Listing - LinkDAO Marketplace">
+      <Layout title="Listing - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
           <div className="text-white text-xl">Loading listing...</div>
         </div>
@@ -18,7 +18,7 @@ export default function ListingPageRoute() {
   }
 
   return (
-    <Layout title="Listing Details - LinkDAO Marketplace">
+    <Layout title="Listing Details - LinkDAO Marketplace" fullWidth={true}>
       <ListingDetailPage listingId={id} />
     </Layout>
   );

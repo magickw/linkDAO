@@ -18,7 +18,7 @@ export default function Settings() {
 
   if (!isConnected) {
     return (
-      <Layout title="Settings - LinkDAO">
+      <Layout title="Settings - LinkDAO" fullWidth={true}>
         <div className="max-w-4xl mx-auto">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
             <div className="text-6xl mb-4">🔒</div>
@@ -40,7 +40,7 @@ export default function Settings() {
   }
 
   return (
-    <Layout title="Settings - LinkDAO">
+    <Layout title="Settings - LinkDAO" fullWidth={true}>
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>

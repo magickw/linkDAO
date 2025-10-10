@@ -318,7 +318,7 @@ export default function Dashboard() {
 
   if (!isConnected) {
     return (
-      <Layout title="Dashboard - LinkDAO">
+      <Layout title="Dashboard - LinkDAO" fullWidth={true}>
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Personalized Dashboard</h1>
@@ -337,8 +337,8 @@ export default function Dashboard() {
   };
 
   return (
-    <Layout title="Dashboard - LinkDAO">
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <Layout title="Dashboard - LinkDAO" fullWidth={true}>
+      <div className="py-6 px-4 sm:px-6 lg:px-8">
       {/* Legacy Functionality Preserver */}
       <LegacyFunctionalityPreserver />
       

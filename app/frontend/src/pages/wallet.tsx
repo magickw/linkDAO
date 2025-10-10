@@ -183,7 +183,7 @@ export default function Wallet() {
   }));
 
   return (
-    <Layout title="Wallet - LinkDAO">
+    <Layout title="Wallet - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-6">

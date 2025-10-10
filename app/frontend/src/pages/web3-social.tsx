@@ -233,7 +233,7 @@ export default function Web3SocialFeed() {
   // Show migration notice for non-connected users
   if (showMigrationNotice) {
     return (
-      <Layout title="Web3 Social Feed - LinkDAO">
+      <Layout title="Web3 Social Feed - LinkDAO" fullWidth={true}>
         <div className="px-4 py-6 sm:px-0">
           <div className="max-w-4xl mx-auto">
             <div className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-xl p-8 text-center">
@@ -283,7 +283,7 @@ export default function Web3SocialFeed() {
   }
 
   return (
-    <Layout title="Web3 Social Feed - LinkDAO">
+    <Layout title="Web3 Social Feed - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-6xl mx-auto">
           {/* Header */}

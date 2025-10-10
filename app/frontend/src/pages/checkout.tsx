@@ -49,7 +49,7 @@ const CheckoutPage: React.FC = () => {
 
   if (checkoutItems.length === 0) {
     return (
-      <Layout title="Checkout - LinkDAO Marketplace">
+      <Layout title="Checkout - LinkDAO Marketplace" fullWidth={true}>
         <GlassPanel variant="primary" className="max-w-2xl mx-auto p-12 text-center space-y-6">
           <h1 className="text-3xl font-bold text-white">Your cart is empty</h1>
           <p className="text-white/70 text-lg">
@@ -64,7 +64,7 @@ const CheckoutPage: React.FC = () => {
   }
 
   return (
-    <Layout title="Secure Checkout - LinkDAO Marketplace">
+    <Layout title="Secure Checkout - LinkDAO Marketplace" fullWidth={true}>
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="space-y-2">
           <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">

@@ -203,11 +203,11 @@ export default function Profile() {
 
   if (!isConnected) {
     return (
-      <Layout title="Profile - LinkDAO">
+      <Layout title="Profile - LinkDAO" fullWidth={true}>
         <div className="px-4 py-6 sm:px-0">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Your Profile</h1>
-            <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to view and edit your profile.</p>
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Profile</h1>
+            <p className="text-gray-600 dark:text-gray-300">Please connect your wallet to view your profile.</p>
           </div>
         </div>
       </Layout>
@@ -227,7 +227,7 @@ export default function Profile() {
   );
 
   return (
-    <Layout title="Profile - LinkDAO">
+    <Layout title="Profile - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Your Profile</h1>

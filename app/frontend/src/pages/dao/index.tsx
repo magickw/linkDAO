@@ -103,7 +103,7 @@ export default function CommunitiesPage() {
   );
 
   return (
-    <Layout title="Communities - LinkDAO">
+    <Layout title="Communities - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Web3 Communities</h1>

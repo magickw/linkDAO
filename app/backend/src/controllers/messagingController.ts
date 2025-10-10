@@ -57,7 +57,7 @@ export class MessagingController {
       });
 
       if (!conversation.success) {
-        res.status(400).json(apiResponse.error(conversation.message, 400));
+        res.status(400).json(apiResponse.error((conversation as any).message, 400));
         return;
       }
 
@@ -123,7 +123,7 @@ export class MessagingController {
       });
 
       if (!messages.success) {
-        res.status(400).json(apiResponse.error(messages.message, 400));
+        res.status(400).json(apiResponse.error((messages as any).message, 400));
         return;
       }
 
@@ -163,7 +163,7 @@ export class MessagingController {
       });
 
       if (!message.success) {
-        res.status(400).json(apiResponse.error(message.message, 400));
+        res.status(400).json(apiResponse.error((message as any).message, 400));
         return;
       }
 
@@ -191,7 +191,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -219,7 +219,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -247,7 +247,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -275,7 +275,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -306,7 +306,7 @@ export class MessagingController {
       });
 
       if (!encryptedMessage.success) {
-        res.status(400).json(apiResponse.error(encryptedMessage.message, 400));
+        res.status(400).json(apiResponse.error((encryptedMessage as any).message, 400));
         return;
       }
 
@@ -337,7 +337,7 @@ export class MessagingController {
       });
 
       if (!decryptedMessage.success) {
-        res.status(400).json(apiResponse.error(decryptedMessage.message, 400));
+        res.status(400).json(apiResponse.error((decryptedMessage as any).message, 400));
         return;
       }
 
@@ -367,7 +367,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -395,7 +395,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -454,7 +454,7 @@ export class MessagingController {
       });
 
       if (!thread.success) {
-        res.status(400).json(apiResponse.error(thread.message, 400));
+        res.status(400).json(apiResponse.error((thread as any).message, 400));
         return;
       }
 
@@ -483,7 +483,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -511,7 +511,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -560,7 +560,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
@@ -588,7 +588,7 @@ export class MessagingController {
       });
 
       if (!participants.success) {
-        res.status(400).json(apiResponse.error(participants.message, 400));
+        res.status(400).json(apiResponse.error((participants as any).message, 400));
         return;
       }
 
@@ -618,11 +618,11 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 
-      res.json(apiResponse.success(result.data, 'Participant added successfully'));
+      res.json(apiResponse.success((result as any).data, 'Participant added successfully'));
     } catch (error) {
       console.error('Error adding participant:', error);
       res.status(500).json(apiResponse.error('Failed to add participant'));
@@ -647,7 +647,7 @@ export class MessagingController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(apiResponse.error((result as any).message, 400));
         return;
       }
 

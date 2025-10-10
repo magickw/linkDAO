@@ -16,6 +16,8 @@ import { MessagingWidget } from '@/components/Messaging';
 interface LayoutProps {
   children: ReactNode;
   title?: string;
+  hideFooter?: boolean;
+  fullWidth?: boolean;
 }
 
 type NavItem = {
@@ -25,7 +27,7 @@ type NavItem = {
   badge?: number;
 };
 
-export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
+export default function Layout({ children, title = 'LinkDAO', hideFooter = false, fullWidth = false }: LayoutProps & { fullWidth?: boolean }) {
   const { address, isConnected } = useAccount();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -245,13 +247,12 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
         )}
       </header>
 
-      <main className="pb-16 md:pb-0">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          {children}
-        </div>
+      <main className={fullWidth ? "w-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
+        {children}
       </main>
 
-      <footer className="bg-white dark:bg-gray-800 mt-12 border-t border-gray-200 dark:border-gray-700">
+      {!hideFooter && (
+        <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {/* Quick Links */}
@@ -315,6 +316,7 @@ export default function Layout({ children, title = 'LinkDAO' }: LayoutProps) {
         </div>
         <Analytics />
       </footer>
+      )}
 
       {/* {isConnected && <NotificationSystem />} */}
 

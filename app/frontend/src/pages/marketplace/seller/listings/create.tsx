@@ -414,7 +414,7 @@ const CreateListingPage: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <Layout title="Create Listing - LinkDAO Marketplace">
+      <Layout title="Create Listing - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <GlassPanel variant="primary" className="text-center py-12">
@@ -429,7 +429,7 @@ const CreateListingPage: React.FC = () => {
   }
 
   return (
-    <Layout title="Create Listing - LinkDAO Marketplace">
+    <Layout title="Create Listing - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           

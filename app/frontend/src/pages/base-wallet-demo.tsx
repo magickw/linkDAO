@@ -44,7 +44,7 @@ export default function BaseWalletDemo() {
         <meta name="description" content="Test Base wallet automatic login functionality" />
       </Head>
       
-      <Layout title="Base Wallet Login Demo">
+      <Layout title="Base Wallet Login Demo" fullWidth={true}>
         <div className="max-w-4xl mx-auto py-8 space-y-8">
           {/* Header */}
           <div className="text-center">

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { UnifiedMarketplaceService } from '../services/marketplaceService';
+import { UnifiedMarketplaceService } from '../services/unifiedMarketplaceService';
 import { CreateListingInput, UpdateListingInput, ListingStatus } from '../services/listingService';
 import { ProductSearchFilters, ProductSortOptions, PaginationOptions } from '../models/Product';
 import { ValidationError } from '../models/validation';

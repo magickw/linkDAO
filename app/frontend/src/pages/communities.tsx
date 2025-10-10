@@ -225,12 +225,12 @@ const CommunitiesPage: React.FC = () => {
   );
 
   return (
-    <Layout title="Communities - LinkDAO">
+    <Layout title="Communities - LinkDAO" fullWidth={true}>
       <Head>
         <meta name="description" content="Discover and join decentralized communities" />
       </Head>
 
-      <div className="grid grid-cols-12 gap-6 max-w-7xl mx-auto">
+      <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
         <div className="col-span-12 lg:col-span-3">
           <div className="sticky top-6 space-y-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">

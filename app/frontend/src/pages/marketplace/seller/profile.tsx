@@ -4,7 +4,7 @@ import Layout from '@/components/Layout';
 
 export default function SellerProfilePageRoute() {
   return (
-    <Layout title="Seller Profile - LinkDAO Marketplace">
+    <Layout title="Seller Profile - LinkDAO Marketplace" fullWidth={true}>
       <SellerProfilePage />
     </Layout>
   );

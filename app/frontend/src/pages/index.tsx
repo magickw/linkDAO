@@ -97,7 +97,7 @@ export default function Home() {
     };
 
     return (
-      <Layout title="LinkDAO - The Web3 Social Network">
+      <Layout title="LinkDAO - The Web3 Social Network" fullWidth={true}>
         {/* Hero Section */}
         <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
           {/* Background with glassmorphism shapes */}
@@ -430,7 +430,7 @@ export default function Home() {
 
   // Connected user experience - Main Social Dashboard/Feed
   return (
-    <Layout title="LinkDAO - Home">
+    <Layout title="LinkDAO - Home" hideFooter={true} fullWidth={true}>
       <div className="flex bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar - Navigation */}
         <div className="hidden lg:flex lg:flex-shrink-0">
@@ -444,7 +444,7 @@ export default function Home() {
           {/* Main Feed Content */}
           <div className="flex-1 flex">
             {/* Center Feed */}
-            <div className="flex-1 overflow-y-auto pb-20">
+            <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
               <div className="max-w-2xl mx-auto py-6 px-4">
                 {/* Facebook-style Post Composer */}
                 <FacebookStylePostComposer

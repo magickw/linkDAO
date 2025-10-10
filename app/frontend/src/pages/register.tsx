@@ -54,7 +54,7 @@ export default function Register() {
 
   if (!isConnected) {
     return (
-      <Layout title="Register - LinkDAO">
+      <Layout title="Register - LinkDAO" fullWidth={true}>
         <div className="px-4 py-6 sm:px-0">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Your Profile</h1>
@@ -66,7 +66,7 @@ export default function Register() {
   }
 
   return (
-    <Layout title="Register - LinkDAO">
+    <Layout title="Register - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Create Your Profile</h1>

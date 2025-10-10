@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { cacheService } from '../services/cacheService';
 import { logger } from '../utils/logger';
 
-interface RateLimitConfig {
+export interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
   maxRequests: number; // Maximum requests per window
   skipSuccessfulRequests?: boolean; // Don't count successful requests
@@ -234,6 +234,20 @@ export class RateLimitingService {
       };
     }
   }
+}
+
+type LegacyRateLimitOptions = Partial<RateLimitConfig> & { max?: number };
+
+/**
+ * Helper exported for existing route imports expecting a function-style middleware factory.
+ */
+export function rateLimitingMiddleware(options: LegacyRateLimitOptions = {}) {
+  const { max, ...rest } = options;
+  const config: Partial<RateLimitConfig> = {
+    ...rest,
+    ...(typeof max === 'number' ? { maxRequests: max } : {}),
+  };
+  return RateLimitingService.getInstance().createRateLimit(config);
 }
 
 // Pre-configured rate limiters for different use cases

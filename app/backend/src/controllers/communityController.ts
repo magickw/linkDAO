@@ -1,6 +1,20 @@
 import { Request, Response } from 'express';
 import { communityService } from '../services/communityService';
-import { apiResponse } from '../utils/apiResponse';
+import { apiResponse, createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
+
+// Extend Request type to include user property
+interface AuthenticatedRequest extends Request {
+  user?: {
+    address?: string;
+    walletAddress?: string;
+    userId?: string;
+    kycStatus?: string;
+    permissions?: string[];
+    id?: string;
+    isAdmin?: boolean;
+    [key: string]: any;
+  };
+}
 
 export class CommunityController {
   // List communities with filtering
@@ -24,10 +38,10 @@ export class CommunityController {
         tags: Array.isArray(tags) ? tags as string[] : []
       });
 
-      res.json(apiResponse.success(communities, 'Communities retrieved successfully'));
+      res.json(createSuccessResponse(communities, {}));
     } catch (error) {
       console.error('Error listing communities:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve communities'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve communities'));
     }
   }
 
@@ -46,10 +60,10 @@ export class CommunityController {
         timeRange: timeRange as string
       });
 
-      res.json(apiResponse.success(trendingCommunities, 'Trending communities retrieved successfully'));
+      res.json(createSuccessResponse(trendingCommunities, {}));
     } catch (error) {
       console.error('Error getting trending communities:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve trending communities'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve trending communities'));
     }
   }
 
@@ -57,28 +71,28 @@ export class CommunityController {
   async getCommunityDetails(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
 
       const community = await communityService.getCommunityDetails(id, userAddress);
 
       if (!community) {
-        res.status(404).json(apiResponse.error('Community not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
         return;
       }
 
-      res.json(apiResponse.success(community, 'Community details retrieved successfully'));
+      res.json(createSuccessResponse(community, {}));
     } catch (error) {
       console.error('Error getting community details:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve community details'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community details'));
     }
   }
 
   // Create new community
   async createCommunity(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -113,13 +127,13 @@ export class CommunityController {
         minimumStake
       });
 
-      res.status(201).json(apiResponse.success(community, 'Community created successfully'));
+      res.status(201).json(createSuccessResponse(community, {}));
     } catch (error) {
       console.error('Error creating community:', error);
       if (error.message.includes('already exists')) {
-        res.status(409).json(apiResponse.error('Community name already exists', 409));
+        res.status(409).json(createErrorResponse('CONFLICT', 'Community name already exists', 409));
       } else {
-        res.status(500).json(apiResponse.error('Failed to create community'));
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create community'));
       }
     }
   }
@@ -127,9 +141,9 @@ export class CommunityController {
   // Update community
   async updateCommunity(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -143,23 +157,23 @@ export class CommunityController {
       });
 
       if (!updatedCommunity) {
-        res.status(404).json(apiResponse.error('Community not found or unauthorized', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found or unauthorized', 404));
         return;
       }
 
-      res.json(apiResponse.success(updatedCommunity, 'Community updated successfully'));
+      res.json(createSuccessResponse(updatedCommunity, {}));
     } catch (error) {
       console.error('Error updating community:', error);
-      res.status(500).json(apiResponse.error('Failed to update community'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to update community'));
     }
   }
 
   // Join community
   async joinCommunity(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -171,23 +185,23 @@ export class CommunityController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to join community', 400));
         return;
       }
 
-      res.json(apiResponse.success(result.data, 'Successfully joined community'));
+      res.json(createSuccessResponse(result.data, {}));
     } catch (error) {
       console.error('Error joining community:', error);
-      res.status(500).json(apiResponse.error('Failed to join community'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to join community'));
     }
   }
 
   // Leave community
   async leaveCommunity(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -199,14 +213,14 @@ export class CommunityController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to leave community', 400));
         return;
       }
 
-      res.json(apiResponse.success(null, 'Successfully left community'));
+      res.json(createSuccessResponse(null, {}));
     } catch (error) {
       console.error('Error leaving community:', error);
-      res.status(500).json(apiResponse.error('Failed to leave community'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to leave community'));
     }
   }
 
@@ -229,19 +243,19 @@ export class CommunityController {
         timeRange: timeRange as string
       });
 
-      res.json(apiResponse.success(posts, 'Community posts retrieved successfully'));
+      res.json(createSuccessResponse(posts, {}));
     } catch (error) {
       console.error('Error getting community posts:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve community posts'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community posts'));
     }
   }
 
   // Create post in community
   async createCommunityPost(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -258,14 +272,14 @@ export class CommunityController {
       });
 
       if (!post.success) {
-        res.status(400).json(apiResponse.error(post.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', post.message || 'Failed to create post', 400));
         return;
       }
 
-      res.status(201).json(apiResponse.success(post.data, 'Post created successfully'));
+      res.status(201).json(createSuccessResponse(post.data, {}));
     } catch (error) {
       console.error('Error creating community post:', error);
-      res.status(500).json(apiResponse.error('Failed to create post'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create post'));
     }
   }
 
@@ -286,10 +300,10 @@ export class CommunityController {
         role: role as string
       });
 
-      res.json(apiResponse.success(members, 'Community members retrieved successfully'));
+      res.json(createSuccessResponse(members, {}));
     } catch (error) {
       console.error('Error getting community members:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve community members'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community members'));
     }
   }
 
@@ -301,23 +315,23 @@ export class CommunityController {
       const stats = await communityService.getCommunityStats(id);
 
       if (!stats) {
-        res.status(404).json(apiResponse.error('Community not found', 404));
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Community not found', 404));
         return;
       }
 
-      res.json(apiResponse.success(stats, 'Community statistics retrieved successfully'));
+      res.json(createSuccessResponse(stats, {}));
     } catch (error) {
       console.error('Error getting community stats:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve community statistics'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve community statistics'));
     }
   }
 
   // Moderate content
   async moderateContent(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -333,14 +347,14 @@ export class CommunityController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', (result as any).message || 'Failed to moderate content', 400));
         return;
       }
 
-      res.json(apiResponse.success(result.data, 'Moderation action completed successfully'));
+      res.json(createSuccessResponse(result.data, {}));
     } catch (error) {
       console.error('Error moderating content:', error);
-      res.status(500).json(apiResponse.error('Failed to moderate content'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to moderate content'));
     }
   }
 
@@ -361,19 +375,19 @@ export class CommunityController {
         status: status as string
       });
 
-      res.json(apiResponse.success(proposals, 'Governance proposals retrieved successfully'));
+      res.json(createSuccessResponse(proposals, {}));
     } catch (error) {
       console.error('Error getting governance proposals:', error);
-      res.status(500).json(apiResponse.error('Failed to retrieve governance proposals'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve governance proposals'));
     }
   }
 
   // Create governance proposal
   async createGovernanceProposal(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -397,23 +411,23 @@ export class CommunityController {
       });
 
       if (!proposal.success) {
-        res.status(400).json(apiResponse.error(proposal.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', proposal.message || 'Failed to create governance proposal', 400));
         return;
       }
 
-      res.status(201).json(apiResponse.success(proposal.data, 'Governance proposal created successfully'));
+      res.status(201).json(createSuccessResponse((proposal as any).data || proposal, {}));
     } catch (error) {
       console.error('Error creating governance proposal:', error);
-      res.status(500).json(apiResponse.error('Failed to create governance proposal'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create governance proposal'));
     }
   }
 
   // Vote on governance proposal
   async voteOnProposal(req: Request, res: Response): Promise<void> {
     try {
-      const userAddress = req.user?.address;
+      const userAddress = (req as AuthenticatedRequest).user?.address;
       if (!userAddress) {
-        res.status(401).json(apiResponse.error('Authentication required', 401));
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
         return;
       }
 
@@ -429,14 +443,14 @@ export class CommunityController {
       });
 
       if (!result.success) {
-        res.status(400).json(apiResponse.error(result.message, 400));
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to cast vote', 400));
         return;
       }
 
-      res.json(apiResponse.success(result.data, 'Vote cast successfully'));
+      res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       console.error('Error voting on proposal:', error);
-      res.status(500).json(apiResponse.error('Failed to cast vote'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to cast vote'));
     }
   }
 
@@ -457,10 +471,10 @@ export class CommunityController {
         category: category as string
       });
 
-      res.json(apiResponse.success(searchResults, 'Community search completed successfully'));
+      res.json(createSuccessResponse(searchResults, {}));
     } catch (error) {
       console.error('Error searching communities:', error);
-      res.status(500).json(apiResponse.error('Failed to search communities'));
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search communities'));
     }
   }
 }

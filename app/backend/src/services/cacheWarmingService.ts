@@ -1,4 +1,5 @@
 import { cacheService } from './cacheService';
+
 import { sellerProfileService } from './sellerProfileService';
 import { marketplaceListingsService } from './marketplaceListingsService';
 import { reputationService } from './reputationService';
@@ -43,7 +44,7 @@ export class CacheWarmingService {
   }
 
   // Warm popular seller profiles
-  async warmPopularSellerProfiles(limit: number = 50): Promise<void> {
+  async warmPopularSellerProfiles(limit: number = 10): Promise<void> { // Reduced from 50 to 10
     console.log(`Warming ${limit} popular seller profiles...`);
 
     // This would typically query for popular sellers from analytics
@@ -66,14 +67,11 @@ export class CacheWarmingService {
   async warmPopularListings(): Promise<void> {
     console.log('Warming popular listings...');
 
-    // Common filter combinations to warm
+    // Reduce the number of filter combinations to warm
     const popularFilters: MarketplaceListingFilters[] = [
       {}, // All listings
-      { sortBy: 'price', sortOrder: 'asc' }, // Cheapest first
       { sortBy: 'createdAt', sortOrder: 'desc' }, // Newest first
-      { limit: 20, offset: 0 }, // First page
-      { category: 'nft' }, // NFT category
-      { category: 'defi' }, // DeFi category
+      { limit: 10, offset: 0 }, // First page with smaller limit
     ];
 
     for (const filters of popularFilters) {
@@ -89,7 +87,7 @@ export class CacheWarmingService {
   }
 
   // Warm reputation data for active users
-  async warmActiveUserReputations(limit: number = 100): Promise<void> {
+  async warmActiveUserReputations(limit: number = 20): Promise<void> { // Reduced from 100 to 20
     console.log(`Warming reputation data for ${limit} active users...`);
 
     const activeUserAddresses = await this.getActiveUserAddresses(limit);
@@ -171,8 +169,8 @@ export class CacheWarmingService {
 
     console.log(`Starting cache warming with ${this.stats.totalJobs} jobs...`);
 
-    // Process jobs in batches to avoid overwhelming the system
-    const batchSize = 5;
+    // Process jobs in smaller batches to avoid overwhelming the system
+    const batchSize = 3; // Reduced from 5 to 3
     while (this.warmupQueue.length > 0) {
       const batch = this.warmupQueue.splice(0, batchSize);
       
@@ -181,7 +179,7 @@ export class CacheWarmingService {
 
       // Small delay between batches
       if (this.warmupQueue.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay to 200ms
       }
     }
 
@@ -201,6 +199,21 @@ export class CacheWarmingService {
       console.log(`Warming cache: ${job.key} (priority: ${job.priority})`);
       
       const data = await job.loader();
+      
+      // Use dynamic import to avoid circular dependencies
+      // Explicitly import the JavaScript version
+      const cacheModule: any = await import('./cacheService.js');
+      let cacheService;
+      if (cacheModule.default) {
+        // If it's a class, create an instance
+        if (typeof cacheModule.default === 'function') {
+          cacheService = new cacheModule.default();
+        } else {
+          cacheService = cacheModule.default;
+        }
+      } else {
+        cacheService = cacheModule;
+      }
       await cacheService.set(job.key, data, job.ttl);
       
       this.stats.completedJobs++;
@@ -264,9 +277,9 @@ export class CacheWarmingService {
     // Clear existing queue
     this.warmupQueue = [];
 
-    // Only warm high priority items
+    // Only warm high priority items with smaller limits
     await Promise.all([
-      this.warmPopularSellerProfiles(20),
+      this.warmPopularSellerProfiles(5), // Reduced from 20 to 5
       this.warmCategoryData()
     ]);
 

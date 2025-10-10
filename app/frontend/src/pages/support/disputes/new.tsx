@@ -226,7 +226,7 @@ const NewDisputePage: React.FC = () => {
   };
 
   return (
-    <Layout title="File a Dispute - LinkDAO Marketplace">
+    <Layout title="File a Dispute - LinkDAO Marketplace" fullWidth={true}>
       <div className="bg-gray-50 dark:bg-gray-900 min-h-screen py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}

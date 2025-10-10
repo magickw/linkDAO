@@ -98,8 +98,7 @@ class TransactionService {
       if (orderId) {
         const order = await db
           .select({ 
-            title: marketplaceListings.title,
-            enhancedData: marketplaceListings.enhancedData 
+            title: marketplaceListings.title
           })
           .from(orders)
           .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
@@ -107,8 +106,7 @@ class TransactionService {
           .limit(1);
 
         if (order.length > 0) {
-          const enhanced = order[0].enhancedData as any;
-          orderTitle = enhanced?.title || order[0].title || 'Unknown Item';
+          orderTitle = order[0].title || 'Unknown Item';
         }
       }
 
@@ -160,26 +158,11 @@ class TransactionService {
         .where(eq(sellerTransactions.sellerWalletAddress, walletAddress));
 
       // Add filters
-      if (type) {
-        query = query.where(and(
-          eq(sellerTransactions.sellerWalletAddress, walletAddress),
-          eq(sellerTransactions.transactionType, type)
-        ));
-      }
 
-      if (startDate) {
-        query = query.where(and(
-          eq(sellerTransactions.sellerWalletAddress, walletAddress),
-          gte(sellerTransactions.createdAt, startDate)
-        ));
-      }
 
-      if (endDate) {
-        query = query.where(and(
-          eq(sellerTransactions.sellerWalletAddress, walletAddress),
-          lte(sellerTransactions.createdAt, endDate)
-        ));
-      }
+
+
+
 
       const transactions = await query
         .orderBy(desc(sellerTransactions.createdAt))
@@ -212,8 +195,7 @@ class TransactionService {
           const relatedOrder = await db
             .select({ 
               orderId: orders.id,
-              title: marketplaceListings.title,
-              enhancedData: marketplaceListings.enhancedData 
+              title: marketplaceListings.title
             })
             .from(orders)
             .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
@@ -222,8 +204,7 @@ class TransactionService {
 
           if (relatedOrder.length > 0) {
             orderId = relatedOrder[0].orderId.toString();
-            const enhanced = relatedOrder[0].enhancedData as any;
-            orderTitle = enhanced?.title || relatedOrder[0].title || 'Unknown Item';
+            orderTitle = relatedOrder[0].title || 'Unknown Item';
           }
         }
 
@@ -465,15 +446,12 @@ class TransactionService {
         .select({
           buyerId: orders.buyerId,
           sellerId: orders.sellerId,
-          buyerAddress: sql<string>`buyer_user.wallet_address`,
-          sellerAddress: sql<string>`seller_user.wallet_address`,
-          listingTitle: marketplaceListings.title,
-          enhancedData: marketplaceListings.enhancedData,
+          buyerAddress: sql<string>`orders.buyer_id::text`,
+          sellerAddress: sql<string>`orders.seller_id::text`,
+          listingTitle: marketplaceListings.title
         })
         .from(orders)
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
-        .leftJoin(users.as('buyer_user'), eq(orders.buyerId, users.id))
-        .leftJoin(users.as('seller_user'), eq(orders.sellerId, users.id))
         .where(eq(orders.id, parseInt(orderId)))
         .limit(1);
 

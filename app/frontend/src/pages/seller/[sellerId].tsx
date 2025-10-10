@@ -15,7 +15,7 @@ export default function SellerStoreRoute() {
 
   if (!sellerId || typeof sellerId !== 'string') {
     return (
-      <Layout title="Store - LinkDAO Marketplace">
+      <Layout title="Store - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen flex items-center justify-center">
           <div className="relative z-10 text-center">
             <h1 className="text-2xl font-bold text-white mb-4">Invalid Store ID</h1>
@@ -32,7 +32,7 @@ export default function SellerStoreRoute() {
   }
 
   return (
-    <Layout title={`Store - LinkDAO Marketplace`}>
+    <Layout title={`Store - LinkDAO Marketplace`} fullWidth={true}>
       <EnhancedCartProvider>
         <SellerStorePage sellerId={sellerId} />
       </EnhancedCartProvider>

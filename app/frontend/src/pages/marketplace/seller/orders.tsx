@@ -11,7 +11,7 @@ export default function SellerOrdersPage() {
 
   if (!profile) {
     return (
-      <Layout title="Seller Orders - LinkDAO Marketplace">
+      <Layout title="Seller Orders - LinkDAO Marketplace" fullWidth={true}>
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
           <GlassPanel className="max-w-md w-full text-center">
             <div className="mb-6">
@@ -35,7 +35,7 @@ export default function SellerOrdersPage() {
   }
 
   return (
-    <Layout title="Seller Orders - LinkDAO Marketplace">
+    <Layout title="Seller Orders - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">

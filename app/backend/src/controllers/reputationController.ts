@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { reputationService, ReputationTransaction } from '../services/reputationService';
-import { successResponse, errorResponse } from '../utils/apiResponse';
+import { createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
 import { logger } from '../utils/logger';
 
 export class ReputationController {
@@ -13,13 +13,13 @@ export class ReputationController {
       const { walletAddress } = req.params;
 
       if (!walletAddress) {
-        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('MISSING_WALLET_ADDRESS', 'Wallet address is required'));
         return;
       }
 
       // Validate wallet address format
       if (!this.isValidWalletAddress(walletAddress)) {
-        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 'Invalid wallet address format'));
         return;
       }
 
@@ -27,9 +27,8 @@ export class ReputationController {
 
       const reputation = await reputationService.getReputation(walletAddress);
 
-      res.status(200).json(successResponse(reputation, {
-        requestId: req.headers['x-request-id'] as string,
-        cached: false, // Could implement cache hit detection
+      res.status(200).json(createSuccessResponse(reputation, {
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
@@ -52,10 +51,8 @@ export class ReputationController {
         lastUpdated: new Date(),
       };
 
-      res.status(200).json(successResponse(defaultReputation, {
-        requestId: req.headers['x-request-id'] as string,
-        fallback: true,
-        error: 'Service temporarily unavailable, showing default values'
+      res.status(200).json(createSuccessResponse(defaultReputation, {
+        requestId: res.locals.requestId,
       }));
     }
   }
@@ -70,18 +67,18 @@ export class ReputationController {
       const { eventType, transactionId, reviewId, metadata } = req.body;
 
       if (!walletAddress) {
-        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('MISSING_WALLET_ADDRESS', 'Wallet address is required'));
         return;
       }
 
       if (!eventType) {
-        res.status(400).json(errorResponse('Event type is required', 'MISSING_EVENT_TYPE'));
+        res.status(400).json(createErrorResponse('MISSING_EVENT_TYPE', 'Event type is required'));
         return;
       }
 
       // Validate wallet address format
       if (!this.isValidWalletAddress(walletAddress)) {
-        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 'Invalid wallet address format'));
         return;
       }
 
@@ -96,10 +93,8 @@ export class ReputationController {
       ];
 
       if (!validEventTypes.includes(eventType)) {
-        res.status(400).json(errorResponse(
-          `Invalid event type. Must be one of: ${validEventTypes.join(', ')}`,
-          'INVALID_EVENT_TYPE'
-        ));
+        res.status(400).json(createErrorResponse('INVALID_EVENT_TYPE', 
+          `Invalid event type. Must be one of: ${validEventTypes.join(', ')}`));
         return;
       }
 
@@ -117,18 +112,18 @@ export class ReputationController {
       // Get updated reputation to return
       const updatedReputation = await reputationService.getReputation(walletAddress);
 
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         message: 'Reputation updated successfully',
         reputation: updatedReputation
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
       logger.error('Error updating reputation:', error);
-      res.status(500).json(errorResponse(
-        'Failed to update reputation',
+      res.status(500).json(createErrorResponse(
         'REPUTATION_UPDATE_FAILED',
+        'Failed to update reputation',
         { error: error.message }
       ));
     }
@@ -144,19 +139,19 @@ export class ReputationController {
       const limit = parseInt(req.query.limit as string) || 50;
 
       if (!walletAddress) {
-        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('MISSING_WALLET_ADDRESS', 'Wallet address is required'));
         return;
       }
 
       // Validate wallet address format
       if (!this.isValidWalletAddress(walletAddress)) {
-        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 'Invalid wallet address format'));
         return;
       }
 
       // Validate limit
       if (limit < 1 || limit > 100) {
-        res.status(400).json(errorResponse('Limit must be between 1 and 100', 'INVALID_LIMIT'));
+        res.status(400).json(createErrorResponse('INVALID_LIMIT', 'Limit must be between 1 and 100'));
         return;
       }
 
@@ -164,28 +159,26 @@ export class ReputationController {
 
       const history = await reputationService.getReputationHistory(walletAddress, limit);
 
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         walletAddress,
         history,
         count: history.length,
         limit
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
       logger.error('Error getting reputation history:', error);
       
       // Return empty history instead of error
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         walletAddress: req.params.walletAddress,
         history: [],
         count: 0,
         limit: parseInt(req.query.limit as string) || 50
       }, {
-        requestId: req.headers['x-request-id'] as string,
-        fallback: true,
-        error: 'Service temporarily unavailable, showing empty history'
+        requestId: res.locals.requestId,
       }));
     }
   }
@@ -198,82 +191,64 @@ export class ReputationController {
     try {
       const { walletAddresses } = req.body;
 
-      if (!walletAddresses || !Array.isArray(walletAddresses)) {
-        res.status(400).json(errorResponse('Wallet addresses array is required', 'MISSING_WALLET_ADDRESSES'));
+      if (!walletAddresses) {
+        res.status(400).json(createErrorResponse('MISSING_WALLET_ADDRESSES', 'Wallet addresses array is required'));
         return;
       }
 
-      if (walletAddresses.length === 0) {
-        res.status(400).json(errorResponse('At least one wallet address is required', 'EMPTY_WALLET_ADDRESSES'));
+      if (!Array.isArray(walletAddresses) || walletAddresses.length === 0) {
+        res.status(400).json(createErrorResponse('EMPTY_WALLET_ADDRESSES', 'At least one wallet address is required'));
         return;
       }
 
       if (walletAddresses.length > 50) {
-        res.status(400).json(errorResponse('Maximum 50 wallet addresses allowed', 'TOO_MANY_ADDRESSES'));
+        res.status(400).json(createErrorResponse('TOO_MANY_ADDRESSES', 'Maximum 50 wallet addresses allowed'));
         return;
       }
 
       // Validate all wallet addresses
-      const invalidAddresses = walletAddresses.filter(addr => !this.isValidWalletAddress(addr));
-      if (invalidAddresses.length > 0) {
-        res.status(400).json(errorResponse(
-          `Invalid wallet address format: ${invalidAddresses.join(', ')}`,
-          'INVALID_WALLET_ADDRESSES'
-        ));
-        return;
+      for (const address of walletAddresses) {
+        if (!this.isValidWalletAddress(address)) {
+          res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 
+            `Invalid wallet address format: ${address}`));
+          return;
+        }
       }
 
-      logger.info(`Getting bulk reputation for ${walletAddresses.length} addresses`);
+      logger.info(`Getting bulk reputation for ${walletAddresses.length} wallets`);
 
-      const reputationMap = await reputationService.getBulkReputation(walletAddresses);
-      
-      // Convert Map to object for JSON response
-      const reputationData: Record<string, any> = {};
-      reputationMap.forEach((reputation, address) => {
-        reputationData[address] = reputation;
-      });
+      const reputationData = await reputationService.getBulkReputation(walletAddresses);
 
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         reputations: reputationData,
-        count: walletAddresses.length
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
       logger.error('Error getting bulk reputation:', error);
       
       // Return default values for all addresses
-      const { walletAddresses } = req.body;
-      const defaultReputations: Record<string, any> = {};
-      
-      if (Array.isArray(walletAddresses)) {
-        walletAddresses.forEach(address => {
-          defaultReputations[address] = {
-            walletAddress: address,
-            score: 50.0,
-            totalTransactions: 0,
-            positiveReviews: 0,
-            negativeReviews: 0,
-            neutralReviews: 0,
-            successfulSales: 0,
-            successfulPurchases: 0,
-            disputedTransactions: 0,
-            resolvedDisputes: 0,
-            averageResponseTime: 0,
-            completionRate: 100,
-            lastUpdated: new Date(),
-          };
-        });
-      }
+      const defaultReputations = req.body.walletAddresses.map((address: string) => ({
+        walletAddress: address,
+        score: 50.0,
+        totalTransactions: 0,
+        positiveReviews: 0,
+        negativeReviews: 0,
+        neutralReviews: 0,
+        successfulSales: 0,
+        successfulPurchases: 0,
+        disputedTransactions: 0,
+        resolvedDisputes: 0,
+        averageResponseTime: 0,
+        completionRate: 100,
+        lastUpdated: new Date(),
+      }));
 
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         reputations: defaultReputations,
-        count: Object.keys(defaultReputations).length
       }, {
-        requestId: req.headers['x-request-id'] as string,
-        fallback: true,
-        error: 'Service temporarily unavailable, showing default values'
+        requestId: res.locals.requestId,
       }));
     }
   }
@@ -287,59 +262,62 @@ export class ReputationController {
       const { walletAddress } = req.params;
 
       if (!walletAddress) {
-        res.status(400).json(errorResponse('Wallet address is required', 'MISSING_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('MISSING_WALLET_ADDRESS', 'Wallet address is required'));
         return;
       }
 
       // Validate wallet address format
       if (!this.isValidWalletAddress(walletAddress)) {
-        res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
+        res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 'Invalid wallet address format'));
         return;
       }
 
-      logger.info(`Calculating comprehensive reputation for wallet: ${walletAddress}`);
+      logger.info(`Calculating reputation for wallet: ${walletAddress}`);
 
-      const score = await reputationService.calculateReputation(walletAddress);
+      await reputationService.calculateReputation(walletAddress);
+
+      // Get updated reputation to return
       const updatedReputation = await reputationService.getReputation(walletAddress);
 
-      res.status(200).json(successResponse({
+      res.status(200).json(createSuccessResponse({
         message: 'Reputation calculated successfully',
-        score,
         reputation: updatedReputation
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
       logger.error('Error calculating reputation:', error);
-      res.status(500).json(errorResponse(
-        'Failed to calculate reputation',
+      res.status(500).json(createErrorResponse(
         'REPUTATION_CALCULATION_FAILED',
+        'Failed to calculate reputation',
         { error: error.message }
       ));
     }
   }
 
   /**
-   * Get reputation statistics and cache info
+   * Get reputation service statistics
    * GET /marketplace/reputation/stats
    */
   async getReputationStats(req: Request, res: Response): Promise<void> {
     try {
-      const cacheStats = reputationService.getCacheStats();
+      logger.info('Getting reputation service statistics');
 
-      res.status(200).json(successResponse({
+      const cacheStats = await reputationService.getCacheStats();
+
+      res.status(200).json(createSuccessResponse({
         cache: cacheStats,
         timestamp: new Date().toISOString()
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
-      logger.error('Error getting reputation stats:', error);
-      res.status(500).json(errorResponse(
+      logger.error('Error getting reputation statistics:', error);
+      res.status(500).json(createErrorResponse(
+        'STATS_RETRIEVAL_FAILED',
         'Failed to get reputation statistics',
-        'REPUTATION_STATS_FAILED',
         { error: error.message }
       ));
     }
@@ -353,32 +331,29 @@ export class ReputationController {
     try {
       const { walletAddress } = req.query;
 
-      if (walletAddress && typeof walletAddress === 'string') {
-        // Validate wallet address if provided
-        if (!this.isValidWalletAddress(walletAddress)) {
-          res.status(400).json(errorResponse('Invalid wallet address format', 'INVALID_WALLET_ADDRESS'));
-          return;
-        }
-        reputationService.clearCache(walletAddress);
-        logger.info(`Cleared reputation cache for wallet: ${walletAddress}`);
-      } else {
-        reputationService.clearCache();
-        logger.info('Cleared all reputation cache');
+      if (walletAddress && !this.isValidWalletAddress(walletAddress as string)) {
+        res.status(400).json(createErrorResponse('INVALID_WALLET_ADDRESS', 'Invalid wallet address format'));
+        return;
       }
 
-      res.status(200).json(successResponse({
-        message: walletAddress ? 
-          `Cache cleared for wallet: ${walletAddress}` : 
-          'All reputation cache cleared'
+      logger.info(`Clearing reputation cache for: ${walletAddress || 'all'}`);
+
+      await reputationService.clearCache(walletAddress as string);
+
+      res.status(200).json(createSuccessResponse({
+        message: walletAddress ?
+          `Reputation cache cleared for ${walletAddress}` :
+          'All reputation cache cleared',
+        walletAddress: walletAddress || undefined
       }, {
-        requestId: req.headers['x-request-id'] as string,
+        requestId: res.locals.requestId,
       }));
 
     } catch (error) {
       logger.error('Error clearing reputation cache:', error);
-      res.status(500).json(errorResponse(
-        'Failed to clear reputation cache',
+      res.status(500).json(createErrorResponse(
         'CACHE_CLEAR_FAILED',
+        'Failed to clear reputation cache',
         { error: error.message }
       ));
     }
@@ -386,8 +361,11 @@ export class ReputationController {
 
   /**
    * Validate wallet address format
+   * @param address Wallet address to validate
+   * @returns boolean indicating if address is valid
    */
   private isValidWalletAddress(address: string): boolean {
+    // Basic Ethereum address validation
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 }

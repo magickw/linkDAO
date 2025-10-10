@@ -663,8 +663,6 @@ const DashboardRightSidebar = memo(() => {
     switch (widgetType) {
       case 'community-info':
         return renderCommunityInfoWidget();
-      case 'wallet':
-        return renderWalletWidget();
       case 'suggested-users':
         return renderSuggestedUsersWidget();
       case 'active-auctions':
@@ -673,12 +671,8 @@ const DashboardRightSidebar = memo(() => {
         return renderGovernanceWidget();
       case 'related-communities':
         return renderRelatedCommunitiesWidget();
-      case 'trending-content':
-        return renderTrendingContentWidget();
       case 'defi-markets':
         return renderDeFiMarketsWidget();
-      case 'trending-hashtags':
-        return renderTrendingHashtagsWidget();
       default:
         return null;
     }
@@ -687,42 +681,33 @@ const DashboardRightSidebar = memo(() => {
   // Memoized adaptive widget configuration
   const activeWidgets = useMemo(() => {
     const widgets = [];
-    
-    // Always show wallet widget if user has connected wallet
-    widgets.push('wallet');
-    
+
     // Context-specific widgets
     if (contextualContent.showCommunityInfo) {
       widgets.push('community-info');
     }
-    
+
     if (contextualContent.showCommunityGovernance) {
       widgets.push('governance');
     }
-    
+
     if (contextualContent.showRelatedCommunities) {
       widgets.push('related-communities');
     }
-    
+
     // Show user suggestions in feed view
     if (activeView === 'feed') {
       widgets.push('suggested-users');
     }
-    
+
     // Show auctions in marketplace or general feed
     if (activeView === 'feed') {
       widgets.push('active-auctions');
     }
-    
-    // Always show trending content but adapt the type
-    widgets.push('trending-content');
-    
+
     // Show DeFi markets for general engagement
     widgets.push('defi-markets');
-    
-    // Show trending hashtags for content discovery
-    widgets.push('trending-hashtags');
-    
+
     return widgets;
   }, [activeView, contextualContent]);
 
@@ -764,45 +749,6 @@ const DashboardRightSidebar = memo(() => {
         </div>
     );
   }, [contextualContent.showCommunityInfo, currentCommunity, formatNumber]);
-
-  const renderWalletWidget = useCallback(() => {
-    return (
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <svg className="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-              Wallet Overview
-            </h3>
-          </div>
-          <div className="p-4">
-            <WalletSnapshotEmbed 
-              walletAddress="0x1234...5678" 
-              className="mb-4"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                <div className="text-2xl mb-1">💸</div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Send</span>
-              </button>
-              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                <div className="text-2xl mb-1">📥</div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Receive</span>
-              </button>
-              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                <div className="text-2xl mb-1">🔄</div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Swap</span>
-              </button>
-              <button className="bg-gray-100/80 dark:bg-gray-700/50 hover:bg-gray-200/80 dark:hover:bg-gray-600/50 rounded-lg p-3 text-center transition-colors">
-                <div className="text-2xl mb-1">🗳️</div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Vote</span>
-              </button>
-            </div>
-          </div>
-        </div>
-    );
-  }, []);
 
   const renderSuggestedUsersWidget = useCallback(() => {
     if (!contextualContent.showPersonalizedContent) return null;
@@ -1114,46 +1060,6 @@ const DashboardRightSidebar = memo(() => {
     );
   }, [contextualContent.showRelatedCommunities, currentCommunity, loadingCommunities, errors.communities, communities, formatNumber, retryLoad]);
 
-  const renderTrendingContentWidget = useCallback(() => {
-    return (
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <svg className="h-5 w-5 mr-2 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-            Trending Content
-          </h3>
-        </div>
-        <div className="p-4">
-          <div className="space-y-3">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group cursor-pointer">
-                <div className="text-xs font-bold text-gray-400 mt-1">{item}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 dark:text-white text-sm group-hover:text-primary-600 dark:group-hover:text-primary-400 line-clamp-2">
-                    Trending content item {item} - This is a sample trending content title that would be fetched from the API
-                  </div>
-                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1 space-x-2">
-                    <span>Community Name</span>
-                    <span>•</span>
-                    <span>1.2k views</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <Link 
-            href="/trending" 
-            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-          >
-            See More Trends →
-          </Link>
-        </div>
-      </div>
-    );
-  }, []);
-
   const renderDeFiMarketsWidget = useCallback(() => {
     return (
       <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
@@ -1193,60 +1099,6 @@ const DashboardRightSidebar = memo(() => {
       </div>
     );
   }, []);
-
-  const renderTrendingHashtagsWidget = useCallback(() => {
-    return (
-      <div className="bg-white/80 dark:bg-gray-880/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-        <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
-            <span className="mr-2 text-lg">#️⃣</span>
-            Trending Now
-          </h3>
-        </div>
-        <div className="p-4">
-          <div className="space-y-3">
-            {[
-              { tag: 'defi', count: 1240, growth: 15 },
-              { tag: 'nft', count: 890, growth: 8 },
-              { tag: 'web3', count: 2100, growth: 22 },
-              { tag: 'dao', count: 567, growth: 12 },
-              { tag: 'ethereum', count: 3400, growth: 5 }
-            ].map((hashtag, index) => (
-              <Link
-                key={hashtag.tag}
-                href={`/hashtags/${hashtag.tag}`}
-                className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-              >
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-4">
-                    {index + 1}
-                  </span>
-                  <span className="text-primary-600 dark:text-primary-400 font-medium group-hover:text-primary-700 dark:group-hover:text-primary-300">
-                    #{hashtag.tag}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                  <span>{formatNumber(hashtag.count)}</span>
-                  <span className="text-green-600 dark:text-green-400 flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                    {hashtag.growth}%
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          <Link
-            href="/search?tab=trending"
-            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-          >
-            View All Trending →
-          </Link>
-        </div>
-      </div>
-    );
-  }, [formatNumber]);
 
   return (
     <div className="space-y-6">
