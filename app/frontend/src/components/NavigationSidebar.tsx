@@ -16,9 +16,10 @@ import {
 import { GlassPanel } from '@/design-system';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
+import type { Community as CommunityModel } from '@/models/Community';
 
-// Mock community data - will be replaced with real data in future tasks
-interface Community {
+// Local sidebar community view model (separate from domain model)
+interface SidebarCommunity {
   id: string;
   name: string;
   displayName: string;
@@ -37,7 +38,7 @@ interface NavigationSidebarProps {
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
-  const [communities, setCommunities] = useState<Community[]>([]);
+const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,14 +72,18 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         );
         
         const communityResults = await Promise.all(communityPromises);
-        const validCommunities = communityResults.filter(c => c !== null) as Community[];
+const validCommunities = communityResults.filter(c => c !== null) as CommunityModel[];
         
         // Transform to expected format with membership info
-        const communitiesWithMembership = validCommunities.map((community) => ({
-          ...community,
+const communitiesWithMembership = validCommunities.map((community) => ({
+          id: community.id,
+          name: community.name,
+          displayName: community.displayName,
+          memberCount: community.memberCount,
+          avatar: community.avatar,
           isJoined: true,
           unreadCount: 0, // Would be calculated from notifications
-          membershipRole: roleByCommunityId.get(community.id)
+          // keep role info out of the view model for now
         }));
         
         setCommunities(communitiesWithMembership);

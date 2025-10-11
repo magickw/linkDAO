@@ -187,6 +187,29 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
 
   const displayedTransactions = transactions.slice(0, visibleTransactions);
 
+  const chainLabel = (cid?: number) => {
+    switch (cid) {
+      case 1: return 'Ethereum';
+      case 8453: return 'Base';
+      case 84532: return 'Base Sepolia';
+      case 137: return 'Polygon';
+      case 42161: return 'Arbitrum';
+      default: return 'Unknown';
+    }
+  };
+
+  const explorerUrl = (cid?: number, hash?: string) => {
+    if (!hash) return '#';
+    switch (cid) {
+      case 1: return `https://etherscan.io/tx/${hash}`;
+      case 8453: return `https://basescan.org/tx/${hash}`;
+      case 84532: return `https://base-sepolia.basescan.org/tx/${hash}`;
+      case 137: return `https://polygonscan.com/tx/${hash}`;
+      case 42161: return `https://arbiscan.io/tx/${hash}`;
+      default: return `https://etherscan.io/tx/${hash}`;
+    }
+  };
+
   return (
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
       {/* Header */}
@@ -245,6 +268,22 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(transaction.status)}
+                        {/* Chain badge */}
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                          {chainLabel((transaction as any).chainId)}
+                        </span>
+                        {/* Explorer link */}
+                        {transaction.hash && (
+                          <a
+                            href={explorerUrl((transaction as any).chainId, transaction.hash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View
+                          </a>
+                        )}
                         {transaction.gasUsed && (
                           <span className="text-xs text-gray-500 dark:text-gray-400">
                             Gas: {transaction.gasUsed.toLocaleString()}

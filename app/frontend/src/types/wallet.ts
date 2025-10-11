@@ -5,6 +5,15 @@ export interface TokenBalance {
   valueUSD: number;
   change24h: number;
   contractAddress: string;
+  // New: chains this token balance is present on (e.g., [1, 8453])
+  chains?: number[];
+  // New: per-chain breakdown for display
+  chainBreakdown?: Array<{
+    chainId: number;
+    balance: number;
+    valueUSD: number;
+    contractAddress?: string;
+  }>;
 }
 
 export interface Transaction {

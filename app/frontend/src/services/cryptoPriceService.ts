@@ -55,6 +55,7 @@ class CryptoPriceService {
     ['CRV', 'curve-dao-token'],
     ['BAL', 'balancer'],
     ['MATIC', 'matic-network'],
+    ['WBTC', 'wrapped-bitcoin'],
     ['AVAX', 'avalanche-2'],
     ['SOL', 'solana'],
     ['ADA', 'cardano'],

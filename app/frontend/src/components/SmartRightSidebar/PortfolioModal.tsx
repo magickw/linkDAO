@@ -16,6 +16,30 @@ export default function PortfolioModal({
 }: PortfolioModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'tokens' | 'nfts' | 'defi' | 'analytics'>('overview');
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d' | '1y'>('7d');
+  // Track which tokens show per-chain breakdown
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggleExpanded = (symbol: string) => setExpanded(prev => ({ ...prev, [symbol]: !prev[symbol] }));
+
+  // Persist expanded state in localStorage
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('portfolio_breakdown_expanded') : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setExpanded(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('portfolio_breakdown_expanded', JSON.stringify(expanded));
+      }
+    } catch {}
+  }, [expanded]);
 
   // Close modal on escape key
   useEffect(() => {
@@ -224,33 +248,70 @@ export default function PortfolioModal({
                     Recent Activity
                   </h3>
                   <div className="space-y-3">
-                    {walletData.recentTransactions.slice(0, 5).map((tx, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm">
-                            {tx.type === 'send' ? '↗' : '↙'}
+                    {walletData.recentTransactions.slice(0, 5).map((tx: any, index: number) => {
+                      const chainId = tx.chainId as number | undefined;
+                      const chainLabel = (cid?: number) => {
+                        switch (cid) {
+                          case 1: return 'Ethereum';
+                          case 8453: return 'Base';
+                          case 84532: return 'Base Sepolia';
+                          case 137: return 'Polygon';
+                          case 42161: return 'Arbitrum';
+                          default: return 'Unknown';
+                        }
+                      };
+                      const explorerUrl = (cid?: number, hash?: string) => {
+                        if (!hash) return '#';
+                        switch (cid) {
+                          case 1: return `https://etherscan.io/tx/${hash}`;
+                          case 8453: return `https://basescan.org/tx/${hash}`;
+                          case 84532: return `https://base-sepolia.basescan.org/tx/${hash}`;
+                          case 137: return `https://polygonscan.com/tx/${hash}`;
+                          case 42161: return `https://arbiscan.io/tx/${hash}`;
+                          default: return `https://etherscan.io/tx/${hash}`;
+                        }
+                      };
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm">
+                              {tx.type === 'send' ? '↗' : '↙'}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {tx.type === 'send' ? 'Sent' : 'Received'} {tx.token}
+                              </p>
+                              <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                                <span>{new Date(tx.timestamp).toLocaleDateString()}</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">
+                                  {chainLabel(chainId)}
+                                </span>
+                                {tx.hash && (
+                                  <a
+                                    href={explorerUrl(chainId, tx.hash)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                                  >
+                                    View
+                                  </a>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div>
+                          <div className="text-right">
                             <p className="font-medium text-gray-900 dark:text-white">
-                              {tx.type === 'send' ? 'Sent' : 'Received'} {tx.token}
+                              {formatNumber(Number(tx.amount || 0))} {tx.token}
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {tx.timestamp.toLocaleDateString()}
-                            </p>
+                            {tx.valueUSD && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {formatCurrency(Number(tx.valueUSD))}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {formatNumber(tx.amount)} {tx.token}
-                          </p>
-                          {tx.valueUSD && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {formatCurrency(tx.valueUSD)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -262,9 +323,27 @@ export default function PortfolioModal({
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Token Holdings
                   </h3>
-                  <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                    Sort by value ↓
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        const all: Record<string, boolean> = {};
+                        walletData.balances.forEach((t) => (all[t.symbol] = true));
+                        setExpanded(all);
+                      }}
+                      className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                    >
+                      Expand all
+                    </button>
+                    <button
+                      onClick={() => setExpanded({})}
+                      className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+                    >
+                      Collapse all
+                    </button>
+                    <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                      Sort by value ↓
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -275,17 +354,86 @@ export default function PortfolioModal({
                     return (
                       <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                         <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
-                            {token.symbol.substring(0, 2)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                              {token.symbol}
-                            </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {token.name}
-                            </p>
-                          </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold">
+                      {token.symbol.substring(0, 2)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {token.symbol}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {token.name}
+                      </p>
+                      {/* Chain labels */}
+                      {token.chains && token.chains.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {token.chains.map((cid) => (
+                            <span
+                              key={`${token.symbol}-${cid}`}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200"
+                            >
+                              {cid === 1 && 'Ethereum'}
+                              {cid === 8453 && 'Base'}
+                              {cid === 84532 && 'Base Sepolia'}
+                              {cid === 137 && 'Polygon'}
+                              {cid === 42161 && 'Arbitrum'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Toggle breakdown */}
+                      {token.chainBreakdown && token.chainBreakdown.length > 0 && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => toggleExpanded(token.symbol)}
+                            className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                          >
+                            {expanded[token.symbol] ? 'Hide per-chain breakdown' : 'View per-chain breakdown'}
+                          </button>
+                          {expanded[token.symbol] && (
+                            <div className="mt-2 space-y-1">
+                              {token.chainBreakdown.map((b, i) => {
+                                const explorerTokenUrl = (cid?: number, addr?: string) => {
+                                  if (!addr || addr === '0x0000000000000000000000000000000000000000') return null;
+                                  switch (cid) {
+                                    case 1: return `https://etherscan.io/token/${addr}`;
+                                    case 8453: return `https://basescan.org/token/${addr}`;
+                                    case 84532: return `https://base-sepolia.basescan.org/token/${addr}`;
+                                    case 137: return `https://polygonscan.com/token/${addr}`;
+                                    case 42161: return `https://arbiscan.io/token/${addr}`;
+                                    default: return null;
+                                  }
+                                };
+                                const url = explorerTokenUrl(b.chainId, b.contractAddress);
+                                return (
+                                  <div key={`${token.symbol}-bd-${b.chainId}-${i}`} className="flex items-center text-xs text-gray-600 dark:text-gray-300">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-[10px] mr-2">
+                                      {b.chainId === 1 && 'Ethereum'}
+                                      {b.chainId === 8453 && 'Base'}
+                                      {b.chainId === 84532 && 'Base Sepolia'}
+                                      {b.chainId === 137 && 'Polygon'}
+                                      {b.chainId === 42161 && 'Arbitrum'}
+                                    </span>
+                                    <span className="mr-2">{formatNumber(b.balance)} {token.symbol}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">({formatCurrency(b.valueUSD)})</span>
+                                    {url && (
+                                      <a
+                                        href={url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="ml-2 text-[10px] text-primary-600 dark:text-primary-400 hover:underline"
+                                      >
+                                        View token
+                                      </a>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                         </div>
                         
                         <div className="text-center">

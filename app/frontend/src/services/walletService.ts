@@ -59,6 +59,9 @@ export interface WalletData {
 const getTokensForChain = (chainId: number) => {
   switch (chainId) {
     case 8453: // Base Mainnet
+      // Optionally include DAI/WBTC via env-configured addresses to avoid hardcoding incorrect addresses
+      const baseDai = process.env.NEXT_PUBLIC_BASE_DAI_ADDRESS as `0x${string}` | undefined;
+      const baseWbtc = process.env.NEXT_PUBLIC_BASE_WBTC_ADDRESS as `0x${string}` | undefined;
       return [
         {
           symbol: 'USDC',
@@ -66,11 +69,12 @@ const getTokensForChain = (chainId: number) => {
           address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address,
           decimals: 6
         },
+        // WETH on OP-Stack chains (canonical)
         {
-          symbol: 'USDT',
-          name: 'Tether USD',
-          address: '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2' as Address,
-          decimals: 6
+          symbol: 'WETH',
+          name: 'Wrapped Ether',
+          address: '0x4200000000000000000000000000000000000006' as Address,
+          decimals: 18
         },
         {
           symbol: 'LINK',
@@ -78,12 +82,8 @@ const getTokensForChain = (chainId: number) => {
           address: '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196' as Address,
           decimals: 18
         },
-        {
-          symbol: 'UNI',
-          name: 'Uniswap',
-          address: '0xc3De830EA07524a0761646a6a4e4be0e114a3C83' as Address,
-          decimals: 18
-        }
+        ...(baseDai ? [{ symbol: 'DAI', name: 'Dai (Base)', address: baseDai as Address, decimals: 18 }] : []),
+        ...(baseWbtc ? [{ symbol: 'WBTC', name: 'Wrapped Bitcoin (Base)', address: baseWbtc as Address, decimals: 8 }] : []),
       ];
     case 84532: // Base Sepolia
       return [
@@ -92,6 +92,12 @@ const getTokensForChain = (chainId: number) => {
           name: 'USD Coin',
           address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address,
           decimals: 6
+        },
+        {
+          symbol: 'WETH',
+          name: 'Wrapped Ether',
+          address: '0x4200000000000000000000000000000000000006' as Address,
+          decimals: 18
         }
       ];
     case 11155111: // Sepolia Testnet
@@ -101,6 +107,108 @@ const getTokensForChain = (chainId: number) => {
           name: 'USD Coin (Sepolia)',
           address: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' as Address,
           decimals: 6
+        }
+      ];
+    case 137: // Polygon
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin (Polygon)',
+          address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' as Address, // USDC.e (Polygon PoS)
+          decimals: 6
+        },
+        {
+          symbol: 'USDT',
+          name: 'Tether USD (Polygon)',
+          address: '0xc2132D05D31c914a87C6611C10748AaCB6D3cC19' as Address,
+          decimals: 6
+        },
+        {
+          symbol: 'WETH',
+          name: 'Wrapped Ether (Polygon)',
+          address: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'LINK',
+          name: 'Chainlink (Polygon)',
+          address: '0x53E0bca35eC356BD5ddDFebbD1fC0fD03Fabad39' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'DAI',
+          name: 'Dai (Polygon)',
+          address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'WBTC',
+          name: 'Wrapped Bitcoin (Polygon)',
+          address: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6' as Address,
+          decimals: 8
+        },
+        {
+          symbol: 'AAVE',
+          name: 'Aave (Polygon)',
+          address: '0xD6DF932A45C0f255f85145f286eA0b292B21C90B' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'UNI',
+          name: 'Uniswap (Polygon)',
+          address: '0xb33EaAd8d922B1083446DC23f610c2567fb5180f' as Address,
+          decimals: 18
+        }
+      ];
+    case 42161: // Arbitrum One
+      return [
+        {
+          symbol: 'USDC',
+          name: 'USD Coin (Arbitrum)',
+          address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address, // Native USDC
+          decimals: 6
+        },
+        {
+          symbol: 'USDT',
+          name: 'Tether USD (Arbitrum)',
+          address: '0xfd086bC7CD5C481DCC9C85ebE478A1C0b69fcBB9' as Address,
+          decimals: 6
+        },
+        {
+          symbol: 'WETH',
+          name: 'Wrapped Ether (Arbitrum)',
+          address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'LINK',
+          name: 'Chainlink (Arbitrum)',
+          address: '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'DAI',
+          name: 'Dai (Arbitrum)',
+          address: '0xda10009cBd5D07dd0CeCc66161FC93D7c9000da1' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'WBTC',
+          name: 'Wrapped Bitcoin (Arbitrum)',
+          address: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f' as Address,
+          decimals: 8
+        },
+        {
+          symbol: 'AAVE',
+          name: 'Aave (Arbitrum)',
+          address: '0xba5DdD1f9d7F570dc94a51479a000E3BCE967196' as Address,
+          decimals: 18
+        },
+        {
+          symbol: 'UNI',
+          name: 'Uniswap (Arbitrum)',
+          address: '0xfa7F8980b0f1E64A2062791cc3b0871572f1F7f0' as Address,
+          decimals: 18
         }
       ];
     case 1: // Ethereum Mainnet
@@ -117,6 +225,12 @@ const getTokensForChain = (chainId: number) => {
           name: 'Tether USD',
           address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' as Address,
           decimals: 6
+        },
+        {
+          symbol: 'WETH',
+          name: 'Wrapped Ether',
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2' as Address,
+          decimals: 18
         },
         {
           symbol: 'LINK',
@@ -252,15 +366,17 @@ export class WalletService {
       const ethBalanceFormatted = formatEther(ethBalance);
       const ethValueUSD = parseFloat(ethBalanceFormatted) * ethPrice;
 
+      const nativeSymbol = chainId === 137 ? 'MATIC' : 'ETH';
+      const nativeName = chainId === 137 ? 'Polygon' : 'Ethereum';
       balances.push({
-        symbol: chainId === 8453 || chainId === 84532 ? 'ETH' : 'ETH',
-        name: 'Ethereum',
+        symbol: nativeSymbol,
+        name: nativeName,
         address: '0x0000000000000000000000000000000000000000',
         balance: ethBalance.toString(),
         balanceFormatted: ethBalanceFormatted,
         decimals: 18,
         valueUSD: ethValueUSD,
-        change24h: await this.getTokenChange24h('ethereum'),
+        change24h: await this.getTokenChange24h(chainId === 137 ? 'matic-network' : 'ethereum'),
         priceUSD: ethPrice,
         isNative: true
       });
