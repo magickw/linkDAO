@@ -62,7 +62,7 @@ export default function Wallet() {
     e.preventDefault();
     
     if (!recipient || !amount) {
-      alert('Please fill in all fields');
+      addToast('Please fill in all fields', 'error');
       return;
     }
     
@@ -76,7 +76,7 @@ export default function Wallet() {
     } else {
       // For token payments, we would need the token address
       // This is a simplified example
-      alert('Token payments not fully implemented in this example');
+      addToast('Token payments not fully implemented in this example', 'info');
     }
   };
 

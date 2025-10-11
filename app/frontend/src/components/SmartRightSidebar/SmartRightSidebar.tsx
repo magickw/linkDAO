@@ -8,6 +8,7 @@ import { SendTokenModal, ReceiveTokenModal, SwapTokenModal, StakeTokenModal } fr
 import { QuickAction, Transaction } from '../../types/wallet';
 import { useWalletData } from '../../hooks/useWalletData';
 import { useCryptoPayment } from '../../hooks/useCryptoPayment';
+import { useWritePaymentRouterSendTokenPayment, useWritePaymentRouterSendEthPayment } from '@/generated';
 import { useChainId } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
@@ -30,6 +31,7 @@ export default function SmartRightSidebar({
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   const [prefillToken, setPrefillToken] = useState<string | null>(null);
+  const [sendModalEstimate, setSendModalEstimate] = useState<any /* GasFeeEstimate */ | null>(null);
   
   // Use real wallet data with live prices
   const {
@@ -44,19 +46,19 @@ export default function SmartRightSidebar({
   const router = useRouter();
 
 
-
-
-
   const handleQuickAction = useCallback(async (action: QuickAction) => {
     try {
       // Handle different quick actions
       switch (action.id) {
         case 'send':
+          // Clear any prefill and open modal (no estimate)
+          setPrefillToken(null);
           setIsSendModalOpen(true);
           break;
         // Support specific quick-action ids like 'send-usdc' or 'send-eth' to preselect token
         case 'send-usdc':
           setPrefillToken('USDC');
+          // We will compute an estimate when opening modal based on a small preview amount (e.g., 0.01)
           setIsSendModalOpen(true);
           break;
         case 'send-eth':
@@ -94,65 +96,112 @@ export default function SmartRightSidebar({
   const { processPayment, parseAmount, estimateGas } = useCryptoPayment();
   const chainId = useChainId();
 
+  // Use generated write hooks for direct contract writes and wire lifecycle callbacks
+  const [sendTxHash, setSendTxHash] = useState<string | null>(null);
+
+  const {
+    writeContract: writeSendToken,
+    writeContractAsync: writeSendTokenAsync,
+    isPending: isSendingTokenHook
+  } = useWritePaymentRouterSendTokenPayment();
+
+  const {
+    writeContract: writeSendEth,
+    writeContractAsync: writeSendEthAsync,
+    isPending: isSendingEthHook
+  } = useWritePaymentRouterSendEthPayment();
+
   const handleSendToken = useCallback(async (tokenSymbol: string, amount: number, recipient: string) => {
     try {
-      if (!walletData) {
-        throw new Error('Wallet data not available');
-      }
+      if (!walletData) throw new Error('Wallet data not available');
 
-      // Find token metadata from wallet balances
       const tokenBalance = walletData.balances.find(b => b.symbol === tokenSymbol);
-
-      // Fallback token metadata
       const isNative = !tokenBalance || tokenBalance.contractAddress === '0x0000000000000000000000000000000000000000' || tokenSymbol === 'ETH';
       const tokenAddress = tokenBalance ? tokenBalance.contractAddress : (isNative ? '0x0000000000000000000000000000000000000000' : undefined);
-      // Guess decimals (USDC -> 6, otherwise 18)
       const decimals = tokenSymbol === 'USDC' ? 6 : 18;
 
-      if (!recipient.match(/^0x[a-fA-F0-9]{40}$/)) {
-        throw new Error('Invalid recipient address');
-      }
+      if (!recipient.match(/^0x[a-fA-F0-9]{40}$/)) throw new Error('Invalid recipient address');
 
-      // Parse amount to bigint using helper from hook
       const amountBigInt = parseAmount(amount.toString(), decimals);
 
-      const paymentToken = {
-        address: tokenAddress || '',
-        symbol: tokenSymbol,
-        name: tokenSymbol,
-        decimals,
-        chainId: chainId || 1,
-        isNative: isNative
-      };
-
-      const paymentRequest = {
-        orderId: `ui_${Date.now()}`,
-        amount: amountBigInt,
-        token: paymentToken,
-        recipient,
-        chainId: chainId || 1
-      } as any;
-
-      // Optional: estimate gas and warn user (best-effort)
-      try {
-        await estimateGas(paymentRequest);
-      } catch (e) {
-        // Estimation failed, continue but surface warning
-        console.warn('Gas estimate failed, proceeding:', e);
+      // Use ETH write hook for native transfers
+      if (isNative) {
+        if (!writeSendEthAsync) throw new Error('ETH write hook not available');
+        // Trigger the async write and capture hash when available; rely on isPending from the hook for UI
+        writeSendEthAsync({ args: [recipient as `0x${string}`, amountBigInt, ''], value: amountBigInt })
+          .then((res: any) => {
+            const hash = res?.hash ?? res?.transactionHash ?? null;
+            if (hash) setSendTxHash(hash);
+          })
+          .catch((err: any) => {
+            console.error('writeSendEthAsync error', err);
+          });
+        addToast('Payment submitted (ETH)', 'success');
+        try { router.push('/wallet/transactions'); } catch {}
+        return;
       }
 
-      const tx = await processPayment(paymentRequest);
-
-      // Provide basic success feedback
-      addToast(`Payment submitted (tx id: ${tx.id}).`, 'success');
+      // Token transfer via payment router
+      if (!writeSendTokenAsync) throw new Error('Token write hook not available');
+      const tokenAddr = tokenAddress as `0x${string}`;
+      writeSendTokenAsync({ args: [tokenAddr, recipient as `0x${string}`, amountBigInt, ''] })
+        .then((res: any) => {
+          const hash = res?.hash ?? res?.transactionHash ?? null;
+          if (hash) setSendTxHash(hash);
+        })
+        .catch((err: any) => console.error('writeSendTokenAsync error', err));
+      addToast('Payment submitted', 'success');
       try { router.push('/wallet/transactions'); } catch {}
+      return;
     } catch (err: any) {
       console.error('Send token failed:', err);
       const msg = err?.message || 'Failed to send tokens';
       addToast(msg, 'error');
       throw err;
     }
-  }, [walletData, parseAmount, processPayment, estimateGas, chainId]);
+  }, [walletData, parseAmount, chainId, writeSendEthAsync, writeSendTokenAsync, router, addToast]);
+
+  // Compute an estimated gas value when user opens the Send modal and we have a prefill token
+  React.useEffect(() => {
+    let cancelled = false;
+    async function computeEstimate() {
+      if (!isSendModalOpen) return setSendModalEstimate(null);
+      if (!prefillToken || !walletData) return setSendModalEstimate(null);
+
+      try {
+        const decimals = prefillToken === 'USDC' ? 6 : 18;
+        const amountBigInt = parseAmount('0.01', decimals); // preview small amount for estimate
+        const tokenBalance = walletData.balances.find(b => b.symbol === prefillToken);
+        const paymentToken = {
+          address: tokenBalance ? tokenBalance.contractAddress : '',
+          symbol: prefillToken,
+          name: prefillToken,
+          decimals,
+          chainId: chainId || 1,
+          isNative: prefillToken === 'ETH'
+        } as any;
+
+        const paymentRequest = {
+          orderId: `ui_est_${Date.now()}`,
+          amount: amountBigInt,
+          token: paymentToken,
+          recipient: walletData.address,
+          chainId: chainId || 1
+        } as any;
+
+  const estimate = await estimateGas(paymentRequest);
+  if (!cancelled) setSendModalEstimate(estimate ?? null);
+      } catch (e) {
+        console.warn('preview gas estimate failed', e);
+        if (!cancelled) setSendModalEstimate(null);
+      }
+    }
+
+    computeEstimate();
+    return () => { cancelled = true; };
+  }, [isSendModalOpen, prefillToken, walletData, parseAmount, estimateGas, chainId]);
+
+  // write hooks already declared above; reused for swap/stake handlers
 
   const handleSwapToken = useCallback(async (fromToken: string, toToken: string, amount: number) => {
     try {
@@ -169,25 +218,28 @@ export default function SmartRightSidebar({
         isNative: fromToken === 'ETH'
       } as any;
 
-      const request = {
-        orderId: `swap_${Date.now()}`,
-        amount: amountBigInt,
-        token: paymentToken,
-        recipient: paymentRouterAddress,
-        chainId: chainId || 1,
-        metadata: { type: 'swap', toToken }
-      } as any;
+      // If it's a native ETH swap/send, use sendEthPayment write hook
+      if (fromToken === 'ETH') {
+        if (!writeSendEthAsync) throw new Error('ETH write hook not available');
+        await writeSendEthAsync({ args: [paymentRouterAddress as `0x${string}`, amountBigInt, `swap:${toToken}`], value: amountBigInt });
+        addToast('Swap (ETH) submitted', 'success');
+        try { router.push('/wallet/transactions'); } catch {}
+        return;
+      }
 
-      try { await estimateGas(request); } catch(e){ console.warn('gas estimate failed', e); }
-      const tx = await processPayment(request);
-      addToast(`Swap submitted (tx id: ${tx.id})`, 'success');
-      try { router.push('/wallet/transactions'); } catch {}
+      // For token-based swap, call sendTokenPayment(tokenAddress, to, amount, memo)
+      if (!writeSendTokenAsync) throw new Error('Token write hook not available');
+      const tokenAddr = paymentToken.address as `0x${string}`;
+      await writeSendTokenAsync({ args: [tokenAddr, paymentRouterAddress as `0x${string}`, amountBigInt, `swap:${toToken}`] });
+  addToast('Swap submitted', 'success');
+  try { router.push('/wallet/transactions'); } catch {}
+  return;
     } catch (err: any) {
       console.error('Swap failed', err);
       addToast(err?.message || 'Swap failed', 'error');
       throw err;
     }
-  }, [walletData, parseAmount, processPayment, estimateGas, chainId, router, addToast]);
+  }, [walletData, parseAmount, processPayment, estimateGas, chainId, router, addToast, writeSendEthAsync, writeSendTokenAsync]);
 
   const handleStakeToken = useCallback(async (poolId: string, token: string, amount: number) => {
     try {
@@ -204,25 +256,27 @@ export default function SmartRightSidebar({
         isNative: token === 'ETH'
       } as any;
 
-      const request = {
-        orderId: `stake_${Date.now()}`,
-        amount: amountBigInt,
-        token: paymentToken,
-        recipient: paymentRouterAddress,
-        chainId: chainId || 1,
-        metadata: { type: 'stake', poolId }
-      } as any;
+      // Stake flows typically go to the router as a token transfer with a memo indicating staking intent
+      if (token === 'ETH') {
+        if (!writeSendEthAsync) throw new Error('ETH write hook not available');
+        await writeSendEthAsync({ args: [paymentRouterAddress as `0x${string}`, amountBigInt, `stake:${poolId}`], value: amountBigInt });
+        addToast('Stake (ETH) submitted', 'success');
+        try { router.push('/wallet/transactions'); } catch {}
+        return;
+      }
 
-      try { await estimateGas(request); } catch(e){ console.warn('gas estimate failed', e); }
-      const tx = await processPayment(request);
-      addToast(`Stake submitted (tx id: ${tx.id})`, 'success');
+      if (!writeSendTokenAsync) throw new Error('Token write hook not available');
+      const tokenAddr = paymentToken.address as `0x${string}`;
+      await writeSendTokenAsync({ args: [tokenAddr, paymentRouterAddress as `0x${string}`, amountBigInt, `stake:${poolId}`] });
+      addToast('Stake submitted', 'success');
       try { router.push('/wallet/transactions'); } catch {}
+      return;
     } catch (err: any) {
       console.error('Stake failed', err);
       addToast(err?.message || 'Staking failed', 'error');
       throw err;
     }
-  }, [walletData, parseAmount, processPayment, estimateGas, chainId, router, addToast]);
+  }, [walletData, parseAmount, chainId, router, addToast, writeSendEthAsync, writeSendTokenAsync]);
 
   if (isLoading) {
     return (
@@ -312,13 +366,40 @@ export default function SmartRightSidebar({
         <>
           <SendTokenModal
             isOpen={isSendModalOpen}
-            onClose={() => {
-              setIsSendModalOpen(false);
-              try { delete (window as any).__prefillSendToken; } catch {};
-            }}
+            onClose={() => setIsSendModalOpen(false)}
             tokens={walletData.balances}
-            initialToken={(window as any).__prefillSendToken}
+            initialToken={prefillToken ?? undefined}
+            estimatedGas={sendModalEstimate}
             onSend={handleSendToken}
+            isPending={isSendingTokenHook || isSendingEthHook}
+            onEstimate={async ({ token, amount, recipient }) => {
+              try {
+                const decimals = token === 'USDC' ? 6 : 18;
+                const amountBigInt = parseAmount(amount, decimals);
+                const tokenBalance = walletData.balances.find(b => b.symbol === token);
+                const paymentToken = {
+                  address: tokenBalance ? tokenBalance.contractAddress : '',
+                  symbol: token,
+                  name: token,
+                  decimals,
+                  chainId: chainId || 1,
+                  isNative: token === 'ETH'
+                } as any;
+
+                const request = {
+                  orderId: `ui_est_${Date.now()}`,
+                  amount: amountBigInt,
+                  token: paymentToken,
+                  recipient,
+                  chainId: chainId || 1
+                } as any;
+
+                const est = await estimateGas(request);
+                return est ?? null;
+              } catch (e) {
+                return null;
+              }
+            }}
           />
 
           <ReceiveTokenModal

@@ -1,18 +1,22 @@
 import React, { useState } from 'react';
 import { TokenBalance } from '../../types/wallet';
+import { GasFeeEstimate } from '../../types/payment';
 
 interface SendTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   tokens: TokenBalance[];
   initialToken?: string;
-  onSend: (token: string, amount: number, recipient: string) => Promise<void>;
-  estimatedGas?: bigint | null;
+  onSend: (token: string, amount: number, recipient: string) => Promise<{ hash?: string } | void>;
+  isPending?: boolean;
+  estimatedGas?: GasFeeEstimate | null;
+  onEstimate?: (opts: { token: string; amount: string; recipient: string }) => Promise<GasFeeEstimate | null>;
 }
 
-export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSend, estimatedGas }: SendTokenModalProps) {
+export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSend, isPending, estimatedGas, onEstimate }: SendTokenModalProps) {
   const [selectedToken, setSelectedToken] = useState(tokens[0]?.symbol || 'ETH');
-  const [localEstimatedGas, setLocalEstimatedGas] = useState<bigint | null>(null);
+  const [localEstimatedGas, setLocalEstimatedGas] = useState<GasFeeEstimate | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
 
   // Sync selected token when modal opens or when tokens/initialToken change
   React.useEffect(() => {
@@ -32,13 +36,15 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       setSelectedToken(tokens[0].symbol);
     }
 
-    // Mirror estimatedGas from parent for display
-    setLocalEstimatedGas(typeof estimatedGas !== 'undefined' ? (estimatedGas ?? null) : null);
+  // Mirror estimatedGas from parent for display
+  setLocalEstimatedGas(typeof estimatedGas !== 'undefined' ? (estimatedGas ?? null) : null);
   }, [isOpen, tokens, initialToken, estimatedGas]);
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const estimateRef = React.useRef<number | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
 
   const selectedTokenData = tokens.find(t => t.symbol === selectedToken);
   const maxAmount = selectedTokenData?.balance || 0;
@@ -64,7 +70,10 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
     setError('');
 
     try {
-      await onSend(selectedToken, parseFloat(amount), recipient);
+      const result = await onSend(selectedToken, parseFloat(amount), recipient);
+      if (result && result.hash) {
+        setTxHash(result.hash);
+      }
       onClose();
       setAmount('');
       setRecipient('');
@@ -74,6 +83,41 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       setIsLoading(false);
     }
   };
+
+  // Debounced estimate effect: call onEstimate 300ms after user stops typing/changing
+  React.useEffect(() => {
+    // If parent provided an estimatedGas prop, mirror it (higher priority)
+    if (typeof estimatedGas !== 'undefined') {
+      setLocalEstimatedGas(estimatedGas ?? null);
+      return;
+    }
+
+    if (!onEstimate) return;
+
+    // clear previous timer
+    if (estimateRef.current) window.clearTimeout(estimateRef.current);
+
+    if (!amount || !recipient) {
+      setLocalEstimatedGas(null);
+      return;
+    }
+
+    setIsEstimating(true);
+    estimateRef.current = window.setTimeout(async () => {
+      try {
+        const res = await onEstimate({ token: selectedToken, amount, recipient });
+        setLocalEstimatedGas(res ?? null);
+      } catch (e) {
+        setLocalEstimatedGas(null);
+      } finally {
+        setIsEstimating(false);
+      }
+    }, 300);
+
+    return () => {
+      if (estimateRef.current) window.clearTimeout(estimateRef.current);
+    };
+  }, [amount, recipient, selectedToken, onEstimate, estimatedGas]);
 
   if (!isOpen) return null;
 
@@ -165,14 +209,50 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Estimated Gas Fee:</span>
-              <span className="text-gray-900 dark:text-white">
-                {localEstimatedGas !== null ? `${localEstimatedGas.toString()} (gas units)` : '~$2.50'}
-              </span>
+                <span className="text-gray-900 dark:text-white">
+                  {localEstimatedGas !== null ? (
+                    (() => {
+                      try {
+                        const wei = localEstimatedGas.totalCost;
+                        // Precise bigint-aware formatting to ETH string
+                        const formatWeiToEth = (value: bigint | number | string, decimals = 6) => {
+                          try {
+                            let v: bigint;
+                            if (typeof value === 'bigint') v = value;
+                            else if (typeof value === 'number') v = BigInt(Math.floor(value));
+                            else v = BigInt(value.toString());
+                            const WEI_PER_ETH = 10n ** 18n;
+                            const intPart = v / WEI_PER_ETH;
+                            const rem = v % WEI_PER_ETH;
+                            let frac = rem.toString().padStart(18, '0').slice(0, decimals);
+                            // trim trailing zeros
+                            frac = frac.replace(/0+$/, '');
+                            if (frac === '') return `${intPart.toString()}.0`;
+                            return `${intPart.toString()}.${frac}`;
+                          } catch (e) {
+                            return value.toString();
+                          }
+                        };
+
+                        const ethStr = formatWeiToEth(wei, 6);
+                        const usd = localEstimatedGas.totalCostUSD !== undefined ? ` • $${localEstimatedGas.totalCostUSD.toFixed(2)}` : '';
+                        return (<span title={`${wei.toString()} wei`}>{`${ethStr} ETH${usd}`}</span>);
+                      } catch (e) {
+                        return `${localEstimatedGas.totalCost.toString()} (wei)`;
+                      }
+                    })()
+                  ) : (isEstimating ? 'Estimating...' : '~$2.50')}
+                </span>
             </div>
           </div>
         </div>
 
         {/* Footer */}
+        {txHash && (
+          <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300">
+            In-flight transaction: <code className="font-mono text-xs">{txHash}</code>
+          </div>
+        )}
         <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onClose}
@@ -182,7 +262,7 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
           </button>
           <button
             onClick={handleSend}
-            disabled={isLoading || !amount || !recipient}
+            disabled={isLoading || !amount || !recipient || !!isPending}
             className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
             {isLoading ? (

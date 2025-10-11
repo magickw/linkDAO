@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/context/ToastContext';
 import Link from 'next/link';
 import { marketplaceService, MockProduct } from '../../services/marketplaceService';
 
@@ -33,6 +34,7 @@ export default function RealTimeAuctionCard({
   const [auctionStats, setAuctionStats] = useState<any>(null);
   const [recentBids, setRecentBids] = useState<any[]>([]);
   const [isEnded, setIsEnded] = useState(false);
+  const { addToast } = useToast();
 
   // Calculate time remaining
   const calculateTimeRemaining = useCallback(() => {
@@ -140,7 +142,7 @@ export default function RealTimeAuctionCard({
 
     const bid = parseFloat(bidAmount);
     if (bid <= currentBid) {
-      alert('Bid must be higher than current bid');
+      addToast('Bid must be higher than current bid', 'error');
       return;
     }
 
@@ -154,11 +156,11 @@ export default function RealTimeAuctionCard({
         onBidPlaced?.(auction.id, bid);
         // Real-time update will handle UI updates
       } else {
-        alert('Failed to place bid. Please try again.');
+        addToast('Failed to place bid. Please try again.', 'error');
       }
     } catch (error) {
       console.error('Error placing bid:', error);
-      alert('Error placing bid. Please try again.');
+      addToast('Error placing bid. Please try again.', 'error');
     } finally {
       setIsPlacingBid(false);
     }

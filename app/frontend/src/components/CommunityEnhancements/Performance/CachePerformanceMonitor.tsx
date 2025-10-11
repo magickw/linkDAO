@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useIntelligentCache } from '../../../hooks/useIntelligentCache';
+import { useToast } from '@/context/ToastContext';
 
 interface CacheStats {
   totalSize: number;
@@ -90,13 +91,15 @@ const CachePerformanceMonitor: React.FC<{
     return 'text-red-600';
   };
 
+  const { addToast } = useToast ? useToast() : { addToast: (m: string) => console.log(m) };
+
   const handleClearCaches = async () => {
     if (window.confirm('Are you sure you want to clear all caches? This will reset all cached data.')) {
       try {
         await clearCache();
-        alert('All caches cleared successfully');
+        addToast('All caches cleared successfully', 'success');
       } catch (error) {
-        alert('Failed to clear caches: ' + error);
+        addToast('Failed to clear caches: ' + String(error), 'error');
       }
     }
   };

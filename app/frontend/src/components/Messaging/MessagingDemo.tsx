@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAccount, useConnect } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
+import { useToast } from '@/context/ToastContext';
 import { MessagingWidget } from './index';
 import { messagingService } from '../../services/messagingService';
 import { nftNegotiationBot } from '../../services/nftNegotiationBot';
@@ -123,6 +124,8 @@ const MessagingDemo: React.FC = () => {
     setFeatures(status);
   };
 
+  const { addToast } = useToast();
+
   const setupNotifications = async () => {
     try {
       const granted = await notificationService.requestNotificationPermission();
@@ -132,7 +135,7 @@ const MessagingDemo: React.FC = () => {
         // Test notification
         await notificationService.sendTestNotification('message');
       } else {
-        alert('Notification permission denied. You can enable it in your browser settings.');
+        addToast('Notification permission denied. You can enable it in your browser settings.', 'error');
       }
     } catch (error) {
       console.error('Failed to setup notifications:', error);
@@ -145,14 +148,14 @@ const MessagingDemo: React.FC = () => {
     try {
       // Start negotiation with bot
       await nftNegotiationBot.startNegotiation(address.toLowerCase(), '0x1');
-      alert('NFT negotiation started with game.etherscan.eth! Check your messages.');
+  addToast('NFT negotiation started with game.etherscan.eth! Check your messages.', 'success');
     } catch (error) {
       console.error('Failed to start NFT negotiation:', error);
     }
   };
 
   const testMultichain = () => {
-    alert(`
+  addToast(`
 Multichain Support Includes:
 
 🔹 EVM Chains:
@@ -170,11 +173,11 @@ Try searching for:
 • vitalik.eth
 • game.etherscan.eth
 • 0x742d35Cc6634C0532925a3b8D91B062fd8AfD34a
-    `);
+    `, 'info');
   };
 
   const demoEncryption = () => {
-    alert(`
+  addToast(`
 🔐 End-to-End Encryption Features:
 
 ✅ AES-GCM 256-bit encryption
@@ -184,7 +187,7 @@ Try searching for:
 ✅ Secure key derivation
 
 All messages are encrypted by default!
-    `);
+    `, 'info');
   };
 
   if (!isConnected) {

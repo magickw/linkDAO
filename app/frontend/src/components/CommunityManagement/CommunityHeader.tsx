@@ -9,6 +9,7 @@ import {
   XMarkIcon 
 } from '@heroicons/react/24/outline';
 import { useAccessibility } from '@/components/Accessibility/AccessibilityProvider';
+import { useToast } from '@/context/ToastContext';
 
 // Types based on design document
 interface Community {
@@ -50,6 +51,8 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
   const headerId = useId();
   const bannerUploadId = `banner-upload-${headerId}`;
 
+  const { addToast } = useToast();
+
   const handleBannerUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !onBannerUpload) return;
@@ -57,14 +60,14 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
     // Validate file type
     if (!file.type.startsWith('image/')) {
       announceToScreenReader('Error: Please select an image file', 'assertive');
-      alert('Please select an image file');
+      addToast('Please select an image file', 'error');
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       announceToScreenReader('Error: Image must be smaller than 5MB', 'assertive');
-      alert('Image must be smaller than 5MB');
+      addToast('Image must be smaller than 5MB', 'error');
       return;
     }
 
@@ -75,9 +78,9 @@ const CommunityHeader: React.FC<CommunityHeaderProps> = ({
       await onBannerUpload(file);
       announceToScreenReader('Banner uploaded successfully');
     } catch (error) {
-      console.error('Banner upload failed:', error);
-      announceToScreenReader('Banner upload failed. Please try again.', 'assertive');
-      alert('Failed to upload banner. Please try again.');
+  console.error('Banner upload failed:', error);
+  announceToScreenReader('Banner upload failed. Please try again.', 'assertive');
+  addToast('Failed to upload banner. Please try again.', 'error');
     } finally {
       setIsUploading(false);
       // Reset file input

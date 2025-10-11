@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '@/context/ToastContext';
 import { 
   Upload, 
   Download, 
@@ -343,8 +344,9 @@ const DigitalAssetManager: React.FC = () => {
         contactInformation: ''
       });
       
-      setError(null);
-      alert(`DMCA request submitted successfully. Request ID: ${result.data.requestId}`);
+  setError(null);
+  const { addToast } = useToast();
+  addToast(`DMCA request submitted successfully. Request ID: ${result.data.requestId}`, 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit DMCA request');
     } finally {

@@ -23,7 +23,7 @@ const ButtonTestSimple = () => {
         variant="primary" 
         onClick={() => {
           console.log('Primary button clicked!');
-          alert('Primary button works!');
+          addToast('Primary button works!', 'success');
         }}
       >
         Test Primary Button
@@ -52,7 +52,7 @@ const ButtonTestSimple = () => {
       <button
         onClick={() => {
           console.log('Native button clicked!');
-          alert('Native button works!');
+          addToast('Native button works!', 'success');
         }}
         style={{
           padding: '12px 24px',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { useSeller, useSellerTiers } from '@/hooks/useSeller';
+import { useToast } from '@/context/ToastContext';
 import { Button, GlassPanel } from '@/design-system';
 import Layout from '@/components/Layout';
 
@@ -8,6 +9,7 @@ export default function SellerUpgradePage() {
   const router = useRouter();
   const { profile } = useSeller();
   const { tiers } = useSellerTiers();
+  const { addToast } = useToast();
 
   if (!profile) {
     return (
@@ -149,10 +151,10 @@ export default function SellerUpgradePage() {
                     onClick={() => {
                       if (tier.id === 'verified') {
                         // For verified tier, we might want to redirect to a verification page
-                        alert('Verification process would start here. In a real implementation, this would redirect to an email/phone verification flow.');
+                        addToast('Verification process would start here. In a real implementation, this would redirect to an email/phone verification flow.', 'info');
                       } else {
                         // For Pro tier, contact support
-                        alert('To upgrade to Pro tier, please contact our support team.');
+                        addToast('To upgrade to Pro tier, please contact our support team.', 'info');
                       }
                     }}
                   >

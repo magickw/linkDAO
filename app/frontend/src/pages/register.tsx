@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useWriteProfileRegistryCreateProfile } from '@/generated';
 import { useWeb3 } from '@/context/Web3Context';
+import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
 
 export default function Register() {
   const router = useRouter();
   const { address, isConnected } = useWeb3();
+  const { addToast } = useToast();
   const { 
     writeContract: createProfile, 
     isPending: isCreatingProfile, 
@@ -29,13 +31,13 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!profile.handle) {
-      alert('Please enter a handle');
-      return;
-    }
+       if (!profile.handle) {
+         addToast('Please enter a handle', 'error');
+         return;
+       }
     
     if (!isConnected || !address) {
-      alert('Please connect your wallet first');
+         addToast('Please connect your wallet first', 'error');
       return;
     }
     

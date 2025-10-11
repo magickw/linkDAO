@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSeller } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
+import { useToast } from '@/context/ToastContext';
 import { sellerService } from '../../../services/sellerService';
 
 interface FormData {
@@ -88,6 +89,8 @@ export function SellerProfilePage() {
       website: ''
     }
   });
+
+  const { addToast } = useToast();
 
 
 
@@ -212,13 +215,13 @@ export function SellerProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      addToast('Please select an image file', 'error');
       return;
     }
 
     // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      alert('Image size must be less than 10MB');
+      addToast('Image size must be less than 10MB', 'error');
       return;
     }
 
@@ -240,19 +243,19 @@ export function SellerProfilePage() {
     
     // Check wallet connection
     if (!isConnected) {
-      alert('Please connect your wallet first');
+      addToast('Please connect your wallet first', 'error');
       return;
     }
     
     // Add validation
     if (!formData.displayName.trim() && !formData.storeName.trim()) {
-      alert('Please enter either a display name or store name');
+      addToast('Please enter either a display name or store name', 'error');
       return;
     }
 
     // Validate ENS handle if provided
     if (formData.ensHandle && (!ensValidation.isValid || !ensValidation.isOwned)) {
-      alert('Please provide a valid ENS handle that you own, or leave it empty');
+      addToast('Please provide a valid ENS handle that you own, or leave it empty', 'error');
       return;
     }
     
@@ -331,8 +334,8 @@ export function SellerProfilePage() {
         isUploading: false,
       });
       
-      // Show success message
-      alert('Profile updated successfully!');
+  // Show success message
+  addToast('Profile updated successfully!', 'success');
       
       // Trigger store page refresh by setting a flag in localStorage
       localStorage.setItem(`seller_profile_updated_${walletAddress}`, Date.now().toString());
@@ -344,8 +347,8 @@ export function SellerProfilePage() {
     } catch (err) {
       console.error('Failed to update profile:', err);
       // Show error message to user
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
-      alert(`Error: ${errorMessage}`);
+  const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+  addToast(`Error: ${errorMessage}`, 'error');
     } finally {
       setIsSaving(false);
       setImageUpload(prev => ({ ...prev, isUploading: false }));
@@ -446,7 +449,7 @@ export function SellerProfilePage() {
               <Button 
                 onClick={() => {
                   if (!isConnected) {
-                    alert('Please connect your wallet to edit your profile');
+                    addToast('Please connect your wallet to edit your profile', 'error');
                     return;
                   }
                   setIsEditing(true);

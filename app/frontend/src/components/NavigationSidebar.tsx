@@ -283,6 +283,16 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   communities={enhancedCommunities as any}
                   onCommunitySelect={handleCommunitySelectWithContext}
                 />
+
+                {/* Create Post action moved up from footer to reduce whitespace */}
+                <div className="mt-6">
+                  <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Post
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -359,17 +369,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         </nav>
       </div>
 
-      {/* Footer Actions */}
-      {!navigationState.sidebarCollapsed && (
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Create Post
-          </button>
-        </div>
-      )}
 
       {/* Community Creation Modal */}
       <CommunityCreationModal

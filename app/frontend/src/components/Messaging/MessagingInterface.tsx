@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
+import { useToast } from '@/context/ToastContext';
 import messagingService, { 
   ChatMessage, 
   ChatConversation, 
@@ -1023,9 +1024,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     variant="outline"
                     className="w-full"
                     onClick={() => {
+                      const { addToast } = useToast();
                       // Show available NFTs
                       const nfts = nftNegotiationBot.getAvailableNFTs();
-                      alert(`Available NFTs:\n${nfts.map(nft => `${nft.data.name}: ${nft.data.currentPrice} ETH`).join('\n')}`);
+                      addToast(`Available NFTs:\n${nfts.map(nft => `${nft.data.name}: ${nft.data.currentPrice} ETH`).join('\n')}`, 'info');
                     }}
                   >
                     View Available NFTs

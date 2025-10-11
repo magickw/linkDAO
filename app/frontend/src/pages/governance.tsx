@@ -3,9 +3,11 @@ import Layout from '@/components/Layout';
 // Temporarily disable generated hooks to fix runtime error
 // import { useReadGovernanceProposalCount, useWriteGovernancePropose, useWriteGovernanceCastVote } from '@/generated';
 import { useAccount } from 'wagmi';
+import { useToast } from '@/context/ToastContext';
 
 export default function Governance() {
   const { address, isConnected } = useAccount();
+  const { addToast } = useToast();
   
   // Temporarily use mock data to fix runtime error
   const proposalCount = 0;
@@ -78,19 +80,19 @@ export default function Governance() {
     e.preventDefault();
     
     if (!newProposal.title || !newProposal.description) {
-      alert('Please fill in all fields');
+  addToast('Please fill in all fields', 'error');
       return;
     }
     
     // Create proposal on-chain (governance contracts not yet configured)
     console.log('Creating proposal:', newProposal);
-    alert('Proposal creation functionality will be available once governance contracts are deployed.');
+  addToast('Proposal creation functionality will be available once governance contracts are deployed.', 'info');
   };
 
   const handleVote = (proposalId: number, vote: boolean) => {
     // Cast vote on-chain (governance contracts not yet configured)
     console.log('Voting on proposal:', proposalId, 'vote:', vote);
-    alert('Voting functionality will be available once governance contracts are deployed.');
+  addToast('Voting functionality will be available once governance contracts are deployed.', 'info');
   };
 
   // Filter proposals based on active tab and search term

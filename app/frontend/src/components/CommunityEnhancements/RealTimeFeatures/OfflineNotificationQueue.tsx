@@ -26,6 +26,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useOfflineSync, useOfflineActions } from '../../../hooks/useOfflineSync';
+import { useToast } from '@/context/ToastContext';
 import { OfflineAction, ConflictResolutionStrategy } from '../../../services/offlineSyncService';
 
 interface OfflineNotificationQueueProps {
@@ -432,7 +433,8 @@ const ConflictResolutionModal: React.FC<{
       try {
         resolveData = JSON.parse(customData);
       } catch (error) {
-        alert('Invalid JSON in custom data');
+        const { addToast } = useToast();
+        addToast('Invalid JSON in custom data', 'error');
         return;
       }
     }
