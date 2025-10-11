@@ -157,8 +157,11 @@ class EnhancedUserService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.success ? data.data : [];
+      const data = await response.json().catch(() => null);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.users)) return data.users;
+      return [];
     } catch (error) {
       console.error('Error fetching suggested users:', error);
       return [];
@@ -192,8 +195,11 @@ class EnhancedUserService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.success ? data.data : [];
+      const data = await response.json().catch(() => null);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.users)) return data.users;
+      return [];
     } catch (error) {
       console.error('Error searching users:', error);
       return [];
@@ -316,8 +322,11 @@ class EnhancedUserService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.success ? data.data : [];
+      const data = await response.json().catch(() => null);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.users)) return data.users;
+      return [];
     } catch (error) {
       console.error('Error fetching trending users:', error);
       return [];

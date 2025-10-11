@@ -143,10 +143,13 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
         setIsLoading(true);
         
         // Get trending communities for discovery
-        const trendingCommunities = await CommunityService.getTrendingCommunities(10);
+        const trending = await CommunityService.getTrendingCommunities(10).catch(() => [] as any);
+
+        // Ensure we always have an array before mapping
+        const trendingList = Array.isArray(trending) ? trending : [];
         
         // Transform to expected format
-        const communitiesWithIcons: CommunityWithIcons[] = trendingCommunities.map(community => ({
+        const communitiesWithIcons: CommunityWithIcons[] = trendingList.map(community => ({
           id: community.id,
           name: community.name,
           displayName: community.displayName,
@@ -238,9 +241,11 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
     // Handle different indicator types
     switch (indicator.type) {
       case 'notification':
+      case 'notifications':
         router.push('/notifications');
         break;
       case 'transaction':
+      case 'transactions':
         router.push('/wallet/transactions');
         break;
       case 'community':
@@ -248,6 +253,9 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
         break;
       case 'governance':
         router.push('/governance');
+        break;
+      default:
+        // No-op for unknown indicator types
         break;
     }
   }, [router]);

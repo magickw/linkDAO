@@ -11,6 +11,15 @@ const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://loca
  * Community API Service
  * Provides functions to interact with the backend community API endpoints
  */
+// Helper to safely parse JSON without throwing if body is empty
+async function safeJson(response: Response): Promise<any> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export class CommunityService {
   /**
    * Create a new community
@@ -172,11 +181,19 @@ export class CommunityService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch communities');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch communities');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      // Normalize payload to an array regardless of envelope shape
+      if (Array.isArray(json)) return json;
+      if (Array.isArray(json?.data)) return json.data;
+      if (Array.isArray(json?.communities)) return json.communities;
+      if (Array.isArray(json?.results)) return json.results;
+      if (Array.isArray(json?.items)) return json.items;
+      if (Array.isArray(json?.data?.items)) return json.data.items;
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -326,11 +343,19 @@ export class CommunityService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch trending communities');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch trending communities');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      // Normalize payload to an array regardless of envelope shape
+      if (Array.isArray(json)) return json;
+      if (Array.isArray(json?.data)) return json.data;
+      if (Array.isArray(json?.communities)) return json.communities;
+      if (Array.isArray(json?.results)) return json.results;
+      if (Array.isArray(json?.items)) return json.items;
+      if (Array.isArray(json?.data?.items)) return json.data.items;
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       

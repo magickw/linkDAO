@@ -172,10 +172,13 @@ export default function CommentThread({
           {/* Comment Header */}
           <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
             <span className="font-medium text-gray-900 dark:text-white">
-              u/{comment.author.slice(0, 6)}...{comment.author.slice(-4)}
+              {(() => {
+                const author = (comment as any).author || (comment as any).authorId || '';
+                return author ? `u/${author.slice(0, 6)}...${author.slice(-4)}` : 'u/unknown';
+              })()}
             </span>
             <span>•</span>
-            <span>{formatTimestamp(comment.createdAt)}</span>
+            <span>{formatTimestamp((comment as any).createdAt || new Date())}</span>
             {comment.isEdited && (
               <>
                 <span>•</span>

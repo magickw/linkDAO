@@ -111,6 +111,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Bypass Google Fonts (opaque responses) to avoid noisy errors in dev
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(fetch(request).catch(() => new Response('', { status: 204 })));
+    return;
+  }
+
   // Handle different types of requests with different strategies
   if (isStaticAsset(request)) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
@@ -236,6 +242,11 @@ async function performNetworkRequest(request, cacheName, requestKey) {
     });
     
     clearTimeout(timeoutId);
+    
+    // Treat opaque responses (status 0) as non-fatal and return as-is
+    if (networkResponse.type === 'opaque') {
+      return networkResponse;
+    }
     
     if (networkResponse.ok) {
       // Clone response before consuming it for caching

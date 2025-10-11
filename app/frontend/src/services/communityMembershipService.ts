@@ -12,6 +12,15 @@ const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://loca
  * Community Membership API Service
  * Provides functions to interact with the backend community membership API endpoints
  */
+// Helper to safely parse JSON without throwing if body is empty
+async function safeJson(response: Response): Promise<any> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export class CommunityMembershipService {
   /**
    * Join a community (create membership)
@@ -237,11 +246,12 @@ export class CommunityMembershipService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch user memberships');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch user memberships');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      return (json && (json.data || json.memberships)) || json || [];
     } catch (error) {
       clearTimeout(timeoutId);
       

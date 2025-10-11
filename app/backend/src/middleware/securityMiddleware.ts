@@ -109,7 +109,6 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
       // SQL Injection
       /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
       /(\b(OR|AND)\s+\d+\s*=\s*\d+)/i,
-      /(\'|\"|;|--|\*|\|)/,
       
       // XSS
       /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
@@ -117,7 +116,7 @@ export const inputValidation = async (req: SecurityRequest, res: Response, next:
       /javascript:/i,
       /on\w+\s*=/i,
       
-      // Command Injection
+      // Command Injection (avoid flagging JSON structural quotes)
       /(\||&|;|\$\(|\`)/,
       /(rm\s|cat\s|ls\s|pwd|whoami)/i,
       

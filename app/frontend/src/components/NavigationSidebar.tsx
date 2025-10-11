@@ -13,7 +13,9 @@ import {
   NavigationBreadcrumbs, 
   ActivityIndicators 
 } from '@/components/Navigation';
+import { GlassPanel } from '@/design-system';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
+import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 
 // Mock community data - will be replaced with real data in future tasks
 interface Community {
@@ -54,10 +56,14 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         setError(null);
         
         // Get user's memberships
-        const memberships = await CommunityMembershipService.getUserMemberships(address, {
+        const rawMemberships = await CommunityMembershipService.getUserMemberships(address, {
           isActive: true,
           limit: 20
         });
+        
+        // Defensive: ensure array
+        const memberships = Array.isArray(rawMemberships) ? rawMemberships : [];
+        const roleByCommunityId = new Map(memberships.map(m => [m.communityId, m.role]));
         
         // Get community details for each membership
         const communityPromises = memberships.map(membership => 
@@ -65,14 +71,14 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         );
         
         const communityResults = await Promise.all(communityPromises);
-        const validCommunities = communityResults.filter(c => c !== null);
+        const validCommunities = communityResults.filter(c => c !== null) as Community[];
         
         // Transform to expected format with membership info
-        const communitiesWithMembership = validCommunities.map((community, index) => ({
+        const communitiesWithMembership = validCommunities.map((community) => ({
           ...community,
           isJoined: true,
           unreadCount: 0, // Would be calculated from notifications
-          membershipRole: memberships[index]?.role
+          membershipRole: roleByCommunityId.get(community.id)
         }));
         
         setCommunities(communitiesWithMembership);
@@ -126,44 +132,46 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`} data-tour="navigation">
       {/* Enhanced User Profile Section */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        {enhancedUser ? (
-          <EnhancedUserCard
-            user={enhancedUser as any}
-            onClick={() => {/* Handle profile click */}}
-          />
-        ) : (
-          /* Fallback to original profile display */
-          !navigationState.sidebarCollapsed ? (
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
+      <div className="px-4 pt-4">
+        <GlassPanel variant="primary" padding={navigationState.sidebarCollapsed ? '0.5rem' : '0.75rem'} className="w-full">
+          {enhancedUser ? (
+            <EnhancedUserCard
+              user={enhancedUser as any}
+              onClick={() => {/* Handle profile click */}}
+            />
+          ) : (
+            /* Fallback to original profile display */
+            !navigationState.sidebarCollapsed ? (
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      0.00 ETH
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center">
                 <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                     {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    0.00 ETH
-                  </p>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                  {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-              </div>
-            </div>
-          )
-        )}
+            )
+          )}
+        </GlassPanel>
       </div>
 
       {/* Navigation Breadcrumbs */}
@@ -191,109 +199,119 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           {!navigationState.sidebarCollapsed ? (
             <>
               {/* Quick Filters Panel */}
-              <QuickFilterPanel 
-                activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
-                onFilterChange={(filters) => {
-                  quickFilters.forEach(filter => {
-                    if (filters.includes(filter.id) !== filter.active) {
-                      handleFilterChange(filter.id);
-                    }
-                  });
-                }}
-                className="mb-6"
-              />
-
-              {/* Navigation Header */}
-              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                Navigation
-              </div>
-
-              {/* Search */}
-              <Link
-                href="/search"
-                className="flex items-center px-3 py-3 md:py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors touch-target"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                Search & Discovery
-              </Link>
-
-              {/* Communities */}
-              <button
-                onClick={() => setShowDiscoveryModal(true)}
-                className="w-full flex items-center px-3 py-3 md:py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors touch-target"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Discover Communities
-              </button>
-              
-              {/* Wallet-to-Wallet Messaging */}
-              <Link
-                href="/messaging"
-                className="flex items-center px-3 py-3 md:py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors touch-target"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                Messages
-                <span className="ml-auto w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-              </Link>
-
-              {/* Governance */}
-              <Link
-                href="/governance"
-                className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-                Governance
-              </Link>
-
-              {/* Marketplace */}
-              <Link
-                href="/marketplace"
-                className="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                Marketplace
-              </Link>
-
-              {/* Enhanced Communities Section */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center"
-                    title="Create Community"
-                  >
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Create
-                  </button>
-                </div>
-                
-                <CommunityIconList
-                  communities={enhancedCommunities as any}
-                  onCommunitySelect={handleCommunitySelectWithContext}
+              <GlassPanel variant="secondary" padding={'0.5rem'} className="mb-3">
+                <QuickFilterPanel 
+                  activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
+                  onFilterChange={(filters) => {
+                    quickFilters.forEach(filter => {
+                      if (filters.includes(filter.id) !== filter.active) {
+                        handleFilterChange(filter.id);
+                      }
+                    });
+                  }}
+                  className="space-y-1"
                 />
+              </GlassPanel>
 
-                {/* Create Post action moved up from footer to reduce whitespace */}
-                <div className="mt-6">
-                  <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    Create Post
-                  </button>
-                </div>
+              {/* Trending Now (moved from right sidebar) */}
+              <div className="mt-3">
+                <TrendingContentWidget context="feed" />
               </div>
+
+              {/* Card: Navigation */}
+              <GlassPanel variant="secondary" padding={'0.5rem'}>
+                {/* Navigation Header */}
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
+                  Navigation
+                </div>
+
+                {/* Search */}
+                <Link
+                  href="/search"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span>Search & Discovery</span>
+                </Link>
+
+                {/* Communities */}
+                <button
+                  onClick={() => setShowDiscoveryModal(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Discover Communities</span>
+                </button>
+                
+                {/* Wallet-to-Wallet Messaging */}
+                <Link
+                  href="/messaging"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors relative"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span>Messages</span>
+                  <span className="absolute top-2 right-3 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                </Link>
+
+                {/* Governance */}
+                <Link
+                  href="/governance"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  <span>Governance</span>
+                </Link>
+
+                {/* Marketplace */}
+                <Link
+                  href="/marketplace"
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  <span>Marketplace</span>
+                </Link>
+
+                {/* Enhanced Communities Section */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center"
+                      title="Create Community"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create
+                    </button>
+                  </div>
+                  
+                  <CommunityIconList
+                    communities={enhancedCommunities as any}
+                    onCommunitySelect={handleCommunitySelectWithContext}
+                  />
+
+                  {/* Create Post action moved up from footer to reduce whitespace */}
+                  <div className="mt-4">
+                    <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create Post
+                    </button>
+                  </div>
+                </div>
+              </GlassPanel>
             </>
           ) : (
             /* Collapsed Navigation */

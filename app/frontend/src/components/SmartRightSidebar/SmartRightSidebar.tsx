@@ -316,11 +316,7 @@ export default function SmartRightSidebar({
           </div>
         </div>
         
-        {/* Still show trending content */}
-        <TrendingContentWidget 
-          context={context}
-          communityId={communityId}
-        />
+        {/* Trending content moved to left sidebar */}
       </div>
     );
   }
@@ -347,11 +343,7 @@ export default function SmartRightSidebar({
           onActionClick={handleQuickAction}
         />
 
-        {/* Trending Content Widget */}
-        <TrendingContentWidget 
-          context={context}
-          communityId={communityId}
-        />
+        {/* Trending content moved to left sidebar */}
       </div>
 
       {/* Portfolio Modal */}

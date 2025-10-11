@@ -1104,7 +1104,7 @@ const DashboardRightSidebar = memo(() => {
       />
 
       {/* Contextual Header */}
-      {contextualContent.contextTitle && (
+      {contextualContent.contextTitle && contextualContent.contextTitle !== 'Discover' && (
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
           <div className="p-4 text-center">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">

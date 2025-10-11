@@ -60,6 +60,12 @@ const nextConfig = {
   
   // Standard webpack config
   webpack: (config, { isServer }) => {
+    // Silence RN async-storage resolution for MetaMask SDK browser build
+    config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@react-native-async-storage/async-storage': false,
+    };
     // Web3 and crypto fallbacks
     config.resolve.fallback = { 
       fs: false, 

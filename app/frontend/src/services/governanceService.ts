@@ -21,7 +21,8 @@ export class GovernanceService {
       
       if (response.ok) {
         const data = await response.json();
-        return this.transformBackendProposals(data);
+        const payload = Array.isArray(data) ? data : (data?.data || data?.results || data?.proposals || []);
+        return this.transformBackendProposals(payload);
       }
       
       // Fallback to Web3 service for mock data
@@ -44,7 +45,8 @@ export class GovernanceService {
       
       if (response.ok) {
         const data = await response.json();
-        return this.transformBackendProposals(data);
+        const payload = Array.isArray(data) ? data : (data?.data || data?.results || data?.proposals || []);
+        return this.transformBackendProposals(payload);
       }
       
       // Return mock data for development
@@ -64,7 +66,8 @@ export class GovernanceService {
       
       if (response.ok) {
         const data = await response.json();
-        return this.transformBackendProposal(data);
+        const payload = data?.data || data?.proposal || data;
+        return this.transformBackendProposal(payload);
       }
       
       return null;
@@ -131,7 +134,8 @@ export class GovernanceService {
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
       
       if (response.ok) {
-        const data = await response.json();
+        const json = await response.json();
+        const data = json?.data || json;
         return {
           ...data,
           lastUpdated: new Date(data.lastUpdated)

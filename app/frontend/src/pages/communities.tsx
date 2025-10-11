@@ -224,6 +224,9 @@ const CommunitiesPage: React.FC = () => {
     post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) // Interest-based suggestions
   );
 
+  // Defensive: normalize communities to array for rendering
+  const communityList: Community[] = Array.isArray(communities) ? communities : [];
+
   return (
     <Layout title="Communities - LinkDAO" fullWidth={true}>
       <Head>
@@ -245,7 +248,7 @@ const CommunitiesPage: React.FC = () => {
                     <span className="text-lg">🏠</span>
                     <span className="truncate">Home</span>
                   </button>
-                  {communities.filter(c => joinedCommunities.includes(c.id)).map(community => (
+                  {communityList.filter(c => joinedCommunities.includes(c.id)).map(community => (
                     <button
                       key={community.id}
                       onClick={() => router.push(`/dao/${community.name}`)}
@@ -261,7 +264,7 @@ const CommunitiesPage: React.FC = () => {
               <div>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Discover</h4>
                 <div className="space-y-1">
-                  {communities.filter(c => !joinedCommunities.includes(c.id)).map(community => (
+                  {communityList.filter(c => !joinedCommunities.includes(c.id)).map(community => (
                     <button
                       key={community.id}
                       onClick={() => router.push(`/dao/${community.name}`)}
@@ -305,7 +308,7 @@ const CommunitiesPage: React.FC = () => {
             {filteredPosts.map(post => (
               <div 
                 key={post.id} 
-                onClick={() => router.push(`/dao/${communities.find(c => c.id === post.communityId)?.name || post.communityId}/posts/${post.id}`)}
+                onClick={() => router.push(`/dao/${communityList.find(c => c.id === post.communityId)?.name || post.communityId}/posts/${post.id}`)}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer"
               >
                 <div className="flex">
@@ -336,7 +339,7 @@ const CommunitiesPage: React.FC = () => {
                   <div className="flex-1 p-4">
                     <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 mb-2">
                       <span className="text-gray-600 dark:text-gray-300">
-                        r/{communities.find(c => c.id === post.communityId)?.name || post.communityId}
+                        r/{communityList.find(c => c.id === post.communityId)?.name || post.communityId}
                       </span>
                       <span>•</span>
                       <span>Posted by u/{post.authorName}</span>
@@ -412,7 +415,7 @@ const CommunitiesPage: React.FC = () => {
                 Suggested Communities
               </h3>
               <div className="space-y-2">
-                {communities.filter(c => !joinedCommunities.includes(c.id)).slice(0, 3).map(community => (
+                {communityList.filter(c => !joinedCommunities.includes(c.id)).slice(0, 3).map(community => (
                   <div key={community.id} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">{community.avatar}</span>
@@ -447,7 +450,7 @@ const CommunitiesPage: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-500 dark:text-gray-400">Total Communities</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {communities.length}
+                    {communityList.length}
                   </span>
                 </div>
                 <div className="flex justify-between">
