@@ -179,8 +179,8 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
   // Mock activity indicators - replace with real data
   useEffect(() => {
     const indicators = [
-      createActivityIndicator('notifications', 5, 'bg-blue-500'),
-      createActivityIndicator('transactions', 2, 'bg-green-500'),
+      createActivityIndicator('notification', 5, 'bg-blue-500'),
+      createActivityIndicator('transaction', 2, 'bg-green-500'),
       createActivityIndicator('community', 8, 'bg-purple-500'),
       createActivityIndicator('governance', 1, 'bg-red-500')
     ];
@@ -241,11 +241,9 @@ export function useEnhancedNavigation(): UseEnhancedNavigationReturn {
     // Handle different indicator types
     switch (indicator.type) {
       case 'notification':
-      case 'notifications':
         router.push('/notifications');
         break;
       case 'transaction':
-      case 'transactions':
         router.push('/wallet/transactions');
         break;
       case 'community':
