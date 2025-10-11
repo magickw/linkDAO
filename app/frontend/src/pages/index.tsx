@@ -13,6 +13,7 @@ import { useToast } from '@/context/ToastContext';
 import { CreatePostInput } from '@/models/Post';
 import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
 import BottomSheet from '@/components/BottomSheet';
+import CompactGlobalSearch from '@/components/Search/CompactGlobalSearch';
 import Link from 'next/link';
 import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -453,6 +454,11 @@ export default function Home() {
                   userName={(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
                   className="mb-6"
                 />
+
+                {/* Quick Search */}
+                <div className="mb-6">
+                  <CompactGlobalSearch placeholder="Search by wallet address or posts..." />
+                </div>
 
                 {/* Feed Tabs */}
                 <div className="flex space-x-1 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">

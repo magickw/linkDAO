@@ -166,10 +166,12 @@ app.get('/marketplace/listings', async (req, res) => {
         description: 'High-quality noise-canceling wireless headphones with 30-hour battery life and premium sound quality.',
         price: '299.99',
         currency: 'USD',
-        cryptoPrice: '0.1245',
+        cryptoPrice: '0.0010',
         cryptoSymbol: 'ETH',
         category: 'electronics',
         listingType: 'FIXED_PRICE',
+        // Hint for testnet; frontend ignores unknown fields safely
+        testnetChainId: 84532,
         seller: {
           id: 'seller_001',
           name: 'TechGear Pro',
@@ -177,7 +179,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 95,
           verified: true,
           daoApproved: true,
-          walletAddress: '0x1234567890123456789012345678901234567890'
+          walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -211,7 +213,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 88,
           verified: true,
           daoApproved: true,
-          walletAddress: '0x2345678901234567890123456789012345678901'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -248,7 +250,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 72,
           verified: true,
           daoApproved: false,
-          walletAddress: '0x3456789012345678901234567890123456789012'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -282,7 +284,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 91,
           verified: true,
           daoApproved: true,
-          walletAddress: '0x4567890123456789012345678901234567890123'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -319,7 +321,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 78,
           verified: false,
           daoApproved: false,
-          walletAddress: '0x5678901234567890123456789012345678901234'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: false,
@@ -353,7 +355,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 84,
           verified: true,
           daoApproved: true,
-          walletAddress: '0x6789012345678901234567890123456789012345'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -390,7 +392,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 96,
           verified: true,
           daoApproved: true,
-          walletAddress: '0x7890123456789012345678901234567890123456'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -424,7 +426,7 @@ app.get('/marketplace/listings', async (req, res) => {
           reputation: 89,
           verified: true,
           daoApproved: false,
-          walletAddress: '0x8901234567890123456789012345678901234567'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
         },
         trust: {
           verified: true,
@@ -559,7 +561,7 @@ app.get('/marketplace/listings/:id', async (req, res) => {
         memberSince: '2023-01-01',
         verified: true,
         daoApproved: Math.random() > 0.5,
-        walletAddress: '0x1234567890123456789012345678901234567890'
+walletAddress: '0x0a315B01BbD1F92E08CC755afFB3214ED1C46bB5'
       },
       trust: {
         verified: true,

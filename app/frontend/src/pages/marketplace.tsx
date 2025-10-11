@@ -226,7 +226,7 @@ const MarketplaceContent: React.FC = () => {
           {
             id: 'prod_001',
             sellerWalletAddress: '0x1234567890123456789012345678901234567890',
-            tokenAddress: '0x0000000000000000000000000000000000000000',
+            tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
             price: '0.1245',
             quantity: 15,
             itemType: 'DIGITAL',
@@ -241,8 +241,8 @@ const MarketplaceContent: React.FC = () => {
           },
           {
             id: 'prod_002',
-            sellerWalletAddress: '0x2345678901234567890123456789012345678901',
-            tokenAddress: '0x0000000000000000000000000000000000000000',
+            sellerWalletAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
+            tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
             price: '2.5000',
             quantity: 1,
             itemType: 'NFT',
@@ -267,9 +267,9 @@ const MarketplaceContent: React.FC = () => {
       setListings([
         {
           id: 'prod_001',
-          sellerWalletAddress: '0x1234567890123456789012345678901234567890',
-          tokenAddress: '0x0000000000000000000000000000000000000000',
-          price: '0.1245',
+          sellerWalletAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
+          tokenAddress: '0xEe034b53D4cCb101b2a4faec27708be507197350',
+          price: '0.00245',
           quantity: 15,
           itemType: 'DIGITAL',
           listingType: 'FIXED_PRICE',

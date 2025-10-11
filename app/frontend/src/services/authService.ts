@@ -1,5 +1,6 @@
 import { signMessage } from '@wagmi/core';
 import { config } from '@/lib/wagmi';
+import { ENV_CONFIG } from '@/config/environment';
 
 export interface AuthUser {
   id: string;
@@ -67,7 +68,8 @@ class AuthService {
   private token: string | null = null;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+    // Use centralized environment config to ensure correct backend port
+    this.baseUrl = ENV_CONFIG.BACKEND_URL || 'http://localhost:10000';
     
     // Load token from localStorage on initialization
     if (typeof window !== 'undefined') {

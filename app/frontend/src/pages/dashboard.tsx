@@ -21,6 +21,7 @@ import { AnimatedCard, AnimatedButton, AnimatedCounter, StaggeredAnimation } fro
 import { ViewTransition } from '@/components/animations/TransitionComponents';
 import { DashboardHeaderSkeleton, FeedSkeleton } from '@/components/animations/LoadingSkeletons';
 import { EnhancedCard, EnhancedButton } from '@/components/ui/EnhancedTheme';
+import CompactGlobalSearch from '@/components/Search/CompactGlobalSearch';
 
 // Helper function to determine post type based on tags
 const getPostType = (post: any) => {
@@ -353,6 +354,10 @@ export default function Dashboard() {
       {/* Dashboard Tour */}
       <DashboardTour />
       <div className="space-y-6">
+        {/* Quick Search */}
+        <div className="mb-2">
+          <CompactGlobalSearch placeholder="Search by wallet address or posts..." />
+        </div>
         {/* Top Section (User Snapshot) */}
         <div className="mb-8">
           <AnimatedCard animation="lift" className="overflow-hidden" delay={0}>

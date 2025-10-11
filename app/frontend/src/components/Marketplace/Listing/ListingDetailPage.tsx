@@ -162,7 +162,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
           id: listingId,
           title: mockData.title,
           description: mockData.description,
-          price: 0.15,
+          price: 0.001,
           currency: 'ETH',
           images: mockData.images,
           category: mockData.category,
