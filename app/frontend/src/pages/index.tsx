@@ -430,7 +430,7 @@ export default function Home() {
 
   // Connected user experience - Main Social Dashboard/Feed
   return (
-    <Layout title="LinkDAO - Home" hideFooter={true} fullWidth={true}>
+    <Layout title="LinkDAO - Home">
       <div className="flex bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar - Navigation */}
         <div className="hidden lg:flex lg:flex-shrink-0">

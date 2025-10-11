@@ -5,11 +5,36 @@ interface SendTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   tokens: TokenBalance[];
+  initialToken?: string;
   onSend: (token: string, amount: number, recipient: string) => Promise<void>;
+  estimatedGas?: bigint | null;
 }
 
-export default function SendTokenModal({ isOpen, onClose, tokens, onSend }: SendTokenModalProps) {
+export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSend, estimatedGas }: SendTokenModalProps) {
   const [selectedToken, setSelectedToken] = useState(tokens[0]?.symbol || 'ETH');
+  const [localEstimatedGas, setLocalEstimatedGas] = useState<bigint | null>(null);
+
+  // Sync selected token when modal opens or when tokens/initialToken change
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    // If initialToken provided and present in tokens, select it
+    if (initialToken) {
+      const found = tokens.find(t => t.symbol === initialToken);
+      if (found) {
+        setSelectedToken(initialToken);
+        // fall through
+      }
+    }
+
+    // Default to first token in list if available
+    if (tokens && tokens.length > 0 && !initialToken) {
+      setSelectedToken(tokens[0].symbol);
+    }
+
+    // Mirror estimatedGas from parent for display
+    setLocalEstimatedGas(typeof estimatedGas !== 'undefined' ? (estimatedGas ?? null) : null);
+  }, [isOpen, tokens, initialToken, estimatedGas]);
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -140,7 +165,9 @@ export default function SendTokenModal({ isOpen, onClose, tokens, onSend }: Send
           <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Estimated Gas Fee:</span>
-              <span className="text-gray-900 dark:text-white">~$2.50</span>
+              <span className="text-gray-900 dark:text-white">
+                {localEstimatedGas !== null ? `${localEstimatedGas.toString()} (gas units)` : '~$2.50'}
+              </span>
             </div>
           </div>
         </div>

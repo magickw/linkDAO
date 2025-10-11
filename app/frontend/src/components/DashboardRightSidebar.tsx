@@ -814,12 +814,7 @@ const DashboardRightSidebar = memo(() => {
               No suggestions available
             </div>
           )}
-          <Link 
-            href="/discover" 
-            className="block mt-4 text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-          >
-            Discover More →
-          </Link>
+          {/* Discover link removed per design request */}
         </div>
       </div>
     );

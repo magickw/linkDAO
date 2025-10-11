@@ -47,12 +47,9 @@ export default function MessagingPage() {
         <meta name="description" content="Secure wallet-to-wallet messaging on LinkDAO" />
       </Head>
       
-      <Layout 
-        title="Messages - LinkDAO"
-        fullWidth={true}
-      >
+      <Layout title="Messages - LinkDAO">
         <ContactProvider>
-          <div className="h-full">
+          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {/* Header */}
             <div className="mb-6">
               <div className="flex items-center justify-between">
@@ -68,7 +65,7 @@ export default function MessagingPage() {
             </div>
             
             {/* Main Interface */}
-            <div className="bg-gray-900 rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
+            <div className="bg-gray-900 rounded-lg overflow-hidden h-[70vh] md:h-[75vh]">
               {/* Tab Navigation */}
               <div className="flex border-b border-gray-700">
                 <button
@@ -96,7 +93,7 @@ export default function MessagingPage() {
               </div>
 
               {/* Tab Content */}
-              <div className="h-full" style={{ height: 'calc(100% - 60px)' }}>
+              <div className="h-full">
                 {activeTab === 'messages' ? (
                   <DiscordStyleMessagingInterface className="h-full" />
                 ) : (
@@ -106,7 +103,7 @@ export default function MessagingPage() {
             </div>
           </div>
         </ContactProvider>
-        
+
         {/* Feature Highlights */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
           <GlassPanel className="p-4 text-center">
