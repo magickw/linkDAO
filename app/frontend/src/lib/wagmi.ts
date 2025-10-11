@@ -1,5 +1,5 @@
 import { createConfig, http } from 'wagmi'
-import { base, baseGoerli, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
+import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains'
 import { injected, metaMask, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 import './devConfig' // Import development configuration
 
@@ -43,8 +43,8 @@ const getChainRpcUrl = (chainId: number) => {
   switch (chainId) {
     case base.id:
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-    case baseGoerli.id:
-      return process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL || 'https://goerli.base.org';
+    case baseSepolia.id:
+      return process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
     case mainnet.id:
       return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com';
     case polygon.id:
@@ -60,7 +60,7 @@ const getChainRpcUrl = (chainId: number) => {
 
 // Set up wagmi config with enhanced connectors
 export const config = createConfig({
-  chains: [base, baseGoerli, mainnet, polygon, arbitrum, sepolia],
+  chains: [base, baseSepolia, mainnet, polygon, arbitrum, sepolia],
   connectors: [
     metaMask({
       dappMetadata: {
@@ -98,7 +98,7 @@ export const config = createConfig({
   ],
   transports: {
     [base.id]: http(getRpcUrl(base.id)),
-    [baseGoerli.id]: http(getRpcUrl(baseGoerli.id)),
+    [baseSepolia.id]: http(getRpcUrl(baseSepolia.id)),
     [mainnet.id]: http(getRpcUrl(mainnet.id)),
     [polygon.id]: http(getRpcUrl(polygon.id)),
     [arbitrum.id]: http(getRpcUrl(arbitrum.id)),
@@ -106,7 +106,7 @@ export const config = createConfig({
   },
 })
 
-export { base, baseGoerli, mainnet, polygon, arbitrum, sepolia }
+export { base, baseSepolia, mainnet, polygon, arbitrum, sepolia }
 
 // Add a health check function
 export const checkWagmiConnection = async () => {

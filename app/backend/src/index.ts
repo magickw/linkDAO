@@ -205,6 +205,8 @@ import sellerRoutes from './routes/sellerRoutes';
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
+// Import user profile API routes
+import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
 // Import listing routes
@@ -291,6 +293,9 @@ app.use('/api/marketplace', marketplaceSellerRoutes);
 
 // Seller profile API routes
 app.use('/api/marketplace', sellerProfileRoutes);
+
+// User profile API routes
+app.use('/api/profiles', userProfileRoutes);
 
 // Marketplace listings routes
 app.use('/api/marketplace', marketplaceListingsRoutes);

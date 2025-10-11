@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useChainId, useSwitchChain } from 'wagmi';
 import { ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { mainnet, polygon, arbitrum, sepolia, base, baseGoerli } from 'wagmi/chains';
+import { mainnet, polygon, arbitrum, sepolia, base, baseSepolia } from 'wagmi/chains';
 
 interface NetworkSwitcherProps {
   variant?: 'compact' | 'full';
@@ -45,9 +45,9 @@ const SUPPORTED_NETWORKS = [
     isTestnet: false
   },
   {
-    id: baseGoerli.id,
-    name: 'Base Goerli',
-    shortName: 'BASE-G',
+    id: baseSepolia.id,
+    name: 'Base Sepolia',
+    shortName: 'BASE-S',
     color: 'bg-blue-300',
     isTestnet: true
   }

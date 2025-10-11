@@ -1,5 +1,5 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
-import { base, baseGoerli, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains';
+import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains';
 import { http } from 'wagmi';
 
 // Get the WalletConnect project ID from environment variables
@@ -16,8 +16,8 @@ const getRpcUrl = (chainId: number): string => {
       return process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/demo';
     case base.id:
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';
-    case baseGoerli.id:
-      return process.env.NEXT_PUBLIC_BASE_GOERLI_RPC_URL || 'https://goerli.base.org';
+    case baseSepolia.id:
+      return process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
     case polygon.id:
       return process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon-rpc.com';
     case arbitrum.id:
@@ -32,11 +32,11 @@ const getRpcUrl = (chainId: number): string => {
 export const config = getDefaultConfig({
   appName: 'LinkDAO Marketplace',
   projectId,
-  chains: [base, baseGoerli, mainnet, polygon, arbitrum, sepolia],
+  chains: [base, baseSepolia, mainnet, polygon, arbitrum, sepolia],
   transports: {
     [mainnet.id]: http(getRpcUrl(mainnet.id)),
     [base.id]: http(getRpcUrl(base.id)),
-    [baseGoerli.id]: http(getRpcUrl(baseGoerli.id)),
+    [baseSepolia.id]: http(getRpcUrl(baseSepolia.id)),
     [polygon.id]: http(getRpcUrl(polygon.id)),
     [arbitrum.id]: http(getRpcUrl(arbitrum.id)),
     [sepolia.id]: http(getRpcUrl(sepolia.id)),

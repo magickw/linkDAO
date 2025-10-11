@@ -4,7 +4,7 @@
  */
 
 import { PublicClient, createPublicClient, http, formatEther, Address } from 'viem';
-import { mainnet, sepolia, base, baseGoerli } from 'viem/chains';
+import { mainnet, sepolia, base, baseSepolia } from 'viem/chains';
 
 export interface TokenBalance {
   symbol: string;
@@ -85,7 +85,7 @@ const getTokensForChain = (chainId: number) => {
           decimals: 18
         }
       ];
-    case 84532: // Base Goerli
+    case 84532: // Base Sepolia
       return [
         {
           symbol: 'USDC',
@@ -180,7 +180,7 @@ export class WalletService {
         chain = base;
         break;
       case 84532:
-        chain = baseGoerli;
+        chain = baseSepolia;
         break;
       case 11155111:
         chain = sepolia;
