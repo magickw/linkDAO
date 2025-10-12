@@ -12,7 +12,6 @@ const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({
 import NotificationSystem from '@/components/NotificationSystem';
 import MobileNavigation from './MobileNavigation';
 import { MessagingWidget } from '@/components/Messaging';
-import CompactGlobalSearch from '@/components/Search/CompactGlobalSearch';
 
 interface LayoutProps {
   children: ReactNode;
@@ -144,10 +143,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
               </ul>
             </nav>
 
-            {/* Global search (desktop) */}
-            <div className="hidden lg:block w-72">
-              <CompactGlobalSearch placeholder="Search wallet or posts" />
-            </div>
 
             <div className="flex items-center space-x-2">
               {/* Dark mode toggle */}

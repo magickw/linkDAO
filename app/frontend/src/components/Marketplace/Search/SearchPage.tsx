@@ -11,6 +11,7 @@ import { ProductGrid } from '../ProductDisplay/ProductGrid';
 import { LoadingSkeleton } from '../../../design-system/components/LoadingSkeleton';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { designTokens } from '../../../design-system/tokens';
+import { marketplaceService, type Product as ServiceProduct, type ProductFilters as ServiceFilters } from '@/services/marketplaceService';
 
 // Define types based on backend models
 interface Product {
@@ -185,143 +186,135 @@ const SearchPage: React.FC<SearchPageProps> = ({ className = '' }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [customAttributes, setCustomAttributes] = useState<Record<string, any[]>>({});
 
-  // Mock data for demonstration
-  // In a real implementation, this would come from API calls
-  const mockProducts: Product[] = [
-    {
-      id: '1',
-      title: 'Premium Wireless Headphones',
-      description: 'High-quality wireless headphones with noise cancellation',
-      images: ['https://placehold.co/300x300'],
-      price: {
-        amount: '0.5',
-        currency: 'ETH',
-        usdEquivalent: '1500.00',
-        eurEquivalent: '1350.00',
-        gbpEquivalent: '1170.00'
-      },
-      seller: {
-        id: 'seller1',
-        name: 'TechGadgets Store',
-        avatar: 'https://placehold.co/50x50',
-        verified: true,
-        reputation: 4.8,
-        daoApproved: true,
-        tier: 'premium',
-        onlineStatus: 'online'
-      },
-      trust: {
-        verified: true,
-        escrowProtected: true,
-        onChainCertified: true
-      },
-      category: 'Electronics',
-      isNFT: false,
-      inventory: 25,
-      views: 1250,
-      favorites: 89,
-      condition: 'new',
-      brand: 'AudioTech',
-      hasWarranty: true,
-      shipping: {
-        freeShipping: true,
-        handlingTime: 1,
-        shipsFrom: {
-          country: 'USA'
-        }
-      },
-      discount: {
-        percentage: 15,
-        active: true
-      },
-      isFeatured: true,
-      isPublished: true,
-      createdAt: new Date(),
-      tags: ['wireless', 'headphones', 'audio', 'tech']
-    },
-    {
-      id: '2',
-      title: 'Vintage Leather Jacket',
-      description: 'Authentic vintage leather jacket from the 80s',
-      images: ['https://placehold.co/300x300'],
-      price: {
-        amount: '2.5',
-        currency: 'ETH',
-        usdEquivalent: '7500.00',
-        eurEquivalent: '6750.00',
-        gbpEquivalent: '5850.00'
-      },
-      seller: {
-        id: 'seller2',
-        name: 'Vintage Fashion',
-        avatar: 'https://placehold.co/50x50',
-        verified: true,
-        reputation: 4.9,
-        daoApproved: false,
-        tier: 'premium',
-        onlineStatus: 'away'
-      },
-      trust: {
-        verified: true,
-        escrowProtected: true,
-        onChainCertified: false
-      },
-      category: 'Fashion',
-      isNFT: false,
-      inventory: 3,
-      views: 890,
-      favorites: 156,
-      condition: 'used',
-      brand: 'LeatherCraft',
-      hasWarranty: false,
-      shipping: {
-        freeShipping: false,
-        handlingTime: 3,
-        shipsFrom: {
-          country: 'Italy'
-        }
-      },
-      isFeatured: false,
-      isPublished: true,
-      createdAt: new Date(),
-      tags: ['vintage', 'leather', 'fashion', 'jacket']
-    }
-  ];
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit] = useState(24);
+  const [hasMore, setHasMore] = useState(false);
 
+  // Map backend product to UI product shape expected by ProductGrid
+  const mapServiceProduct = (p: ServiceProduct): Product => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    images: p.images || [],
+    price: {
+      amount: String(p.priceAmount ?? 0),
+      currency: p.priceCurrency || 'USD',
+      usdEquivalent: undefined,
+      lastUpdated: p.updatedAt ? new Date(p.updatedAt) : undefined,
+    },
+    seller: {
+      id: p.seller?.id || p.sellerId,
+      name: p.seller?.displayName || p.seller?.storeName || (p.seller?.walletAddress ? `${p.seller.walletAddress.slice(0,6)}...${p.seller.walletAddress.slice(-4)}` : 'Seller'),
+      avatar: p.seller?.profileImageUrl || '/placeholder-product.jpg',
+      verified: Boolean(p.seller?.verified),
+      reputation: p.seller?.reputation || 0,
+      daoApproved: Boolean(p.seller?.daoApproved),
+      tier: undefined,
+      onlineStatus: p.seller?.isOnline ? 'online' : 'offline',
+    },
+    trust: {
+      verified: Boolean(p.trust?.verified),
+      escrowProtected: Boolean(p.trust?.escrowProtected),
+      onChainCertified: Boolean(p.trust?.onChainCertified),
+    },
+    category: p.category?.name || p.category?.slug || 'General',
+    isNFT: Boolean(p.nft),
+    inventory: p.inventory,
+    views: p.views,
+    favorites: p.favorites,
+    condition: p.metadata?.condition as any,
+    brand: p.metadata?.brand,
+    hasWarranty: undefined,
+    shipping: p.shipping ? { freeShipping: p.shipping.free, handlingTime: parseInt(p.shipping.estimatedDays || '0') } : undefined,
+    discount: undefined,
+    isFeatured: undefined,
+    isPublished: p.status === 'active',
+    createdAt: new Date(p.createdAt),
+    metadata: undefined,
+    tags: p.tags || [],
+  });
+
+  // Map UI filters to service filters
+  const buildServiceFilters = (f: AdvancedSearchFilters, s: SearchFiltersSortOption, pageNum: number): ServiceFilters => {
+    const sf: ServiceFilters = {};
+    if (f.category) sf.category = f.category;
+    if (f.priceRange) {
+      const [min, max] = f.priceRange;
+      if (min !== undefined) sf.minPrice = min;
+      if (max !== undefined) sf.maxPrice = max;
+    }
+    if (f.productCondition) sf.condition = f.productCondition;
+    if (f.isNFT !== undefined) sf.tags = [...(sf.tags || []), 'nft'];
+    // Sorting mapping
+    let sortBy: ServiceFilters['sortBy'] | undefined;
+    if (s.field === 'price') sortBy = s.direction === 'asc' ? 'price_asc' : 'price_desc';
+    else if (s.field === 'createdAt') sortBy = s.direction === 'asc' ? 'oldest' : 'newest';
+    else if (s.field === 'title') sortBy = 'popular';
+    else sortBy = 'popular';
+    sf.sortBy = sortBy;
+    // Pagination
+    sf.limit = limit;
+    sf.offset = (pageNum - 1) * limit;
+    // Only include active
+    sf.status = 'active';
+    return sf;
+  };
+
+  // Fetch a page of products
+  const fetchPage = async (pageNum: number, reset = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const serviceFilters = buildServiceFilters(filters, sortBy, pageNum);
+      const pageData = await marketplaceService.getProducts(serviceFilters);
+      const mapped = pageData.products.map(mapServiceProduct);
+      setProducts(prev => reset ? mapped : [...prev, ...mapped]);
+      setHasMore(pageData.hasMore);
+      setPage(pageNum);
+    } catch (e) {
+      console.error('Error fetching products:', e);
+      setError('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+// Initialize categories/brands/etc. from mocks for now (can be fetched from API later)
+useEffect(() => {
+  // Keep existing mock metadata lists for filters until backend endpoints are used
   const mockCategories = ['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books', 'Toys'];
   const mockBrands = ['AudioTech', 'LeatherCraft', 'HomeStyle', 'SportMax', 'BookWorm', 'ToyJoy'];
   const mockCountries = ['USA', 'China', 'Germany', 'Italy', 'Japan', 'UK'];
   const mockTags = ['wireless', 'headphones', 'audio', 'tech', 'vintage', 'leather', 'fashion', 'jacket'];
+  setCategories(mockCategories);
+  setBrands(mockBrands);
+  setCountries(mockCountries);
+  setTags(mockTags);
+  // Initial load
+  fetchPage(1, true);
+}, []);
 
-  // Initialize mock data
-  useEffect(() => {
-    setProducts(mockProducts);
-    setCategories(mockCategories);
-    setBrands(mockBrands);
-    setCountries(mockCountries);
-    setTags(mockTags);
-  }, []);
+// Handle search
+const handleSearch = (query: string) => {
+  setSearchQuery(query);
+  // Reset and fetch with current filters/sort
+  fetchPage(1, true);
+};
 
-  // Handle search
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // In a real implementation, this would call the search API
-    console.log('Searching for:', query);
-  };
+// Handle filter changes
+const handleFiltersChange = (newFilters: AdvancedSearchFilters) => {
+  setFilters(newFilters);
+  // Reset pagination when filters change
+  fetchPage(1, true);
+};
 
-  // Handle filter changes
-  const handleFiltersChange = (newFilters: AdvancedSearchFilters) => {
-    setFilters(newFilters);
-    // In a real implementation, this would call the search API with filters
-    console.log('Filters changed:', newFilters);
-  };
-
-  // Handle sort changes
-  const handleSortChange = (newSort: SearchFiltersSortOption) => {
-    setSortBy(newSort);
-    // In a real implementation, this would call the search API with sort options
-    console.log('Sort changed:', newSort);
-  };
+// Handle sort changes
+const handleSortChange = (newSort: SearchFiltersSortOption) => {
+  setSortBy(newSort);
+  // Reset pagination when sorting changes
+  fetchPage(1, true);
+};
 
   // Convert SearchFiltersSortOption to ProductGridSortOption
   const convertSortOption = (option: SearchFiltersSortOption): ProductGridSortOption => {
@@ -433,6 +426,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ className = '' }) => {
               onSortChange={(sort) => handleSortChange({...sort, label: sortBy.label})}
               showFilters={false} // We're using our custom filters
               showSorting={false} // We're using our custom sorting
+              showPagination={false}
+              infiniteScroll
+              hasMore={hasMore}
+              onLoadMore={() => fetchPage(page + 1)}
             />
           )}
         </div>

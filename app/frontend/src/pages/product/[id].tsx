@@ -90,9 +90,9 @@ const ProductPage: React.FC = () => {
           { type: 'video', url: '/videos/headphones-demo.mp4', thumbnail: '/api/placeholder/600/600', alt: 'Product demo' }
         ],
         price: {
-          crypto: '0.25',
+          crypto: '0.001',
           cryptoSymbol: 'ETH',
-          fiat: '425.00',
+          fiat: '42.00',
           fiatSymbol: 'USD'
         },
         seller: {

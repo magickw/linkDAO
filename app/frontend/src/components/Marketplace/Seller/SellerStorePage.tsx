@@ -647,7 +647,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
               {
                 id: '1',
                 title: 'Premium Wireless Headphones',
-                price: 0.15,
+                price: 0.001,
                 currency: 'ETH',
                 image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
                 category: 'electronics',
@@ -667,7 +667,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
             {
               id: '1',
               title: 'Premium Wireless Headphones',
-              price: 0.15,
+              price: 0.001,
               currency: 'ETH',
               image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
               category: 'electronics',

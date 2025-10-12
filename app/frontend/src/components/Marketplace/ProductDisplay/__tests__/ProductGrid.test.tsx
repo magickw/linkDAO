@@ -16,18 +16,18 @@ jest.mock('../ProductCard', () => ({
   ),
 }));
 
-jest.mock('../../../design-system/components/LoadingSkeleton', () => ({
+jest.mock('@/design-system/components/LoadingSkeleton', () => ({
   LoadingSkeleton: () => <div data-testid="loading-skeleton">Loading...</div>,
   ProductCardSkeleton: () => <div data-testid="product-card-skeleton">Loading card...</div>,
 }));
 
-jest.mock('../../../design-system/components/GlassPanel', () => ({
+jest.mock('@/design-system/components/GlassPanel', () => ({
   GlassPanel: ({ children, className }: any) => (
     <div className={`glass-panel ${className}`}>{children}</div>
   ),
 }));
 
-jest.mock('../../../design-system/components/Button', () => ({
+jest.mock('@/design-system/components/Button', () => ({
   Button: ({ children, onClick, disabled }: any) => (
     <button onClick={onClick} disabled={disabled} data-testid="button">
       {children}

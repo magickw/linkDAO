@@ -165,6 +165,10 @@ interface ProductGridProps {
   showFilters?: boolean;
   showSorting?: boolean;
   showPagination?: boolean;
+  // New optional infinite scroll support
+  infiniteScroll?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
   onProductClick?: (productId: string) => void;
   onSellerClick?: (sellerId: string) => void;
   onAddToCart?: (productId: string) => void;
@@ -561,6 +565,7 @@ const Pagination: React.FC<PaginationProps> = ({
         size="small"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
+        data-testid="pagination-previous"
       >
         Previous
       </Button>
@@ -577,6 +582,7 @@ const Pagination: React.FC<PaginationProps> = ({
                   ? 'text-white bg-white/20'
                   : 'text-white/60 hover:text-white hover:bg-white/10'
               }`}
+              data-testid={`pagination-page-${page}`}
             >
               {page}
             </button>
@@ -589,6 +595,7 @@ const Pagination: React.FC<PaginationProps> = ({
         size="small"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
+        data-testid="pagination-next"
       >
         Next
       </Button>
@@ -601,12 +608,15 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   loading = false,
   error,
   filters = {},
-  sortBy = { field: 'createdAt', direction: 'desc' },
+  sortBy,
   layout: initialLayout = 'grid',
   itemsPerPage = 12,
   showFilters = true,
   showSorting = true,
   showPagination = true,
+  infiniteScroll = false,
+  hasMore = false,
+  onLoadMore,
   onProductClick,
   onSellerClick,
   onAddToCart,
@@ -617,6 +627,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [layout, setLayout] = useState(initialLayout);
+  const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
 
   // Get unique categories for filter
   const categories = useMemo(() => {
@@ -705,22 +716,37 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       return true;
     });
 
-    // Sort products
-    filtered.sort((a, b) => {
-      let aValue: any, bValue: any;
+    // Helper to normalize price across shapes used in tests and app
+    const parsePriceNumber = (p: Product) => {
+      // Support multiple shapes:
+      // - p.price.usdEquivalent (string)
+      // - p.price.amount (string)
+      // - p as any).price.fiat (string from older tests)
+      const anyPrice: any = p.price as any;
+      const raw = (p.price as any)?.usdEquivalent
+        ?? (p.price as any)?.amount
+        ?? anyPrice?.fiat;
+      const n = parseFloat(raw ?? 'NaN');
+      return Number.isFinite(n) ? n : 0;
+    };
 
-      switch (sortBy.field) {
+    // Sort products only when a sortBy is provided; otherwise preserve input order
+    if (sortBy) {
+      filtered.sort((a, b) => {
+        let aValue: any, bValue: any;
+
+        switch (sortBy.field) {
         case 'price':
-          aValue = parseFloat(a.price.usdEquivalent || a.price.amount);
-          bValue = parseFloat(b.price.usdEquivalent || b.price.amount);
+          aValue = parsePriceNumber(a);
+          bValue = parsePriceNumber(b);
           break;
         case 'title':
           aValue = a.title.toLowerCase();
           bValue = b.title.toLowerCase();
           break;
         case 'createdAt':
-          aValue = a.createdAt.getTime();
-          bValue = b.createdAt.getTime();
+          aValue = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as any).getTime();
+          bValue = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as any).getTime();
           break;
         case 'reputation':
           aValue = a.seller.reputation;
@@ -747,9 +773,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           bValue = b.shipping?.handlingTime || Number.MAX_VALUE;
           break;
         default:
-          // Relevance sorting would be handled on the backend
-          aValue = a.createdAt.getTime();
-          bValue = b.createdAt.getTime();
+          // Relevance sorting would be handled on the backend; default to createdAt desc when requested
+          aValue = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt as any).getTime();
+          bValue = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt as any).getTime();
           break;
       }
 
@@ -759,6 +785,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
       }
     });
+    }
 
     return filtered;
   }, [products, filters, sortBy]);
@@ -774,6 +801,25 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   React.useEffect(() => {
     setCurrentPage(1);
   }, [filters, sortBy]);
+
+  // Optional infinite scroll using IntersectionObserver
+  React.useEffect(() => {
+    if (!infiniteScroll || !hasMore || loading) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const first = entries[0];
+      if (first.isIntersecting) {
+        onLoadMore?.();
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [infiniteScroll, hasMore, onLoadMore, loading]);
 
   const handleFiltersChange = (newFilters: FilterOptions) => {
     onFiltersChange?.(newFilters);
@@ -887,6 +933,19 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               totalPages={totalPages}
               onPageChange={setCurrentPage}
             />
+          )}
+
+          {/* Infinite Scroll Sentinel / Load More */}
+          {!showPagination && !loading && hasMore && (
+            <div className="flex justify-center mt-6">
+              {infiniteScroll ? (
+                <div ref={loadMoreRef} className="h-1 w-full" aria-hidden />
+              ) : (
+                <Button variant="outline" onClick={() => onLoadMore?.()}>
+                  Load more
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

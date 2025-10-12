@@ -15,6 +15,7 @@ import {
   AnimatedEngagementMetrics,
   AnimatedProductBadge
 } from '../../../components/VisualPolish/MarketplaceAnimations';
+import { marketplaceService, type Product as ServiceProduct, type ProductFilters as ServiceFilters } from '@/services/marketplaceService';
 
 // Define types based on backend models
 interface Product {
@@ -214,6 +215,102 @@ const SearchResultsPage: React.FC = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [customAttributes, setCustomAttributes] = useState<Record<string, any[]>>({});
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit] = useState(24);
+  const [hasMore, setHasMore] = useState(false);
+
+  // Map backend product to UI product shape expected by ProductGrid
+  const mapServiceProduct = (p: ServiceProduct): Product => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    images: p.images || [],
+    price: {
+      amount: String(p.priceAmount ?? 0),
+      currency: p.priceCurrency || 'USD',
+      usdEquivalent: undefined,
+      lastUpdated: p.updatedAt ? new Date(p.updatedAt) : undefined,
+    },
+    seller: {
+      id: p.seller?.id || p.sellerId,
+      name: p.seller?.displayName || p.seller?.storeName || (p.seller?.walletAddress ? `${p.seller.walletAddress.slice(0,6)}...${p.seller.walletAddress.slice(-4)}` : 'Seller'),
+      avatar: p.seller?.profileImageUrl || '/placeholder-product.jpg',
+      verified: Boolean(p.seller?.verified),
+      reputation: p.seller?.reputation || 0,
+      daoApproved: Boolean(p.seller?.daoApproved),
+      tier: undefined,
+      onlineStatus: p.seller?.isOnline ? 'online' : 'offline',
+    },
+    trust: {
+      verified: Boolean(p.trust?.verified),
+      escrowProtected: Boolean(p.trust?.escrowProtected),
+      onChainCertified: Boolean(p.trust?.onChainCertified),
+    },
+    category: p.category?.name || p.category?.slug || 'General',
+    isNFT: Boolean(p.nft),
+    inventory: p.inventory,
+    views: p.views,
+    favorites: p.favorites,
+    condition: p.metadata?.condition as any,
+    brand: p.metadata?.brand,
+    hasWarranty: undefined,
+    shipping: p.shipping ? { freeShipping: p.shipping.free, handlingTime: parseInt(p.shipping.estimatedDays || '0') } : undefined,
+    discount: undefined,
+    isFeatured: undefined,
+    isPublished: p.status === 'active',
+    createdAt: new Date(p.createdAt),
+    metadata: undefined,
+    tags: p.tags || [],
+  });
+
+  // Map UI filters to service filters
+  const buildServiceFilters = (f: AdvancedSearchFilters, s: SearchFiltersSortOption, pageNum: number): ServiceFilters => {
+    const sf: ServiceFilters = {};
+    if (searchCategory) sf.category = searchCategory;
+    if (f.category) sf.category = f.category; // override if explicitly set
+    if (f.priceRange) {
+      const [min, max] = f.priceRange;
+      if (min !== undefined) sf.minPrice = min;
+      if (max !== undefined) sf.maxPrice = max;
+    }
+    if (f.productCondition) sf.condition = f.productCondition;
+    if (f.isNFT !== undefined) sf.tags = [...(sf.tags || []), 'nft'];
+    // Sorting mapping
+    let sortBy: ServiceFilters['sortBy'] | undefined;
+    if (s.field === 'price') sortBy = s.direction === 'asc' ? 'price_asc' : 'price_desc';
+    else if (s.field === 'createdAt') sortBy = s.direction === 'asc' ? 'oldest' : 'newest';
+    else if (s.field === 'title') sortBy = 'popular';
+    else sortBy = 'popular';
+    sf.sortBy = sortBy;
+    // Pagination
+    sf.limit = limit;
+    sf.offset = (pageNum - 1) * limit;
+    // Only include active
+    sf.status = 'active';
+    return sf;
+  };
+
+  // Fetch a page of products
+  const fetchPage = async (pageNum: number, reset = false) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const serviceFilters = buildServiceFilters(filters, sortBy, pageNum);
+      const pageData = await marketplaceService.getProducts(serviceFilters);
+      const mapped = pageData.products.map(mapServiceProduct);
+      setProducts(prev => reset ? mapped : [...prev, ...mapped]);
+      setHasMore(pageData.hasMore);
+      setPage(pageNum);
+      setTotalResults(pageData.total);
+    } catch (e) {
+      console.error('Error fetching products:', e);
+      setError('Failed to fetch search results');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Extract search query from URL parameters
   useEffect(() => {
     const params = new URLSearchParams(router.asPath.split('?')[1] || '');
@@ -223,9 +320,8 @@ const SearchResultsPage: React.FC = () => {
     setSearchQuery(query);
     setSearchCategory(category);
     
-    if (query) {
-      performSearch(query, category);
-    }
+    // Reset results and fetch first page when route changes
+    fetchPage(1, true);
   }, [router.asPath]);
 
   // Mock data for demonstration
@@ -344,26 +440,12 @@ const SearchResultsPage: React.FC = () => {
     setTags(mockTags);
   }, []);
 
-  // Perform search
-  const performSearch = async (query: string, category?: string) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // In a real implementation, this would call the search API
-      // const response = await fetch(`/api/marketplace/search?q=${encodeURIComponent(query)}&category=${category || ''}`);
-      // const data = await response.json();
-      
-      // For demo purposes, use mock data
-      setProducts(mockProducts);
-      setTotalResults(mockProducts.length);
-    } catch (err) {
-      setError('Failed to fetch search results');
-      console.error('Search error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+// Perform search (resets pagination and reloads page 1)
+const performSearch = async (query: string, category?: string) => {
+  setSearchQuery(query);
+  setSearchCategory(category);
+  await fetchPage(1, true);
+};
 
   // Handle search from search bar
   const handleSearch = (query: string, category?: string) => {
@@ -478,6 +560,10 @@ const SearchResultsPage: React.FC = () => {
                 onSortChange={(newSort) => handleSortChange({ ...newSort, label: sortBy.label })}
                 showFilters={false} // We're using our custom filters
                 showSorting={false} // We're using our custom sorting
+                showPagination={false}
+                infiniteScroll
+                hasMore={hasMore}
+                onLoadMore={() => fetchPage(page + 1)}
               />
             )}
           </div>
