@@ -242,11 +242,7 @@ const ProductPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div
-          className="fixed inset-0 z-0"
-          style={{ background: designTokens.gradients.heroMain }}
-        />
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="relative z-10 animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white/50"></div>
       </div>
     );
@@ -254,38 +250,24 @@ const ProductPage: React.FC = () => {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div
-          className="fixed inset-0 z-0"
-          style={{ background: designTokens.gradients.heroMain }}
-        />
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="relative z-10 text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Product Not Found</h1>
-          <button
-            onClick={() => router.push('/marketplace')}
-            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
+          <Button variant="primary" onClick={() => router.push('/marketplace')}>
             Back to Marketplace
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Background */}
-      <div
-        className="fixed inset-0 z-0"
-        style={{ background: designTokens.gradients.heroMain }}
-      />
-
-      {/* Content */}
-      <div className="relative z-10">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Breadcrumb */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <nav className="mb-4">
-            <div className="flex items-center space-x-2 text-sm text-white/70">
+        <GlassPanel className="p-4">
+          <nav>
+            <div className="flex items-center space-x-2 text-sm text-white/80">
               <button onClick={() => router.push('/marketplace')} className="hover:text-white">
                 Marketplace
               </button>
@@ -297,18 +279,22 @@ const ProductPage: React.FC = () => {
               <span className="text-white">{product.title}</span>
             </div>
           </nav>
-        </div>
+        </GlassPanel>
 
-        {/* Product Detail Page */}
-        <ProductDetailPage
-          product={product}
-          onAddToCart={handleAddToCart}
-          onBuyNow={handleBuyNow}
-          onAddToWishlist={handleAddToWishlist}
-          onContactSeller={handleContactSeller}
-          onViewSellerProfile={handleViewSellerProfile}
-          onOrderComplete={handleOrderComplete}
-        />
+        {/* Product Detail Content */}
+        <GlassPanel className="p-0">
+          <div className="p-4 sm:p-6">
+            <ProductDetailPage
+              product={product}
+              onAddToCart={handleAddToCart}
+              onBuyNow={handleBuyNow}
+              onAddToWishlist={handleAddToWishlist}
+              onContactSeller={handleContactSeller}
+              onViewSellerProfile={handleViewSellerProfile}
+              onOrderComplete={handleOrderComplete}
+            />
+          </div>
+        </GlassPanel>
       </div>
     </div>
   );

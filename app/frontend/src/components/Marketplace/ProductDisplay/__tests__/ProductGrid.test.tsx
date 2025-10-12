@@ -28,8 +28,8 @@ jest.mock('@/design-system/components/GlassPanel', () => ({
 }));
 
 jest.mock('@/design-system/components/Button', () => ({
-  Button: ({ children, onClick, disabled }: any) => (
-    <button onClick={onClick} disabled={disabled} data-testid="button">
+  Button: ({ children, onClick, disabled, ...rest }: any) => (
+    <button onClick={onClick} disabled={disabled} {...rest} data-testid={rest['data-testid'] || 'button'}>
       {children}
     </button>
   ),
@@ -39,6 +39,8 @@ jest.mock('@/design-system/components/Button', () => ({
 jest.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    span: ({ children, ...props }: any) => <span {...props}>{children}</span>,
   },
   AnimatePresence: ({ children }: any) => children,
 }));
@@ -329,7 +331,7 @@ describe('ProductGrid', () => {
       );
 
       // Go to page 2
-      fireEvent.click(screen.getByText('2'));
+      fireEvent.click(screen.getByTestId('pagination-page-2'));
 
       // Should show products 10-19 (but our mock only creates 25 products starting from 0)
       expect(screen.getByText('Product 10 - Electronics')).toBeInTheDocument();
@@ -361,9 +363,9 @@ describe('ProductGrid', () => {
       );
 
       // Go to last page (page 3 for 25 products with 10 per page)
-      fireEvent.click(screen.getByText('3'));
+      fireEvent.click(screen.getByTestId('pagination-page-3'));
 
-      const nextButton = screen.getByText('Next');
+      const nextButton = screen.getByTestId('pagination-next');
       expect(nextButton).toBeDisabled();
     });
   });

@@ -528,14 +528,16 @@ export class UnifiedMarketplaceService {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch marketplace listings');
+        console.warn('Marketplace listings request was not ok:', response.status, response.statusText);
+        return [];
       }
 
-      const result = await response.json();
-      if (result.success) {
+      const result = await response.json().catch(() => ({ success: false }));
+      if (result && result.success) {
         return result.data || [];
       } else {
-        throw new Error(result.message || 'Failed to fetch marketplace listings');
+        console.warn('Marketplace listings response indicated failure:', result?.message);
+        return [];
       }
     } catch (error) {
       console.error('Error fetching marketplace listings:', error);

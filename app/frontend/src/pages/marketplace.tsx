@@ -480,12 +480,12 @@ const MarketplaceContent: React.FC = () => {
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Web3 Marketplace</h1>
-            <p className="text-gray-600 dark:text-gray-300 text-base">
-              Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
-            </p>
-          </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Web3 Marketplace</h1>
+              <p className="text-gray-600 dark:text-gray-300 text-base">
+                Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
+              </p>
+            </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative" ref={actionsMenuRef}>
@@ -527,9 +527,9 @@ const MarketplaceContent: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="space-y-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm space-y-4 sticky top-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <aside className="space-y-4 lg:col-span-3">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm space-y-4 lg:sticky lg:top-24">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Search</h2>
               <SearchBar
                 value={searchTerm}
@@ -539,7 +539,7 @@ const MarketplaceContent: React.FC = () => {
               />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm">
               <FilterBar
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -548,7 +548,7 @@ const MarketplaceContent: React.FC = () => {
             </div>
           </aside>
 
-          <section className="space-y-6">
+          <section className="space-y-6 lg:col-span-9">
             {/* Active Filter Chips */}
             <ActiveFilterChips
               filters={filters}
@@ -580,7 +580,7 @@ const MarketplaceContent: React.FC = () => {
             </div>
 
             {loading ? (
-            <div className={`grid ${gridColumns} gap-4`}>
+            <div className={`grid ${gridColumns} gap-6`}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
@@ -620,7 +620,7 @@ const MarketplaceContent: React.FC = () => {
                 </div>
               ) : (
                 <motion.div
-                  className={`grid ${gridColumns} gap-4`}
+                  className={`grid ${gridColumns} gap-6`}
                   initial="hidden"
                   animate="visible"
                   variants={{

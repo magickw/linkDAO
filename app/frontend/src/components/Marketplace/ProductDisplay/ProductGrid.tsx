@@ -6,10 +6,10 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProductCard } from './ProductCard';
-import { LoadingSkeleton, ProductCardSkeleton } from '../../../design-system/components/LoadingSkeleton';
-import { GlassPanel } from '../../../design-system/components/GlassPanel';
-import { Button } from '../../../design-system/components/Button';
-import { designTokens } from '../../../design-system/tokens';
+import { LoadingSkeleton, ProductCardSkeleton } from '@/design-system/components/LoadingSkeleton';
+import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { Button } from '@/design-system/components/Button';
+import { designTokens } from '@/design-system/tokens';
 
 interface Product {
   id: string;
@@ -607,7 +607,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   products,
   loading = false,
   error,
-  filters = {},
+  filters: filtersProp,
   sortBy,
   layout: initialLayout = 'grid',
   itemsPerPage = 12,
@@ -628,6 +628,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [layout, setLayout] = useState(initialLayout);
   const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Stabilize default empty filters object across renders to avoid unintended resets
+  const defaultFiltersRef = React.useRef<FilterOptions>({});
+  const filters = filtersProp ?? defaultFiltersRef.current;
 
   // Get unique categories for filter
   const categories = useMemo(() => {
@@ -825,6 +829,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     onFiltersChange?.(newFilters);
   };
 
+  // Ensure a non-undefined sort option for dependent components
+  const effectiveSort: SortOption = sortBy ?? { field: 'createdAt', direction: 'desc' };
+
   const handleSortChange = (newSort: SortOption) => {
     onSortChange?.(newSort);
   };
@@ -867,7 +874,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
           {/* Sort Controls */}
           {showSorting && (
             <SortControls
-              sortBy={sortBy}
+              sortBy={effectiveSort}
               onSortChange={handleSortChange}
               layout={layout}
               onLayoutChange={setLayout}
