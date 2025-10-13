@@ -84,6 +84,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setIsLoading(true);
       
+      // Add a small delay to ensure connector is fully ready
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
       const result = await authService.authenticateWallet(walletAddress, connector, status);
       
       if (result.success && result.user) {

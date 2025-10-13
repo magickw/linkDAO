@@ -17,7 +17,7 @@ import {
 } from '../types/seller';
 
 class SellerService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   private profileCache = new Map<string, { data: SellerProfile | null; timestamp: number }>();
   private readonly CACHE_DURATION = 60000; // 60 seconds cache
 
@@ -267,7 +267,12 @@ class SellerService {
         ? `${baseUrl}/api/sellers/profile/${walletAddress}`  // Server-side direct call
         : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
       console.log(`Making GET request to: ${endpoint}`);
-      const response = await fetch(endpoint);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
       console.log(`Response status: ${response.status}`);
       if (!response.ok) {
         if (response.status === 404) {
@@ -275,7 +280,28 @@ class SellerService {
           this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
           return null;
         }
-        throw new Error(`Failed to fetch seller profile: ${response.status} ${response.statusText}`);
+        if (response.status === 503) {
+          // Backend temporarily unavailable — retry briefly once, then gracefully return null
+          await new Promise(r => setTimeout(r, 1000));
+          try {
+            const retry = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
+            if (retry.ok) {
+              const retriedResult = await retry.json();
+              if (retriedResult?.success) {
+                const profile = retriedResult.data || null;
+                this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
+                return profile;
+              }
+            }
+          } catch {}
+          console.warn('Seller profile fetch 503, returning null to avoid crashing UI');
+          this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
+          return null;
+        }
+        // For other errors, don’t throw—gracefully return null so the UI can recover
+        console.warn(`Failed to fetch seller profile (HTTP ${response.status}). Returning null.`);
+        this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
+        return null;
       }
       
       const result = await response.json();

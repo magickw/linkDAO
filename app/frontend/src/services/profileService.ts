@@ -1,7 +1,7 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
 
 // Get the backend API base URL from environment variables
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
 
 /**
  * Profile API Service
@@ -137,19 +137,33 @@ export class ProfileService {
       }
       
       try {
-        const profile = await response.json();
+        const contentType = response.headers.get('content-type') || '';
+        const raw = await response.text();
+        // Empty body or 204-equivalent — treat as no profile
+        if (!raw || raw.trim().length === 0) {
+          return null;
+        }
+        let parsed: any;
+        try {
+          parsed = JSON.parse(raw);
+        } catch (parseErr) {
+          console.error(`Failed to parse JSON response for address ${address}. Raw snippet:`, raw.slice(0, 200));
+          // Do not crash the UI on bad backend payloads; treat as no profile
+          return null;
+        }
         // Convert string dates to Date objects
-        if (profile && profile.data) {
+        if (parsed && parsed.data) {
           return {
-            ...profile.data,
-            createdAt: new Date(profile.data.createdAt),
-            updatedAt: new Date(profile.data.updatedAt)
+            ...parsed.data,
+            createdAt: new Date(parsed.data.createdAt),
+            updatedAt: new Date(parsed.data.updatedAt)
           };
         }
         return null;
       } catch (jsonError) {
-        console.error(`Failed to parse JSON response for address ${address}:`, jsonError);
-        throw new Error('Backend returned invalid JSON response');
+        console.error(`Failed handling response for address ${address}:`, jsonError);
+        // Graceful fallback: return null instead of throwing
+        return null;
       }
     } catch (error) {
       clearTimeout(timeoutId);

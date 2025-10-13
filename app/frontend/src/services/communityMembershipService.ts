@@ -6,7 +6,10 @@ import {
 } from '../models/CommunityMembership';
 
 // Get the backend API base URL from environment variables
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+const BACKEND_API_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://localhost:10000';
 
 /**
  * Community Membership API Service
@@ -239,15 +242,26 @@ export class CommunityMembershipService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 404) {
+          // No memberships for this user — return empty array instead of throwing
+          return [];
+        }
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — treat as no visible memberships in sidebar context
+          return [];
+        }
         const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || 'Failed to fetch user memberships');
+        const message = (error && (error.error || error.message)) || `Failed to fetch user memberships (HTTP ${response.status})`;
+        throw new Error(message);
       }
       
       const json = await safeJson(response);

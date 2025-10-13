@@ -127,8 +127,22 @@ class AuthService {
       
       let signature: string;
       try {
+        // Add a small delay to ensure connector is fully ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if connector is still connected before signing
+        if (!connector.connected) {
+          // Try to reconnect
+          try {
+            await connector.connect();
+          } catch (reconnectError) {
+            throw new Error('Failed to reconnect wallet. Please reconnect manually.');
+          }
+        }
+        
         // Sign message with wallet - this will prompt the user
-        signature = await signMessage(config, { message });
+        // Pass the connector to ensure proper connection
+        signature = await signMessage(config, { message, connector });
         
         if (!signature) {
           throw new Error('Signature is required for authentication');
@@ -139,6 +153,8 @@ class AuthService {
           throw new Error('Signature request was rejected by user');
         } else if (signError.message?.includes('not supported')) {
           throw new Error('Your wallet does not support message signing');
+        } else if (signError.message?.includes('Connector not connected')) {
+          throw new Error('Wallet connector is not properly connected. Please reconnect your wallet.');
         } else {
           console.error('Signing error:', signError);
           throw new Error('Failed to sign authentication message');
@@ -466,20 +482,26 @@ class AuthService {
    * Logout user
    */
   async logout(): Promise<void> {
-    if (this.token) {
+    // Capture token and clear immediately to avoid UI blocking on network errors
+    const token = this.token;
+    this.clearToken();
+
+    if (token) {
       try {
+        // Fire-and-forget; do not surface network errors to the UI
         await fetch(`${this.baseUrl}/api/auth/logout`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${this.token}`,
+            'Authorization': `Bearer ${token}`,
           },
+        }).catch((e) => {
+          console.warn('Logout network call failed, proceeding locally:', e);
         });
       } catch (error) {
-        console.error('Logout request failed:', error);
+        // Extra safety: never throw from logout
+        console.warn('Logout request error suppressed:', error);
       }
     }
-    
-    this.clearToken();
   }
 
   /**

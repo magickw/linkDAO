@@ -23,7 +23,7 @@ export class UserProfileController {
     if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return res.json(profile);
+    return res.json({ data: profile });
   }
 
   getProfileByAddress = async (req: Request, res: Response): Promise<Response> => {
@@ -32,7 +32,7 @@ export class UserProfileController {
     if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return res.json(profile);
+    return res.json({ data: profile });
   }
 
   updateProfile = async (req: Request, res: Response): Promise<Response> => {
@@ -46,14 +46,14 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new AppError(403, 'You can only update your own profile');
+      throw new AppError('You can only update your own profile', 403);
     }
     
     const profile = await userProfileService.updateProfile(id, input);
     if (!profile) {
       throw new NotFoundError('Profile not found');
     }
-    return res.json(profile);
+    return res.json({ data: profile });
   }
 
   deleteProfile = async (req: Request, res: Response): Promise<Response> => {
@@ -66,7 +66,7 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new AppError(403, 'You can only delete your own profile');
+      throw new AppError('You can only delete your own profile', 403);
     }
     
     const deleted = await userProfileService.deleteProfile(id);
@@ -78,6 +78,6 @@ export class UserProfileController {
 
   getAllProfiles = async (req: Request, res: Response): Promise<Response> => {
     const profiles = await userProfileService.getAllProfiles();
-    return res.json(profiles);
+    return res.json({ data: profiles });
   }
 }

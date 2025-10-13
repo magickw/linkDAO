@@ -297,7 +297,7 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Create
+                      Create Community
                     </button>
                   </div>
                   
