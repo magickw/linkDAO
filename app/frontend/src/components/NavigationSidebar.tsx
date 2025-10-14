@@ -299,10 +299,6 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                 />
               </GlassPanel>
 
-              {/* Trending Now (moved from right sidebar) */}
-              <div className="mt-3">
-                <TrendingContentWidget context="feed" />
-              </div>
 
               {/* Card: Navigation */}
               <GlassPanel variant="secondary" padding={'0.5rem'}>

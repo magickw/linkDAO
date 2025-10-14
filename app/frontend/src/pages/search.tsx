@@ -4,7 +4,7 @@ import Head from 'next/head';
 import { useWeb3 } from '@/context/Web3Context';
 import Layout from '@/components/Layout';
 import NavigationSidebar from '@/components/NavigationSidebar';
-import RightSidebarAccordion from '@/components/RightSidebarAccordion';
+import { SmartRightSidebar } from '@/components/SmartRightSidebar';
 import SearchInterface from '@/components/SearchInterface';
 import TrendingContent from '@/components/TrendingContent';
 import RecommendationSystem from '@/components/RecommendationSystem';
@@ -207,7 +207,7 @@ export default function SearchPage() {
               {/* Right Sidebar */}
               <div className="hidden xl:flex xl:flex-shrink-0">
                 <div className="flex flex-col w-80">
-                  <RightSidebarAccordion />
+                  <SmartRightSidebar context="feed" />
                 </div>
               </div>
             </div>

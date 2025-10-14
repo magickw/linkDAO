@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
-import RightSidebarAccordion from '@/components/RightSidebarAccordion';
+import { SmartRightSidebar } from '@/components/SmartRightSidebar';
 import FeedView from '@/components/FeedView';
 import CommunityView from '@/components/CommunityView';
 import NavigationSidebar from '@/components/NavigationSidebar';
@@ -539,7 +539,7 @@ export default function Home() {
             {/* Right Sidebar - Activity & Notifications */}
             <div className="hidden xl:flex xl:flex-shrink-0">
               <div className="flex flex-col w-80">
-                <RightSidebarAccordion />
+                <SmartRightSidebar context="feed" />
               </div>
             </div>
           </div>

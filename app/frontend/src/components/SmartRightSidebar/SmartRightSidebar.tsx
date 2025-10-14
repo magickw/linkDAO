@@ -316,7 +316,8 @@ export default function SmartRightSidebar({
           </div>
         </div>
         
-        {/* Trending content moved to left sidebar */}
+        {/* Trending Now (available even when wallet is disconnected) */}
+        <TrendingContentWidget context={context} />
       </div>
     );
   }
@@ -331,16 +332,19 @@ export default function SmartRightSidebar({
           onPortfolioClick={handlePortfolioClick}
         />
 
-        {/* Transaction Mini Feed */}
-        <TransactionMiniFeed
-          transactions={walletData.recentTransactions}
-          onTransactionClick={handleTransactionClick}
-        />
+        {/* Trending Now (moved here from left sidebar) */}
+        <TrendingContentWidget context={context} />
 
         {/* Quick Action Buttons */}
         <QuickActionButtons
           actions={walletData.quickActions}
           onActionClick={handleQuickAction}
+        />
+
+        {/* Transaction Mini Feed */}
+        <TransactionMiniFeed
+          transactions={walletData.recentTransactions}
+          onTransactionClick={handleTransactionClick}
         />
 
         {/* Trending content moved to left sidebar */}
