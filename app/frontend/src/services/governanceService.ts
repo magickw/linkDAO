@@ -8,6 +8,20 @@ import {
 } from '../types/governance';
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
 
+// Safe JSON helper to avoid crashing on non-JSON API responses
+async function safeJson(response: Response): Promise<any | null> {
+  try {
+    // Prefer checking content-type when available
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      return null;
+    }
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export class GovernanceService {
   private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -18,11 +32,14 @@ export class GovernanceService {
     try {
       // First try to get from backend API
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
-      
       if (response.ok) {
-        const data = await response.json();
-        const payload = Array.isArray(data) ? data : (data?.data || data?.results || data?.proposals || []);
-        return this.transformBackendProposals(payload);
+        const data = await safeJson(response);
+        if (data) {
+          const payload = Array.isArray(data) ? data : (data?.data || data?.results || data?.proposals || []);
+          if (Array.isArray(payload)) {
+            return this.transformBackendProposals(payload);
+          }
+        }
       }
       
       // Fallback to Web3 service for mock data
@@ -42,15 +59,18 @@ export class GovernanceService {
   async getAllActiveProposals(): Promise<Proposal[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/governance/proposals/active`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const payload = Array.isArray(data) ? data : (data?.data || data?.results || data?.proposals || []);
-        return this.transformBackendProposals(payload);
+      if (!response.ok) {
+        return this.getMockProposals('all');
       }
-      
-      // Return mock data for development
-      return this.getMockProposals('all');
+      const json = await safeJson(response);
+      if (!json) {
+        return this.getMockProposals('all');
+      }
+      const payload = Array.isArray(json) ? json : (json?.data || json?.results || json?.proposals || []);
+      if (!Array.isArray(payload)) {
+        return this.getMockProposals('all');
+      }
+      return this.transformBackendProposals(payload);
     } catch (error) {
       console.error('Error fetching active proposals:', error);
       return this.getMockProposals('all');
@@ -63,14 +83,11 @@ export class GovernanceService {
   async getProposal(proposalId: string): Promise<Proposal | null> {
     try {
       const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const payload = data?.data || data?.proposal || data;
-        return this.transformBackendProposal(payload);
-      }
-      
-      return null;
+      if (!response.ok) return null;
+      const data = await safeJson(response);
+      if (!data) return null;
+      const payload = data?.data || data?.proposal || data;
+      return this.transformBackendProposal(payload);
     } catch (error) {
       console.error('Error fetching proposal:', error);
       return null;
@@ -134,12 +151,14 @@ export class GovernanceService {
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${daoId}/treasury`);
       
       if (response.ok) {
-        const json = await response.json();
-        const data = json?.data || json;
-        return {
-          ...data,
-          lastUpdated: new Date(data.lastUpdated)
-        };
+        const json = await safeJson(response);
+        if (json) {
+          const data = json?.data || json;
+          return {
+            ...data,
+            lastUpdated: new Date(data.lastUpdated)
+          };
+        }
       }
       
       return null;

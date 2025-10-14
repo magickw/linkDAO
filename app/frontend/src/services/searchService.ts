@@ -5,6 +5,17 @@ import { UserProfile } from '../models/UserProfile';
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+// Safe JSON helper to avoid crashing on non-JSON responses
+async function safeJson<T = any>(response: Response): Promise<T | null> {
+  try {
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
 export interface SearchFilters {
   type?: 'all' | 'posts' | 'communities' | 'users';
   timeRange?: 'all' | 'hour' | 'day' | 'week' | 'month' | 'year';
@@ -291,11 +302,12 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch trending content');
+        // Don't attempt to parse non-JSON error bodies
+        throw new Error(response.statusText || 'Failed to fetch trending content');
       }
       
-      return response.json();
+      const json = await safeJson<TrendingContent>(response);
+      return json || { posts: [], communities: [], hashtags: [], topics: [] };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -335,11 +347,11 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch trending hashtags');
+        throw new Error(response.statusText || 'Failed to fetch trending hashtags');
       }
       
-      return response.json();
+      const json = await safeJson<{ tag: string; count: number; growth: number }[]>(response);
+      return json || [];
     } catch (error) {
       clearTimeout(timeoutId);
       
