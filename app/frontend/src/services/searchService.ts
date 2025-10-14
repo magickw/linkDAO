@@ -95,11 +95,23 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Search failed');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Search failed');
       }
       
-      return response.json();
+      const json = await safeJson<SearchResults>(response);
+      if (!json) {
+        return { posts: [], communities: [], users: [], hashtags: [], totalResults: 0, hasMore: false };
+      }
+      const anyJson: any = json as any;
+      return {
+        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        communities: Array.isArray(anyJson?.communities) ? anyJson.communities : [],
+        users: Array.isArray(anyJson?.users) ? anyJson.users : [],
+        hashtags: Array.isArray(anyJson?.hashtags) ? anyJson.hashtags : [],
+        totalResults: Number.isFinite(anyJson?.totalResults) ? anyJson.totalResults : 0,
+        hasMore: Boolean(anyJson?.hasMore),
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -152,11 +164,17 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Post search failed');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Post search failed');
       }
       
-      return response.json();
+      const json = await safeJson<{ posts: Post[]; hasMore: boolean; total: number }>(response);
+      const anyJson: any = json || {};
+      return {
+        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        hasMore: Boolean(anyJson?.hasMore),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.posts) ? anyJson.posts.length : 0),
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -209,11 +227,17 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Community search failed');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Community search failed');
       }
       
-      return response.json();
+      const json = await safeJson<{ communities: Community[]; hasMore: boolean; total: number }>(response);
+      const anyJson: any = json || {};
+      return {
+        communities: Array.isArray(anyJson?.communities) ? anyJson.communities : [],
+        hasMore: Boolean(anyJson?.hasMore),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.communities) ? anyJson.communities.length : 0),
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -258,11 +282,17 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'User search failed');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'User search failed');
       }
       
-      return response.json();
+      const json = await safeJson<{ users: UserProfile[]; hasMore: boolean; total: number }>(response);
+      const anyJson: any = json || {};
+      return {
+        users: Array.isArray(anyJson?.users) ? anyJson.users : [],
+        hasMore: Boolean(anyJson?.hasMore),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.users) ? anyJson.users.length : 0),
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -395,11 +425,16 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch community recommendations');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch community recommendations');
       }
       
-      return response.json();
+      const json = await safeJson<any>(response);
+      if (Array.isArray(json)) return json as Community[];
+      if (Array.isArray(json?.data)) return json.data as Community[];
+      if (Array.isArray(json?.communities)) return json.communities as Community[];
+      if (Array.isArray(json?.results)) return json.results as Community[];
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -442,11 +477,16 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch user recommendations');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch user recommendations');
       }
       
-      return response.json();
+      const json = await safeJson<any>(response);
+      if (Array.isArray(json)) return json as UserProfile[];
+      if (Array.isArray(json?.data)) return json.data as UserProfile[];
+      if (Array.isArray(json?.users)) return json.users as UserProfile[];
+      if (Array.isArray(json?.results)) return json.results as UserProfile[];
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -499,11 +539,17 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch hashtag posts');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch hashtag posts');
       }
       
-      return response.json();
+      const json = await safeJson<{ posts: Post[]; hasMore: boolean; total: number }>(response);
+      const anyJson: any = json || {};
+      return {
+        posts: Array.isArray(anyJson?.posts) ? anyJson.posts : [],
+        hasMore: Boolean(anyJson?.hasMore),
+        total: Number.isFinite(anyJson?.total) ? anyJson.total : (Array.isArray(anyJson?.posts) ? anyJson.posts.length : 0),
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -543,11 +589,16 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch topic content');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch topic content');
       }
       
-      return response.json();
+      const json = await safeJson<any>(response);
+      return {
+        posts: Array.isArray(json?.posts) ? json.posts : [],
+        communities: Array.isArray(json?.communities) ? json.communities : [],
+        hashtags: Array.isArray(json?.hashtags) ? json.hashtags : [],
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -594,11 +645,17 @@ export class SearchService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch suggestions');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch suggestions');
       }
       
-      return response.json();
+      const json = await safeJson<any>(response);
+      return {
+        posts: Array.isArray(json?.posts) ? json.posts : [],
+        communities: Array.isArray(json?.communities) ? json.communities : [],
+        users: Array.isArray(json?.users) ? json.users : [],
+        hashtags: Array.isArray(json?.hashtags) ? json.hashtags : [],
+      };
     } catch (error) {
       clearTimeout(timeoutId);
       

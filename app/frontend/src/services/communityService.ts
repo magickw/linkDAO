@@ -11,9 +11,11 @@ const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://loca
  * Community API Service
  * Provides functions to interact with the backend community API endpoints
  */
-// Helper to safely parse JSON without throwing if body is empty
+// Helper to safely parse JSON without throwing if body is empty or non-JSON
 async function safeJson(response: Response): Promise<any> {
   try {
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) return null;
     return await response.json();
   } catch {
     return null;
@@ -43,8 +45,8 @@ export class CommunityService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create community');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to create community');
       }
       
       return response.json();
@@ -83,11 +85,12 @@ export class CommunityService {
         if (response.status === 404) {
           return null;
         }
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch community');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch community');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      return (json as Community) || null;
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -123,11 +126,12 @@ export class CommunityService {
         if (response.status === 404) {
           return null;
         }
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch community');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to fetch community');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      return (json as Community) || null;
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -228,8 +232,8 @@ export class CommunityService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update community');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to update community');
       }
       
       return response.json();
@@ -268,8 +272,8 @@ export class CommunityService {
         if (response.status === 404) {
           return false;
         }
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to delete community');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to delete community');
       }
       
       return true;
@@ -306,11 +310,19 @@ export class CommunityService {
       clearTimeout(timeoutId);
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to search communities');
+        const error = await safeJson(response);
+        throw new Error((error && (error.error || error.message)) || 'Failed to search communities');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      // Normalize payload to an array regardless of envelope shape
+      if (Array.isArray(json)) return json;
+      if (Array.isArray(json?.data)) return json.data;
+      if (Array.isArray(json?.communities)) return json.communities;
+      if (Array.isArray(json?.results)) return json.results;
+      if (Array.isArray(json?.items)) return json.items;
+      if (Array.isArray(json?.data?.items)) return json.data.items;
+      return [];
     } catch (error) {
       clearTimeout(timeoutId);
       

@@ -71,8 +71,10 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
           CommunityService.getCommunityById(membership.communityId)
         );
         
-        const communityResults = await Promise.all(communityPromises);
-const validCommunities = communityResults.filter(c => c !== null) as CommunityModel[];
+        const communityResults = await Promise.allSettled(communityPromises);
+        const validCommunities = (communityResults as any[])
+          .filter((r: any) => r.status === 'fulfilled' && r.value)
+          .map((r: any) => r.value) as CommunityModel[];
         
         // Transform to expected format with membership info
 const communitiesWithMembership = validCommunities.map((community) => ({
@@ -321,12 +323,12 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                 {/* Communities */}
                 <button
                   onClick={() => setShowDiscoveryModal(true)}
-                  className="group w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
+                  className="group w-full flex items-center justify-start gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 text-left hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <span>Discover Communities</span>
+                  <span className="text-left">Discover Communities</span>
                 </button>
                 
                 {/* Wallet-to-Wallet Messaging */}
@@ -369,13 +371,13 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                   <div className="flex items-center justify-between mb-3">
                     <button
                       onClick={() => setShowCreateModal(true)}
-                      className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full shadow-sm border border-white/20 dark:border-white/10 hover:from-primary-600 hover:to-secondary-600 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-primary-400/50 transition-all"
                       title="Create Community"
                     >
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      Create Community
+                      <span>Create Community</span>
                     </button>
                   </div>
                   
