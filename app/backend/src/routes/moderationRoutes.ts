@@ -1,36 +1,81 @@
-import express from 'express';
-import { ModerationController } from '../controllers/moderationController';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../utils/asyncHandler';
+import { Router } from 'express';
+import { moderationController } from '../controllers/moderationController';
+import { authenticateToken } from '../middleware/authMiddleware';
+import { moderatorAuthService } from '../services/moderatorAuthService';
+import rateLimit from 'express-rate-limit';
 
-const router = express.Router();
-const moderationController = new ModerationController();
+const router = Router();
 
-// Profile and authentication
-router.get('/profile', authenticateToken, asyncHandler(moderationController.getProfile));
-router.post('/session/start', authenticateToken, asyncHandler(moderationController.startSession));
-router.post('/session/end', authenticateToken, asyncHandler(moderationController.endSession));
+// Rate limiting for moderation endpoints
+const moderationRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each moderator to 1000 requests per windowMs
+  message: 'Too many requests from this moderator',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// Review queue
-router.get('/queue', authenticateToken, asyncHandler(moderationController.getReviewQueue));
-router.get('/queue/next', authenticateToken, asyncHandler(moderationController.getNextCase));
-router.get('/queue/stats', authenticateToken, asyncHandler(moderationController.getQueueStats));
-router.post('/queue/cases/:caseId/assign', authenticateToken, asyncHandler(moderationController.assignCase));
-router.post('/queue/cases/:caseId/release', authenticateToken, asyncHandler(moderationController.releaseCase));
+const decisionRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // Limit decisions to 60 per minute
+  message: 'Decision rate limit exceeded',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// Moderation decisions
-router.post('/decisions', authenticateToken, asyncHandler(moderationController.makeDecision));
-router.post('/decisions/bulk', authenticateToken, asyncHandler(moderationController.makeBulkDecisions));
-router.get('/decisions/history', authenticateToken, asyncHandler(moderationController.getDecisionHistory));
+const bulkActionRateLimit = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // Limit bulk actions to 10 per 5 minutes
+  message: 'Bulk action rate limit exceeded',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply authentication and moderator authorization to all routes
+router.use(authenticateToken);
+router.use(moderatorAuthService.requireModerator());
+router.use(moderationRateLimit);
+
+// Moderator profile and session management
+router.get('/profile', moderationController.getProfile);
+router.post('/session/start', moderationController.startSession);
+router.post('/session/end', moderationController.endSession);
+router.get('/health', moderationController.healthCheck);
+
+// Review queue management
+router.get('/queue', moderationController.getReviewQueue);
+router.get('/queue/stats', moderationController.getQueueStats);
+router.get('/queue/next', moderationController.getNextCase);
+router.post('/queue/assign/:caseId', moderationController.assignCase);
+router.post('/queue/release/:caseId', moderationController.releaseCase);
+
+// Decision making
+router.post('/decisions', 
+  decisionRateLimit,
+  moderatorAuthService.requireModeratorPermission('canMakeDecisions'),
+  moderationController.makeDecision
+);
+
+router.post('/decisions/bulk',
+  bulkActionRateLimit,
+  moderatorAuthService.requireModeratorPermission('canAccessBulkActions'),
+  moderationController.makeBulkDecisions
+);
+
+router.get('/decisions/history', moderationController.getDecisionHistory);
 
 // Policy templates
-router.get('/templates', authenticateToken, asyncHandler(moderationController.getPolicyTemplates));
+router.get('/templates', moderationController.getPolicyTemplates);
 
-// Performance and reporting
-router.get('/dashboard', authenticateToken, asyncHandler(moderationController.getPerformanceDashboard));
-router.get('/report', authenticateToken, asyncHandler(moderationController.getPerformanceReport));
+// Performance and analytics
+router.get('/dashboard', 
+  moderatorAuthService.requireModeratorPermission('canViewAnalytics'),
+  moderationController.getPerformanceDashboard
+);
 
-// Health check
-router.get('/health', authenticateToken, asyncHandler(moderationController.healthCheck));
+router.get('/reports/performance',
+  moderatorAuthService.requireModeratorPermission('canViewAnalytics'),
+  moderationController.getPerformanceReport
+);
 
 export default router;

@@ -171,7 +171,7 @@ export default function TrendingContentWidget({
   ];
 
   return (
-    <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
+    <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden design-card hover-lift ${className}`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="flex items-center justify-between mb-3">
@@ -187,12 +187,12 @@ export default function TrendingContentWidget({
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+        <div className="flex flex-wrap gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
           {filters.map((filter) => (
             <button
               key={filter.id}
               onClick={() => setActiveFilter(filter.id as any)}
-              className={`flex-1 px-2 py-1 text-xs rounded-md transition-colors ${
+              className={`flex-1 min-w-[88px] px-3 py-1.5 text-xs rounded-md transition-colors ${
                 activeFilter === filter.id
                   ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'

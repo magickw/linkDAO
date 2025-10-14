@@ -1,7 +1,6 @@
 import express from 'express';
 import { AuthController } from '../controllers/authController';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../utils/asyncHandler';
+import { authenticateToken, requireKYC, requirePermission } from '../middleware/authMiddleware';
 
 const router = express.Router();
 const authController = new AuthController();

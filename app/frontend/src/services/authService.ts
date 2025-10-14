@@ -127,22 +127,8 @@ class AuthService {
       
       let signature: string;
       try {
-        // Add a small delay to ensure connector is fully ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Check if connector is still connected before signing
-        if (!connector.connected) {
-          // Try to reconnect
-          try {
-            await connector.connect();
-          } catch (reconnectError) {
-            throw new Error('Failed to reconnect wallet. Please reconnect manually.');
-          }
-        }
-        
         // Sign message with wallet - this will prompt the user
-        // Pass the connector to ensure proper connection
-        signature = await signMessage(config, { message, connector });
+        signature = await signMessage(config, { message });
         
         if (!signature) {
           throw new Error('Signature is required for authentication');
@@ -153,8 +139,6 @@ class AuthService {
           throw new Error('Signature request was rejected by user');
         } else if (signError.message?.includes('not supported')) {
           throw new Error('Your wallet does not support message signing');
-        } else if (signError.message?.includes('Connector not connected')) {
-          throw new Error('Wallet connector is not properly connected. Please reconnect your wallet.');
         } else {
           console.error('Signing error:', signError);
           throw new Error('Failed to sign authentication message');

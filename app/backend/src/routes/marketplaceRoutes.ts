@@ -1,69 +1,61 @@
-import express from 'express';
+import { Router } from 'express';
 import { MarketplaceController } from '../controllers/marketplaceController';
-import { authenticateToken } from '../middleware/auth';
-import { asyncHandler } from '../utils/asyncHandler';
+import { authenticateToken } from '../middleware/authMiddleware';
 
-const router = express.Router();
+const router = Router();
 const marketplaceController = new MarketplaceController();
 
-// Listings
-router.get('/listings', asyncHandler(marketplaceController.getAllListings));
-router.get('/listings/active', asyncHandler(marketplaceController.getActiveListings));
-router.get('/listings/seller/:sellerAddress', asyncHandler(marketplaceController.getListingsBySeller));
-router.get('/listings/:id', asyncHandler(marketplaceController.getListingById));
-router.post('/listings', authenticateToken, asyncHandler(marketplaceController.createListing));
-router.put('/listings/:id', authenticateToken, asyncHandler(marketplaceController.updateListing));
-router.delete('/listings/:id', authenticateToken, asyncHandler(marketplaceController.cancelListing));
+// Public routes
+router.get('/listings', (req, res) => marketplaceController.getActiveListings(req, res));
+router.get('/listings/all', (req, res) => marketplaceController.getAllListings(req, res));
+router.get('/listings/:id', (req, res) => marketplaceController.getListingById(req, res));
+router.get('/listings/seller/:sellerAddress', (req, res) => marketplaceController.getListingsBySeller(req, res));
+router.get('/bids/listing/:listingId', (req, res) => marketplaceController.getBidsByListing(req, res));
+router.get('/bids/bidder/:bidderAddress', (req, res) => marketplaceController.getBidsByBidder(req, res));
+router.get('/offers/listing/:listingId', (req, res) => marketplaceController.getOffersByListing(req, res));
+router.get('/offers/buyer/:buyerAddress', (req, res) => marketplaceController.getOffersByBuyer(req, res));
+router.get('/escrows/:id', (req, res) => marketplaceController.getEscrowById(req, res));
+router.get('/escrows/user/:userAddress', (req, res) => marketplaceController.getEscrowsByUser(req, res));
+router.get('/orders/:id', (req, res) => marketplaceController.getOrderById(req, res));
+router.get('/orders/user/:userAddress', (req, res) => marketplaceController.getOrdersByUser(req, res));
+router.get('/disputes/:id', (req, res) => marketplaceController.getDisputeById(req, res));
+router.get('/disputes/user/:userAddress', (req, res) => marketplaceController.getDisputesByUser(req, res));
+router.get('/reputation/:address', (req, res) => marketplaceController.getUserReputation(req, res));
+router.get('/vendors/dao-approved', (req, res) => marketplaceController.getDAOApprovedVendors(req, res));
 
-// Bids
-router.get('/bids/listing/:listingId', asyncHandler(marketplaceController.getBidsByListing));
-router.get('/bids/bidder/:bidderAddress', asyncHandler(marketplaceController.getBidsByBidder));
-router.post('/bids/:listingId', authenticateToken, asyncHandler(marketplaceController.placeBid));
+// AI Moderation routes
+router.get('/ai-moderation/pending', (req, res) => marketplaceController.getPendingAIModeration(req, res));
+router.get('/ai-moderation/:objectType/:objectId', (req, res) => marketplaceController.getAIModerationByObject(req, res));
 
-// Offers
-router.get('/offers/listing/:listingId', asyncHandler(marketplaceController.getOffersByListing));
-router.get('/offers/buyer/:buyerAddress', asyncHandler(marketplaceController.getOffersByBuyer));
-router.post('/offers/:listingId', authenticateToken, asyncHandler(marketplaceController.makeOffer));
-router.put('/offers/:offerId/accept', authenticateToken, asyncHandler(marketplaceController.acceptOffer));
+// Protected routes (require authentication)
+router.post('/listings', authenticateToken, (req, res) => marketplaceController.createListing(req, res));
+router.put('/listings/:id', authenticateToken, (req, res) => marketplaceController.updateListing(req, res));
+router.delete('/listings/:id', authenticateToken, (req, res) => marketplaceController.cancelListing(req, res));
+router.post('/bids/listing/:listingId', authenticateToken, (req, res) => marketplaceController.placeBid(req, res));
+router.post('/offers/listing/:listingId', authenticateToken, (req, res) => marketplaceController.makeOffer(req, res));
+router.post('/offers/:offerId/accept', authenticateToken, (req, res) => marketplaceController.acceptOffer(req, res));
+router.post('/escrows/listing/:listingId', authenticateToken, (req, res) => marketplaceController.createEscrow(req, res));
+router.post('/escrows/:escrowId/approve', authenticateToken, (req, res) => marketplaceController.approveEscrow(req, res));
+router.post('/escrows/:escrowId/dispute', authenticateToken, (req, res) => marketplaceController.openDispute(req, res));
+router.post('/escrows/:escrowId/confirm-delivery', authenticateToken, (req, res) => marketplaceController.confirmDelivery(req, res));
+router.post('/orders', authenticateToken, (req, res) => marketplaceController.createOrder(req, res));
+router.put('/orders/:orderId/status', authenticateToken, (req, res) => marketplaceController.updateOrderStatus(req, res));
+router.post('/disputes', authenticateToken, (req, res) => marketplaceController.createDispute(req, res));
+router.put('/disputes/:disputeId/status', authenticateToken, (req, res) => marketplaceController.updateDisputeStatus(req, res));
 
-// Escrows
-router.get('/escrows/user/:userAddress', asyncHandler(marketplaceController.getEscrowsByUser));
-router.get('/escrows/:id', asyncHandler(marketplaceController.getEscrowById));
-router.post('/escrows/:listingId', authenticateToken, asyncHandler(marketplaceController.createEscrow));
-router.put('/escrows/:escrowId/approve', authenticateToken, asyncHandler(marketplaceController.approveEscrow));
-router.put('/escrows/:escrowId/dispute', authenticateToken, asyncHandler(marketplaceController.openDispute));
-router.put('/escrows/:escrowId/delivery', authenticateToken, asyncHandler(marketplaceController.confirmDelivery));
+// AI Moderation routes (protected)
+router.post('/ai-moderation', authenticateToken, (req, res) => marketplaceController.createAIModeration(req, res));
+router.put('/ai-moderation/:id/status', authenticateToken, (req, res) => marketplaceController.updateAIModerationStatus(req, res));
 
-// Orders
-router.get('/orders/user/:userAddress', asyncHandler(marketplaceController.getOrdersByUser));
-router.get('/orders/:id', asyncHandler(marketplaceController.getOrderById));
-router.post('/orders', authenticateToken, asyncHandler(marketplaceController.createOrder));
-router.put('/orders/:orderId/status', authenticateToken, asyncHandler(marketplaceController.updateOrderStatus));
+// Enhanced Escrow routes
+router.post('/enhanced-escrows', authenticateToken, (req, res) => marketplaceController.createEnhancedEscrow(req, res));
+router.post('/enhanced-escrows/:escrowId/lock-funds', authenticateToken, (req, res) => marketplaceController.lockFunds(req, res));
+router.post('/enhanced-escrows/:escrowId/confirm-delivery', authenticateToken, (req, res) => marketplaceController.confirmDeliveryEnhanced(req, res));
+router.post('/enhanced-escrows/:escrowId/approve', authenticateToken, (req, res) => marketplaceController.approveEnhancedEscrow(req, res));
+router.post('/enhanced-escrows/:escrowId/dispute', authenticateToken, (req, res) => marketplaceController.openEnhancedDispute(req, res));
+router.post('/enhanced-escrows/:escrowId/evidence', authenticateToken, (req, res) => marketplaceController.submitEvidence(req, res));
+router.post('/enhanced-escrows/:escrowId/vote', authenticateToken, (req, res) => marketplaceController.castVote(req, res));
 
-// Disputes
-router.get('/disputes/user/:userAddress', asyncHandler(marketplaceController.getDisputesByUser));
-router.get('/disputes/:id', asyncHandler(marketplaceController.getDisputeById));
-router.post('/disputes', authenticateToken, asyncHandler(marketplaceController.createDispute));
-router.put('/disputes/:disputeId/status', authenticateToken, asyncHandler(marketplaceController.updateDisputeStatus));
-
-// AI Moderation
-router.get('/ai-moderation/object/:objectType/:objectId', asyncHandler(marketplaceController.getAIModerationByObject));
-router.get('/ai-moderation/pending', asyncHandler(marketplaceController.getPendingAIModeration));
-router.post('/ai-moderation', authenticateToken, asyncHandler(marketplaceController.createAIModeration));
-router.put('/ai-moderation/:id/status', authenticateToken, asyncHandler(marketplaceController.updateAIModerationStatus));
-
-// Enhanced Escrow
-router.post('/enhanced-escrow', authenticateToken, asyncHandler(marketplaceController.createEnhancedEscrow));
-router.put('/enhanced-escrow/:escrowId/funds', authenticateToken, asyncHandler(marketplaceController.lockFunds));
-router.put('/enhanced-escrow/:escrowId/delivery', authenticateToken, asyncHandler(marketplaceController.confirmDeliveryEnhanced));
-router.put('/enhanced-escrow/:escrowId/approve', authenticateToken, asyncHandler(marketplaceController.approveEnhancedEscrow));
-router.put('/enhanced-escrow/:escrowId/dispute', authenticateToken, asyncHandler(marketplaceController.openEnhancedDispute));
-router.put('/enhanced-escrow/:escrowId/evidence', authenticateToken, asyncHandler(marketplaceController.submitEvidence));
-router.put('/enhanced-escrow/:escrowId/vote', authenticateToken, asyncHandler(marketplaceController.castVote));
-
-// Reputation
-router.get('/reputations/:address', asyncHandler(marketplaceController.getUserReputation));
-router.post('/reputations/:address', authenticateToken, asyncHandler(marketplaceController.updateUserReputation));
-router.get('/vendors/approved', asyncHandler(marketplaceController.getDAOApprovedVendors));
+router.put('/reputation/:address', authenticateToken, (req, res) => marketplaceController.updateUserReputation(req, res));
 
 export default router;

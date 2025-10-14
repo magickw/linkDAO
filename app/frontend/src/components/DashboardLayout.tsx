@@ -129,7 +129,7 @@ export default function DashboardLayout({
         <div className="flex h-screen overflow-hidden">
           {/* Left Sidebar */}
           <div className={`
-          fixed md:static top-16 bottom-0 left-4 z-50 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 transform transition-all duration-300 ease-bounce-in
+          fixed md:static top-16 bottom-0 left-4 z-50 w-80 md:w-96 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 transform transition-all duration-300 ease-bounce-in
           ${navigationState.sidebarCollapsed ? '-translate-x-full md:translate-x-0 md:w-16' : 'translate-x-0'}
           ${isMobile ? 'shadow-2xl animate-slideInLeft' : ''}
         `}>
@@ -228,8 +228,9 @@ export default function DashboardLayout({
             {/* Main content with right sidebar */}
             <div className="flex-1 flex overflow-hidden">
               {/* Main content */}
-              <main className={`flex-1 overflow-y-auto p-3 md:p-6 ${navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''
-                } ${isMobile ? 'pb-20' : ''}`}>
+              <main className={`flex-1 overflow-y-auto p-3 md:p-6 ${navigationState.rightSidebarVisible && !isMobile ? 'mr-80' : ''}
+                ${!navigationState.sidebarCollapsed && !isMobile ? 'ml-80 md:ml-96' : (!isMobile ? 'md:ml-20' : '')}
+                ${isMobile ? 'pb-20' : ''}`}>
                 <Web3ErrorBoundary>
                   <PageTransition animation="fade" duration={300}>
                     {children}

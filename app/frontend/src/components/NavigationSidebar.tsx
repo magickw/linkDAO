@@ -150,24 +150,105 @@ const communitiesWithMembership = validCommunities.map((community) => ({
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {/* XP Progress Ring */}
+                    <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="22"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="text-gray-200 dark:text-gray-700"
+                      />
+                      <circle
+                        cx="24"
+                        cy="24"
+                        r="22"
+                        fill="none"
+                        stroke="url(#gradient)"
+                        strokeWidth="2"
+                        strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
+                        strokeLinecap="round"
+                        className="transition-all duration-500"
+                        transform="rotate(-90 24 24)"
+                      />
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
+                          <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
                       {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      0.00 ETH
-                    </p>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                      </p>
+                      {/* Badges */}
+                      <span className="text-sm" title="Builder Badge">🏆</span>
+                      <span className="text-sm" title="Active Voter">🗳️</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        0.00 ETH
+                      </p>
+                      <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">Lvl 5</span>
+                    </div>
+                  </div>
+                </div>
+                {/* XP Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>XP Progress</span>
+                    <span>680 / 1000</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
+                      style={{ width: '68%' }}
+                    />
                   </div>
                 </div>
               </div>
             ) : (
               <div className="flex justify-center">
                 <div className="relative">
+                  {/* XP Progress Ring for collapsed state */}
+                  <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-gray-200 dark:text-gray-700"
+                    />
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="18"
+                      fill="none"
+                      stroke="url(#gradient-collapsed)"
+                      strokeWidth="2"
+                      strokeDasharray={`${(68 / 100) * 113} 113`}
+                      strokeLinecap="round"
+                      className="transition-all duration-500"
+                      transform="rotate(-90 20 20)"
+                    />
+                    <defs>
+                      <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
+                        <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
                   <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                     {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
                   </div>
@@ -233,9 +314,9 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                 {/* Search */}
                 <Link
                   href="/search"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <span>Search & Discovery</span>
@@ -244,9 +325,9 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                 {/* Communities */}
                 <button
                   onClick={() => setShowDiscoveryModal(true)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                  className="group w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-gray-700/50 dark:hover:to-gray-600/50 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                   <span>Discover Communities</span>
@@ -255,32 +336,33 @@ const communitiesWithMembership = validCommunities.map((community) => ({
                 {/* Wallet-to-Wallet Messaging */}
                 <Link
                   href="/messaging"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors relative"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-primary-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-blue-900/30 dark:hover:to-primary-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   <span>Messages</span>
-                  <span className="absolute top-2 right-3 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white text-xs font-bold animate-pulse">3</span>
                 </Link>
 
                 {/* Governance */}
                 <Link
                   href="/governance"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   <span>Governance</span>
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-purple-500 text-white text-xs font-bold">2</span>
                 </Link>
 
                 {/* Marketplace */}
                 <Link
                   href="/marketplace"
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700/50 transition-colors"
+                  className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                   </svg>
                   <span>Marketplace</span>

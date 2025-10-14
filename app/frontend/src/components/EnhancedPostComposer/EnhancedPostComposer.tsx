@@ -264,7 +264,25 @@ export default function EnhancedPostComposer({
     }
   }, [content, media, title, context, communityId]);
 
-  // Get placeholder text based on content type
+  // Get placeholder text based on content type - with rotating suggestions
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const placeholders = [
+    "Share your latest DAO proposal 🧠",
+    "Post your NFT drop 🚀",
+    "Comment on trending governance votes 🏛️",
+    "Share what you're building in Web3 💻",
+    "Ask the community a question 🤔"
+  ];
+
+  useEffect(() => {
+    if (!isExpanded) {
+      const interval = setInterval(() => {
+        setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isExpanded]);
+
   const getPlaceholder = useCallback(() => {
     switch (contentType) {
       case ContentType.MEDIA:
@@ -276,56 +294,95 @@ export default function EnhancedPostComposer({
       case ContentType.PROPOSAL:
         return "Describe your governance proposal...";
       default:
-        return context === 'community' 
+        return context === 'community'
           ? "Share your thoughts with the community..."
-          : "What's happening in Web3?";
+          : isExpanded ? "What's happening in Web3?" : placeholders[placeholderIndex];
     }
-  }, [contentType, context]);
+  }, [contentType, context, isExpanded, placeholderIndex]);
 
   // Collapsed state
   if (!isExpanded) {
     return (
-      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden ${className}`}>
-        <div 
+      <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary-300 dark:hover:border-primary-700 ${className}`}>
+        <div
           onClick={handleExpand}
-          className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200"
+          className="p-4 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-primary-50/30 dark:hover:from-gray-700/50 dark:hover:to-primary-900/20 transition-all duration-200"
         >
           <div className="flex items-center space-x-3">
-            {/* User Avatar */}
-            <div className="bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold text-sm">
-                {address ? address.slice(2, 4).toUpperCase() : 'U'}
-              </span>
+            {/* User Avatar with Gradient Border */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full blur-sm opacity-0 group-hover:opacity-75 transition-opacity duration-300"></div>
+              <div className="relative bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:scale-110 transition-transform duration-200">
+                <span className="text-white font-bold text-base">
+                  {address ? address.slice(2, 4).toUpperCase() : 'U'}
+                </span>
+              </div>
             </div>
-            
-            {/* Post Input Placeholder */}
-            <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
-              {getPlaceholder()}
+
+            {/* Post Input Placeholder with Animation */}
+            <div className="flex-1 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 rounded-full px-5 py-3.5 text-gray-500 dark:text-gray-400 hover:from-gray-200 hover:to-gray-100 dark:hover:from-gray-600 dark:hover:to-gray-500 transition-all duration-300 hover:shadow-inner">
+              <span className="transition-opacity duration-500">{getPlaceholder()}</span>
             </div>
           </div>
-          
-          {/* Quick Action Buttons */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <div className="flex items-center space-x-4">
-              <button type="button" className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                <span className="text-lg">📸</span>
-                <span className="text-sm font-medium">Media</span>
+
+          {/* Quick Action Buttons with Icons */}
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all duration-200 hover:scale-105"
+                onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.MEDIA); handleExpand(); }}
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium">Image</span>
               </button>
-              <button type="button" className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                <span className="text-lg">📊</span>
+              <button
+                type="button"
+                className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 hover:scale-105"
+                onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.POLL); handleExpand(); }}
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
                 <span className="text-sm font-medium">Poll</span>
               </button>
               {context === 'feed' && (
-                <button type="button" className="flex items-center space-x-2 text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                  <span className="text-lg">🏛️</span>
+                <button
+                  type="button"
+                  className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200 hover:scale-105"
+                  onClick={(e) => { e.stopPropagation(); handleContentTypeChange(ContentType.PROPOSAL); handleExpand(); }}
+                >
+                  <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   <span className="text-sm font-medium">Proposal</span>
                 </button>
               )}
+              <button
+                type="button"
+                className="group flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 hover:scale-105"
+                onClick={(e) => { e.stopPropagation(); handleExpand(); }}
+              >
+                <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                </svg>
+                <span className="text-sm font-medium">Thread</span>
+              </button>
             </div>
-            
-            <div className="text-xs text-gray-400 dark:text-gray-500">
-              {hasDraft && <span className="text-amber-500 mr-2">Draft saved</span>}
-              Click to create post
+
+            <div className="flex items-center space-x-2 text-xs text-gray-400 dark:text-gray-500">
+              {hasDraft && (
+                <span className="flex items-center space-x-1 text-amber-500 animate-pulse">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                  <span className="font-medium">Draft saved</span>
+                </span>
+              )}
+              <span className="text-gray-400">•</span>
+              <span>Click to create post</span>
             </div>
           </div>
         </div>

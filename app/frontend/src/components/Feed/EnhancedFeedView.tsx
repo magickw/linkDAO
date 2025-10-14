@@ -195,7 +195,7 @@ export default function EnhancedFeedView({
       />
 
       {/* Feed Header with Sorting */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 design-card hover-lift">
         <FeedSortingHeader
           activeSort={filter.sortBy}
           activeTimeRange={filter.timeRange || 'day'}

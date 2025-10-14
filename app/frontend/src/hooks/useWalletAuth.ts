@@ -64,9 +64,6 @@ export const useWalletAuth = (): UseWalletAuthReturn => {
 
       console.log(`Starting authentication for ${isBaseWallet ? 'Base' : 'other'} wallet:`, address);
 
-      // Add a small delay to ensure connector is fully ready
-      await new Promise(resolve => setTimeout(resolve, 200));
-
       const result = await login(address, connector, 'connected');
 
       if (!result.success) {

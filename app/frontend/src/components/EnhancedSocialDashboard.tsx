@@ -56,7 +56,7 @@ const EnhancedSocialDashboard: React.FC<EnhancedSocialDashboardProps> = ({
                 {/* Main Dashboard Layout */}
                 <div className="flex h-screen overflow-hidden">
                   {/* Left Sidebar - Navigation */}
-                  <div className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+                  <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 w-80 md:w-96 lg:w-96 xl:w-[28rem] 2xl:w-[32rem]">
                     <Suspense fallback={<LoadingSkeleton className="h-full w-full" />}>
                       <AdvancedNavigationSidebar />
                     </Suspense>
@@ -95,7 +95,7 @@ const EnhancedSocialDashboard: React.FC<EnhancedSocialDashboardProps> = ({
                   </div>
 
                   {/* Right Sidebar - Smart Features */}
-                  <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+                  <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 w-72 md:w-80 lg:w-80 xl:w-96 2xl:w-[28rem]">
                     <Suspense fallback={<LoadingSkeleton className="h-full w-full" />}>
                       <SmartRightSidebar context="feed" />
                     </Suspense>
