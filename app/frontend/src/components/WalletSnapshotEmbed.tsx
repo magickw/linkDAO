@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface TokenBalance {
   symbol: string;
@@ -18,8 +18,25 @@ export default function WalletSnapshotEmbed({ walletAddress, className = '' }: W
   const [portfolioValue, setPortfolioValue] = useState<number>(0);
   const [portfolioChange, setPortfolioChange] = useState<number>(0);
   const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  const [series, setSeries] = useState<number[]>([]);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mock data for demonstration
+  // Generate lightweight synthetic series for sparkline based on timeframe
+  useEffect(() => {
+    const points = 24; // 24 points for 24h default
+    const base = Math.max(1, portfolioValue || 1000);
+    const arr: number[] = [];
+    let val = base * (0.98 + Math.random() * 0.04);
+    for (let i = 0; i < points; i++) {
+      const drift = (Math.random() - 0.5) * 0.015 * base; // small drift
+      val = Math.max(base * 0.8, Math.min(base * 1.2, val + drift));
+      arr.push(val);
+    }
+    setSeries(arr);
+  }, [timeframe, walletAddress, portfolioValue]);
+
+  // Mock data for demonstration (regenerate on refresh)
   React.useEffect(() => {
     // In a real implementation, this would fetch from blockchain APIs
     // For now, we'll generate mock data
@@ -41,7 +58,8 @@ export default function WalletSnapshotEmbed({ walletAddress, className = '' }: W
     ];
     
     setTokenBalances(mockBalances);
-  }, [walletAddress]);
+    setIsRefreshing(false);
+  }, [walletAddress, refreshTick]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -68,14 +86,27 @@ export default function WalletSnapshotEmbed({ walletAddress, className = '' }: W
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
       <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             <h3 className="font-semibold text-gray-900 dark:text-white">Wallet Snapshot</h3>
+            <button
+              onClick={() => { setIsRefreshing(true); setRefreshTick((t) => t + 1); }}
+              title="Update Wallet Data"
+              className="inline-flex items-center justify-center rounded p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+              aria-label="Update Wallet Data"
+            >
+              <svg className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0114.13-3.36L23 10"></path>
+                <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14"></path>
+              </svg>
+            </button>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {walletAddress.substring(0, 6)}...{walletAddress.substring(38)}
             </p>
           </div>
           <div className="text-right">
-            <p className="font-semibold text-gray-900 dark:text-white">{formatCurrency(portfolioValue)}</p>
+            <p className={`font-semibold text-gray-900 dark:text-white`}>{formatCurrency(portfolioValue)}</p>
             <p className={`text-sm ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
               {isPositive ? '+' : ''}{portfolioChange.toFixed(2)}%
             </p>
@@ -84,6 +115,36 @@ export default function WalletSnapshotEmbed({ walletAddress, className = '' }: W
       </div>
       
       <div className="p-4">
+        {/* Inline SVG sparkline */}
+        {series.length > 1 && (
+          <div className="mb-3">
+            {(() => {
+              const width = 300;
+              const height = 40;
+              const min = Math.min(...series);
+              const max = Math.max(...series);
+              const range = Math.max(1, max - min);
+              const pts = series
+                .map((v, i) => {
+                  const x = (i / (series.length - 1)) * width;
+                  const y = height - ((v - min) / range) * height;
+                  return `${x.toFixed(2)},${y.toFixed(2)}`;
+                })
+                .join(' ');
+              const rising = series[series.length - 1] >= series[0];
+              return (
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-10">
+                  <polyline
+                    fill="none"
+                    stroke={rising ? '#10b981' : '#ef4444'}
+                    strokeWidth="2"
+                    points={pts}
+                  />
+                </svg>
+              );
+            })()}
+          </div>
+        )}
         <div className="flex justify-center space-x-2 mb-4">
           {(['24h', '7d', '30d'] as const).map((tf) => (
             <button

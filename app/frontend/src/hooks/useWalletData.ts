@@ -4,6 +4,22 @@ import { EnhancedWalletData, TokenBalance } from '../types/wallet';
 import { WalletService } from '@/services/walletService';
 import { cryptoPriceService } from '@/services/cryptoPriceService';
 
+// Simple in-memory cache for recent transactions to reduce API calls
+const txCache = new Map<string, { data: any[]; timestamp: number }>();
+const TX_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
+// Allow external invalidation of the transaction cache
+export function invalidateTxCache(address?: string) {
+  if (!address) {
+    txCache.clear();
+    return;
+  }
+  const prefix = `${address}:`;
+  for (const key of Array.from(txCache.keys())) {
+    if (key.startsWith(prefix)) txCache.delete(key);
+  }
+}
+
 interface UseWalletDataOptions {
   address?: string;
   refreshInterval?: number;
@@ -137,18 +153,21 @@ export function useWalletData({
   let recentTransactions: any[] = [];
   if (enableTransactionHistory) {
     try {
-      const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
-      const unifiedBase = 'https://api.etherscan.io/v2/api';
-
-      // Determine chains to query: default supported + optional env extension
-      const defaultChainIds = [1, 8453, 84532, 137, 42161];
-      const extraChainIds = (process.env.NEXT_PUBLIC_EXPLORER_CHAIN_IDS || '')
-        .split(',')
-        .map((s) => parseInt(s.trim(), 10))
-        .filter((n) => Number.isFinite(n) && !defaultChainIds.includes(n));
-      const chainIdsToQuery = [...defaultChainIds, ...extraChainIds];
-
-      const nativeSymbolFor = (cid: number) => (cid === 137 ? 'MATIC' : 'ETH');
+      const cacheKey = `${address}:${maxTransactions}`;
+      const cached = txCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < TX_TTL_MS) {
+        recentTransactions = cached.data.map((t) => ({ ...t, timestamp: new Date(t.timestamp) }));
+      } else {
+        // Determine chains to query: default supported + optional env extension
+        const unifiedKey = process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY;
+        const unifiedBase = 'https://api.etherscan.io/v2/api';
+        const defaultChainIds = [1, 8453, 84532, 137, 42161];
+        const extraChainIds = (process.env.NEXT_PUBLIC_EXPLORER_CHAIN_IDS || '')
+          .split(',')
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => Number.isFinite(n) && !defaultChainIds.includes(n));
+        const chainIdsToQuery = [...defaultChainIds, ...extraChainIds];
+        const nativeSymbolFor = (cid: number) => (cid === 137 ? 'MATIC' : 'ETH');
 
       if (unifiedKey) {
         // Use unified v2 endpoint for both native and token transfers
@@ -316,10 +335,13 @@ export function useWalletData({
           return { ...t, valueUSD: usd };
         });
       }
-    } catch (e) {
-      // Soft-fail on tx history
-      recentTransactions = [];
+      // Cache normalized result (serialize timestamp)
+      txCache.set(cacheKey, { data: recentTransactions.map((t) => ({ ...t, timestamp: (t.timestamp as Date).toISOString() })), timestamp: Date.now() });
     }
+  } catch (e) {
+    // Soft-fail on tx history
+    recentTransactions = [];
+  }
   } else {
     recentTransactions = [];
   }

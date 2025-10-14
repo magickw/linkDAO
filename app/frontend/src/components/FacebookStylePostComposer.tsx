@@ -18,6 +18,12 @@ export default function FacebookStylePostComposer({
   className = ''
 }: FacebookStylePostComposerProps) {
   const [content, setContent] = useState('');
+  const HINTS = [
+    'Share your latest DAO proposal 🧠',
+    'Post your NFT drop 🚀',
+    'Comment on trending governance votes 🏛️',
+  ];
+  const [hintIdx, setHintIdx] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -38,6 +44,14 @@ export default function FacebookStylePostComposer({
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [content]);
+
+  // Rotate placeholder hints
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setHintIdx((i) => (i + 1) % HINTS.length);
+    }, 4000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const handleFocus = () => {
     setIsExpanded(true);
@@ -145,7 +159,7 @@ export default function FacebookStylePostComposer({
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`group rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent bg-gradient-to-r from-transparent to-transparent focus-within:from-primary-500/10 focus-within:to-purple-500/10`}>
       <form onSubmit={handleSubmit}>
         {/* Main composer area */}
         <div className="p-4">
@@ -172,7 +186,7 @@ export default function FacebookStylePostComposer({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={handleFocus}
-                placeholder="What's happening in Web3? Use # to add hashtags..."
+                placeholder={content.length ? '' : HINTS[hintIdx]}
                 className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
                 rows={isExpanded ? 3 : 1}
                 disabled={isLoading}

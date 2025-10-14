@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useChatHistory } from '@/hooks/useChatHistory';
+import { governanceService } from '@/services/governanceService';
+import { CommunityMembershipService } from '@/services/communityMembershipService';
+import { useAccount } from 'wagmi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
@@ -53,6 +57,37 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const cart = useEnhancedCart();
 
   const cartBadge = cart.state.totals.itemCount;
+  const { address } = useAccount();
+
+  // Live unread counts
+  const { conversations } = useChatHistory();
+  const [messagesUnread, setMessagesUnread] = useState(0);
+  const [governancePending, setGovernancePending] = useState(0);
+
+  useEffect(() => {
+    try {
+      // We don't have direct access to wallet address here; sum across all keys
+      const total = (conversations || []).reduce((sum, conv: any) => sum + Object.values(conv.unreadCounts || {}).reduce((s: number, v: any) => s + (typeof v === 'number' ? v : 0), 0), 0);
+      setMessagesUnread(total);
+    } catch { setMessagesUnread(0); }
+  }, [conversations]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (!address) { if (active) setGovernancePending(0); return; }
+        const memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
+        const proposals = await governanceService.getAllActiveProposals();
+        const count = Array.isArray(proposals)
+          ? proposals.filter((p: any) => (p.status === 'ACTIVE' || p.status === 'active') && communityIds.has(p.communityId) && (p.canVote ?? true)).length
+          : 0;
+        if (active) setGovernancePending(count);
+      } catch { if (active) setGovernancePending(0); }
+    })();
+    return () => { active = false; };
+  }, [address]);
 
   const navItems: NavItem[] = useMemo(() => ([
     {
@@ -75,7 +110,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       icon: ChatBubbleLeftRightIcon,
       iconSolid: ChatBubbleLeftRightIconSolid,
       path: '/messaging',
-      badge: 3
+      badge: messagesUnread
     },
     {
       id: 'marketplace',
@@ -89,7 +124,8 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       label: 'Governance',
       icon: ClipboardDocumentListIcon,
       iconSolid: ClipboardDocumentListIconSolid,
-      path: '/governance'
+      path: '/governance',
+      badge: governancePending
     },
     {
       id: 'settings',
@@ -98,7 +134,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       iconSolid: Cog6ToothIconSolid,
       path: '/settings'
     }
-  ]), [cartBadge]);
+  ]), [messagesUnread, governancePending, cartBadge]);
 
   // Handle scroll to show/hide navigation
   useEffect(() => {
@@ -152,13 +188,13 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     return (
       <motion.button
         className={`
-          relative flex flex-col items-center justify-center p-2 rounded-xl
+          relative flex flex-col items-center justify-center p-2 rounded-2xl
           transition-all duration-200 ease-out
           ${isActive 
-            ? 'text-indigo-600 bg-indigo-50/80 backdrop-blur-sm' 
-            : 'text-gray-600 hover:text-indigo-500 hover:bg-gray-50/50'
+            ? 'text-indigo-600 bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 backdrop-blur-sm' 
+            : 'text-gray-600 hover:text-indigo-500 hover:bg-gray-50/50 dark:hover:bg-gray-800/40'
           }
-          active:scale-95 touch-manipulation
+          hover:scale-105 active:scale-95 touch-manipulation
           min-h-[56px] min-w-[56px]
         `}
         onClick={() => handleItemPress(item)}
@@ -208,11 +244,18 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
 
         {/* Active indicator */}
         {isActive && (
-          <motion.div
-            className="absolute -top-1 left-1/2 w-1 h-1 bg-indigo-600 rounded-full"
-            layoutId="activeIndicator"
-            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-          />
+          <>
+            <motion.div
+              className="absolute -top-1 left-1/2 w-1 h-1 bg-indigo-600 rounded-full"
+              layoutId="activeIndicatorDot"
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+            <motion.div
+              className="absolute -bottom-1 left-3 right-3 h-0.5 bg-indigo-500/80 rounded-full"
+              layoutId="activeIndicatorBar"
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
+          </>
         )}
       </motion.button>
     );

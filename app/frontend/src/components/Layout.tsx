@@ -5,6 +5,9 @@ import { useRouter } from 'next/router';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import dynamic from 'next/dynamic';
+import { useChatHistory } from '@/hooks/useChatHistory';
+import { governanceService } from '@/services/governanceService';
+import { CommunityMembershipService } from '@/services/communityMembershipService';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -32,6 +35,12 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Live badge counts
+  const { conversations } = useChatHistory();
+  const [messagesUnread, setMessagesUnread] = useState(0);
+  const [governancePending, setGovernancePending] = useState(0);
 
   // For demo purposes, we'll consider a specific address as admin
   // In a real implementation, this would be checked against a backend service
@@ -88,6 +97,34 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   // Combine all navigation items
   const allNavItems = [...navItems, ...userNavItems];
 
+  // Compute real unread counts for messages and governance
+  useEffect(() => {
+    try {
+      if (!address) { setMessagesUnread(0); return; }
+      const total = (conversations || []).reduce((sum, conv: any) => sum + (conv.unreadCounts?.[address] || 0), 0);
+      setMessagesUnread(total);
+    } catch { setMessagesUnread(0); }
+  }, [conversations, address]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        if (!address) { if (active) setGovernancePending(0); return; }
+        // Get user's joined communities
+        const memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
+        // Fetch active proposals across all and filter to joined communities only
+        const proposals = await governanceService.getAllActiveProposals();
+        const count = Array.isArray(proposals)
+          ? proposals.filter((p: any) => (p.status === 'ACTIVE' || p.status === 'active') && communityIds.has(p.communityId) && (p.canVote ?? true)).length
+          : 0;
+        if (active) setGovernancePending(count);
+      } catch { if (active) setGovernancePending(0); }
+    })();
+    return () => { active = false; };
+  }, [address]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <Head>
@@ -98,45 +135,81 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       </Head>
 
       <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
+          <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
             LinkDAO
           </Link>
+
+          {/* Global Search (Desktop) */}
+          <div className="hidden md:flex flex-1 max-w-xl">
+            <div className="relative w-full">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.3-4.3"></path>
+                </svg>
+              </span>
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                  }
+                }}
+                placeholder="Search"
+                className="w-full rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-9 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Global search"
+              />
+            </div>
+          </div>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <nav>
-              <ul className="flex space-x-1">
-                {allNavItems.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${router.pathname === item.href
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400'
-                        }`}
-                    >
-                      <span className="mr-1">{item.icon}</span>
-                      <span>{item.name}</span>
-                      {item.badge !== undefined && item.badge > 0 && (
-                        <span className="ml-2 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-xs px-2 py-0.5">
-                          {item.badge > 99 ? '99+' : item.badge}
+              <ul className="flex space-x-2">
+                {allNavItems.map((item) => {
+                  const isActive = router.pathname === item.href;
+                  const dynamicBadge = item.badge ?? (item.href === '/messaging' ? messagesUnread : item.href === '/governance' ? governancePending : 0);
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        className={`group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${isActive
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                            : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
+                          } hover:scale-[1.03]`}
+                      >
+                        <span className="flex flex-col items-center leading-4">
+                          <span className="text-base">{item.icon}</span>
+                          <span className="text-[11px] mt-0.5">{item.name}</span>
                         </span>
-                      )}
-                    </Link>
-                  </li>
-                ))}
+                        {dynamicBadge > 0 && (
+                          <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full bg-primary-600 text-white text-[10px] px-1.5 py-0.5 leading-none shadow">
+                            {dynamicBadge > 99 ? '99+' : dynamicBadge}
+                          </span>
+                        )}
+                        {isActive && (
+                          <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
                 {isAdmin && (
                   <li>
                     <Link
                       href="/admin"
-                      className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${router.pathname === '/admin'
+                      className={`group relative flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors transition-transform ${router.pathname === '/admin'
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400'
-                        }`}
+                          : 'text-gray-600 hover:text-primary-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-primary-400 dark:hover:bg-gray-700/50'
+                        } hover:scale-[1.03]`}
                     >
                       <span className="mr-1">🔒</span>
                       Admin
+                      {router.pathname === '/admin' && (
+                        <span className="pointer-events-none absolute -bottom-1 left-2 right-2 h-0.5 rounded-full bg-primary-600" />
+                      )}
                     </Link>
                   </li>
                 )}

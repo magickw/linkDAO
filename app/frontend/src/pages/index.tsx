@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
-import DashboardRightSidebar from '@/components/DashboardRightSidebar';
+import RightSidebarAccordion from '@/components/RightSidebarAccordion';
 import FeedView from '@/components/FeedView';
 import CommunityView from '@/components/CommunityView';
 import NavigationSidebar from '@/components/NavigationSidebar';
@@ -13,7 +13,6 @@ import { useToast } from '@/context/ToastContext';
 import { CreatePostInput } from '@/models/Post';
 import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
 import BottomSheet from '@/components/BottomSheet';
-import CompactGlobalSearch from '@/components/Search/CompactGlobalSearch';
 import Link from 'next/link';
 import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -455,10 +454,6 @@ export default function Home() {
                   className="mb-6"
                 />
 
-                {/* Quick Search */}
-                <div className="mb-6">
-                  <CompactGlobalSearch placeholder="Search by wallet address or posts..." />
-                </div>
 
                 {/* Feed Tabs */}
                 <div className="flex space-x-1 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
@@ -466,15 +461,24 @@ export default function Home() {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
                         activeTab === tab
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
                       }`}
                     >
                       {tab.charAt(0).toUpperCase() + tab.slice(1)}
                     </button>
                   ))}
+                </div>
+
+                {/* Top Trending Tags */}
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    {['defi','governance','nft','airdrops','layer2'].map((tag) => (
+                      <a key={tag} href={`/hashtags/${tag}`} className="rounded-full border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50">#{tag}</a>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Feed Content */}
@@ -483,15 +487,21 @@ export default function Home() {
                 ) : (
                   <div className="space-y-6">
                     {isFeedLoading ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                        <p className="text-gray-600 dark:text-gray-300">Loading feed...</p>
+                      <div className="space-y-4">
+                        {[0,1,2].map((i) => (
+                          <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 animate-pulse">
+                            <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                            <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
+                            <div className="h-24 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+                          </div>
+                        ))}
                       </div>
                     ) : displayPosts.length === 0 ? (
                       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
                         <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No posts yet</h3>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">👋 Welcome! Start the conversation</h3>
                         <p className="text-gray-500 dark:text-gray-400">
-                          Be the first to share something with the community!
+                          Your first post will show here.
                         </p>
                       </div>
                     ) : (
@@ -522,7 +532,7 @@ export default function Home() {
             {/* Right Sidebar - Activity & Notifications */}
             <div className="hidden xl:flex xl:flex-shrink-0">
               <div className="flex flex-col w-80">
-                <DashboardRightSidebar />
+                <RightSidebarAccordion />
               </div>
             </div>
           </div>
