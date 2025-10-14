@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useWeb3 } from '@/context/Web3Context';
-import DashboardLayout from '@/components/DashboardLayout';
+import Layout from '@/components/Layout';
+import NavigationSidebar from '@/components/NavigationSidebar';
+import RightSidebarAccordion from '@/components/RightSidebarAccordion';
 import SearchInterface from '@/components/SearchInterface';
 import TrendingContent from '@/components/TrendingContent';
 import RecommendationSystem from '@/components/RecommendationSystem';
@@ -66,20 +68,22 @@ export default function SearchPage() {
         <meta name="description" content="Search posts, communities, and users. Discover trending content and get personalized recommendations." />
       </Head>
 
-      <DashboardLayout activeView="feed">
-        <div className="max-w-6xl mx-auto px-4 py-6">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Search & Discovery
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Find posts, communities, and users. Explore trending content and discover new interests.
-            </p>
+      <Layout title="Search & Discovery">
+        <div className="flex bg-gray-50 dark:bg-gray-900">
+          {/* Left Sidebar */}
+          <div className="hidden lg:flex lg:flex-shrink-0">
+            <div className="flex flex-col w-64">
+              <NavigationSidebar className="h-full" />
+            </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-8 overflow-x-auto">
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col min-h-screen">
+            <div className="flex-1 flex">
+              <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
+                <div className="max-w-2xl mx-auto py-6 px-4">
+                  {/* Navigation Tabs */}
+                  <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-6 overflow-x-auto">
             {[
               { id: 'search', label: 'Search', icon: '🔍', description: 'Search everything' },
               { id: 'trending', label: 'Trending', icon: '🔥', description: 'What\'s hot now' },
@@ -101,10 +105,10 @@ export default function SearchPage() {
                 </div>
               </button>
             ))}
-          </div>
+                  </div>
 
-          {/* Tab Content */}
-          <div className="min-h-screen">
+                  {/* Tab Content */}
+                  <div>
             {activeTab === 'search' && (
               <SearchInterface
                 initialQuery={initialQuery}
@@ -196,9 +200,20 @@ export default function SearchPage() {
                 )}
               </div>
             )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Sidebar */}
+              <div className="hidden xl:flex xl:flex-shrink-0">
+                <div className="flex flex-col w-80">
+                  <RightSidebarAccordion />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </DashboardLayout>
+      </Layout>
     </>
   );
 }
