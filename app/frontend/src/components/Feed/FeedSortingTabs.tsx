@@ -1,6 +1,6 @@
-// Mock Feed Sorting Header for testing
 import React from 'react';
 import { FeedSortType } from '../../types/feed';
+import { EnhancedFeedSortingTabs } from './EnhancedFeedSortingTabs';
 
 interface FeedSortingHeaderProps {
   activeSort: FeedSortType;
@@ -21,42 +21,13 @@ export const FeedSortingHeader: React.FC<FeedSortingHeaderProps> = ({
 }) => {
   return (
     <div data-testid="feed-sorting-header">
-      <div className="flex space-x-2">
-        <button 
-          onClick={() => onSortChange(FeedSortType.HOT)}
-          className={activeSort === FeedSortType.HOT ? 'active' : ''}
-        >
-          Hot
-        </button>
-        <button 
-          onClick={() => onSortChange(FeedSortType.NEW)}
-          className={activeSort === FeedSortType.NEW ? 'active' : ''}
-        >
-          New
-        </button>
-        <button 
-          onClick={() => onSortChange(FeedSortType.TOP)}
-          className={activeSort === FeedSortType.TOP ? 'active' : ''}
-        >
-          Top
-        </button>
-      </div>
-      {showTimeRange && (
-        <div className="flex space-x-2 mt-2">
-          <button 
-            onClick={() => onTimeRangeChange('day')}
-            className={activeTimeRange === 'day' ? 'active' : ''}
-          >
-            Day
-          </button>
-          <button 
-            onClick={() => onTimeRangeChange('week')}
-            className={activeTimeRange === 'week' ? 'active' : ''}
-          >
-            Week
-          </button>
-        </div>
-      )}
+      <EnhancedFeedSortingTabs
+        activeSort={activeSort}
+        activeTimeRange={activeTimeRange}
+        onSortChange={onSortChange}
+        onTimeRangeChange={onTimeRangeChange}
+        showTimeRange={showTimeRange}
+      />
     </div>
   );
 };

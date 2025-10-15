@@ -43,16 +43,31 @@ class PaymentMethodService {
    * Get user's saved payment methods (returns tokenized data only)
    */
   async getPaymentMethods(userAddress: string): Promise<PaymentMethod[]> {
-    const response = await fetch(`${this.baseUrl}/api/payment-methods/${userAddress}`, {
-      headers: this.getAuthHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/payment-methods/${userAddress}`, {
+        headers: this.getAuthHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch payment methods');
+      if (!response.ok) {
+        // Try to parse a body if available to extract any partial data
+        try {
+          const data = await response.json().catch(() => null);
+          if (data?.paymentMethods && Array.isArray(data.paymentMethods)) {
+            return data.paymentMethods as PaymentMethod[];
+          }
+        } catch {
+          // ignore JSON parse errors
+        }
+        // Fallback gracefully with empty list (development/demo resilience)
+        return [];
+      }
+
+      const data = await response.json();
+      return data.paymentMethods || [];
+    } catch (err) {
+      // Network or CORS error — return an empty list to avoid crashing UI
+      return [];
     }
-
-    const data = await response.json();
-    return data.paymentMethods || [];
   }
 
   /**

@@ -501,6 +501,10 @@ export class WebSocketClientService {
     return this.socket;
   }
 
+  getUrl(): string {
+    return this.config.url;
+  }
+
   getQueuedMessageCount(): number {
     return this.messageQueue.length;
   }

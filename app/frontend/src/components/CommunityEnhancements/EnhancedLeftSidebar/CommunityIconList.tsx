@@ -1,24 +1,40 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Star, Users, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Star, Users, TrendingUp, ChevronDown, ChevronUp, Crown, Shield, Coins, Vote, Bell } from 'lucide-react';
 import { EnhancedCommunityData, CommunityIconListProps } from '../../../types/communityEnhancements';
+import { CommunityWithWeb3Data, UserRoleMap, TokenBalanceMap } from '../../../types/web3Post';
 import { useCommunityCache } from '../../../hooks/useCommunityCache';
 import LoadingSkeletons from '../SharedComponents/LoadingSkeletons';
+import RoleBadge from '../SharedComponents/RoleBadge';
+import TokenBalanceDisplay from '../SharedComponents/TokenBalanceDisplay';
+import VotingPowerIndicator from '../SharedComponents/VotingPowerIndicator';
+import GovernanceNotificationBadge from '../SharedComponents/GovernanceNotificationBadge';
+
+interface ExtendedCommunityIconListProps extends Omit<CommunityIconListProps, 'communities'> {
+  communities: CommunityWithWeb3Data[];
+  userRoles?: UserRoleMap;
+  tokenBalances?: TokenBalanceMap;
+  searchQuery?: string;
+  showWeb3Features?: boolean;
+}
 
 /**
- * CommunityIconList Component
+ * CommunityIconList Component with Web3 Features
  * 
- * Displays a list of communities with icons, badges, and search functionality.
- * Implements caching, hover animations, and visual feedback.
+ * Displays a list of communities with icons, badges, role indicators, token balances,
+ * and governance notifications. Implements caching, hover animations, and visual feedback.
  * 
- * Requirements: 1.1, 1.2, 1.4, 1.6
+ * Requirements: 1.1, 1.2, 1.4, 1.5, 1.6, 1.7
  */
-export const CommunityIconList: React.FC<CommunityIconListProps> = ({
+export const CommunityIconList: React.FC<ExtendedCommunityIconListProps> = ({
   communities,
   selectedCommunity,
   onCommunitySelect,
-  showBadges = true
+  showBadges = true,
+  userRoles = {},
+  tokenBalances = {},
+  searchQuery = '',
+  showWeb3Features = true
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(true);
   const [hoveredCommunity, setHoveredCommunity] = useState<string | null>(null);
   
@@ -38,11 +54,11 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
   const sortedCommunities = useMemo(() => {
     return [...filteredCommunities].sort((a, b) => {
       // Prioritize joined communities
-      if (a.userMembership.isJoined && !b.userMembership.isJoined) return -1;
-      if (!a.userMembership.isJoined && b.userMembership.isJoined) return 1;
+      if (a.userMembership?.isJoined && !b.userMembership?.isJoined) return -1;
+      if (!a.userMembership?.isJoined && b.userMembership?.isJoined) return 1;
       
       // Then by activity level
-      return b.activityMetrics.trendingScore - a.activityMetrics.trendingScore;
+      return (b.activityMetrics?.trendingScore || 0) - (a.activityMetrics?.trendingScore || 0);
     });
   }, [filteredCommunities]);
 
@@ -75,17 +91,47 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
     return balance.toString();
   };
 
+  // Get role icon and color
+  const getRoleDisplay = (communityId: string) => {
+    const role = userRoles[communityId];
+    if (!role) return null;
+
+    switch (role) {
+      case 'admin':
+        return { icon: Crown, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30' };
+      case 'moderator':
+        return { icon: Shield, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' };
+      case 'member':
+        return { icon: Users, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30' };
+      default:
+        return null;
+    }
+  };
+
+  // Get user's token balance for community
+  const getUserTokenBalance = (communityId: string): number => {
+    return tokenBalances[communityId] || 0;
+  };
+
+  // Get voting power indicator
+  const getVotingPowerLevel = (balance: number): 'high' | 'medium' | 'low' | 'none' => {
+    if (balance >= 10000) return 'high';
+    if (balance >= 1000) return 'medium';
+    if (balance > 0) return 'low';
+    return 'none';
+  };
+
   if (communities.length === 0) {
     return <LoadingSkeletons.CommunityListSkeleton count={5} />;
   }
 
   return (
     <div className="community-icon-list bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      {/* Header with search */}
+      {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Communities
+            My Communities
           </h3>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -99,22 +145,6 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
             )}
           </button>
         </div>
-        
-        {isExpanded && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search communities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md 
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                       placeholder-gray-500 dark:placeholder-gray-400"
-            />
-          </div>
-        )}
       </div>
 
       {/* Community List */}
@@ -148,7 +178,7 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
                 >
                   {/* Community Icon */}
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 ring-2 ring-transparent hover:ring-blue-200 dark:hover:ring-blue-800 transition-all duration-200">
                       <img
                         src={getCachedIcon(community.id) || community.icon}
                         alt={`${community.name} icon`}
@@ -160,57 +190,133 @@ export const CommunityIconList: React.FC<CommunityIconListProps> = ({
                       />
                     </div>
                     
-                    {/* Activity Indicator */}
-                    <div className={`
-                      absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800
-                      ${community.activityMetrics.engagementRate > 0.7 ? 'bg-green-500' :
-                        community.activityMetrics.engagementRate > 0.4 ? 'bg-yellow-500' : 'bg-gray-400'}
-                    `} />
+                    {/* Activity Indicator (Green Dot) */}
+                    {community.isActive && (
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800 animate-pulse" />
+                    )}
+
+                    {/* Governance Notifications Badge */}
+                    {showWeb3Features && community.governanceNotifications && community.governanceNotifications > 0 && (
+                      <div className="absolute -top-1 -right-1">
+                        <GovernanceNotificationBadge
+                          count={community.governanceNotifications}
+                          type="pending"
+                          size="sm"
+                          showIcon={false}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Community Info */}
                   <div className="flex-1 min-w-0 ml-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {community.name}
-                      </h4>
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {community.name}
+                        </h4>
+                        
+                        {/* Role Badge */}
+                        {showWeb3Features && userRoles[community.id] && (
+                          <RoleBadge 
+                            role={userRoles[community.id]} 
+                            size="sm"
+                            showLabel={false}
+                          />
+                        )}
+                      </div>
                       
-                      {/* Badges */}
+                      {/* Status Badges */}
                       {showBadges && (
                         <div className="flex items-center space-x-1 ml-2">
-                          {community.userMembership.isJoined && (
+                          {community.userMembership?.isJoined && (
                             <Star className="w-3 h-3 text-yellow-500 fill-current" />
                           )}
                           
-                          {community.activityMetrics.trendingScore > 0.8 && (
+                          {(community.activityMetrics?.trendingScore || 0) > 0.8 && (
                             <TrendingUp className="w-3 h-3 text-green-500" />
                           )}
                         </div>
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                         <Users className="w-3 h-3" />
                         <span>{community.memberCount.toLocaleString()}</span>
                       </div>
                       
-                      {/* Token Balance Badge */}
-                      {showBadges && community.userMembership.tokenBalance > 0 && (
-                        <div className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 
-                                      text-blue-800 dark:text-blue-300 rounded-full">
-                          {formatTokenBalance(community.userMembership.tokenBalance)}
-                        </div>
-                      )}
-                      
-                      {/* Reputation Badge */}
-                      {showBadges && community.userMembership.reputation > 0 && (
-                        <div className="px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/30 
-                                      text-purple-800 dark:text-purple-300 rounded-full">
-                          {community.userMembership.reputation}
+                      {/* Web3 Features */}
+                      {showWeb3Features && (
+                        <div className="flex items-center space-x-1">
+                          {/* Token Balance */}
+                          {(() => {
+                            const balance = getUserTokenBalance(community.id);
+                            if (balance > 0) {
+                              return (
+                                <TokenBalanceDisplay
+                                  balance={balance}
+                                  symbol={community.tokenRequirement?.tokenSymbol || 'TOKENS'}
+                                  showSymbol={false}
+                                  size="xs"
+                                  variant="compact"
+                                  stakingStatus={balance > 1000 ? 'staked' : 'unstaked'}
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
+                          
+                          {/* Voting Power Indicator */}
+                          {(() => {
+                            const balance = getUserTokenBalance(community.id);
+                            const votingLevel = getVotingPowerLevel(balance);
+                            if (votingLevel !== 'none') {
+                              const participationLevel = votingLevel === 'high' ? 'high' : 
+                                                       votingLevel === 'medium' ? 'medium' : 'low';
+                              return (
+                                <VotingPowerIndicator
+                                  votingPower={balance}
+                                  participationLevel={participationLevel}
+                                  size="xs"
+                                  variant="icon-only"
+                                />
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       )}
                     </div>
+
+                    {/* Hover Tooltip Content */}
+                    {hoveredCommunity === community.id && (
+                      <div className="absolute left-full ml-2 top-0 z-50 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg min-w-48">
+                        <div className="space-y-1">
+                          <div className="font-medium">{community.name}</div>
+                          <div className="text-gray-300">{community.memberCount.toLocaleString()} members</div>
+                          {showWeb3Features && (
+                            <>
+                              {userRoles[community.id] && (
+                                <div className="text-blue-300">Role: {userRoles[community.id]}</div>
+                              )}
+                              {getUserTokenBalance(community.id) > 0 && (
+                                <div className="text-green-300">
+                                  Balance: {formatTokenBalance(getUserTokenBalance(community.id))} tokens
+                                </div>
+                              )}
+                              {community.governanceNotifications && community.governanceNotifications > 0 && (
+                                <div className="text-red-300">
+                                  {community.governanceNotifications} pending governance action{community.governanceNotifications > 1 ? 's' : ''}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        {/* Tooltip Arrow */}
+                        <div className="absolute left-0 top-3 -ml-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

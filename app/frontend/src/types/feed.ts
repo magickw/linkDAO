@@ -6,12 +6,27 @@ export enum FeedSortType {
   RISING = 'rising'
 }
 
+export enum Web3SortType {
+  TOKEN_ACTIVITY = 'token_activity',
+  STAKING_AMOUNT = 'staking_amount',
+  GOVERNANCE_RELEVANCE = 'governance_relevance',
+  TIP_AMOUNT = 'tip_amount',
+  UNIQUE_STAKERS = 'unique_stakers',
+  SOCIAL_PROOF = 'social_proof',
+  ENGAGEMENT_VELOCITY = 'engagement_velocity',
+  COMMUNITY_IMPACT = 'community_impact'
+}
+
 export interface FeedFilter {
   sortBy: FeedSortType;
   timeRange?: string;
   communityId?: string;
   tags?: string[];
   author?: string;
+  feedSource?: 'following' | 'all';
+  postTypes?: string[];
+  web3Sort?: Web3SortType;
+  web3SortDirection?: 'asc' | 'desc';
 }
 
 export interface EnhancedPost {

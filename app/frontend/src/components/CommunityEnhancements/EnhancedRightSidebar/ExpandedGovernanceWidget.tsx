@@ -3,12 +3,35 @@ import { GovernanceProposal, VotingProgress } from '../../../types/communityEnha
 import { useCommunityWebSocket } from '../../../hooks/useCommunityWebSocket';
 import { MicroInteractionLayer } from '../SharedComponents/MicroInteractionLayer';
 
+interface TokenPriceInfo {
+  symbol: string;
+  currentPrice: number;
+  priceChange24h: number;
+  marketCap: number;
+  volume24h: number;
+}
+
+interface ExpiringVote {
+  proposalId: string;
+  proposalTitle: string;
+  timeRemaining: number;
+  userVotingPower: number;
+  priority: 'urgent' | 'normal' | 'low';
+}
+
 interface ExpandedGovernanceWidgetProps {
   activeProposals: GovernanceProposal[];
   userVotingPower: number;
   onVoteClick: (proposalId: string) => void;
   showProgressBars?: boolean;
   communityId: string;
+  // Web3 enhancements
+  tokenPrice?: TokenPriceInfo;
+  expiringVotes?: ExpiringVote[];
+  delegatedVotingPower?: number;
+  totalTokensStaked?: number;
+  onDelegateVotes?: () => void;
+  onViewTokenDetails?: () => void;
 }
 
 interface CountdownTimerProps {
@@ -135,6 +158,99 @@ interface VoteButtonProps {
   priority: 'urgent' | 'normal' | 'low';
 }
 
+const TokenPriceDisplay: React.FC<{
+  tokenPrice: TokenPriceInfo;
+  onViewDetails?: () => void;
+}> = ({ tokenPrice, onViewDetails }) => {
+  const isPositiveChange = tokenPrice.priceChange24h >= 0;
+  
+  return (
+    <div 
+      className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer hover:shadow-md transition-all duration-200"
+      onClick={onViewDetails}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+            {tokenPrice.symbol.slice(0, 2)}
+          </div>
+          <span className="font-medium text-gray-900 dark:text-white">
+            {tokenPrice.symbol}
+          </span>
+        </div>
+        <div className="text-right">
+          <div className="text-lg font-bold text-gray-900 dark:text-white">
+            ${tokenPrice.currentPrice.toFixed(4)}
+          </div>
+          <div className={`text-sm font-medium ${
+            isPositiveChange ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+          }`}>
+            {isPositiveChange ? '+' : ''}{tokenPrice.priceChange24h.toFixed(2)}%
+          </div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
+        <div>
+          <div className="font-medium">Market Cap</div>
+          <div>${(tokenPrice.marketCap / 1000000).toFixed(1)}M</div>
+        </div>
+        <div>
+          <div className="font-medium">24h Volume</div>
+          <div>${(tokenPrice.volume24h / 1000000).toFixed(1)}M</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExpiringVotesAlert: React.FC<{
+  expiringVotes: ExpiringVote[];
+  onVoteClick: (proposalId: string) => void;
+}> = ({ expiringVotes, onVoteClick }) => {
+  if (expiringVotes.length === 0) return null;
+
+  return (
+    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+      <div className="flex items-center space-x-2 mb-3">
+        <svg className="w-5 h-5 text-red-600 dark:text-red-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+        <span className="font-medium text-red-900 dark:text-red-100">
+          Expiring Votes
+        </span>
+      </div>
+      
+      <div className="space-y-2">
+        {expiringVotes.slice(0, 2).map((vote) => (
+          <div key={vote.proposalId} className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-red-900 dark:text-red-100 truncate">
+                {vote.proposalTitle}
+              </div>
+              <div className="text-xs text-red-700 dark:text-red-300">
+                {Math.floor(vote.timeRemaining / 3600)}h remaining
+              </div>
+            </div>
+            <button
+              onClick={() => onVoteClick(vote.proposalId)}
+              className="ml-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+            >
+              Vote Now
+            </button>
+          </div>
+        ))}
+      </div>
+      
+      {expiringVotes.length > 2 && (
+        <div className="text-xs text-red-700 dark:text-red-300 mt-2">
+          +{expiringVotes.length - 2} more expiring soon
+        </div>
+      )}
+    </div>
+  );
+};
+
 const VoteWithWalletButton: React.FC<VoteButtonProps> = ({
   proposalId,
   userHasVoted,
@@ -172,7 +288,7 @@ const VoteWithWalletButton: React.FC<VoteButtonProps> = ({
             <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Vote with Wallet
+            Vote with Wallet ({userVotingPower.toLocaleString()})
           </span>
         )}
       </button>
@@ -185,7 +301,13 @@ export const ExpandedGovernanceWidget: React.FC<ExpandedGovernanceWidgetProps> =
   userVotingPower,
   onVoteClick,
   showProgressBars = true,
-  communityId
+  communityId,
+  tokenPrice,
+  expiringVotes = [],
+  delegatedVotingPower = 0,
+  totalTokensStaked,
+  onDelegateVotes,
+  onViewTokenDetails
 }) => {
   const [proposals, setProposals] = useState<GovernanceProposal[]>(activeProposals);
   const { isConnected } = useCommunityWebSocket(communityId);
@@ -239,9 +361,29 @@ export const ExpandedGovernanceWidget: React.FC<ExpandedGovernanceWidgetProps> =
         </div>
       </div>
 
-      {/* Voting Power Display */}
+      {/* Token Price Display */}
+      {tokenPrice && (
+        <div className="mb-6">
+          <TokenPriceDisplay 
+            tokenPrice={tokenPrice} 
+            onViewDetails={onViewTokenDetails}
+          />
+        </div>
+      )}
+
+      {/* Expiring Votes Alert */}
+      {expiringVotes.length > 0 && (
+        <div className="mb-6">
+          <ExpiringVotesAlert 
+            expiringVotes={expiringVotes}
+            onVoteClick={onVoteClick}
+          />
+        </div>
+      )}
+
+      {/* Enhanced Voting Power Display */}
       <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
             Your Voting Power
           </span>
@@ -249,9 +391,36 @@ export const ExpandedGovernanceWidget: React.FC<ExpandedGovernanceWidgetProps> =
             {userVotingPower.toLocaleString()}
           </span>
         </div>
-        <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-          Based on token holdings and delegation
+        
+        {/* Voting Power Breakdown */}
+        <div className="space-y-2 text-xs">
+          <div className="flex justify-between text-blue-700 dark:text-blue-300">
+            <span>Direct Holdings:</span>
+            <span>{(userVotingPower - delegatedVotingPower).toLocaleString()}</span>
+          </div>
+          {delegatedVotingPower > 0 && (
+            <div className="flex justify-between text-blue-700 dark:text-blue-300">
+              <span>Delegated to You:</span>
+              <span>{delegatedVotingPower.toLocaleString()}</span>
+            </div>
+          )}
+          {totalTokensStaked && (
+            <div className="flex justify-between text-blue-700 dark:text-blue-300">
+              <span>Tokens Staked:</span>
+              <span>{totalTokensStaked.toLocaleString()}</span>
+            </div>
+          )}
         </div>
+        
+        {/* Delegation Button */}
+        {onDelegateVotes && (
+          <button
+            onClick={onDelegateVotes}
+            className="mt-3 w-full text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+          >
+            Manage Delegation →
+          </button>
+        )}
       </div>
 
       {/* Proposals List */}

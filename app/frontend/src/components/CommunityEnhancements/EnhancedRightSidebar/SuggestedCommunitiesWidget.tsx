@@ -2,6 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { EnhancedCommunityData } from '../../../types/communityEnhancements';
 import { MicroInteractionLayer } from '../SharedComponents/MicroInteractionLayer';
 
+interface TokenRequirement {
+  tokenAddress: string;
+  tokenSymbol: string;
+  minimumAmount: number;
+  currentPrice?: number;
+  userBalance?: number;
+  meetsRequirement: boolean;
+}
+
+interface TrendingTopic {
+  hashtag: string;
+  postCount: number;
+  growthRate: number;
+  category: 'defi' | 'nft' | 'governance' | 'general';
+}
+
 interface SuggestedCommunity extends EnhancedCommunityData {
   mutualMemberCount: number;
   trendingScore: number;
@@ -10,6 +26,15 @@ interface SuggestedCommunity extends EnhancedCommunityData {
     recentPosts: number;
     activeDiscussions: number;
     weeklyGrowth: number;
+  };
+  // Web3 specific fields
+  tokenRequirement?: TokenRequirement;
+  trendingTopics: TrendingTopic[];
+  web3Stats: {
+    treasuryValue?: number;
+    governanceTokenPrice?: number;
+    stakingApy?: number;
+    totalValueLocked?: number;
   };
 }
 
@@ -84,6 +109,78 @@ const CommunityPreview: React.FC<CommunityPreviewProps> = ({ community, onClose 
         </span>
       </div>
 
+      {/* Token Requirements */}
+      {community.tokenRequirement && (
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Token Requirement
+            </span>
+            <span className={`text-xs px-2 py-1 rounded-full ${
+              community.tokenRequirement.meetsRequirement
+                ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+            }`}>
+              {community.tokenRequirement.meetsRequirement ? '✓ Eligible' : '✗ Not Eligible'}
+            </span>
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Hold {community.tokenRequirement.minimumAmount} {community.tokenRequirement.tokenSymbol}
+          </div>
+          {community.tokenRequirement.userBalance !== undefined && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Your balance: {community.tokenRequirement.userBalance} {community.tokenRequirement.tokenSymbol}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Trending Topics */}
+      {community.trendingTopics.length > 0 && (
+        <div className="mb-4">
+          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Trending Topics
+          </h5>
+          <div className="flex flex-wrap gap-1">
+            {community.trendingTopics.slice(0, 3).map((topic, index) => (
+              <span
+                key={index}
+                className={`text-xs px-2 py-1 rounded-full ${
+                  topic.category === 'defi' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' :
+                  topic.category === 'nft' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300' :
+                  topic.category === 'governance' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                  'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {topic.hashtag} ({topic.postCount})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Web3 Stats */}
+      {(community.web3Stats.treasuryValue || community.web3Stats.governanceTokenPrice || community.web3Stats.stakingApy) && (
+        <div className="mb-4 grid grid-cols-2 gap-2 text-xs">
+          {community.web3Stats.treasuryValue && (
+            <div className="text-center">
+              <div className="font-semibold text-gray-900 dark:text-white">
+                ${(community.web3Stats.treasuryValue / 1000000).toFixed(1)}M
+              </div>
+              <div className="text-gray-500 dark:text-gray-400">Treasury</div>
+            </div>
+          )}
+          {community.web3Stats.stakingApy && (
+            <div className="text-center">
+              <div className="font-semibold text-green-600 dark:text-green-400">
+                {community.web3Stats.stakingApy.toFixed(1)}%
+              </div>
+              <div className="text-gray-500 dark:text-gray-400">Staking APY</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Mutual connections */}
       {community.mutualMemberCount > 0 && (
         <div className="text-center text-sm text-blue-600 dark:text-blue-400 mb-4">
@@ -136,15 +233,19 @@ const ActivityIndicator: React.FC<ActivityIndicatorProps> = ({ level, trendingSc
 interface JoinButtonProps {
   communityId: string;
   isJoined: boolean;
+  tokenRequirement?: TokenRequirement;
   onJoin: (communityId: string) => Promise<boolean>;
 }
 
-const JoinButton: React.FC<JoinButtonProps> = ({ communityId, isJoined, onJoin }) => {
+const JoinButton: React.FC<JoinButtonProps> = ({ communityId, isJoined, tokenRequirement, onJoin }) => {
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(isJoined);
 
+  const canJoin = !tokenRequirement || tokenRequirement.meetsRequirement;
+  const isDisabled = hasJoined || isJoining || !canJoin;
+
   const handleJoin = async () => {
-    if (hasJoined || isJoining) return;
+    if (isDisabled) return;
 
     setIsJoining(true);
     try {
@@ -159,41 +260,83 @@ const JoinButton: React.FC<JoinButtonProps> = ({ communityId, isJoined, onJoin }
     }
   };
 
+  const getButtonContent = () => {
+    if (hasJoined) {
+      return (
+        <span className="flex items-center">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          Joined
+        </span>
+      );
+    }
+    
+    if (isJoining) {
+      return (
+        <span className="flex items-center">
+          <svg className="animate-spin w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          Joining...
+        </span>
+      );
+    }
+    
+    if (!canJoin) {
+      return (
+        <span className="flex items-center">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+          Need Tokens
+        </span>
+      );
+    }
+    
+    return 'Join';
+  };
+
+  const getButtonStyles = () => {
+    if (hasJoined) {
+      return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 cursor-default';
+    }
+    
+    if (isJoining) {
+      return 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 cursor-wait';
+    }
+    
+    if (!canJoin) {
+      return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed';
+    }
+    
+    return 'bg-blue-600 hover:bg-blue-700 text-white';
+  };
+
   return (
     <MicroInteractionLayer interactionType="click">
-      <button
-        onClick={handleJoin}
-        disabled={hasJoined || isJoining}
-        className={`
-          px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105
-          ${hasJoined
-            ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 cursor-default'
-            : isJoining
-            ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 cursor-wait'
-            : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }
-          disabled:transform-none disabled:hover:scale-100
-        `}
-      >
-        {hasJoined ? (
-          <span className="flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            Joined
-          </span>
-        ) : isJoining ? (
-          <span className="flex items-center">
-            <svg className="animate-spin w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-            Joining...
-          </span>
-        ) : (
-          'Join'
+      <div className="relative">
+        <button
+          onClick={handleJoin}
+          disabled={isDisabled}
+          title={!canJoin && tokenRequirement ? `Requires ${tokenRequirement.minimumAmount} ${tokenRequirement.tokenSymbol}` : undefined}
+          className={`
+            px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105
+            ${getButtonStyles()}
+            disabled:transform-none disabled:hover:scale-100
+          `}
+        >
+          {getButtonContent()}
+        </button>
+        
+        {/* Token requirement tooltip */}
+        {!canJoin && tokenRequirement && (
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Need {tokenRequirement.minimumAmount} {tokenRequirement.tokenSymbol}
+          </div>
         )}
-      </button>
+      </div>
     </MicroInteractionLayer>
   );
 };
@@ -305,11 +448,55 @@ const CommunityCard: React.FC<CommunityCardProps> = ({ community, onJoin, onClic
             />
           </div>
 
+          {/* Web3 Stats Preview */}
+          {(community.web3Stats.governanceTokenPrice || community.web3Stats.stakingApy) && (
+            <div className="mb-3 flex items-center space-x-4 text-xs">
+              {community.web3Stats.governanceTokenPrice && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    ${community.web3Stats.governanceTokenPrice.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {community.web3Stats.stakingApy && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-green-600 dark:text-green-400">
+                    {community.web3Stats.stakingApy.toFixed(1)}% APY
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Trending Topics Preview */}
+          {community.trendingTopics.length > 0 && (
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-1">
+                {community.trendingTopics.slice(0, 2).map((topic, index) => (
+                  <span
+                    key={index}
+                    className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  >
+                    {topic.hashtag}
+                  </span>
+                ))}
+                {community.trendingTopics.length > 2 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    +{community.trendingTopics.length - 2} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Join button */}
           <div onClick={(e) => e.stopPropagation()}>
             <JoinButton
               communityId={community.id}
               isJoined={community.userMembership.isJoined}
+              tokenRequirement={community.tokenRequirement}
               onJoin={onJoin}
             />
           </div>

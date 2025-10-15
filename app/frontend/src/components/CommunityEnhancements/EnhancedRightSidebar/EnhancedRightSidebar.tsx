@@ -2,11 +2,28 @@ import React from 'react';
 import { ExpandedGovernanceWidget } from './ExpandedGovernanceWidget';
 import { WalletActivityFeed } from './WalletActivityFeed';
 import { SuggestedCommunitiesWidget } from './SuggestedCommunitiesWidget';
+import { CommunityInfoWidget } from './CommunityInfoWidget';
 import { 
   GovernanceProposal, 
   WalletActivity, 
   EnhancedCommunityData 
 } from '../../../types/communityEnhancements';
+
+interface TokenRequirement {
+  tokenAddress: string;
+  tokenSymbol: string;
+  minimumAmount: number;
+  currentPrice?: number;
+  userBalance?: number;
+  meetsRequirement: boolean;
+}
+
+interface TrendingTopic {
+  hashtag: string;
+  postCount: number;
+  growthRate: number;
+  category: 'defi' | 'nft' | 'governance' | 'general';
+}
 
 interface SuggestedCommunity extends EnhancedCommunityData {
   mutualMemberCount: number;
@@ -17,6 +34,49 @@ interface SuggestedCommunity extends EnhancedCommunityData {
     activeDiscussions: number;
     weeklyGrowth: number;
   };
+  tokenRequirement?: TokenRequirement;
+  trendingTopics: TrendingTopic[];
+  web3Stats: {
+    treasuryValue?: number;
+    governanceTokenPrice?: number;
+    stakingApy?: number;
+    totalValueLocked?: number;
+  };
+}
+
+interface TopContributor {
+  id: string;
+  username: string;
+  avatar: string;
+  reputation: number;
+  weeklyContributions: number;
+  badges: string[];
+  isFollowing: boolean;
+}
+
+interface CommunityRule {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  icon: string;
+}
+
+interface TreasuryToken {
+  symbol: string;
+  amount: number;
+  valueUSD: number;
+  percentage: number;
+}
+
+interface GovernanceTokenInfo {
+  symbol: string;
+  totalSupply: number;
+  circulatingSupply: number;
+  currentPrice: number;
+  marketCap: number;
+  holders: number;
+  stakingRatio: number;
 }
 
 interface EnhancedRightSidebarProps {
@@ -34,11 +94,22 @@ interface EnhancedRightSidebarProps {
   onJoinCommunity: (communityId: string) => Promise<boolean>;
   onCommunityClick: (communityId: string) => void;
   
+  // Community-specific information
+  currentCommunity?: EnhancedCommunityData;
+  topContributors?: TopContributor[];
+  communityRules?: CommunityRule[];
+  treasuryTokens?: TreasuryToken[];
+  governanceToken?: GovernanceTokenInfo;
+  onFollowContributor?: (contributorId: string) => Promise<void>;
+  onViewFullRules?: () => void;
+  onViewTreasury?: () => void;
+  
   // Configuration
   communityId: string;
   showGovernance?: boolean;
   showWalletActivity?: boolean;
   showSuggestedCommunities?: boolean;
+  showCommunityInfo?: boolean;
   maxActivityItems?: number;
   maxSuggestions?: number;
 }
@@ -52,15 +123,38 @@ export const EnhancedRightSidebar: React.FC<EnhancedRightSidebarProps> = ({
   suggestedCommunities,
   onJoinCommunity,
   onCommunityClick,
+  currentCommunity,
+  topContributors = [],
+  communityRules = [],
+  treasuryTokens,
+  governanceToken,
+  onFollowContributor,
+  onViewFullRules,
+  onViewTreasury,
   communityId,
   showGovernance = true,
   showWalletActivity = true,
   showSuggestedCommunities = true,
+  showCommunityInfo = true,
   maxActivityItems = 10,
   maxSuggestions = 5
 }) => {
   return (
     <div className="space-y-6">
+      {/* Community-Specific Information */}
+      {showCommunityInfo && currentCommunity && (
+        <CommunityInfoWidget
+          community={currentCommunity}
+          topContributors={topContributors}
+          rules={communityRules}
+          treasuryTokens={treasuryTokens}
+          governanceToken={governanceToken}
+          onFollowContributor={onFollowContributor || (async () => {})}
+          onViewFullRules={onViewFullRules || (() => {})}
+          onViewTreasury={onViewTreasury || (() => {})}
+        />
+      )}
+
       {/* Governance Widget */}
       {showGovernance && (
         <ExpandedGovernanceWidget

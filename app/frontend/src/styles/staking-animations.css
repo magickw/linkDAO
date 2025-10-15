@@ -1,0 +1,143 @@
+/* Staking component animations */
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+@keyframes stakingPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-staking-pulse {
+  animation: stakingPulse 2s ease-in-out infinite;
+}
+
+@keyframes tierGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+.animate-tier-glow {
+  animation: tierGlow 3s ease-in-out infinite;
+}
+
+/* Tier-specific glow colors */
+.gold-glow {
+  --glow-color: #fbbf24;
+}
+
+.silver-glow {
+  --glow-color: #9ca3af;
+}
+
+.bronze-glow {
+  --glow-color: #f97316;
+}
+
+/* Hover effects */
+.staking-hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.staking-hover-lift:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Progress bar animations */
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width);
+  }
+}
+
+.animate-progress-fill {
+  animation: progressFill 1s ease-out;
+}
+
+/* Tooltip animations */
+.tooltip-enter {
+  opacity: 0;
+  transform: scale(0.95) translateY(5px);
+  transition: all 0.2s ease-out;
+}
+
+.tooltip-enter-active {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.tooltip-exit {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  transition: all 0.15s ease-in;
+}
+
+.tooltip-exit-active {
+  opacity: 0;
+  transform: scale(0.95) translateY(5px);
+}
+
+/* Slide-in animations for real-time updates */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+/* Button hover effects */
+.boost-button-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.boost-button-hover:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.25);
+}

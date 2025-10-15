@@ -1,15 +1,72 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { 
-  Proposal, 
-  ProposalStatus, 
-  VoteChoice, 
-  GovernanceWidgetProps,
-  GovernanceWidgetState,
-  ProposalCardProps,
-  VotingButtonProps,
-  ParticipationMetricsProps
-} from '../../types/governance';
 import VotingParticipationMetrics from './VotingParticipationMetrics';
+
+// Local UI types to decouple from backend governance types
+export type VoteChoice = 'for' | 'against' | 'abstain';
+export type ProposalStatus = 'active' | 'succeeded' | 'passed' | 'failed' | 'executed' | 'queued' | 'cancelled' | 'expired';
+
+export interface Proposal {
+  id: string;
+  title: string;
+  description: string;
+  proposer: string;
+  communityId: string;
+  startTime: Date;
+  endTime: Date;
+  forVotes: string;
+  againstVotes: string;
+  abstainVotes?: string;
+  quorum: string;
+  status: ProposalStatus;
+  actions: any[];
+  category: string;
+  executionDelay?: number;
+  requiredMajority?: number;
+  participationRate: number;
+  canVote: boolean;
+  userVote?: VoteChoice;
+}
+
+interface VotingButtonProps {
+  proposal: Proposal;
+  choice: VoteChoice;
+  onVote: (proposalId: string, choice: VoteChoice) => Promise<void> | void;
+  disabled?: boolean;
+  userVotingPower: number;
+}
+
+interface ParticipationMetricsProps {
+  proposal: Proposal;
+  userVotingPower: number;
+  participationMetrics?: any;
+}
+
+interface ProposalCardProps {
+  proposal: Proposal;
+  userVotingPower: number;
+  onVote: (proposalId: string, choice: VoteChoice) => Promise<void> | void;
+  onViewDetails: (proposalId: string) => void;
+  isExpanded: boolean;
+  onToggleExpand: (proposalId: string) => void;
+  votingInProgress: boolean;
+}
+
+export interface GovernanceWidgetProps {
+  activeProposals: Proposal[];
+  userVotingPower: number;
+  participationRate: number;
+  participationMetrics?: any;
+  onVote: (proposalId: string, choice: VoteChoice) => Promise<void> | void;
+  onViewProposal: (proposalId: string) => void;
+  loading?: boolean;
+  error?: string | null;
+}
+
+interface GovernanceWidgetState {
+  expandedProposal: string | null;
+  votingInProgress: string | null;
+  showAllProposals: boolean;
+}
 
 // Utility function to format time remaining
 const formatTimeRemaining = (endTime: Date): string => {
@@ -38,15 +95,16 @@ const formatVoteCount = (count: string): string => {
 // Utility function to get status color
 const getStatusColor = (status: ProposalStatus): string => {
   switch (status) {
-    case ProposalStatus.ACTIVE:
+    case 'active':
       return 'text-green-600 bg-green-100';
-    case ProposalStatus.SUCCEEDED:
+    case 'succeeded':
+    case 'passed':
       return 'text-blue-600 bg-blue-100';
-    case ProposalStatus.DEFEATED:
+    case 'failed':
       return 'text-red-600 bg-red-100';
-    case ProposalStatus.EXECUTED:
+    case 'executed':
       return 'text-purple-600 bg-purple-100';
-    case ProposalStatus.QUEUED:
+    case 'queued':
       return 'text-yellow-600 bg-yellow-100';
     default:
       return 'text-gray-600 bg-gray-100';
@@ -81,11 +139,11 @@ const VotingButton: React.FC<VotingButtonProps> = ({
     
     if (proposal.userVote === choice) {
       switch (choice) {
-        case VoteChoice.FOR:
+        case 'for':
           return baseStyle + 'bg-green-600 text-white';
-        case VoteChoice.AGAINST:
+        case 'against':
           return baseStyle + 'bg-red-600 text-white';
-        case VoteChoice.ABSTAIN:
+        case 'abstain':
           return baseStyle + 'bg-gray-600 text-white';
       }
     }
@@ -95,11 +153,11 @@ const VotingButton: React.FC<VotingButtonProps> = ({
     }
     
     switch (choice) {
-      case VoteChoice.FOR:
+      case 'for':
         return baseStyle + 'bg-green-100 text-green-700 hover:bg-green-200';
-      case VoteChoice.AGAINST:
+      case 'against':
         return baseStyle + 'bg-red-100 text-red-700 hover:bg-red-200';
-      case VoteChoice.ABSTAIN:
+      case 'abstain':
         return baseStyle + 'bg-gray-100 text-gray-700 hover:bg-gray-200';
     }
   };
@@ -108,11 +166,11 @@ const VotingButton: React.FC<VotingButtonProps> = ({
     if (isVoting) return 'Voting...';
     
     switch (choice) {
-      case VoteChoice.FOR:
+      case 'for':
         return proposal.userVote === choice ? '✓ For' : 'For';
-      case VoteChoice.AGAINST:
+      case 'against':
         return proposal.userVote === choice ? '✓ Against' : 'Against';
-      case VoteChoice.ABSTAIN:
+      case 'abstain':
         return proposal.userVote === choice ? '✓ Abstain' : 'Abstain';
     }
   };
@@ -214,7 +272,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
   onToggleExpand,
   votingInProgress
 }) => {
-  const isActive = proposal.status === ProposalStatus.ACTIVE;
+  const isActive = proposal.status === 'active';
   const canVote = isActive && proposal.canVote && !proposal.userVote;
   const timeRemaining = formatTimeRemaining(proposal.endTime);
   
@@ -276,23 +334,23 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
       {isActive && (
         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
           <div className="flex space-x-2">
-            <VotingButton
+              <VotingButton
               proposal={proposal}
-              choice={VoteChoice.FOR}
+              choice={'for'}
               onVote={onVote}
               disabled={!canVote || votingInProgress}
               userVotingPower={userVotingPower}
             />
-            <VotingButton
+              <VotingButton
               proposal={proposal}
-              choice={VoteChoice.AGAINST}
+              choice={'against'}
               onVote={onVote}
               disabled={!canVote || votingInProgress}
               userVotingPower={userVotingPower}
             />
-            <VotingButton
+              <VotingButton
               proposal={proposal}
-              choice={VoteChoice.ABSTAIN}
+              choice={'abstain'}
               onVote={onVote}
               disabled={!canVote || votingInProgress}
               userVotingPower={userVotingPower}
@@ -313,7 +371,7 @@ const ProposalCard: React.FC<ProposalCardProps> = ({
         <div className="pt-2 border-t border-gray-100">
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              Final Result: {proposal.status === ProposalStatus.SUCCEEDED ? 'Passed' : 'Failed'}
+Final Result: {(['succeeded','passed'] as ProposalStatus[]).includes(proposal.status) ? 'Passed' : 'Failed'}
             </div>
             <button
               onClick={() => onViewDetails(proposal.id)}
@@ -347,8 +405,8 @@ const GovernanceWidget: React.FC<GovernanceWidgetProps> = ({
   
   // Memoized proposal sorting and filtering
   const { activeProposalsList, closedProposalsList } = useMemo(() => {
-    const active = activeProposals.filter(p => p.status === ProposalStatus.ACTIVE);
-    const closed = activeProposals.filter(p => p.status !== ProposalStatus.ACTIVE);
+    const active = activeProposals.filter(p => p.status === 'active');
+    const closed = activeProposals.filter(p => p.status !== 'active');
     
     // Sort active proposals by end time (soonest first)
     active.sort((a, b) => a.endTime.getTime() - b.endTime.getTime());

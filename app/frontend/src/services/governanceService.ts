@@ -315,10 +315,10 @@ export class GovernanceService {
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     try {
       // Map VoteChoice to backend format
-      const voteMap = {
-        [VoteChoice.FOR]: 'yes',
-        [VoteChoice.AGAINST]: 'no',
-        [VoteChoice.ABSTAIN]: 'abstain'
+      const voteMap: Record<VoteChoice, 'yes' | 'no' | 'abstain'> = {
+        for: 'yes',
+        against: 'no',
+        abstain: 'abstain'
       };
 
       // Try backend API first
@@ -340,7 +340,7 @@ export class GovernanceService {
       }
 
       // Fallback to Web3 service
-      const support = choice === VoteChoice.FOR;
+      const support = choice === 'for';
       const txHash = await communityWeb3Service.voteOnProposal(
         proposalId, 
         support, 
@@ -537,6 +537,7 @@ export class GovernanceService {
       proposer: proposal.proposer,
       proposerReputation: Math.floor(Math.random() * 1000 + 500),
       communityId: proposal.communityId,
+      type: 'general',
       startTime: proposal.startTime,
       endTime: proposal.endTime,
       forVotes: proposal.forVotes,
@@ -544,7 +545,6 @@ export class GovernanceService {
       abstainVotes: '0',
       quorum: proposal.quorum,
       status: this.mapWeb3Status(proposal.status),
-      actions: proposal.actions,
       category: ProposalCategory.GOVERNANCE,
       executionDelay: 172800, // 2 days
       requiredMajority: 60,
@@ -571,6 +571,7 @@ export class GovernanceService {
       proposer: proposal.proposer,
       proposerReputation: proposal.proposerReputation || 500,
       communityId: proposal.daoId || 'general',
+      type: (proposal.type as 'parameter' | 'treasury' | 'upgrade' | 'general' | 'emergency') || 'general',
       startTime: new Date(proposal.votingStarts),
       endTime: new Date(proposal.votingEnds),
       forVotes: proposal.yesVotes?.toString() || '0',
@@ -578,7 +579,6 @@ export class GovernanceService {
       abstainVotes: proposal.abstainVotes?.toString() || '0',
       quorum: proposal.quorum?.toString() || '1000',
       status: this.mapBackendStatus(proposal.status),
-      actions: proposal.actions || [],
       category: this.mapBackendCategory(proposal.category),
       executionDelay: proposal.executionDelay || 172800,
       requiredMajority: proposal.requiredMajority || 50,
@@ -594,13 +594,13 @@ export class GovernanceService {
   private mapBackendStatus(status: string): ProposalStatus {
     switch (status) {
       case 'pending':
-        return ProposalStatus.PENDING;
+        return ProposalStatus.DRAFT;
       case 'active':
         return ProposalStatus.ACTIVE;
       case 'passed':
         return ProposalStatus.SUCCEEDED;
       case 'failed':
-        return ProposalStatus.DEFEATED;
+        return ProposalStatus.FAILED;
       case 'executed':
         return ProposalStatus.EXECUTED;
       case 'cancelled':
@@ -634,13 +634,13 @@ export class GovernanceService {
   private mapWeb3Status(web3Status: string): ProposalStatus {
     switch (web3Status) {
       case 'pending':
-        return ProposalStatus.PENDING;
+        return ProposalStatus.DRAFT;
       case 'active':
         return ProposalStatus.ACTIVE;
       case 'passed':
         return ProposalStatus.SUCCEEDED;
       case 'failed':
-        return ProposalStatus.DEFEATED;
+        return ProposalStatus.FAILED;
       case 'executed':
         return ProposalStatus.EXECUTED;
       default:
@@ -660,6 +660,7 @@ export class GovernanceService {
         proposer: '0x1234567890123456789012345678901234567890',
         proposerReputation: 850,
         communityId,
+        type: 'general',
         startTime: new Date(Date.now() - 86400000), // 1 day ago
         endTime: new Date(Date.now() + 6 * 86400000), // 6 days from now
         forVotes: '1250.5',
@@ -667,7 +668,6 @@ export class GovernanceService {
         abstainVotes: '50.0',
         quorum: '1000.0',
         status: ProposalStatus.ACTIVE,
-        actions: [],
         category: ProposalCategory.GOVERNANCE,
         executionDelay: 172800,
         requiredMajority: 60,
@@ -681,6 +681,7 @@ export class GovernanceService {
         proposer: '0x2345678901234567890123456789012345678901',
         proposerReputation: 920,
         communityId,
+        type: 'general',
         startTime: new Date(Date.now() - 2 * 86400000), // 2 days ago
         endTime: new Date(Date.now() + 5 * 86400000), // 5 days from now
         forVotes: '2100.8',
@@ -688,7 +689,6 @@ export class GovernanceService {
         abstainVotes: '75.2',
         quorum: '1500.0',
         status: ProposalStatus.ACTIVE,
-        actions: [],
         category: ProposalCategory.FUNDING,
         executionDelay: 259200, // 3 days
         requiredMajority: 65,
@@ -702,6 +702,7 @@ export class GovernanceService {
         proposer: '0x3456789012345678901234567890123456789012',
         proposerReputation: 780,
         communityId,
+        type: 'general',
         startTime: new Date(Date.now() - 7 * 86400000), // 7 days ago
         endTime: new Date(Date.now() - 86400000), // 1 day ago (ended)
         forVotes: '1850.3',
@@ -709,7 +710,6 @@ export class GovernanceService {
         abstainVotes: '30.0',
         quorum: '1200.0',
         status: ProposalStatus.SUCCEEDED,
-        actions: [],
         category: ProposalCategory.COMMUNITY,
         executionDelay: 172800,
         requiredMajority: 60,
