@@ -87,6 +87,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
 }) => {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(product.media[0]?.url || '');
+  const [isBuying, setIsBuying] = useState(false);
 
   const handleAddToCart = () => {
     // Add to cart functionality
@@ -97,12 +98,23 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     }
   };
 
-  const handleBuyNow = () => {
-    // Buy now functionality
-    if (onBuyNow) {
-      onBuyNow(product.id, quantity);
-    } else {
-      console.log('Buying now:', { productId: product.id, quantity });
+  const handleBuyNow = async () => {
+    if (isBuying) return;
+    setIsBuying(true);
+    try {
+      // Buy now functionality
+      if (onBuyNow) {
+        const result = onBuyNow(product.id, quantity);
+        // Support async handlers
+        if (result && typeof (result as any).then === 'function') {
+          await (result as any);
+        }
+      } else {
+        console.log('Buying now:', { productId: product.id, quantity });
+      }
+    } finally {
+      // In most cases navigation occurs; this is a safe reset if it doesn't
+      setIsBuying(false);
     }
   };
 
@@ -273,13 +285,26 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <button 
+                type="button"
                 onClick={handleBuyNow}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
+                disabled={isBuying}
+                aria-busy={isBuying}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
               >
-                <Shield size={20} className="mr-2" />
-                Buy Now with Escrow
+                {isBuying ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Shield size={20} className="mr-2" />
+                    Buy Now with Escrow
+                  </>
+                )}
               </button>
               <button 
+                type="button"
                 onClick={handleAddToCart}
                 className="flex-1 bg-white border border-blue-600 text-blue-600 hover:bg-blue-50 py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center"
               >
@@ -287,12 +312,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 Add to Cart
               </button>
               <button 
+                type="button"
                 onClick={handleAddToWishlist}
                 className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 <Heart size={20} className="text-gray-600" />
               </button>
-              <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button type="button" className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
                 <Share2 size={20} className="text-gray-600" />
               </button>
             </div>
