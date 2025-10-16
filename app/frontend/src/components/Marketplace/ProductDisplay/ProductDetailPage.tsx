@@ -69,7 +69,7 @@ interface ProductDetailPageProps {
     }>;
   };
   onAddToCart?: (productId: string, quantity: number) => void;
-  onBuyNow?: (productId: string, quantity: number) => void;
+  onBuyNow?: (productId: string, quantity: number) => void | Promise<void>;
   onAddToWishlist?: (productId: string) => void;
   onContactSeller?: (sellerId: string) => void;
   onViewSellerProfile?: (sellerId: string) => void;
@@ -104,11 +104,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     try {
       // Buy now functionality
       if (onBuyNow) {
-        const result = onBuyNow(product.id, quantity);
-        // Support async handlers
-        if (result && typeof (result as any).then === 'function') {
-          await (result as any);
-        }
+        await Promise.resolve(onBuyNow(product.id, quantity));
       } else {
         console.log('Buying now:', { productId: product.id, quantity });
       }

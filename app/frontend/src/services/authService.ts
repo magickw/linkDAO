@@ -1,5 +1,5 @@
 import { signMessage } from '@wagmi/core';
-import { config } from '@/lib/wagmi';
+import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
 
 export interface AuthUser {
@@ -128,7 +128,7 @@ class AuthService {
       let signature: string;
       try {
         // Sign message with wallet - this will prompt the user
-        signature = await signMessage(config, { message });
+        signature = await signMessage(config, { account: address as `0x${string}`, message });
         
         if (!signature) {
           throw new Error('Signature is required for authentication');
