@@ -65,7 +65,8 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <Layout title="Secure Checkout - LinkDAO Marketplace" fullWidth={true}>
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 text-white">
         <div className="space-y-2">
           <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
             Checkout
@@ -79,11 +80,13 @@ const CheckoutPage: React.FC = () => {
           </p>
         </div>
 
-        <EnhancedCheckoutFlow
+        <div className="bg-white/10 rounded-2xl p-6">
+          <EnhancedCheckoutFlow
           cartItems={checkoutItems}
           onComplete={handleComplete}
           onCancel={() => router.push('/marketplace/cart')}
         />
+        </div>
 
         <GlassPanel variant="secondary" className="p-6 space-y-3">
           <h2 className="text-xl font-semibold text-white">Need help?</h2>
@@ -95,6 +98,7 @@ const CheckoutPage: React.FC = () => {
             Open Support Center
           </Button>
         </GlassPanel>
+        </div>
       </div>
     </Layout>
   );

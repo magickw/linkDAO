@@ -50,7 +50,8 @@ const DisputesSupportPage: React.FC = () => {
 
   return (
     <Layout title="Support & Disputes - LinkDAO Marketplace" fullWidth={true}>
-      <div className="space-y-10">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-4">
           <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
           <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
@@ -153,6 +154,7 @@ const DisputesSupportPage: React.FC = () => {
             className="space-y-6"
           />
         </GlassPanel>
+        </div>
       </div>
     </Layout>
   );

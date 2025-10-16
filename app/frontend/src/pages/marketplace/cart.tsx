@@ -91,12 +91,12 @@ const CartPage: React.FC = () => {
 
   return (
     <Layout title="Your Cart - LinkDAO Marketplace" fullWidth={true}>
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen py-8">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
-          <div className="flex flex-col gap-2">
+          <div className="bg-white/10 rounded-2xl p-6 flex flex-col gap-2 text-white">
             <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marketplace</span>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Shopping Cart</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Shopping Cart</h1>
           </div>
 
           {/* Tabs */}
@@ -138,7 +138,7 @@ const CartPage: React.FC = () => {
             <div className="space-y-4">
               {/* Bulk Actions */}
               {currentItems.length > 0 && activeTab === 'cart' && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm flex flex-wrap items-center gap-4">
+                <div className="bg-white/10 rounded-xl p-4 flex flex-wrap items-center gap-4 text-white">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -188,7 +188,7 @@ const CartPage: React.FC = () => {
                 currentItems.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm flex gap-4"
+                    className="bg-white/10 rounded-lg p-4 flex gap-4 text-white"
                   >
                     {/* Checkbox */}
                     {activeTab === 'cart' && (
@@ -312,7 +312,7 @@ const CartPage: React.FC = () => {
                   </div>
                 ))
               ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-12 shadow-sm text-center">
+                <div className="bg-white/10 rounded-2xl p-12 text-center text-white">
                   <ShoppingCart size={64} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                     {activeTab === 'cart' && 'Your cart is empty'}
@@ -332,7 +332,7 @@ const CartPage: React.FC = () => {
             {/* Order Summary */}
             {activeTab === 'cart' && items.length > 0 && (
               <div className="space-y-4">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm sticky top-4 space-y-6">
+                <div className="bg-white/10 rounded-lg p-6 sticky top-4 space-y-6 text-white">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Order summary</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Taxes and fees calculated at checkout</p>
@@ -427,7 +427,7 @@ const CartPage: React.FC = () => {
                 </div>
 
                 {/* Trust Info */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+                <div className="bg-white/10 rounded-lg p-6 text-white">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Why LinkDAO checkout?</h3>
                   <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <li className="flex items-start gap-2">

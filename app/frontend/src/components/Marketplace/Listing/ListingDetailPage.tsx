@@ -159,7 +159,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
           description: mockData.description,
           price: 0.001,
           currency: 'ETH',
-          images: mockData.images,
+          images: Array.from(mockData.images),
           category: mockData.category,
           condition: 'New',
           seller: {
@@ -207,7 +207,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
             description: mockData.description,
             price: 0.001,
             currency: 'ETH',
-            images: mockData.images,
+            images: Array.from(mockData.images),
             category: mockData.category,
             condition: 'New',
             seller: {

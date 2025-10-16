@@ -225,13 +225,13 @@ const OrdersPage: React.FC = () => {
 
   return (
     <Layout title="Orders - LinkDAO Marketplace" fullWidth={true}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marketplace</span>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Order History & Tracking</h1>
-              <p className="text-gray-600 dark:text-gray-300 max-w-2xl mt-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Order history & tracking</h1>
+              <p className="text-gray-600 dark:text-gray-300 text-base max-w-2xl">
                 Monitor escrow releases, shipping progress, and DAO dispute outcomes across every marketplace purchase.
               </p>
             </div>
@@ -247,7 +247,7 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {stats && (
-          <GlassPanel variant="secondary" className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-white">
             <div>
               <p className="text-xs uppercase tracking-wide text-white/60">Total orders</p>
               <p className="text-2xl font-semibold text-white mt-2">{stats.totalOrders}</p>
@@ -264,7 +264,7 @@ const OrdersPage: React.FC = () => {
               <p className="text-xs uppercase tracking-wide text-white/60">Disputed</p>
               <p className="text-2xl font-semibold text-red-300 mt-2">{stats.disputedOrders}</p>
             </div>
-          </GlassPanel>
+          </div>
         )}
         {statsError && (
           <GlassPanel variant="secondary" className="p-4 text-sm text-white/70">
@@ -288,7 +288,7 @@ const OrdersPage: React.FC = () => {
           ))}
         </div>
 
-        <GlassPanel variant="primary" className="p-6 space-y-6">
+        <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-white flex items-center gap-2">
               <ShoppingBag size={20} />
@@ -314,7 +314,7 @@ const OrdersPage: React.FC = () => {
               {filteredOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-5"
+                  className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/20 transition flex flex-col md:flex-row md:items-center md:justify-between gap-6 p-5 text-white"
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <img
@@ -368,7 +368,8 @@ const OrdersPage: React.FC = () => {
               ))}
             </div>
           )}
-        </GlassPanel>
+        </div>
+        </div>
       </div>
     </Layout>
   );
