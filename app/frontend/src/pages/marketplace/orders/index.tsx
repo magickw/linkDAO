@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '@/components/Layout';
 import { orderService } from '@/services/orderService';
 import type { OrderStatus, OrderStatistics } from '@/types/order';
@@ -122,6 +122,7 @@ const OrdersPage: React.FC = () => {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [stats, setStats] = useState<OrderStatistics | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const errorToastShownRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,7 +172,10 @@ const OrdersPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load orders', error);
-        addToast('Unable to fetch orders. Showing recent activity instead.', 'warning');
+        if (!errorToastShownRef.current) {
+          addToast('Unable to fetch orders. Showing recent activity instead.', 'warning');
+          errorToastShownRef.current = true;
+        }
         if (!cancelled) {
           const localOrders = sessionStorage.getItem(RECENT_ORDERS_KEY);
           setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
@@ -221,7 +225,7 @@ const OrdersPage: React.FC = () => {
 
   return (
     <Layout title="Orders - LinkDAO Marketplace" fullWidth={true}>
-      <div className="space-y-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-4">
           <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marketplace</span>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">

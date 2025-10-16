@@ -160,26 +160,30 @@ function AppContent({ Component, pageProps, router }: AppProps) {
           memoryMonitor.start();
         }
 
-        // Initialize service worker
-        swUtilRef.current = new ServiceWorkerUtil({
-          onUpdate: (registration) => {
-            console.log('App update available');
-            setUpdateAvailable(true);
-          },
-          onSuccess: (registration) => {
-            console.log('Service worker registered successfully');
-          },
-          onError: (error) => {
-            console.error('Service worker registration failed:', error);
-          }
-        });
+        // Initialize service worker (production only to avoid dev interference)
+        if (process.env.NODE_ENV === 'production') {
+          swUtilRef.current = new ServiceWorkerUtil({
+            onUpdate: (registration) => {
+              console.log('App update available');
+              setUpdateAvailable(true);
+            },
+            onSuccess: (registration) => {
+              console.log('Service worker registered successfully');
+            },
+            onError: (error) => {
+              console.error('Service worker registration failed:', error);
+            }
+          });
 
-        await swUtilRef.current.init();
+          await swUtilRef.current.init();
 
-        // Monitor network status
-        const networkStatus = swUtilRef.current.getNetworkStatus();
-        networkStatus.addListener(setIsOnline);
-        setIsOnline(networkStatus.getNetworkStatus());
+          // Monitor network status
+          const networkStatus = swUtilRef.current.getNetworkStatus();
+          networkStatus.addListener(setIsOnline);
+          setIsOnline(networkStatus.getNetworkStatus());
+        } else {
+          console.log('Service Worker disabled in development');
+        }
 
         performanceMonitor.measure('app_init');
       } catch (error) {

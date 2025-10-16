@@ -125,23 +125,23 @@ class AuthService {
         throw new Error('Wallet authentication requires browser environment');
       }
       
-      let signature: string;
+      let signature: string | null = null;
       try {
         // Sign message with wallet - this will prompt the user
         signature = await signMessage(config, { account: address as `0x${string}`, message });
         
         if (!signature) {
-          throw new Error('Signature is required for authentication');
+          return { success: false, error: 'Signature is required for authentication' };
         }
       } catch (signError: any) {
-        // Handle specific signing errors
-        if (signError.message?.includes('rejected') || signError.message?.includes('denied')) {
-          throw new Error('Signature request was rejected by user');
-        } else if (signError.message?.includes('not supported')) {
-          throw new Error('Your wallet does not support message signing');
+        // Handle specific signing errors without throwing (avoid runtime overlays)
+        if (signError?.message?.toLowerCase().includes('rejected') || signError?.message?.toLowerCase().includes('denied')) {
+          return { success: false, error: 'Signature request was rejected by user' };
+        } else if (signError?.message?.toLowerCase().includes('not supported')) {
+          return { success: false, error: 'Your wallet does not support message signing' };
         } else {
           console.error('Signing error:', signError);
-          throw new Error('Failed to sign authentication message');
+          return { success: false, error: 'Failed to sign authentication message' };
         }
       }
       

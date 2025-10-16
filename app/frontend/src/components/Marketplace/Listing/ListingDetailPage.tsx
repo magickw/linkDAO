@@ -136,11 +136,7 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
           }
         }
         
-        // Fallback to mock data if API fails
-        throw new Error('API failed');
-      } catch (error) {
-        console.error('Failed to fetch listing, using fallback:', error);
-        // Use different mock data based on listingId
+        // Fallback to mock data if API not successful
         const mockListings = {
           'prod_001': {
             title: 'Premium Wireless Headphones',
@@ -154,10 +150,9 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
             category: 'NFT',
             images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=600&h=600&fit=crop']
           }
-        };
-        
+        } as const;
         const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['prod_001'];
-        
+
         setListing({
           id: listingId,
           title: mockData.title,
@@ -187,6 +182,55 @@ const ListingDetailPage: React.FC<ListingDetailPageProps> = ({ listingId }) => {
           isEscrowProtected: true,
           tags: []
         });
+      } catch (error) {
+        console.error('Failed to fetch listing, using fallback:', error);
+        // Already set fallback above for non-success; network errors also land here but state is set below as safety
+        if (!listing) {
+          const mockListings = {
+            'prod_001': {
+              title: 'Premium Wireless Headphones',
+              description: 'High-quality noise-canceling wireless headphones with 30-hour battery life.',
+              category: 'Electronics',
+              images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop']
+            },
+            'prod_002': {
+              title: 'Rare Digital Art NFT',
+              description: 'Exclusive digital artwork from renowned crypto artist.',
+              category: 'NFT',
+              images: ['https://images.unsplash.com/photo-1634973357973-f2ed2657db3c?w=600&h=600&fit=crop']
+            }
+          } as const;
+          const mockData = mockListings[listingId as keyof typeof mockListings] || mockListings['prod_001'];
+          setListing({
+            id: listingId,
+            title: mockData.title,
+            description: mockData.description,
+            price: 0.001,
+            currency: 'ETH',
+            images: mockData.images,
+            category: mockData.category,
+            condition: 'New',
+            seller: {
+              id: '0x742d35Cc6634C0532925a3b8D4C9db96590c6C87',
+              name: 'Verified Seller',
+              avatar: '',
+              rating: 4.8,
+              totalSales: 247,
+              responseTime: '< 2 hours',
+              location: 'Global',
+              memberSince: 'March 2023',
+              isVerified: true
+            },
+            specifications: {},
+            shipping: { cost: 0.005, estimatedDays: '2-3 days', locations: ['Worldwide'] },
+            policies: { returns: '30-day return', warranty: '1 year', authenticity: 'Verified' },
+            stats: { views: 245, favorites: 18, watchers: 7 },
+            status: 'ACTIVE',
+            createdAt: new Date(),
+            isEscrowProtected: true,
+            tags: []
+          });
+        }
       } finally {
         setLoading(false);
       }

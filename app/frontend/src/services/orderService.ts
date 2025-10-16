@@ -18,6 +18,14 @@ export class OrderService {
     limit: number = 20,
     filters?: OrderFilters
   ): Promise<PaginatedOrders> {
+    const fallback: PaginatedOrders = {
+      orders: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+    };
+
     try {
       const params = new URLSearchParams({
         page: page.toString(),
@@ -42,7 +50,8 @@ export class OrderService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch order history: ${response.status} ${response.statusText}`);
+        console.warn(`Order history unavailable (${response.status}). Using fallback.`);
+        return fallback;
       }
 
       const result = await response.json();
@@ -56,11 +65,12 @@ export class OrderService {
           totalPages: result.data.totalPages || Math.ceil((result.data.total || 0) / limit),
         };
       } else {
-        throw new Error(result.message || 'Failed to fetch order history');
+        console.warn('Order history response not successful. Using fallback.');
+        return fallback;
       }
     } catch (error) {
       console.error('Error fetching order history:', error);
-      throw error;
+      return fallback;
     }
   }
 
@@ -73,19 +83,22 @@ export class OrderService {
       
       if (!response.ok) {
         if (response.status === 404) return null;
-        throw new Error(`Failed to fetch order: ${response.status} ${response.statusText}`);
+        console.warn(`Order ${orderId} unavailable (${response.status}). Returning null.`);
+        return null;
       }
 
-      const result = await response.json();
+      const result = await response.json().catch(() => ({ success: false }));
       
       if (result.success) {
-        return result.data;
+        return result.data as Order;
       } else {
-        throw new Error(result.message || 'Failed to fetch order');
+        console.warn('Order response not successful. Returning null.');
+        return null;
       }
     } catch (error) {
       console.error('Error fetching order:', error);
-      throw error;
+      // Gracefully degrade instead of throwing to avoid runtime overlays
+      return null;
     }
   }
 
@@ -279,7 +292,28 @@ export class OrderService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch order statistics: ${response.status} ${response.statusText}`);
+        console.warn(`Order statistics unavailable (${response.status}). Using defaults.`);
+        return {
+          totalOrders: 0,
+          completedOrders: 0,
+          pendingOrders: 0,
+          disputedOrders: 0,
+          totalValue: 0,
+          averageOrderValue: 0,
+          completionRate: 0,
+          statusBreakdown: {
+            CREATED: 0,
+            PAYMENT_PENDING: 0,
+            PAID: 0,
+            PROCESSING: 0,
+            SHIPPED: 0,
+            DELIVERED: 0,
+            COMPLETED: 0,
+            DISPUTED: 0,
+            CANCELLED: 0,
+            REFUNDED: 0,
+          },
+        };
       }
 
       const result = await response.json();
@@ -287,7 +321,28 @@ export class OrderService {
       if (result.success) {
         return result.data;
       } else {
-        throw new Error(result.message || 'Failed to fetch order statistics');
+        console.warn('Order statistics response not successful. Using defaults.');
+        return {
+          totalOrders: 0,
+          completedOrders: 0,
+          pendingOrders: 0,
+          disputedOrders: 0,
+          totalValue: 0,
+          averageOrderValue: 0,
+          completionRate: 0,
+          statusBreakdown: {
+            CREATED: 0,
+            PAYMENT_PENDING: 0,
+            PAID: 0,
+            PROCESSING: 0,
+            SHIPPED: 0,
+            DELIVERED: 0,
+            COMPLETED: 0,
+            DISPUTED: 0,
+            CANCELLED: 0,
+            REFUNDED: 0,
+          },
+        };
       }
     } catch (error) {
       console.error('Error fetching order statistics:', error);

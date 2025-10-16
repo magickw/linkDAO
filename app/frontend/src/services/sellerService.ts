@@ -153,73 +153,75 @@ class SellerService {
 
   // Onboarding Flow
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
+    const defaultSteps: OnboardingStep[] = [
+      {
+        id: 'wallet-connect',
+        title: 'Connect Wallet',
+        description: 'Connect your Web3 wallet to get started',
+        component: 'WalletConnect',
+        required: true,
+        completed: true,
+      },
+      {
+        id: 'profile-setup',
+        title: 'Profile Setup',
+        description: 'Set up your seller profile and store information',
+        component: 'ProfileSetup',
+        required: true,
+        completed: false,
+      },
+      {
+        id: 'verification',
+        title: 'Verification',
+        description: 'Verify your email and phone for enhanced features',
+        component: 'Verification',
+        required: false,
+        completed: false,
+      },
+      {
+        id: 'payout-setup',
+        title: 'Payout Setup',
+        description: 'Configure your payment preferences',
+        component: 'PayoutSetup',
+        required: true,
+        completed: false,
+      },
+      {
+        id: 'first-listing',
+        title: 'Create First Listing',
+        description: 'Create your first product listing',
+        component: 'FirstListing',
+        required: true,
+        completed: false,
+      },
+    ];
+
     try {
       const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint (using plural 'sellers' as per memory)
-      const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/api/sellers/onboarding/${walletAddress}`  // Server-side direct call
-        : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}`;  // Client-side through proxy
+      const endpoint = typeof window === 'undefined'
+        ? `${baseUrl}/api/sellers/onboarding/${walletAddress}`
+        : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}`;
       console.log(`Making GET request to: ${endpoint}`);
       const response = await fetch(endpoint);
       console.log(`Response status: ${response.status}`);
+
+      // Gracefully handle 404/5xx by returning defaults instead of throwing
       if (!response.ok) {
-        throw new Error(`Failed to fetch onboarding steps: ${response.status} ${response.statusText}`);
+        console.warn(`Onboarding steps unavailable (${response.status}). Using defaults.`);
+        return defaultSteps;
       }
       
-      const result = await response.json();
+      const result = await response.json().catch(() => ({ success: false }));
       console.log(`Response data:`, result);
-      // The backend returns { success: true, data: [...] }
-      // We need to return the data array
-      if (result.success) {
-        return Array.isArray(result.data) ? result.data : [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch onboarding steps');
+      if (result?.success && Array.isArray(result.data)) {
+        return result.data as OnboardingStep[];
       }
+
+      console.warn('Onboarding steps response not successful. Using defaults.');
+      return defaultSteps;
     } catch (error) {
       console.error('Error fetching onboarding steps:', error);
-      // Return default onboarding steps if there's an error
-      return [
-        {
-          id: 'wallet-connect',
-          title: 'Connect Wallet',
-          description: 'Connect your Web3 wallet to get started',
-          component: 'WalletConnect',
-          required: true,
-          completed: true // Assumed completed if we're here
-        },
-        {
-          id: 'profile-setup',
-          title: 'Profile Setup',
-          description: 'Set up your seller profile and store information',
-          component: 'ProfileSetup',
-          required: true,
-          completed: false
-        },
-        {
-          id: 'verification',
-          title: 'Verification',
-          description: 'Verify your email and phone for enhanced features',
-          component: 'Verification',
-          required: false,
-          completed: false
-        },
-        {
-          id: 'payout-setup',
-          title: 'Payout Setup',
-          description: 'Configure your payment preferences',
-          component: 'PayoutSetup',
-          required: true,
-          completed: false
-        },
-        {
-          id: 'first-listing',
-          title: 'Create First Listing',
-          description: 'Create your first product listing',
-          component: 'FirstListing',
-          required: true,
-          completed: false
-        }
-      ];
+      return defaultSteps;
     }
   }
 

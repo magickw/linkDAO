@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { orderService } from '@/services/orderService';
@@ -72,6 +72,7 @@ const OrderDetailPage: React.FC = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [timeline, setTimeline] = useState<OrderEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const errorToastShownRef = useRef(false);
 
   useEffect(() => {
     if (!orderId || typeof orderId !== 'string') return;
@@ -108,7 +109,10 @@ const OrderDetailPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to load order', error);
-        addToast('Unable to load order details. Showing local history if available.', 'warning');
+        if (!errorToastShownRef.current) {
+          addToast('Unable to load order details. Showing local history if available.', 'warning');
+          errorToastShownRef.current = true;
+        }
         const fallback = loadFallbackOrder(orderId);
         if (fallback) {
           setOrder(fallback);
@@ -159,7 +163,7 @@ const OrderDetailPage: React.FC = () => {
 
   return (
     <Layout title={`Order ${order.id} - LinkDAO Marketplace`} fullWidth={true}>
-      <div className="max-w-5xl mx-auto space-y-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-4">
           <button
             onClick={() => router.back()}
