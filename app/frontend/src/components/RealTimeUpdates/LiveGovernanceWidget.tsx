@@ -28,8 +28,8 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
   showVotingProgress = true,
   autoRefresh = true
 }) => {
-  // Ensure communityId is always a valid string
-  const communityId = propCommunityId && typeof propCommunityId === 'string' 
+  // Ensure communityId is always a valid string with more defensive checking
+  const communityId = propCommunityId && typeof propCommunityId === 'string' && propCommunityId.length > 0
     ? propCommunityId 
     : 'default-community';
     
@@ -42,7 +42,7 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
   // Get governance updates for this community with stable reference
   const updates = useMemo(() =>
     getGovernanceUpdates(communityId).slice(0, maxProposals),
-    [governanceUpdates, communityId, maxProposals]
+    [communityId, maxProposals, governanceUpdates]
   );
 
   // Handle voting progress animations
@@ -50,16 +50,21 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
     if (updates.length === 0) return;
 
     const timeouts: NodeJS.Timeout[] = [];
+    let hasChanges = false;
 
+    // Check if any updates have actually changed
     updates.forEach(update => {
-      setAnimationStates(prev => {
-        const currentState = prev.get(update.proposalId);
-        const hasChanged = !currentState ||
-          currentState.forVotes !== update.votingProgress.for ||
-          currentState.againstVotes !== update.votingProgress.against ||
-          currentState.abstainVotes !== update.votingProgress.abstain;
+      const currentState = animationStates.get(update.proposalId);
+      const updateHasChanged = !currentState ||
+        currentState.forVotes !== update.votingProgress.for ||
+        currentState.againstVotes !== update.votingProgress.against ||
+        currentState.abstainVotes !== update.votingProgress.abstain;
 
-        if (hasChanged) {
+      if (updateHasChanged) {
+        hasChanges = true;
+        
+        // Set animation state
+        setAnimationStates(prev => {
           const newStates = new Map(prev);
           newStates.set(update.proposalId, {
             forVotes: update.votingProgress.for,
@@ -68,32 +73,35 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
             isAnimating: true,
             lastUpdate: update.timestamp
           });
-
-          // Reset animation after duration
-          const timeout = setTimeout(() => {
-            setAnimationStates(prevState => {
-              const newStates = new Map(prevState);
-              const state = newStates.get(update.proposalId);
-              if (state) {
-                newStates.set(update.proposalId, { ...state, isAnimating: false });
-              }
-              return newStates;
-            });
-          }, 2000);
-
-          timeouts.push(timeout);
           return newStates;
-        }
+        });
 
-        return prev;
-      });
+        // Reset animation after duration
+        const timeout = setTimeout(() => {
+          setAnimationStates(prevState => {
+            const newStates = new Map(prevState);
+            const state = newStates.get(update.proposalId);
+            if (state) {
+              newStates.set(update.proposalId, { ...state, isAnimating: false });
+            }
+            return newStates;
+          });
+        }, 2000);
+
+        timeouts.push(timeout);
+      }
     });
+
+    // Only trigger state updates if there are actual changes
+    if (!hasChanges) {
+      return;
+    }
 
     // Cleanup timeouts
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
     };
-  }, [updates]); // Only depend on updates
+  }, [updates, animationStates]); // Depend on both updates and animationStates
 
   // Auto-refresh governance data
   useEffect(() => {

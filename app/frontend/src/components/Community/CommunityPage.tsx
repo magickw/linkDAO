@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { Community } from '../../models/Community';
 import { CommunityService } from '../../services/communityService';
-import { CommunityHeader } from './CommunityHeader';
+import CommunityHeader from '../CommunityManagement/CommunityHeader';
 import { CommunityPostList } from './CommunityPostList';
 import { CommunitySidebar } from './CommunitySidebar';
 import { CommunityRules } from './CommunityRules';
@@ -270,12 +270,15 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
       <div className="community-page">
         {/* Community Header */}
         <CommunityHeader
-          community={community}
-          stats={stats}
-          membershipStatus={membershipStatus}
-          onJoinLeave={handleJoinLeave}
+          community={{
+            ...community,
+            onlineCount: stats?.activeMembers || 0,
+            isJoined: membershipStatus.isMember,
+            canModerate: canUserModerate
+          } as any}
+          isJoined={membershipStatus.isMember}
+          onJoinToggle={handleJoinLeave}
           canModerate={canUserModerate}
-          isConnected={isConnected}
         />
 
         {/* Main Content Area */}

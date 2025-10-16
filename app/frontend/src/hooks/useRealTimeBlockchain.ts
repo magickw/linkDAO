@@ -247,7 +247,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds]);
+  }, []); // Empty dependency array to prevent re-running on governanceUpdates changes
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };
