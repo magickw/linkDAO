@@ -31,7 +31,7 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
   const safeTokenAddress = tokenAddress && typeof tokenAddress === 'string' && tokenAddress.length > 0
     ? tokenAddress
     : '0x0000000000000000000000000000000000000000'; // Default token address
-  const { tokenPrices, getTokenPrice, forceUpdate } = useRealTimeTokenPrices([safeTokenAddress]);
+  const { tokenPrices, getTokenPrice } = useRealTimeTokenPrices([safeTokenAddress]); // Remove forceUpdate
   
   const [animationState, setAnimationState] = useState<PriceAnimationState>({
     currentPrice: 0,
@@ -48,15 +48,22 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
   // Handle price updates with animation
   useEffect(() => {
     if (tokenData && tokenData.price !== animationState.currentPrice) {
-      const direction = tokenData.price > animationState.currentPrice ? 'up' : 
-                       tokenData.price < animationState.currentPrice ? 'down' : 'neutral';
-      
-      setAnimationState(prev => ({
-        currentPrice: tokenData.price,
-        previousPrice: prev.currentPrice,
-        isAnimating: true,
-        direction
-      }));
+      setAnimationState(prev => {
+        // Only update if the price has actually changed
+        if (tokenData.price === prev.currentPrice) {
+          return prev;
+        }
+
+        const direction = tokenData.price > prev.currentPrice ? 'up' :
+                         tokenData.price < prev.currentPrice ? 'down' : 'neutral';
+
+        return {
+          currentPrice: tokenData.price,
+          previousPrice: prev.currentPrice,
+          isAnimating: true,
+          direction
+        };
+      });
 
       setLastUpdateTime(tokenData.timestamp);
 
@@ -67,16 +74,10 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
 
       return () => clearTimeout(animationTimeout);
     }
-  }, [tokenData, animationState.currentPrice, safeTokenAddress]);
+  }, [tokenData?.price, tokenData?.timestamp, safeTokenAddress]);
 
-  // Force update on interval
-  useEffect(() => {
-    const interval = setInterval(() => {
-      forceUpdate(safeTokenAddress);
-    }, updateInterval);
-
-    return () => clearInterval(interval);
-  }, [safeTokenAddress, updateInterval]); // Removed forceUpdate from dependencies
+  // Remove the interval that was causing the infinite loop
+  // The hook already handles periodic updates
 
   // Format price for display
   const formatPrice = (price: number): string => {

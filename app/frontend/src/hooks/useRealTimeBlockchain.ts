@@ -98,7 +98,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [tokenAddresses]);
+  }, [tokenAddresses.join(',')]);
 
   return { tokenPrices, getTokenPrice, forceUpdate };
 };

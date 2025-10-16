@@ -103,17 +103,6 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
     };
   }, [updates, animationStates]); // Depend on both updates and animationStates
 
-  // Auto-refresh governance data
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      forceUpdate(communityId);
-    }, 60000); // Refresh every 15 seconds
-
-    return () => clearInterval(interval);
-  }, [communityId, autoRefresh]);
-
   // Toggle proposal expansion
   const toggleProposal = (proposalId: string) => {
     setExpandedProposals(prev => {
