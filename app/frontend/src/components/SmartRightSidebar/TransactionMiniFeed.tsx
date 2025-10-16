@@ -17,11 +17,11 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
 
   // Detect new transactions for animation - use stable reference
   const [previousTransactionIds, setPreviousTransactionIds] = useState<Set<string>>(new Set());
-  
+
   useEffect(() => {
     const currentIds = new Set(transactions.map(tx => tx.id));
     const newIds = new Set([...currentIds].filter(id => !previousTransactionIds.has(id)));
-    
+
     if (newIds.size > 0 && previousTransactionIds.size > 0) { // Don't animate on initial load
       setNewTransactionIds(newIds);
       // Clear the new transaction indicators after animation
@@ -29,9 +29,9 @@ const TransactionMiniFeed = React.memo(function TransactionMiniFeed({
         setNewTransactionIds(new Set());
       }, 2000);
     }
-    
+
     setPreviousTransactionIds(currentIds);
-  }, [transactions.length, transactions.map(tx => tx.id).join(',')]); // Use stable dependencies
+  }, [transactions]); // Only depend on transactions array reference
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

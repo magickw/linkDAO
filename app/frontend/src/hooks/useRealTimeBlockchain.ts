@@ -194,7 +194,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
       ...prev,
       [communityId]: [mockUpdate, ...(prev[communityId] || [])].slice(0, 5)
     }));
-  }, [governanceUpdates]);
+  }, []); // Remove governanceUpdates from dependencies
 
   useEffect(() => {
     // Initialize mock governance data
@@ -243,7 +243,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds, minApiCallInterval]);
+  }, [communityIds]); // minApiCallInterval is a constant, remove from dependencies
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };

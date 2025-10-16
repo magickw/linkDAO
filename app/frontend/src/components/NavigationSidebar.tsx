@@ -57,7 +57,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
         setLoading(true);
         setError(null);
         
-        // Get user's memberships with fallback for 503 errors
+        // Get user's memberships with fallback for network errors
         let rawMemberships: CommunityMembership[] = [];
         try {
           rawMemberships = await CommunityMembershipService.getUserMemberships(address, {
@@ -65,15 +65,10 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
             limit: 20
           });
         } catch (err) {
-          // Handle 503 Service Unavailable specifically
-          if (err instanceof Error && err.message.includes('503')) {
-            console.warn('Backend service unavailable, using empty memberships');
-            // Continue with empty memberships instead of throwing
-            rawMemberships = [];
-          } else {
-            // Re-throw other errors
-            throw err;
-          }
+          // Handle network errors (503, Failed to fetch, ECONNREFUSED, etc.)
+          console.warn('Backend service unavailable, using empty memberships:', err);
+          // Continue with empty memberships instead of crashing
+          rawMemberships = [];
         }
         
         // Defensive: ensure array

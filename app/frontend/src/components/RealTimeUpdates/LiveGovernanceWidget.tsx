@@ -2,12 +2,12 @@
  * Live governance widget with real-time voting progress and results updates
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRealTimeGovernance } from '../../hooks/useRealTimeBlockchain';
 import { GovernanceUpdate } from '../../services/realTimeBlockchainService';
 
 interface LiveGovernanceWidgetProps {
-  communityId: string;
+  communityId?: string;
   className?: string;
   maxProposals?: number;
   showVotingProgress?: boolean;
@@ -23,35 +23,43 @@ interface VotingProgressAnimationState {
 }
 
 export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
-  communityId,
+  communityId: propCommunityId,
   className = '',
   maxProposals = 5,
   showVotingProgress = true,
   autoRefresh = true
 }) => {
+  // Ensure communityId is always a string
+  const communityId = propCommunityId && typeof propCommunityId === 'string' 
+    ? propCommunityId 
+    : 'default-community';
+    
   const { governanceUpdates, getGovernanceUpdates, forceUpdate } = useRealTimeGovernance([communityId]);
   
   const [animationStates, setAnimationStates] = useState<Map<string, VotingProgressAnimationState>>(new Map());
   const [expandedProposals, setExpandedProposals] = useState<Set<string>>(new Set());
 
-  // Get governance updates for this community
-  const updates = getGovernanceUpdates(communityId).slice(0, maxProposals);
+  // Get governance updates for this community with stable reference
+  const updates = useMemo(() =>
+    getGovernanceUpdates(communityId).slice(0, maxProposals),
+    [governanceUpdates, communityId, maxProposals]
+  );
 
   // Handle voting progress animations
   useEffect(() => {
     if (updates.length === 0) return;
 
     const timeouts: NodeJS.Timeout[] = [];
-    
-    updates.forEach(update => {
-      const currentState = animationStates.get(update.proposalId);
-      const hasChanged = !currentState || 
-        currentState.forVotes !== update.votingProgress.for ||
-        currentState.againstVotes !== update.votingProgress.against ||
-        currentState.abstainVotes !== update.votingProgress.abstain;
 
-      if (hasChanged) {
-        setAnimationStates(prev => {
+    updates.forEach(update => {
+      setAnimationStates(prev => {
+        const currentState = prev.get(update.proposalId);
+        const hasChanged = !currentState ||
+          currentState.forVotes !== update.votingProgress.for ||
+          currentState.againstVotes !== update.votingProgress.against ||
+          currentState.abstainVotes !== update.votingProgress.abstain;
+
+        if (hasChanged) {
           const newStates = new Map(prev);
           newStates.set(update.proposalId, {
             forVotes: update.votingProgress.for,
@@ -60,30 +68,32 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
             isAnimating: true,
             lastUpdate: update.timestamp
           });
+
+          // Reset animation after duration
+          const timeout = setTimeout(() => {
+            setAnimationStates(prevState => {
+              const newStates = new Map(prevState);
+              const state = newStates.get(update.proposalId);
+              if (state) {
+                newStates.set(update.proposalId, { ...state, isAnimating: false });
+              }
+              return newStates;
+            });
+          }, 2000);
+
+          timeouts.push(timeout);
           return newStates;
-        });
+        }
 
-        // Reset animation after duration
-        const timeout = setTimeout(() => {
-          setAnimationStates(prev => {
-            const newStates = new Map(prev);
-            const state = newStates.get(update.proposalId);
-            if (state) {
-              newStates.set(update.proposalId, { ...state, isAnimating: false });
-            }
-            return newStates;
-          });
-        }, 2000);
-
-        timeouts.push(timeout);
-      }
+        return prev;
+      });
     });
 
     // Cleanup timeouts
     return () => {
       timeouts.forEach(timeout => clearTimeout(timeout));
     };
-  }, [updates, animationStates]); // Added animationStates to dependencies
+  }, [updates]); // Only depend on updates
 
   // Auto-refresh governance data
   useEffect(() => {
