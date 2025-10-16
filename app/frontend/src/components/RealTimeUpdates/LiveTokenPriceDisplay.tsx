@@ -45,7 +45,7 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
   useEffect(() => {
     if (tokenData && tokenData.price !== animationState.currentPrice) {
       const direction = tokenData.price > animationState.currentPrice ? 'up' : 
-                       tokenData.price < animationState.currentPrice ? 'down' : 'neutral';
+                       tokenData.price < animationData.currentPrice ? 'down' : 'neutral';
       
       setAnimationState(prev => ({
         currentPrice: tokenData.price,
@@ -63,7 +63,7 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
 
       return () => clearTimeout(animationTimeout);
     }
-  }, [tokenData, animationState.currentPrice]);
+  }, [tokenData]); // Removed animationState.currentPrice from dependencies
 
   // Force update on interval
   useEffect(() => {
@@ -72,7 +72,7 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
     }, updateInterval);
 
     return () => clearInterval(interval);
-  }, [tokenAddress, updateInterval, forceUpdate]);
+  }, [tokenAddress, updateInterval]); // Removed forceUpdate from dependencies
 
   // Format price for display
   const formatPrice = (price: number): string => {

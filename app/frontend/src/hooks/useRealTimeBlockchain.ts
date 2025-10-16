@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Mock types for real-time blockchain data
 interface TokenPriceData {
@@ -31,13 +31,34 @@ interface GovernanceUpdate {
 // Mock hook for real-time token prices
 export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
   const [tokenPrices, setTokenPrices] = useState<Record<string, TokenPriceData>>({});
+  const lastApiCallTime = useRef<number>(0);
+  const minApiCallInterval = 60000; // 1 minute minimum between API calls
 
   const getTokenPrice = useCallback((address: string) => {
     return tokenPrices[address];
   }, [tokenPrices]);
 
   const forceUpdate = useCallback((address: string) => {
-    // Mock price update
+    // Rate limiting check
+    const now = Date.now();
+    if (now - lastApiCallTime.current < minApiCallInterval) {
+      console.log('Rate limiting API call, using mock data instead');
+      // Use mock data if rate limited
+      setTokenPrices(prev => ({
+        ...prev,
+        [address]: {
+          price: prev[address]?.price || Math.random() * 100,
+          change24h: (Math.random() - 0.5) * 20,
+          timestamp: new Date()
+        }
+      }));
+      return;
+    }
+
+    // Update last API call time
+    lastApiCallTime.current = now;
+
+    // Mock price update (in a real app, this would call an actual API)
     setTokenPrices(prev => ({
       ...prev,
       [address]: {
@@ -68,7 +89,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [tokenAddresses, forceUpdate]);
+  }, [tokenAddresses]);
 
   return { tokenPrices, getTokenPrice, forceUpdate };
 };
@@ -182,7 +203,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds, forceUpdate]);
+  }, [communityIds]);
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };

@@ -228,10 +228,10 @@ const OrdersPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
         <div className="flex flex-col gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="bg-white/10 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 text-white">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Order history & tracking</h1>
-              <p className="text-gray-600 dark:text-gray-300 text-base max-w-2xl">
+              <h1 className="text-3xl font-bold text-white tracking-tight">Order history & tracking</h1>
+              <p className="text-white/70 text-base max-w-2xl">
                 Monitor escrow releases, shipping progress, and DAO dispute outcomes across every marketplace purchase.
               </p>
             </div>

@@ -74,7 +74,7 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
         return () => clearTimeout(timeout);
       }
     });
-  }, [updates, animationStates]);
+  }, [updates]);
 
   // Auto-refresh governance data
   useEffect(() => {
@@ -85,7 +85,7 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
     }, 15000); // Refresh every 15 seconds
 
     return () => clearInterval(interval);
-  }, [communityId, autoRefresh, forceUpdate]);
+  }, [communityId, autoRefresh]);
 
   // Toggle proposal expansion
   const toggleProposal = (proposalId: string) => {

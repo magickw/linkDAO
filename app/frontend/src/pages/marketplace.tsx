@@ -479,10 +479,10 @@ const MarketplaceContent: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        <div className="bg-white/10 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 text-white">
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Web3 Marketplace</h1>
-              <p className="text-gray-600 dark:text-gray-300 text-base">
+              <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
+              <p className="text-white/70 text-base">
                 Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
               </p>
             </div>
@@ -529,8 +529,8 @@ const MarketplaceContent: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <aside className="space-y-4 lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm space-y-4 lg:sticky lg:top-24">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Search</h2>
+            <div className="bg-white/10 rounded-2xl p-5 space-y-4 lg:sticky lg:top-24 text-white">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/70">Search</h2>
               <SearchBar
                 value={searchTerm}
                 onChange={setSearchTerm}
@@ -539,7 +539,7 @@ const MarketplaceContent: React.FC = () => {
               />
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm">
+            <div className="bg-white/10 rounded-2xl p-5 text-white">
               <FilterBar
                 filters={filters}
                 onFiltersChange={setFilters}
@@ -556,7 +556,7 @@ const MarketplaceContent: React.FC = () => {
               onClearAll={handleClearAllFilters}
             />
 
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-white/10 rounded-2xl p-4 text-white">
               <div className="flex items-center gap-3 text-sm">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -591,12 +591,12 @@ const MarketplaceContent: React.FC = () => {
           ) : (
             <div>
               {filteredAndSortedListings.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm text-center py-12 px-6">
-                  <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="bg-white/10 rounded-2xl text-center py-12 px-6 text-white">
+                  <svg className="mx-auto h-12 w-12 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                   </svg>
-                  <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No items found</h3>
-                  <p className="mt-2 text-gray-600 dark:text-gray-400">
+                  <h3 className="mt-4 text-lg font-medium text-white">No items found</h3>
+                  <p className="mt-2 text-white/70">
                     {searchTerm || Object.keys(filters).length > 0
                       ? 'No items match your search criteria. Try adjusting your filters.'
                       : 'No listings available at the moment. Check back soon!'}

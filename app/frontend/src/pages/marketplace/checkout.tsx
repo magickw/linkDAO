@@ -67,14 +67,14 @@ const CheckoutPage: React.FC = () => {
     <Layout title="Secure Checkout - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 text-white">
-        <div className="space-y-2">
-          <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <div className="bg-white/10 rounded-2xl p-6 space-y-2">
+          <span className="text-sm text-white/60 uppercase tracking-wider">
             Checkout
           </span>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-4xl font-bold text-white">
             Complete your purchase
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl">
+          <p className="text-lg text-white/70 max-w-3xl">
             Escrow-protected payments, DAO-backed dispute resolution, and NFT receipts ensure
             every order is trustworthy.
           </p>
@@ -88,7 +88,7 @@ const CheckoutPage: React.FC = () => {
         />
         </div>
 
-        <GlassPanel variant="secondary" className="p-6 space-y-3">
+        <div className="bg-white/10 rounded-2xl p-6 space-y-3">
           <h2 className="text-xl font-semibold text-white">Need help?</h2>
           <p className="text-white/70">
             Questions about escrow, shipping, or disputes? Visit our support center for detailed
@@ -97,7 +97,7 @@ const CheckoutPage: React.FC = () => {
           <Button variant="outline" onClick={() => router.push('/support/disputes')}>
             Open Support Center
           </Button>
-        </GlassPanel>
+        </div>
         </div>
       </div>
     </Layout>

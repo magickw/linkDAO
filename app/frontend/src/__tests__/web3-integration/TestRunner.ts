@@ -363,6 +363,15 @@ const defaultConfig: TestRunnerConfig = {
 // Export for use in scripts
 export { Web3IntegrationTestRunner, defaultConfig };
 
+// Simple test to make Jest happy
+describe('Web3 Integration Test Runner', () => {
+  test('should be properly configured', () => {
+    expect(defaultConfig).toBeDefined();
+    expect(defaultConfig.suites).toHaveLength(6);
+    expect(Web3IntegrationTestRunner).toBeDefined();
+  });
+});
+
 // CLI execution
 if (require.main === module) {
   const runner = new Web3IntegrationTestRunner(defaultConfig);

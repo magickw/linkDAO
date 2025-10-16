@@ -177,14 +177,31 @@ class DisputeService {
    */
   async getDisputeAnalytics(timeRange?: string): Promise<DisputeAnalytics> {
     const params = timeRange ? `?timeRange=${timeRange}` : '';
-    return this.makeRequest(`/disputes/analytics${params}`);
+    try {
+      return await this.makeRequest(`/disputes/analytics${params}`);
+    } catch (err) {
+      console.warn('Dispute analytics unavailable, returning defaults');
+      return {
+        totalDisputes: 0,
+        resolvedDisputes: 0,
+        averageResolutionTime: 0,
+        disputesByType: {},
+        verdictsByType: {},
+        successRateByArbitrator: {},
+      };
+    }
   }
 
   /**
    * Get user's dispute history
    */
   async getUserDisputeHistory(): Promise<DisputeDetails[]> {
-    return this.makeRequest('/disputes/user/history');
+    try {
+      return await this.makeRequest('/disputes/user/history');
+    } catch (err) {
+      console.warn('User dispute history unavailable, returning empty list');
+      return [];
+    }
   }
 
   /**

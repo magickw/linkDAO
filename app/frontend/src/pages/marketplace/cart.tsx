@@ -95,8 +95,8 @@ const CartPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           {/* Header */}
           <div className="bg-white/10 rounded-2xl p-6 flex flex-col gap-2 text-white">
-            <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marketplace</span>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Shopping Cart</h1>
+            <span className="text-sm text-white/60 uppercase tracking-wider">Marketplace</span>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Shopping Cart</h1>
           </div>
 
           {/* Tabs */}
@@ -314,12 +314,12 @@ const CartPage: React.FC = () => {
               ) : (
                 <div className="bg-white/10 rounded-2xl p-12 text-center text-white">
                   <ShoppingCart size={64} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  <h2 className="text-xl font-semibold text-white mb-2">
                     {activeTab === 'cart' && 'Your cart is empty'}
                     {activeTab === 'saved' && 'No saved items'}
                     {activeTab === 'wishlist' && 'Your wishlist is empty'}
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  <p className="text-white/70 mb-6">
                     Browse the marketplace to find products you love.
                   </p>
                   <Button variant="primary" onClick={() => router.push('/marketplace')}>

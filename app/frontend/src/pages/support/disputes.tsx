@@ -51,22 +51,21 @@ const DisputesSupportPage: React.FC = () => {
   return (
     <Layout title="Support & Disputes - LinkDAO Marketplace" fullWidth={true}>
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 text-white">
         <div className="flex flex-col gap-4">
-          <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+          <div className="bg-white/10 rounded-2xl p-6 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
             <div className="space-y-3">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+              <h1 className="text-4xl font-bold text-white flex items-center gap-3">
                 <ShieldAlert size={36} className="text-red-400" />
                 Resolve a marketplace dispute
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
+              <p className="text-white/70 max-w-2xl">
                 LinkDAO protects buyers and sellers through escrow and community arbitration. Start a dispute,
                 submit evidence, and involve the DAO if needed—all from one dashboard.
               </p>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => router.push('/orders')}>
+              <Button variant="outline" onClick={() => router.push('/marketplace/orders')}>
                 View your orders
               </Button>
               <Button variant="primary" onClick={() => router.push('/marketplace')}>
@@ -76,7 +75,7 @@ const DisputesSupportPage: React.FC = () => {
           </div>
         </div>
 
-        <GlassPanel variant="secondary" className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white/10 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="space-y-1">
             <p className="text-xs uppercase tracking-wide text-white/60">Total cases</p>
             <p className="text-2xl font-semibold text-white">
@@ -101,10 +100,10 @@ const DisputesSupportPage: React.FC = () => {
               {stats ? stats.userDisputes : isStatsLoading ? '—' : '0'}
             </p>
           </div>
-        </GlassPanel>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <GlassPanel variant="primary" className="p-6 space-y-4">
+          <div className="bg-white/10 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-3 text-white">
               <LifeBuoy size={20} />
               <h2 className="text-lg font-semibold">Support checklist</h2>
@@ -117,9 +116,9 @@ const DisputesSupportPage: React.FC = () => {
             <Button variant="outline" onClick={() => window.open('/docs/disputes', '_blank')}>
               View dispute playbook
             </Button>
-          </GlassPanel>
+          </div>
 
-          <GlassPanel variant="secondary" className="p-6 space-y-4">
+          <div className="bg-white/10 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-3 text-white">
               <MessageSquare size={20} />
               <h2 className="text-lg font-semibold">Need live help?</h2>
@@ -130,9 +129,9 @@ const DisputesSupportPage: React.FC = () => {
             <Button variant="primary" onClick={() => window.open('https://discord.gg/linkdao', '_blank')}>
               Open Discord support
             </Button>
-          </GlassPanel>
+          </div>
 
-          <GlassPanel variant="secondary" className="p-6 space-y-4">
+          <div className="bg-white/10 rounded-2xl p-6 space-y-4">
             <div className="flex items-center gap-3 text-white">
               <BookOpen size={20} />
               <h2 className="text-lg font-semibold">DAO governance</h2>
@@ -144,16 +143,16 @@ const DisputesSupportPage: React.FC = () => {
             <Button variant="outline" onClick={() => router.push('/governance')}>
               View governance portal
             </Button>
-          </GlassPanel>
+          </div>
         </div>
 
-        <GlassPanel variant="primary" className="p-6">
+        <div className="bg-white/10 rounded-2xl p-6">
           <DisputeResolutionPanel
             orderId={orderId}
             userRole="buyer"
             className="space-y-6"
           />
-        </GlassPanel>
+        </div>
         </div>
       </div>
     </Layout>
