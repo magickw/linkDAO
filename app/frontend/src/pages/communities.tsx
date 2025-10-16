@@ -6,19 +6,16 @@ import Layout from '@/components/Layout';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 // Web3-Native Community Enhancement Components
-import { LiveTokenPriceDisplay } from '@/components/RealTimeUpdates/LiveTokenPriceDisplay';
 import { LivePostUpdates } from '@/components/RealTimeUpdates/LivePostUpdates';
-import { LiveGovernanceWidget } from '@/components/RealTimeUpdates/LiveGovernanceWidget';
 import { StakingIndicator } from '@/components/Staking/StakingIndicator';
 import { BoostButton } from '@/components/Staking/BoostButton';
 import { RealTimeStakingUpdates } from '@/components/Staking/RealTimeStakingUpdates';
 import { EnhancedLeftSidebar } from '@/components/CommunityEnhancements/EnhancedLeftSidebar/EnhancedLeftSidebar';
-import SmartRightSidebar from '@/components/SmartRightSidebar/SmartRightSidebar';
+import CommunityRightSidebar from '@/components/Community/CommunityRightSidebar';
 import TokenReactionSystem from '@/components/TokenReactionSystem/TokenReactionSystem';
 import { EnhancedTipButton } from '@/components/Web3PostInteractions/EnhancedTipButton';
 import { OnChainVerificationBadge } from '@/components/OnChainVerification/OnChainVerificationBadge';
 import { ExplorerLinkButton } from '@/components/OnChainVerification/ExplorerLinkButton';
-import { TrendingCommunitiesSection } from '@/components/CommunityDiscovery/TrendingCommunitiesSection';
 import { AdvancedSearchInterface } from '@/components/CommunityDiscovery/AdvancedSearchInterface';
 
 // Mobile Web3 Components (preserve existing functionality)
@@ -766,29 +763,7 @@ const CommunitiesPage: React.FC = () => {
             <meta name="description" content="Discover and join decentralized communities with Web3 enhancements" />
           </Head>
 
-          {/* Enhanced Header */}
-          <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 mb-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Communities</h1>
-
-                {/* Governance Notifications */}
-                {governanceNotifications > 0 && (
-                  <button
-                    onClick={() => router.push('/governance')}
-                    className="relative p-2 text-gray-600 hover:text-gray-900 bg-gray-100 rounded-lg"
-                  >
-                    <Vote className="w-6 h-6" />
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {governanceNotifications}
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
+          <div className="grid grid-cols-12 gap-6 w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl pt-6">
             {/* Enhanced Left Sidebar */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-4">
@@ -1067,86 +1042,14 @@ const CommunitiesPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Enhanced Right Sidebar */}
+            {/* Community-Focused Right Sidebar */}
             <div className="col-span-12 lg:col-span-3">
-              <div className="sticky top-24 space-y-4">
-                {/* Smart Right Sidebar with Web3 Features */}
-                <SmartRightSidebar
-                  context="community"
-                  className="space-y-4"
-                />
-
-                {/* Trending Communities Section */}
-                <TrendingCommunitiesSection
+              <div className="sticky top-24">
+                <CommunityRightSidebar
+                  communities={communityList}
+                  joinedCommunityIds={joinedCommunities}
                   onCommunitySelect={handleCommunitySelect}
-                  onViewAll={() => router.push('/communities/trending')}
-                  maxItems={5}
-                  showComparison={true}
                 />
-
-                {/* Live Governance Widget */}
-                <LiveGovernanceWidget
-                  communityId="global"
-                  className="bg-white rounded-lg shadow-sm border"
-                  maxProposals={3}
-                  showVotingProgress={true}
-                  autoRefresh={true}
-                />
-
-                {/* Real-Time Staking Updates */}
-                <RealTimeStakingUpdates
-                  communityIds={joinedCommunities}
-                  className="bg-white rounded-lg shadow-sm border"
-                  showAnimations={true}
-                />
-
-                {/* Enhanced Community Stats */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
-                    Community Stats
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">Total Communities</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {communityList.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">Joined</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {joinedCommunities.length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">Total Staked</span>
-                      <span className="font-medium text-green-600">
-                        {Object.values(stakingData).reduce((sum, data) => sum + (data.totalStaked || 0), 0).toLocaleString()} LDAO
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">Governance Power</span>
-                      <span className="font-medium text-blue-600">
-                        {Object.values(tokenBalances).reduce((sum, balance) => sum + balance, 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Live Token Prices */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm">
-                    Live Token Prices
-                  </h3>
-                  <div className="space-y-3">
-                    <LiveTokenPriceDisplay
-                      tokenAddress="0x1234567890123456789012345678901234567890"
-                      displayFormat="detailed"
-                      showChange={true}
-                      className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           </div>

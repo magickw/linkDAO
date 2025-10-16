@@ -26,6 +26,7 @@ interface GovernanceUpdate {
     abstain: number;
   };
   timestamp: Date;
+  communityId?: string; // Add optional communityId property
 }
 
 // Mock hook for real-time token prices
@@ -187,14 +188,15 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
         against: Math.floor(Math.random() * 500),
         abstain: Math.floor(Math.random() * 200)
       },
-      timestamp: new Date()
+      timestamp: new Date(),
+      communityId // Add communityId to the mock update
     };
 
     setGovernanceUpdates(prev => ({
       ...prev,
       [communityId]: [mockUpdate, ...(prev[communityId] || [])].slice(0, 5)
     }));
-  }, []); // Remove governanceUpdates from dependencies
+  }, []);
 
   useEffect(() => {
     // Initialize mock governance data
@@ -209,7 +211,8 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
             against: Math.floor(Math.random() * 500),
             abstain: Math.floor(Math.random() * 200)
           },
-          timestamp: new Date()
+          timestamp: new Date(),
+          communityId // Add communityId to the mock update
         }
       ];
     });
@@ -231,7 +234,8 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
               against: Math.floor(Math.random() * 500),
               abstain: Math.floor(Math.random() * 200)
             },
-            timestamp: new Date()
+            timestamp: new Date(),
+            communityId // Add communityId to the mock update
           };
 
           setGovernanceUpdates(prev => ({
@@ -243,7 +247,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds]); // minApiCallInterval is a constant, remove from dependencies
+  }, [communityIds]);
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };

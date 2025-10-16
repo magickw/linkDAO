@@ -4,7 +4,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRealTimeGovernance } from '../../hooks/useRealTimeBlockchain';
-import { GovernanceUpdate } from '../../services/realTimeBlockchainService';
 
 interface LiveGovernanceWidgetProps {
   communityId?: string;
@@ -29,11 +28,12 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
   showVotingProgress = true,
   autoRefresh = true
 }) => {
-  // Ensure communityId is always a string
+  // Ensure communityId is always a valid string
   const communityId = propCommunityId && typeof propCommunityId === 'string' 
     ? propCommunityId 
     : 'default-community';
     
+  // Pass communityId as an array to the hook
   const { governanceUpdates, getGovernanceUpdates, forceUpdate } = useRealTimeGovernance([communityId]);
   
   const [animationStates, setAnimationStates] = useState<Map<string, VotingProgressAnimationState>>(new Map());
