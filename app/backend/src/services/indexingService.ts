@@ -66,7 +66,7 @@ export class IndexingService {
     this.setupEventListeners();
     
     // Start polling for new blocks
-    setInterval(() => this.pollNewBlocks(), 10000); // Poll every 10 seconds
+    setInterval(() => this.pollNewBlocks(), 60000); // Poll every 1 minute
   }
 
   private setupEventListeners(): void {

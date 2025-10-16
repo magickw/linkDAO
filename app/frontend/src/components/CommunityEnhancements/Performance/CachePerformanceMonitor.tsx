@@ -59,7 +59,7 @@ const CachePerformanceMonitor: React.FC<{
     updateStats();
     
     if (autoRefresh) {
-      const interval = setInterval(updateStats, 5000); // Update every 5 seconds
+      const interval = setInterval(updateStats, 30000); // Update every 5 seconds
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);

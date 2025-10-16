@@ -1,10 +1,12 @@
 import { DatabaseService } from './databaseService';
+import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
 import { eq, and } from "drizzle-orm";
 import { follows } from '../db/schema';
 import { db } from '../db';
 
-const databaseService = new DatabaseService();
+// Use the singleton instance instead of creating a new one
+// const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
 
 export class FollowService {

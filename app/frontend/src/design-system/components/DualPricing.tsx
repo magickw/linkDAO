@@ -62,7 +62,7 @@ export const DualPricing: React.FC<DualPricingProps> = ({
   showToggle = false,
   showChange = true,
   showLastUpdated = false,
-  updateInterval = 30000, // 30 seconds
+  updateInterval = 120000, // 2 minutes
   trackHistory = false,
   supportedCurrencies = ['USD', 'EUR', 'GBP', 'JPY', 'CAD'],
   conversionApi,

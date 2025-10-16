@@ -32,7 +32,7 @@ describe('LiveTokenPriceDisplay', () => {
     tokenAddress: '0x1234567890123456789012345678901234567890',
     displayFormat: 'detailed' as const,
     showChange: true,
-    updateInterval: 5000,
+    updateInterval: 60000, // Changed from 5000 to 60000 (1 minute)
   };
 
   beforeEach(() => {
@@ -233,12 +233,12 @@ describe('LiveTokenPriceDisplay', () => {
   it('respects custom update interval', async () => {
     jest.useFakeTimers();
     
-    render(<LiveTokenPriceDisplay {...mockProps} updateInterval={10000} />);
+    render(<LiveTokenPriceDisplay {...mockProps} updateInterval={60000} />); // Changed from 10000 to 60000
 
     const mockGetTokenPrice = require('@/services/web3/tokenPriceService').getTokenPrice;
     
     // Fast-forward time
-    jest.advanceTimersByTime(10000);
+    jest.advanceTimersByTime(60000); // Changed from 10000 to 60000
 
     await waitFor(() => {
       expect(mockGetTokenPrice).toHaveBeenCalledTimes(2); // Initial + one interval

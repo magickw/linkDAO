@@ -4,6 +4,7 @@ import { eq, and, or, ilike, desc, lt, sql } from "drizzle-orm";
 import { ValidationHelper, ValidationError } from "../models/validation";
 import postgres from 'postgres';
 import dotenv from "dotenv";
+import { db as databaseInstance } from '../db/index';
 
 dotenv.config();
 
@@ -17,23 +18,15 @@ export class DatabaseService {
 
   private initializeDatabase() {
     try {
-      const connectionString = process.env.DATABASE_URL;
-      
-      if (!connectionString) {
-        console.warn('No DATABASE_URL provided. Database operations will be disabled.');
+      // Use the database instance from db/index.ts
+      if (databaseInstance) {
+        this.db = databaseInstance;
+        this.isConnected = true;
+        console.log('✅ Database service initialized successfully');
+      } else {
+        console.warn('⚠️ Database service running in offline mode - no database connection available');
         this.isConnected = false;
-        return;
       }
-
-      const sql = postgres(connectionString, {
-        max: 20,
-        idle_timeout: 20,
-        connect_timeout: 10,
-      });
-
-      this.db = drizzle(sql, { schema });
-      this.isConnected = true;
-      console.log('✅ Database service initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize database service:', error);
       this.isConnected = false;

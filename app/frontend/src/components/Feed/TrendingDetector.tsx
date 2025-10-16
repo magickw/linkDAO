@@ -54,7 +54,7 @@ const TRENDING_WEIGHTS = {
 export default function TrendingDetector({
   posts,
   onTrendingUpdate,
-  updateInterval = 30000, // 30 seconds
+  updateInterval = 120000, // 2 minutes
   enabled = true
 }: TrendingDetectorProps) {
   // State

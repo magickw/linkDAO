@@ -1,9 +1,10 @@
 import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
-import { DatabaseService } from './databaseService';
+import { databaseService } from './databaseService'; // Import the singleton instance
 import { users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
-const databaseService = new DatabaseService();
+// Use the singleton instance instead of creating a new one
+// const databaseService = new DatabaseService();
 
 export interface EnhancedCreateUserProfileInput extends CreateUserProfileInput {
   email?: string;

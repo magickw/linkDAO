@@ -24,10 +24,14 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
   tokenAddress,
   displayFormat = 'compact',
   showChange = true,
-  updateInterval = 10000,
+  updateInterval = 60000,
   className = ''
 }) => {
-  const { tokenPrices, getTokenPrice, forceUpdate } = useRealTimeTokenPrices([tokenAddress]);
+  // Defensive check for tokenAddress
+  const safeTokenAddress = tokenAddress && typeof tokenAddress === 'string' && tokenAddress.length > 0
+    ? tokenAddress
+    : '0x0000000000000000000000000000000000000000'; // Default token address
+  const { tokenPrices, getTokenPrice, forceUpdate } = useRealTimeTokenPrices([safeTokenAddress]);
   
   const [animationState, setAnimationState] = useState<PriceAnimationState>({
     currentPrice: 0,
@@ -39,7 +43,7 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
   // Get current token price data
-  const tokenData = getTokenPrice(tokenAddress);
+  const tokenData = getTokenPrice(safeTokenAddress);
 
   // Handle price updates with animation
   useEffect(() => {
@@ -63,16 +67,16 @@ export const LiveTokenPriceDisplay: React.FC<LiveTokenPriceDisplayProps> = ({
 
       return () => clearTimeout(animationTimeout);
     }
-  }, [tokenData, animationState.currentPrice]);
+  }, [tokenData, animationState.currentPrice, safeTokenAddress]);
 
   // Force update on interval
   useEffect(() => {
     const interval = setInterval(() => {
-      forceUpdate(tokenAddress);
+      forceUpdate(safeTokenAddress);
     }, updateInterval);
 
     return () => clearInterval(interval);
-  }, [tokenAddress, updateInterval]); // Removed forceUpdate from dependencies
+  }, [safeTokenAddress, updateInterval]); // Removed forceUpdate from dependencies
 
   // Format price for display
   const formatPrice = (price: number): string => {

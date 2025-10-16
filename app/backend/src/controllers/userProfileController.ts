@@ -46,7 +46,7 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new AppError(403, 'You can only update your own profile');
+      throw new AppError('You can only update your own profile', 403);
     }
     
     const profile = await userProfileService.updateProfile(id, input);
@@ -66,7 +66,7 @@ export class UserProfileController {
     }
     
     if (req.user?.walletAddress !== existingProfile.walletAddress) {
-      throw new AppError(403, 'You can only delete your own profile');
+      throw new AppError('You can only delete your own profile', 403);
     }
     
     const deleted = await userProfileService.deleteProfile(id);

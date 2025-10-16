@@ -109,7 +109,7 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
 
     const interval = setInterval(() => {
       forceUpdate(communityId);
-    }, 15000); // Refresh every 15 seconds
+    }, 60000); // Refresh every 15 seconds
 
     return () => clearInterval(interval);
   }, [communityId, autoRefresh]);
@@ -326,7 +326,7 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>Updates every 15 seconds</span>
+          <span>Updates every minute</span>
           <button 
             onClick={() => forceUpdate(communityId)}
             className="text-blue-600 hover:text-blue-800 transition-colors"

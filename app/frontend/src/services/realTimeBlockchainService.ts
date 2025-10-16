@@ -64,9 +64,9 @@ export class RealTimeBlockchainService {
   private lastPostUpdate: Map<string, Date> = new Map();
 
   // Update intervals (in milliseconds)
-  private readonly PRICE_UPDATE_INTERVAL = 10000; // 10 seconds
-  private readonly GOVERNANCE_UPDATE_INTERVAL = 15000; // 15 seconds
-  private readonly POST_UPDATE_INTERVAL = 5000; // 5 seconds
+  private readonly PRICE_UPDATE_INTERVAL = 60000; // 1 minute
+  private readonly GOVERNANCE_UPDATE_INTERVAL = 120000; // 2 minutes
+  private readonly POST_UPDATE_INTERVAL = 30000; // 30 seconds
 
   static getInstance(): RealTimeBlockchainService {
     if (!RealTimeBlockchainService.instance) {

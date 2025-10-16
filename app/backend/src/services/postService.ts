@@ -1,9 +1,10 @@
 import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { MetadataService } from './metadataService';
-import { DatabaseService } from './databaseService';
+import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
 
-const databaseService = new DatabaseService();
+// Use the singleton instance instead of creating a new one
+// const databaseService = new DatabaseService();
 const userProfileService = new UserProfileService();
 
 export class PostService {

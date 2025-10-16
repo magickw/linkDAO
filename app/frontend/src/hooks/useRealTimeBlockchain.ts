@@ -33,7 +33,7 @@ interface GovernanceUpdate {
 export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
   const [tokenPrices, setTokenPrices] = useState<Record<string, TokenPriceData>>({});
   const lastApiCallTime = useRef<number>(0);
-  const minApiCallInterval = 60000; // 1 minute minimum between API calls
+  const minApiCallInterval = 60000; // 2 minute minimum between API calls
 
   const getTokenPrice = useCallback((address: string) => {
     return tokenPrices[address];
@@ -82,7 +82,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
     });
     setTokenPrices(mockData);
 
-    // Update prices every 10 seconds
+    // Update prices every 60 seconds
     const interval = setInterval(() => {
       setTokenPrices(prev => {
         const updated = { ...prev };
@@ -95,7 +95,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
         });
         return updated;
       });
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [tokenAddresses]);
@@ -162,7 +162,7 @@ export const useRealTimePostActivity = (postIds: string[]) => {
 export const useRealTimeGovernance = (communityIds: string[]) => {
   const [governanceUpdates, setGovernanceUpdates] = useState<Record<string, GovernanceUpdate[]>>({});
   const lastApiCallTime = useRef<number>(0);
-  const minApiCallInterval = 30000; // 30 seconds minimum between API calls
+  const minApiCallInterval = 120000; // 2 minutes minimum between API calls
 
   const getGovernanceUpdates = useCallback((communityId: string) => {
     return governanceUpdates[communityId] || [];
@@ -218,7 +218,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     });
     setGovernanceUpdates(mockData);
 
-    // Update governance data every 20 seconds
+    // Update governance data every 60 seconds
     const interval = setInterval(() => {
       communityIds.forEach(communityId => {
         // Rate limiting check
@@ -244,7 +244,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
           }));
         }
       });
-    }, 20000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []); // Empty dependency array to prevent re-running on governanceUpdates changes
