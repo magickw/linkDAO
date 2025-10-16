@@ -5,6 +5,7 @@ import { useToast } from '@/context/ToastContext';
 import { SearchService, RecommendationOptions } from '@/services/searchService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
 import { Community } from '@/models/Community';
+import type { CommunityMembership } from '@/models/CommunityMembership';
 import { UserProfile } from '@/models/UserProfile';
 import { LoadingSkeletons } from '@/components/LoadingSkeletons';
 import { EmptyState, RetryState } from '@/components/FallbackStates';
@@ -73,7 +74,7 @@ export default function RecommendationSystem({
       // Load user's joined communities if connected
       if (isConnected && address && (type === 'communities' || type === 'both')) {
         try {
-          let memberships = [];
+          let memberships: CommunityMembership[] = [];
           try {
             memberships = await CommunityMembershipService.getUserMemberships(address);
           } catch (err) {

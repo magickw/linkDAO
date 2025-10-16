@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Community } from '@/models/Community';
+import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityService } from '@/services/communityService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
 import { useWeb3 } from '@/context/Web3Context';
@@ -68,7 +69,7 @@ export default function CommunityDiscovery({ onCommunitySelect, className = '' }
       // Load user's joined communities if connected
       if (isConnected && address) {
         try {
-          let memberships = [];
+          let memberships: CommunityMembership[] = [];
           try {
             memberships = await CommunityMembershipService.getUserMemberships(address);
           } catch (err) {

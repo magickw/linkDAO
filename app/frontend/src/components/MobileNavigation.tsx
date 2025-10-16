@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { governanceService } from '@/services/governanceService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
+import type { CommunityMembership } from '@/models/CommunityMembership';
 import { useAccount } from 'wagmi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
@@ -78,7 +79,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       try {
         if (!address) { if (active) setGovernancePending(0); return; }
         // Get user's joined communities with fallback for 503 errors
-        let memberships = [];
+        let memberships: CommunityMembership[] = [];
         try {
           memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
         } catch (err) {
@@ -92,7 +93,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             throw err;
           }
         }
-        const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
+        const communityIds = new Set(memberships.map(m => m.communityId));
         const proposals = await governanceService.getAllActiveProposals();
         const count = Array.isArray(proposals)
           ? proposals.filter((p: any) => (p.status === 'ACTIVE' || p.status === 'active') && communityIds.has(p.communityId) && (p.canVote ?? true)).length

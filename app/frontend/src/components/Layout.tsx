@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { governanceService } from '@/services/governanceService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
+import type { CommunityMembership } from '@/models/CommunityMembership';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -112,7 +113,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       try {
         if (!address) { if (active) setGovernancePending(0); return; }
         // Get user's joined communities with fallback for 503 errors
-        let memberships = [];
+        let memberships: CommunityMembership[] = [];
         try {
           memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
         } catch (err) {
@@ -126,7 +127,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
             throw err;
           }
         }
-        const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
+        const communityIds = new Set(memberships.map(m => m.communityId));
         // Fetch active proposals across all and filter to joined communities only
         const proposals = await governanceService.getAllActiveProposals();
         const count = Array.isArray(proposals)

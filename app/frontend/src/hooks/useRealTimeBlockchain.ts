@@ -83,13 +83,21 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
 
     // Update prices every 10 seconds
     const interval = setInterval(() => {
-      tokenAddresses.forEach(address => {
-        forceUpdate(address);
+      setTokenPrices(prev => {
+        const updated = { ...prev };
+        tokenAddresses.forEach(address => {
+          updated[address] = {
+            price: Math.random() * 100,
+            change24h: (Math.random() - 0.5) * 20,
+            timestamp: new Date()
+          };
+        });
+        return updated;
       });
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [tokenAddresses, forceUpdate]);
+  }, [tokenAddresses]);
 
   return { tokenPrices, getTokenPrice, forceUpdate };
 };
@@ -194,7 +202,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     communityIds.forEach(communityId => {
       mockData[communityId] = [
         {
-          proposalId: `prop-${Math.random().toString(36).substr(2, 9)}`,
+          proposalId: `prop-${Math.random().toString(36).substring(2, 11)}`,
           status: 'active',
           votingProgress: {
             for: Math.floor(Math.random() * 1000),
@@ -210,12 +218,32 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     // Update governance data every 20 seconds
     const interval = setInterval(() => {
       communityIds.forEach(communityId => {
-        forceUpdate(communityId);
+        // Rate limiting check
+        const now = Date.now();
+        if (now - lastApiCallTime.current >= minApiCallInterval) {
+          lastApiCallTime.current = now;
+
+          const mockUpdate: GovernanceUpdate = {
+            proposalId: `prop-${Math.random().toString(36).substring(2, 11)}`,
+            status: ['active', 'passed', 'failed'][Math.floor(Math.random() * 3)] as any,
+            votingProgress: {
+              for: Math.floor(Math.random() * 1000),
+              against: Math.floor(Math.random() * 500),
+              abstain: Math.floor(Math.random() * 200)
+            },
+            timestamp: new Date()
+          };
+
+          setGovernanceUpdates(prev => ({
+            ...prev,
+            [communityId]: [mockUpdate, ...(prev[communityId] || [])].slice(0, 5)
+          }));
+        }
       });
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds, forceUpdate]);
+  }, [communityIds, minApiCallInterval]);
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };

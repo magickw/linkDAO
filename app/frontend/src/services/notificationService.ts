@@ -224,7 +224,22 @@ class NotificationService {
             email: true,
             push: true,
             inApp: true,
-            categories: ['mentions', 'replies', 'likes', 'follows', 'community']
+            enablePush: true,
+            enableSound: true,
+            enableDesktop: true,
+            categories: {
+              direct_message: { enabled: true, push: true, sound: true },
+              post_reaction: { enabled: true, push: true, sound: true },
+              comment_mention: { enabled: true, push: true, sound: true },
+              community_invite: { enabled: true, push: true, sound: true },
+              governance_proposal: { enabled: true, push: true, sound: true },
+              system_alert: { enabled: true, push: true, sound: true }
+            },
+            quietHours: {
+              enabled: false,
+              startTime: '22:00',
+              endTime: '08:00'
+            }
           };
         }
         if (response.status === 429) {
@@ -234,7 +249,22 @@ class NotificationService {
             email: true,
             push: true,
             inApp: true,
-            categories: ['mentions', 'replies', 'likes', 'follows', 'community']
+            enablePush: true,
+            enableSound: true,
+            enableDesktop: true,
+            categories: {
+              direct_message: { enabled: true, push: true, sound: true },
+              post_reaction: { enabled: true, push: true, sound: true },
+              comment_mention: { enabled: true, push: true, sound: true },
+              community_invite: { enabled: true, push: true, sound: true },
+              governance_proposal: { enabled: true, push: true, sound: true },
+              system_alert: { enabled: true, push: true, sound: true }
+            },
+            quietHours: {
+              enabled: false,
+              startTime: '22:00',
+              endTime: '08:00'
+            }
           };
         }
         throw new Error('Failed to fetch notification preferences');

@@ -30,9 +30,25 @@ export class PostService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — throw appropriate error
+          const error = await response.json();
+          throw new Error(error.error || 'Unauthorized to create post');
+        }
+        if (response.status === 503) {
+          // Service unavailable - throw appropriate error to prevent data loss
+          console.warn('Post service unavailable (503), cannot create post');
+          throw new Error('Post service temporarily unavailable. Please try again later.');
+        }
+        if (response.status === 429) {
+          // Rate limited - throw appropriate error
+          console.warn('Post service rate limited (429), cannot create post');
+          throw new Error('Too many requests. Please wait before creating another post.');
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create post');
+        throw new Error(error.error || `Failed to create post (HTTP ${response.status})`);
       }
       
       return response.json();
@@ -127,9 +143,24 @@ export class PostService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return empty array in context where user may not be logged in
+          return [];
+        }
+        if (response.status === 503) {
+          // Service unavailable - return empty array instead of throwing to prevent UI crashes
+          console.warn('Post service unavailable (503), returning empty array');
+          return [];
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty array instead of throwing to prevent UI crashes
+          console.warn('Post service rate limited (429), returning empty array');
+          return [];
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch posts');
+        throw new Error(error.error || `Failed to fetch posts (HTTP ${response.status})`);
       }
       
       return response.json();
@@ -164,9 +195,24 @@ export class PostService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return empty array in context where user may not be logged in
+          return [];
+        }
+        if (response.status === 503) {
+          // Service unavailable - return empty array instead of throwing to prevent UI crashes
+          console.warn('Post service unavailable (503), returning empty array');
+          return [];
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty array instead of throwing to prevent UI crashes
+          console.warn('Post service rate limited (429), returning empty array');
+          return [];
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch posts');
+        throw new Error(error.error || `Failed to fetch posts (HTTP ${response.status})`);
       }
       
       return response.json();
@@ -203,9 +249,25 @@ export class PostService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — throw appropriate error
+          const error = await response.json();
+          throw new Error(error.error || 'Unauthorized to update post');
+        }
+        if (response.status === 503) {
+          // Service unavailable - throw appropriate error
+          console.warn('Post service unavailable (503), cannot update post');
+          throw new Error('Post service temporarily unavailable. Please try again later.');
+        }
+        if (response.status === 429) {
+          // Rate limited - throw appropriate error
+          console.warn('Post service rate limited (429), cannot update post');
+          throw new Error('Too many requests. Please wait before updating the post again.');
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to update post');
+        throw new Error(error.error || `Failed to update post (HTTP ${response.status})`);
       }
       
       return response.json();
@@ -240,12 +302,28 @@ export class PostService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
           return false;
         }
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return false
+          console.warn('Unauthorized to delete post');
+          return false;
+        }
+        if (response.status === 503) {
+          // Service unavailable - return false to prevent UI crashes
+          console.warn('Post service unavailable (503), cannot delete post');
+          return false;
+        }
+        if (response.status === 429) {
+          // Rate limited - return false to prevent UI crashes
+          console.warn('Post service rate limited (429), cannot delete post');
+          return false;
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to delete post');
+        throw new Error(error.error || `Failed to delete post (HTTP ${response.status})`);
       }
       
       return true;

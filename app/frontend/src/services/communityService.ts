@@ -137,12 +137,27 @@ export class CommunityService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
         if (response.status === 404) {
           return null;
         }
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return null in context where user may not be logged in
+          return null;
+        }
+        if (response.status === 503) {
+          // Service unavailable - return null instead of throwing to prevent UI crashes
+          console.warn('Community service unavailable (503), returning null');
+          return null;
+        }
+        if (response.status === 429) {
+          // Rate limited - return null instead of throwing to prevent UI crashes
+          console.warn('Community service rate limited (429), returning null');
+          return null;
+        }
         const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || 'Failed to fetch community');
+        throw new Error((error && (error.error || error.message)) || `Failed to fetch community (HTTP ${response.status})`);
       }
       
       const json = await safeJson(response);
@@ -199,9 +214,24 @@ export class CommunityService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return empty array in context where user may not be logged in
+          return [];
+        }
+        if (response.status === 503) {
+          // Service unavailable - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community service unavailable (503), returning empty array');
+          return [];
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community service rate limited (429), returning empty array');
+          return [];
+        }
         const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || 'Failed to fetch communities');
+        throw new Error((error && (error.error || error.message)) || `Failed to fetch communities (HTTP ${response.status})`);
       }
       
       const json = await safeJson(response);
@@ -324,9 +354,24 @@ export class CommunityService {
       
       clearTimeout(timeoutId);
       
+      // Gracefully handle common non-success statuses
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return empty array in context where user may not be logged in
+          return [];
+        }
+        if (response.status === 503) {
+          // Service unavailable - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community service unavailable (503), returning empty array');
+          return [];
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community service rate limited (429), returning empty array');
+          return [];
+        }
         const error = await safeJson(response);
-        throw new Error((error && (error.error || error.message)) || 'Failed to search communities');
+        throw new Error((error && (error.error || error.message)) || `Failed to search communities (HTTP ${response.status})`);
       }
       
       const json = await safeJson(response);

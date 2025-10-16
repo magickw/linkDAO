@@ -17,6 +17,7 @@ import { GlassPanel } from '@/design-system';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
+import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -57,7 +58,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
         setError(null);
         
         // Get user's memberships with fallback for 503 errors
-        let rawMemberships = [];
+        let rawMemberships: CommunityMembership[] = [];
         try {
           rawMemberships = await CommunityMembershipService.getUserMemberships(address, {
             isActive: true,
@@ -76,8 +77,8 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
         }
         
         // Defensive: ensure array
-        const memberships = Array.isArray(rawMemberships) ? rawMemberships : [];
-        const roleByCommunityId = new Map(memberships.map(m => [m.communityId, m.role]));
+        const memberships: CommunityMembership[] = Array.isArray(rawMemberships) ? rawMemberships : [];
+        const roleByCommunityId = new Map<string, CommunityRole>(memberships.map(m => [m.communityId, m.role]));
         
         // Get community details for each membership
         const communityPromises = memberships.map(membership => 

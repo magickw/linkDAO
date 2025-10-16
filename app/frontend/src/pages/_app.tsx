@@ -260,10 +260,17 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
 export default function App({ Component, pageProps, router }: AppProps) {
   const [mounted, setMounted] = React.useState(false);
-  
+
   React.useEffect(() => setMounted(true), []);
-  
-  if (!mounted) return null;
+
+  // Render a minimal placeholder during SSR to prevent CSS HMR issues
+  if (!mounted) {
+    return (
+      <div style={{ display: 'none' }} suppressHydrationWarning>
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
