@@ -77,7 +77,21 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
     (async () => {
       try {
         if (!address) { if (active) setGovernancePending(0); return; }
-        const memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        // Get user's joined communities with fallback for 503 errors
+        let memberships = [];
+        try {
+          memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        } catch (err) {
+          // Handle 503 Service Unavailable specifically
+          if (err instanceof Error && err.message.includes('503')) {
+            console.warn('Backend service unavailable, using empty memberships for governance count');
+            // Continue with empty memberships instead of throwing
+            memberships = [];
+          } else {
+            // Re-throw other errors
+            throw err;
+          }
+        }
         const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
         const proposals = await governanceService.getAllActiveProposals();
         const count = Array.isArray(proposals)

@@ -426,17 +426,17 @@ class TestImplementationValidator {
                 acc[result.category].push(result);
                 return acc;
               }, {})
-            ).map(([category, requirements]: [string, any[]]) => `
+            ).map(([category, requirements]) => `
                 <div class="category">
                     <div class="category-header">
                         <h3>${category}</h3>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${(requirements.filter(r => r.implemented).length / requirements.length) * 100}%"></div>
+                            <div class="progress-fill" style="width: ${((requirements as any[]).filter(r => r.implemented).length / (requirements as any[]).length) * 100}%"></div>
                         </div>
-                        <p>${requirements.filter(r => r.implemented).length}/${requirements.length} requirements implemented</p>
+                        <p>${(requirements as any[]).filter(r => r.implemented).length}/${(requirements as any[]).length} requirements implemented</p>
                     </div>
                     <div class="category-body">
-                        ${requirements.map(req => `
+                        ${(requirements as any[]).map(req => `
                             <div class="requirement">
                                 <div class="requirement-text">
                                     <div class="requirement-title">${req.requirement}</div>

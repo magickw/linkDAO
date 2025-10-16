@@ -77,8 +77,22 @@ export class PostService {
         if (response.status === 404) {
           return null;
         }
+        if (response.status === 401 || response.status === 403) {
+          // Unauthenticated/Unauthorized — return null in context where user may not be logged in
+          return null;
+        }
+        if (response.status === 503) {
+          // Service unavailable - return null instead of throwing to prevent UI crashes
+          console.warn('Post service unavailable (503), returning null');
+          return null;
+        }
+        if (response.status === 429) {
+          // Rate limited - return null instead of throwing to prevent UI crashes
+          console.warn('Post service rate limited (429), returning null');
+          return null;
+        }
         const error = await response.json();
-        throw new Error(error.error || 'Failed to fetch post');
+        throw new Error(error.error || `Failed to fetch post (HTTP ${response.status})`);
       }
       
       return response.json();

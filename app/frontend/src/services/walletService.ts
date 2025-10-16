@@ -217,7 +217,7 @@ const getTokensForChain = (chainId: number) => {
         {
           symbol: 'USDC',
           name: 'USD Coin',
-          address: '0xA0b86a33E6F68F3b5c4C33b8fF88D36a1c1e6c5a' as Address,
+          address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as Address,
           decimals: 6
         },
         {
@@ -285,6 +285,8 @@ export class WalletService {
   private priceCache: Map<string, { price: number; timestamp: number }> = new Map();
   private readonly PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   private chainId: number;
+  private lastPriceApiCallTime: number = 0;
+  private readonly MIN_PRICE_API_CALL_INTERVAL = 1000; // 1 second minimum between price API calls
 
   constructor(chainId: number = 1) {
     this.chainId = chainId;
@@ -519,7 +521,7 @@ export class WalletService {
   }
 
   /**
-   * Get token price from CoinGecko API (with caching)
+   * Get token price from CoinGecko API (with caching and rate limiting)
    */
   private async getTokenPrice(tokenId: string): Promise<number> {
     const cached = this.priceCache.get(tokenId);
@@ -527,7 +529,16 @@ export class WalletService {
       return cached.price;
     }
 
+    // Rate limiting check
+    const now = Date.now();
+    if (now - this.lastPriceApiCallTime < this.MIN_PRICE_API_CALL_INTERVAL) {
+      // Return cached price if available, otherwise return 0
+      return cached?.price || 0;
+    }
+
     try {
+      this.lastPriceApiCallTime = now;
+      
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd&include_24hr_change=true`
       );
@@ -553,10 +564,18 @@ export class WalletService {
   }
 
   /**
-   * Get 24h price change for a token
+   * Get 24h price change for a token (with rate limiting)
    */
   private async getTokenChange24h(tokenId: string): Promise<number> {
+    // Rate limiting check
+    const now = Date.now();
+    if (now - this.lastPriceApiCallTime < this.MIN_PRICE_API_CALL_INTERVAL) {
+      return 0;
+    }
+
     try {
+      this.lastPriceApiCallTime = now;
+      
       const response = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${tokenId}&vs_currencies=usd&include_24hr_change=true`
       );

@@ -111,8 +111,21 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     (async () => {
       try {
         if (!address) { if (active) setGovernancePending(0); return; }
-        // Get user's joined communities
-        const memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        // Get user's joined communities with fallback for 503 errors
+        let memberships = [];
+        try {
+          memberships = await CommunityMembershipService.getUserMemberships(address, { isActive: true, limit: 100 });
+        } catch (err) {
+          // Handle 503 Service Unavailable specifically
+          if (err instanceof Error && err.message.includes('503')) {
+            console.warn('Backend service unavailable, using empty memberships for governance count');
+            // Continue with empty memberships instead of throwing
+            memberships = [];
+          } else {
+            // Re-throw other errors
+            throw err;
+          }
+        }
         const communityIds = new Set((memberships || []).map((m: any) => m.communityId));
         // Fetch active proposals across all and filter to joined communities only
         const proposals = await governanceService.getAllActiveProposals();

@@ -42,7 +42,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
     // Rate limiting check
     const now = Date.now();
     if (now - lastApiCallTime.current < minApiCallInterval) {
-      console.log('Rate limiting API call, using mock data instead');
+      // Rate limiting API call, using mock data instead
       // Use mock data if rate limited
       setTokenPrices(prev => ({
         ...prev,
@@ -89,7 +89,7 @@ export const useRealTimeTokenPrices = (tokenAddresses: string[]) => {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [tokenAddresses]);
+  }, [tokenAddresses, forceUpdate]);
 
   return { tokenPrices, getTokenPrice, forceUpdate };
 };
@@ -152,12 +152,24 @@ export const useRealTimePostActivity = (postIds: string[]) => {
 // Mock hook for real-time governance updates
 export const useRealTimeGovernance = (communityIds: string[]) => {
   const [governanceUpdates, setGovernanceUpdates] = useState<Record<string, GovernanceUpdate[]>>({});
+  const lastApiCallTime = useRef<number>(0);
+  const minApiCallInterval = 30000; // 30 seconds minimum between API calls
 
   const getGovernanceUpdates = useCallback((communityId: string) => {
     return governanceUpdates[communityId] || [];
   }, [governanceUpdates]);
 
   const forceUpdate = useCallback((communityId: string) => {
+    // Rate limiting check
+    const now = Date.now();
+    if (now - lastApiCallTime.current < minApiCallInterval) {
+      // Rate limiting governance API call
+      return;
+    }
+
+    // Update last API call time
+    lastApiCallTime.current = now;
+
     // Mock governance update
     const mockUpdate: GovernanceUpdate = {
       proposalId: `prop-${Math.random().toString(36).substr(2, 9)}`,
@@ -174,7 +186,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
       ...prev,
       [communityId]: [mockUpdate, ...(prev[communityId] || [])].slice(0, 5)
     }));
-  }, []);
+  }, [governanceUpdates]);
 
   useEffect(() => {
     // Initialize mock governance data
@@ -203,7 +215,7 @@ export const useRealTimeGovernance = (communityIds: string[]) => {
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [communityIds]);
+  }, [communityIds, forceUpdate]);
 
   return { governanceUpdates, getGovernanceUpdates, forceUpdate };
 };

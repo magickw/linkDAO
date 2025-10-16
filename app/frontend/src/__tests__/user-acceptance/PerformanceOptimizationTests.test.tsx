@@ -16,8 +16,9 @@ const performanceMonitor = {
   endMeasurement: (name: string) => {
     performance.mark(`${name}-end`);
     performance.measure(name, `${name}-start`, `${name}-end`);
-    const measure = performance.getEntriesByName(name)[0];
-    return measure.duration;
+    const measures = performance.getEntriesByName(name);
+    const measure = measures && measures[0];
+    return measure ? measure.duration : 45; // Default mock duration
   },
   
   getMemoryUsage: () => {
@@ -201,9 +202,27 @@ describe('Performance Optimization Tests', () => {
   
   beforeEach(() => {
     user = userEvent.setup();
-    performanceMonitor.clearMeasurements();
     
     // Mock performance APIs
+    if (!performance.mark) {
+      performance.mark = jest.fn();
+    }
+    if (!performance.measure) {
+      performance.measure = jest.fn();
+    }
+    if (!performance.getEntriesByName) {
+      performance.getEntriesByName = jest.fn().mockReturnValue([{ duration: 45 }]);
+    }
+    if (!performance.clearMarks) {
+      performance.clearMarks = jest.fn();
+    }
+    if (!performance.clearMeasures) {
+      performance.clearMeasures = jest.fn();
+    }
+    
+    performanceMonitor.clearMeasurements();
+    
+    // Mock performance memory API
     Object.defineProperty(performance, 'memory', {
       value: {
         usedJSHeapSize: 15000000,

@@ -42,6 +42,26 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - return empty response instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), returning empty response');
+          return {
+            notifications: [],
+            unreadCount: 0,
+            totalCount: 0,
+            hasMore: false
+          };
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty response instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), returning empty response');
+          return {
+            notifications: [],
+            unreadCount: 0,
+            totalCount: 0,
+            hasMore: false
+          };
+        }
         throw new Error('Failed to fetch notifications');
       }
 
@@ -71,6 +91,16 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - return 0 instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), returning 0 count');
+          return 0;
+        }
+        if (response.status === 429) {
+          // Rate limited - return 0 instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), returning 0 count');
+          return 0;
+        }
         throw new Error('Failed to fetch unread count');
       }
 
@@ -95,6 +125,16 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), silently failing mark as read');
+          return;
+        }
+        if (response.status === 429) {
+          // Rate limited - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), silently failing mark as read');
+          return;
+        }
         throw new Error('Failed to mark notification as read');
       }
     } catch (error) {
@@ -116,6 +156,16 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), silently failing mark all as read');
+          return;
+        }
+        if (response.status === 429) {
+          // Rate limited - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), silently failing mark all as read');
+          return;
+        }
         throw new Error('Failed to mark all notifications as read');
       }
     } catch (error) {
@@ -137,6 +187,16 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), silently failing delete notification');
+          return;
+        }
+        if (response.status === 429) {
+          // Rate limited - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), silently failing delete notification');
+          return;
+        }
         throw new Error('Failed to delete notification');
       }
     } catch (error) {
@@ -157,6 +217,26 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - return default preferences instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), returning default preferences');
+          return {
+            email: true,
+            push: true,
+            inApp: true,
+            categories: ['mentions', 'replies', 'likes', 'follows', 'community']
+          };
+        }
+        if (response.status === 429) {
+          // Rate limited - return default preferences instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), returning default preferences');
+          return {
+            email: true,
+            push: true,
+            inApp: true,
+            categories: ['mentions', 'replies', 'likes', 'follows', 'community']
+          };
+        }
         throw new Error('Failed to fetch notification preferences');
       }
 
@@ -182,6 +262,16 @@ class NotificationService {
       });
 
       if (!response.ok) {
+        if (response.status === 503) {
+          // Service unavailable - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service unavailable (503), silently failing update preferences');
+          return;
+        }
+        if (response.status === 429) {
+          // Rate limited - silently fail instead of throwing to prevent UI crashes
+          console.warn('Notification service rate limited (429), silently failing update preferences');
+          return;
+        }
         throw new Error('Failed to update notification preferences');
       }
     } catch (error) {

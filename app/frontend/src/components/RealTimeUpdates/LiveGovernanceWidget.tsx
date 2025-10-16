@@ -39,6 +39,10 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
 
   // Handle voting progress animations
   useEffect(() => {
+    if (updates.length === 0) return;
+
+    const timeouts: NodeJS.Timeout[] = [];
+    
     updates.forEach(update => {
       const currentState = animationStates.get(update.proposalId);
       const hasChanged = !currentState || 
@@ -71,10 +75,15 @@ export const LiveGovernanceWidget: React.FC<LiveGovernanceWidgetProps> = ({
           });
         }, 2000);
 
-        return () => clearTimeout(timeout);
+        timeouts.push(timeout);
       }
     });
-  }, [updates]);
+
+    // Cleanup timeouts
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [updates, animationStates]); // Added animationStates to dependencies
 
   // Auto-refresh governance data
   useEffect(() => {

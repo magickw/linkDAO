@@ -259,6 +259,16 @@ export class CommunityMembershipService {
           // Unauthenticated/Unauthorized — treat as no visible memberships in sidebar context
           return [];
         }
+        if (response.status === 503) {
+          // Service unavailable - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community membership service unavailable (503), returning empty memberships');
+          return [];
+        }
+        if (response.status === 429) {
+          // Rate limited - return empty array instead of throwing to prevent UI crashes
+          console.warn('Community membership service rate limited (429), returning empty memberships');
+          return [];
+        }
         const error = await safeJson(response);
         const message = (error && (error.error || error.message)) || `Failed to fetch user memberships (HTTP ${response.status})`;
         throw new Error(message);

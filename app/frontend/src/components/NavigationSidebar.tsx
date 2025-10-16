@@ -56,11 +56,24 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
         setLoading(true);
         setError(null);
         
-        // Get user's memberships
-        const rawMemberships = await CommunityMembershipService.getUserMemberships(address, {
-          isActive: true,
-          limit: 20
-        });
+        // Get user's memberships with fallback for 503 errors
+        let rawMemberships = [];
+        try {
+          rawMemberships = await CommunityMembershipService.getUserMemberships(address, {
+            isActive: true,
+            limit: 20
+          });
+        } catch (err) {
+          // Handle 503 Service Unavailable specifically
+          if (err instanceof Error && err.message.includes('503')) {
+            console.warn('Backend service unavailable, using empty memberships');
+            // Continue with empty memberships instead of throwing
+            rawMemberships = [];
+          } else {
+            // Re-throw other errors
+            throw err;
+          }
+        }
         
         // Defensive: ensure array
         const memberships = Array.isArray(rawMemberships) ? rawMemberships : [];
@@ -77,7 +90,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
           .map((r: any) => r.value) as CommunityModel[];
         
         // Transform to expected format with membership info
-const communitiesWithMembership = validCommunities.map((community) => ({
+        const communitiesWithMembership = validCommunities.map((community) => ({
           id: community.id,
           name: community.name,
           displayName: community.displayName,
@@ -92,6 +105,8 @@ const communitiesWithMembership = validCommunities.map((community) => ({
       } catch (err) {
         console.error('Error loading user communities:', err);
         setError(err instanceof Error ? err.message : 'Failed to load communities');
+        // Set empty communities on error to prevent UI crashes
+        setCommunities([]);
       } finally {
         setLoading(false);
       }

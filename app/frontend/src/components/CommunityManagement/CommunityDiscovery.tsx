@@ -68,7 +68,20 @@ export default function CommunityDiscovery({ onCommunitySelect, className = '' }
       // Load user's joined communities if connected
       if (isConnected && address) {
         try {
-          const memberships = await CommunityMembershipService.getUserMemberships(address);
+          let memberships = [];
+          try {
+            memberships = await CommunityMembershipService.getUserMemberships(address);
+          } catch (err) {
+            // Handle 503 Service Unavailable specifically
+            if (err instanceof Error && err.message.includes('503')) {
+              console.warn('Backend service unavailable, using empty memberships');
+              // Continue with empty memberships instead of throwing
+              memberships = [];
+            } else {
+              // Re-throw other errors
+              throw err;
+            }
+          }
           const joinedIds = new Set(memberships.map(m => m.communityId));
           setJoinedCommunities(joinedIds);
           
