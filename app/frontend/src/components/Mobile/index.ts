@@ -14,7 +14,6 @@ export { MobileEnhancedFeed } from './MobileEnhancedFeed';
 // Mobile Navigation Components
 export { MobileNavigationSidebar } from './MobileNavigationSidebar';
 export { MobileFloatingActionButton, CreatePostFAB } from './MobileFloatingActionButton';
-export { default as MobileBottomNavigation } from './MobileBottomNavigation';
 export { default as MobileSlideOutMenu } from './MobileSlideOutMenu';
 
 // Mobile Layout and Gestures

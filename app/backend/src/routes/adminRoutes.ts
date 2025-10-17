@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import { adminController } from '../controllers/adminController';
+import moderationRoutes from './moderationRoutes';
+import sellerRoutes from './sellerRoutes';
+import disputeRoutes from './disputeRoutes';
+import userRoutes from './userRoutes';
 
 const router = Router();
 
@@ -30,6 +34,9 @@ router.get('/dashboard/metrics', adminController.getDashboardMetrics.bind(adminC
 router.get('/dashboard/status', adminController.getSystemStatus.bind(adminController));
 router.get('/dashboard/historical', adminController.getHistoricalMetrics.bind(adminController));
 
+// Admin Stats Route
+router.get('/stats', adminController.getAdminStats.bind(adminController));
+
 // Audit Log Analysis Routes
 router.get('/audit/search', adminController.searchAuditLogs.bind(adminController));
 router.get('/audit/analytics', adminController.getAuditAnalytics.bind(adminController));
@@ -37,5 +44,17 @@ router.get('/audit/compliance', adminController.generateComplianceReport.bind(ad
 router.get('/audit/export', adminController.exportAuditLogs.bind(adminController));
 router.get('/audit/violations', adminController.detectPolicyViolations.bind(adminController));
 router.get('/audit/logs', adminController.getAuditLogs.bind(adminController));
+
+// Moderation Routes
+router.use('/moderation', moderationRoutes);
+
+// Seller Applications Routes
+router.use('/sellers', sellerRoutes);
+
+// Dispute Resolution Routes
+router.use('/disputes', disputeRoutes);
+
+// User Management Routes
+router.use('/users', userRoutes);
 
 export default router;

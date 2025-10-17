@@ -668,3 +668,19 @@ export class DisputeService {
     console.log(`Dispute ${disputeId}: ${eventType} by ${userId} at ${new Date().toISOString()}`);
   }
 }
+
+export const disputeService = new DisputeService();
+export { DisputeService };
+export type { 
+  CreateDisputeRequest, 
+  SubmitEvidenceRequest, 
+  CommunityVote, 
+  ArbitratorDecision,
+  DisputeType,
+  DisputeStatus,
+  VerdictType,
+  ResolutionMethod,
+  DisputeEvidence,
+  DisputeAnalytics
+};
+export const disputeService = new DisputeService();

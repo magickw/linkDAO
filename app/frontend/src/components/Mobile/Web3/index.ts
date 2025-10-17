@@ -1,5 +1,4 @@
 // Mobile Web3 Components
-export { default as Web3MobileBottomNavigation } from '../Web3MobileBottomNavigation';
 export { default as Web3SwipeGestureHandler } from '../Web3SwipeGestureHandler';
 export { default as CollapsibleWeb3Sidebar } from '../CollapsibleWeb3Sidebar';
 export { default as CompactWeb3PostCard } from '../CompactWeb3PostCard';

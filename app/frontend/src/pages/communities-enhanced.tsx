@@ -16,7 +16,6 @@ import TrendingSidebar from '@/components/TrendingSidebar';
 
 // Mobile Web3 Components (preserve existing functionality)
 import {
-  Web3MobileBottomNavigation,
   CollapsibleWeb3Sidebar,
   CompactWeb3PostCard,
   Web3SwipeGestureHandler,
@@ -213,15 +212,7 @@ const EnhancedCommunitiesPage: React.FC = () => {
               />
             </div>
 
-            {/* Enhanced Mobile Bottom Navigation */}
-            <Web3MobileBottomNavigation
-              currentPath="/communities-enhanced"
-              onNavigate={(path) => router.push(path)}
-              onCreatePost={() => router.push('/create-post')}
-              stakingRewards={stakingRewards}
-              governanceNotifications={governanceNotifications}
-              walletConnected={walletConnected}
-            />
+            {/* Mobile Bottom Navigation removed as per mobile tab bar removal task */}
           </div>
         </VisualPolishIntegration>
       </ErrorBoundary>

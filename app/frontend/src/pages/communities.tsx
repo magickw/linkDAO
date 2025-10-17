@@ -20,7 +20,6 @@ import { AdvancedSearchInterface } from '@/components/CommunityDiscovery/Advance
 
 // Mobile Web3 Components (preserve existing functionality)
 import {
-  Web3MobileBottomNavigation,
   CollapsibleWeb3Sidebar,
   CompactWeb3PostCard,
   Web3SwipeGestureHandler,
@@ -740,15 +739,7 @@ const CommunitiesPage: React.FC = () => {
               })}
             </div>
 
-            {/* Mobile Bottom Navigation */}
-            <Web3MobileBottomNavigation
-              currentPath="/communities"
-              onNavigate={handleNavigate}
-              onCreatePost={handleCreatePost}
-              stakingRewards={stakingRewards}
-              governanceNotifications={governanceNotifications}
-              walletConnected={walletConnected}
-            />
+            {/* Mobile Bottom Navigation removed as per mobile tab bar removal task */}
           </div>
         </VisualPolishIntegration>
       </ErrorBoundary>

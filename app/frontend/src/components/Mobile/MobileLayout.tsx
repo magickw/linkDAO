@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useMobileAccessibility } from '@/hooks/useMobileAccessibility';
-import MobileBottomNavigation from './MobileBottomNavigation';
 import MobileSlideOutMenu from './MobileSlideOutMenu';
 
 interface MobileLayoutProps {
@@ -144,17 +143,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
       </main>
 
-      {/* Bottom Navigation */}
-      <AnimatePresence>
-        {showBottomNav && !isKeyboardVisible && (
-          <MobileBottomNavigation
-            currentPath={currentPath}
-            onNavigate={onNavigate}
-            onCreatePost={onCreatePost}
-            unreadMessages={unreadMessages}
-          />
-        )}
-      </AnimatePresence>
+      {/* Bottom Navigation - Removed as per mobile tab bar removal task */}
 
       {/* Slide Out Menu */}
       <MobileSlideOutMenu

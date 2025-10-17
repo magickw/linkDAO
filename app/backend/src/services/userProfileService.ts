@@ -284,4 +284,4 @@ export class UserProfileService {
     
     return profiles;
   }
-}
+}export const userProfileService = new UserProfileService();

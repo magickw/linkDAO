@@ -431,6 +431,421 @@ app.get('/api/profiles/address/:address', (req, res) => {
 });
 
 // ============================================================================
+// ADMIN ROUTES
+// ============================================================================
+
+// Simple admin stats endpoint
+app.get('/api/admin/stats', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from the database
+  res.json({
+    success: true,
+    data: {
+      pendingModerations: 5,
+      pendingSellerApplications: 3,
+      openDisputes: 2,
+      suspendedUsers: 1,
+      totalUsers: 1250,
+      totalSellers: 87,
+      recentActions: [
+        {
+          adminHandle: "admin1",
+          action: "approved seller application",
+          reason: "Verified business documents",
+          timestamp: new Date(Date.now() - 3600000).toISOString()
+        },
+        {
+          adminHandle: "admin2",
+          action: "resolved dispute",
+          reason: "Buyer received item as described",
+          timestamp: new Date(Date.now() - 7200000).toISOString()
+        }
+      ]
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin dashboard metrics endpoint
+app.get('/api/admin/dashboard/metrics', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from analytics service
+  res.json({
+    success: true,
+    data: {
+      totalAlerts: 24,
+      activeAlerts: 3,
+      resolvedAlerts: 156,
+      averageResponseTime: 120,
+      systemHealth: 95
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin dashboard status endpoint
+app.get('/api/admin/dashboard/status', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: "operational",
+      lastChecked: new Date().toISOString(),
+      components: []
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Admin dashboard historical metrics endpoint
+app.get('/api/admin/dashboard/historical', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from analytics service
+  const now = new Date();
+  const timeSeries = [];
+  for (let i = 30; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    timeSeries.push({
+      date: date.toISOString().split('T')[0],
+      sales: Math.floor(Math.random() * 10000),
+      orders: Math.floor(Math.random() * 100),
+      gmv: Math.floor(Math.random() * 15000)
+    });
+  }
+  
+  res.json({
+    success: true,
+    data: {
+      timeSeries: timeSeries,
+      metrics: {
+        totalRevenue: timeSeries.reduce((sum, day) => sum + day.sales, 0),
+        totalOrders: timeSeries.reduce((sum, day) => sum + day.orders, 0)
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Moderation queue endpoint
+app.get('/api/admin/moderation', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from the database
+  const items = [
+    {
+      id: 1,
+      contentId: "post_123",
+      contentType: "post",
+      userId: "user_456",
+      status: "pending",
+      riskScore: 0.85,
+      decision: null,
+      reasonCode: null,
+      confidence: 0.92,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600000).toISOString()
+    },
+    {
+      id: 2,
+      contentId: "listing_789",
+      contentType: "listing",
+      userId: "user_101",
+      status: "pending",
+      riskScore: 0.72,
+      decision: null,
+      reasonCode: null,
+      confidence: 0.88,
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      updatedAt: new Date(Date.now() - 7200000).toISOString()
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: {
+      items: items,
+      total: items.length,
+      page: 1,
+      totalPages: 1
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Assign moderation item endpoint
+app.post('/api/admin/moderation/:itemId/assign', (req, res) => {
+  const { itemId } = req.params;
+  const { assigneeId } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Item ${itemId} assigned to ${assigneeId}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Resolve moderation item endpoint
+app.post('/api/admin/moderation/:itemId/resolve', (req, res) => {
+  const { itemId } = req.params;
+  const { action, reason, details } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Item ${itemId} resolved with action: ${action}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Seller applications endpoint
+app.get('/api/admin/sellers/applications', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from the database
+  const applications = [
+    {
+      id: "user_123",
+      legalName: "Acme Corporation",
+      email: "contact@acme.com",
+      country: "US",
+      kycVerified: false,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      currentTier: "unverified",
+      reputationScore: 0,
+      totalVolume: "0"
+    },
+    {
+      id: "user_456",
+      legalName: "Global Traders LLC",
+      email: "info@globaltraders.com",
+      country: "UK",
+      kycVerified: true,
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      currentTier: "standard",
+      reputationScore: 85,
+      totalVolume: "12500"
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: {
+      applications: applications,
+      total: applications.length,
+      page: 1,
+      totalPages: 1
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get specific seller application endpoint
+app.get('/api/admin/sellers/applications/:applicationId', (req, res) => {
+  const { applicationId } = req.params;
+  
+  // Mock data - in a real implementation, this would fetch from the database
+  const application = {
+    id: applicationId,
+    legalName: "Acme Corporation",
+    email: "contact@acme.com",
+    country: "US",
+    shippingAddress: {
+      street: "123 Main St",
+      city: "New York",
+      state: "NY",
+      zip: "10001",
+      country: "US"
+    },
+    billingAddress: {
+      street: "123 Main St",
+      city: "New York",
+      state: "NY",
+      zip: "10001",
+      country: "US"
+    },
+    kycVerified: false,
+    kycVerificationDate: null,
+    kycProvider: null,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    currentTier: "unverified",
+    reputationScore: 0,
+    totalVolume: "0",
+    successfulTransactions: 0,
+    disputeRate: "0"
+  };
+  
+  res.json({
+    success: true,
+    data: application,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Review seller application endpoint
+app.post('/api/admin/sellers/applications/:applicationId/review', (req, res) => {
+  const { applicationId } = req.params;
+  const { status, notes, rejectionReason, requiredInfo } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Application ${applicationId} reviewed with status: ${status}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Disputes endpoint
+app.get('/api/admin/disputes', (req, res) => {
+  // Mock data - in a real implementation, this would fetch from the database
+  const disputes = [
+    {
+      id: 1,
+      escrowId: 101,
+      reporterId: "user_123",
+      reason: "Product not received",
+      status: "open",
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      resolvedAt: null,
+      resolution: null,
+      evidence: []
+    },
+    {
+      id: 2,
+      escrowId: 102,
+      reporterId: "user_456",
+      reason: "Product not as described",
+      status: "in_review",
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      resolvedAt: null,
+      resolution: null,
+      evidence: []
+    }
+  ];
+  
+  res.json({
+    success: true,
+    data: {
+      disputes: disputes,
+      total: disputes.length,
+      page: 1,
+      totalPages: 1
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Get specific dispute endpoint
+app.get('/api/admin/disputes/:disputeId', (req, res) => {
+  const { disputeId } = req.params;
+  
+  // Mock data - in a real implementation, this would fetch from the database
+  const dispute = {
+    id: parseInt(disputeId),
+    escrowId: 101,
+    reporterId: "user_123",
+    reason: "Product not received",
+    status: "open",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    resolvedAt: null,
+    resolution: null,
+    evidence: [
+      {
+        id: 1,
+        disputeId: parseInt(disputeId),
+        submitterId: "user_123",
+        evidenceType: "screenshot",
+        ipfsHash: "Qm...",
+        description: "Screenshot of order confirmation",
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        verified: true
+      }
+    ],
+    votes: []
+  };
+  
+  res.json({
+    success: true,
+    data: dispute,
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Assign dispute endpoint
+app.post('/api/admin/disputes/:disputeId/assign', (req, res) => {
+  const { disputeId } = req.params;
+  const { assigneeId } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Dispute ${disputeId} assigned to ${assigneeId}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Resolve dispute endpoint
+app.post('/api/admin/disputes/:disputeId/resolve', (req, res) => {
+  const { disputeId } = req.params;
+  const { outcome, refundAmount, reasoning, adminNotes } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Dispute ${disputeId} resolved with outcome: ${outcome}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Add dispute note endpoint
+app.post('/api/admin/disputes/:disputeId/notes', (req, res) => {
+  const { disputeId } = req.params;
+  const { note } = req.body;
+  
+  // Mock implementation - in a real implementation, this would update the database
+  res.json({
+    success: true,
+    data: {
+      message: `Note added to dispute ${disputeId}`
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// ============================================================================
 // CATCH-ALL & ERROR HANDLING
 // ============================================================================
 
@@ -517,7 +932,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'production'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 CORS origins: ${allowedOrigins.join(', ')}`);
-
+  
   // Log memory usage after startup
   setTimeout(() => {
     console.log('📊 Post-startup memory usage:');

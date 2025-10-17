@@ -14,7 +14,6 @@ const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({
   ssr: false
 });
 import NotificationSystem from '@/components/NotificationSystem';
-import MobileNavigation from './MobileNavigation';
 import { MessagingWidget } from '@/components/Messaging';
 
 interface LayoutProps {
@@ -412,9 +411,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
       {/* Wallet-to-Wallet Messaging Widget - Available when connected */}
       {isConnected && <MessagingWidget />}
-
-      {/* Mobile Navigation */}
-      <MobileNavigation />
     </div>
   );
 }

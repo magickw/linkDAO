@@ -14,10 +14,7 @@ import {
   ChatBubbleLeftRightIcon, 
   ClipboardDocumentListIcon, 
   ShoppingBagIcon,
-  Cog6ToothIcon,
-  ShoppingCartIcon,
-  TruckIcon,
-  ShieldCheckIcon
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -25,12 +22,8 @@ import {
   ChatBubbleLeftRightIcon as ChatBubbleLeftRightIconSolid,
   ClipboardDocumentListIcon as ClipboardDocumentListIconSolid,
   ShoppingBagIcon as ShoppingBagIconSolid,
-  Cog6ToothIcon as Cog6ToothIconSolid,
-  ShoppingCartIcon as ShoppingCartIconSolid,
-  TruckIcon as TruckIconSolid,
-  ShieldCheckIcon as ShieldCheckIconSolid
+  Cog6ToothIcon as Cog6ToothIconSolid
 } from '@heroicons/react/24/solid';
-import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 
 interface NavItem {
   id: string;
@@ -55,9 +48,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
   const [activeItem, setActiveItem] = useState<string>('home');
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const cart = useEnhancedCart();
 
-  const cartBadge = cart.state.totals.itemCount;
   const { address } = useAccount();
 
   // Live unread counts
@@ -149,7 +140,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       iconSolid: Cog6ToothIconSolid,
       path: '/settings'
     }
-  ]), [messagesUnread, governancePending, cartBadge]);
+  ]), [messagesUnread, governancePending]);
 
   // Handle scroll to show/hide navigation
   useEffect(() => {
