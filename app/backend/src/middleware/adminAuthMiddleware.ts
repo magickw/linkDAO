@@ -1,426 +1,290 @@
-import { Request, Response, NextFunction, RequestHandler } from 'express';
-import jwt from 'jsonwebtoken';
-import rateLimit from 'express-rate-limit';
+import { Request, Response, NextFunction } from 'express';
 
-// Admin roles hierarchy
-export enum AdminRole {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
-  MODERATOR = 'moderator'
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    permissions: string[];
+  };
 }
 
-// Permission constants
-export const ADMIN_PERMISSIONS = {
-  // User management
-  'users.view': 'View user list and details',
-  'users.edit': 'Edit user information',
-  'users.suspend': 'Suspend/unsuspend users',
-  'users.delete': 'Delete user accounts',
-
-  // Content moderation
-  'content.moderate': 'Moderate user content',
-  'content.delete': 'Delete user content',
-  'content.feature': 'Feature content',
-
-  // Marketplace
-  'marketplace.seller_review': 'Review seller applications',
-  'marketplace.manage': 'Manage marketplace settings',
-
-  // Disputes
-  'disputes.view': 'View disputes',
-  'disputes.resolve': 'Resolve disputes',
-
-  // System
-  'system.analytics': 'View system analytics',
-  'system.settings': 'Modify system settings',
-  'system.audit': 'View audit logs',
-
-  // Admin management
-  'admin.manage': 'Manage admin users',
-  'admin.roles': 'Manage roles and permissions'
-};
-
-// Role-based default permissions
-export const ROLE_PERMISSIONS: Record<AdminRole, string[]> = {
-  [AdminRole.SUPER_ADMIN]: Object.keys(ADMIN_PERMISSIONS), // All permissions
-  [AdminRole.ADMIN]: [
-    'users.view',
-    'users.edit',
-    'users.suspend',
-    'content.moderate',
-    'content.delete',
-    'content.feature',
-    'marketplace.seller_review',
-    'marketplace.manage',
-    'disputes.view',
-    'disputes.resolve',
-    'system.analytics',
-    'system.audit'
-  ],
-  [AdminRole.MODERATOR]: [
-    'users.view',
-    'content.moderate',
-    'content.delete',
-    'disputes.view',
-    'system.analytics'
-  ]
-};
-
-// Session tracking for activity-based renewal
-interface AdminSession {
-  userId: string;
-  lastActivity: Date;
-  expiresAt: Date;
-  ipAddress: string;
-  userAgent: string;
-}
-
-const activeSessions = new Map<string, AdminSession>();
-
-// Admin session configuration
-const ADMIN_SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const ADMIN_SESSION_MAX_LIFETIME = 8 * 60 * 60 * 1000; // 8 hours
-
-export interface AdminAuthenticatedUser {
-  address: string;
-  walletAddress: string;
-  userId: string;
-  id: string;
-  role: AdminRole;
-  permissions: string[];
-  isAdmin: boolean;
-  sessionId?: string;
-}
-
-export interface AdminAuthenticatedRequest extends Request {
-  user?: AdminAuthenticatedUser;
-}
-
-/**
- * Verify JWT token and extract admin user information
- */
-function verifyAdminToken(token: string): AdminAuthenticatedUser | null {
+// Admin role validation middleware
+export const validateAdminRole = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'fallback-secret'
-    ) as any;
-
-    // Verify admin status
-    if (!decoded.isAdmin && !decoded.role) {
-      return null;
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
     }
 
-    // Determine role
-    let role: AdminRole = AdminRole.MODERATOR;
-    if (decoded.role === 'super_admin') {
-      role = AdminRole.SUPER_ADMIN;
-    } else if (decoded.role === 'admin') {
-      role = AdminRole.ADMIN;
+    // Check if user has admin role
+    const adminRoles = ['super_admin', 'admin', 'moderator', 'analyst'];
+    if (!adminRoles.includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin access required',
+        details: `Role '${user.role}' is not authorized for admin operations`
+      });
     }
 
-    // Get permissions from token or use role defaults
-    const permissions = decoded.permissions || ROLE_PERMISSIONS[role] || [];
-
-    return {
-      address: decoded.walletAddress || decoded.address,
-      walletAddress: decoded.walletAddress || decoded.address,
-      userId: decoded.userId || decoded.id,
-      id: decoded.userId || decoded.id,
-      role,
-      permissions,
-      isAdmin: true,
-      sessionId: decoded.sessionId
-    };
+    next();
   } catch (error) {
-    return null;
-  }
-}
-
-/**
- * Check if admin session is valid and active
- */
-function isSessionValid(sessionId: string, userId: string): boolean {
-  const session = activeSessions.get(sessionId);
-
-  if (!session || session.userId !== userId) {
-    return false;
-  }
-
-  const now = new Date();
-
-  // Check if session expired
-  if (session.expiresAt < now) {
-    activeSessions.delete(sessionId);
-    return false;
-  }
-
-  // Update last activity for activity-based renewal
-  session.lastActivity = now;
-  session.expiresAt = new Date(now.getTime() + ADMIN_SESSION_TIMEOUT);
-
-  return true;
-}
-
-/**
- * Create or update admin session
- */
-function createOrUpdateSession(
-  userId: string,
-  ipAddress: string,
-  userAgent: string
-): string {
-  const sessionId = `admin_${userId}_${Date.now()}`;
-  const now = new Date();
-
-  const session: AdminSession = {
-    userId,
-    lastActivity: now,
-    expiresAt: new Date(now.getTime() + ADMIN_SESSION_TIMEOUT),
-    ipAddress,
-    userAgent
-  };
-
-  activeSessions.set(sessionId, session);
-
-  return sessionId;
-}
-
-/**
- * Main admin authentication middleware
- * Verifies JWT token and checks if user has admin privileges
- */
-export const adminAuthMiddleware: RequestHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    res.status(401).json({
+    console.error('Admin role validation error:', error);
+    res.status(500).json({
       success: false,
-      error: 'Admin access token required'
+      error: 'Internal server error during role validation'
     });
-    return;
   }
-
-  // Verify and decode token
-  const adminUser = verifyAdminToken(token);
-
-  if (!adminUser) {
-    res.status(403).json({
-      success: false,
-      error: 'Invalid admin token or insufficient privileges'
-    });
-    return;
-  }
-
-  // Check session validity if session management is enabled
-  if (adminUser.sessionId && !isSessionValid(adminUser.sessionId, adminUser.userId)) {
-    res.status(401).json({
-      success: false,
-      error: 'Admin session expired. Please re-authenticate.'
-    });
-    return;
-  }
-
-  // Create/update session
-  const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
-  const userAgent = req.headers['user-agent'] || 'unknown';
-
-  if (!adminUser.sessionId) {
-    adminUser.sessionId = createOrUpdateSession(adminUser.userId, ipAddress, userAgent);
-  }
-
-  // Attach admin user to request
-  (req as AdminAuthenticatedRequest).user = adminUser;
-
-  next();
 };
 
-/**
- * Permission check middleware factory
- * Creates middleware that checks if admin has specific permission
- */
-export const requirePermission = (permission: string): RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const adminReq = req as AdminAuthenticatedRequest;
+// Permission-based access control
+export const requirePermission = (permission: string) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
 
-    if (!adminReq.user) {
-      res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      });
-      return;
-    }
+      // Super admins have all permissions
+      if (user.role === 'super_admin') {
+        return next();
+      }
 
-    // Super admins have all permissions
-    if (adminReq.user.role === AdminRole.SUPER_ADMIN) {
+      // Check if user has the required permission
+      if (!user.permissions || !user.permissions.includes(permission)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Insufficient permissions',
+          details: `Permission '${permission}' is required for this operation`
+        });
+      }
+
       next();
-      return;
-    }
-
-    // Check if user has the required permission
-    if (!adminReq.user.permissions.includes(permission)) {
-      res.status(403).json({
+    } catch (error) {
+      console.error('Permission validation error:', error);
+      res.status(500).json({
         success: false,
-        error: `Permission denied. Required permission: ${permission}`,
-        requiredPermission: permission
+        error: 'Internal server error during permission validation'
       });
-      return;
     }
-
-    next();
   };
 };
 
-/**
- * Role check middleware factory
- * Creates middleware that checks if admin has specific role or higher
- */
-export const requireRole = (minimumRole: AdminRole): RequestHandler => {
-  const roleHierarchy = {
-    [AdminRole.MODERATOR]: 1,
-    [AdminRole.ADMIN]: 2,
-    [AdminRole.SUPER_ADMIN]: 3
+// Role-based access control
+export const requireRole = (roles: string | string[]) => {
+  const allowedRoles = Array.isArray(roles) ? roles : [roles];
+  
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      // Check if user has one of the required roles
+      if (!allowedRoles.includes(user.role)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Insufficient role privileges',
+          details: `One of the following roles is required: ${allowedRoles.join(', ')}`
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Role validation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error during role validation'
+      });
+    }
   };
+};
 
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const adminReq = req as AdminAuthenticatedRequest;
+// Audit logging middleware for admin actions
+export const auditAdminAction = (action: string) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      
+      if (user) {
+        // Log the admin action
+        console.log(`Admin Action: ${action}`, {
+          adminId: user.id,
+          email: user.email,
+          role: user.role,
+          timestamp: new Date().toISOString(),
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          method: req.method,
+          path: req.path,
+          body: req.method !== 'GET' ? req.body : undefined
+        });
 
-    if (!adminReq.user) {
-      res.status(401).json({
+        // Add audit info to response locals for potential use in controllers
+        res.locals.auditInfo = {
+          action,
+          adminId: user.id,
+          timestamp: new Date().toISOString()
+        };
+      }
+
+      next();
+    } catch (error) {
+      console.error('Audit logging error:', error);
+      // Don't fail the request due to audit logging issues
+      next();
+    }
+  };
+};
+
+// Rate limiting for admin operations
+export const adminRateLimit = (maxRequests: number = 100, windowMs: number = 15 * 60 * 1000) => {
+  const requests = new Map<string, { count: number; resetTime: number }>();
+  
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      
+      if (!user) {
+        return next(); // Let auth middleware handle this
+      }
+
+      const key = `admin_${user.id}`;
+      const now = Date.now();
+      const windowStart = now - windowMs;
+      
+      // Clean up old entries
+      for (const [k, v] of requests.entries()) {
+        if (v.resetTime < windowStart) {
+          requests.delete(k);
+        }
+      }
+      
+      const userRequests = requests.get(key);
+      
+      if (!userRequests) {
+        requests.set(key, { count: 1, resetTime: now + windowMs });
+        return next();
+      }
+      
+      if (userRequests.resetTime < now) {
+        // Reset the window
+        requests.set(key, { count: 1, resetTime: now + windowMs });
+        return next();
+      }
+      
+      if (userRequests.count >= maxRequests) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many requests',
+          details: `Rate limit exceeded. Maximum ${maxRequests} requests per ${windowMs / 1000} seconds.`,
+          retryAfter: Math.ceil((userRequests.resetTime - now) / 1000)
+        });
+      }
+      
+      userRequests.count++;
+      next();
+    } catch (error) {
+      console.error('Admin rate limiting error:', error);
+      // Don't fail the request due to rate limiting issues
+      next();
+    }
+  };
+};
+
+// IP whitelist middleware for admin access
+export const adminIPWhitelist = (allowedIPs: string[] = []) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      // Skip IP checking if no whitelist is configured
+      if (allowedIPs.length === 0) {
+        return next();
+      }
+
+      const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+      
+      if (!clientIP || !allowedIPs.includes(clientIP)) {
+        console.warn(`Admin access denied from IP: ${clientIP}`);
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied',
+          details: 'Admin access is restricted to authorized IP addresses'
+        });
+      }
+
+      next();
+    } catch (error) {
+      console.error('IP whitelist validation error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error during IP validation'
+      });
+    }
+  };
+};
+
+// Session validation for admin users
+export const validateAdminSession = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({
         success: false,
         error: 'Authentication required'
       });
-      return;
     }
 
-    const userRoleLevel = roleHierarchy[adminReq.user.role] || 0;
-    const requiredRoleLevel = roleHierarchy[minimumRole] || 0;
-
-    if (userRoleLevel < requiredRoleLevel) {
-      res.status(403).json({
+    // Add session validation logic here
+    // This could check session expiry, concurrent sessions, etc.
+    
+    // For now, just validate that we have required user fields
+    if (!user.id || !user.email || !user.role) {
+      return res.status(401).json({
         success: false,
-        error: `Insufficient role. Required: ${minimumRole}, Current: ${adminReq.user.role}`
+        error: 'Invalid session data'
       });
-      return;
     }
 
     next();
-  };
+  } catch (error) {
+    console.error('Session validation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error during session validation'
+    });
+  }
 };
 
-/**
- * Rate limiting for admin endpoints
- * More lenient than public endpoints but still prevents abuse
- */
-export const adminRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 1000 requests per windowMs per IP
-  message: {
-    success: false,
-    error: 'Too many admin requests from this IP, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Skip rate limiting for super admins if needed
-  skip: (req) => {
-    const adminReq = req as AdminAuthenticatedRequest;
-    return adminReq.user?.role === AdminRole.SUPER_ADMIN;
-  }
-});
-
-/**
- * Stricter rate limiting for sensitive operations
- */
-export const strictAdminRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per windowMs
-  message: {
-    success: false,
-    error: 'Too many sensitive operations, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-/**
- * Audit logging middleware for admin actions
- */
-export const adminAuditLogger: RequestHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const adminReq = req as AdminAuthenticatedRequest;
-
-  if (adminReq.user) {
-    // Store original send function
-    const originalSend = res.send;
-
-    // Override send to capture response
-    res.send = function(data): Response {
-      // Log admin action (in production, send to audit service)
-      const auditLog = {
-        timestamp: new Date(),
-        adminId: adminReq.user?.userId,
-        adminRole: adminReq.user?.role,
-        action: `${req.method} ${req.path}`,
-        ipAddress: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-        userAgent: req.headers['user-agent'],
-        statusCode: res.statusCode,
-        requestBody: req.method !== 'GET' ? req.body : undefined
-      };
-
-      // TODO: Send to audit logging service
-      console.log('[ADMIN AUDIT]', JSON.stringify(auditLog));
-
-      // Call original send
-      return originalSend.call(this, data);
-    };
-  }
-
-  next();
+// Combine multiple admin middlewares for convenience
+export const adminAuth = {
+  validateRole: validateAdminRole,
+  requirePermission,
+  requireRole,
+  auditAction: auditAdminAction,
+  rateLimit: adminRateLimit,
+  ipWhitelist: adminIPWhitelist,
+  validateSession: validateAdminSession
 };
 
-/**
- * Clean up expired sessions periodically
- */
-setInterval(() => {
-  const now = new Date();
-  for (const [sessionId, session] of activeSessions.entries()) {
-    if (session.expiresAt < now) {
-      activeSessions.delete(sessionId);
-    }
-  }
-}, 60000); // Clean up every minute
-
-/**
- * Get active admin sessions count (for monitoring)
- */
-export function getActiveAdminSessionsCount(): number {
-  return activeSessions.size;
-}
-
-/**
- * Revoke admin session
- */
-export function revokeAdminSession(sessionId: string): boolean {
-  return activeSessions.delete(sessionId);
-}
-
-/**
- * Get all active sessions for a user
- */
-export function getUserSessions(userId: string): AdminSession[] {
-  const sessions: AdminSession[] = [];
-  for (const [sessionId, session] of activeSessions.entries()) {
-    if (session.userId === userId) {
-      sessions.push(session);
-    }
-  }
-  return sessions;
-}
+// Default admin middleware stack
+export const defaultAdminMiddleware = [
+  validateAdminSession,
+  validateAdminRole,
+  adminRateLimit(),
+  auditAdminAction('admin_operation')
+];

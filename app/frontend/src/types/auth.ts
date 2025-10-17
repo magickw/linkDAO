@@ -127,6 +127,17 @@ export interface SellerApplication {
   updatedAt: string;
 }
 
+export interface Evidence {
+  id: string;
+  type: string;
+  filename?: string;
+  status?: 'pending' | 'verified' | 'rejected';
+  size?: number;
+  uploadedAt?: string;
+  description?: string;
+  url?: string;
+}
+
 export interface DisputeCase {
   id: string;
   orderId: string;
@@ -139,9 +150,9 @@ export interface DisputeCase {
   currency: string;
   description: string;
   evidence: {
-    buyerEvidence?: string[];
-    sellerEvidence?: string[];
-    adminNotes?: string[];
+    buyerEvidence?: Evidence[];
+    sellerEvidence?: Evidence[];
+    adminEvidence?: Evidence[];
   };
   timeline: DisputeTimelineEvent[];
   assignedTo?: string;

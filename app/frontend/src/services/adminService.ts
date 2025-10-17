@@ -92,15 +92,25 @@ class AdminService {
       });
     }
 
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications?${params}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications?${params}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch seller applications');
+      const data = await response.json();
+
+      // Handle error responses gracefully - return empty results
+      if (!response.ok || !data.success) {
+        console.warn('Seller applications API error:', data.error?.message || 'Unknown error');
+        return { applications: [], total: 0, page: 1, totalPages: 0 };
+      }
+
+      return data.data || { applications: [], total: 0, page: 1, totalPages: 0 };
+    } catch (error) {
+      console.error('Failed to fetch seller applications:', error);
+      // Return empty state instead of throwing
+      return { applications: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    return response.json();
   }
 
   async getSellerApplication(applicationId: string): Promise<SellerApplication> {
@@ -216,15 +226,25 @@ class AdminService {
       });
     }
 
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes?${params}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes?${params}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch disputes');
+      const data = await response.json();
+
+      // Handle error responses gracefully - return empty results
+      if (!response.ok || !data.success) {
+        console.warn('Disputes API error:', data.error?.message || 'Unknown error');
+        return { disputes: [], total: 0, page: 1, totalPages: 0 };
+      }
+
+      return data.data || { disputes: [], total: 0, page: 1, totalPages: 0 };
+    } catch (error) {
+      console.error('Failed to fetch disputes:', error);
+      // Return empty state instead of throwing
+      return { disputes: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    return response.json();
   }
 
   async getDispute(disputeId: string): Promise<DisputeCase> {

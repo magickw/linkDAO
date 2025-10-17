@@ -34,6 +34,7 @@ import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceS
 
 // Import services
 import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
+import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
 
 // Use dynamic imports to avoid circular dependencies
 let cacheService: any = null;
@@ -187,6 +188,7 @@ import marketplaceVerificationRoutes from './routes/marketplaceVerificationRoute
 import linkSafetyRoutes from './routes/linkSafetyRoutes';
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
+import adminDashboardRoutes from './routes/adminDashboardRoutes';
 // Import analytics routes
 import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
@@ -260,6 +262,9 @@ app.use('/api/link-safety', linkSafetyRoutes);
 
 // Admin routes
 app.use('/api/admin', adminRoutes);
+
+// Admin dashboard routes
+app.use('/api/admin/dashboard', adminDashboardRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);
@@ -376,6 +381,15 @@ httpServer.listen(PORT, async () => {
   } catch (error) {
     console.warn('⚠️ WebSocket service initialization failed:', error);
   }
+
+  // Initialize Admin WebSocket service
+  try {
+    const adminWebSocketService = initializeAdminWebSocket(httpServer);
+    console.log('✅ Admin WebSocket service initialized');
+    console.log(`🔧 Admin real-time dashboard ready`);
+  } catch (error) {
+    console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+  }
   
   // Initialize cache service
   try {
@@ -415,6 +429,9 @@ const gracefulShutdown = (signal: string) => {
   
   // Close WebSocket service
   shutdownWebSocket();
+  
+  // Close Admin WebSocket service
+  shutdownAdminWebSocket();
   
   // Close HTTP server
   httpServer.close(() => {
