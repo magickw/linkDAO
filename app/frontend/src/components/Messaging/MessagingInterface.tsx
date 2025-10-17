@@ -80,6 +80,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
   const [showAddressSearch, setShowAddressSearch] = useState(false);
   const [showNFTBot, setShowNFTBot] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -411,53 +412,53 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   return (
     <div className={`flex h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
       {/* Conversations Sidebar */}
-      <div className="w-80 border-r border-gray-700 flex flex-col">
+      <div className={`${showMobileSidebar || !selectedConversation ? 'flex' : 'hidden'} md:flex w-full md:w-80 border-r border-gray-700 flex-col`}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-3 sm:p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white flex items-center">
-              <MessageCircle size={20} className="mr-2" />
+            <h2 className="text-base sm:text-lg font-semibold text-white flex items-center">
+              <MessageCircle size={18} className="mr-2 sm:w-5 sm:h-5" />
               Messages
             </h2>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="small" 
-                className="p-2"
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Button
+                variant="outline"
+                size="small"
+                className="p-1.5 sm:p-2"
                 onClick={() => setShowAddressSearch(true)}
                 title="New Conversation"
               >
-                <User size={16} />
+                <User size={14} className="sm:w-4 sm:h-4" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="small" 
-                className="p-2"
+              <Button
+                variant="outline"
+                size="small"
+                className="p-1.5 sm:p-2"
                 onClick={() => setShowNFTBot(true)}
                 title="NFT Negotiation Bot"
               >
-                <Coins size={16} />
+                <Coins size={14} className="sm:w-4 sm:h-4" />
               </Button>
-              <Button variant="outline" size="small" className="p-2">
-                <Settings size={16} />
+              <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                <Settings size={14} className="sm:w-4 sm:h-4" />
               </Button>
               {onClose && (
-                <Button variant="outline" size="small" onClick={onClose} className="p-2">
-                  <X size={16} />
+                <Button variant="outline" size="small" onClick={onClose} className="p-1.5 sm:p-2">
+                  <X size={14} className="sm:w-4 sm:h-4" />
                 </Button>
               )}
             </div>
           </div>
-          
+
           {/* Search */}
           <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={14} className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 text-sm bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
             />
           </div>
         </div>
@@ -489,48 +490,51 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 return (
                   <motion.div
                     key={conversation.id}
-                    className={`p-4 border-b border-gray-700 cursor-pointer transition-colors ${
+                    className={`p-3 sm:p-4 border-b border-gray-700 cursor-pointer transition-colors ${
                       selectedConversation === conversation.id ? 'bg-blue-600/20' : 'hover:bg-gray-800'
                     } ${isBlocked ? 'opacity-50' : ''}`}
-                    onClick={() => setSelectedConversation(conversation.id)}
+                    onClick={() => {
+                      setSelectedConversation(conversation.id);
+                      setShowMobileSidebar(false);
+                    }}
                     whileHover={{ backgroundColor: 'rgba(75, 85, 99, 0.5)' }}
                   >
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       {/* Avatar */}
-                      <div className="relative">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                          <User size={20} className="text-white" />
+                      <div className="relative flex-shrink-0">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <User size={16} className="text-white sm:w-5 sm:h-5" />
                         </div>
                         {isOnline && (
-                          <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                          <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
                         )}
                       </div>
 
                       {/* Conversation Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <p className="font-medium text-white text-sm">
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            <p className="font-medium text-white text-xs sm:text-sm truncate">
                               {formatAddress(otherParticipant || '')}
                             </p>
                             {conversation.isPinned && (
-                              <Pin size={12} className="text-yellow-500" />
+                              <Pin size={10} className="text-yellow-500 sm:w-3 sm:h-3 flex-shrink-0" />
                             )}
                             {isBlocked && (
-                              <Block size={12} className="text-red-500" />
+                              <Block size={10} className="text-red-500 sm:w-3 sm:h-3 flex-shrink-0" />
                             )}
                           </div>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0 ml-2">
                             {conversation.lastMessage && formatTime(conversation.lastMessage.timestamp)}
                           </span>
                         </div>
-                        
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-sm text-gray-400 truncate">
+
+                        <div className="flex items-center justify-between mt-0.5 sm:mt-1">
+                          <p className="text-xs sm:text-sm text-gray-400 truncate">
                             {conversation.lastMessage?.content || 'No messages yet'}
                           </p>
                           {conversation.unreadCount > 0 && (
-                            <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                            <span className="bg-blue-500 text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 min-w-[18px] sm:min-w-[20px] text-center flex-shrink-0 ml-2">
                               {conversation.unreadCount}
                             </span>
                           )}
@@ -545,45 +549,57 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={`${!showMobileSidebar && selectedConversation ? 'flex' : 'hidden'} md:flex flex-1 flex-col w-full`}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-700 bg-gray-800">
+            <div className="p-3 sm:p-4 border-b border-gray-700 bg-gray-800">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <User size={16} className="text-white" />
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  {/* Mobile Back Button */}
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="p-1.5 md:hidden"
+                    onClick={() => setShowMobileSidebar(true)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </Button>
+
+                  <div className="relative flex-shrink-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <User size={14} className="text-white sm:w-4 sm:h-4" />
                     </div>
                     {userPresence.get(getOtherParticipant(selectedConversation) || '')?.isOnline && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border border-gray-800 rounded-full"></div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-green-500 border border-gray-800 rounded-full"></div>
                     )}
                   </div>
-                  <div>
-                    <h3 className="font-medium text-white">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-white text-sm sm:text-base truncate">
                       {formatAddress(getOtherParticipant(selectedConversation) || '')}
                     </h3>
                     {typingUsers.size > 0 && (
-                      <p className="text-xs text-blue-400">Typing...</p>
+                      <p className="text-[10px] sm:text-xs text-blue-400">Typing...</p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="small" className="p-2">
-                    <Phone size={16} />
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                    <Phone size={14} className="sm:w-4 sm:h-4" />
                   </Button>
-                  <Button variant="outline" size="small" className="p-2">
-                    <Video size={16} />
+                  <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                    <Video size={14} className="sm:w-4 sm:h-4" />
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="small" 
-                    className="p-2"
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="p-1.5 sm:p-2"
                     onClick={() => setShowConversationInfo(!showConversationInfo)}
                   >
-                    <MoreVertical size={16} />
+                    <MoreVertical size={14} className="sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>
@@ -758,12 +774,12 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-700 bg-gray-800">
-              <div className="flex items-center space-x-3">
-                <Button variant="outline" size="small" className="p-2">
-                  <Paperclip size={16} />
+            <div className="p-2 sm:p-4 border-t border-gray-700 bg-gray-800">
+              <div className="flex items-center space-x-1 sm:space-x-3">
+                <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                  <Paperclip size={14} className="sm:w-4 sm:h-4" />
                 </Button>
-                
+
                 <div className="flex-1 relative">
                   <textarea
                     ref={messageInputRef}
@@ -779,19 +795,19 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                       }
                     }}
                     placeholder="Type a message..."
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none max-h-20"
+                    className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none max-h-20"
                     rows={1}
                   />
                 </div>
 
-                <Button variant="outline" size="small" className="p-2">
-                  <Smile size={16} />
+                <Button variant="outline" size="small" className="p-1.5 sm:p-2 hidden sm:flex">
+                  <Smile size={14} className="sm:w-4 sm:h-4" />
                 </Button>
 
-                <Button 
-                  variant="outline" 
-                  size="small" 
-                  className="p-2"
+                <Button
+                  variant="outline"
+                  size="small"
+                  className="p-1.5 sm:p-2"
                   onClick={() => {
                     const otherParticipant = getOtherParticipant(selectedConversation);
                     if (otherParticipant) {
@@ -810,17 +826,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   }}
                   title="Send NFT Offer"
                 >
-                  <Coins size={16} />
+                  <Coins size={14} className="sm:w-4 sm:h-4" />
                 </Button>
 
-                <Button 
-                  variant="primary" 
-                  size="small" 
-                  className="p-2"
+                <Button
+                  variant="primary"
+                  size="small"
+                  className="p-1.5 sm:p-2"
                   onClick={sendMessage}
                   disabled={!newMessage.trim()}
                 >
-                  <Send size={16} />
+                  <Send size={14} className="sm:w-4 sm:h-4" />
                 </Button>
               </div>
             </div>
@@ -844,61 +860,61 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
-            className="w-80 border-l border-gray-700 bg-gray-800 p-4"
+            className="absolute md:relative right-0 top-0 h-full w-full sm:w-80 md:w-80 border-l border-gray-700 bg-gray-800 p-3 sm:p-4 z-10"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">Conversation Info</h3>
-              <Button 
-                variant="outline" 
-                size="small" 
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-white">Conversation Info</h3>
+              <Button
+                variant="outline"
+                size="small"
                 onClick={() => setShowConversationInfo(false)}
-                className="p-2"
+                className="p-1.5 sm:p-2"
               >
-                <X size={16} />
+                <X size={14} className="sm:w-4 sm:h-4" />
               </Button>
             </div>
 
             {/* User Info */}
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <User size={24} className="text-white" />
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                <User size={20} className="text-white sm:w-6 sm:h-6" />
               </div>
-              <h4 className="font-medium text-white">
+              <h4 className="font-medium text-white text-sm sm:text-base">
                 {formatAddress(getOtherParticipant(selectedConversation) || '')}
               </h4>
-              <p className="text-sm text-gray-400">
-                {userPresence.get(getOtherParticipant(selectedConversation) || '')?.isOnline 
-                  ? 'Online' 
+              <p className="text-xs sm:text-sm text-gray-400">
+                {userPresence.get(getOtherParticipant(selectedConversation) || '')?.isOnline
+                  ? 'Online'
                   : 'Offline'
                 }
               </p>
             </div>
 
             {/* Actions */}
-            <div className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <Shield size={16} className="mr-2" />
+            <div className="space-y-2 sm:space-y-3">
+              <Button variant="outline" className="w-full justify-start text-sm">
+                <Shield size={14} className="mr-2 sm:w-4 sm:h-4" />
                 View Profile
               </Button>
-              
-              <Button variant="outline" className="w-full justify-start">
-                <Pin size={16} className="mr-2" />
+
+              <Button variant="outline" className="w-full justify-start text-sm">
+                <Pin size={14} className="mr-2 sm:w-4 sm:h-4" />
                 Pin Conversation
               </Button>
-              
-              <Button variant="outline" className="w-full justify-start">
-                <Archive size={16} className="mr-2" />
+
+              <Button variant="outline" className="w-full justify-start text-sm">
+                <Archive size={14} className="mr-2 sm:w-4 sm:h-4" />
                 Archive
               </Button>
-              
-              <Button variant="outline" className="w-full justify-start">
-                <Bell size={16} className="mr-2" />
+
+              <Button variant="outline" className="w-full justify-start text-sm">
+                <Bell size={14} className="mr-2 sm:w-4 sm:h-4" />
                 Mute Notifications
               </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-red-400 border-red-400 hover:bg-red-500/10"
+
+              <Button
+                variant="outline"
+                className="w-full justify-start text-red-400 border-red-400 hover:bg-red-500/10 text-sm"
                 onClick={() => {
                   const otherParticipant = getOtherParticipant(selectedConversation);
                   if (otherParticipant) {
@@ -906,18 +922,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   }
                 }}
               >
-                <Block size={16} className="mr-2" />
+                <Block size={14} className="mr-2 sm:w-4 sm:h-4" />
                 Block User
               </Button>
             </div>
 
             {/* Security Notice */}
-            <div className="mt-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <div className="flex items-center space-x-2 text-green-400 mb-2">
-                <Shield size={16} />
-                <span className="text-sm font-medium">End-to-End Encrypted</span>
+            <div className="mt-4 sm:mt-6 p-2 sm:p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className="flex items-center space-x-2 text-green-400 mb-1 sm:mb-2">
+                <Shield size={14} className="sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium">End-to-End Encrypted</span>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-[10px] sm:text-xs text-gray-400">
                 Messages are encrypted and can only be read by you and the recipient.
               </p>
             </div>

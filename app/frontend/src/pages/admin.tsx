@@ -55,42 +55,44 @@ const AdminPage: NextPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         {/* Sidebar Navigation */}
-        <div className="w-64 bg-black/20 backdrop-blur-md border-r border-white/10 min-h-screen">
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-8">
-              <Shield className="w-8 h-8 text-purple-400" />
+        <div className="w-full md:w-64 bg-black/20 backdrop-blur-md border-b md:border-r border-white/10 md:min-h-screen">
+          <div className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-8">
+              <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 flex-shrink-0" />
               <div>
-                <h1 className="text-xl font-bold text-white">Admin Panel</h1>
-                <p className="text-sm text-gray-400">LinkDAO Management</p>
+                <h1 className="text-lg sm:text-xl font-bold text-white">Admin Panel</h1>
+                <p className="text-xs sm:text-sm text-gray-400">LinkDAO Management</p>
               </div>
             </div>
 
-            <nav className="space-y-2">
-              {navigationItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                      activeSection === item.id
-                        ? 'bg-white/10 text-white'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 ${activeSection === item.id ? item.color : ''}`} />
-                    {item.label}
-                  </button>
-                );
-              })}
+            <nav className="space-y-1 sm:space-y-2 overflow-x-auto md:overflow-x-visible">
+              <div className="flex md:flex-col gap-1 sm:gap-2 pb-2 md:pb-0">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-left transition-colors whitespace-nowrap min-w-fit ${
+                        activeSection === item.id
+                          ? 'bg-white/10 text-white'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 ${activeSection === item.id ? item.color : ''}`} />
+                      <span className="text-sm sm:text-base">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </nav>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-8">
+        <div className="flex-1 p-4 sm:p-8">
           {renderContent()}
         </div>
       </div>
@@ -101,92 +103,100 @@ const AdminPage: NextPage = () => {
 // Dashboard Overview Component
 const DashboardOverview: React.FC = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-        <p className="text-gray-400">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-400">
           Administrative dashboard for LinkDAO platform management.
         </p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="w-8 h-8 text-blue-400" />
-            <h3 className="text-xl font-bold text-white">Users</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-bold text-white">Users</h3>
           </div>
-          <div className="text-2xl font-bold text-white">1,234</div>
-          <p className="text-sm text-gray-400">Total users</p>
-          <div className="flex items-center gap-1 mt-2 text-green-400 text-sm">
-            <TrendingUp className="w-4 h-4" />
+          <div className="text-xl sm:text-2xl font-bold text-white">1,234</div>
+          <p className="text-xs sm:text-sm text-gray-400">Total users</p>
+          <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
             +12.5% this week
           </div>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-          <div className="flex items-center gap-3 mb-4">
-            <Eye className="w-8 h-8 text-green-400" />
-            <h3 className="text-xl font-bold text-white">Visitors</h3>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-bold text-white">Visitors</h3>
           </div>
-          <div className="text-2xl font-bold text-white">8,923</div>
-          <p className="text-sm text-gray-400">This week</p>
-          <div className="flex items-center gap-1 mt-2 text-green-400 text-sm">
-            <TrendingUp className="w-4 h-4" />
+          <div className="text-xl sm:text-2xl font-bold text-white">8,923</div>
+          <p className="text-xs sm:text-sm text-gray-400">This week</p>
+          <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
             +8.3% vs last week
           </div>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-          <div className="flex items-center gap-3 mb-4">
-            <ShoppingBag className="w-8 h-8 text-purple-400" />
-            <h3 className="text-xl font-bold text-white">Sales</h3>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-bold text-white">Sales</h3>
           </div>
-          <div className="text-2xl font-bold text-white">$45.2k</div>
-          <p className="text-sm text-gray-400">This month</p>
-          <div className="flex items-center gap-1 mt-2 text-green-400 text-sm">
-            <TrendingUp className="w-4 h-4" />
+          <div className="text-xl sm:text-2xl font-bold text-white">$45.2k</div>
+          <p className="text-xs sm:text-sm text-gray-400">This month</p>
+          <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
+            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
             +15.7% vs last month
           </div>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-          <div className="flex items-center gap-3 mb-4">
-            <BarChart3 className="w-8 h-8 text-indigo-400" />
-            <h3 className="text-xl font-bold text-white">Uptime</h3>
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400 flex-shrink-0" />
+            <h3 className="text-lg sm:text-xl font-bold text-white">Uptime</h3>
           </div>
-          <div className="text-2xl font-bold text-white">99.9%</div>
-          <p className="text-sm text-gray-400">Last 30 days</p>
-          <div className="flex items-center gap-1 mt-2 text-green-400 text-sm">
-            <Globe className="w-4 h-4" />
+          <div className="text-xl sm:text-2xl font-bold text-white">99.9%</div>
+          <p className="text-xs sm:text-sm text-gray-400">Last 30 days</p>
+          <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
+            <Globe className="w-3 h-3 sm:w-4 sm:h-4" />
             All systems operational
           </div>
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-        <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-            <Users className="w-5 h-5 text-blue-400" />
-            <span className="text-gray-300">New user registered: alice.eth</span>
-            <span className="text-sm text-gray-400 ml-auto">2 minutes ago</span>
+      <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+        <h3 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Recent Activity</h3>
+        <div className="space-y-2 sm:space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-300 truncate">New user registered: alice.eth</span>
+            </div>
+            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">2 minutes ago</span>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-            <ShoppingBag className="w-5 h-5 text-purple-400" />
-            <span className="text-gray-300">Seller application approved: NFT Store</span>
-            <span className="text-sm text-gray-400 ml-auto">15 minutes ago</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-300 truncate">Seller application approved: NFT Store</span>
+            </div>
+            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">15 minutes ago</span>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            <span className="text-gray-300">Dispute resolved: Order #1234</span>
-            <span className="text-sm text-gray-400 ml-auto">1 hour ago</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-300 truncate">Dispute resolved: Order #1234</span>
+            </div>
+            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">1 hour ago</span>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
-            <Eye className="w-5 h-5 text-green-400" />
-            <span className="text-gray-300">Visitor analytics updated: 142 active users</span>
-            <span className="text-sm text-gray-400 ml-auto">5 minutes ago</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm text-gray-300 truncate">Visitor analytics updated: 142 active users</span>
+            </div>
+            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">5 minutes ago</span>
           </div>
         </div>
       </div>
@@ -196,46 +206,46 @@ const DashboardOverview: React.FC = () => {
 
 // Placeholder components for other sections
 const UserManagementSection: React.FC = () => (
-  <div className="space-y-6">
-    <h1 className="text-3xl font-bold text-white">User Management</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-      <p className="text-gray-300">User management interface coming soon...</p>
+  <div className="space-y-4 sm:space-y-6">
+    <h1 className="text-2xl sm:text-3xl font-bold text-white">User Management</h1>
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+      <p className="text-sm sm:text-base text-gray-300">User management interface coming soon...</p>
     </div>
   </div>
 );
 
 const ModerationSection: React.FC = () => (
-  <div className="space-y-6">
-    <h1 className="text-3xl font-bold text-white">Content Moderation</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-      <p className="text-gray-300">Moderation queue and tools coming soon...</p>
+  <div className="space-y-4 sm:space-y-6">
+    <h1 className="text-2xl sm:text-3xl font-bold text-white">Content Moderation</h1>
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+      <p className="text-sm sm:text-base text-gray-300">Moderation queue and tools coming soon...</p>
     </div>
   </div>
 );
 
 const SellersSection: React.FC = () => (
-  <div className="space-y-6">
-    <h1 className="text-3xl font-bold text-white">Seller Management</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-      <p className="text-gray-300">Seller applications and management coming soon...</p>
+  <div className="space-y-4 sm:space-y-6">
+    <h1 className="text-2xl sm:text-3xl font-bold text-white">Seller Management</h1>
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+      <p className="text-sm sm:text-base text-gray-300">Seller applications and management coming soon...</p>
     </div>
   </div>
 );
 
 const DisputesSection: React.FC = () => (
-  <div className="space-y-6">
-    <h1 className="text-3xl font-bold text-white">Dispute Resolution</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-      <p className="text-gray-300">Dispute management system coming soon...</p>
+  <div className="space-y-4 sm:space-y-6">
+    <h1 className="text-2xl sm:text-3xl font-bold text-white">Dispute Resolution</h1>
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+      <p className="text-sm sm:text-base text-gray-300">Dispute management system coming soon...</p>
     </div>
   </div>
 );
 
 const SettingsSection: React.FC = () => (
-  <div className="space-y-6">
-    <h1 className="text-3xl font-bold text-white">Platform Settings</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
-      <p className="text-gray-300">Platform configuration settings coming soon...</p>
+  <div className="space-y-4 sm:space-y-6">
+    <h1 className="text-2xl sm:text-3xl font-bold text-white">Platform Settings</h1>
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
+      <p className="text-sm sm:text-base text-gray-300">Platform configuration settings coming soon...</p>
     </div>
   </div>
 );

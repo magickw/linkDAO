@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  Eye, 
-  Shield, 
-  Ban, 
+import {
+  Users,
+  Eye,
+  Shield,
+  Ban,
   CheckCircle,
   XCircle,
   Clock,
@@ -11,7 +11,19 @@ import {
   Search,
   Mail,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  CheckSquare,
+  Square,
+  Download,
+  UserCheck,
+  AlertCircle,
+  Activity,
+  LogIn,
+  MessageSquare,
+  ShoppingCart,
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { AuthUser, UserRole } from '@/types/auth';
@@ -21,8 +33,15 @@ export function UserManagement() {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [showActivityTimeline, setShowActivityTimeline] = useState(false);
+  const [userActivity, setUserActivity] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [actionModal, setActionModal] = useState<{
-    type: 'suspend' | 'role' | null;
+    type: 'suspend' | 'role' | 'bulk-suspend' | 'bulk-role' | null;
     user: AuthUser | null;
   }>({ type: null, user: null });
   const [suspensionData, setSuspensionData] = useState({
@@ -35,7 +54,12 @@ export function UserManagement() {
     role: '',
     status: '',
     kycStatus: '',
-    search: ''
+    search: '',
+    searchField: 'all', // 'all', 'handle', 'email', 'address', 'ens'
+    lastLoginAfter: '',
+    lastLoginBefore: '',
+    createdAfter: '',
+    createdBefore: ''
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -55,7 +79,7 @@ export function UserManagement() {
         page: pagination.page,
         limit: 20
       });
-      
+
       setUsers(response.users);
       setPagination({
         page: response.page,
@@ -66,6 +90,19 @@ export function UserManagement() {
       console.error('Failed to load users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserActivity = async (userId: string) => {
+    try {
+      setActivityLoading(true);
+      const response = await adminService.getUserActivity(userId);
+      setUserActivity(response.activities || []);
+    } catch (error) {
+      console.error('Failed to load user activity:', error);
+      setUserActivity([]);
+    } finally {
+      setActivityLoading(false);
     }
   };
 
@@ -92,13 +129,104 @@ export function UserManagement() {
 
   const handleRoleChange = async () => {
     if (!actionModal.user) return;
-    
+
     try {
       await adminService.updateUserRole(actionModal.user.id, newRole);
       setActionModal({ type: null, user: null });
       loadUsers();
     } catch (error) {
       console.error('Failed to update user role:', error);
+    }
+  };
+
+  // Bulk action handlers
+  const toggleUserSelection = (userId: string) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map(user => user.id)));
+    }
+  };
+
+  const handleBulkSuspend = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setBulkActionLoading(true);
+    try {
+      const userIds = Array.from(selectedUsers);
+      await Promise.all(
+        userIds.map(userId =>
+          adminService.suspendUser(userId, suspensionData)
+        )
+      );
+
+      setSelectedUsers(new Set());
+      setShowBulkActions(false);
+      setActionModal({ type: null, user: null });
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to bulk suspend users:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkUnsuspend = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setBulkActionLoading(true);
+    try {
+      const userIds = Array.from(selectedUsers);
+      await Promise.all(
+        userIds.map(userId => adminService.unsuspendUser(userId))
+      );
+
+      setSelectedUsers(new Set());
+      setShowBulkActions(false);
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to bulk unsuspend users:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkRoleChange = async () => {
+    if (selectedUsers.size === 0) return;
+
+    setBulkActionLoading(true);
+    try {
+      const userIds = Array.from(selectedUsers);
+      await Promise.all(
+        userIds.map(userId => adminService.updateUserRole(userId, newRole))
+      );
+
+      setSelectedUsers(new Set());
+      setShowBulkActions(false);
+      setActionModal({ type: null, user: null });
+      loadUsers();
+    } catch (error) {
+      console.error('Failed to bulk update roles:', error);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const exportUsers = async () => {
+    try {
+      await adminService.exportUsers(filters);
+    } catch (error) {
+      console.error('Failed to export users:', error);
     }
   };
 
@@ -121,69 +249,300 @@ export function UserManagement() {
     }
   };
 
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'login': return LogIn;
+      case 'post': return MessageSquare;
+      case 'comment': return MessageSquare;
+      case 'transaction': return ShoppingCart;
+      case 'content': return FileText;
+      default: return Activity;
+    }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'login': return 'bg-blue-500/20 text-blue-400';
+      case 'post': return 'bg-purple-500/20 text-purple-400';
+      case 'comment': return 'bg-purple-500/20 text-purple-400';
+      case 'transaction': return 'bg-green-500/20 text-green-400';
+      case 'content': return 'bg-yellow-500/20 text-yellow-400';
+      default: return 'bg-gray-500/20 text-gray-400';
+    }
+  };
+
+  const formatActivityTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header with Export */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-white">User Management</h2>
+          <p className="text-gray-400 text-sm">Manage users, roles, and permissions</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={exportUsers}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export
+          </Button>
+          <Button
+            variant={showBulkActions ? "primary" : "outline"}
+            onClick={() => setShowBulkActions(!showBulkActions)}
+            className="flex items-center gap-2"
+          >
+            <CheckSquare className="w-4 h-4" />
+            Bulk Actions
+          </Button>
+        </div>
+      </div>
+
       {/* Filters */}
-      <GlassPanel className="p-6">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <span className="text-white font-medium">Filters:</span>
+      <GlassPanel className="p-4 sm:p-6">
+        <div className="space-y-4">
+          {/* Basic Filters */}
+          <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <span className="text-white font-medium text-sm sm:text-base">Filters:</span>
+            </div>
+
+            <select
+              value={filters.role}
+              onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white text-sm"
+            >
+              <option value="">All Roles</option>
+              <option value="user">User</option>
+              <option value="moderator">Moderator</option>
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
+            </select>
+
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white text-sm"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+
+            <select
+              value={filters.kycStatus}
+              onChange={(e) => setFilters({ ...filters, kycStatus: e.target.value })}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white text-sm"
+            >
+              <option value="">All KYC Status</option>
+              <option value="none">None</option>
+              <option value="pending">Pending</option>
+              <option value="basic">Basic</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+
+            <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:min-w-[250px]">
+              <select
+                value={filters.searchField}
+                onChange={(e) => setFilters({ ...filters, searchField: e.target.value })}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm"
+              >
+                <option value="all">All Fields</option>
+                <option value="handle">Username</option>
+                <option value="email">Email</option>
+                <option value="address">Wallet</option>
+                <option value="ens">ENS</option>
+              </select>
+              <Search className="w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder={`Search ${filters.searchField === 'all' ? 'users' : filters.searchField}...`}
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white flex-1 text-sm"
+              />
+            </div>
+
+            <Button
+              variant={showAdvancedSearch ? "primary" : "outline"}
+              onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+              className="flex items-center gap-2 text-sm"
+            >
+              <Filter className="w-4 h-4" />
+              Advanced
+            </Button>
           </div>
-          
-          <select
-            value={filters.role}
-            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
-          >
-            <option value="">All Roles</option>
-            <option value="user">User</option>
-            <option value="moderator">Moderator</option>
-            <option value="admin">Admin</option>
-            <option value="super_admin">Super Admin</option>
-          </select>
 
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-          </select>
+          {/* Advanced Search Panel */}
+          {showAdvancedSearch && (
+            <div className="p-4 bg-white/5 rounded-lg border border-gray-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Last Login Filters */}
+                <div>
+                  <label className="text-gray-400 text-xs sm:text-sm mb-2 block">Last Login After</label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={filters.lastLoginAfter}
+                      onChange={(e) => setFilters({ ...filters, lastLoginAfter: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 text-white flex-1 text-sm"
+                    />
+                  </div>
+                </div>
 
-          <select
-            value={filters.kycStatus}
-            onChange={(e) => setFilters({ ...filters, kycStatus: e.target.value })}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
-          >
-            <option value="">All KYC Status</option>
-            <option value="none">None</option>
-            <option value="pending">Pending</option>
-            <option value="basic">Basic</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
+                <div>
+                  <label className="text-gray-400 text-xs sm:text-sm mb-2 block">Last Login Before</label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={filters.lastLoginBefore}
+                      onChange={(e) => setFilters({ ...filters, lastLoginBefore: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 text-white flex-1 text-sm"
+                    />
+                  </div>
+                </div>
 
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white flex-1"
-            />
-          </div>
+                {/* Account Creation Filters */}
+                <div>
+                  <label className="text-gray-400 text-xs sm:text-sm mb-2 block">Joined After</label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={filters.createdAfter}
+                      onChange={(e) => setFilters({ ...filters, createdAfter: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 text-white flex-1 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-gray-400 text-xs sm:text-sm mb-2 block">Joined Before</label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={filters.createdBefore}
+                      onChange={(e) => setFilters({ ...filters, createdBefore: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 text-white flex-1 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilters({
+                    role: '',
+                    status: '',
+                    kycStatus: '',
+                    search: '',
+                    searchField: 'all',
+                    lastLoginAfter: '',
+                    lastLoginBefore: '',
+                    createdAfter: '',
+                    createdBefore: ''
+                  })}
+                  className="flex items-center gap-2"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Clear All Filters
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </GlassPanel>
 
+      {/* Bulk Actions Toolbar */}
+      {showBulkActions && selectedUsers.size > 0 && (
+        <GlassPanel className="p-4 bg-purple-500/20 border-purple-500/50">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-purple-400" />
+              <span className="text-white font-medium text-sm sm:text-base">
+                {selectedUsers.size} user{selectedUsers.size > 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+              <Button
+                onClick={() => setActionModal({ type: 'bulk-suspend', user: null })}
+                disabled={bulkActionLoading}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Ban className="w-4 h-4" />
+                Suspend All
+              </Button>
+              <Button
+                onClick={handleBulkUnsuspend}
+                disabled={bulkActionLoading}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                Unsuspend All
+              </Button>
+              <Button
+                onClick={() => setActionModal({ type: 'bulk-role', user: null })}
+                disabled={bulkActionLoading}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                Change Role
+              </Button>
+            </div>
+          </div>
+        </GlassPanel>
+      )}
+
       {/* Users List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-white">Users ({pagination.total})</h2>
-          
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl font-bold text-white">Users ({pagination.total})</h2>
+            {showBulkActions && users.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 text-purple-400 hover:text-purple-300 text-sm"
+              >
+                {selectedUsers.size === users.length ? (
+                  <CheckSquare className="w-4 h-4" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                <span className="hidden sm:inline">Select All</span>
+              </button>
+            )}
+          </div>
+
           {loading ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
@@ -194,56 +553,82 @@ export function UserManagement() {
             </div>
           ) : (
             <div className="space-y-4">
-              {users.map((user) => (
-                <GlassPanel
-                  key={user.id}
-                  className={`p-4 cursor-pointer transition-colors ${
-                    selectedUser?.id === user.id ? 'ring-2 ring-purple-500' : 'hover:bg-white/5'
-                  }`}
-                  onClick={() => setSelectedUser(user)}
-                >
-                  <div className="flex items-start justify-between">
+              {users.map((user) => {
+                const isSelected = selectedUsers.has(user.id);
+                return (
+                  <GlassPanel
+                    key={user.id}
+                    className={`p-4 cursor-pointer transition-colors ${
+                      selectedUser?.id === user.id ? 'ring-2 ring-purple-500' :
+                      isSelected ? 'ring-2 ring-blue-500 bg-blue-500/10' :
+                      'hover:bg-white/5'
+                    }`}
+                  >
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold">
-                          {user.handle.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-white font-medium">{user.handle}</span>
-                          {user.ens && (
-                            <span className="text-blue-400 text-sm">({user.ens})</span>
+                      {/* Selection Checkbox */}
+                      {showBulkActions && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleUserSelection(user.id);
+                          }}
+                          className="mt-1 flex-shrink-0"
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-blue-400" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400 hover:text-gray-300" />
                           )}
-                        </div>
-                        <p className="text-gray-400 text-sm mb-1">{user.address}</p>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                            {user.role.replace('_', ' ')}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getKycStatusColor(user.kycStatus)}`}>
-                            KYC: {user.kycStatus}
-                          </span>
+                        </button>
+                      )}
+
+                      {/* User Content */}
+                      <div className="flex-1 min-w-0" onClick={() => setSelectedUser(user)}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-white font-bold">
+                                {user.handle.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="text-white font-medium text-sm sm:text-base">{user.handle}</span>
+                                {user.ens && (
+                                  <span className="text-blue-400 text-xs sm:text-sm">({user.ens})</span>
+                                )}
+                              </div>
+                              <p className="text-gray-400 text-xs sm:text-sm mb-1 truncate">{user.address}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                                  {user.role.replace('_', ' ')}
+                                </span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getKycStatusColor(user.kycStatus)}`}>
+                                  KYC: {user.kycStatus}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            {user.isSuspended ? (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium text-red-400 bg-red-500/20 whitespace-nowrap">
+                                Suspended
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium text-green-400 bg-green-500/20 whitespace-nowrap">
+                                Active
+                              </span>
+                            )}
+                            <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">
+                              Joined {new Date(user.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {user.isSuspended ? (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium text-red-400 bg-red-500/20">
-                          Suspended
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-full text-xs font-medium text-green-400 bg-green-500/20">
-                          Active
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">
-                        Joined {new Date(user.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </GlassPanel>
-              ))}
+                  </GlassPanel>
+                );
+              })}
             </div>
           )}
 
@@ -304,46 +689,46 @@ export function UserManagement() {
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="text-gray-400 text-sm">Handle</label>
                   <p className="text-white">{selectedUser.handle}</p>
                 </div>
-                
+
                 {selectedUser.ens && (
                   <div>
                     <label className="text-gray-400 text-sm">ENS</label>
                     <p className="text-white">{selectedUser.ens}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Wallet Address</label>
                   <p className="text-white text-sm break-all">{selectedUser.address}</p>
                 </div>
-                
+
                 {selectedUser.email && (
                   <div>
                     <label className="text-gray-400 text-sm">Email</label>
                     <p className="text-white">{selectedUser.email}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Role</label>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(selectedUser.role)}`}>
                     {selectedUser.role.replace('_', ' ')}
                   </span>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">KYC Status</label>
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getKycStatusColor(selectedUser.kycStatus)}`}>
                     {selectedUser.kycStatus}
                   </span>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Account Status</label>
                   <div className="flex items-center gap-2">
@@ -372,17 +757,17 @@ export function UserManagement() {
                     )}
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Last Login</label>
                   <p className="text-white">
-                    {selectedUser.lastLogin 
+                    {selectedUser.lastLogin
                       ? new Date(selectedUser.lastLogin).toLocaleString()
                       : 'Never'
                     }
                   </p>
                 </div>
-                
+
                 <div>
                   <label className="text-gray-400 text-sm">Member Since</label>
                   <p className="text-white">{new Date(selectedUser.createdAt).toLocaleString()}</p>
@@ -404,6 +789,84 @@ export function UserManagement() {
                     </div>
                   </div>
                 )}
+
+                {/* Activity Timeline Section */}
+                <div className="border-t border-gray-700 pt-4">
+                  <button
+                    onClick={() => {
+                      if (!showActivityTimeline) {
+                        loadUserActivity(selectedUser.id);
+                      }
+                      setShowActivityTimeline(!showActivityTimeline);
+                    }}
+                    className="flex items-center justify-between w-full text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-purple-400" />
+                      <span className="text-white font-medium text-sm">Activity Timeline</span>
+                    </div>
+                    {showActivityTimeline ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {showActivityTimeline && (
+                    <div className="mt-4 space-y-3 max-h-96 overflow-y-auto">
+                      {activityLoading ? (
+                        <div className="space-y-3">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="p-3 bg-white/5 rounded-lg animate-pulse">
+                              <div className="h-12 bg-white/10 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : userActivity.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Activity className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-400 text-sm">No activity recorded</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {userActivity.map((activity, index) => {
+                            const ActivityIcon = getActivityIcon(activity.type);
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-start gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                              >
+                                <div className={`p-2 rounded-lg ${getActivityColor(activity.type)} flex-shrink-0`}>
+                                  <ActivityIcon className="w-4 h-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-sm font-medium mb-1">
+                                    {activity.description}
+                                  </p>
+                                  {activity.details && (
+                                    <p className="text-gray-400 text-xs mb-1 truncate">
+                                      {activity.details}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{formatActivityTime(activity.timestamp)}</span>
+                                    {activity.ipAddress && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="font-mono">{activity.ipAddress}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </GlassPanel>
           ) : (
@@ -477,13 +940,13 @@ export function UserManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <GlassPanel className="max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-white mb-4">Change User Role</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-1">Current Role</label>
                 <p className="text-white">{actionModal.user.role.replace('_', ' ')}</p>
               </div>
-              
+
               <div>
                 <label className="block text-gray-400 text-sm mb-1">New Role</label>
                 <select
@@ -498,10 +961,105 @@ export function UserManagement() {
                 </select>
               </div>
             </div>
-            
+
             <div className="flex gap-2 mt-6">
               <Button onClick={handleRoleChange} variant="primary">
                 Update Role
+              </Button>
+              <Button onClick={() => setActionModal({ type: null, user: null })} variant="outline">
+                Cancel
+              </Button>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
+
+      {/* Bulk Suspend Modal */}
+      {actionModal.type === 'bulk-suspend' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <GlassPanel className="max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-white mb-4">
+              Suspend {selectedUsers.size} User{selectedUsers.size > 1 ? 's' : ''}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">Reason</label>
+                <textarea
+                  value={suspensionData.reason}
+                  onChange={(e) => setSuspensionData({ ...suspensionData, reason: e.target.value })}
+                  rows={3}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  placeholder="Reason for suspension..."
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="permanent-bulk"
+                  checked={suspensionData.permanent}
+                  onChange={(e) => setSuspensionData({ ...suspensionData, permanent: e.target.checked })}
+                  className="rounded"
+                />
+                <label htmlFor="permanent-bulk" className="text-white text-sm">
+                  Permanent suspension
+                </label>
+              </div>
+
+              {!suspensionData.permanent && (
+                <div>
+                  <label className="block text-gray-400 text-sm mb-1">Duration (days)</label>
+                  <input
+                    type="number"
+                    value={suspensionData.duration}
+                    onChange={(e) => setSuspensionData({ ...suspensionData, duration: parseInt(e.target.value) || 1 })}
+                    min="1"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button onClick={handleBulkSuspend} variant="primary" disabled={bulkActionLoading}>
+                Suspend All Users
+              </Button>
+              <Button onClick={() => setActionModal({ type: null, user: null })} variant="outline">
+                Cancel
+              </Button>
+            </div>
+          </GlassPanel>
+        </div>
+      )}
+
+      {/* Bulk Role Change Modal */}
+      {actionModal.type === 'bulk-role' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <GlassPanel className="max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-white mb-4">
+              Change Role for {selectedUsers.size} User{selectedUsers.size > 1 ? 's' : ''}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-1">New Role</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as UserRole)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                >
+                  <option value="user">User</option>
+                  <option value="moderator">Moderator</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <Button onClick={handleBulkRoleChange} variant="primary" disabled={bulkActionLoading}>
+                Update All Roles
               </Button>
               <Button onClick={() => setActionModal({ type: null, user: null })} variant="outline">
                 Cancel

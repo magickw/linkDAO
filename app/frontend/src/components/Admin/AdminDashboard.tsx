@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { 
-  Users, 
-  FileText, 
-  AlertTriangle, 
-  ShoppingBag, 
-  BarChart3, 
+import {
+  Users,
+  FileText,
+  AlertTriangle,
+  ShoppingBag,
+  BarChart3,
   Settings,
   Shield,
   Clock,
   CheckCircle,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  History
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
 import { Button, GlassPanel } from '@/design-system';
 import { ModerationQueue } from './ModerationQueue';
+import { ModerationHistory } from './ModerationHistory';
 import { SellerApplications } from './SellerApplications';
+import { SellerPerformance } from './SellerPerformance';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
 import { AdminAnalytics } from './AdminAnalytics';
@@ -66,56 +69,58 @@ export function AdminDashboard() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3, permission: null },
     { id: 'moderation', label: 'Moderation', icon: Shield, permission: 'content.moderate' },
+    { id: 'history', label: 'Mod History', icon: History, permission: 'system.audit' },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review' },
+    { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view' },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp, permission: 'system.analytics' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
-    <GlassPanel className="p-6">
+    <GlassPanel className="p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-400 text-sm">{title}</p>
-          <p className="text-2xl font-bold text-white mt-1">{value}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold text-white mt-1">{value}</p>
           {trend && (
-            <p className={`text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`text-xs sm:text-sm mt-1 ${trend > 0 ? 'text-green-400' : 'text-red-400'}`}>
               {trend > 0 ? '+' : ''}{trend}% from last week
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`p-2 sm:p-3 rounded-lg ${color} flex-shrink-0 ml-2`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
       </div>
     </GlassPanel>
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-2 sm:p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-gray-400 mt-2">Manage platform operations and user activities</p>
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
+          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Manage platform operations and user activities</p>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-1 sm:gap-2 mb-4 sm:mb-8 overflow-x-auto pb-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id
                     ? 'bg-purple-600 text-white'
                     : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {tab.label}
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{tab.label}</span>
               </button>
             );
           })}
@@ -123,18 +128,18 @@ export function AdminDashboard() {
 
         {/* Content */}
         {activeTab === 'overview' && (
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-8">
             {/* Stats Grid */}
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
-                  <GlassPanel key={i} className="p-6 animate-pulse">
+                  <GlassPanel key={i} className="p-4 sm:p-6 animate-pulse">
                     <div className="h-16 bg-white/10 rounded"></div>
                   </GlassPanel>
                 ))}
               </div>
             ) : stats && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                 <StatCard
                   title="Pending Moderations"
                   value={stats.pendingModerations}
@@ -175,43 +180,43 @@ export function AdminDashboard() {
             )}
 
             {/* Recent Actions */}
-            <GlassPanel className="p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Recent Admin Actions</h2>
+            <GlassPanel className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Recent Admin Actions</h2>
               {stats?.recentActions && stats.recentActions.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {stats.recentActions.slice(0, 10).map((action, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <div>
-                          <p className="text-white text-sm">
+                    <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-white/5 rounded-lg gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full flex-shrink-0"></div>
+                        <div className="min-w-0">
+                          <p className="text-white text-xs sm:text-sm">
                             <span className="font-medium">{action.adminHandle}</span> {action.action}
                           </p>
-                          <p className="text-gray-400 text-xs">{action.reason}</p>
+                          <p className="text-gray-400 text-[10px] sm:text-xs truncate">{action.reason}</p>
                         </div>
                       </div>
-                      <span className="text-gray-400 text-xs">
+                      <span className="text-gray-400 text-[10px] sm:text-xs ml-4 sm:ml-0 flex-shrink-0">
                         {new Date(action.timestamp).toLocaleString()}
                       </span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-400">No recent actions</p>
+                <p className="text-gray-400 text-sm">No recent actions</p>
               )}
             </GlassPanel>
 
             {/* Quick Actions */}
-            <GlassPanel className="p-6">
-              <h2 className="text-xl font-bold text-white mb-4">Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <GlassPanel className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
                 {hasPermission('content.moderate') && (
                   <Button
                     onClick={() => setActiveTab('moderation')}
                     variant="outline"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 justify-center text-sm"
                   >
-                    <Shield className="w-4 h-4" />
+                    <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
                     Review Content
                   </Button>
                 )}
@@ -219,9 +224,9 @@ export function AdminDashboard() {
                   <Button
                     onClick={() => setActiveTab('sellers')}
                     variant="outline"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 justify-center text-sm"
                   >
-                    <ShoppingBag className="w-4 h-4" />
+                    <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4" />
                     Review Sellers
                   </Button>
                 )}
@@ -229,9 +234,9 @@ export function AdminDashboard() {
                   <Button
                     onClick={() => setActiveTab('disputes')}
                     variant="outline"
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 justify-center text-sm"
                   >
-                    <AlertTriangle className="w-4 h-4" />
+                    <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
                     Resolve Disputes
                   </Button>
                 )}
@@ -244,8 +249,16 @@ export function AdminDashboard() {
           <ModerationQueue />
         )}
 
+        {activeTab === 'history' && hasPermission('system.audit') && (
+          <ModerationHistory />
+        )}
+
         {activeTab === 'sellers' && hasPermission('marketplace.seller_review') && (
           <SellerApplications />
+        )}
+
+        {activeTab === 'performance' && hasPermission('marketplace.seller_view') && (
+          <SellerPerformance />
         )}
 
         {activeTab === 'disputes' && hasPermission('disputes.view') && (

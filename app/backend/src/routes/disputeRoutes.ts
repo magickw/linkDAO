@@ -15,4 +15,13 @@ router.post('/:disputeId/assign', disputeController.assignDispute.bind(disputeCo
 router.post('/:disputeId/resolve', disputeController.resolveDispute.bind(disputeController));
 router.post('/:disputeId/notes', disputeController.addDisputeNote.bind(disputeController));
 
+// Evidence Management Routes
+router.post('/:disputeId/evidence', disputeController.uploadDisputeEvidence.bind(disputeController));
+router.delete('/:disputeId/evidence/:evidenceId', disputeController.deleteDisputeEvidence.bind(disputeController));
+router.patch('/:disputeId/evidence/:evidenceId/status', disputeController.updateEvidenceStatus.bind(disputeController));
+
+// Communication Thread Routes
+router.get('/:disputeId/messages', disputeController.getDisputeMessages.bind(disputeController));
+router.post('/:disputeId/messages', disputeController.sendDisputeMessage.bind(disputeController));
+
 export default router;

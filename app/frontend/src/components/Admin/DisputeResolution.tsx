@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  AlertTriangle, 
-  Eye, 
-  CheckCircle, 
-  XCircle, 
+import {
+  AlertTriangle,
+  Eye,
+  CheckCircle,
+  XCircle,
   Clock,
   Filter,
   Search,
@@ -11,7 +11,19 @@ import {
   User,
   MessageSquare,
   FileText,
-  Calendar
+  Calendar,
+  Upload,
+  Image,
+  Download,
+  Trash2,
+  ExternalLink,
+  FileImage,
+  File,
+  Check,
+  X,
+  Send,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { DisputeCase } from '@/types/auth';
@@ -22,6 +34,13 @@ export function DisputeResolution() {
   const [loading, setLoading] = useState(true);
   const [selectedDispute, setSelectedDispute] = useState<DisputeCase | null>(null);
   const [resolutionModal, setResolutionModal] = useState(false);
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
+  const [evidenceUploading, setEvidenceUploading] = useState(false);
+  const [showCommunicationThread, setShowCommunicationThread] = useState(true);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
   const [resolutionData, setResolutionData] = useState({
     outcome: 'buyer_favor' as 'buyer_favor' | 'seller_favor' | 'partial_refund' | 'no_action',
     refundAmount: 0,
@@ -44,6 +63,12 @@ export function DisputeResolution() {
     loadDisputes();
   }, [filters, pagination.page]);
 
+  useEffect(() => {
+    if (selectedDispute) {
+      loadMessages(selectedDispute.id);
+    }
+  }, [selectedDispute]);
+
   const loadDisputes = async () => {
     try {
       setLoading(true);
@@ -52,7 +77,7 @@ export function DisputeResolution() {
         page: pagination.page,
         limit: 20
       });
-      
+
       setDisputes(response.disputes);
       setPagination({
         page: response.page,
@@ -63,6 +88,62 @@ export function DisputeResolution() {
       console.error('Failed to load disputes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMessages = async (disputeId: string) => {
+    try {
+      const response = await adminService.getDisputeMessages(disputeId);
+      setMessages(response.messages || []);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      setMessages([]);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedDispute || sendingMessage) return;
+
+    setSendingMessage(true);
+    try {
+      await adminService.sendDisputeMessage(selectedDispute.id, {
+        message: newMessage,
+        sender: 'admin',
+        isInternal: false
+      });
+
+      setNewMessage('');
+      // Reload messages
+      await loadMessages(selectedDispute.id);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const getMessageSenderColor = (sender: string) => {
+    switch (sender) {
+      case 'admin': return 'bg-purple-500/20 border-purple-500/30';
+      case 'buyer': return 'bg-blue-500/20 border-blue-500/30';
+      case 'seller': return 'bg-green-500/20 border-green-500/30';
+      default: return 'bg-gray-500/20 border-gray-500/30';
+    }
+  };
+
+  const getMessageSenderLabel = (sender: string) => {
+    switch (sender) {
+      case 'admin': return 'Admin';
+      case 'buyer': return 'Buyer';
+      case 'seller': return 'Seller';
+      default: return sender;
     }
   };
 
@@ -117,6 +198,72 @@ export function DisputeResolution() {
       case 'high': return 'text-orange-400 bg-orange-500/20';
       case 'medium': return 'text-yellow-400 bg-yellow-500/20';
       default: return 'text-gray-400 bg-gray-500/20';
+    }
+  };
+
+  const getEvidenceIcon = (type: string) => {
+    if (type?.includes('image') || type?.includes('png') || type?.includes('jpg') || type?.includes('jpeg')) {
+      return FileImage;
+    }
+    return File;
+  };
+
+  const getEvidenceTypeLabel = (type: string) => {
+    if (!type) return 'Unknown';
+    if (type.includes('image')) return 'Image';
+    if (type.includes('pdf')) return 'PDF Document';
+    if (type.includes('video')) return 'Video';
+    return 'Document';
+  };
+
+  const handleEvidenceUpload = async (files: FileList | null, party: 'buyer' | 'seller' | 'admin') => {
+    if (!files || !selectedDispute) return;
+
+    setEvidenceUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach(file => {
+        formData.append('files', file);
+      });
+      formData.append('party', party);
+
+      await adminService.uploadDisputeEvidence(selectedDispute.id, formData);
+
+      // Refresh dispute details
+      const updatedDispute = await adminService.getDispute(selectedDispute.id);
+      setSelectedDispute(updatedDispute);
+    } catch (error) {
+      console.error('Failed to upload evidence:', error);
+    } finally {
+      setEvidenceUploading(false);
+    }
+  };
+
+  const handleEvidenceDelete = async (evidenceId: string) => {
+    if (!selectedDispute) return;
+
+    try {
+      await adminService.deleteDisputeEvidence(selectedDispute.id, evidenceId);
+
+      // Refresh dispute details
+      const updatedDispute = await adminService.getDispute(selectedDispute.id);
+      setSelectedDispute(updatedDispute);
+    } catch (error) {
+      console.error('Failed to delete evidence:', error);
+    }
+  };
+
+  const handleEvidenceStatusUpdate = async (evidenceId: string, status: 'verified' | 'rejected' | 'pending') => {
+    if (!selectedDispute) return;
+
+    try {
+      await adminService.updateEvidenceStatus(selectedDispute.id, evidenceId, status);
+
+      // Refresh dispute details
+      const updatedDispute = await adminService.getDispute(selectedDispute.id);
+      setSelectedDispute(updatedDispute);
+    } catch (error) {
+      console.error('Failed to update evidence status:', error);
     }
   };
 
@@ -349,26 +496,436 @@ export function DisputeResolution() {
                   </div>
                 </div>
 
-                {/* Evidence */}
-                {(selectedDispute.evidence.buyerEvidence?.length || selectedDispute.evidence.sellerEvidence?.length) && (
-                  <div>
-                    <label className="text-gray-400 text-sm mb-2 block">Evidence</label>
-                    <div className="space-y-2">
-                      {selectedDispute.evidence.buyerEvidence?.map((evidence, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-blue-500/10 rounded-lg">
-                          <FileText className="w-4 h-4 text-blue-400" />
-                          <span className="text-blue-400 text-sm">Buyer Evidence {index + 1}</span>
-                        </div>
-                      ))}
-                      {selectedDispute.evidence.sellerEvidence?.map((evidence, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-green-500/10 rounded-lg">
-                          <FileText className="w-4 h-4 text-green-400" />
-                          <span className="text-green-400 text-sm">Seller Evidence {index + 1}</span>
-                        </div>
-                      ))}
+                {/* Communication Thread */}
+                <div className="border-t border-gray-700 pt-4">
+                  <button
+                    onClick={() => setShowCommunicationThread(!showCommunicationThread)}
+                    className="flex items-center justify-between w-full text-left mb-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-purple-400" />
+                      <span className="text-white font-medium text-sm">Communication Thread</span>
+                      {messages.length > 0 && (
+                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
+                          {messages.length}
+                        </span>
+                      )}
                     </div>
+                    {showCommunicationThread ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                    )}
+                  </button>
+
+                  {showCommunicationThread && (
+                    <div>
+                      {/* Messages List */}
+                      <div className="space-y-3 mb-3 max-h-96 overflow-y-auto">
+                        {messages.length === 0 ? (
+                          <div className="text-center py-8">
+                            <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-gray-400 text-sm">No messages yet</p>
+                            <p className="text-gray-500 text-xs mt-1">Start the conversation with the parties</p>
+                          </div>
+                        ) : (
+                          messages.map((message, index) => (
+                            <div
+                              key={index}
+                              className={`p-3 rounded-lg border ${getMessageSenderColor(message.sender)}`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-white text-sm font-medium">
+                                    {getMessageSenderLabel(message.sender)}
+                                  </span>
+                                  {message.isInternal && (
+                                    <span className="px-2 py-0.5 bg-gray-500/30 text-gray-300 text-xs rounded-full">
+                                      Internal
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-400 flex-shrink-0">
+                                  {new Date(message.timestamp).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-gray-200 text-sm whitespace-pre-wrap">{message.message}</p>
+                              {message.attachments && message.attachments.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {message.attachments.map((attachment: any, idx: number) => (
+                                    <a
+                                      key={idx}
+                                      href={attachment.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded text-xs text-blue-400 hover:text-blue-300"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      {attachment.filename}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Message Input */}
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <textarea
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Type a message... (Press Enter to send, Shift+Enter for new line)"
+                            rows={3}
+                            disabled={sendingMessage}
+                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm resize-none focus:outline-none focus:border-purple-500 disabled:opacity-50"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <label className="cursor-pointer text-xs text-gray-400 hover:text-gray-300 flex items-center gap-1">
+                              <input
+                                type="file"
+                                multiple
+                                className="hidden"
+                                disabled={sendingMessage}
+                              />
+                              <Upload className="w-3 h-3" />
+                              Attach files
+                            </label>
+                          </div>
+                          <Button
+                            onClick={handleSendMessage}
+                            disabled={!newMessage.trim() || sendingMessage}
+                            variant="primary"
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Send className="w-4 h-4" />
+                            {sendingMessage ? 'Sending...' : 'Send'}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Messages are visible to both buyer and seller. Use internal notes for admin-only communication.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced Evidence Management */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-gray-400 text-sm">Evidence Management</label>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,application/pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => handleEvidenceUpload(e.target.files, 'admin')}
+                        disabled={evidenceUploading}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={evidenceUploading}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {evidenceUploading ? 'Uploading...' : 'Upload Evidence'}
+                      </Button>
+                    </label>
                   </div>
-                )}
+
+                  <div className="space-y-3">
+                    {/* Buyer Evidence */}
+                    {selectedDispute.evidence.buyerEvidence && selectedDispute.evidence.buyerEvidence.length > 0 && (
+                      <div>
+                        <h4 className="text-blue-400 text-xs font-medium mb-2">Buyer Evidence</h4>
+                        <div className="space-y-2">
+                          {selectedDispute.evidence.buyerEvidence.map((evidence, index) => {
+                            const EvidenceIcon = getEvidenceIcon(evidence.type);
+                            return (
+                              <div key={index} className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                <div className="flex items-start gap-3">
+                                  <EvidenceIcon className="w-5 h-5 text-blue-400 flex-shrink-0 mt-1" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-white text-sm font-medium truncate">
+                                        {evidence.filename || `Evidence ${index + 1}`}
+                                      </span>
+                                      {evidence.status && (
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                          evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                                          evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                          'bg-yellow-500/20 text-yellow-400'
+                                        }`}>
+                                          {evidence.status}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                                      <span>{getEvidenceTypeLabel(evidence.type)}</span>
+                                      {evidence.size && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{(evidence.size / 1024).toFixed(1)} KB</span>
+                                        </>
+                                      )}
+                                      {evidence.uploadedAt && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{new Date(evidence.uploadedAt).toLocaleDateString()}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    {evidence.description && (
+                                      <p className="text-gray-300 text-xs mb-2">{evidence.description}</p>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedEvidence(evidence)}
+                                        className="flex items-center gap-1 text-xs"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        View
+                                      </Button>
+                                      {evidence.url && (
+                                        <a
+                                          href={evidence.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          Download
+                                        </a>
+                                      )}
+                                      <div className="flex gap-1 ml-auto">
+                                        <button
+                                          onClick={() => handleEvidenceStatusUpdate(evidence.id, 'verified')}
+                                          className="p-1 rounded bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                                          title="Verify"
+                                        >
+                                          <Check className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleEvidenceStatusUpdate(evidence.id, 'rejected')}
+                                          className="p-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                                          title="Reject"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleEvidenceDelete(evidence.id)}
+                                          className="p-1 rounded bg-gray-500/20 hover:bg-gray-500/30 text-gray-400"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Seller Evidence */}
+                    {selectedDispute.evidence.sellerEvidence && selectedDispute.evidence.sellerEvidence.length > 0 && (
+                      <div>
+                        <h4 className="text-green-400 text-xs font-medium mb-2">Seller Evidence</h4>
+                        <div className="space-y-2">
+                          {selectedDispute.evidence.sellerEvidence.map((evidence, index) => {
+                            const EvidenceIcon = getEvidenceIcon(evidence.type);
+                            return (
+                              <div key={index} className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                                <div className="flex items-start gap-3">
+                                  <EvidenceIcon className="w-5 h-5 text-green-400 flex-shrink-0 mt-1" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-white text-sm font-medium truncate">
+                                        {evidence.filename || `Evidence ${index + 1}`}
+                                      </span>
+                                      {evidence.status && (
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                          evidence.status === 'verified' ? 'bg-green-500/20 text-green-400' :
+                                          evidence.status === 'rejected' ? 'bg-red-500/20 text-red-400' :
+                                          'bg-yellow-500/20 text-yellow-400'
+                                        }`}>
+                                          {evidence.status}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                                      <span>{getEvidenceTypeLabel(evidence.type)}</span>
+                                      {evidence.size && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{(evidence.size / 1024).toFixed(1)} KB</span>
+                                        </>
+                                      )}
+                                      {evidence.uploadedAt && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{new Date(evidence.uploadedAt).toLocaleDateString()}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    {evidence.description && (
+                                      <p className="text-gray-300 text-xs mb-2">{evidence.description}</p>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedEvidence(evidence)}
+                                        className="flex items-center gap-1 text-xs"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        View
+                                      </Button>
+                                      {evidence.url && (
+                                        <a
+                                          href={evidence.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          Download
+                                        </a>
+                                      )}
+                                      <div className="flex gap-1 ml-auto">
+                                        <button
+                                          onClick={() => handleEvidenceStatusUpdate(evidence.id, 'verified')}
+                                          className="p-1 rounded bg-green-500/20 hover:bg-green-500/30 text-green-400"
+                                          title="Verify"
+                                        >
+                                          <Check className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleEvidenceStatusUpdate(evidence.id, 'rejected')}
+                                          className="p-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                                          title="Reject"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleEvidenceDelete(evidence.id)}
+                                          className="p-1 rounded bg-gray-500/20 hover:bg-gray-500/30 text-gray-400"
+                                          title="Delete"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Admin Evidence */}
+                    {selectedDispute.evidence.adminEvidence && selectedDispute.evidence.adminEvidence.length > 0 && (
+                      <div>
+                        <h4 className="text-purple-400 text-xs font-medium mb-2">Admin Evidence</h4>
+                        <div className="space-y-2">
+                          {selectedDispute.evidence.adminEvidence.map((evidence, index) => {
+                            const EvidenceIcon = getEvidenceIcon(evidence.type);
+                            return (
+                              <div key={index} className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                                <div className="flex items-start gap-3">
+                                  <EvidenceIcon className="w-5 h-5 text-purple-400 flex-shrink-0 mt-1" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-white text-sm font-medium truncate">
+                                        {evidence.filename || `Evidence ${index + 1}`}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
+                                      <span>{getEvidenceTypeLabel(evidence.type)}</span>
+                                      {evidence.size && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{(evidence.size / 1024).toFixed(1)} KB</span>
+                                        </>
+                                      )}
+                                      {evidence.uploadedAt && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{new Date(evidence.uploadedAt).toLocaleDateString()}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                    {evidence.description && (
+                                      <p className="text-gray-300 text-xs mb-2">{evidence.description}</p>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedEvidence(evidence)}
+                                        className="flex items-center gap-1 text-xs"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        View
+                                      </Button>
+                                      {evidence.url && (
+                                        <a
+                                          href={evidence.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          Download
+                                        </a>
+                                      )}
+                                      <button
+                                        onClick={() => handleEvidenceDelete(evidence.id)}
+                                        className="p-1 rounded bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 ml-auto"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Evidence Message */}
+                    {(!selectedDispute.evidence.buyerEvidence || selectedDispute.evidence.buyerEvidence.length === 0) &&
+                     (!selectedDispute.evidence.sellerEvidence || selectedDispute.evidence.sellerEvidence.length === 0) &&
+                     (!selectedDispute.evidence.adminEvidence || selectedDispute.evidence.adminEvidence.length === 0) && (
+                      <div className="text-center py-8">
+                        <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm">No evidence uploaded yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Resolution */}
                 {selectedDispute.resolution && (

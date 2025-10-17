@@ -2,8 +2,10 @@ import { Request, Response } from "express";
 import { analyticsService } from "../services/analyticsService";
 import { databaseService } from "../services/databaseService";
 import AuditLoggingService from "../services/auditLoggingService";
+import { adminConfigurationService } from "../services/adminConfigurationService";
 import { eq, desc } from "drizzle-orm";
 import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases } from "../db/schema";
+import { AdminAuthenticatedRequest } from "../middleware/adminAuthMiddleware";
 
 export class AdminController {
   private auditLoggingService: AuditLoggingService;
@@ -15,117 +17,288 @@ export class AdminController {
   // Policy Configuration Methods
   async createPolicyConfiguration(req: Request, res: Response) {
     try {
-      res.status(201).json({ message: "Policy configuration created" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.createPolicyConfiguration(req.body, adminId);
+      res.status(201).json({
+        success: true,
+        message: "Policy configuration created successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to create policy configuration" });
+      console.error("Error creating policy configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to create policy configuration" });
     }
   }
 
   async updatePolicyConfiguration(req: Request, res: Response) {
     try {
-      res.json({ message: "Policy configuration updated" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+      const { id } = req.params;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.updatePolicyConfiguration(
+        parseInt(id),
+        req.body,
+        adminId
+      );
+      res.json({
+        success: true,
+        message: "Policy configuration updated successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update policy configuration" });
+      console.error("Error updating policy configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to update policy configuration" });
     }
   }
 
   async getPolicyConfigurations(req: Request, res: Response) {
     try {
-      res.json({ data: [] });
+      const { activeOnly } = req.query;
+      const configs = await adminConfigurationService.getPolicyConfigurations(
+        activeOnly === 'true'
+      );
+      res.json({ success: true, data: configs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch policy configurations" });
+      console.error("Error fetching policy configurations:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch policy configurations" });
     }
   }
 
   async deletePolicyConfiguration(req: Request, res: Response) {
     try {
-      res.json({ message: "Policy configuration deleted" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+      const { id } = req.params;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      await adminConfigurationService.deletePolicyConfiguration(parseInt(id), adminId);
+      res.json({
+        success: true,
+        message: "Policy configuration deleted successfully"
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete policy configuration" });
+      console.error("Error deleting policy configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to delete policy configuration" });
     }
   }
 
   // Threshold Configuration Methods
   async createThresholdConfiguration(req: Request, res: Response) {
     try {
-      res.status(201).json({ message: "Threshold configuration created" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.createThresholdConfiguration(req.body, adminId);
+      res.status(201).json({
+        success: true,
+        message: "Threshold configuration created successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to create threshold configuration" });
+      console.error("Error creating threshold configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to create threshold configuration" });
     }
   }
 
   async updateThresholdConfiguration(req: Request, res: Response) {
     try {
-      res.json({ message: "Threshold configuration updated" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+      const { id } = req.params;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.updateThresholdConfiguration(
+        parseInt(id),
+        req.body,
+        adminId
+      );
+      res.json({
+        success: true,
+        message: "Threshold configuration updated successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update threshold configuration" });
+      console.error("Error updating threshold configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to update threshold configuration" });
     }
   }
 
   async getThresholdConfigurations(req: Request, res: Response) {
     try {
-      res.json({ data: [] });
+      const { contentType, reputationTier } = req.query;
+      const configs = await adminConfigurationService.getThresholdConfigurations(
+        contentType as string,
+        reputationTier as string
+      );
+      res.json({ success: true, data: configs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch threshold configurations" });
+      console.error("Error fetching threshold configurations:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch threshold configurations" });
     }
   }
 
   // Vendor Configuration Methods
   async createVendorConfiguration(req: Request, res: Response) {
     try {
-      res.status(201).json({ message: "Vendor configuration created" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.createVendorConfiguration(req.body, adminId);
+      res.status(201).json({
+        success: true,
+        message: "Vendor configuration created successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to create vendor configuration" });
+      console.error("Error creating vendor configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to create vendor configuration" });
     }
   }
 
   async updateVendorConfiguration(req: Request, res: Response) {
     try {
-      res.json({ message: "Vendor configuration updated" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+      const { id } = req.params;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.updateVendorConfiguration(
+        parseInt(id),
+        req.body,
+        adminId
+      );
+      res.json({
+        success: true,
+        message: "Vendor configuration updated successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update vendor configuration" });
+      console.error("Error updating vendor configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to update vendor configuration" });
     }
   }
 
   async getVendorConfigurations(req: Request, res: Response) {
     try {
-      res.json({ data: [] });
+      const { serviceType, enabledOnly } = req.query;
+      const configs = await adminConfigurationService.getVendorConfigurations(
+        serviceType as string,
+        enabledOnly === 'true'
+      );
+      res.json({ success: true, data: configs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch vendor configurations" });
+      console.error("Error fetching vendor configurations:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch vendor configurations" });
     }
   }
 
   // Vendor Health Status
   async updateVendorHealthStatus(req: Request, res: Response) {
     try {
-      res.json({ message: "Vendor health status updated" });
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ success: false, error: "Health status is required" });
+      }
+
+      await adminConfigurationService.updateVendorHealthStatus(parseInt(id), status);
+      res.json({
+        success: true,
+        message: "Vendor health status updated successfully"
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update vendor health status" });
+      console.error("Error updating vendor health status:", error);
+      res.status(500).json({ success: false, error: "Failed to update vendor health status" });
     }
   }
 
   // Alert Configuration Methods
   async createAlertConfiguration(req: Request, res: Response) {
     try {
-      res.status(201).json({ message: "Alert configuration created" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.createAlertConfiguration(req.body, adminId);
+      res.status(201).json({
+        success: true,
+        message: "Alert configuration created successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to create alert configuration" });
+      console.error("Error creating alert configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to create alert configuration" });
     }
   }
 
   async updateAlertConfiguration(req: Request, res: Response) {
     try {
-      res.json({ message: "Alert configuration updated" });
+      const adminReq = req as AdminAuthenticatedRequest;
+      const adminId = adminReq.user?.userId;
+      const { id } = req.params;
+
+      if (!adminId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" });
+      }
+
+      const config = await adminConfigurationService.updateAlertConfiguration(
+        parseInt(id),
+        req.body,
+        adminId
+      );
+      res.json({
+        success: true,
+        message: "Alert configuration updated successfully",
+        data: config
+      });
     } catch (error) {
-      res.status(500).json({ error: "Failed to update alert configuration" });
+      console.error("Error updating alert configuration:", error);
+      res.status(500).json({ success: false, error: "Failed to update alert configuration" });
     }
   }
 
   async getAlertConfigurations(req: Request, res: Response) {
     try {
-      res.json({ data: [] });
+      const { activeOnly } = req.query;
+      const configs = await adminConfigurationService.getAlertConfigurations(
+        activeOnly === 'true'
+      );
+      res.json({ success: true, data: configs });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch alert configurations" });
+      console.error("Error fetching alert configurations:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch alert configurations" });
     }
   }
 
@@ -344,13 +517,13 @@ export class AdminController {
   async getAuditLogs(req: Request, res: Response) {
     try {
       const { page = 1, limit = 10 } = req.query;
-      
+
       const auditTrail = await this.auditLoggingService.getAuditTrail({
         limit: parseInt(limit as string),
         offset: (parseInt(page as string) - 1) * parseInt(limit as string),
         orderBy: 'desc'
       });
-      
+
       res.json({
         logs: auditTrail.logs,
         pagination: {
@@ -362,6 +535,65 @@ export class AdminController {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch audit logs" });
+    }
+  }
+
+  // User Activity
+  async getUserActivity(req: Request, res: Response) {
+    try {
+      const { userId } = req.params;
+
+      // Get user login history from audit logs
+      const auditTrail = await this.auditLoggingService.getAuditTrail({
+        actorId: userId,
+        limit: 50
+      });
+
+      // Transform audit logs into activity format
+      const activities = auditTrail.logs.map((log: any) => ({
+        type: this.mapActionToActivityType(log.actionType),
+        description: this.formatActivityDescription(log.actionType),
+        details: log.details?.description || '',
+        timestamp: log.timestamp,
+        ipAddress: log.ipAddress
+      }));
+
+      res.json({
+        activities,
+        total: activities.length
+      });
+    } catch (error) {
+      console.error('Error fetching user activity:', error);
+      res.status(500).json({ error: "Failed to fetch user activity" });
+    }
+  }
+
+  private mapActionToActivityType(actionType: string): string {
+    if (actionType.includes('login')) return 'login';
+    if (actionType.includes('post') || actionType.includes('content')) return 'post';
+    if (actionType.includes('comment')) return 'comment';
+    if (actionType.includes('transaction') || actionType.includes('purchase')) return 'transaction';
+    return 'content';
+  }
+
+  private formatActivityDescription(actionType: string): string {
+    switch (actionType) {
+      case 'user.login':
+        return 'Logged in to the platform';
+      case 'user.logout':
+        return 'Logged out';
+      case 'content.create':
+        return 'Created new content';
+      case 'content.update':
+        return 'Updated content';
+      case 'content.delete':
+        return 'Deleted content';
+      case 'transaction.create':
+        return 'Made a purchase';
+      case 'comment.create':
+        return 'Posted a comment';
+      default:
+        return actionType.replace(/\./g, ' ').replace(/_/g, ' ');
     }
   }
 }

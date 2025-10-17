@@ -131,15 +131,152 @@ export class DisputeController {
     try {
       const { disputeId } = req.params;
       const { note } = req.body;
-      
+
       // In a real implementation, we would store notes in a separate table
       // For now, we'll just log it
       console.log(`Note added to dispute ${disputeId}: ${note}`);
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error adding dispute note:", error);
       res.status(500).json({ error: "Failed to add dispute note" });
+    }
+  }
+
+  // Evidence Management
+  async uploadDisputeEvidence(req: Request, res: Response) {
+    try {
+      const { disputeId } = req.params;
+      const files = req.files as Express.Multer.File[];
+      const party = req.body.party; // 'buyer', 'seller', or 'admin'
+
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No files uploaded" });
+      }
+
+      // In production, upload files to cloud storage (S3, etc.)
+      // For now, create mock evidence records
+      const evidence = files.map((file, index) => ({
+        id: `evidence_${Date.now()}_${index}`,
+        disputeId,
+        filename: file.originalname,
+        type: file.mimetype,
+        size: file.size,
+        url: `/uploads/${file.filename}`,
+        uploadedBy: party,
+        uploadedAt: new Date().toISOString(),
+        status: 'pending',
+        description: ''
+      }));
+
+      res.json({
+        success: true,
+        evidence
+      });
+    } catch (error) {
+      console.error("Error uploading evidence:", error);
+      res.status(500).json({ error: "Failed to upload evidence" });
+    }
+  }
+
+  async deleteDisputeEvidence(req: Request, res: Response) {
+    try {
+      const { disputeId, evidenceId } = req.params;
+
+      // In production, delete from cloud storage and database
+      console.log(`Deleting evidence ${evidenceId} from dispute ${disputeId}`);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting evidence:", error);
+      res.status(500).json({ error: "Failed to delete evidence" });
+    }
+  }
+
+  async updateEvidenceStatus(req: Request, res: Response) {
+    try {
+      const { disputeId, evidenceId } = req.params;
+      const { status } = req.body;
+
+      // In production, update evidence status in database
+      console.log(`Updating evidence ${evidenceId} status to ${status}`);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating evidence status:", error);
+      res.status(500).json({ error: "Failed to update evidence status" });
+    }
+  }
+
+  // Communication Thread
+  async getDisputeMessages(req: Request, res: Response) {
+    try {
+      const { disputeId } = req.params;
+
+      // In production, fetch from messages table
+      // For now, return mock messages
+      const messages = [
+        {
+          id: 'msg_1',
+          disputeId,
+          sender: 'buyer',
+          message: 'I never received the product as described.',
+          timestamp: new Date(Date.now() - 86400000).toISOString(),
+          isInternal: false,
+          attachments: []
+        },
+        {
+          id: 'msg_2',
+          disputeId,
+          sender: 'seller',
+          message: 'The product was shipped on time with tracking number.',
+          timestamp: new Date(Date.now() - 43200000).toISOString(),
+          isInternal: false,
+          attachments: []
+        },
+        {
+          id: 'msg_3',
+          disputeId,
+          sender: 'admin',
+          message: 'I am reviewing the case and will provide a resolution soon.',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          isInternal: false,
+          attachments: []
+        }
+      ];
+
+      res.json({ messages });
+    } catch (error) {
+      console.error("Error fetching dispute messages:", error);
+      res.status(500).json({ error: "Failed to fetch dispute messages" });
+    }
+  }
+
+  async sendDisputeMessage(req: Request, res: Response) {
+    try {
+      const { disputeId } = req.params;
+      const { message, sender, isInternal } = req.body;
+
+      // In production, save to messages table
+      const newMessage = {
+        id: `msg_${Date.now()}`,
+        disputeId,
+        sender,
+        message,
+        timestamp: new Date().toISOString(),
+        isInternal: isInternal || false,
+        attachments: []
+      };
+
+      console.log(`Message sent to dispute ${disputeId}:`, newMessage);
+
+      res.json({
+        success: true,
+        message: newMessage
+      });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ error: "Failed to send message" });
     }
   }
 }

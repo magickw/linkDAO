@@ -134,6 +134,72 @@ class AdminService {
     return response.json();
   }
 
+  async getSellerRiskAssessment(applicationId: string): Promise<{ assessment: any }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/risk-assessment`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch seller risk assessment');
+    }
+
+    return response.json();
+  }
+
+  async getSellerPerformance(filters?: {
+    status?: string;
+    minRating?: string;
+    search?: string;
+    sortBy?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ sellers: any[]; total: number; page: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch seller performance');
+    }
+
+    return response.json();
+  }
+
+  async exportSellerPerformance(filters?: {
+    status?: string;
+    minRating?: string;
+    search?: string;
+    sortBy?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{ success: boolean; downloadUrl?: string }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance/export?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export seller performance');
+    }
+
+    return response.json();
+  }
+
   // Dispute Resolution
   async getDisputes(filters?: {
     status?: string;
@@ -220,6 +286,83 @@ class AdminService {
     return response.json();
   }
 
+  // Evidence Management
+  async uploadDisputeEvidence(disputeId: string, formData: FormData): Promise<{ success: boolean; evidence: any[] }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence`, {
+      method: 'POST',
+      headers: {
+        ...this.getHeaders(),
+        // Remove Content-Type to let browser set it with boundary for FormData
+        'Content-Type': undefined as any
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload evidence');
+    }
+
+    return response.json();
+  }
+
+  async deleteDisputeEvidence(disputeId: string, evidenceId: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete evidence');
+    }
+
+    return response.json();
+  }
+
+  async updateEvidenceStatus(disputeId: string, evidenceId: string, status: 'verified' | 'rejected' | 'pending'): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update evidence status');
+    }
+
+    return response.json();
+  }
+
+  // Communication Thread
+  async getDisputeMessages(disputeId: string): Promise<{ messages: any[] }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch dispute messages');
+    }
+
+    return response.json();
+  }
+
+  async sendDisputeMessage(disputeId: string, messageData: {
+    message: string;
+    sender: string;
+    isInternal?: boolean;
+  }): Promise<{ success: boolean; message: any }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(messageData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
+
+    return response.json();
+  }
+
   // User Management
   async getUsers(filters?: {
     role?: string;
@@ -287,6 +430,120 @@ class AdminService {
 
     if (!response.ok) {
       throw new Error('Failed to update user role');
+    }
+
+    return response.json();
+  }
+
+  async getUserActivity(userId: string): Promise<{ activities: any[] }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/activity`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user activity');
+    }
+
+    return response.json();
+  }
+
+  async exportUsers(filters?: {
+    role?: string;
+    status?: string;
+    kycStatus?: string;
+    search?: string;
+  }): Promise<{ success: boolean; downloadUrl?: string }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined) params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/users/export?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export users');
+    }
+
+    return response.json();
+  }
+
+  // Moderation History
+  async getModerationHistory(filters?: {
+    moderatorId?: string;
+    action?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ actions: any[]; total: number; page: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch moderation history');
+    }
+
+    return response.json();
+  }
+
+  async undoModerationAction(actionId: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/${actionId}/undo`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to undo moderation action');
+    }
+
+    return response.json();
+  }
+
+  async exportModerationHistory(filters?: {
+    moderatorId?: string;
+    action?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<{ success: boolean; downloadUrl?: string }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/export?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to export moderation history');
+    }
+
+    return response.json();
+  }
+
+  async deleteModerationItem(itemId: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete moderation item');
     }
 
     return response.json();

@@ -4,57 +4,75 @@ import moderationRoutes from './moderationRoutes';
 import sellerRoutes from './sellerRoutes';
 import disputeRoutes from './disputeRoutes';
 import userRoutes from './userRoutes';
+import {
+  adminAuthMiddleware,
+  requirePermission,
+  requireRole,
+  adminRateLimiter,
+  strictAdminRateLimiter,
+  adminAuditLogger,
+  AdminRole
+} from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
-// Policy Configuration Routes
-router.post('/policies', adminController.createPolicyConfiguration.bind(adminController));
-router.put('/policies/:id', adminController.updatePolicyConfiguration.bind(adminController));
-router.get('/policies', adminController.getPolicyConfigurations.bind(adminController));
-router.delete('/policies/:id', adminController.deletePolicyConfiguration.bind(adminController));
+// Apply admin authentication to all routes
+router.use(adminAuthMiddleware);
 
-// Threshold Configuration Routes
-router.post('/thresholds', adminController.createThresholdConfiguration.bind(adminController));
-router.put('/thresholds/:id', adminController.updateThresholdConfiguration.bind(adminController));
-router.get('/thresholds', adminController.getThresholdConfigurations.bind(adminController));
+// Apply rate limiting to all admin routes
+router.use(adminRateLimiter);
 
-// Vendor Configuration Routes
-router.post('/vendors', adminController.createVendorConfiguration.bind(adminController));
-router.put('/vendors/:id', adminController.updateVendorConfiguration.bind(adminController));
-router.get('/vendors', adminController.getVendorConfigurations.bind(adminController));
-router.patch('/vendors/:id/health', adminController.updateVendorHealthStatus.bind(adminController));
+// Apply audit logging to all admin actions
+router.use(adminAuditLogger);
 
-// Alert Configuration Routes
-router.post('/alerts', adminController.createAlertConfiguration.bind(adminController));
-router.put('/alerts/:id', adminController.updateAlertConfiguration.bind(adminController));
-router.get('/alerts', adminController.getAlertConfigurations.bind(adminController));
+// Policy Configuration Routes (requires system.settings permission)
+router.post('/policies', requirePermission('system.settings'), adminController.createPolicyConfiguration.bind(adminController));
+router.put('/policies/:id', requirePermission('system.settings'), adminController.updatePolicyConfiguration.bind(adminController));
+router.get('/policies', requirePermission('system.settings'), adminController.getPolicyConfigurations.bind(adminController));
+router.delete('/policies/:id', requirePermission('system.settings'), strictAdminRateLimiter, adminController.deletePolicyConfiguration.bind(adminController));
 
-// System Status Dashboard Routes
+// Threshold Configuration Routes (requires system.settings permission)
+router.post('/thresholds', requirePermission('system.settings'), adminController.createThresholdConfiguration.bind(adminController));
+router.put('/thresholds/:id', requirePermission('system.settings'), adminController.updateThresholdConfiguration.bind(adminController));
+router.get('/thresholds', requirePermission('system.settings'), adminController.getThresholdConfigurations.bind(adminController));
+
+// Vendor Configuration Routes (requires system.settings permission)
+router.post('/vendors', requirePermission('system.settings'), adminController.createVendorConfiguration.bind(adminController));
+router.put('/vendors/:id', requirePermission('system.settings'), adminController.updateVendorConfiguration.bind(adminController));
+router.get('/vendors', requirePermission('system.settings'), adminController.getVendorConfigurations.bind(adminController));
+router.patch('/vendors/:id/health', requirePermission('system.settings'), adminController.updateVendorHealthStatus.bind(adminController));
+
+// Alert Configuration Routes (requires system.settings permission)
+router.post('/alerts', requirePermission('system.settings'), adminController.createAlertConfiguration.bind(adminController));
+router.put('/alerts/:id', requirePermission('system.settings'), adminController.updateAlertConfiguration.bind(adminController));
+router.get('/alerts', requirePermission('system.settings'), adminController.getAlertConfigurations.bind(adminController));
+
+// System Status Dashboard Routes (all authenticated admins can view)
 router.get('/dashboard/metrics', adminController.getDashboardMetrics.bind(adminController));
 router.get('/dashboard/status', adminController.getSystemStatus.bind(adminController));
-router.get('/dashboard/historical', adminController.getHistoricalMetrics.bind(adminController));
+router.get('/dashboard/historical', requirePermission('system.analytics'), adminController.getHistoricalMetrics.bind(adminController));
 
-// Admin Stats Route
+// Admin Stats Route (all authenticated admins can view)
 router.get('/stats', adminController.getAdminStats.bind(adminController));
 
-// Audit Log Analysis Routes
-router.get('/audit/search', adminController.searchAuditLogs.bind(adminController));
-router.get('/audit/analytics', adminController.getAuditAnalytics.bind(adminController));
-router.get('/audit/compliance', adminController.generateComplianceReport.bind(adminController));
-router.get('/audit/export', adminController.exportAuditLogs.bind(adminController));
-router.get('/audit/violations', adminController.detectPolicyViolations.bind(adminController));
-router.get('/audit/logs', adminController.getAuditLogs.bind(adminController));
+// Audit Log Analysis Routes (requires system.audit permission)
+router.get('/audit/search', requirePermission('system.audit'), adminController.searchAuditLogs.bind(adminController));
+router.get('/audit/analytics', requirePermission('system.audit'), adminController.getAuditAnalytics.bind(adminController));
+router.get('/audit/compliance', requireRole(AdminRole.ADMIN), adminController.generateComplianceReport.bind(adminController));
+router.get('/audit/export', requireRole(AdminRole.ADMIN), strictAdminRateLimiter, adminController.exportAuditLogs.bind(adminController));
+router.get('/audit/violations', requirePermission('system.audit'), adminController.detectPolicyViolations.bind(adminController));
+router.get('/audit/logs', requirePermission('system.audit'), adminController.getAuditLogs.bind(adminController));
 
-// Moderation Routes
-router.use('/moderation', moderationRoutes);
+// Moderation Routes (with content.moderate permission)
+router.use('/moderation', requirePermission('content.moderate'), moderationRoutes);
 
-// Seller Applications Routes
-router.use('/sellers', sellerRoutes);
+// Seller Applications Routes (with marketplace.seller_review permission)
+router.use('/sellers', requirePermission('marketplace.seller_review'), sellerRoutes);
 
-// Dispute Resolution Routes
-router.use('/disputes', disputeRoutes);
+// Dispute Resolution Routes (with disputes.view permission)
+router.use('/disputes', requirePermission('disputes.view'), disputeRoutes);
 
-// User Management Routes
-router.use('/users', userRoutes);
+// User Management Routes (with users.view permission)
+router.use('/users', requirePermission('users.view'), userRoutes);
 
 export default router;
