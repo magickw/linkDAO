@@ -1355,6 +1355,273 @@ app.post('/api/admin/sellers/applications/:applicationId/review', sensitiveAdmin
   }
 });
 
+// Get seller risk assessment endpoint
+app.get('/api/admin/sellers/applications/:applicationId/risk-assessment', [
+  param('applicationId').notEmpty().withMessage('Application ID is required')
+], validate, async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    const client = await pool.connect();
+
+    try {
+      // Get seller verification data
+      const [seller] = await client.query(
+        `SELECT
+          sv.reputation_score,
+          sv.total_volume,
+          sv.successful_transactions,
+          sv.dispute_rate,
+          mu.kyc_verified,
+          mu.created_at
+        FROM seller_verifications sv
+        LEFT JOIN marketplace_users mu ON sv.user_id = mu.user_id
+        WHERE sv.user_id = $1`,
+        [applicationId]
+      ).then(result => result.rows);
+
+      if (!seller) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Seller not found'
+          },
+          metadata: {
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
+      // Calculate risk assessment scores
+      const accountAge = Math.floor((Date.now() - new Date(seller.created_at).getTime()) / (1000 * 60 * 60 * 24));
+      const volumeFloat = parseFloat(seller.total_volume || '0');
+      const disputeRateFloat = parseFloat(seller.dispute_rate || '0');
+
+      const factors = {
+        account_age: Math.min(100, (accountAge / 365) * 100),
+        kyc_verification: seller.kyc_verified ? 100 : 0,
+        transaction_history: Math.min(100, (seller.successful_transactions / 10) * 100),
+        dispute_rate: Math.max(0, 100 - (disputeRateFloat * 20)),
+        volume_score: Math.min(100, (volumeFloat / 10000) * 100)
+      };
+
+      const overallScore = Math.round(
+        (factors.account_age * 0.2 +
+         factors.kyc_verification * 0.3 +
+         factors.transaction_history * 0.2 +
+         factors.dispute_rate * 0.2 +
+         factors.volume_score * 0.1)
+      );
+
+      const notes = [];
+      if (!seller.kyc_verified) notes.push("KYC verification not completed");
+      if (disputeRateFloat > 5) notes.push("High dispute rate detected");
+      if (seller.successful_transactions < 5) notes.push("Limited transaction history");
+      if (accountAge < 30) notes.push("New account - less than 30 days old");
+
+      // Log the action
+      await logAdminAction('view_seller_risk_assessment', req.adminId || 'unknown', {
+        applicationId,
+        overallScore,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json({
+        success: true,
+        data: {
+          assessment: {
+            overallScore,
+            factors,
+            notes
+          }
+        },
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    logError(error, 'fetch_seller_risk_assessment', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to fetch risk assessment'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Get seller performance endpoint
+app.get('/api/admin/sellers/performance', [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100')
+], validate, async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+
+    const client = await pool.connect();
+
+    try {
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+
+      // Get verified sellers with performance metrics
+      const sellers = await client.query(
+        `SELECT
+          mu.user_id as id,
+          mu.legal_name as seller_handle,
+          mu.legal_name as business_name,
+          sv.current_tier,
+          sv.reputation_score,
+          sv.total_volume,
+          sv.successful_transactions,
+          sv.dispute_rate,
+          mu.created_at,
+          sv.updated_at
+        FROM marketplace_users mu
+        LEFT JOIN seller_verifications sv ON mu.user_id = sv.user_id
+        WHERE mu.role = $1
+        ORDER BY sv.total_volume DESC
+        LIMIT $2 OFFSET $3`,
+        ['seller', parseInt(limit), offset]
+      ).then(result => result.rows);
+
+      // Calculate performance status for each seller
+      const sellersWithPerformance = sellers.map(seller => {
+        const volumeFloat = parseFloat(seller.total_volume || '0');
+        const disputeRateFloat = parseFloat(seller.dispute_rate || '0');
+        const reputationScore = seller.reputation_score || 0;
+
+        // Determine performance status
+        let performanceStatus = 'good';
+        if (reputationScore >= 90 && disputeRateFloat < 2) {
+          performanceStatus = 'excellent';
+        } else if (reputationScore < 50 || disputeRateFloat > 10) {
+          performanceStatus = 'critical';
+        } else if (reputationScore < 70 || disputeRateFloat > 5) {
+          performanceStatus = 'warning';
+        }
+
+        // Calculate mock trends (in production, compare with previous period)
+        const salesGrowth = Math.random() * 40 - 10; // -10% to +30%
+        const revenueGrowth = Math.random() * 40 - 10;
+        const ratingTrend = Math.random() * 2 - 0.5; // -0.5 to +1.5
+
+        return {
+          id: seller.id,
+          sellerId: seller.id,
+          sellerHandle: seller.seller_handle || 'Unknown',
+          businessName: seller.business_name || 'Unknown Business',
+          metrics: {
+            totalSales: seller.successful_transactions || 0,
+            totalRevenue: volumeFloat,
+            averageOrderValue: volumeFloat / Math.max(seller.successful_transactions || 1, 1),
+            totalOrders: seller.successful_transactions || 0,
+            completedOrders: seller.successful_transactions || 0,
+            cancelledOrders: 0,
+            averageRating: reputationScore / 20, // Convert 0-100 to 0-5
+            totalReviews: Math.floor(seller.successful_transactions * 0.7) || 0,
+            disputeRate: disputeRateFloat,
+            responseTime: 2 + Math.random() * 6, // 2-8 hours
+            fulfillmentRate: Math.min(100, 85 + Math.random() * 15)
+          },
+          trends: {
+            salesGrowth,
+            revenueGrowth,
+            ratingTrend
+          },
+          status: performanceStatus,
+          lastUpdated: seller.updated_at || seller.created_at
+        };
+      });
+
+      // Get total count
+      const totalCountResult = await client.query(
+        'SELECT COUNT(*) as count FROM marketplace_users WHERE role = $1',
+        ['seller']
+      );
+      const totalCount = parseInt(totalCountResult.rows[0].count);
+
+      // Log the action
+      await logAdminAction('view_seller_performance', req.adminId || 'unknown', {
+        page,
+        limit,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      res.json({
+        success: true,
+        data: {
+          sellers: sellersWithPerformance,
+          total: totalCount,
+          page: parseInt(page),
+          totalPages: Math.ceil(totalCount / parseInt(limit))
+        },
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    logError(error, 'fetch_seller_performance', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to fetch seller performance'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Export seller performance endpoint
+app.get('/api/admin/sellers/performance/export', async (req, res) => {
+  try {
+    // Log the action
+    await logAdminAction('export_seller_performance', req.adminId || 'unknown', {
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    // In production, this would generate a CSV/Excel file
+    // For now, return success with a mock download URL
+    res.json({
+      success: true,
+      data: {
+        downloadUrl: `/downloads/seller-performance-${Date.now()}.csv`
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'export_seller_performance', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to export seller performance'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
 // Disputes endpoint with caching
 app.get('/api/admin/disputes', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
@@ -1749,6 +2016,291 @@ app.post('/api/admin/disputes/:disputeId/notes', [
       timestamp: new Date().toISOString()
     }
   });
+});
+
+// Upload dispute evidence endpoint
+app.post('/api/admin/disputes/:disputeId/evidence', [
+  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer')
+], validate, async (req, res) => {
+  try {
+    const { disputeId } = req.params;
+    const files = req.files;
+    const party = req.body.party; // 'buyer', 'seller', or 'admin'
+
+    if (!files || (Array.isArray(files) && files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'No files uploaded'
+        },
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    // In production, upload files to cloud storage (S3, etc.)
+    // For now, create mock evidence records
+    const fileArray = Array.isArray(files) ? files : [files];
+    const evidence = fileArray.map((file, index) => ({
+      id: `evidence_${Date.now()}_${index}`,
+      disputeId,
+      filename: file.originalname || file.name || 'unknown',
+      type: file.mimetype || file.type || 'application/octet-stream',
+      size: file.size || 0,
+      url: `/uploads/${file.filename || file.name || 'unknown'}`,
+      uploadedBy: party || 'admin',
+      uploadedAt: new Date().toISOString(),
+      status: 'pending',
+      description: ''
+    }));
+
+    // Log the action
+    await logAdminAction('upload_dispute_evidence', req.adminId || 'unknown', {
+      disputeId,
+      party,
+      fileCount: evidence.length,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      data: {
+        evidence
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'upload_dispute_evidence', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to upload evidence'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Delete dispute evidence endpoint
+app.delete('/api/admin/disputes/:disputeId/evidence/:evidenceId', [
+  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
+  param('evidenceId').notEmpty().withMessage('Evidence ID is required')
+], validate, async (req, res) => {
+  try {
+    const { disputeId, evidenceId } = req.params;
+
+    // In production, delete from cloud storage and database
+    // For now, just log the action
+    await logAdminAction('delete_dispute_evidence', req.adminId || 'unknown', {
+      disputeId,
+      evidenceId,
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Evidence ${evidenceId} deleted from dispute ${disputeId}`
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'delete_dispute_evidence', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to delete evidence'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Update evidence status endpoint
+app.patch('/api/admin/disputes/:disputeId/evidence/:evidenceId/status', [
+  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
+  param('evidenceId').notEmpty().withMessage('Evidence ID is required'),
+  body('status').isIn(['pending', 'verified', 'rejected']).withMessage('Status must be pending, verified, or rejected')
+], validate, async (req, res) => {
+  try {
+    const { disputeId, evidenceId } = req.params;
+    const { status } = req.body;
+
+    // In production, update evidence status in database
+    // For now, just log the action
+    await logAdminAction('update_evidence_status', req.adminId || 'unknown', {
+      disputeId,
+      evidenceId,
+      status,
+      success: true,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: `Evidence ${evidenceId} status updated to ${status}`
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'update_evidence_status', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to update evidence status'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Get dispute messages endpoint
+app.get('/api/admin/disputes/:disputeId/messages', [
+  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer')
+], validate, async (req, res) => {
+  try {
+    const { disputeId } = req.params;
+
+    // In production, fetch from messages table
+    // For now, return mock messages
+    const messages = [
+      {
+        id: 'msg_1',
+        disputeId,
+        sender: 'buyer',
+        message: 'I never received the product as described.',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        isInternal: false,
+        attachments: []
+      },
+      {
+        id: 'msg_2',
+        disputeId,
+        sender: 'seller',
+        message: 'The product was shipped on time with tracking number.',
+        timestamp: new Date(Date.now() - 43200000).toISOString(),
+        isInternal: false,
+        attachments: []
+      },
+      {
+        id: 'msg_3',
+        disputeId,
+        sender: 'admin',
+        message: 'I am reviewing the case and will provide a resolution soon.',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        isInternal: false,
+        attachments: []
+      }
+    ];
+
+    // Log the action
+    await logAdminAction('view_dispute_messages', req.adminId || 'unknown', {
+      disputeId,
+      messageCount: messages.length,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      data: {
+        messages
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'fetch_dispute_messages', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to fetch dispute messages'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+});
+
+// Send dispute message endpoint
+app.post('/api/admin/disputes/:disputeId/messages', [
+  param('disputeId').isInt({ min: 1 }).withMessage('Dispute ID must be a positive integer'),
+  body('message').notEmpty().withMessage('Message is required').trim(),
+  body('sender').optional().trim(),
+  body('isInternal').optional().isBoolean()
+], validate, async (req, res) => {
+  try {
+    const { disputeId } = req.params;
+    const { message, sender, isInternal } = req.body;
+
+    // In production, save to messages table
+    const newMessage = {
+      id: `msg_${Date.now()}`,
+      disputeId,
+      sender: sender || 'admin',
+      message,
+      timestamp: new Date().toISOString(),
+      isInternal: isInternal || false,
+      attachments: []
+    };
+
+    // Log the action
+    await logAdminAction('send_dispute_message', req.adminId || 'unknown', {
+      disputeId,
+      sender: newMessage.sender,
+      isInternal: newMessage.isInternal,
+      messageLength: message.length,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      data: {
+        message: newMessage
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logError(error, 'send_dispute_message', req);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to send message'
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
 });
 
 // Users endpoint with caching

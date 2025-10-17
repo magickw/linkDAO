@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import { VisitorAnalytics } from '@/components/Admin/VisitorAnalytics';
 import { AdminAnalytics } from '@/components/Admin/AdminAnalytics';
+import { SellerApplications } from '@/components/Admin/SellerApplications';
+import { SellerPerformance } from '@/components/Admin/SellerPerformance';
+import { DisputeResolution } from '@/components/Admin/DisputeResolution';
 
-type AdminSection = 'dashboard' | 'users' | 'moderation' | 'sellers' | 'disputes' | 'analytics' | 'visitor-analytics' | 'settings';
+type AdminSection = 'dashboard' | 'users' | 'moderation' | 'sellers' | 'seller-performance' | 'disputes' | 'analytics' | 'visitor-analytics' | 'settings';
 
 const AdminPage: NextPage = () => {
   const [activeSection, setActiveSection] = useState<AdminSection>('dashboard');
@@ -27,8 +30,9 @@ const AdminPage: NextPage = () => {
     { id: 'visitor-analytics' as AdminSection, label: 'Visitor Analytics', icon: Eye, color: 'text-green-400' },
     { id: 'analytics' as AdminSection, label: 'Platform Analytics', icon: BarChart3, color: 'text-indigo-400' },
     { id: 'moderation' as AdminSection, label: 'Moderation', icon: Shield, color: 'text-green-400' },
-    { id: 'sellers' as AdminSection, label: 'Sellers', icon: ShoppingBag, color: 'text-purple-400' },
-    { id: 'disputes' as AdminSection, label: 'Disputes', icon: AlertTriangle, color: 'text-yellow-400' },
+    { id: 'sellers' as AdminSection, label: 'Seller Applications', icon: ShoppingBag, color: 'text-purple-400' },
+    { id: 'seller-performance' as AdminSection, label: 'Seller Performance', icon: TrendingUp, color: 'text-emerald-400' },
+    { id: 'disputes' as AdminSection, label: 'Dispute Resolution', icon: AlertTriangle, color: 'text-yellow-400' },
     { id: 'settings' as AdminSection, label: 'Settings', icon: Settings, color: 'text-gray-400' }
   ];
 
@@ -43,9 +47,11 @@ const AdminPage: NextPage = () => {
       case 'moderation':
         return <ModerationSection />;
       case 'sellers':
-        return <SellersSection />;
+        return <SellerApplications />;
+      case 'seller-performance':
+        return <SellerPerformance />;
       case 'disputes':
-        return <DisputesSection />;
+        return <DisputeResolution />;
       case 'settings':
         return <SettingsSection />;
       default:
@@ -219,24 +225,6 @@ const ModerationSection: React.FC = () => (
     <h1 className="text-2xl sm:text-3xl font-bold text-white">Content Moderation</h1>
     <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
       <p className="text-sm sm:text-base text-gray-300">Moderation queue and tools coming soon...</p>
-    </div>
-  </div>
-);
-
-const SellersSection: React.FC = () => (
-  <div className="space-y-4 sm:space-y-6">
-    <h1 className="text-2xl sm:text-3xl font-bold text-white">Seller Management</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
-      <p className="text-sm sm:text-base text-gray-300">Seller applications and management coming soon...</p>
-    </div>
-  </div>
-);
-
-const DisputesSection: React.FC = () => (
-  <div className="space-y-4 sm:space-y-6">
-    <h1 className="text-2xl sm:text-3xl font-bold text-white">Dispute Resolution</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
-      <p className="text-sm sm:text-base text-gray-300">Dispute management system coming soon...</p>
     </div>
   </div>
 );
