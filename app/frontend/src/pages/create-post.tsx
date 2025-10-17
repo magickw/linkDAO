@@ -3,14 +3,14 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Layout from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
-import { ArrowLeft, Image, Video, Link as LinkIcon, Hash } from 'lucide-react';
+import { ArrowLeft, Hash } from 'lucide-react';
+import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
 
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState('');
-  const [postType, setPostType] = useState<'text' | 'image' | 'link' | 'video'>('text');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +49,6 @@ const CreatePostPage: React.FC = () => {
         title,
         content,
         community: selectedCommunity,
-        type: postType,
         tags
       });
 
@@ -109,63 +108,6 @@ const CreatePostPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Post Type Selection */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                Post Type
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPostType('text')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
-                    postType === 'text'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  <Hash className="w-6 h-6 mb-2" />
-                  <span className="text-sm font-medium">Text</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostType('image')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
-                    postType === 'image'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  <Image className="w-6 h-6 mb-2" />
-                  <span className="text-sm font-medium">Image</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostType('link')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
-                    postType === 'link'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  <LinkIcon className="w-6 h-6 mb-2" />
-                  <span className="text-sm font-medium">Link</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPostType('video')}
-                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
-                    postType === 'video'
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-300 dark:border-gray-600 hover:border-blue-300'
-                  }`}
-                >
-                  <Video className="w-6 h-6 mb-2" />
-                  <span className="text-sm font-medium">Video</span>
-                </button>
-              </div>
-            </div>
-
             {/* Title */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -190,13 +132,11 @@ const CreatePostPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Content *
               </label>
-              <textarea
+              <RichTextEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
                 placeholder="Share your thoughts..."
-                rows={10}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
-                required
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[200px]"
               />
             </div>
 
