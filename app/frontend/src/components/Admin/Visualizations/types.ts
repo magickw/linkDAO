@@ -91,6 +91,7 @@ export interface TreemapData {
   name: string;
   value?: number;
   children?: TreemapNode[];
+  color?: string;
 }
 
 export interface TreemapNode {

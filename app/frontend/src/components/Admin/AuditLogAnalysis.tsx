@@ -78,6 +78,9 @@ export const AuditLogAnalysis: React.FC = () => {
       });
 
       const response = await fetch(`/api/admin/audit/search?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       
       if (data.success) {
@@ -101,6 +104,9 @@ export const AuditLogAnalysis: React.FC = () => {
       const response = await fetch(
         `/api/admin/audit/analytics?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`
       );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       
       if (data.success) {

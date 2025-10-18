@@ -106,6 +106,17 @@ export const SystemStatusDashboard: React.FC = () => {
         fetch(`/api/admin/dashboard/historical?metricNames=latency,throughput,error_rate&granularity=hour&timeRange=${timeRange}`)
       ]);
 
+      // Check if responses are ok before parsing JSON
+      if (!metricsRes.ok) {
+        throw new Error(`Metrics API error! status: ${metricsRes.status}`);
+      }
+      if (!statusRes.ok) {
+        throw new Error(`Status API error! status: ${statusRes.status}`);
+      }
+      if (!historicalRes.ok) {
+        throw new Error(`Historical API error! status: ${historicalRes.status}`);
+      }
+
       const [metricsData, statusData, historicalData] = await Promise.all([
         metricsRes.json(),
         statusRes.json(),

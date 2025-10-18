@@ -98,7 +98,6 @@ export class AdminWebSocketManager {
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: this.reconnectDelay,
       reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: this.maxReconnectAttempts,
       forceNew: true
     });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-interface HelpTip {
+export interface HelpTip {
   id: string;
   title: string;
   content: string;
@@ -205,7 +205,7 @@ export const useContextualHelp = () => {
   };
 
   const toggleHelp = () => {
-    setHelpEnabled(prev => !prev);
+    setHelpEnabled((prev: boolean) => !prev);
   };
 
   return {

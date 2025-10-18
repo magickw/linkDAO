@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-interface OnboardingStep {
+export interface OnboardingStep {
   id: string;
   title: string;
   description: string;
@@ -11,7 +11,7 @@ interface OnboardingStep {
   skippable?: boolean;
 }
 
-interface OnboardingTour {
+export interface OnboardingTour {
   id: string;
   name: string;
   description: string;
@@ -21,7 +21,7 @@ interface OnboardingTour {
   prerequisites?: string[];
 }
 
-interface OnboardingProgress {
+export interface OnboardingProgress {
   completedTours: string[];
   completedSteps: string[];
   currentTour?: string;
@@ -30,7 +30,7 @@ interface OnboardingProgress {
   lastActivity?: Date;
 }
 
-interface OnboardingContextType {
+export interface OnboardingContextType {
   tours: OnboardingTour[];
   progress: OnboardingProgress;
   currentTour: OnboardingTour | null;

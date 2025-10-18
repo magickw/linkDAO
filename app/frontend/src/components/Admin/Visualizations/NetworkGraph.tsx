@@ -64,7 +64,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
     svg.call(zoom);
 
     // Create color scale for groups
-    const groupColorScale = d3.scaleOrdinal()
+    const groupColorScale = d3.scaleOrdinal<string, string>()
       .domain(Array.from(new Set(processedData.nodes.map(d => d.group))))
       .range(adminColors.primary);
 
@@ -85,10 +85,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
       );
 
     // Create tooltip
-    let tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
-    if (tooltipRef.current) {
-      tooltip = d3.select(tooltipRef.current);
-    }
+    const tooltip = tooltipRef.current ? d3.select(tooltipRef.current) : null;
 
     // Create arrow markers for directed links
     svg.append('defs')
@@ -118,15 +115,12 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
       .attr('stroke-opacity', 0.6)
       .attr('marker-end', 'url(#arrow)')
       .style('cursor', onLinkClick ? 'pointer' : 'default')
-      .style('opacity', 0)
-      .transition()
-      .duration(1000)
-      .style('opacity', 1);
+      .style('opacity', 0);
 
     // Add link interactions
     if (onLinkClick || tooltip) {
       link
-        .on('mouseover', function(event, d) {
+        .on('mouseover', function(event: MouseEvent, d: any) {
           d3.select(this)
             .transition()
             .duration(200)
@@ -146,14 +140,14 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
               `);
           }
         })
-        .on('mousemove', function(event) {
+        .on('mousemove', function(event: MouseEvent) {
           if (tooltip) {
             tooltip
               .style('left', (event.pageX + 10) + 'px')
               .style('top', (event.pageY - 10) + 'px');
           }
         })
-        .on('mouseout', function(event, d) {
+        .on('mouseout', function(event: MouseEvent, d: any) {
           d3.select(this)
             .transition()
             .duration(200)
@@ -164,12 +158,17 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
             tooltip.style('opacity', 0);
           }
         })
-        .on('click', function(event, d) {
+        .on('click', function(event: MouseEvent, d: any) {
           if (onLinkClick) {
             onLinkClick(d);
           }
         });
     }
+
+    // Apply initial transition to links
+    link.transition()
+      .duration(1000)
+      .style('opacity', 1);
 
     // Draw nodes
     const node = g.selectAll('.node')
@@ -198,7 +197,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
     // Add node circles
     node.append('circle')
       .attr('r', d => d.size)
-      .attr('fill', d => d.color || groupColorScale(d.group))
+      .attr('fill', d => d.color || (groupColorScale(d.group) as string))
       .attr('stroke', '#ffffff')
       .attr('stroke-width', 2)
       .style('opacity', 0)
@@ -226,7 +225,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
     // Add node interactions
     if (onNodeClick || tooltip) {
       node
-        .on('mouseover', function(event, d) {
+        .on('mouseover', function(event: MouseEvent, d: any) {
           d3.select(this).select('circle')
             .transition()
             .duration(200)
@@ -254,14 +253,14 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
               `);
           }
         })
-        .on('mousemove', function(event) {
+        .on('mousemove', function(event: MouseEvent) {
           if (tooltip) {
             tooltip
               .style('left', (event.pageX + 10) + 'px')
               .style('top', (event.pageY - 10) + 'px');
           }
         })
-        .on('mouseout', function(event, d) {
+        .on('mouseout', function(event: MouseEvent, d: any) {
           d3.select(this).select('circle')
             .transition()
             .duration(200)
@@ -278,7 +277,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
             tooltip.style('opacity', 0);
           }
         })
-        .on('click', function(event, d) {
+        .on('click', function(event: MouseEvent, d: any) {
           if (onNodeClick) {
             onNodeClick(d);
           }
@@ -313,7 +312,7 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({
 
       legendItems.append('circle')
         .attr('r', 6)
-        .attr('fill', d => groupColorScale(d))
+        .attr('fill', d => groupColorScale(d) as string)
         .attr('stroke', '#ffffff')
         .attr('stroke-width', 1);
 

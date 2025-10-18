@@ -51,7 +51,7 @@ export const OnboardingMenu: React.FC = () => {
 
   const canStartTour = (tour: any) => {
     if (!tour.prerequisites) return true;
-    return tour.prerequisites.every(prereq => 
+    return tour.prerequisites.every((prereq: string) =>
       progress.completedTours.includes(prereq)
     );
   };

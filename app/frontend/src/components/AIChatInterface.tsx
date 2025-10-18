@@ -70,21 +70,25 @@ const AIChatInterface: React.FC = () => {
 
     try {
       // Send message to backend
-      const response = await fetch(`/api/ai/bots/${selectedBot}/process`, {
+      const message = {
+        role: 'user',
+        content: inputMessage,
+      };
+      const context = {
+        userId: address,
+      };
+      const response = await fetch('/api/ai/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: inputMessage,
-          userId: address
-        })
+        body: JSON.stringify({ message, context }),
       });
-
+      
       if (!response.ok) {
-        throw new Error('Failed to get response from AI');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+      
       const data = await response.json();
 
       // Add AI response to chat

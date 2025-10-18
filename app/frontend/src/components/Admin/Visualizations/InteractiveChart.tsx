@@ -243,23 +243,23 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
       datasets: data.datasets.map((dataset, datasetIndex) => ({
         ...dataset,
         backgroundColor: Array.isArray(dataset.backgroundColor)
-          ? dataset.backgroundColor.map((color, index) => {
+          ? dataset.backgroundColor.map((color: any, index: number) => {
               const pointId = `${datasetIndex}-${index}`;
-              return selectedDataPoints.has(pointId) 
+              return selectedDataPoints.has(pointId)
                 ? `${color}FF` // Full opacity for selected
                 : `${color}80`; // Semi-transparent for unselected
             })
           : dataset.backgroundColor,
         borderColor: Array.isArray(dataset.borderColor)
-          ? dataset.borderColor.map((color, index) => {
+          ? dataset.borderColor.map((color: any, index: number) => {
               const pointId = `${datasetIndex}-${index}`;
-              return selectedDataPoints.has(pointId) 
+              return selectedDataPoints.has(pointId)
                 ? color
                 : `${color}80`;
             })
           : dataset.borderColor,
         pointRadius: Array.isArray(dataset.pointRadius)
-          ? dataset.pointRadius.map((radius, index) => {
+          ? dataset.pointRadius.map((radius: any, index: number) => {
               const pointId = `${datasetIndex}-${index}`;
               return selectedDataPoints.has(pointId) ? (radius || 3) * 1.5 : radius;
             })

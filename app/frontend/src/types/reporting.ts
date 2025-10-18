@@ -79,6 +79,21 @@ export interface SchedulingConfig {
   format: 'pdf' | 'excel' | 'csv' | 'html';
 }
 
+export interface ReportExecution {
+  id: string;
+  templateId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  startedAt: Date;
+  completedAt?: Date;
+  duration?: number;
+  generatedBy: string;
+  format: 'pdf' | 'excel' | 'csv' | 'html';
+  fileUrl?: string;
+  fileSize?: number;
+  error?: string;
+  parameters?: Record<string, any>;
+}
+
 export interface ReportPermissions {
   view: string[];
   edit: string[];

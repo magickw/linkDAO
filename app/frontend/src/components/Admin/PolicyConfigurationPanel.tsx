@@ -52,12 +52,20 @@ export const PolicyConfigurationPanel: React.FC<PolicyConfigurationPanelProps> =
   };
 
   const handleCreatePolicy = async () => {
+    const policy = { ...formData };
+    
     try {
       const response = await fetch('/api/admin/policies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(policy),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
       if (data.success) {
@@ -75,11 +83,20 @@ export const PolicyConfigurationPanel: React.FC<PolicyConfigurationPanelProps> =
     if (!editingPolicy?.id) return;
     
     try {
-      const response = await fetch(`/api/admin/policies/${editingPolicy.id}`, {
+      const policy = { ...formData };
+      const { id: policyId, ...updatedData } = policy;
+
+      const response = await fetch(`/api/admin/policies/${policyId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(policy),
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
       if (data.success) {
@@ -98,8 +115,12 @@ export const PolicyConfigurationPanel: React.FC<PolicyConfigurationPanelProps> =
     
     try {
       const response = await fetch(`/api/admin/policies/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
       if (data.success) {
@@ -127,6 +148,41 @@ export const PolicyConfigurationPanel: React.FC<PolicyConfigurationPanelProps> =
   const startEdit = (policy: PolicyConfiguration) => {
     setEditingPolicy(policy);
     setFormData(policy);
+  };
+
+  const testPolicy = async () => {
+    const testData = {
+      category: 'harassment',
+      confidenceThreshold: 0.7,
+      description: 'Test policy',
+      isActive: true,
+      name: 'Test Policy',
+      reputationModifier: 0,
+      severity: 'medium',
+      action: 'review',
+    }
+
+    try {
+      const response = await fetch('/api/admin/policies/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        await fetchPolicies();
+        onPolicyChange?.();
+      }
+    } catch (error) {
+      console.error('Error testing policy:', error);
+    }
   };
 
   const getSeverityColor = (severity: string) => {

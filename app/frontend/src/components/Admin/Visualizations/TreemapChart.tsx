@@ -46,10 +46,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
       .range(colorScale);
 
     // Create tooltip
-    let tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
-    if (tooltipRef.current) {
-      tooltip = d3.select(tooltipRef.current);
-    }
+    const tooltip = tooltipRef.current ? d3.select(tooltipRef.current) : null;
 
     // Draw leaf nodes
     const leaf = svg
@@ -65,7 +62,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
       .append('rect')
       .attr('width', d => d.x1 - d.x0)
       .attr('height', d => d.y1 - d.y0)
-      .attr('fill', d => d.data.color || colorScaleFunc(d.parent?.data.name || d.data.name))
+      .attr('fill', d => (d.data as any).color || (colorScaleFunc(d.parent?.data.name || d.data.name) as string))
       .attr('stroke', '#ffffff')
       .attr('stroke-width', 1)
       .attr('rx', 4)
@@ -77,7 +74,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
       .style('opacity', 0.8)
       .on('end', function() {
         d3.select(this)
-          .on('mouseover', function(event, d) {
+          .on('mouseover', function(event: MouseEvent, d: any) {
             d3.select(this)
               .transition()
               .duration(200)
@@ -97,7 +94,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
                 `);
             }
           })
-          .on('mousemove', function(event) {
+          .on('mousemove', function(event: MouseEvent) {
             if (tooltip) {
               tooltip
                 .style('left', (event.pageX + 10) + 'px')
@@ -116,7 +113,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
               tooltip.style('opacity', 0);
             }
           })
-          .on('click', function(event, d) {
+          .on('click', function(event: MouseEvent, d: any) {
             if (onNodeClick) {
               onNodeClick(d.data);
             }
@@ -222,7 +219,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
         .attr('y', minY - 20)
         .attr('width', maxX - minX)
         .attr('height', 18)
-        .attr('fill', colorScaleFunc(parent.data.name))
+        .attr('fill', colorScaleFunc(parent.data.name) as string)
         .attr('opacity', 0.1)
         .attr('rx', 2);
 
@@ -233,7 +230,7 @@ const TreemapChart: React.FC<TreemapProps> = ({
         .attr('y', minY - 6)
         .style('font-size', '11px')
         .style('font-weight', '600')
-        .style('fill', colorScaleFunc(parent.data.name))
+        .style('fill', colorScaleFunc(parent.data.name) as string)
         .style('pointer-events', 'none')
         .text(parent.data.name)
         .style('opacity', 0)
