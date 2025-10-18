@@ -223,6 +223,12 @@ export interface MarketplaceListing {
 export class UnifiedMarketplaceService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
+  private createTimeoutSignal(timeoutMs: number): AbortSignal {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), timeoutMs);
+    return controller.signal;
+  }
+
   // ============================================================================
   // CORE PRODUCT MANAGEMENT
   // ============================================================================
@@ -243,7 +249,7 @@ export class UnifiedMarketplaceService {
       }
 
       const response = await fetch(`${this.baseUrl}/api/products?${params.toString()}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -271,7 +277,7 @@ export class UnifiedMarketplaceService {
   async getProductById(id: string): Promise<Product | null> {
     try {
       const response = await fetch(`${this.baseUrl}/api/products/${id}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -288,6 +294,70 @@ export class UnifiedMarketplaceService {
     } catch (error) {
       console.error('Error fetching product:', error);
       return null;
+    }
+  }
+
+  async getListingById(id: string): Promise<Product | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/listings/${id}`, {
+        signal: this.createTimeoutSignal(10000),
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        if (response.status >= 500) {
+          throw new Error(`Server error: ${response.status}. Please try again later.`);
+        }
+        if (response.status === 429) {
+          throw new Error('Too many requests. Please wait a moment and try again.');
+        }
+        throw new Error(`Failed to fetch listing: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.listing) {
+        // Transform the listing data to match the Product interface
+        const listing = result.listing;
+        return {
+          id: listing.id,
+          sellerId: listing.sellerId,
+          title: listing.title,
+          description: listing.description,
+          priceAmount: listing.priceAmount || 0,
+          priceCurrency: listing.priceCurrency || 'USD',
+          categoryId: listing.categoryId || '',
+          images: listing.images || [],
+          metadata: listing.metadata || {},
+          inventory: listing.inventory || 0,
+          status: listing.status || 'active',
+          tags: listing.tags || [],
+          shipping: listing.shipping,
+          nft: listing.nft,
+          views: listing.views || 0,
+          favorites: listing.favorites || 0,
+          listingStatus: listing.listingStatus || 'active',
+          publishedAt: listing.publishedAt,
+          createdAt: listing.createdAt,
+          updatedAt: listing.updatedAt,
+          seller: listing.seller,
+          category: listing.category,
+          trust: listing.trust
+        } as Product;
+      } else {
+        throw new Error(result.message || 'Failed to fetch listing');
+      }
+    } catch (error) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      console.error('Error fetching listing:', error);
+      throw error;
     }
   }
 
@@ -351,7 +421,7 @@ export class UnifiedMarketplaceService {
       });
 
       const response = await fetch(`${this.baseUrl}/api/products/search?${params.toString()}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -378,7 +448,7 @@ export class UnifiedMarketplaceService {
       });
 
       const response = await fetch(`${this.baseUrl}/api/products/search-suggestions?${params.toString()}`, {
-        signal: AbortSignal.timeout(5000)
+        signal: this.createTimeoutSignal(5000)
       });
       
       if (!response.ok) {
@@ -411,7 +481,7 @@ export class UnifiedMarketplaceService {
       };
 
       const response = await fetch(`${this.baseUrl}/api/auctions/active?${new URLSearchParams(filters as any).toString()}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -441,7 +511,7 @@ export class UnifiedMarketplaceService {
           amount: bidAmount,
           bidderAddress
         }),
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -497,7 +567,7 @@ export class UnifiedMarketplaceService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(input),
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
 
       if (!response.ok) {
@@ -524,7 +594,7 @@ export class UnifiedMarketplaceService {
       }
 
       const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {
@@ -658,6 +728,46 @@ export class UnifiedMarketplaceService {
   // UTILITY METHODS
   // ============================================================================
 
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: Error;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Don't retry on certain errors
+        if (error instanceof Error) {
+          if (error.message.includes('not found') || 
+              error.message.includes('404') ||
+              error.message.includes('unauthorized') ||
+              error.message.includes('forbidden')) {
+            throw error;
+          }
+        }
+        
+        if (attempt === maxRetries) {
+          throw lastError;
+        }
+        
+        // Exponential backoff with jitter
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError!;
+  }
+
+  async getListingByIdWithRetry(id: string): Promise<Product | null> {
+    return this.retryWithBackoff(() => this.getListingById(id));
+  }
+
   async healthCheck(): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/api/health`);
@@ -671,7 +781,7 @@ export class UnifiedMarketplaceService {
   async getCategories(): Promise<CategoryInfo[]> {
     try {
       const response = await fetch(`${this.baseUrl}/api/categories`, {
-        signal: AbortSignal.timeout(10000)
+        signal: this.createTimeoutSignal(10000)
       });
       
       if (!response.ok) {

@@ -14,7 +14,7 @@ import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
 // New redesigned components
-import { SimpleProductCard } from '@/components/Marketplace/ProductDisplay/SimpleProductCard';
+import { ProductCard } from '@/components/Marketplace/ProductDisplay/ProductCard';
 import { FilterBar, type FilterOptions } from '@/components/Marketplace/ProductDisplay/FilterBar';
 import { ViewDensityToggle, useDensityPreference } from '@/components/Marketplace/ProductDisplay/ViewDensityToggle';
 import { SortingControls, type SortField, type SortDirection } from '@/components/Marketplace/ProductDisplay/SortingControls';
@@ -633,7 +633,7 @@ const MarketplaceContent: React.FC = () => {
                 >
                   <AnimatePresence mode="popLayout">
                     {filteredAndSortedListings.map((listing) => {
-                        // Transform listing to product format for SimpleProductCard
+                        // Transform listing to product format for ProductCard
                         const product = {
                           id: listing.id,
                           title: listing.metadataURI || 'Unnamed Item',
@@ -649,8 +649,7 @@ const MarketplaceContent: React.FC = () => {
                             name: formatAddress(listing.sellerWalletAddress),
                             avatar: listing.sellerWalletAddress,
                             verified: true,
-                            rating: 4.8,
-                            reviewCount: Math.floor(Math.random() * 50) + 10,
+                            reputation: 4.8,
                             daoApproved: true,
                           },
                           trust: {
@@ -659,15 +658,8 @@ const MarketplaceContent: React.FC = () => {
                             onChainCertified: true,
                           },
                           category: listing.itemType.toLowerCase(),
-                          stock: listing.quantity,
-                          shipping: {
-                            free: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT',
-                            deliverySpeed: listing.itemType === 'DIGITAL' || listing.itemType === 'NFT' ? 'Instant' : '2-3 days',
-                          },
+                          inventory: listing.quantity,
                           condition: 'new' as 'new' | 'used' | 'refurbished' | undefined,
-                          listingType: listing.listingType,
-                          endTime: listing.endTime,
-                          highestBid: listing.highestBid,
                         };
 
                         return (
@@ -679,10 +671,9 @@ const MarketplaceContent: React.FC = () => {
                             exit={{ opacity: 0, scale: 0.9 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <SimpleProductCard
+                            <ProductCard
                               product={product}
-                              density={density}
-                              onProductClick={(id) => router.push(`/marketplace/listing/${id}`)}
+                              variant="grid"
                               onAddToCart={(id) => {
                                 // Add to cart logic
                                 const cartProduct = {

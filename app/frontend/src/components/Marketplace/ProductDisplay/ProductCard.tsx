@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 import { DualPricing } from '../../../design-system/components/DualPricing';
 import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
 import { LoadingSkeleton } from '../../../design-system/components/LoadingSkeleton';
@@ -263,15 +264,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToWishlist,
   className = '',
 }) => {
+  const router = useRouter();
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   const handleProductClick = () => {
-    onProductClick?.(product.id);
+    // Use direct navigation with fallback to callback
+    if (onProductClick) {
+      onProductClick(product.id);
+    } else {
+      router.push(`/marketplace/listing/${product.id}`);
+    }
   };
 
   const handleSellerClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSellerClick?.(product.seller.id);
+    // Use direct navigation with fallback to callback
+    if (onSellerClick) {
+      onSellerClick(product.seller.id);
+    } else {
+      router.push(`/marketplace/seller/store/${product.seller.id}`);
+    }
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
