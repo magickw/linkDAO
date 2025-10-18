@@ -1,11 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { NextPage } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
-import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import ProductDetailPage from '@/components/Marketplace/ProductDisplay/ProductDetailPage';
-import { marketplaceService, Product } from '@/services/marketplaceService';
+import { marketplaceService } from '@/services/marketplaceService';
+import { enhancedMarketplaceService } from '@/services/enhancedMarketplaceService';
+import { MarketplaceBreadcrumbs } from '@/components/Marketplace/Navigation/MarketplaceBreadcrumbs';
+import { useMarketplaceBreadcrumbs } from '@/hooks/useMarketplaceBreadcrumbs';
+import { MarketplaceErrorBoundary } from '@/components/ErrorHandling/MarketplaceErrorBoundary';
+import { 
+  ProductNotFoundFallback, 
+  NetworkErrorFallback, 
+  ServerErrorFallback,
+  GenericMarketplaceErrorFallback 
+} from '@/components/ErrorHandling/MarketplaceErrorFallback';
 
 interface ProductDetailPageData {
   id: string;
@@ -63,23 +71,26 @@ const ProductDetailPageRoute: NextPage = () => {
   
   const [product, setProduct] = useState<ProductDetailPageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    type: 'not_found' | 'network' | 'server' | 'generic';
+    message: string;
+    retryable: boolean;
+    suggestedActions?: string[];
+    originalError?: Error;
+  } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const { breadcrumbItems } = useMarketplaceBreadcrumbs();
 
-  const maxRetries = 3;
-  const retryDelay = 1000; // 1 second
-
-  const fetchProductDetails = async (productId: string, attempt: number = 0) => {
+  const fetchProductDetails = async (productId: string) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Use retry logic with exponential backoff
-      const productData = await marketplaceService.getListingByIdWithRetry(productId);
+      // Use enhanced marketplace service with built-in retry logic
+      const response = await enhancedMarketplaceService.getListingById(productId);
       
-      if (!productData) {
-        throw new Error('Product not found');
-      }
+      if (response.success && response.data) {
+        const productData = response.data;
 
       // Transform the API data to match the component interface
       const transformedProduct: ProductDetailPageData = {
@@ -132,19 +143,29 @@ const ProductDetailPageRoute: NextPage = () => {
         })),
       };
 
-      setProduct(transformedProduct);
-      setRetryCount(0);
+        setProduct(transformedProduct);
+        setRetryCount(0);
+      } else if (response.error) {
+        const errorType = response.error.code === 'NOT_FOUND' ? 'not_found' :
+                         response.error.message.includes('network') || response.error.message.includes('fetch') ? 'network' :
+                         response.error.message.includes('500') || response.error.message.includes('503') ? 'server' :
+                         'generic';
+        
+        setError({
+          type: errorType,
+          message: response.error.message,
+          retryable: response.error.retryable,
+          suggestedActions: response.error.suggestedActions
+        });
+      }
     } catch (err) {
       console.error('Error fetching product details:', err);
-      
-      if (attempt < maxRetries) {
-        setRetryCount(attempt + 1);
-        setTimeout(() => {
-          fetchProductDetails(productId, attempt + 1);
-        }, retryDelay * Math.pow(2, attempt)); // Exponential backoff
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to load product details');
-      }
+      setError({
+        type: 'generic',
+        message: 'An unexpected error occurred while loading the product',
+        retryable: true,
+        originalError: err instanceof Error ? err : new Error(String(err))
+      });
     } finally {
       setLoading(false);
     }
@@ -161,6 +182,7 @@ const ProductDetailPageRoute: NextPage = () => {
 
   const handleRetry = () => {
     if (id && typeof id === 'string') {
+      setRetryCount(prev => prev + 1);
       fetchProductDetails(id);
     }
   };
@@ -221,7 +243,7 @@ const ProductDetailPageRoute: NextPage = () => {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Product Details</h2>
             <p className="text-gray-600">Please wait while we fetch the product information...</p>
             {retryCount > 0 && (
-              <p className="text-sm text-gray-500 mt-2">Retry attempt {retryCount} of {maxRetries}</p>
+              <p className="text-sm text-gray-500 mt-2">Retry attempt {retryCount}</p>
             )}
           </div>
         </div>
@@ -230,34 +252,21 @@ const ProductDetailPageRoute: NextPage = () => {
   }
 
   if (error) {
+    const ErrorComponent = error.type === 'not_found' ? ProductNotFoundFallback :
+                          error.type === 'network' ? NetworkErrorFallback :
+                          error.type === 'server' ? ServerErrorFallback :
+                          GenericMarketplaceErrorFallback;
+
     return (
       <>
         <Head>
           <title>Error Loading Product | Marketplace</title>
         </Head>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Product</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <div className="space-y-3">
-              <button
-                onClick={handleRetry}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </button>
-              <Link
-                href="/marketplace"
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Return to Marketplace
-              </Link>
-            </div>
-          </div>
-        </div>
+        <ErrorComponent
+          productId={typeof id === 'string' ? id : undefined}
+          onRetry={error.retryable ? handleRetry : undefined}
+          error={error.originalError}
+        />
       </>
     );
   }
@@ -268,26 +277,15 @@ const ProductDetailPageRoute: NextPage = () => {
         <Head>
           <title>Product Not Found | Marketplace</title>
         </Head>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Product Not Found</h2>
-            <p className="text-gray-600 mb-6">The product you're looking for doesn't exist or has been removed.</p>
-            <Link
-              href="/marketplace"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Return to Marketplace
-            </Link>
-          </div>
-        </div>
+        <ProductNotFoundFallback
+          productId={typeof id === 'string' ? id : undefined}
+        />
       </>
     );
   }
 
   return (
-    <>
+    <MarketplaceErrorBoundary>
       <Head>
         <title>{product.title} | Marketplace</title>
         <meta name="description" content={product.description} />
@@ -301,17 +299,11 @@ const ProductDetailPageRoute: NextPage = () => {
         {/* Breadcrumb Navigation */}
         <div className="bg-white border-b">
           <div className="container mx-auto px-4 py-3">
-            <nav className="flex items-center space-x-2 text-sm text-gray-600">
-              <Link href="/" className="hover:text-blue-600">Home</Link>
-              <span>/</span>
-              <Link href="/marketplace" className="hover:text-blue-600">Marketplace</Link>
-              <span>/</span>
-              <Link href={`/marketplace?category=${encodeURIComponent(product.category)}`} className="hover:text-blue-600">
-                {product.category}
-              </Link>
-              <span>/</span>
-              <span className="text-gray-900 font-medium truncate">{product.title}</span>
-            </nav>
+            <MarketplaceBreadcrumbs 
+              items={breadcrumbItems}
+              className="text-gray-600"
+              preserveFilters={true}
+            />
           </div>
         </div>
 
@@ -324,7 +316,7 @@ const ProductDetailPageRoute: NextPage = () => {
           onViewSellerProfile={handleViewSellerProfile}
         />
       </div>
-    </>
+    </MarketplaceErrorBoundary>
   );
 };
 

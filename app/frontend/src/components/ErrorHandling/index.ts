@@ -15,10 +15,19 @@ export {
   PerformanceErrorBoundary
 } from './ErrorBoundary';
 
+// Marketplace-specific error handling
+export { MarketplaceErrorBoundary } from './MarketplaceErrorBoundary';
+export {
+  ProductNotFoundFallback,
+  SellerNotFoundFallback,
+  ServerErrorFallback,
+  GenericMarketplaceErrorFallback
+} from './MarketplaceErrorFallback';
+
 // Error UI components
 export {
   ErrorFallbackUI,
-  NetworkErrorFallback,
+  GenericNetworkErrorFallback as NetworkErrorFallback,
   WalletErrorFallback,
   ContentLoadingErrorFallback,
   PerformanceErrorFallback

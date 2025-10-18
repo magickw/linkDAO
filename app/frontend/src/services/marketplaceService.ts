@@ -799,6 +799,38 @@ export class UnifiedMarketplaceService {
       return [];
     }
   }
+
+  // ============================================================================
+  // SELLER MANAGEMENT (for breadcrumbs)
+  // ============================================================================
+
+  async getSellerById(sellerId: string): Promise<SellerInfo | null> {
+    try {
+      // Try to use the seller service if available
+      const { sellerService } = await import('@/services/sellerService');
+      const sellerProfile = await sellerService.getSellerProfile(sellerId);
+      
+      if (sellerProfile) {
+        return {
+          id: sellerProfile.walletAddress,
+          walletAddress: sellerProfile.walletAddress,
+          displayName: sellerProfile.displayName || sellerProfile.storeName,
+          storeName: sellerProfile.storeName,
+          rating: 4.5, // Default rating
+          reputation: sellerProfile.daoReputation?.governanceParticipation || 0,
+          verified: false, // Default value since not available in SellerProfile
+          daoApproved: false, // Default value since not available in SellerProfile
+          profileImageUrl: sellerProfile.profileImageCdn,
+          isOnline: true // Default value
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching seller by ID:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance

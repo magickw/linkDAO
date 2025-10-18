@@ -5,6 +5,7 @@ import { useToast } from '@/context/ToastContext';
 import { useSeller } from '@/hooks/useSeller';
 import { getFallbackImage } from '@/utils/imageUtils';
 import { marketplaceService } from '@/services/marketplaceService';
+import { enhancedMarketplaceService } from '@/services/enhancedMarketplaceService';
 import type { MarketplaceListing } from '@/services/marketplaceService';
 import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
@@ -27,6 +28,15 @@ import { ChevronDown } from 'lucide-react';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import Layout from '@/components/Layout'; // Import the standard Layout component
+import { MarketplaceBreadcrumbs } from '@/components/Marketplace/Navigation/MarketplaceBreadcrumbs';
+import { useMarketplaceBreadcrumbs } from '@/hooks/useMarketplaceBreadcrumbs';
+import { MarketplaceErrorBoundary } from '@/components/ErrorHandling/MarketplaceErrorBoundary';
+import { NetworkErrorFallback, ServerErrorFallback } from '@/components/ErrorHandling/MarketplaceErrorFallback';
+import { NavigationLoadingStates } from '@/components/Performance/NavigationLoadingStates';
+import { MarketplacePreloader } from '@/components/Performance/MarketplacePreloader';
+import { PerformanceIndicator } from '@/components/Performance/MarketplacePerformanceDashboard';
+import { navigationPreloadService } from '@/services/navigationPreloadService';
+import { productCache, sellerCache, searchCache } from '@/services/marketplaceDataCache';
 
 // Define design tokens for fallback
 const designTokens = {
@@ -43,6 +53,7 @@ const MarketplaceContent: React.FC = () => {
   const router = useRouter();
   const { profile } = useSeller();
   const { density, setDensity } = useDensityPreference();
+  const { breadcrumbItems } = useMarketplaceBreadcrumbs();
 
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +109,17 @@ const MarketplaceContent: React.FC = () => {
         setLoadingMore(true);
       } else {
         setLoading(true);
+      }
+      
+      // Check cache first for better performance
+      const cacheKey = `listings-${pageNum}-${JSON.stringify({ sortBy: 'createdAt', sortOrder: 'desc' })}`;
+      const cachedData = await productCache.get(cacheKey);
+      
+      if (cachedData && !append) {
+        console.log('Using cached listings data');
+        setListings(Array.isArray(cachedData) ? cachedData : []);
+        setLoading(false);
+        return;
       }
       
       // Use the marketplace service
@@ -207,6 +229,14 @@ const MarketplaceContent: React.FC = () => {
         });
         
         console.log('Transformed listings:', transformedListings);
+        
+        // Cache the transformed data for better performance
+        if (!append) {
+          await productCache.set(cacheKey, transformedListings, { 
+            ttl: 5 * 60 * 1000, // 5 minutes
+            priority: 'high' 
+          });
+        }
         
         if (append) {
           setListings(prev => [...prev, ...transformedListings]);
@@ -324,6 +354,15 @@ const MarketplaceContent: React.FC = () => {
       mounted = false;
     };
   }, [debouncedSearchTerm, filters, sortField, sortDirection]);
+
+  // Initialize navigation preloading
+  useEffect(() => {
+    navigationPreloadService.initialize();
+    
+    return () => {
+      navigationPreloadService.destroy();
+    };
+  }, []);
 
   const handleLoadMore = useCallback(async () => {
     if (!loadingMore && hasMore) {
@@ -476,6 +515,17 @@ const MarketplaceContent: React.FC = () => {
 
   return (
     <Layout title="Marketplace - LinkDAO" fullWidth={true}>
+      {/* Breadcrumb Navigation */}
+      <div className="bg-white/10 backdrop-blur-sm border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <MarketplaceBreadcrumbs 
+            items={breadcrumbItems}
+            className="text-white/80"
+            preserveFilters={true}
+          />
+        </div>
+      </div>
+      
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
@@ -1009,12 +1059,23 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
 
 const MarketplacePage: React.FC = () => {
   return (
-    <>
+    <NavigationLoadingStates showProgressBar={true} showSkeletons={true}>
+      <MarketplacePreloader 
+        config={{
+          preloadCategories: true,
+          preloadFeaturedProducts: true,
+          preloadOnHover: true,
+          preloadDelay: 150
+        }}
+      />
       <MarketplaceContent />
       
       {/* Floating Seller Action Button - Always accessible */}
       <SellerFloatingActionButton />
-    </>
+      
+      {/* Performance Indicator - Development only */}
+      <PerformanceIndicator />
+    </NavigationLoadingStates>
   );
 };
 

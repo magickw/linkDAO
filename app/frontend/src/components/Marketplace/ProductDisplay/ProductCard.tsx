@@ -7,19 +7,21 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { DualPricing } from '../../../design-system/components/DualPricing';
-import { TrustIndicators } from '../../../design-system/components/TrustIndicators';
-import { LoadingSkeleton } from '../../../design-system/components/LoadingSkeleton';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
+import { OptimizedImage } from '../../Performance/OptimizedImageLoader';
 import { designTokens } from '../../../design-system/tokens';
-import { 
-  AnimatedProductBadge, 
-  AnimatedSellerBadge, 
-  AnimatedEngagementMetrics, 
-  AnimatedTrustIndicator 
+import {
+  AnimatedProductBadge,
+  AnimatedEngagementMetrics,
+  AnimatedTrustIndicator
 } from '../../../components/VisualPolish/MarketplaceAnimations';
 import { useCart } from '../../../hooks/useCart';
 import { useToast } from '../../../context/ToastContext';
+import useMarketplaceErrorHandler from '../../../hooks/useMarketplaceErrorHandler';
+import { usePrice } from '../../../hooks/useMarketplaceData';
+import { formatPrice, formatDualPrice } from '../../../utils/priceFormatter';
+import { validateProductID, validateSellerID, normalizeID } from '../../../utils/idValidator';
 
 interface Product {
   id: string;
@@ -126,62 +128,11 @@ interface OptimizedImageProps {
   onLoad?: () => void;
 }
 
-const OptimizedImage: React.FC<OptimizedImageProps> = ({ 
-  src, 
-  alt, 
-  className = '',
-  onLoad 
-}) => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+// Remove the local OptimizedImage component as we're now using the performance-optimized version
 
-  const handleLoad = () => {
-    setLoading(false);
-    onLoad?.();
-  };
-
-  const handleError = () => {
-    setLoading(false);
-    setError(true);
-  };
-
-  return (
-    <div className={`relative overflow-hidden ${className}`}>
-      {loading && (
-        <div className="absolute inset-0">
-          <LoadingSkeleton variant="image" height="100%" />
-        </div>
-      )}
-      
-      {error ? (
-        <div 
-          className="w-full h-full flex items-center justify-center text-white/60"
-          style={{
-            background: designTokens.glassmorphism.secondary.background,
-            backdropFilter: designTokens.glassmorphism.secondary.backdropFilter,
-          }}
-        >
-          <span>Image not available</span>
-        </div>
-      ) : (
-        <img
-          src={src}
-          alt={alt}
-          onLoad={handleLoad}
-          onError={handleError}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            loading ? 'opacity-0' : 'opacity-100'
-          }`}
-          loading="lazy"
-        />
-      )}
-    </div>
-  );
-};
-
-const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }> = ({ 
-  seller, 
-  onClick 
+const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }> = ({
+  seller,
+  onClick
 }) => {
   // Format reputation score for display
   const formatReputationScore = (score: number) => {
@@ -212,7 +163,11 @@ const SellerBadge: React.FC<{ seller: Product['seller']; onClick?: () => void }>
         <OptimizedImage
           src={seller.avatar}
           alt={seller.name}
+          width={24}
+          height={24}
           className="w-full h-full"
+          priority="low"
+          placeholder="skeleton"
         />
       </div>
       <div className="flex items-center gap-1">
@@ -248,7 +203,7 @@ const ReputationIndicator: React.FC<{ reputation: number }> = ({ reputation }) =
 
   return (
     <div className="flex items-center gap-1 text-xs">
-      <div 
+      <div
         className="w-2 h-2 rounded-full"
         style={{ backgroundColor: color }}
       />
@@ -265,60 +220,102 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onSellerClick,
   onAddToCart,
   onAddToWishlist,
-  onBidClick,
   className = '',
 }) => {
   const router = useRouter();
-  const { actions: cartActions, state: cartState } = useCart();
+  const { actions: cartActions } = useCart();
   const { addToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  
+
+  // Validate and normalize IDs for consistency
+  const normalizedProductId = normalizeID(product.id, 'product');
+  const normalizedSellerId = normalizeID(product.seller.id, 'seller');
+
+  // Use centralized price data management
+  const { priceData } = usePrice(normalizedProductId);
+
   // Check if product is in cart
-  const isInCart = cartActions.isInCart(product.id);
-  const cartItem = cartActions.getItem(product.id);
+  const isInCart = cartActions.isInCart(normalizedProductId);
+  const cartItem = cartActions.getItem(normalizedProductId);
+
+  const { handleError, showErrorToast } = useMarketplaceErrorHandler();
 
   const handleProductClick = () => {
-    // Use direct navigation with fallback to callback
-    if (onProductClick) {
-      onProductClick(product.id);
-    } else {
-      router.push(`/marketplace/listing/${product.id}`);
+    try {
+      // Validate product ID before navigation
+      const productValidation = validateProductID(product.id);
+      if (!productValidation.isValid) {
+        console.warn('Invalid product ID:', productValidation.errors);
+        showErrorToast('Invalid product ID');
+        return;
+      }
+
+      // Use direct navigation with fallback to callback
+      if (onProductClick) {
+        onProductClick(normalizedProductId);
+      } else {
+        router.push(`/marketplace/listing/${normalizedProductId}`);
+      }
+    } catch (error) {
+      handleError(error, 'Product Navigation');
+      showErrorToast('Failed to navigate to product details');
     }
   };
 
   const handleSellerClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Use direct navigation with fallback to callback
-    if (onSellerClick) {
-      onSellerClick(product.seller.id);
-    } else {
-      router.push(`/marketplace/seller/store/${product.seller.id}`);
+    try {
+      // Validate seller ID before navigation
+      const sellerValidation = validateSellerID(product.seller.id);
+      if (!sellerValidation.isValid) {
+        console.warn('Invalid seller ID:', sellerValidation.errors);
+        showErrorToast('Invalid seller ID');
+        return;
+      }
+
+      // Use direct navigation with fallback to callback
+      if (onSellerClick) {
+        onSellerClick(normalizedSellerId);
+      } else {
+        router.push(`/marketplace/seller/store/${normalizedSellerId}`);
+      }
+    } catch (error) {
+      handleError(error, 'Seller Navigation');
+      showErrorToast('Failed to navigate to seller store');
     }
   };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (isAddingToCart) return;
-    
+
     setIsAddingToCart(true);
-    
+
     try {
-      // Create cart item from product
+      // Create cart item from product with consistent pricing
+      const cartCurrentPrice = priceData || {
+        productId: normalizedProductId,
+        amount: parseFloat(product.price.amount),
+        currency: product.price.currency,
+        usdEquivalent: product.price.usdEquivalent || '0',
+        lastUpdated: new Date()
+      };
+
       const cartItem = {
-        id: product.id,
+        id: normalizedProductId,
         title: product.title,
         description: product.description,
         image: product.images[0] || '',
         price: {
-          crypto: product.price.amount,
-          cryptoSymbol: product.price.currency,
-          fiat: product.price.usdEquivalent || '0',
+          crypto: cartCurrentPrice.amount.toString(),
+          cryptoSymbol: cartCurrentPrice.currency,
+          fiat: cartCurrentPrice.usdEquivalent || '0',
           fiatSymbol: 'USD'
         },
         seller: {
-          id: product.seller.id,
+          id: normalizedSellerId,
           name: product.seller.name,
           avatar: product.seller.avatar,
           verified: product.seller.verified,
@@ -343,10 +340,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       };
 
       await cartActions.addItem(cartItem, 1);
-      
+
       // Call optional callback
-      onAddToCart?.(product.id);
-      
+      onAddToCart?.(normalizedProductId);
+
       addToast(`Added "${product.title}" to cart! 🛒`, 'success');
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -359,7 +356,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsWishlisted(!isWishlisted);
-    onAddToWishlist?.(product.id);
+    onAddToWishlist?.(normalizedProductId);
   };
 
   const cardVariants = {
@@ -402,11 +399,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   }
 
-  // Format price data for dual pricing component
-  const priceData = {
-    crypto: product.price.amount,
-    cryptoSymbol: product.price.currency,
-    fiat: product.price.usdEquivalent || '0',
+  // Format price data for dual pricing component using centralized formatter
+  const currentPrice = priceData || {
+    productId: normalizedProductId,
+    amount: parseFloat(product.price.amount),
+    currency: product.price.currency,
+    usdEquivalent: product.price.usdEquivalent || '0',
+    lastUpdated: new Date()
+  };
+
+  const formattedPrice = formatDualPrice(
+    currentPrice.amount,
+    currentPrice.currency,
+    parseFloat(currentPrice.usdEquivalent || '0'),
+    'USD',
+    { layout: 'horizontal', primaryCurrency: 'crypto' }
+  );
+
+  const priceDisplayData = {
+    crypto: currentPrice.amount.toString(),
+    cryptoSymbol: currentPrice.currency,
+    fiat: currentPrice.usdEquivalent || '0',
     fiatSymbol: 'USD'
   };
 
@@ -420,8 +433,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         className={`cursor-pointer ${className}`}
         onClick={handleProductClick}
       >
-        <GlassPanel 
-          variant="secondary" 
+        <GlassPanel
+          variant="secondary"
           className="p-4"
           nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
         >
@@ -431,15 +444,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <OptimizedImage
                 src={product.images[0]}
                 alt={product.title}
+                width={96}
+                height={96}
                 className="w-full h-full"
+                priority="medium"
+                placeholder="skeleton"
               />
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-2">
-                <SellerBadge 
-                  seller={product.seller} 
+                <SellerBadge
+                  seller={product.seller}
                   onClick={() => onSellerClick?.(product.seller.id)}
                 />
                 {showTrustIndicators && (
@@ -516,10 +533,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
               <div className="flex items-center justify-between">
                 <DualPricing
-                  cryptoPrice={priceData.crypto}
-                  cryptoSymbol={priceData.cryptoSymbol}
-                  fiatPrice={priceData.fiat}
-                  fiatSymbol={priceData.fiatSymbol}
+                  cryptoPrice={priceDisplayData.crypto}
+                  cryptoSymbol={priceDisplayData.cryptoSymbol}
+                  fiatPrice={priceDisplayData.fiat}
+                  fiatSymbol={priceDisplayData.fiatSymbol}
                   size="small"
                   layout="horizontal"
                 />
@@ -559,8 +576,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className={`cursor-pointer ${className}`}
       onClick={handleProductClick}
     >
-      <GlassPanel 
-        variant="secondary" 
+      <GlassPanel
+        variant="secondary"
         className="overflow-hidden"
         nftShadow={product.seller.daoApproved ? 'dao' : (product.isNFT ? 'standard' : undefined)}
       >
@@ -569,9 +586,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <OptimizedImage
             src={product.images[0]}
             alt={product.title}
+            width={400}
+            height={300}
             className="w-full h-full"
+            priority={product.isFeatured ? "high" : "medium"}
+            placeholder="skeleton"
+            preload={product.isFeatured}
+            onLoad={() => {
+              // Preload additional images for this product
+              if (product.images.length > 1) {
+                product.images.slice(1, 3).forEach(imageUrl => {
+                  const img = new Image();
+                  img.src = imageUrl;
+                });
+              }
+            }}
           />
-          
+
           {/* Wishlist button overlay */}
           <motion.button
             className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center"
@@ -620,8 +651,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Low stock indicator */}
           {product.inventory !== undefined && product.inventory < 5 && product.inventory > 0 && (
-            <AnimatedProductBadge 
-              variant="warning" 
+            <AnimatedProductBadge
+              variant="warning"
               size="sm"
               className="absolute bottom-3 left-3"
             >
@@ -631,8 +662,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Out of stock indicator */}
           {product.inventory !== undefined && product.inventory === 0 && (
-            <AnimatedProductBadge 
-              variant="error" 
+            <AnimatedProductBadge
+              variant="error"
               size="sm"
               className="absolute bottom-3 left-3"
             >
@@ -645,8 +676,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="p-4">
           {/* Seller and Trust Indicators */}
           <div className="flex items-center justify-between mb-3">
-            <SellerBadge 
-              seller={product.seller} 
+            <SellerBadge
+              seller={product.seller}
               onClick={() => onSellerClick?.(product.seller.id)}
             />
             {showTrustIndicators && (
@@ -712,10 +743,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {/* Pricing */}
           <div className="mb-4">
             <DualPricing
-              cryptoPrice={priceData.crypto}
-              cryptoSymbol={priceData.cryptoSymbol}
-              fiatPrice={priceData.fiat}
-              fiatSymbol={priceData.fiatSymbol}
+              cryptoPrice={priceDisplayData.crypto}
+              cryptoSymbol={priceDisplayData.cryptoSymbol}
+              fiatPrice={priceDisplayData.fiat}
+              fiatSymbol={priceDisplayData.fiatSymbol}
               size="medium"
               layout="vertical"
               realTimeConversion
@@ -724,9 +755,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Engagement metrics */}
           <div className="mb-4">
-            <AnimatedEngagementMetrics 
-              views={product.views || 0} 
-              favorites={product.favorites || 0} 
+            <AnimatedEngagementMetrics
+              views={product.views || 0}
+              favorites={product.favorites || 0}
             />
           </div>
 

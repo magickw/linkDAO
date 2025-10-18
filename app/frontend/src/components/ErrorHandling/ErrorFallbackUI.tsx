@@ -153,7 +153,7 @@ const GenericErrorFallback: React.FC<{ onRetry?: () => void; canRetry?: boolean 
 
 // Specialized fallback components for different scenarios
 
-export const NetworkErrorFallback: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => (
+export const GenericNetworkErrorFallback: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => (
   <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg text-center">
     <div className="text-4xl mb-4">🌐</div>
     <h3 className="text-lg font-semibold mb-2">Connection Issue</h3>
