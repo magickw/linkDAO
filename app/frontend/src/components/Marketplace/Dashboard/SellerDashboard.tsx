@@ -167,7 +167,14 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
               </Button>
             )}
             <Button
-              onClick={() => router.push(`/marketplace/seller/store/${profile?.walletAddress || dashboardAddress}`)}
+              onClick={() => {
+                const sellerId = profile?.walletAddress || dashboardAddress;
+                if (sellerId) {
+                  router.push(`/marketplace/seller/store/${sellerId}`);
+                } else {
+                  console.error('No seller ID available for store navigation');
+                }
+              }}
               variant="outline"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

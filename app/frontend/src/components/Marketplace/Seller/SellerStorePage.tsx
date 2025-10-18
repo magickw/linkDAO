@@ -244,9 +244,10 @@ interface Review {
 
 interface SellerStorePageProps {
   sellerId: string;
+  onProductClick?: (productId: string) => void;
 }
 
-const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
+const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick }) => {
   const router = useRouter();
   const { address } = useAccount();
   
@@ -256,6 +257,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'listings' | 'reviews' | 'about' | 'activity' | 'transactions'>('listings');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -388,337 +390,268 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
     };
   }, [sellerId]);
 
-  // Fetch seller data
-  useEffect(() => {
-    const fetchSellerData = async () => {
+  // Enhanced data fetching with proper error handling and retry logic
+  const fetchSellerData = async (isRetry = false) => {
+    if (!sellerId) {
+      setError('No seller ID provided');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Try to fetch real seller profile data first
       try {
-        setLoading(true);
+        const { sellerService } = await import('@/services/sellerService');
+        const sellerProfile = await sellerService.getSellerProfile(sellerId);
         
-        // Try to fetch real seller profile data first
-        try {
-          const { sellerService } = await import('@/services/sellerService');
-          const sellerProfile = await sellerService.getSellerProfile(sellerId);
-          
-          if (sellerProfile) {
-            // Transform backend profile to store page format
-            const transformedSeller: SellerInfo = {
-              id: sellerProfile.walletAddress,
-              name: sellerProfile.displayName || sellerProfile.storeName || 'Anonymous Seller',
-              avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
-              coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
-              walletAddress: sellerProfile.walletAddress,
-              ensName: sellerProfile.ensHandle,
-              description: sellerProfile.bio || sellerProfile.description || 'No description available',
-              sellerStory: sellerProfile.sellerStory || '',
-              memberSince: new Date(sellerProfile.createdAt),
-              location: sellerProfile.location || '',
-              isOnline: true, // Default to online
-              lastSeen: new Date(sellerProfile.updatedAt),
-              
-              // Use stats from profile or defaults
-              reputationScore: { 
-                value: sellerProfile.stats?.reputationScore?.toString() || '0', 
-                tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
-              },
-              successRate: { 
-                value: '98.5%', // Default for now
-                tooltip: 'Percentage of successful transactions without disputes or issues' 
-              },
-              safetyScore: { 
-                value: '9.2', // Default for now
-                tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
-              },
-              totalTransactions: sellerProfile.stats?.completedOrders || 0,
-              successfulTransactions: sellerProfile.stats?.completedOrders || 0,
-              disputesRatio: 0.02, // Default
-              
-              verificationLevels: {
-                identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
-                business: { type: 'BASIC', verified: false },
-                kyc: { type: 'PREMIUM', verified: sellerProfile.ensVerified }
-              },
-              socialLinks: {
-                twitter: sellerProfile.socialLinks?.twitter,
-                linkedin: sellerProfile.socialLinks?.linkedin,
-                website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
-              },
-              
-              performanceMetrics: {
-                avgDeliveryTime: '1.2 days',
-                customerSatisfaction: sellerProfile.stats?.averageRating || 0,
-                returnRate: 1.2,
-                repeatCustomerRate: 68,
-                responseTime: '< 2 hours',
-                trend: 'up',
-                trendValue: '+12%'
-              },
-              tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
-              tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
-              isKYCVerified: sellerProfile.ensVerified,
-              isDAOEndorsed: false, // Default
-              hasEscrowProtection: true,
-              followers: 0, // Default
-              following: 0, // Default
-              daoMemberships: [],
-              daoEndorsements: [],
-              topCategories: ['electronics', 'digital', 'collectibles'], // Default
-              totalListings: sellerProfile.stats?.activeListings || 0,
-              activeListings: sellerProfile.stats?.activeListings || 0,
-              featuredListings: [],
-              featuredProducts: [],
-              performanceBadges: [],
-              activityTimeline: [],
-              recentTransactions: [],
-              nftPortfolio: [],
-              web3Badges: []
-            };
+        if (sellerProfile) {
+          // Transform backend profile to store page format
+          const transformedSeller: SellerInfo = {
+            id: sellerProfile.walletAddress,
+            name: sellerProfile.displayName || sellerProfile.storeName || 'Anonymous Seller',
+            avatar: sellerProfile.profilePicture || sellerProfile.profileImageCdn || '',
+            coverImage: sellerProfile.coverImage || sellerProfile.coverImageCdn || '',
+            walletAddress: sellerProfile.walletAddress,
+            ensName: sellerProfile.ensHandle,
+            description: sellerProfile.bio || sellerProfile.description || 'No description available',
+            sellerStory: sellerProfile.sellerStory || '',
+            memberSince: new Date(sellerProfile.createdAt),
+            location: sellerProfile.location || '',
+            isOnline: true, // Default to online
+            lastSeen: new Date(sellerProfile.updatedAt),
             
-            setSeller(transformedSeller);
-          } else {
-            throw new Error('Profile not found');
-          }
-        } catch (profileError) {
-          console.warn('Failed to fetch real seller profile, using mock data:', profileError);
-          
-          // Fallback to mock seller data
-          const mockSeller: SellerInfo = {
-            id: sellerId,
-            name: 'Alex Chen',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-            coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=300&fit=crop',
-            walletAddress: sellerId,
-            ensName: 'cryptoartist.eth',
-            description: 'Digital artist and NFT creator specializing in generative art and Web3 experiences.',
-            sellerStory: 'Started as a traditional artist in 2018, transitioned to Web3 in 2021. I create unique generative art pieces that blend mathematics with creativity, focusing on sustainable and community-driven projects.',
-            memberSince: new Date('2023-01-15'),
-            location: 'San Francisco, CA',
-            isOnline: true,
-            lastSeen: new Date(),
-            reputationScore: { value: '4.8', tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' },
-            successRate: { value: '98.5%', tooltip: 'Percentage of successful transactions without disputes or issues' },
-            safetyScore: { value: '9.2', tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' },
-            totalTransactions: 150,
-            successfulTransactions: 147,
-            disputesRatio: 0.02,
+            // Use stats from profile or defaults
+            reputationScore: { 
+              value: sellerProfile.stats?.reputationScore?.toString() || '0', 
+              tooltip: 'Based on buyer reviews, DAO endorsements, and community feedback' 
+            },
+            successRate: { 
+              value: sellerProfile.stats?.completedOrders > 0 ? 
+                `${Math.round((sellerProfile.stats.completedOrders / sellerProfile.stats.completedOrders) * 100)}%` : 
+                '98.5%',
+              tooltip: 'Percentage of successful transactions without disputes or issues' 
+            },
+            safetyScore: { 
+              value: sellerProfile.stats?.reputationScore ? 
+                Math.min(10, Math.max(1, sellerProfile.stats.reputationScore * 2)).toFixed(1) : 
+                '9.2',
+              tooltip: 'Calculated from transaction history, dispute resolution, and community trust signals' 
+            },
+            totalTransactions: sellerProfile.stats?.completedOrders || 0,
+            successfulTransactions: sellerProfile.stats?.completedOrders || 0,
+            disputesRatio: 0.02, // Default
             
             verificationLevels: {
-              identity: { type: 'ENHANCED', verified: true, verifiedAt: new Date('2023-02-01') },
-              business: { type: 'BASIC', verified: true, verifiedAt: new Date('2023-03-15') },
-              kyc: { type: 'PREMIUM', verified: true, verifiedAt: new Date('2023-01-20') }
+              identity: { type: 'ENHANCED', verified: sellerProfile.ensVerified, verifiedAt: new Date() },
+              business: { type: 'BASIC', verified: false },
+              kyc: { type: 'PREMIUM', verified: sellerProfile.ensVerified }
             },
             socialLinks: {
-              twitter: 'https://twitter.com/alexchen_art',
-              linkedin: 'https://linkedin.com/in/alexchen',
-              website: 'https://alexchen.art'
+              twitter: sellerProfile.socialLinks?.twitter,
+              linkedin: sellerProfile.socialLinks?.linkedin,
+              website: sellerProfile.websiteUrl || sellerProfile.socialLinks?.website
             },
             
             performanceMetrics: {
               avgDeliveryTime: '1.2 days',
-              customerSatisfaction: 4.9,
+              customerSatisfaction: sellerProfile.stats?.averageRating || 0,
               returnRate: 1.2,
               repeatCustomerRate: 68,
               responseTime: '< 2 hours',
               trend: 'up',
               trendValue: '+12%'
             },
-            tier: 'TIER_2',
+            tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
             tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
-            isKYCVerified: true,
-            isDAOEndorsed: true,
+            isKYCVerified: sellerProfile.ensVerified,
+            isDAOEndorsed: false, // Default
             hasEscrowProtection: true,
-            followers: 1250,
-            following: 89,
-            daoMemberships: [
-              { name: 'LinkDAO', role: 'Core Contributor', joinDate: '2023-03-15', contributions: 45 },
-              { name: 'TechDAO', role: 'Member', joinDate: '2023-06-20', contributions: 12 },
-              { name: 'ArtistsDAO', role: 'Delegate', joinDate: '2023-04-10', contributions: 28 }
-            ],
-            daoEndorsements: [
-              {
-                id: 'endorsement1',
-                endorserAddress: '0xdao123...',
-                endorserENS: 'dao_leader.eth',
-                proposalHash: '0xproposal123...',
-                voteCount: 45,
-                timestamp: new Date('2024-01-10'),
-                reason: 'Exceptional service and community contribution'
-              }
-            ],
-            topCategories: ['electronics', 'digital', 'collectibles'],
-            totalListings: 25,
-            activeListings: 12,
+            followers: 0, // Default
+            following: 0, // Default
+            daoMemberships: [],
+            daoEndorsements: [],
+            topCategories: ['electronics', 'digital', 'collectibles'], // Default
+            totalListings: sellerProfile.stats?.activeListings || 0,
+            activeListings: sellerProfile.stats?.activeListings || 0,
             featuredListings: [],
-            featuredProducts: [
-              { id: '1', name: 'Quantum Dreams #001', price: '2.5 ETH', image: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=200&h=200&fit=crop', category: 'Digital Art' },
-              { id: '2', name: 'Generative Landscape', price: '1.8 ETH', image: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?w=200&h=200&fit=crop', category: 'NFT' },
-              { id: '3', name: 'Abstract Motion', price: '3.2 ETH', image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=200&h=200&fit=crop', category: 'Digital Art' }
-            ],
-            performanceBadges: [
-              {
-                id: 'perf1',
-                title: 'Top Seller This Month',
-                description: 'Ranked #3 in sales volume',
-                icon: '🏆',
-                color: 'text-yellow-400 bg-yellow-500/20',
-                earnedDate: new Date('2024-01-01')
-              },
-              {
-                id: 'perf2',
-                title: 'Fast Shipper',
-                description: 'Average shipping time: 1.2 days',
-                icon: '⚡',
-                color: 'text-green-400 bg-green-500/20',
-                earnedDate: new Date('2023-12-15')
-              }
-            ],
-            activityTimeline: [
-              {
-                id: 'activity1',
-                type: 'SALE',
-                title: 'Completed 3 sales',
-                description: 'Successfully delivered premium headphones, NFT artwork, and digital course',
-                timestamp: new Date('2024-01-15'),
-                icon: '💰'
-              },
-              {
-                id: 'activity2',
-                type: 'LISTING',
-                title: 'Listed Product A',
-                description: 'Added new wireless earbuds to marketplace',
-                timestamp: new Date('2024-01-12'),
-                icon: '📦'
-              },
-              {
-                id: 'activity3',
-                type: 'ENDORSEMENT',
-                title: 'Received DAO endorsement',
-                description: 'LinkDAO community voted to endorse this seller',
-                timestamp: new Date('2024-01-10'),
-                icon: '🏛️'
-              }
-            ],
-            recentTransactions: [
-              { id: '1', type: 'sale', amount: '2.1 ETH', timestamp: '2024-01-15T10:30:00Z', counterparty: '0x123...789' },
-              { id: '2', type: 'sale', amount: '1.5 ETH', timestamp: '2024-01-14T15:45:00Z', counterparty: '0xabc...def' },
-              { id: '3', type: 'purchase', amount: '0.8 ETH', timestamp: '2024-01-13T09:20:00Z', counterparty: '0x456...123' },
-              { id: '4', type: 'sale', amount: '4.2 ETH', timestamp: '2024-01-12T14:10:00Z', counterparty: '0x789...abc' },
-              { id: '5', type: 'sale', amount: '1.9 ETH', timestamp: '2024-01-11T11:55:00Z', counterparty: '0xdef...456' }
-            ],
+            featuredProducts: [],
+            performanceBadges: [],
+            activityTimeline: [],
+            recentTransactions: [],
             nftPortfolio: [],
-            web3Badges: [
-              {
-                id: 'badge1',
-                name: 'Verified Creator',
-                type: 'VERIFICATION',
-                icon: '🎨',
-                description: 'Verified digital content creator',
-                earnedDate: new Date('2023-06-01')
-              }
-            ]
+            web3Badges: []
           };
           
-          setSeller(mockSeller);
+          setSeller(transformedSeller);
+        } else {
+          throw new Error('Seller profile not found');
+        }
+      } catch (profileError) {
+        console.warn('Failed to fetch real seller profile:', profileError);
+        
+        if (!isRetry && retryCount < 2) {
+          // Retry once for network issues
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => fetchSellerData(true), 1000);
+          return;
         }
         
-        // Fetch seller listings
-        try {
-          const { sellerService } = await import('@/services/sellerService');
-          const sellerListings = await sellerService.getListings(sellerId);
-          
-          if (sellerListings && sellerListings.length > 0) {
-            // Transform seller listings to display format
-            const transformedListings: DisplayMarketplaceListing[] = sellerListings.map(listing => ({
-              id: listing.id,
-              title: listing.title,
-              price: listing.price,
-              currency: 'ETH', // Default currency
-              image: listing.images?.[0] || '',
-              category: listing.category,
-              status: listing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
-              createdAt: new Date(listing.createdAt),
-              views: listing.views || 0,
-              likes: listing.favorites || 0,
-              isEscrowProtected: listing.escrowEnabled
-            }));
-            setListings(transformedListings);
-          } else {
-            // Use mock listings data as fallback
-            const mockListings: DisplayMarketplaceListing[] = [
-              {
-                id: '1',
-                title: 'Premium Wireless Headphones',
-                price: 0.001,
-                currency: 'ETH',
-                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
-                category: 'electronics',
-                status: 'ACTIVE',
-                createdAt: new Date('2024-01-10'),
-                views: 245,
-                likes: 18,
-                isEscrowProtected: true
-              }
-            ];
-            setListings(mockListings);
-          }
-        } catch (listingsError) {
-          console.warn('Failed to fetch seller listings, using mock data:', listingsError);
-          // Use mock listings as fallback
-          const mockListings: DisplayMarketplaceListing[] = [
-            {
-              id: '1',
-              title: 'Premium Wireless Headphones',
-              price: 0.001,
-              currency: 'ETH',
-              image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop',
-              category: 'electronics',
-              status: 'ACTIVE',
-              createdAt: new Date('2024-01-10'),
-              views: 245,
-              likes: 18,
-              isEscrowProtected: true
-            }
-          ];
-          setListings(mockListings);
+        // If seller not found, show appropriate error
+        if (profileError instanceof Error && profileError.message.includes('not found')) {
+          setError('Seller store not found. This seller may not exist or may have deactivated their store.');
+          setLoading(false);
+          return;
         }
         
-        // Mock reviews data
-        const mockReviews: Review[] = [
-          {
-            id: 'review1',
-            buyerAddress: '0x1234567890123456789012345678901234567890',
-            buyerENS: 'buyer1.eth',
-            rating: 5,
-            comment: 'Excellent seller! Fast shipping and exactly as described.',
-            transactionHash: '0xabcdef...',
-            isVerifiedPurchase: true,
-            createdAt: new Date('2024-01-10'),
-            listingId: 'listing1'
+        // For other errors, use fallback mock data to prevent complete failure
+        const mockSeller: SellerInfo = {
+          id: sellerId,
+          name: 'Seller Store',
+          avatar: '',
+          coverImage: '',
+          walletAddress: sellerId,
+          ensName: undefined,
+          description: 'This seller store is currently unavailable. Please try again later.',
+          sellerStory: '',
+          memberSince: new Date(),
+          location: '',
+          isOnline: false,
+          lastSeen: new Date(),
+          reputationScore: { value: '0', tooltip: 'No reputation data available' },
+          successRate: { value: '0%', tooltip: 'No transaction history available' },
+          safetyScore: { value: '0', tooltip: 'No safety data available' },
+          totalTransactions: 0,
+          successfulTransactions: 0,
+          disputesRatio: 0,
+          verificationLevels: {
+            identity: { type: 'BASIC', verified: false },
+            business: { type: 'BASIC', verified: false },
+            kyc: { type: 'BASIC', verified: false }
           },
-          {
-            id: 'review2',
-            buyerAddress: '0x2345678901234567890123456789012345678901',
-            rating: 4,
-            comment: 'Great product, minor packaging issues but overall satisfied.',
-            transactionHash: '0x123456...',
-            isVerifiedPurchase: true,
-            createdAt: new Date('2024-01-05'),
-            listingId: 'listing2'
-          }
-        ];
+          socialLinks: {},
+          performanceMetrics: {
+            avgDeliveryTime: 'N/A',
+            customerSatisfaction: 0,
+            returnRate: 0,
+            repeatCustomerRate: 0,
+            responseTime: 'N/A',
+            trend: 'stable',
+            trendValue: '0%'
+          },
+          tier: 'TIER_1',
+          tierProgress: { current: 0, required: 100, nextTier: 'TIER_2' },
+          isKYCVerified: false,
+          isDAOEndorsed: false,
+          hasEscrowProtection: false,
+          followers: 0,
+          following: 0,
+          daoMemberships: [],
+          daoEndorsements: [],
+          topCategories: [],
+          totalListings: 0,
+          activeListings: 0,
+          featuredListings: [],
+          featuredProducts: [],
+          performanceBadges: [],
+          activityTimeline: [],
+          recentTransactions: [],
+          nftPortfolio: [],
+          web3Badges: []
+        };
         
-        setReviews(mockReviews);
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load seller data');
-      } finally {
-        setLoading(false);
+        setSeller(mockSeller);
       }
-    };
+      
+      // Fetch seller listings with error handling
+      try {
+        const { sellerService } = await import('@/services/sellerService');
+        const sellerListings = await sellerService.getListings(sellerId);
+        
+        if (sellerListings && sellerListings.length > 0) {
+          // Transform seller listings to display format
+          const transformedListings: DisplayMarketplaceListing[] = sellerListings.map(listing => ({
+            id: listing.id,
+            title: listing.title,
+            price: listing.price,
+            currency: (listing.currency === 'USDC' || listing.currency === 'DAI') ? listing.currency : 'ETH' as 'ETH' | 'USDC' | 'DAI',
+            image: listing.images?.[0] || '',
+            category: listing.category,
+            status: listing.status === 'active' ? 'ACTIVE' : 
+                   listing.status === 'sold' ? 'SOLD' : 'DRAFT',
+            createdAt: new Date(listing.createdAt),
+            views: listing.views || 0,
+            likes: listing.favorites || 0,
+            isEscrowProtected: listing.escrowEnabled
+          }));
+          setListings(transformedListings);
+        } else {
+          setListings([]);
+        }
+      } catch (listingsError) {
+        console.warn('Failed to fetch seller listings:', listingsError);
+        setListings([]);
+      }
+      
+      // Mock reviews data for now
+      const mockReviews: Review[] = [
+        {
+          id: 'review1',
+          buyerAddress: '0x1234567890123456789012345678901234567890',
+          buyerENS: 'buyer1.eth',
+          rating: 5,
+          comment: 'Excellent seller! Fast shipping and exactly as described.',
+          transactionHash: '0xabcdef...',
+          isVerifiedPurchase: true,
+          createdAt: new Date('2024-01-10'),
+          listingId: 'listing1'
+        },
+        {
+          id: 'review2',
+          buyerAddress: '0x2345678901234567890123456789012345678901',
+          rating: 4,
+          comment: 'Great product, minor packaging issues but overall satisfied.',
+          transactionHash: '0x123456...',
+          isVerifiedPurchase: true,
+          createdAt: new Date('2024-01-05'),
+          listingId: 'listing2'
+        }
+      ];
+      
+      setReviews(mockReviews);
+      
+    } catch (err) {
+      console.error('Error fetching seller data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load seller store. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Fetch seller data on component mount and sellerId change
+  useEffect(() => {
     if (sellerId) {
+      setRetryCount(0);
       fetchSellerData();
     }
   }, [sellerId]);
+
+  // Retry function for failed requests
+  const handleRetry = () => {
+    setRetryCount(0);
+    fetchSellerData();
+  };
+
+  // Handle product click with proper navigation
+  const handleProductClick = (productId: string) => {
+    if (onProductClick) {
+      onProductClick(productId);
+    } else {
+      router.push(`/marketplace/listing/${productId}`);
+    }
+  };
 
   const fetchSellerReviews = async () => {
     // This function is kept for compatibility but reviews are now loaded in the main fetch
@@ -753,15 +686,42 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading seller profile...</div>
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
+          <div className="text-white text-xl mb-2">Loading seller store...</div>
+          <div className="text-white/70 text-sm">Please wait while we fetch the seller information</div>
+        </div>
       </div>
     );
   }
 
   if (error || !seller) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-red-400 text-xl">{error || 'Seller not found'}</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center max-w-md w-full">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Store Unavailable</h2>
+          <p className="text-white/80 mb-6">
+            {error || 'This seller store could not be found or is currently unavailable.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={handleRetry}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Try Again
+            </button>
+            <button
+              onClick={() => router.push('/marketplace')}
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+            >
+              Return to Marketplace
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -1151,7 +1111,7 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {seller.featuredListings.slice(0, 3).map((listing) => (
                 <div key={listing.id} className="bg-white/10 rounded-lg overflow-hidden cursor-pointer hover:bg-white/15 transition-colors"
-                     onClick={() => router.push(`/marketplace/listing/${listing.id}`)}>
+                     onClick={() => handleProductClick(listing.id)}>
                   <div className="relative h-32">
                     {listing.image ? (
                       <Image src={listing.image} alt={listing.title} fill className="object-cover" />
@@ -1170,6 +1130,33 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
             </div>
           </motion.div>
         )}
+
+        {/* Breadcrumb Navigation */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <nav className="flex items-center space-x-2 text-sm text-white/70">
+            <button 
+              onClick={() => router.push('/marketplace')}
+              className="hover:text-white transition-colors"
+            >
+              Marketplace
+            </button>
+            <span>›</span>
+            <button 
+              onClick={() => router.push('/marketplace?tab=sellers')}
+              className="hover:text-white transition-colors"
+            >
+              Sellers
+            </button>
+            <span>›</span>
+            <span className="text-white font-medium">
+              {seller.name}
+            </span>
+          </nav>
+        </motion.div>
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-6 mb-8">
@@ -1245,59 +1232,84 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId }) => {
               </div>
 
               {/* Listings Grid/List */}
-              <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-                {filteredListings.map((listing) => (
-                  <motion.div
-                    key={listing.id}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white/10 rounded-lg overflow-hidden cursor-pointer"
-                    onClick={() => router.push(`/marketplace/listing/${listing.id}`)}
-                  >
-                    <div className="relative">
-                      {listing.image ? (
-                        <Image
-                          src={listing.image}
-                          alt={listing.title}
-                          width={400}
-                          height={300}
-                          className="w-full h-48 object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-48 bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center text-white">
-                          <span className="text-lg font-medium">No Image</span>
+              {filteredListings.length > 0 ? (
+                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+                  {filteredListings.map((listing) => (
+                    <motion.div
+                      key={listing.id}
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-white/10 rounded-lg overflow-hidden cursor-pointer"
+                      onClick={() => handleProductClick(listing.id)}
+                    >
+                      <div className="relative">
+                        {listing.image ? (
+                          <Image
+                            src={listing.image}
+                            alt={listing.title}
+                            width={400}
+                            height={300}
+                            className="w-full h-48 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-48 bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center text-white">
+                            <span className="text-lg font-medium">No Image</span>
+                          </div>
+                        )}
+                        {listing.isEscrowProtected && (
+                          <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                            <Shield className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-white font-semibold mb-2 truncate">{listing.title}</h3>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-lg font-bold text-white">
+                            {listing.price} {listing.currency}
+                          </span>
+                          <div className="flex items-center gap-2 text-white/70 text-sm">
+                            <Heart className="w-4 h-4" />
+                            <span>{listing.likes}</span>
+                          </div>
                         </div>
-                      )}
-                      {listing.isEscrowProtected && (
-                        <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
-                          <Shield className="w-4 h-4 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-white font-semibold mb-2 truncate">{listing.title}</h3>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-lg font-bold text-white">
-                          {listing.price} {listing.currency}
-                        </span>
-                        <div className="flex items-center gap-2 text-white/70 text-sm">
-                          <Heart className="w-4 h-4" />
-                          <span>{listing.likes}</span>
+                        <div className="flex items-center justify-between text-xs text-white/60">
+                          <span>{listing.views} views</span>
+                          <span className={`px-2 py-1 rounded-full ${
+                            listing.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
+                            listing.status === 'SOLD' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {listing.status.toLowerCase()}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-white/60">
-                        <span>{listing.views} views</span>
-                        <span className={`px-2 py-1 rounded-full ${
-                          listing.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                          listing.status === 'SOLD' ? 'bg-red-500/20 text-red-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {listing.status.toLowerCase()}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Package className="w-8 h-8 text-white/60" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">No listings found</h3>
+                  <p className="text-white/70 mb-6">
+                    {searchQuery || selectedCategory !== 'all' 
+                      ? 'Try adjusting your search or filters to find more products.'
+                      : 'This seller hasn\'t listed any products yet.'}
+                  </p>
+                  {(searchQuery || selectedCategory !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setSelectedCategory('all');
+                      }}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

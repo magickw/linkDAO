@@ -26,14 +26,14 @@
   - Add retry mechanisms for failed API calls
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [-] 5. Complete seller store page implementation
+- [x] 5. Complete seller store page implementation
   - Enhance SellerStorePage component to accept sellerId prop and fetch real data
   - Ensure seller store displays actual seller listings with working product links
   - Fix seller dashboard "View Store" button to navigate to correct URL
   - Add proper error handling for unavailable seller stores
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 6. Integrate shopping cart system with ProductCard components
+- [-] 6. Integrate shopping cart system with ProductCard components
   - Connect cart service to all ProductCard instances for "Add to Cart" functionality
   - Add cart badge to marketplace header showing current item count
   - Implement cart state persistence across page navigation
