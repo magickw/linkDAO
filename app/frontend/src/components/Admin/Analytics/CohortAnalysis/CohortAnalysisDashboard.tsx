@@ -3,8 +3,8 @@ import {
   CalendarIcon, 
   ArrowPathIcon,
   UsersIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   ChartBarIcon
 } from '@heroicons/react/24/outline';
 import CohortHeatmap from './CohortHeatmap';
@@ -48,7 +48,12 @@ export const CohortAnalysisDashboard: React.FC<CohortAnalysisDashboardProps> = (
     endDate: new Date(dateRange.endDate),
     cohortType,
     retentionPeriods,
-    comparisonCohorts: comparisonCohorts.cohortA && comparisonCohorts.cohortB ? comparisonCohorts : undefined
+    comparisonCohorts: comparisonCohorts.cohortA && comparisonCohorts.cohortB ? 
+      { 
+        cohortA: comparisonCohorts.cohortA, 
+        cohortB: comparisonCohorts.cohortB 
+      } : 
+      undefined
   });
 
   const handleDateRangeChange = (field: 'startDate' | 'endDate', value: string) => {
@@ -77,7 +82,7 @@ export const CohortAnalysisDashboard: React.FC<CohortAnalysisDashboardProps> = (
     { id: 'overview', name: 'Overview', icon: ChartBarIcon },
     { id: 'heatmap', name: 'Retention Heatmap', icon: CalendarIcon },
     { id: 'comparison', name: 'Cohort Comparison', icon: UsersIcon },
-    { id: 'trends', name: 'Trends & Churn', icon: TrendingUpIcon }
+    { id: 'trends', name: 'Trends & Churn', icon: ArrowTrendingUpIcon }
   ];
 
   if (error) {
@@ -191,7 +196,7 @@ export const CohortAnalysisDashboard: React.FC<CohortAnalysisDashboardProps> = (
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <TrendingUpIcon className="w-5 h-5 text-green-600" />
+                  <ArrowTrendingUpIcon className="w-5 h-5 text-green-600" />
                 </div>
               </div>
               <div className="ml-4">
@@ -223,7 +228,7 @@ export const CohortAnalysisDashboard: React.FC<CohortAnalysisDashboardProps> = (
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                  <TrendingDownIcon className="w-5 h-5 text-red-600" />
+                  <ArrowTrendingDownIcon className="w-5 h-5 text-red-600" />
                 </div>
               </div>
               <div className="ml-4">
@@ -353,10 +358,10 @@ export const CohortAnalysisDashboard: React.FC<CohortAnalysisDashboardProps> = (
                               </span>
                               <div className="flex items-center">
                                 {trend.trend === 'up' && (
-                                  <TrendingUpIcon className="w-4 h-4 text-green-500" />
+                                  <ArrowTrendingUpIcon className="w-4 h-4 text-green-500" />
                                 )}
                                 {trend.trend === 'down' && (
-                                  <TrendingDownIcon className="w-4 h-4 text-red-500" />
+                                  <ArrowTrendingDownIcon className="w-4 h-4 text-red-500" />
                                 )}
                                 {trend.trend === 'stable' && (
                                   <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
