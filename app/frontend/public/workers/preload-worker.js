@@ -1,313 +1,360 @@
 /**
  * Preload Worker
- * Handles background preloading of resources to avoid blocking main thread
+ * Handles background preloading of resources for intelligent caching
  */
 
-// Cache for preloaded resources
+// Cache for tracking preloaded resources
 const preloadCache = new Map();
-const pendingRequests = new Map();
+const preloadQueue = new Set();
 
 // Configuration
-const BATCH_SIZE = 5; // Process 5 resources at a time
-const RETRY_ATTEMPTS = 3;
-const RETRY_DELAY = 1000; // 1 second
-
-// Network condition tracking
-let networkCondition = 'fast';
-let isOnline = true;
-
-// Message handler
-self.onmessage = function(event) {
-  const { type, data } = event.data;
-  
-  switch (type) {
-    case 'preload_resources':
-      handlePreloadResources(data);
-      break;
-    case 'update_network_condition':
-      networkCondition = data.condition;
-      isOnline = data.isOnline;
-      break;
-    case 'clear_cache':
-      clearPreloadCache();
-      break;
-    case 'get_cache_stats':
-      sendCacheStats();
-      break;
-    default:
-      console.warn('Unknown message type:', type);
-  }
+const config = {
+  maxConcurrentRequests: 3,
+  requestTimeout: 10000,
+  retryAttempts: 2,
+  retryDelay: 1000
 };
+
+let activeRequests = 0;
+
+/**
+ * Handle messages from main thread
+ */
+self.addEventListener('message', async (event) => {
+  const { type, data, id } = event.data;
+  
+  try {
+    switch (type) {
+      case 'preload_resources':
+        await handlePreloadResources(data, id);
+        break;
+      case 'get_cache_status':
+        handleGetCacheStatus(id);
+        break;
+      case 'clear_cache':
+        handleClearCache(id);
+        break;
+      case 'configure':
+        handleConfigure(data, id);
+        break;
+      default:
+        postMessage({
+          type: 'error',
+          id,
+          data: { error: `Unknown message type: ${type}` }
+        });
+    }
+  } catch (error) {
+    postMessage({
+      type: 'error',
+      id,
+      data: { error: error.message }
+    });
+  }
+});
 
 /**
  * Handle preload resources request
  */
-async function handlePreloadResources(data) {
-  const { resources, priority, networkCondition: reqNetworkCondition } = data;
+async function handlePreloadResources(data, id) {
+  const { resources, priority, networkCondition } = data;
   
-  // Update network condition
-  if (reqNetworkCondition) {
-    networkCondition = reqNetworkCondition;
+  if (!Array.isArray(resources)) {
+    throw new Error('Resources must be an array');
   }
-  
-  // Don't preload if offline
-  if (!isOnline || networkCondition === 'offline') {
+
+  // Filter out already preloaded or queued resources
+  const newResources = resources.filter(url => 
+    !preloadCache.has(url) && !preloadQueue.has(url)
+  );
+
+  if (newResources.length === 0) {
+    postMessage({
+      type: 'preload_complete',
+      id,
+      data: { 
+        message: 'All resources already cached or queued',
+        cached: resources.length,
+        new: 0
+      }
+    });
     return;
   }
+
+  // Add to queue
+  newResources.forEach(url => preloadQueue.add(url));
+
+  // Adjust concurrency based on network condition
+  const maxConcurrent = getMaxConcurrentRequests(networkCondition);
   
-  // Adjust batch size based on network condition and priority
-  const batchSize = getBatchSize(priority, networkCondition);
-  
-  // Process resources in batches
-  for (let i = 0; i < resources.length; i += batchSize) {
-    const batch = resources.slice(i, i + batchSize);
-    await processBatch(batch, priority);
-    
-    // Add delay between batches on slow networks
-    if (networkCondition === 'slow' && i + batchSize < resources.length) {
-      await delay(500);
+  // Process resources with controlled concurrency
+  const results = await processResourcesWithConcurrency(
+    newResources, 
+    maxConcurrent, 
+    priority
+  );
+
+  // Remove from queue
+  newResources.forEach(url => preloadQueue.delete(url));
+
+  postMessage({
+    type: 'preload_complete',
+    id,
+    data: {
+      results,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      total: results.length
     }
-  }
+  });
 }
 
 /**
- * Process a batch of resources
+ * Process resources with controlled concurrency
  */
-async function processBatch(resources, priority) {
-  const promises = resources.map(resource => preloadResource(resource, priority));
-  await Promise.allSettled(promises);
+async function processResourcesWithConcurrency(resources, maxConcurrent, priority) {
+  const results = [];
+  const executing = [];
+
+  for (const resource of resources) {
+    const promise = preloadResource(resource, priority).then(result => {
+      results.push(result);
+      // Remove from executing array
+      const index = executing.indexOf(promise);
+      if (index > -1) {
+        executing.splice(index, 1);
+      }
+      return result;
+    });
+
+    executing.push(promise);
+
+    // Wait if we've reached max concurrency
+    if (executing.length >= maxConcurrent) {
+      await Promise.race(executing);
+    }
+  }
+
+  // Wait for all remaining requests
+  await Promise.all(executing);
+  
+  return results;
 }
 
 /**
  * Preload a single resource
  */
-async function preloadResource(resource, priority, attempt = 1) {
-  // Check if already cached or in progress
-  if (preloadCache.has(resource) || pendingRequests.has(resource)) {
-    return;
-  }
-  
-  // Create abort controller for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), getTimeout(priority));
+async function preloadResource(url, priority = 'medium') {
+  const startTime = Date.now();
   
   try {
-    // Mark as in progress
-    pendingRequests.set(resource, true);
+    activeRequests++;
     
-    const response = await fetch(resource, {
+    // Check if already cached
+    if (preloadCache.has(url)) {
+      return {
+        url,
+        success: true,
+        cached: true,
+        responseTime: 0,
+        size: preloadCache.get(url).size
+      };
+    }
+
+    const result = await fetchWithRetry(url, priority);
+    
+    // Cache successful result
+    if (result.success) {
+      preloadCache.set(url, {
+        timestamp: Date.now(),
+        size: result.size,
+        priority,
+        accessCount: 1
+      });
+    }
+
+    return {
+      ...result,
+      responseTime: Date.now() - startTime
+    };
+    
+  } catch (error) {
+    return {
+      url,
+      success: false,
+      error: error.message,
+      responseTime: Date.now() - startTime
+    };
+  } finally {
+    activeRequests--;
+  }
+}
+
+/**
+ * Fetch with retry logic
+ */
+async function fetchWithRetry(url, priority, attempt = 1) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.requestTimeout);
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Preload': 'true',
         'X-Priority': priority
       },
-      signal: controller.signal
+      signal: controller.signal,
+      cache: 'default'
     });
-    
+
     clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      // Clone response for caching
-      const responseClone = response.clone();
-      const data = await response.arrayBuffer();
-      
-      // Store in cache
-      preloadCache.set(resource, {
-        data: data,
-        headers: Object.fromEntries(response.headers.entries()),
-        status: response.status,
-        timestamp: Date.now(),
-        size: data.byteLength
-      });
-      
-      // Notify main thread of success
-      self.postMessage({
-        type: 'preload_complete',
-        data: {
-          resource,
-          success: true,
-          size: data.byteLength
-        }
-      });
-      
-      // Update cache in service worker if available
-      if ('caches' in self) {
-        try {
-          const cache = await caches.open('preload-cache');
-          await cache.put(resource, responseClone);
-        } catch (cacheError) {
-          console.warn('Failed to update service worker cache:', cacheError);
-        }
-      }
-      
-    } else {
+
+    if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
+    // Get response size
+    const contentLength = response.headers.get('content-length');
+    const size = contentLength ? parseInt(contentLength, 10) : 0;
+
+    // Clone response for caching
+    const responseClone = response.clone();
     
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    // Retry on failure (except for abort)
-    if (attempt < RETRY_ATTEMPTS && error.name !== 'AbortError') {
-      await delay(RETRY_DELAY * attempt);
-      return preloadResource(resource, priority, attempt + 1);
-    }
-    
-    // Notify main thread of error
-    self.postMessage({
-      type: 'preload_error',
-      data: {
-        resource,
-        error: error.message,
-        attempt
+    // Store in cache if supported
+    if ('caches' in self) {
+      try {
+        const cache = await caches.open('preload-cache-v1');
+        await cache.put(url, responseClone);
+      } catch (cacheError) {
+        console.warn('Failed to cache response:', cacheError);
       }
-    });
-    
-  } finally {
-    pendingRequests.delete(resource);
+    }
+
+    return {
+      url,
+      success: true,
+      size,
+      status: response.status,
+      headers: Object.fromEntries(response.headers.entries())
+    };
+
+  } catch (error) {
+    // Retry logic
+    if (attempt < config.retryAttempts && !error.name === 'AbortError') {
+      await new Promise(resolve => setTimeout(resolve, config.retryDelay * attempt));
+      return fetchWithRetry(url, priority, attempt + 1);
+    }
+
+    throw error;
   }
 }
 
 /**
- * Get appropriate batch size based on conditions
+ * Get max concurrent requests based on network condition
  */
-function getBatchSize(priority, networkCondition) {
-  const baseSizes = {
-    'high': 8,
-    'medium': 5,
-    'low': 3
-  };
-  
-  const networkMultipliers = {
-    'fast': 1,
-    'slow': 0.5,
-    'offline': 0
-  };
-  
-  const baseSize = baseSizes[priority] || 5;
-  const multiplier = networkMultipliers[networkCondition] || 1;
-  
-  return Math.max(1, Math.floor(baseSize * multiplier));
-}
-
-/**
- * Get timeout based on priority
- */
-function getTimeout(priority) {
-  const timeouts = {
-    'high': 5000,   // 5 seconds
-    'medium': 8000, // 8 seconds
-    'low': 12000    // 12 seconds
-  };
-  
-  return timeouts[priority] || 8000;
-}
-
-/**
- * Clear preload cache
- */
-function clearPreloadCache() {
-  preloadCache.clear();
-  pendingRequests.clear();
-  
-  self.postMessage({
-    type: 'cache_cleared',
-    data: { success: true }
-  });
-}
-
-/**
- * Send cache statistics
- */
-function sendCacheStats() {
-  let totalSize = 0;
-  let oldestTimestamp = Date.now();
-  let newestTimestamp = 0;
-  
-  for (const [resource, cached] of preloadCache.entries()) {
-    totalSize += cached.size;
-    oldestTimestamp = Math.min(oldestTimestamp, cached.timestamp);
-    newestTimestamp = Math.max(newestTimestamp, cached.timestamp);
+function getMaxConcurrentRequests(networkCondition) {
+  switch (networkCondition) {
+    case 'fast':
+      return 6;
+    case 'slow':
+      return 2;
+    case 'offline':
+      return 0;
+    default:
+      return config.maxConcurrentRequests;
   }
-  
-  self.postMessage({
-    type: 'cache_stats',
+}
+
+/**
+ * Handle get cache status request
+ */
+function handleGetCacheStatus(id) {
+  const cacheEntries = Array.from(preloadCache.entries()).map(([url, data]) => ({
+    url,
+    ...data
+  }));
+
+  postMessage({
+    type: 'cache_status',
+    id,
     data: {
-      totalItems: preloadCache.size,
-      totalSize,
-      pendingRequests: pendingRequests.size,
-      oldestItem: oldestTimestamp,
-      newestItem: newestTimestamp,
-      memoryUsage: estimateMemoryUsage()
+      cacheSize: preloadCache.size,
+      queueSize: preloadQueue.size,
+      activeRequests,
+      entries: cacheEntries,
+      totalSize: cacheEntries.reduce((sum, entry) => sum + (entry.size || 0), 0)
     }
   });
 }
 
 /**
- * Estimate memory usage
+ * Handle clear cache request
  */
-function estimateMemoryUsage() {
-  let totalSize = 0;
-  
-  for (const cached of preloadCache.values()) {
-    totalSize += cached.size;
-    totalSize += JSON.stringify(cached.headers).length * 2; // Rough estimate for headers
-  }
-  
-  return totalSize;
+function handleClearCache(id) {
+  const clearedEntries = preloadCache.size;
+  preloadCache.clear();
+  preloadQueue.clear();
+
+  postMessage({
+    type: 'cache_cleared',
+    id,
+    data: {
+      clearedEntries,
+      message: `Cleared ${clearedEntries} cache entries`
+    }
+  });
 }
 
 /**
- * Utility delay function
+ * Handle configuration update
  */
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function handleConfigure(data, id) {
+  Object.assign(config, data);
+  
+  postMessage({
+    type: 'configured',
+    id,
+    data: {
+      config,
+      message: 'Configuration updated'
+    }
+  });
 }
 
 /**
- * Cleanup old cache entries periodically
+ * Periodic cache cleanup
  */
 function cleanupCache() {
   const now = Date.now();
   const maxAge = 30 * 60 * 1000; // 30 minutes
-  const maxItems = 1000;
-  
-  // Remove expired items
-  for (const [resource, cached] of preloadCache.entries()) {
-    if (now - cached.timestamp > maxAge) {
-      preloadCache.delete(resource);
+  const maxEntries = 1000;
+
+  // Remove expired entries
+  for (const [url, data] of preloadCache.entries()) {
+    if (now - data.timestamp > maxAge) {
+      preloadCache.delete(url);
     }
   }
-  
-  // Remove oldest items if over limit
-  if (preloadCache.size > maxItems) {
+
+  // Remove oldest entries if over limit
+  if (preloadCache.size > maxEntries) {
     const entries = Array.from(preloadCache.entries())
       .sort(([, a], [, b]) => a.timestamp - b.timestamp);
     
-    const toRemove = entries.slice(0, preloadCache.size - maxItems);
-    toRemove.forEach(([resource]) => preloadCache.delete(resource));
+    const toRemove = entries.slice(0, preloadCache.size - maxEntries);
+    toRemove.forEach(([url]) => preloadCache.delete(url));
   }
 }
 
-// Cleanup every 5 minutes
+// Run cleanup every 5 minutes
 setInterval(cleanupCache, 5 * 60 * 1000);
 
-// Handle network status changes
-self.addEventListener('online', () => {
-  isOnline = true;
-  self.postMessage({
-    type: 'network_status',
-    data: { isOnline: true }
-  });
+// Send ready message
+postMessage({
+  type: 'worker_ready',
+  data: {
+    message: 'Preload worker initialized',
+    config
+  }
 });
-
-self.addEventListener('offline', () => {
-  isOnline = false;
-  networkCondition = 'offline';
-  self.postMessage({
-    type: 'network_status',
-    data: { isOnline: false }
-  });
-});
-
-console.log('Preload worker initialized');

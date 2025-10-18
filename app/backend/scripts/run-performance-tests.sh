@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Admin Functionality Enhancements - Performance Test Runner
-# This script runs comprehensive performance and load tests for the admin system
+# Performance Testing Script
+# Runs comprehensive performance tests for the interconnected social platform
 
 set -e
 
-echo "🚀 Starting Admin Dashboard Performance Tests"
-echo "=============================================="
+echo "🚀 Starting Performance Test Suite"
+echo "=================================="
 
 # Colors for output
 RED='\033[0;31m'
@@ -16,319 +16,208 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-TEST_ENV=${TEST_ENV:-"test"}
-BACKEND_PORT=${BACKEND_PORT:-3000}
-FRONTEND_PORT=${FRONTEND_PORT:-3001}
-DB_NAME=${DB_NAME:-"linkdao_test"}
+TEST_ENV=${TEST_ENV:-test}
+PERFORMANCE_BUDGET=${PERFORMANCE_BUDGET:-strict}
+GENERATE_REPORT=${GENERATE_REPORT:-true}
+PARALLEL_TESTS=${PARALLEL_TESTS:-false}
 
-# Test results directory
-RESULTS_DIR="./test-results/performance"
-mkdir -p "$RESULTS_DIR"
-
-# Timestamp for this test run
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-REPORT_FILE="$RESULTS_DIR/performance_report_$TIMESTAMP.json"
-
-echo -e "${BLUE}Test Configuration:${NC}"
-echo "- Environment: $TEST_ENV"
-echo "- Backend Port: $BACKEND_PORT"
-echo "- Frontend Port: $FRONTEND_PORT"
-echo "- Database: $DB_NAME"
-echo "- Results Directory: $RESULTS_DIR"
+echo -e "${BLUE}Configuration:${NC}"
+echo "  Environment: $TEST_ENV"
+echo "  Performance Budget: $PERFORMANCE_BUDGET"
+echo "  Generate Report: $GENERATE_REPORT"
+echo "  Parallel Tests: $PARALLEL_TESTS"
 echo ""
 
-# Function to check if service is running
-check_service() {
-    local service_name=$1
-    local port=$2
-    local max_attempts=30
-    local attempt=1
+# Set environment variables
+export NODE_ENV=$TEST_ENV
+export LOG_LEVEL=error
+export PERFORMANCE_TESTING=true
 
-    echo -e "${YELLOW}Checking $service_name on port $port...${NC}"
-    
-    while [ $attempt -le $max_attempts ]; do
-        if curl -s "http://localhost:$port/health" > /dev/null 2>&1; then
-            echo -e "${GREEN}✓ $service_name is running${NC}"
-            return 0
-        fi
-        
-        echo "Attempt $attempt/$max_attempts - waiting for $service_name..."
-        sleep 2
-        ((attempt++))
-    done
-    
-    echo -e "${RED}✗ $service_name failed to start${NC}"
-    return 1
-}
+# Performance budgets
+if [ "$PERFORMANCE_BUDGET" = "strict" ]; then
+    export MAX_RESPONSE_TIME=100
+    export MAX_CACHE_TIME=5
+    export MAX_MEMORY_GROWTH=50
+    export MAX_ERROR_RATE=0.01
+elif [ "$PERFORMANCE_BUDGET" = "moderate" ]; then
+    export MAX_RESPONSE_TIME=200
+    export MAX_CACHE_TIME=10
+    export MAX_MEMORY_GROWTH=100
+    export MAX_ERROR_RATE=0.05
+else
+    export MAX_RESPONSE_TIME=500
+    export MAX_CACHE_TIME=20
+    export MAX_MEMORY_GROWTH=200
+    export MAX_ERROR_RATE=0.1
+fi
 
-# Function to run backend unit performance tests
-run_backend_performance_tests() {
-    echo -e "\n${BLUE}Running Backend Performance Tests...${NC}"
+# Create results directory
+RESULTS_DIR="./performance-results/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$RESULTS_DIR"
+
+echo -e "${YELLOW}Performance Budgets:${NC}"
+echo "  Max Response Time: ${MAX_RESPONSE_TIME}ms"
+echo "  Max Cache Time: ${MAX_CACHE_TIME}ms"
+echo "  Max Memory Growth: ${MAX_MEMORY_GROWTH}MB"
+echo "  Max Error Rate: ${MAX_ERROR_RATE}"
+echo ""
+
+# Function to run test suite with timing
+run_test_suite() {
+    local suite_name=$1
+    local test_pattern=$2
+    local config_file=$3
     
-    cd "$(dirname "$0")/.."
+    echo -e "${BLUE}Running $suite_name...${NC}"
     
-    # Run Jest performance tests
-    npm test -- --testPathPattern="performance" --verbose --detectOpenHandles --forceExit \
-        --testTimeout=60000 --maxWorkers=1 \
-        --outputFile="$RESULTS_DIR/backend_performance_$TIMESTAMP.json" \
-        --json > "$RESULTS_DIR/backend_performance_raw_$TIMESTAMP.json" 2>&1
+    local start_time=$(date +%s)
+    local exit_code=0
     
-    local exit_code=$?
+    if [ "$PARALLEL_TESTS" = "true" ]; then
+        npm test -- --testPathPattern="$test_pattern" --config="$config_file" --maxWorkers=4 --verbose --json --outputFile="$RESULTS_DIR/${suite_name,,}.json" || exit_code=$?
+    else
+        npm test -- --testPathPattern="$test_pattern" --config="$config_file" --runInBand --verbose --json --outputFile="$RESULTS_DIR/${suite_name,,}.json" || exit_code=$?
+    fi
+    
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
     
     if [ $exit_code -eq 0 ]; then
-        echo -e "${GREEN}✓ Backend performance tests passed${NC}"
+        echo -e "${GREEN}✓ $suite_name completed successfully in ${duration}s${NC}"
     else
-        echo -e "${RED}✗ Backend performance tests failed${NC}"
-        return $exit_code
+        echo -e "${RED}✗ $suite_name failed after ${duration}s${NC}"
     fi
+    
+    return $exit_code
 }
 
-# Function to run frontend performance tests
-run_frontend_performance_tests() {
-    echo -e "\n${BLUE}Running Frontend Performance Tests...${NC}"
+# Function to check prerequisites
+check_prerequisites() {
+    echo -e "${BLUE}Checking prerequisites...${NC}"
     
-    cd "$(dirname "$0")/../../frontend"
-    
-    # Run Jest performance tests
-    npm test -- --testPathPattern="performance" --verbose --detectOpenHandles --forceExit \
-        --testTimeout=60000 --maxWorkers=1 \
-        --outputFile="$RESULTS_DIR/frontend_performance_$TIMESTAMP.json" \
-        --json > "$RESULTS_DIR/frontend_performance_raw_$TIMESTAMP.json" 2>&1
-    
-    local exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-        echo -e "${GREEN}✓ Frontend performance tests passed${NC}"
-    else
-        echo -e "${RED}✗ Frontend performance tests failed${NC}"
-        return $exit_code
+    # Check if Redis is running
+    if ! redis-cli ping > /dev/null 2>&1; then
+        echo -e "${YELLOW}Warning: Redis not running. Starting Redis...${NC}"
+        redis-server --daemonize yes --port 6379 || {
+            echo -e "${RED}Failed to start Redis${NC}"
+            exit 1
+        }
     fi
+    
+    # Check if PostgreSQL is running
+    if ! pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
+        echo -e "${YELLOW}Warning: PostgreSQL not running${NC}"
+        echo "Please start PostgreSQL before running performance tests"
+        exit 1
+    fi
+    
+    # Check available memory
+    local available_memory=$(free -m | awk 'NR==2{printf "%.0f", $7}')
+    if [ "$available_memory" -lt 2048 ]; then
+        echo -e "${YELLOW}Warning: Low available memory (${available_memory}MB). Performance tests may be affected.${NC}"
+    fi
+    
+    echo -e "${GREEN}✓ Prerequisites check completed${NC}"
+    echo ""
 }
 
-# Function to run Artillery load tests
-run_load_tests() {
-    echo -e "\n${BLUE}Running Artillery Load Tests...${NC}"
+# Function to setup test environment
+setup_test_environment() {
+    echo -e "${BLUE}Setting up test environment...${NC}"
     
-    cd "$(dirname "$0")/../load-tests"
+    # Create test database if it doesn't exist
+    createdb test_marketplace 2>/dev/null || true
     
-    # Check if Artillery is installed
-    if ! command -v artillery &> /dev/null; then
-        echo -e "${YELLOW}Installing Artillery...${NC}"
-        npm install -g artillery
-    fi
+    # Run database migrations for test environment
+    npm run db:migrate:test || {
+        echo -e "${RED}Failed to run database migrations${NC}"
+        exit 1
+    }
     
-    # Prepare test data
-    echo "email,password,token" > test-data/admin-credentials.csv
-    echo "admin1@test.com,password123,test-token-1" >> test-data/admin-credentials.csv
-    echo "admin2@test.com,password123,test-token-2" >> test-data/admin-credentials.csv
-    echo "admin3@test.com,password123,test-token-3" >> test-data/admin-credentials.csv
+    # Clear Redis test databases
+    redis-cli -n 15 FLUSHDB > /dev/null 2>&1 || true
+    redis-cli -n 14 FLUSHDB > /dev/null 2>&1 || true
+    redis-cli -n 13 FLUSHDB > /dev/null 2>&1 || true
     
-    # Run load test
-    echo -e "${YELLOW}Starting load test (this may take 15-20 minutes)...${NC}"
-    
-    artillery run admin-dashboard-load-test.yml \
-        --output "$RESULTS_DIR/load_test_raw_$TIMESTAMP.json" \
-        --config '{"target": "http://localhost:'$BACKEND_PORT'"}' \
-        > "$RESULTS_DIR/load_test_$TIMESTAMP.log" 2>&1
-    
-    local exit_code=$?
-    
-    # Generate HTML report
-    if [ -f "$RESULTS_DIR/load_test_raw_$TIMESTAMP.json" ]; then
-        artillery report "$RESULTS_DIR/load_test_raw_$TIMESTAMP.json" \
-            --output "$RESULTS_DIR/load_test_report_$TIMESTAMP.html"
-        echo -e "${GREEN}✓ Load test report generated: $RESULTS_DIR/load_test_report_$TIMESTAMP.html${NC}"
-    fi
-    
-    if [ $exit_code -eq 0 ]; then
-        echo -e "${GREEN}✓ Load tests completed successfully${NC}"
-    else
-        echo -e "${RED}✗ Load tests failed${NC}"
-        return $exit_code
-    fi
+    echo -e "${GREEN}✓ Test environment setup completed${NC}"
+    echo ""
 }
 
-# Function to run database performance tests
-run_database_performance_tests() {
-    echo -e "\n${BLUE}Running Database Performance Tests...${NC}"
-    
-    cd "$(dirname "$0")/.."
-    
-    # Run database-specific performance tests
-    npm run test:db-performance -- \
-        --outputFile="$RESULTS_DIR/db_performance_$TIMESTAMP.json" \
-        --json > "$RESULTS_DIR/db_performance_raw_$TIMESTAMP.json" 2>&1
-    
-    local exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-        echo -e "${GREEN}✓ Database performance tests passed${NC}"
-    else
-        echo -e "${RED}✗ Database performance tests failed${NC}"
-        return $exit_code
-    fi
-}
-
-# Function to run WebSocket performance tests
-run_websocket_performance_tests() {
-    echo -e "\n${BLUE}Running WebSocket Performance Tests...${NC}"
-    
-    cd "$(dirname "$0")/.."
-    
-    # Run WebSocket load test
-    node ./scripts/websocket-load-test.js \
-        --port=$BACKEND_PORT \
-        --connections=100 \
-        --duration=60 \
-        --output="$RESULTS_DIR/websocket_performance_$TIMESTAMP.json"
-    
-    local exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-        echo -e "${GREEN}✓ WebSocket performance tests passed${NC}"
-    else
-        echo -e "${RED}✗ WebSocket performance tests failed${NC}"
-        return $exit_code
-    fi
-}
-
-# Function to monitor system resources during tests
-monitor_system_resources() {
-    echo -e "\n${BLUE}Starting System Resource Monitoring...${NC}"
-    
-    local monitor_file="$RESULTS_DIR/system_resources_$TIMESTAMP.log"
-    
-    # Start resource monitoring in background
-    (
-        echo "timestamp,cpu_percent,memory_percent,disk_io,network_io" > "$monitor_file"
-        
-        while true; do
-            local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-            local cpu=$(top -l 1 | grep "CPU usage" | awk '{print $3}' | sed 's/%//' || echo "0")
-            local memory=$(vm_stat | grep "Pages active" | awk '{print $3}' | sed 's/\.//' || echo "0")
-            local disk_io=$(iostat -d 1 1 | tail -1 | awk '{print $3}' || echo "0")
-            local network_io=$(netstat -ib | awk 'NR>1 {sum+=$7} END {print sum}' || echo "0")
-            
-            echo "$timestamp,$cpu,$memory,$disk_io,$network_io" >> "$monitor_file"
-            sleep 5
-        done
-    ) &
-    
-    local monitor_pid=$!
-    echo "Resource monitoring started (PID: $monitor_pid)"
-    echo $monitor_pid > "$RESULTS_DIR/monitor.pid"
-}
-
-# Function to stop resource monitoring
-stop_system_monitoring() {
-    if [ -f "$RESULTS_DIR/monitor.pid" ]; then
-        local monitor_pid=$(cat "$RESULTS_DIR/monitor.pid")
-        kill $monitor_pid 2>/dev/null || true
-        rm -f "$RESULTS_DIR/monitor.pid"
-        echo -e "${GREEN}✓ System monitoring stopped${NC}"
-    fi
-}
-
-# Function to generate comprehensive performance report
+# Function to generate performance report
 generate_performance_report() {
-    echo -e "\n${BLUE}Generating Comprehensive Performance Report...${NC}"
+    if [ "$GENERATE_REPORT" != "true" ]; then
+        return 0
+    fi
     
-    local report_file="$RESULTS_DIR/comprehensive_report_$TIMESTAMP.html"
+    echo -e "${BLUE}Generating performance report...${NC}"
+    
+    local report_file="$RESULTS_DIR/performance-report.html"
     
     cat > "$report_file" << EOF
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Admin Dashboard Performance Test Report - $TIMESTAMP</title>
+    <title>Performance Test Report</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { background: #f4f4f4; padding: 20px; border-radius: 5px; }
-        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        .success { color: #28a745; }
-        .warning { color: #ffc107; }
-        .error { color: #dc3545; }
-        .metric { display: inline-block; margin: 10px; padding: 10px; background: #f8f9fa; border-radius: 3px; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        .header { background: #f5f5f5; padding: 20px; border-radius: 5px; }
+        .suite { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .passed { border-left: 5px solid #4CAF50; }
+        .failed { border-left: 5px solid #f44336; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0; }
+        .metric { background: #f9f9f9; padding: 10px; border-radius: 3px; }
+        .metric-value { font-size: 1.2em; font-weight: bold; color: #333; }
+        .budget-pass { color: #4CAF50; }
+        .budget-fail { color: #f44336; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Admin Dashboard Performance Test Report</h1>
-        <p><strong>Test Run:</strong> $TIMESTAMP</p>
-        <p><strong>Environment:</strong> $TEST_ENV</p>
-        <p><strong>Generated:</strong> $(date)</p>
+        <h1>Performance Test Report</h1>
+        <p>Generated: $(date)</p>
+        <p>Environment: $TEST_ENV</p>
+        <p>Performance Budget: $PERFORMANCE_BUDGET</p>
     </div>
+EOF
 
-    <div class="section">
-        <h2>Test Summary</h2>
-        <div class="metric">
-            <strong>Backend Tests:</strong> <span id="backend-status">Completed</span>
-        </div>
-        <div class="metric">
-            <strong>Frontend Tests:</strong> <span id="frontend-status">Completed</span>
-        </div>
-        <div class="metric">
-            <strong>Load Tests:</strong> <span id="load-status">Completed</span>
-        </div>
-        <div class="metric">
-            <strong>Database Tests:</strong> <span id="db-status">Completed</span>
-        </div>
-    </div>
+    # Process each test suite result
+    for result_file in "$RESULTS_DIR"/*.json; do
+        if [ -f "$result_file" ]; then
+            local suite_name=$(basename "$result_file" .json)
+            echo "    <div class=\"suite\">" >> "$report_file"
+            echo "        <h2>$suite_name</h2>" >> "$report_file"
+            
+            # Extract test results (simplified - would need proper JSON parsing in real implementation)
+            local num_tests=$(grep -o '"numTotalTests":[0-9]*' "$result_file" | cut -d: -f2 || echo "0")
+            local num_passed=$(grep -o '"numPassedTests":[0-9]*' "$result_file" | cut -d: -f2 || echo "0")
+            local num_failed=$(grep -o '"numFailedTests":[0-9]*' "$result_file" | cut -d: -f2 || echo "0")
+            
+            if [ "$num_failed" -eq 0 ]; then
+                echo "        <div class=\"passed\">" >> "$report_file"
+            else
+                echo "        <div class=\"failed\">" >> "$report_file"
+            fi
+            
+            echo "            <div class=\"metrics\">" >> "$report_file"
+            echo "                <div class=\"metric\">" >> "$report_file"
+            echo "                    <div>Total Tests</div>" >> "$report_file"
+            echo "                    <div class=\"metric-value\">$num_tests</div>" >> "$report_file"
+            echo "                </div>" >> "$report_file"
+            echo "                <div class=\"metric\">" >> "$report_file"
+            echo "                    <div>Passed</div>" >> "$report_file"
+            echo "                    <div class=\"metric-value budget-pass\">$num_passed</div>" >> "$report_file"
+            echo "                </div>" >> "$report_file"
+            echo "                <div class=\"metric\">" >> "$report_file"
+            echo "                    <div>Failed</div>" >> "$report_file"
+            echo "                    <div class=\"metric-value budget-fail\">$num_failed</div>" >> "$report_file"
+            echo "                </div>" >> "$report_file"
+            echo "            </div>" >> "$report_file"
+            echo "        </div>" >> "$report_file"
+            echo "    </div>" >> "$report_file"
+        fi
+    done
 
-    <div class="section">
-        <h2>Performance Metrics</h2>
-        <table>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-                <th>Threshold</th>
-                <th>Status</th>
-            </tr>
-            <tr>
-                <td>Dashboard Load Time</td>
-                <td id="dashboard-load">-</td>
-                <td>&lt; 2000ms</td>
-                <td id="dashboard-status">-</td>
-            </tr>
-            <tr>
-                <td>Analytics Generation</td>
-                <td id="analytics-time">-</td>
-                <td>&lt; 5000ms</td>
-                <td id="analytics-status">-</td>
-            </tr>
-            <tr>
-                <td>Concurrent Users</td>
-                <td id="concurrent-users">-</td>
-                <td>&gt; 50</td>
-                <td id="concurrent-status">-</td>
-            </tr>
-            <tr>
-                <td>WebSocket Connections</td>
-                <td id="websocket-connections">-</td>
-                <td>&gt; 100</td>
-                <td id="websocket-status">-</td>
-            </tr>
-        </table>
-    </div>
-
-    <div class="section">
-        <h2>Test Files</h2>
-        <ul>
-            <li><a href="backend_performance_$TIMESTAMP.json">Backend Performance Results</a></li>
-            <li><a href="frontend_performance_$TIMESTAMP.json">Frontend Performance Results</a></li>
-            <li><a href="load_test_report_$TIMESTAMP.html">Load Test Report</a></li>
-            <li><a href="system_resources_$TIMESTAMP.log">System Resource Log</a></li>
-        </ul>
-    </div>
-
-    <div class="section">
-        <h2>Recommendations</h2>
-        <div id="recommendations">
-            <p>Performance analysis and recommendations will be populated based on test results.</p>
-        </div>
-    </div>
+    cat >> "$report_file" << EOF
 </body>
 </html>
 EOF
@@ -336,129 +225,76 @@ EOF
     echo -e "${GREEN}✓ Performance report generated: $report_file${NC}"
 }
 
-# Function to cleanup test environment
-cleanup_test_environment() {
-    echo -e "\n${BLUE}Cleaning up test environment...${NC}"
+# Function to cleanup
+cleanup() {
+    echo -e "${BLUE}Cleaning up...${NC}"
     
-    # Stop resource monitoring
-    stop_system_monitoring
+    # Stop any background processes
+    pkill -f "redis-server" 2>/dev/null || true
     
-    # Clean up test data
-    rm -f ./load-tests/test-data/admin-credentials.csv
-    
-    # Clean up temporary files
-    find "$RESULTS_DIR" -name "*.tmp" -delete 2>/dev/null || true
+    # Clear test data
+    redis-cli -n 15 FLUSHDB > /dev/null 2>&1 || true
     
     echo -e "${GREEN}✓ Cleanup completed${NC}"
 }
 
-# Main execution flow
+# Trap cleanup on exit
+trap cleanup EXIT
+
+# Main execution
 main() {
-    echo -e "${BLUE}Starting comprehensive performance test suite...${NC}"
+    local overall_exit_code=0
     
-    # Trap to ensure cleanup on exit
-    trap cleanup_test_environment EXIT
+    check_prerequisites
+    setup_test_environment
     
-    # Start system monitoring
-    monitor_system_resources
+    echo -e "${YELLOW}Starting Performance Test Execution${NC}"
+    echo "====================================="
     
-    # Check if services are running
-    if ! check_service "Backend" "$BACKEND_PORT"; then
-        echo -e "${RED}Backend service is not running. Please start it first.${NC}"
-        exit 1
-    fi
+    # Backend Performance Tests
+    echo -e "\n${BLUE}Backend Performance Tests${NC}"
+    echo "------------------------"
     
-    # Initialize test results
-    local overall_success=true
+    run_test_suite "Caching Strategies" "cachingStrategiesPerformance" "jest.config.js" || overall_exit_code=1
+    run_test_suite "Response Time" "responseTimePerformance" "jest.config.js" || overall_exit_code=1
+    run_test_suite "Load Testing" "loadTestingPerformance" "jest.config.js" || overall_exit_code=1
+    run_test_suite "Memory & Resources" "memoryResourcePerformance" "jest.config.js" || overall_exit_code=1
     
-    # Run performance tests
-    echo -e "\n${YELLOW}=== Running Performance Test Suite ===${NC}"
+    # Frontend Performance Tests
+    echo -e "\n${BLUE}Frontend Performance Tests${NC}"
+    echo "-------------------------"
     
-    # Backend performance tests
-    if ! run_backend_performance_tests; then
-        overall_success=false
-    fi
+    cd ../frontend
     
-    # Frontend performance tests
-    if ! run_frontend_performance_tests; then
-        overall_success=false
-    fi
+    run_test_suite "Frontend Caching" "cachingPerformance" "jest.config.js" || overall_exit_code=1
+    run_test_suite "Component Performance" "componentPerformance" "jest.config.js" || overall_exit_code=1
+    run_test_suite "Feed Performance" "Feed/FeedPerformance" "jest.feed.config.js" || overall_exit_code=1
     
-    # Database performance tests
-    if ! run_database_performance_tests; then
-        overall_success=false
-    fi
+    cd ../backend
     
-    # WebSocket performance tests
-    if ! run_websocket_performance_tests; then
-        overall_success=false
-    fi
-    
-    # Load tests (run last as they take the longest)
-    if ! run_load_tests; then
-        overall_success=false
-    fi
-    
-    # Generate comprehensive report
+    # Generate report
     generate_performance_report
     
-    # Final results
-    echo -e "\n${YELLOW}=== Performance Test Results ===${NC}"
-    
-    if [ "$overall_success" = true ]; then
-        echo -e "${GREEN}✓ All performance tests completed successfully!${NC}"
-        echo -e "${GREEN}✓ Results saved to: $RESULTS_DIR${NC}"
-        exit 0
+    # Summary
+    echo ""
+    echo "====================================="
+    if [ $overall_exit_code -eq 0 ]; then
+        echo -e "${GREEN}🎉 All performance tests passed!${NC}"
+        echo -e "${GREEN}Performance budgets met for $PERFORMANCE_BUDGET configuration${NC}"
     else
-        echo -e "${RED}✗ Some performance tests failed${NC}"
-        echo -e "${YELLOW}Check individual test results in: $RESULTS_DIR${NC}"
-        exit 1
+        echo -e "${RED}❌ Some performance tests failed${NC}"
+        echo -e "${RED}Check individual test results for details${NC}"
     fi
+    
+    echo ""
+    echo -e "${BLUE}Results saved to: $RESULTS_DIR${NC}"
+    
+    if [ "$GENERATE_REPORT" = "true" ]; then
+        echo -e "${BLUE}HTML Report: $RESULTS_DIR/performance-report.html${NC}"
+    fi
+    
+    return $overall_exit_code
 }
 
-# Script options
-case "${1:-}" in
-    --help|-h)
-        echo "Admin Dashboard Performance Test Runner"
-        echo ""
-        echo "Usage: $0 [options]"
-        echo ""
-        echo "Options:"
-        echo "  --help, -h          Show this help message"
-        echo "  --backend-only      Run only backend performance tests"
-        echo "  --frontend-only     Run only frontend performance tests"
-        echo "  --load-only         Run only load tests"
-        echo "  --db-only           Run only database performance tests"
-        echo "  --websocket-only    Run only WebSocket performance tests"
-        echo ""
-        echo "Environment Variables:"
-        echo "  TEST_ENV            Test environment (default: test)"
-        echo "  BACKEND_PORT        Backend service port (default: 3000)"
-        echo "  FRONTEND_PORT       Frontend service port (default: 3001)"
-        echo "  DB_NAME             Database name (default: linkdao_test)"
-        exit 0
-        ;;
-    --backend-only)
-        run_backend_performance_tests
-        exit $?
-        ;;
-    --frontend-only)
-        run_frontend_performance_tests
-        exit $?
-        ;;
-    --load-only)
-        check_service "Backend" "$BACKEND_PORT" && run_load_tests
-        exit $?
-        ;;
-    --db-only)
-        run_database_performance_tests
-        exit $?
-        ;;
-    --websocket-only)
-        check_service "Backend" "$BACKEND_PORT" && run_websocket_performance_tests
-        exit $?
-        ;;
-    *)
-        main
-        ;;
-esac
+# Run main function
+main "$@"

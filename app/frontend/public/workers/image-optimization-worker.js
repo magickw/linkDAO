@@ -1,477 +1,515 @@
 /**
  * Image Optimization Worker
- * Handles image processing in background thread
+ * Handles image optimization, format conversion, and placeholder generation in background
  */
 
-// Import required libraries (if available)
-// Note: In a real implementation, you might want to use libraries like:
-// - Sharp (for Node.js environments)
-// - ImageMagick WASM
-// - Squoosh libraries
+// Import required libraries for image processing
+// Note: In a real implementation, you might use libraries like Sharp.js or similar
 
-// Cache for processed images
-const processedImages = new Map();
+const imageCache = new Map();
+const processingQueue = new Set();
 
 // Configuration
-const DEFAULT_QUALITY = 0.8;
-const MAX_DIMENSION = 2048;
-const SUPPORTED_FORMATS = ['jpeg', 'png', 'webp', 'avif'];
-
-// Message handler
-self.onmessage = function(event) {
-  const { type, data, id } = event.data;
-  
-  switch (type) {
-    case 'optimize_image':
-      handleImageOptimization(data, id);
-      break;
-    case 'generate_placeholder':
-      handlePlaceholderGeneration(data, id);
-      break;
-    case 'batch_optimize':
-      handleBatchOptimization(data, id);
-      break;
-    case 'clear_cache':
-      clearProcessedImages();
-      break;
-    default:
-      sendError('Unknown message type', id);
+const config = {
+  maxCacheSize: 100,
+  maxImageSize: 5 * 1024 * 1024, // 5MB
+  supportedFormats: ['jpeg', 'png', 'webp', 'avif'],
+  qualitySettings: {
+    high: 0.9,
+    medium: 0.8,
+    low: 0.6
+  },
+  maxDimensions: {
+    width: 2048,
+    height: 2048
   }
 };
 
 /**
- * Handle image optimization request
+ * Handle messages from main thread
  */
-async function handleImageOptimization(data, id) {
-  const { url, options = {} } = data;
+self.addEventListener('message', async (event) => {
+  const { type, data, id } = event.data;
   
   try {
-    // Check cache first
-    const cacheKey = generateCacheKey(url, options);
-    if (processedImages.has(cacheKey)) {
-      const cached = processedImages.get(cacheKey);
-      sendSuccess('optimization_complete', cached, id);
-      return;
-    }
-    
-    // Load image
-    const imageData = await loadImage(url);
-    
-    // Process image
-    const result = await processImage(imageData, options);
-    
-    // Cache result
-    processedImages.set(cacheKey, result);
-    
-    // Send result
-    sendSuccess('optimization_complete', result, id);
-    
-  } catch (error) {
-    sendError(error.message, id);
-  }
-}
-
-/**
- * Handle placeholder generation
- */
-async function handlePlaceholderGeneration(data, id) {
-  const { url, type = 'blur', size = 20 } = data;
-  
-  try {
-    const imageData = await loadImage(url);
-    const placeholder = await generatePlaceholder(imageData, type, size);
-    
-    sendSuccess('placeholder_generated', { url, placeholder }, id);
-    
-  } catch (error) {
-    sendError(error.message, id);
-  }
-}
-
-/**
- * Handle batch optimization
- */
-async function handleBatchOptimization(data, id) {
-  const { images, options = {} } = data;
-  const results = [];
-  
-  for (const imageUrl of images) {
-    try {
-      const imageData = await loadImage(imageUrl);
-      const result = await processImage(imageData, options);
-      results.push({ url: imageUrl, success: true, result });
-    } catch (error) {
-      results.push({ url: imageUrl, success: false, error: error.message });
-    }
-  }
-  
-  sendSuccess('batch_complete', results, id);
-}
-
-/**
- * Load image from URL
- */
-async function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    // Create image element
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    
-    img.onload = () => {
-      try {
-        // Create canvas to get image data
-        const canvas = new OffscreenCanvas(img.width, img.height);
-        const ctx = canvas.getContext('2d');
-        
-        if (!ctx) {
-          throw new Error('Canvas context not available');
-        }
-        
-        ctx.drawImage(img, 0, 0);
-        
-        const imageData = {
-          data: ctx.getImageData(0, 0, img.width, img.height),
-          width: img.width,
-          height: img.height,
-          canvas: canvas,
-          context: ctx
-        };
-        
-        resolve(imageData);
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => reject(new Error('Failed to load image'));
-    
-    // Handle data URLs and regular URLs
-    if (url.startsWith('data:')) {
-      img.src = url;
-    } else {
-      // For cross-origin images, we might need to fetch first
-      fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-          const objectUrl = URL.createObjectURL(blob);
-          img.src = objectUrl;
-        })
-        .catch(() => {
-          // Fallback to direct assignment
-          img.src = url;
+    switch (type) {
+      case 'optimize_image':
+        await handleOptimizeImage(data, id);
+        break;
+      case 'generate_placeholder':
+        await handleGeneratePlaceholder(data, id);
+        break;
+      case 'batch_optimize':
+        await handleBatchOptimize(data, id);
+        break;
+      case 'get_cache_info':
+        handleGetCacheInfo(id);
+        break;
+      case 'clear_cache':
+        handleClearCache(id);
+        break;
+      case 'configure':
+        handleConfigure(data, id);
+        break;
+      default:
+        postMessage({
+          type: 'error',
+          id,
+          data: { error: `Unknown message type: ${type}` }
         });
     }
+  } catch (error) {
+    postMessage({
+      type: 'optimization_error',
+      id,
+      data: { error: error.message }
+    });
+  }
+});
+
+/**
+ * Handle image optimization request
+ */
+async function handleOptimizeImage(data, id) {
+  const { url, options = {} } = data;
+  
+  if (!url) {
+    throw new Error('URL is required for image optimization');
+  }
+
+  // Check cache first
+  const cacheKey = generateCacheKey(url, options);
+  if (imageCache.has(cacheKey)) {
+    const cached = imageCache.get(cacheKey);
+    postMessage({
+      type: 'optimization_complete',
+      id,
+      data: {
+        url,
+        cached: true,
+        result: cached
+      }
+    });
+    return;
+  }
+
+  // Add to processing queue
+  if (processingQueue.has(url)) {
+    postMessage({
+      type: 'optimization_error',
+      id,
+      data: { error: 'Image already being processed' }
+    });
+    return;
+  }
+
+  processingQueue.add(url);
+
+  try {
+    const result = await optimizeImage(url, options);
+    
+    // Cache result
+    imageCache.set(cacheKey, result);
+    
+    postMessage({
+      type: 'optimization_complete',
+      id,
+      data: {
+        url,
+        result
+      }
+    });
+    
+  } catch (error) {
+    postMessage({
+      type: 'optimization_error',
+      id,
+      data: { 
+        url,
+        error: error.message 
+      }
+    });
+  } finally {
+    processingQueue.delete(url);
+  }
+}
+
+/**
+ * Handle placeholder generation request
+ */
+async function handleGeneratePlaceholder(data, id) {
+  const { url, type = 'blur', options = {} } = data;
+  
+  try {
+    const placeholder = await generatePlaceholder(url, type, options);
+    
+    postMessage({
+      type: 'placeholder_generated',
+      id,
+      data: {
+        url,
+        placeholder,
+        type
+      }
+    });
+    
+  } catch (error) {
+    postMessage({
+      type: 'optimization_error',
+      id,
+      data: { 
+        url,
+        error: `Placeholder generation failed: ${error.message}` 
+      }
+    });
+  }
+}
+
+/**
+ * Handle batch optimization request
+ */
+async function handleBatchOptimize(data, id) {
+  const { images, options = {} } = data;
+  
+  if (!Array.isArray(images)) {
+    throw new Error('Images must be an array');
+  }
+
+  const results = [];
+  const batchSize = 3; // Process 3 images at a time
+  
+  for (let i = 0; i < images.length; i += batchSize) {
+    const batch = images.slice(i, i + batchSize);
+    
+    const batchPromises = batch.map(async (imageData) => {
+      try {
+        const result = await optimizeImage(imageData.url, { ...options, ...imageData.options });
+        return {
+          url: imageData.url,
+          success: true,
+          result
+        };
+      } catch (error) {
+        return {
+          url: imageData.url,
+          success: false,
+          error: error.message
+        };
+      }
+    });
+
+    const batchResults = await Promise.allSettled(batchPromises);
+    batchResults.forEach(result => {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+      } else {
+        results.push({
+          url: 'unknown',
+          success: false,
+          error: result.reason?.message || 'Unknown error'
+        });
+      }
+    });
+
+    // Send progress update
+    postMessage({
+      type: 'batch_progress',
+      id,
+      data: {
+        completed: results.length,
+        total: images.length,
+        progress: (results.length / images.length) * 100
+      }
+    });
+  }
+
+  postMessage({
+    type: 'batch_complete',
+    id,
+    data: {
+      results,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      total: results.length
+    }
   });
 }
 
 /**
- * Process image with optimization
+ * Optimize image
  */
-async function processImage(imageData, options) {
-  const {
-    width: targetWidth,
-    height: targetHeight,
-    quality = DEFAULT_QUALITY,
-    format = 'auto',
-    enableWebP = true,
-    enableAVIF = true
-  } = options;
+async function optimizeImage(url, options = {}) {
+  // Fetch the image
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const blob = new Blob([arrayBuffer]);
   
-  const { width: originalWidth, height: originalHeight, canvas, context } = imageData;
+  // Check file size
+  if (blob.size > config.maxImageSize) {
+    throw new Error(`Image too large: ${blob.size} bytes (max: ${config.maxImageSize})`);
+  }
+
+  // Create image bitmap for processing
+  const imageBitmap = await createImageBitmap(blob);
   
-  // Calculate dimensions
-  const dimensions = calculateDimensions(
-    originalWidth, 
-    originalHeight, 
-    targetWidth, 
-    targetHeight
+  // Calculate target dimensions
+  const { width, height } = calculateOptimalDimensions(
+    imageBitmap.width,
+    imageBitmap.height,
+    options.width,
+    options.height,
+    options.maxWidth || config.maxDimensions.width,
+    options.maxHeight || config.maxDimensions.height
   );
+
+  // Create canvas for processing
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d');
   
-  // Resize if needed
-  let processedCanvas = canvas;
-  let processedContext = context;
-  
-  if (dimensions.width !== originalWidth || dimensions.height !== originalHeight) {
-    processedCanvas = new OffscreenCanvas(dimensions.width, dimensions.height);
-    processedContext = processedCanvas.getContext('2d');
-    
-    if (!processedContext) {
-      throw new Error('Failed to create processing context');
-    }
-    
-    // Use high-quality scaling
-    processedContext.imageSmoothingEnabled = true;
-    processedContext.imageSmoothingQuality = 'high';
-    
-    // Draw resized image
-    processedContext.drawImage(
-      canvas, 
-      0, 0, originalWidth, originalHeight,
-      0, 0, dimensions.width, dimensions.height
-    );
+  if (!ctx) {
+    throw new Error('Failed to get canvas context');
   }
-  
-  const result = {
-    dimensions,
-    size: 0,
-    originalUrl: null,
-    optimizedUrl: null,
-    webpUrl: null,
-    avifUrl: null
+
+  // Draw image to canvas
+  ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+  // Generate optimized versions
+  const results = {
+    originalUrl: url,
+    dimensions: { width, height },
+    originalSize: blob.size
   };
-  
-  // Generate optimized version
-  const optimizedBlob = await processedCanvas.convertToBlob({
-    type: getOptimalFormat(format),
-    quality: quality
-  });
-  
-  result.optimizedUrl = await blobToDataURL(optimizedBlob);
-  result.size = optimizedBlob.size;
-  
-  // Generate WebP version if supported and requested
-  if (enableWebP && supportsFormat('webp')) {
+
+  // Generate different formats
+  const formats = options.formats || ['jpeg', 'webp'];
+  const quality = getQualityForOptions(options);
+
+  for (const format of formats) {
     try {
-      const webpBlob = await processedCanvas.convertToBlob({
-        type: 'image/webp',
+      const optimizedBlob = await canvas.convertToBlob({
+        type: `image/${format}`,
         quality: quality
       });
-      result.webpUrl = await blobToDataURL(webpBlob);
+
+      const optimizedUrl = await blobToDataUrl(optimizedBlob);
+      
+      results[`${format}Url`] = optimizedUrl;
+      results[`${format}Size`] = optimizedBlob.size;
+      
+      // Set the main optimized URL to the first format
+      if (!results.optimizedUrl) {
+        results.optimizedUrl = optimizedUrl;
+        results.optimizedSize = optimizedBlob.size;
+      }
+      
     } catch (error) {
-      console.warn('WebP generation failed:', error);
+      console.warn(`Failed to generate ${format} format:`, error);
     }
   }
-  
-  // Generate AVIF version if supported and requested
-  if (enableAVIF && supportsFormat('avif')) {
+
+  // Generate placeholder if requested
+  if (options.generatePlaceholder) {
     try {
-      const avifBlob = await processedCanvas.convertToBlob({
-        type: 'image/avif',
-        quality: quality
-      });
-      result.avifUrl = await blobToDataURL(avifBlob);
+      results.placeholder = await generatePlaceholderFromCanvas(canvas, options.placeholderType);
     } catch (error) {
-      console.warn('AVIF generation failed:', error);
+      console.warn('Failed to generate placeholder:', error);
     }
   }
-  
-  return result;
+
+  // Calculate compression ratio
+  if (results.optimizedSize) {
+    results.compressionRatio = results.originalSize / results.optimizedSize;
+    results.sizeSavings = results.originalSize - results.optimizedSize;
+  }
+
+  // Clean up
+  imageBitmap.close();
+
+  return results;
 }
 
 /**
- * Generate placeholder image
+ * Generate placeholder
  */
-async function generatePlaceholder(imageData, type, size) {
-  const { canvas, context } = imageData;
-  
+async function generatePlaceholder(url, type = 'blur', options = {}) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const blob = new Blob([arrayBuffer]);
+  const imageBitmap = await createImageBitmap(blob);
+
+  const canvas = new OffscreenCanvas(
+    options.width || 20,
+    options.height || 20
+  );
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Failed to get canvas context');
+  }
+
   switch (type) {
     case 'blur':
-      return generateBlurPlaceholder(canvas, context, size);
+      return generateBlurPlaceholder(imageBitmap, canvas, ctx, options);
     case 'color':
-      return generateColorPlaceholder(canvas, context, size);
+      return generateColorPlaceholder(imageBitmap, canvas, ctx, options);
     case 'skeleton':
-      return generateSkeletonPlaceholder(size);
+      return generateSkeletonPlaceholder(canvas, ctx, options);
     default:
-      return generateBlurPlaceholder(canvas, context, size);
+      return generateBlurPlaceholder(imageBitmap, canvas, ctx, options);
   }
 }
 
 /**
  * Generate blur placeholder
  */
-async function generateBlurPlaceholder(canvas, context, size) {
-  const placeholderCanvas = new OffscreenCanvas(size, size);
-  const placeholderContext = placeholderCanvas.getContext('2d');
+async function generateBlurPlaceholder(imageBitmap, canvas, ctx, options) {
+  // Draw small blurred version
+  ctx.filter = `blur(${options.blurAmount || 2}px)`;
+  ctx.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
   
-  if (!placeholderContext) {
-    throw new Error('Failed to create placeholder context');
-  }
-  
-  // Apply blur filter
-  placeholderContext.filter = 'blur(2px)';
-  placeholderContext.imageSmoothingEnabled = true;
-  
-  // Draw scaled down image
-  placeholderContext.drawImage(canvas, 0, 0, size, size);
-  
-  const blob = await placeholderCanvas.convertToBlob({
+  const blob = await canvas.convertToBlob({
     type: 'image/jpeg',
     quality: 0.1
   });
   
-  return await blobToDataURL(blob);
+  imageBitmap.close();
+  return blobToDataUrl(blob);
 }
 
 /**
  * Generate color placeholder
  */
-async function generateColorPlaceholder(canvas, context, size) {
+async function generateColorPlaceholder(imageBitmap, canvas, ctx, options) {
   // Sample colors from the image
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  const colors = sampleColors(imageData.data, 5);
-  const dominantColor = getDominantColor(colors);
+  const sampleCanvas = new OffscreenCanvas(1, 1);
+  const sampleCtx = sampleCanvas.getContext('2d');
   
-  const placeholderCanvas = new OffscreenCanvas(size, size);
-  const placeholderContext = placeholderCanvas.getContext('2d');
-  
-  if (!placeholderContext) {
-    throw new Error('Failed to create placeholder context');
+  if (!sampleCtx) {
+    throw new Error('Failed to get sample canvas context');
   }
   
-  // Create gradient with dominant colors
-  const gradient = placeholderContext.createLinearGradient(0, 0, size, size);
-  gradient.addColorStop(0, `rgb(${dominantColor.r}, ${dominantColor.g}, ${dominantColor.b})`);
-  gradient.addColorStop(1, `rgb(${dominantColor.r * 0.8}, ${dominantColor.g * 0.8}, ${dominantColor.b * 0.8})`);
+  sampleCtx.drawImage(imageBitmap, 0, 0, 1, 1);
+  const imageData = sampleCtx.getImageData(0, 0, 1, 1);
+  const [r, g, b] = imageData.data;
   
-  placeholderContext.fillStyle = gradient;
-  placeholderContext.fillRect(0, 0, size, size);
-  
-  const blob = await placeholderCanvas.convertToBlob({
-    type: 'image/png'
-  });
-  
-  return await blobToDataURL(blob);
-}
-
-/**
- * Generate skeleton placeholder
- */
-async function generateSkeletonPlaceholder(size) {
-  const canvas = new OffscreenCanvas(size, size);
-  const context = canvas.getContext('2d');
-  
-  if (!context) {
-    throw new Error('Failed to create skeleton context');
-  }
-  
-  // Create animated gradient effect
-  const gradient = context.createLinearGradient(0, 0, size, 0);
-  gradient.addColorStop(0, '#f0f0f0');
-  gradient.addColorStop(0.5, '#e0e0e0');
-  gradient.addColorStop(1, '#f0f0f0');
-  
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, size, size);
+  // Fill canvas with dominant color
+  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   
   const blob = await canvas.convertToBlob({
     type: 'image/png'
   });
   
-  return await blobToDataURL(blob);
+  imageBitmap.close();
+  return blobToDataUrl(blob);
+}
+
+/**
+ * Generate skeleton placeholder
+ */
+async function generateSkeletonPlaceholder(canvas, ctx, options) {
+  // Create gradient for skeleton effect
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  gradient.addColorStop(0, options.skeletonColor1 || '#f0f0f0');
+  gradient.addColorStop(0.5, options.skeletonColor2 || '#e0e0e0');
+  gradient.addColorStop(1, options.skeletonColor1 || '#f0f0f0');
+  
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  const blob = await canvas.convertToBlob({
+    type: 'image/png'
+  });
+  
+  return blobToDataUrl(blob);
+}
+
+/**
+ * Generate placeholder from existing canvas
+ */
+async function generatePlaceholderFromCanvas(canvas, type = 'blur') {
+  const smallCanvas = new OffscreenCanvas(20, 20);
+  const ctx = smallCanvas.getContext('2d');
+  
+  if (!ctx) {
+    throw new Error('Failed to get placeholder canvas context');
+  }
+
+  if (type === 'blur') {
+    ctx.filter = 'blur(2px)';
+  }
+  
+  ctx.drawImage(canvas, 0, 0, 20, 20);
+  
+  const blob = await smallCanvas.convertToBlob({
+    type: 'image/jpeg',
+    quality: 0.1
+  });
+  
+  return blobToDataUrl(blob);
 }
 
 /**
  * Calculate optimal dimensions
  */
-function calculateDimensions(originalWidth, originalHeight, targetWidth, targetHeight) {
-  // Limit maximum dimensions
+function calculateOptimalDimensions(originalWidth, originalHeight, targetWidth, targetHeight, maxWidth, maxHeight) {
   let width = originalWidth;
   let height = originalHeight;
-  
-  // Apply max dimension limit
-  if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-    const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
-    width = Math.round(width * ratio);
-    height = Math.round(height * ratio);
-  }
-  
+
   // Apply target dimensions if specified
-  if (targetWidth || targetHeight) {
+  if (targetWidth && targetHeight) {
+    width = targetWidth;
+    height = targetHeight;
+  } else if (targetWidth) {
+    const aspectRatio = originalHeight / originalWidth;
+    width = targetWidth;
+    height = Math.round(targetWidth * aspectRatio);
+  } else if (targetHeight) {
     const aspectRatio = originalWidth / originalHeight;
-    
-    if (targetWidth && targetHeight) {
-      width = targetWidth;
-      height = targetHeight;
-    } else if (targetWidth) {
-      width = targetWidth;
-      height = Math.round(targetWidth / aspectRatio);
-    } else if (targetHeight) {
-      height = targetHeight;
-      width = Math.round(targetHeight * aspectRatio);
-    }
+    height = targetHeight;
+    width = Math.round(targetHeight * aspectRatio);
   }
-  
+
+  // Apply max dimensions
+  if (width > maxWidth) {
+    const aspectRatio = height / width;
+    width = maxWidth;
+    height = Math.round(maxWidth * aspectRatio);
+  }
+
+  if (height > maxHeight) {
+    const aspectRatio = width / height;
+    height = maxHeight;
+    width = Math.round(maxHeight * aspectRatio);
+  }
+
   return { width, height };
 }
 
 /**
- * Get optimal format based on input
+ * Get quality setting based on options
  */
-function getOptimalFormat(format) {
-  if (format === 'auto') {
-    // Choose best format based on support
-    if (supportsFormat('avif')) return 'image/avif';
-    if (supportsFormat('webp')) return 'image/webp';
-    return 'image/jpeg';
+function getQualityForOptions(options) {
+  if (options.quality !== undefined) {
+    return Math.max(0.1, Math.min(1.0, options.quality));
   }
-  
-  return `image/${format}`;
-}
 
-/**
- * Check format support
- */
-function supportsFormat(format) {
-  // In a worker, we can't easily test canvas.toDataURL
-  // So we'll assume modern format support based on format
-  const supportMap = {
-    'webp': true,  // Widely supported now
-    'avif': false, // Still limited support
-    'jpeg': true,
-    'png': true
-  };
-  
-  return supportMap[format] || false;
-}
-
-/**
- * Sample colors from image data
- */
-function sampleColors(imageData, sampleCount) {
-  const colors = [];
-  const step = Math.floor(imageData.length / (sampleCount * 4));
-  
-  for (let i = 0; i < imageData.length; i += step * 4) {
-    colors.push({
-      r: imageData[i],
-      g: imageData[i + 1],
-      b: imageData[i + 2],
-      a: imageData[i + 3]
-    });
-  }
-  
-  return colors;
-}
-
-/**
- * Get dominant color from color array
- */
-function getDominantColor(colors) {
-  if (colors.length === 0) {
-    return { r: 128, g: 128, b: 128 };
-  }
-  
-  // Simple average for now - could use more sophisticated clustering
-  const total = colors.reduce(
-    (acc, color) => ({
-      r: acc.r + color.r,
-      g: acc.g + color.g,
-      b: acc.b + color.b
-    }),
-    { r: 0, g: 0, b: 0 }
-  );
-  
-  return {
-    r: Math.round(total.r / colors.length),
-    g: Math.round(total.g / colors.length),
-    b: Math.round(total.b / colors.length)
-  };
+  const qualityLevel = options.qualityLevel || 'medium';
+  return config.qualitySettings[qualityLevel] || config.qualitySettings.medium;
 }
 
 /**
  * Convert blob to data URL
  */
-async function blobToDataURL(blob) {
+async function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -502,46 +540,80 @@ function hashString(str) {
 }
 
 /**
- * Clear processed images cache
+ * Handle get cache info request
  */
-function clearProcessedImages() {
-  processedImages.clear();
-  sendSuccess('cache_cleared', { success: true });
-}
+function handleGetCacheInfo(id) {
+  const cacheEntries = Array.from(imageCache.entries()).map(([key, data]) => ({
+    key,
+    ...data
+  }));
 
-/**
- * Send success message
- */
-function sendSuccess(type, data, id) {
-  self.postMessage({
-    type,
-    data,
+  postMessage({
+    type: 'cache_info',
     id,
-    success: true
+    data: {
+      cacheSize: imageCache.size,
+      processingQueueSize: processingQueue.size,
+      entries: cacheEntries,
+      config
+    }
   });
 }
 
 /**
- * Send error message
+ * Handle clear cache request
  */
-function sendError(error, id) {
-  self.postMessage({
-    type: 'optimization_error',
-    data: { error },
+function handleClearCache(id) {
+  const clearedEntries = imageCache.size;
+  imageCache.clear();
+  processingQueue.clear();
+
+  postMessage({
+    type: 'cache_cleared',
     id,
-    success: false
+    data: {
+      clearedEntries,
+      message: `Cleared ${clearedEntries} cache entries`
+    }
   });
 }
 
-// Cleanup old cache entries periodically
-setInterval(() => {
-  if (processedImages.size > 100) {
-    // Keep only the 50 most recent entries
-    const entries = Array.from(processedImages.entries());
-    const toKeep = entries.slice(-50);
-    processedImages.clear();
-    toKeep.forEach(([key, value]) => processedImages.set(key, value));
+/**
+ * Handle configuration update
+ */
+function handleConfigure(data, id) {
+  Object.assign(config, data);
+  
+  postMessage({
+    type: 'configured',
+    id,
+    data: {
+      config,
+      message: 'Configuration updated'
+    }
+  });
+}
+
+/**
+ * Periodic cache cleanup
+ */
+function cleanupCache() {
+  if (imageCache.size > config.maxCacheSize) {
+    // Remove oldest entries
+    const entries = Array.from(imageCache.entries());
+    const toRemove = entries.slice(0, imageCache.size - config.maxCacheSize);
+    toRemove.forEach(([key]) => imageCache.delete(key));
   }
-}, 5 * 60 * 1000); // Every 5 minutes
+}
 
-console.log('Image optimization worker initialized');
+// Run cleanup every 10 minutes
+setInterval(cleanupCache, 10 * 60 * 1000);
+
+// Send ready message
+postMessage({
+  type: 'worker_ready',
+  data: {
+    message: 'Image optimization worker initialized',
+    config
+  }
+});

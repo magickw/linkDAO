@@ -7,8 +7,6 @@ import {
   ShoppingBag,
   BarChart3,
   Settings,
-  FileText,
-  MessageSquare,
   Eye,
   TrendingUp,
   Globe
@@ -19,6 +17,7 @@ import { SellerApplications } from '@/components/Admin/SellerApplications';
 import { SellerPerformance } from '@/components/Admin/SellerPerformance';
 import { DisputeResolution } from '@/components/Admin/DisputeResolution';
 import { UserManagement } from '@/components/Admin/UserManagement';
+import { ModerationQueue } from '@/components/Admin/ModerationQueue';
 
 type AdminSection = 'dashboard' | 'users' | 'moderation' | 'sellers' | 'seller-performance' | 'disputes' | 'analytics' | 'visitor-analytics' | 'settings';
 
@@ -216,9 +215,7 @@ const DashboardOverview: React.FC = () => {
 const ModerationSection: React.FC = () => (
   <div className="space-y-4 sm:space-y-6">
     <h1 className="text-2xl sm:text-3xl font-bold text-white">Content Moderation</h1>
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
-      <p className="text-sm sm:text-base text-gray-300">Moderation queue and tools coming soon...</p>
-    </div>
+    <ModerationQueue />
   </div>
 );
 

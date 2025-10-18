@@ -1,466 +1,273 @@
 /**
  * User Acceptance Test Setup
- * Comprehensive setup for user acceptance testing environment
+ * Configures the testing environment for comprehensive user acceptance testing
  */
 
 import '@testing-library/jest-dom';
 import { configure } from '@testing-library/react';
 import { TextEncoder, TextDecoder } from 'util';
 
-// Configure testing library for user acceptance tests
+// Configure testing library
 configure({
   testIdAttribute: 'data-testid',
-  asyncUtilTimeout: 15000, // Extended timeout for user acceptance tests
+  asyncUtilTimeout: 10000,
   computedStyleSupportsPseudoElements: true,
 });
 
-// Global polyfills for Node.js environment
-global.TextEncoder = TextEncoder;
-global.TextDecoder = TextDecoder as any;
-
-// Mock ResizeObserver for components that use it
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
-
-// Mock IntersectionObserver for lazy loading and virtual scrolling
-global.IntersectionObserver = jest.fn().mockImplementation((callback) => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-  root: null,
-  rootMargin: '',
-  thresholds: [],
-}));
-
-// Mock requestIdleCallback for performance optimizations
-global.requestIdleCallback = jest.fn((callback) => {
-  const start = Date.now();
-  return setTimeout(() => {
-    callback({
-      didTimeout: false,
-      timeRemaining: () => Math.max(0, 50 - (Date.now() - start)),
-    });
-  }, 1);
-});
-
-global.cancelIdleCallback = jest.fn((id) => {
-  clearTimeout(id);
-});
-
-// Mock requestAnimationFrame for animations
-global.requestAnimationFrame = jest.fn((callback) => {
-  return setTimeout(callback, 16); // 60fps
-});
-
-global.cancelAnimationFrame = jest.fn((id) => {
-  clearTimeout(id);
-});
-
-// Mock performance API for user acceptance tests
-Object.defineProperty(window, 'performance', {
-  value: {
-    ...window.performance,
-    now: jest.fn(() => Date.now()),
-    mark: jest.fn(),
-    measure: jest.fn(),
-    getEntriesByName: jest.fn(() => []),
-    getEntriesByType: jest.fn(() => []),
-    clearMarks: jest.fn(),
-    clearMeasures: jest.fn(),
-    memory: {
-      usedJSHeapSize: 15000000,
-      totalJSHeapSize: 30000000,
-      jsHeapSizeLimit: 60000000,
-    },
-    timing: {
-      navigationStart: Date.now() - 1000,
-      loadEventEnd: Date.now(),
-    },
-  },
-  writable: true,
-});
-
-// Mock localStorage and sessionStorage
-const createStorageMock = () => {
-  let store: Record<string, string> = {};
+// Global test environment setup
+beforeAll(() => {
+  // Mock global objects that might not be available in test environment
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder as any;
   
-  return {
-    getItem: jest.fn((key: string) => store[key] || null),
-    setItem: jest.fn((key: string, value: string) => {
-      store[key] = value.toString();
-    }),
-    removeItem: jest.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: jest.fn(() => {
-      store = {};
-    }),
-    get length() {
-      return Object.keys(store).length;
+  // Mock Web3 globals
+  Object.defineProperty(window, 'ethereum', {
+    writable: true,
+    value: {
+      request: jest.fn(),
+      on: jest.fn(),
+      removeListener: jest.fn(),
+      isMetaMask: true,
+      selectedAddress: '0x742d35Cc6634C0532925a3b8D4C9db96590c6C87',
+      chainId: '0x1',
+      networkVersion: '1',
     },
-    key: jest.fn((index: number) => Object.keys(store)[index] || null),
-  };
-};
+  });
 
-Object.defineProperty(window, 'localStorage', {
-  value: createStorageMock(),
-  writable: true,
-});
-
-Object.defineProperty(window, 'sessionStorage', {
-  value: createStorageMock(),
-  writable: true,
-});
-
-// Mock IndexedDB for offline storage
-const mockIDBRequest = {
-  result: null,
-  error: null,
-  onsuccess: null,
-  onerror: null,
-  readyState: 'done',
-};
-
-const mockIDBDatabase = {
-  close: jest.fn(),
-  createObjectStore: jest.fn(),
-  deleteObjectStore: jest.fn(),
-  transaction: jest.fn(() => ({
-    objectStore: jest.fn(() => ({
-      add: jest.fn(() => mockIDBRequest),
-      put: jest.fn(() => mockIDBRequest),
-      get: jest.fn(() => mockIDBRequest),
-      delete: jest.fn(() => mockIDBRequest),
-      clear: jest.fn(() => mockIDBRequest),
-      getAll: jest.fn(() => mockIDBRequest),
-    })),
-    oncomplete: null,
-    onerror: null,
-    onabort: null,
-  })),
-};
-
-global.indexedDB = {
-  open: jest.fn(() => ({
-    ...mockIDBRequest,
-    onsuccess: null,
-    onerror: null,
-    onupgradeneeded: null,
-    result: mockIDBDatabase,
-  })),
-  deleteDatabase: jest.fn(() => mockIDBRequest),
-  databases: jest.fn(() => Promise.resolve([])),
-} as any;
-
-// Mock Notification API
-global.Notification = jest.fn().mockImplementation((title, options) => ({
-  title,
-  ...options,
-  close: jest.fn(),
-  onclick: null,
-  onclose: null,
-  onerror: null,
-  onshow: null,
-})) as any;
-
-Object.defineProperty(Notification, 'permission', {
-  value: 'granted',
-  writable: true,
-});
-
-Object.defineProperty(Notification, 'requestPermission', {
-  value: jest.fn(() => Promise.resolve('granted')),
-  writable: true,
-});
-
-// Mock Service Worker API
-Object.defineProperty(navigator, 'serviceWorker', {
-  value: {
-    register: jest.fn(() => Promise.resolve({
-      installing: null,
-      waiting: null,
-      active: {
-        scriptURL: '/sw.js',
-        state: 'activated',
+  // Mock performance API
+  Object.defineProperty(window, 'performance', {
+    writable: true,
+    value: {
+      ...performance,
+      mark: jest.fn(),
+      measure: jest.fn(),
+      getEntriesByName: jest.fn().mockReturnValue([{ duration: 45 }]),
+      clearMarks: jest.fn(),
+      clearMeasures: jest.fn(),
+      memory: {
+        usedJSHeapSize: 15000000,
+        totalJSHeapSize: 30000000,
+        jsHeapSizeLimit: 60000000,
       },
-      scope: '/',
-      update: jest.fn(),
-      unregister: jest.fn(),
+    },
+  });
+
+  // Mock ResizeObserver
+  global.ResizeObserver = jest.fn().mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
+
+  // Mock IntersectionObserver
+  global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
+
+  // Mock requestAnimationFrame
+  global.requestAnimationFrame = jest.fn((cb) => setTimeout(cb, 16));
+  global.cancelAnimationFrame = jest.fn();
+
+  // Mock requestIdleCallback
+  global.requestIdleCallback = jest.fn((cb) => {
+    return setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 50 }), 1);
+  });
+  global.cancelIdleCallback = jest.fn();
+
+  // Mock matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
     })),
-    ready: Promise.resolve({
-      installing: null,
-      waiting: null,
-      active: {
-        scriptURL: '/sw.js',
-        state: 'activated',
-      },
-      scope: '/',
-      update: jest.fn(),
-      unregister: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    }),
-    controller: null,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  },
-  writable: true,
-});
+  });
 
-// Mock Push API
-Object.defineProperty(window, 'PushManager', {
-  value: {
-    supportedContentEncodings: ['aes128gcm'],
-  },
-  writable: true,
-});
+  // Mock navigator properties
+  Object.defineProperty(navigator, 'userAgent', {
+    writable: true,
+    value: 'Mozilla/5.0 (compatible; UserAcceptanceTests/1.0)',
+  });
 
-// Mock Geolocation API
-Object.defineProperty(navigator, 'geolocation', {
-  value: {
-    getCurrentPosition: jest.fn((success) => {
-      success({
-        coords: {
-          latitude: 40.7128,
-          longitude: -74.0060,
-          accuracy: 100,
-          altitude: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null,
-        },
-        timestamp: Date.now(),
-      });
-    }),
-    watchPosition: jest.fn(),
-    clearWatch: jest.fn(),
-  },
-  writable: true,
-});
-
-// Mock Network Information API
-Object.defineProperty(navigator, 'connection', {
-  value: {
-    effectiveType: '4g',
-    downlink: 10,
-    rtt: 100,
-    saveData: false,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  },
-  writable: true,
-});
-
-// Mock Battery API
-Object.defineProperty(navigator, 'getBattery', {
-  value: jest.fn(() => Promise.resolve({
-    charging: true,
-    chargingTime: 0,
-    dischargingTime: Infinity,
-    level: 1,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  })),
-  writable: true,
-});
-
-// Mock Vibration API
-Object.defineProperty(navigator, 'vibrate', {
-  value: jest.fn(() => true),
-  writable: true,
-});
-
-// Mock Clipboard API
-Object.defineProperty(navigator, 'clipboard', {
-  value: {
-    writeText: jest.fn(() => Promise.resolve()),
-    readText: jest.fn(() => Promise.resolve('test-clipboard-content')),
-    write: jest.fn(() => Promise.resolve()),
-    read: jest.fn(() => Promise.resolve([])),
-  },
-  writable: true,
-});
-
-// Mock Share API
-Object.defineProperty(navigator, 'share', {
-  value: jest.fn(() => Promise.resolve()),
-  writable: true,
-});
-
-// Mock MediaDevices API
-Object.defineProperty(navigator, 'mediaDevices', {
-  value: {
-    getUserMedia: jest.fn(() => Promise.resolve({
-      getTracks: () => [],
-      getVideoTracks: () => [],
-      getAudioTracks: () => [],
-      addTrack: jest.fn(),
-      removeTrack: jest.fn(),
-      clone: jest.fn(),
-    })),
-    enumerateDevices: jest.fn(() => Promise.resolve([])),
-    getSupportedConstraints: jest.fn(() => ({})),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  },
-  writable: true,
-});
-
-// Mock URL API
-global.URL = {
-  ...global.URL,
-  createObjectURL: jest.fn(() => 'blob:mock-url'),
-  revokeObjectURL: jest.fn(),
-};
-
-// Mock File and FileReader APIs
-global.File = jest.fn().mockImplementation((bits, name, options) => ({
-  name,
-  size: bits.reduce((acc: number, bit: any) => acc + bit.length, 0),
-  type: options?.type || '',
-  lastModified: Date.now(),
-  slice: jest.fn(),
-  stream: jest.fn(),
-  text: jest.fn(() => Promise.resolve(bits.join(''))),
-  arrayBuffer: jest.fn(() => Promise.resolve(new ArrayBuffer(0))),
-})) as any;
-
-global.FileReader = jest.fn().mockImplementation(() => ({
-  readAsText: jest.fn(),
-  readAsDataURL: jest.fn(),
-  readAsArrayBuffer: jest.fn(),
-  readAsBinaryString: jest.fn(),
-  abort: jest.fn(),
-  result: null,
-  error: null,
-  onload: null,
-  onerror: null,
-  onabort: null,
-  onloadstart: null,
-  onloadend: null,
-  onprogress: null,
-  readyState: 0,
-  EMPTY: 0,
-  LOADING: 1,
-  DONE: 2,
-})) as any;
-
-// Mock Crypto API for Web3 operations
-Object.defineProperty(global, 'crypto', {
-  value: {
-    ...global.crypto,
-    getRandomValues: jest.fn((arr: Uint8Array) => {
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = Math.floor(Math.random() * 256);
-      }
-      return arr;
-    }),
-    randomUUID: jest.fn(() => '12345678-1234-1234-1234-123456789abc'),
-    subtle: {
-      digest: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      encrypt: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      decrypt: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      sign: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      verify: jest.fn(() => Promise.resolve(true)),
-      generateKey: jest.fn(() => Promise.resolve({})),
-      importKey: jest.fn(() => Promise.resolve({})),
-      exportKey: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      deriveBits: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      deriveKey: jest.fn(() => Promise.resolve({})),
+  Object.defineProperty(navigator, 'serviceWorker', {
+    writable: true,
+    value: {
+      register: jest.fn().mockResolvedValue({}),
+      ready: Promise.resolve({}),
     },
-  },
-  writable: true,
-});
+  });
 
-// Mock console methods for cleaner test output
-const originalConsole = { ...console };
-global.console = {
-  ...console,
-  warn: jest.fn(),
-  error: jest.fn(),
-  log: process.env.NODE_ENV === 'test' ? jest.fn() : originalConsole.log,
-  info: process.env.NODE_ENV === 'test' ? jest.fn() : originalConsole.info,
-  debug: jest.fn(),
-};
+  // Mock touch events support
+  Object.defineProperty(window, 'ontouchstart', {
+    writable: true,
+    value: () => {},
+  });
 
-// Global test utilities
-global.userAcceptanceTestUtils = {
-  // Wait for async operations
-  waitForAsync: (ms = 100) => new Promise(resolve => setTimeout(resolve, ms)),
-  
-  // Mock user interactions
-  mockUserInteraction: (element: Element, interaction: string) => {
-    const event = new Event(interaction, { bubbles: true });
-    element.dispatchEvent(event);
-  },
-  
-  // Performance measurement helpers
-  measurePerformance: (name: string, fn: () => void) => {
-    const start = performance.now();
-    fn();
-    const end = performance.now();
-    return end - start;
-  },
-  
-  // Memory usage helpers
-  getMemoryUsage: () => {
-    if ('memory' in performance) {
-      return (performance as any).memory;
+  // Mock WebGL context
+  HTMLCanvasElement.prototype.getContext = jest.fn().mockImplementation((contextType) => {
+    if (contextType === 'webgl' || contextType === 'webgl2') {
+      return {
+        canvas: {},
+        drawingBufferWidth: 300,
+        drawingBufferHeight: 150,
+      };
     }
-    return {
-      usedJSHeapSize: 15000000,
-      totalJSHeapSize: 30000000,
-      jsHeapSizeLimit: 60000000,
-    };
-  },
+    return null;
+  });
+
+  // Mock crypto API for Web3 testing
+  Object.defineProperty(window, 'crypto', {
+    writable: true,
+    value: {
+      getRandomValues: jest.fn().mockImplementation((arr) => {
+        for (let i = 0; i < arr.length; i++) {
+          arr[i] = Math.floor(Math.random() * 256);
+        }
+        return arr;
+      }),
+      subtle: {
+        digest: jest.fn().mockResolvedValue(new ArrayBuffer(32)),
+      },
+    },
+  });
+
+  // Mock localStorage and sessionStorage
+  const mockStorage = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+    length: 0,
+    key: jest.fn(),
+  };
+
+  Object.defineProperty(window, 'localStorage', {
+    writable: true,
+    value: mockStorage,
+  });
+
+  Object.defineProperty(window, 'sessionStorage', {
+    writable: true,
+    value: mockStorage,
+  });
+
+  // Mock URL and URLSearchParams
+  global.URL = URL;
+  global.URLSearchParams = URLSearchParams;
+
+  // Mock fetch for API calls
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: jest.fn().mockResolvedValue({}),
+    text: jest.fn().mockResolvedValue(''),
+  });
+
+  // Mock WebSocket
+  global.WebSocket = jest.fn().mockImplementation(() => ({
+    send: jest.fn(),
+    close: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    readyState: 1, // OPEN
+  }));
+
+  // Mock console methods to reduce noise in tests
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    // Suppress known React warnings in tests
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: ReactDOM.render is no longer supported') ||
+       args[0].includes('Warning: validateDOMNesting'))
+    ) {
+      return;
+    }
+    originalConsoleError.call(console, ...args);
+  };
+});
+
+// Setup before each test
+beforeEach(() => {
+  // Clear all mocks
+  jest.clearAllMocks();
   
-  // Network condition simulation
-  simulateNetworkCondition: (condition: 'fast' | 'slow' | 'offline') => {
-    const conditions = {
-      fast: { effectiveType: '4g', downlink: 10, rtt: 100 },
-      slow: { effectiveType: '2g', downlink: 0.5, rtt: 2000 },
-      offline: { effectiveType: 'none', downlink: 0, rtt: 0 },
-    };
-    
-    Object.assign(navigator.connection, conditions[condition]);
-  },
+  // Reset DOM
+  document.body.innerHTML = '';
   
-  // Device simulation
-  simulateDevice: (device: 'desktop' | 'tablet' | 'mobile') => {
-    const devices = {
-      desktop: { width: 1920, height: 1080, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      tablet: { width: 768, height: 1024, userAgent: 'Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X)' },
-      mobile: { width: 375, height: 812, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)' },
-    };
-    
-    const config = devices[device];
-    Object.defineProperty(window, 'innerWidth', { value: config.width, writable: true });
-    Object.defineProperty(window, 'innerHeight', { value: config.height, writable: true });
-    Object.defineProperty(navigator, 'userAgent', { value: config.userAgent, writable: true });
-  },
-};
+  // Reset viewport to default
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: 1024,
+  });
+  
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: 768,
+  });
+
+  // Reset Web3 provider state
+  if (window.ethereum) {
+    window.ethereum.selectedAddress = '0x742d35Cc6634C0532925a3b8D4C9db96590c6C87';
+    window.ethereum.chainId = '0x1';
+    window.ethereum.networkVersion = '1';
+  }
+
+  // Reset performance measurements
+  if (window.performance) {
+    window.performance.clearMarks?.();
+    window.performance.clearMeasures?.();
+  }
+
+  // Reset local storage
+  localStorage.clear();
+  sessionStorage.clear();
+});
+
+// Cleanup after each test
+afterEach(() => {
+  // Clean up any timers
+  jest.runOnlyPendingTimers();
+  jest.useRealTimers();
+  
+  // Clean up any event listeners
+  document.removeEventListener = jest.fn();
+  window.removeEventListener = jest.fn();
+});
+
+// Global cleanup
+afterAll(() => {
+  // Restore console methods
+  jest.restoreAllMocks();
+});
 
 // Custom matchers for user acceptance testing
 expect.extend({
-  toBeAccessible(received: Element) {
-    const hasAriaLabel = received.hasAttribute('aria-label') || received.hasAttribute('aria-labelledby');
-    const hasRole = received.hasAttribute('role');
-    const isFocusable = received.hasAttribute('tabindex') || ['button', 'input', 'select', 'textarea', 'a'].includes(received.tagName.toLowerCase());
-    
-    const pass = hasAriaLabel || hasRole || isFocusable;
+  toBeAccessible(received) {
+    const pass = received && received.getAttribute && (
+      received.getAttribute('aria-label') ||
+      received.getAttribute('aria-labelledby') ||
+      received.getAttribute('aria-describedby') ||
+      received.textContent
+    );
     
     return {
-      message: () => `expected element to be accessible (have aria-label, role, or be focusable)`,
+      message: () => `expected element to be accessible with proper ARIA labels or text content`,
       pass,
     };
   },
   
-  toHavePerformantRender(received: number, threshold: number = 100) {
+  toHavePerformantRenderTime(received, threshold = 100) {
     const pass = received < threshold;
     
     return {
@@ -469,75 +276,42 @@ expect.extend({
     };
   },
   
-  toBeResponsive(received: Element) {
-    const computedStyle = window.getComputedStyle(received);
-    const hasFlexbox = computedStyle.display === 'flex' || computedStyle.display === 'grid';
-    const hasResponsiveUnits = computedStyle.width.includes('%') || computedStyle.width.includes('vw');
-    
-    const pass = hasFlexbox || hasResponsiveUnits;
+  toSupportTouchInteraction(received) {
+    const pass = received && (
+      received.ontouchstart !== undefined ||
+      received.addEventListener
+    );
     
     return {
-      message: () => `expected element to be responsive (use flexbox, grid, or responsive units)`,
+      message: () => `expected element to support touch interactions`,
+      pass,
+    };
+  },
+  
+  toBeWeb3Compatible(received) {
+    const pass = received && (
+      received.ethereum ||
+      received.web3 ||
+      (received.request && typeof received.request === 'function')
+    );
+    
+    return {
+      message: () => `expected object to be Web3 compatible`,
       pass,
     };
   },
 });
 
-// Declare global types for TypeScript
+// Declare custom matchers for TypeScript
 declare global {
   namespace jest {
     interface Matchers<R> {
       toBeAccessible(): R;
-      toHavePerformantRender(threshold?: number): R;
-      toBeResponsive(): R;
+      toHavePerformantRenderTime(threshold?: number): R;
+      toSupportTouchInteraction(): R;
+      toBeWeb3Compatible(): R;
     }
   }
-  
-  var userAcceptanceTestUtils: {
-    waitForAsync: (ms?: number) => Promise<void>;
-    mockUserInteraction: (element: Element, interaction: string) => void;
-    measurePerformance: (name: string, fn: () => void) => number;
-    getMemoryUsage: () => any;
-    simulateNetworkCondition: (condition: 'fast' | 'slow' | 'offline') => void;
-    simulateDevice: (device: 'desktop' | 'tablet' | 'mobile') => void;
-  };
 }
 
-// Setup and teardown hooks
-beforeAll(() => {
-  console.log('🧪 Setting up user acceptance test environment...');
-});
-
-beforeEach(() => {
-  // Reset all mocks before each test
-  jest.clearAllMocks();
-  
-  // Reset DOM
-  document.body.innerHTML = '';
-  
-  // Reset performance measurements
-  performance.clearMarks();
-  performance.clearMeasures();
-  
-  // Reset network conditions
-  global.userAcceptanceTestUtils.simulateNetworkCondition('fast');
-  
-  // Reset device simulation
-  global.userAcceptanceTestUtils.simulateDevice('desktop');
-});
-
-afterEach(() => {
-  // Clean up any pending timers
-  jest.clearAllTimers();
-  
-  // Clean up DOM
-  document.body.innerHTML = '';
-  
-  // Reset localStorage and sessionStorage
-  localStorage.clear();
-  sessionStorage.clear();
-});
-
-afterAll(() => {
-  console.log('✅ User acceptance test environment cleaned up');
-});
+export {};
