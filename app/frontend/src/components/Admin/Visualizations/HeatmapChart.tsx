@@ -66,7 +66,7 @@ const HeatmapChart: React.FC<HeatmapProps> = ({
       .domain(processedData.extent);
 
     // Create tooltip
-    let tooltip: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
+    let tooltip: d3.Selection<HTMLDivElement, unknown, null, undefined>;
     if (showTooltip && tooltipRef.current) {
       tooltip = d3.select(tooltipRef.current);
     }
@@ -87,15 +87,12 @@ const HeatmapChart: React.FC<HeatmapProps> = ({
       .attr('stroke-width', 1)
       .attr('rx', 2)
       .style('cursor', onCellClick ? 'pointer' : 'default')
-      .style('opacity', 0)
-      .transition()
-      .duration(750)
-      .style('opacity', 1);
+      .style('opacity', 0);
 
     // Add cell interactions
     if (showTooltip || onCellClick) {
       cells
-        .on('mouseover', function(event, d) {
+        .on('mouseover', function(event: MouseEvent, d: HeatmapData) {
           d3.select(this)
             .transition()
             .duration(200)
@@ -113,7 +110,7 @@ const HeatmapChart: React.FC<HeatmapProps> = ({
               `);
           }
         })
-        .on('mousemove', function(event) {
+        .on('mousemove', function(event: MouseEvent) {
           if (showTooltip && tooltip) {
             tooltip
               .style('left', (event.pageX + 10) + 'px')
@@ -131,12 +128,18 @@ const HeatmapChart: React.FC<HeatmapProps> = ({
             tooltip.style('opacity', 0);
           }
         })
-        .on('click', function(event, d) {
+        .on('click', function(event: MouseEvent, d: HeatmapData) {
           if (onCellClick) {
             onCellClick(d);
           }
         });
     }
+
+    // Animate cells in
+    cells
+      .transition()
+      .duration(750)
+      .style('opacity', 1);
 
     // Add value labels on cells (for smaller datasets)
     if (processedData.data.length <= 100) {

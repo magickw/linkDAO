@@ -1,254 +1,340 @@
-const crypto = require('crypto');
+const { performance } = require('perf_hooks');
 
-// Custom functions for Artillery load tests
-module.exports = {
-  // Generate random wallet address
-  generateWalletAddress: function(context, events, done) {
-    context.vars.walletAddress = '0x' + crypto.randomBytes(20).toString('hex');
-    return done();
-  },
+// Load test utility functions for Artillery.js
 
-  // Generate random signature
-  generateSignature: function(context, events, done) {
-    context.vars.signature = '0x' + crypto.randomBytes(65).toString('hex');
-    return done();
-  },
+/**
+ * Set authentication token from CSV data
+ */
+function setAuthToken(context, events, done) {
+  // Use token from CSV payload if available
+  if (context.vars.token) {
+    context.vars.authToken = context.vars.token;
+  } else {
+    // Fallback to a test token
+    context.vars.authToken = 'test-admin-token-' + Math.random().toString(36).substr(2, 9);
+  }
+  
+  return done();
+}
 
-  // Generate random product data
-  generateProductData: function(context, events, done) {
-    const products = [
-      'iPhone 15 Pro',
-      'MacBook Pro M3',
-      'Tesla Model S',
-      'Nike Air Jordan',
-      'Sony PlayStation 5',
-      'Samsung Galaxy S24',
-      'iPad Pro 12.9',
-      'AirPods Pro',
-      'Apple Watch Ultra',
-      'Microsoft Surface Pro'
-    ];
+/**
+ * Generate random test data for load testing
+ */
+function generateTestData(context, events, done) {
+  context.vars.testData = {
+    userId: 'user-' + Math.random().toString(36).substr(2, 9),
+    contentId: 'content-' + Math.random().toString(36).substr(2, 9),
+    timestamp: new Date().toISOString(),
+    randomValue: Math.floor(Math.random() * 1000)
+  };
+  
+  return done();
+}
 
-    const categories = [
-      'electronics',
-      'clothing',
-      'automotive',
-      'gaming',
-      'accessories'
-    ];
+/**
+ * Measure custom response times
+ */
+function measureResponseTime(context, events, done) {
+  context.vars.requestStartTime = performance.now();
+  return done();
+}
 
-    context.vars.productTitle = products[Math.floor(Math.random() * products.length)];
-    context.vars.productCategory = categories[Math.floor(Math.random() * categories.length)];
-    context.vars.productPrice = Math.floor(Math.random() * 1000) + 50;
+/**
+ * Calculate and emit custom metrics
+ */
+function emitCustomMetrics(context, events, done) {
+  if (context.vars.requestStartTime) {
+    const responseTime = performance.now() - context.vars.requestStartTime;
     
-    return done();
-  },
-
-  // Generate search queries
-  generateSearchQuery: function(context, events, done) {
-    const searchTerms = [
-      'phone',
-      'laptop',
-      'car',
-      'shoes',
-      'watch',
-      'headphones',
-      'tablet',
-      'camera',
-      'gaming',
-      'wireless'
-    ];
-
-    context.vars.searchQuery = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-    return done();
-  },
-
-  // Log response times for analysis
-  logResponseTime: function(requestParams, response, context, events, done) {
-    const responseTime = response.timings.response;
-    
-    if (responseTime > 2000) {
-      console.log(`Slow response detected: ${requestParams.url} took ${responseTime}ms`);
-    }
-
     // Emit custom metric
     events.emit('customStat', {
-      stat: 'response_time',
+      stat: 'admin_dashboard_response_time',
       value: responseTime
     });
-
-    return done();
-  },
-
-  // Validate response data
-  validateResponse: function(requestParams, response, context, events, done) {
-    if (response.statusCode !== 200) {
-      console.log(`Error response: ${requestParams.url} returned ${response.statusCode}`);
-      events.emit('customStat', {
-        stat: 'error_count',
-        value: 1
-      });
+    
+    // Log slow requests
+    if (responseTime > 5000) {
+      console.log(`Slow request detected: ${responseTime.toFixed(2)}ms`);
     }
+  }
+  
+  return done();
+}
 
-    // Check for required fields in product responses
-    if (requestParams.url.includes('/api/products') && response.body) {
-      try {
-        const data = JSON.parse(response.body);
-        if (data.data && Array.isArray(data.data)) {
-          data.data.forEach(product => {
-            if (!product.id || !product.title || !product.price) {
-              console.log('Invalid product data structure detected');
-              events.emit('customStat', {
-                stat: 'data_validation_error',
-                value: 1
-              });
-            }
-          });
-        }
-      } catch (error) {
-        console.log('Failed to parse response JSON');
+/**
+ * Simulate realistic user behavior patterns
+ */
+function simulateUserBehavior(context, events, done) {
+  const behaviors = [
+    'quick_check',      // Quick dashboard check
+    'detailed_analysis', // Deep dive into analytics
+    'moderation_session', // Extended moderation work
+    'report_generation'  // Generate and review reports
+  ];
+  
+  const behavior = behaviors[Math.floor(Math.random() * behaviors.length)];
+  context.vars.userBehavior = behavior;
+  
+  // Set behavior-specific parameters
+  switch (behavior) {
+    case 'quick_check':
+      context.vars.sessionDuration = 30; // 30 seconds
+      context.vars.pageViews = 2;
+      break;
+    case 'detailed_analysis':
+      context.vars.sessionDuration = 300; // 5 minutes
+      context.vars.pageViews = 8;
+      break;
+    case 'moderation_session':
+      context.vars.sessionDuration = 600; // 10 minutes
+      context.vars.pageViews = 15;
+      break;
+    case 'report_generation':
+      context.vars.sessionDuration = 180; // 3 minutes
+      context.vars.pageViews = 5;
+      break;
+  }
+  
+  return done();
+}
+
+/**
+ * Validate response data structure
+ */
+function validateResponse(context, events, done) {
+  const response = context.vars.$;
+  
+  if (response && response.body) {
+    try {
+      const data = JSON.parse(response.body);
+      
+      // Validate common response structure
+      if (data.error) {
         events.emit('customStat', {
-          stat: 'json_parse_error',
+          stat: 'api_error_rate',
+          value: 1
+        });
+        console.log(`API Error: ${data.error}`);
+      } else {
+        events.emit('customStat', {
+          stat: 'api_success_rate',
           value: 1
         });
       }
-    }
-
-    return done();
-  },
-
-  // Simulate user behavior patterns
-  simulateUserBehavior: function(context, events, done) {
-    const userTypes = ['browser', 'buyer', 'seller', 'searcher'];
-    const userType = userTypes[Math.floor(Math.random() * userTypes.length)];
-    
-    context.vars.userType = userType;
-    
-    // Set different behavior patterns based on user type
-    switch (userType) {
-      case 'browser':
-        context.vars.thinkTime = Math.floor(Math.random() * 5) + 2; // 2-7 seconds
-        context.vars.pagesPerSession = Math.floor(Math.random() * 10) + 5; // 5-15 pages
-        break;
       
-      case 'buyer':
-        context.vars.thinkTime = Math.floor(Math.random() * 10) + 5; // 5-15 seconds
-        context.vars.pagesPerSession = Math.floor(Math.random() * 5) + 3; // 3-8 pages
-        break;
+      // Validate specific endpoint responses
+      if (context.vars.endpoint === '/api/admin/dashboard/metrics') {
+        if (!data.realTimeUsers || !data.systemHealth) {
+          console.log('Invalid dashboard metrics response structure');
+        }
+      }
       
-      case 'seller':
-        context.vars.thinkTime = Math.floor(Math.random() * 15) + 10; // 10-25 seconds
-        context.vars.pagesPerSession = Math.floor(Math.random() * 8) + 2; // 2-10 pages
-        break;
-      
-      case 'searcher':
-        context.vars.thinkTime = Math.floor(Math.random() * 3) + 1; // 1-4 seconds
-        context.vars.pagesPerSession = Math.floor(Math.random() * 15) + 10; // 10-25 pages
-        break;
+    } catch (error) {
+      console.log('Failed to parse response JSON:', error.message);
     }
-    
-    return done();
-  },
-
-  // Generate realistic order data
-  generateOrderData: function(context, events, done) {
-    const paymentMethods = ['crypto', 'fiat'];
-    const cryptocurrencies = ['ETH', 'USDC', 'USDT', 'BTC'];
-    
-    context.vars.paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
-    
-    if (context.vars.paymentMethod === 'crypto') {
-      context.vars.currency = cryptocurrencies[Math.floor(Math.random() * cryptocurrencies.length)];
-    } else {
-      context.vars.currency = 'USD';
-    }
-    
-    context.vars.quantity = Math.floor(Math.random() * 5) + 1; // 1-5 items
-    context.vars.shippingMethod = Math.random() > 0.7 ? 'express' : 'standard';
-    
-    return done();
-  },
-
-  // Track custom metrics
-  trackCustomMetrics: function(context, events, done) {
-    const startTime = Date.now();
-    context.vars._startTime = startTime;
-    
-    return done();
-  },
-
-  // Calculate and emit custom timing metrics
-  emitTimingMetrics: function(requestParams, response, context, events, done) {
-    if (context.vars._startTime) {
-      const totalTime = Date.now() - context.vars._startTime;
-      
-      events.emit('customStat', {
-        stat: 'total_request_time',
-        value: totalTime
-      });
-    }
-    
-    // Track different types of requests
-    if (requestParams.url.includes('/api/products')) {
-      events.emit('customStat', {
-        stat: 'product_request_count',
-        value: 1
-      });
-    } else if (requestParams.url.includes('/api/search')) {
-      events.emit('customStat', {
-        stat: 'search_request_count',
-        value: 1
-      });
-    } else if (requestParams.url.includes('/api/orders')) {
-      events.emit('customStat', {
-        stat: 'order_request_count',
-        value: 1
-      });
-    } else if (requestParams.url.includes('/api/auth')) {
-      events.emit('customStat', {
-        stat: 'auth_request_count',
-        value: 1
-      });
-    }
-    
-    return done();
-  },
-
-  // Simulate realistic delays between requests
-  addRealisticDelay: function(context, events, done) {
-    const delayMs = Math.floor(Math.random() * 3000) + 500; // 0.5-3.5 seconds
-    
-    setTimeout(() => {
-      return done();
-    }, delayMs);
-  },
-
-  // Generate test data for different scenarios
-  setupScenarioData: function(context, events, done) {
-    const scenario = context.scenario;
-    
-    switch (scenario) {
-      case 'Browse marketplace':
-        context.vars.maxPages = Math.floor(Math.random() * 5) + 3; // 3-8 pages
-        context.vars.itemsPerPage = 20;
-        break;
-        
-      case 'Search products':
-        context.vars.searchFilters = Math.random() > 0.5;
-        context.vars.sortBy = ['price', 'rating', 'newest', 'popular'][Math.floor(Math.random() * 4)];
-        break;
-        
-      case 'Order management':
-        context.vars.orderValue = Math.floor(Math.random() * 500) + 50; // $50-$550
-        context.vars.requiresKYC = context.vars.orderValue > 300;
-        break;
-        
-      case 'User authentication':
-        context.vars.isNewUser = Math.random() > 0.7; // 30% new users
-        context.vars.hasProfile = !context.vars.isNewUser || Math.random() > 0.5;
-        break;
-    }
-    
-    return done();
   }
+  
+  return done();
+}
+
+/**
+ * Simulate WebSocket message handling
+ */
+function handleWebSocketMessage(context, events, done) {
+  const messageTypes = [
+    'metrics_update',
+    'alert',
+    'system_health_update',
+    'user_activity'
+  ];
+  
+  const messageType = messageTypes[Math.floor(Math.random() * messageTypes.length)];
+  
+  context.vars.wsMessage = {
+    type: messageType,
+    timestamp: new Date().toISOString(),
+    data: generateMockData(messageType)
+  };
+  
+  return done();
+}
+
+/**
+ * Generate mock data based on message type
+ */
+function generateMockData(type) {
+  switch (type) {
+    case 'metrics_update':
+      return {
+        realTimeUsers: Math.floor(Math.random() * 2000) + 500,
+        systemLoad: Math.random(),
+        moderationQueue: Math.floor(Math.random() * 50),
+        timestamp: new Date().toISOString()
+      };
+    
+    case 'alert':
+      return {
+        id: 'alert-' + Math.random().toString(36).substr(2, 9),
+        severity: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)],
+        message: 'Load test generated alert',
+        timestamp: new Date().toISOString()
+      };
+    
+    case 'system_health_update':
+      return {
+        overall: ['healthy', 'degraded', 'critical'][Math.floor(Math.random() * 3)],
+        components: [
+          { name: 'database', status: 'healthy', responseTime: Math.random() * 100 },
+          { name: 'api', status: 'healthy', responseTime: Math.random() * 200 },
+          { name: 'cache', status: 'healthy', responseTime: Math.random() * 50 }
+        ],
+        timestamp: new Date().toISOString()
+      };
+    
+    case 'user_activity':
+      return {
+        activeUsers: Math.floor(Math.random() * 1000) + 100,
+        newSessions: Math.floor(Math.random() * 50),
+        timestamp: new Date().toISOString()
+      };
+    
+    default:
+      return { timestamp: new Date().toISOString() };
+  }
+}
+
+/**
+ * Monitor resource usage during load test
+ */
+function monitorResources(context, events, done) {
+  // Simulate resource monitoring
+  const resources = {
+    cpu: Math.random() * 100,
+    memory: Math.random() * 100,
+    disk: Math.random() * 100,
+    network: Math.random() * 100
+  };
+  
+  // Emit resource metrics
+  Object.keys(resources).forEach(resource => {
+    events.emit('customStat', {
+      stat: `resource_${resource}_usage`,
+      value: resources[resource]
+    });
+  });
+  
+  // Alert on high resource usage
+  if (resources.cpu > 90) {
+    console.log(`High CPU usage detected: ${resources.cpu.toFixed(2)}%`);
+  }
+  
+  if (resources.memory > 85) {
+    console.log(`High memory usage detected: ${resources.memory.toFixed(2)}%`);
+  }
+  
+  return done();
+}
+
+/**
+ * Simulate database query performance
+ */
+function simulateDbQuery(context, events, done) {
+  const queryTypes = [
+    'simple_select',
+    'complex_aggregation',
+    'join_query',
+    'analytics_query'
+  ];
+  
+  const queryType = queryTypes[Math.floor(Math.random() * queryTypes.length)];
+  
+  // Simulate different query execution times
+  let executionTime;
+  switch (queryType) {
+    case 'simple_select':
+      executionTime = Math.random() * 50 + 10; // 10-60ms
+      break;
+    case 'complex_aggregation':
+      executionTime = Math.random() * 500 + 100; // 100-600ms
+      break;
+    case 'join_query':
+      executionTime = Math.random() * 200 + 50; // 50-250ms
+      break;
+    case 'analytics_query':
+      executionTime = Math.random() * 2000 + 500; // 500-2500ms
+      break;
+  }
+  
+  events.emit('customStat', {
+    stat: `db_query_${queryType}_time`,
+    value: executionTime
+  });
+  
+  context.vars.dbQueryTime = executionTime;
+  
+  return done();
+}
+
+/**
+ * Calculate performance scores
+ */
+function calculatePerformanceScore(context, events, done) {
+  const responseTime = context.vars.responseTime || 0;
+  const dbQueryTime = context.vars.dbQueryTime || 0;
+  
+  // Calculate performance score (0-100)
+  let score = 100;
+  
+  // Penalize slow response times
+  if (responseTime > 2000) score -= 30;
+  else if (responseTime > 1000) score -= 15;
+  else if (responseTime > 500) score -= 5;
+  
+  // Penalize slow database queries
+  if (dbQueryTime > 1000) score -= 20;
+  else if (dbQueryTime > 500) score -= 10;
+  else if (dbQueryTime > 200) score -= 5;
+  
+  events.emit('customStat', {
+    stat: 'performance_score',
+    value: Math.max(0, score)
+  });
+  
+  return done();
+}
+
+/**
+ * Generate load test report data
+ */
+function generateReportData(context, events, done) {
+  const reportData = {
+    timestamp: new Date().toISOString(),
+    virtualUser: context.vars.$uuid || 'unknown',
+    scenario: context.scenario || 'unknown',
+    phase: context.phase || 'unknown',
+    metrics: {
+      responseTime: context.vars.responseTime || 0,
+      dbQueryTime: context.vars.dbQueryTime || 0,
+      userBehavior: context.vars.userBehavior || 'unknown'
+    }
+  };
+  
+  // Log report data for analysis
+  console.log('Load Test Data:', JSON.stringify(reportData));
+  
+  return done();
+}
+
+module.exports = {
+  setAuthToken,
+  generateTestData,
+  measureResponseTime,
+  emitCustomMetrics,
+  simulateUserBehavior,
+  validateResponse,
+  handleWebSocketMessage,
+  monitorResources,
+  simulateDbQuery,
+  calculatePerformanceScore,
+  generateReportData
 };

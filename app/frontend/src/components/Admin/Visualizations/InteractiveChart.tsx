@@ -92,14 +92,14 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
               enabled: interactions.zoom,
             },
             mode: 'xy',
-            onZoomComplete: ({ chart }) => {
+            onZoomComplete: ({ chart }: { chart: any }) => {
               setIsZoomed(chart.isZoomedOrPanned());
             },
           },
           pan: {
             enabled: interactions.pan,
             mode: 'xy',
-            onPanComplete: ({ chart }) => {
+            onPanComplete: ({ chart }: { chart: any }) => {
               setIsZoomed(chart.isZoomedOrPanned());
             },
           },
@@ -142,7 +142,7 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
       },
 
       // Click handler for drill-down and selection
-      onClick: (event, elements) => {
+      onClick: (event: any, elements: any[]) => {
         if (elements.length > 0) {
           const element = elements[0];
           const datasetIndex = element.datasetIndex;
@@ -160,15 +160,15 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
           if (interactions.filter) {
             const pointId = `${datasetIndex}-${index}`;
             const newSelection = new Set(selectedDataPoints);
-            
+
             if (newSelection.has(pointId)) {
               newSelection.delete(pointId);
             } else {
               newSelection.add(pointId);
             }
-            
+
             setSelectedDataPoints(newSelection);
-            
+
             // Trigger filter callback
             if (onFilter) {
               const selectedPoints = Array.from(newSelection).map(id => {
@@ -202,13 +202,13 @@ const InteractiveChart: React.FC<InteractiveChartProps> = ({
       },
 
       // Hover handler
-      onHover: (event, elements) => {
+      onHover: (event: any, elements: any[]) => {
         if (interactions.tooltip.enabled && elements.length > 0) {
           const element = elements[0];
           const datasetIndex = element.datasetIndex;
           const index = element.index;
           const dataPoint = data.datasets[datasetIndex].data[index];
-          
+
           setTooltipData({
             dataPoint,
             index,
