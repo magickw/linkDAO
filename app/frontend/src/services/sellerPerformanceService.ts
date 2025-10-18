@@ -435,7 +435,7 @@ class SellerPerformanceService {
   }
 
   formatScore(score: number): string {
-    return Math.round(score * 10) / 10;
+    return (Math.round(score * 10) / 10).toString();
   }
 
   formatPercentage(value: number): string {
