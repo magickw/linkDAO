@@ -1,5 +1,5 @@
-import { LinkSafetyService } from '../services/linkSafetyService.js';
-import { db } from '../db/index.js';
+import { LinkSafetyService } from '../services/linkSafetyService';
+import { db } from '../db/index';
 
 // Mock the database
 jest.mock('../db/index.js', () => ({

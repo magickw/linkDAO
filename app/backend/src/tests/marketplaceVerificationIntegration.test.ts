@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import marketplaceVerificationRoutes from '../routes/marketplaceVerificationRoutes.js';
+import marketplaceVerificationRoutes from '../routes/marketplaceVerificationRoutes';
 import { ethers } from 'ethers';
 
 // Mock dependencies

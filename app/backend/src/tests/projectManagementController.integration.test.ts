@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import projectManagementRoutes from '../routes/projectManagementRoutes.js';
-import { projectManagementService } from '../services/projectManagementService.js';
+import projectManagementRoutes from '../routes/projectManagementRoutes';
+import { projectManagementService } from '../services/projectManagementService';
 
 // Mock the service
 vi.mock('../services/projectManagementService.js', () => ({

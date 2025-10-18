@@ -1,5 +1,5 @@
-import { ReportTemplate, ReportExecution, SchedulingConfig } from '../types/reporting.js';
-import { reportBuilderService } from './reportBuilderService.js';
+import { ReportTemplate, ReportExecution, SchedulingConfig } from '../types/reporting';
+import { reportBuilderService } from './reportBuilderService';
 
 interface ScheduledReport {
   id: string;

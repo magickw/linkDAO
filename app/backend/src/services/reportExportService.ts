@@ -1,4 +1,4 @@
-import { ReportTemplate, ReportData, ReportExecution } from '../types/reporting.js';
+import { ReportTemplate, ReportData, ReportExecution } from '../types/reporting';
 
 interface ExportOptions {
   format: 'pdf' | 'excel' | 'csv' | 'html' | 'json';

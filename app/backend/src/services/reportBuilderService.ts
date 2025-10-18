@@ -7,7 +7,7 @@ import {
   ValidationError,
   ComponentDefinition,
   ReportExecution
-} from '../types/reporting.js';
+} from '../types/reporting';
 
 export class ReportBuilderService {
   private templates: Map<string, ReportTemplate> = new Map();

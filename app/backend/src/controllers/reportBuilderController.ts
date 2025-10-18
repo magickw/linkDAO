@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { reportBuilderService } from '../services/reportBuilderService.js';
-import { ReportTemplate, ReportSection, DataSourceConnection } from '../types/reporting.js';
+import { reportBuilderService } from '../services/reportBuilderService';
+import { ReportTemplate, ReportSection, DataSourceConnection } from '../types/reporting';
 
 export class ReportBuilderController {
   // Template endpoints

@@ -1,4 +1,4 @@
-import { ReportTemplate } from '../types/reporting.js';
+import { ReportTemplate } from '../types/reporting';
 
 interface TemplateCategory {
   id: string;

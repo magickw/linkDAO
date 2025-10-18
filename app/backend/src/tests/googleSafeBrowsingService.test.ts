@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GoogleSafeBrowsingService } from '../services/vendors/googleSafeBrowsingService.js';
+import { GoogleSafeBrowsingService } from '../services/vendors/googleSafeBrowsingService';
 
 // Mock axios
 jest.mock('axios');

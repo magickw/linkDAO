@@ -358,19 +358,19 @@ app.use('/api/order-management', orderManagementRoutes);
 app.use('/api/seller-performance', sellerPerformanceRoutes);
 
 // Report builder routes
-import reportBuilderRoutes from './routes/reportBuilderRoutes.js';
+import reportBuilderRoutes from './routes/reportBuilderRoutes';
 app.use('/api/admin/report-builder', reportBuilderRoutes);
 
 // Report scheduler routes
-import reportSchedulerRoutes from './routes/reportSchedulerRoutes.js';
+import reportSchedulerRoutes from './routes/reportSchedulerRoutes';
 app.use('/api/admin/report-scheduler', reportSchedulerRoutes);
 
 // Report export routes
-import reportExportRoutes from './routes/reportExportRoutes.js';
+import reportExportRoutes from './routes/reportExportRoutes';
 app.use('/api/admin/report-export', reportExportRoutes);
 
 // Report template library routes
-import reportTemplateLibraryRoutes from './routes/reportTemplateLibraryRoutes.js';
+import reportTemplateLibraryRoutes from './routes/reportTemplateLibraryRoutes';
 app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes

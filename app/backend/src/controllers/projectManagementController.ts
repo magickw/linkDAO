@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { projectManagementService } from '../services/projectManagementService.js';
+import { projectManagementService } from '../services/projectManagementService';
 import { 
   StartTimeTrackingRequest,
   StopTimeTrackingRequest,
@@ -11,7 +11,7 @@ import {
   CreateApprovalRequest,
   ProcessApprovalRequest,
   UploadProjectFileRequest
-} from '../types/service.js';
+} from '../types/service';
 
 export class ProjectManagementController {
   // Time Tracking Endpoints

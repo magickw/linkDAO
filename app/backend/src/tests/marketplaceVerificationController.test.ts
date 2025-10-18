@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { Request, Response } from 'express';
-import { MarketplaceVerificationController } from '../controllers/marketplaceVerificationController.js';
+import { MarketplaceVerificationController } from '../controllers/marketplaceVerificationController';
 
 // Mock the service
 vi.mock('../services/marketplaceVerificationService.js', () => ({

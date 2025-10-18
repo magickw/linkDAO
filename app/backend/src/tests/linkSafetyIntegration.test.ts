@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express';
-import linkSafetyRoutes from '../routes/linkSafetyRoutes.js';
-import { db } from '../db/index.js';
+import linkSafetyRoutes from '../routes/linkSafetyRoutes';
+import { db } from '../db/index';
 
 // Mock the database
 jest.mock('../db/index.js', () => ({

@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { reportBuilderController } from '../controllers/reportBuilderController.js';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware.js';
+import { reportBuilderController } from '../controllers/reportBuilderController';
+import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 

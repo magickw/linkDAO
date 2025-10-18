@@ -716,10 +716,10 @@ class SellerGrowthProjectionService {
         .select({
           totalRevenue: sql<number>`coalesce(sum(total_amount::numeric), 0)`
         })
-        .from(orders)
+        .from(ordersTable)
         .where(and(
-          eq(orders.status, 'completed'),
-          gte(orders.createdAt, thirtyDaysAgo)
+          eq(ordersTable.status, 'completed'),
+          gte(ordersTable.createdAt, thirtyDaysAgo)
         ));
 
       return Number(result[0]?.totalRevenue || 0);

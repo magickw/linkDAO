@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { MarketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService.js';
+import { MarketplaceVerificationService, ProofOfOwnership } from '../services/marketplaceVerificationService';
 import { ethers } from 'ethers';
 
 // Mock the database

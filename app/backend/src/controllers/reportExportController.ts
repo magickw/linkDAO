@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { reportExportService } from '../services/reportExportService.js';
-import { reportBuilderService } from '../services/reportBuilderService.js';
+import { reportExportService } from '../services/reportExportService';
+import { reportBuilderService } from '../services/reportBuilderService';
 
 export class ReportExportController {
   // Single Export

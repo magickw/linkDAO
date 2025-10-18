@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { reportTemplateLibraryService } from '../services/reportTemplateLibraryService.js';
+import { reportTemplateLibraryService } from '../services/reportTemplateLibraryService';
 
 export class ReportTemplateLibraryController {
   // Category Management

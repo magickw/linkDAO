@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { reportSchedulerService } from '../services/reportSchedulerService.js';
-import { SchedulingConfig } from '../types/reporting.js';
+import { reportSchedulerService } from '../services/reportSchedulerService';
+import { SchedulingConfig } from '../types/reporting';
 
 export class ReportSchedulerController {
   // Scheduled Reports

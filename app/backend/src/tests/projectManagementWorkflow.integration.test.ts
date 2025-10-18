@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { projectManagementService } from '../services/projectManagementService.js';
-import { db } from '../db/index.js';
+import { projectManagementService } from '../services/projectManagementService';
+import { db } from '../db/index';
 
 // This test simulates a complete project management workflow
 describe('Project Management Workflow Integration', () => {
