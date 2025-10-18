@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { aiInsightsController } from '../controllers/aiInsightsController';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+import { validateAdminRole } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
 // Apply admin authentication to all routes
-router.use(adminAuthMiddleware);
+router.use(validateAdminRole);
 
 // Main AI Insights Engine routes
 router.get('/report', aiInsightsController.getInsightsReport);
