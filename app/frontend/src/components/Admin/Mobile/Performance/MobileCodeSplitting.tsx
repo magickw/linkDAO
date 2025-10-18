@@ -77,31 +77,31 @@ export const LazyNotificationHistory = lazy(() =>
 
 // Lazy-loaded visualization components
 export const LazyLineChart = lazy(() => 
-  import('../../Visualizations/LineChart').then(module => ({ default: module.LineChart }))
+  import('../../Visualizations/LineChart')
 );
 
 export const LazyBarChart = lazy(() => 
-  import('../../Visualizations/BarChart').then(module => ({ default: module.BarChart }))
+  import('../../Visualizations/BarChart')
 );
 
 export const LazyPieChart = lazy(() => 
-  import('../../Visualizations/PieChart').then(module => ({ default: module.PieChart }))
+  import('../../Visualizations/PieChart')
 );
 
 export const LazyHeatmapChart = lazy(() => 
-  import('../../Visualizations/HeatmapChart').then(module => ({ default: module.HeatmapChart }))
+  import('../../Visualizations/HeatmapChart')
 );
 
 // Higher-order component for wrapping lazy components
-export function withLazyLoading<P extends object>(
-  LazyComponent: React.LazyExoticComponent<React.ComponentType<P>>,
+export function withLazyLoading(
+  LazyComponent: React.LazyExoticComponent<React.ComponentType<any>>,
   options?: {
     fallback?: React.ReactNode;
     errorFallback?: React.ReactNode;
     loadingMessage?: string;
   }
 ) {
-  return function WrappedLazyComponent(props: P) {
+  return function WrappedLazyComponent(props: any) {
     const fallback = options?.fallback || <LoadingFallback message={options?.loadingMessage} />;
     
     return (
@@ -135,11 +135,11 @@ export const preloadCriticalComponents = () => {
 };
 
 // Dynamic import helper with retry logic
-export const dynamicImport = async <T>(
-  importFn: () => Promise<T>,
+export const dynamicImport = async (
+  importFn: () => Promise<any>,
   retries = 3,
   delay = 1000
-): Promise<T> => {
+): Promise<any> => {
   for (let i = 0; i < retries; i++) {
     try {
       return await importFn();
@@ -156,17 +156,17 @@ export const dynamicImport = async <T>(
 
 // Component registry for dynamic loading
 interface ComponentRegistry {
-  [key: string]: () => Promise<{ default: React.ComponentType<any> }>;
+  [key: string]: () => Promise<any>;
 }
 
 const componentRegistry: ComponentRegistry = {
-  'moderation-queue': () => import('../MobileModerationQueue'),
-  'user-management': () => import('../MobileUserManagement'),
-  'analytics': () => import('../MobileAnalytics'),
-  'seller-applications': () => import('../MobileSellerApplications'),
-  'dispute-resolution': () => import('../MobileDisputeResolution'),
-  'moderation-history': () => import('../MobileModerationHistory'),
-  'notification-history': () => import('../Notifications/NotificationHistory'),
+  'moderation-queue': () => import('../MobileModerationQueue').then(module => ({ default: module.MobileModerationQueue })),
+  'user-management': () => import('../MobileUserManagement').then(module => ({ default: module.MobileUserManagement })),
+  'analytics': () => import('../MobileAnalytics').then(module => ({ default: module.MobileAnalytics })),
+  'seller-applications': () => import('../MobileSellerApplications').then(module => ({ default: module.MobileSellerApplications })),
+  'dispute-resolution': () => import('../MobileDisputeResolution').then(module => ({ default: module.MobileDisputeResolution })),
+  'moderation-history': () => import('../MobileModerationHistory').then(module => ({ default: module.MobileModerationHistory })),
+  'notification-history': () => import('../Notifications/NotificationHistory').then(module => ({ default: module.NotificationHistory })),
   'line-chart': () => import('../../Visualizations/LineChart'),
   'bar-chart': () => import('../../Visualizations/BarChart'),
   'pie-chart': () => import('../../Visualizations/PieChart'),

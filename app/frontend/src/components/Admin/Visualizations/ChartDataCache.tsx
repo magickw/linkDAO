@@ -274,16 +274,17 @@ export const useChartDataTransformer = () => {
 
     return Object.entries(groups).map(([key, items]) => {
       let value: number;
+      const typedItems = items as any[];
       
       switch (aggregateFunction) {
         case 'sum':
-          value = items.reduce((sum, item) => sum + (item[aggregateField] || 0), 0);
+          value = typedItems.reduce((sum, item) => sum + (item[aggregateField] || 0), 0);
           break;
         case 'avg':
-          value = items.reduce((sum, item) => sum + (item[aggregateField] || 0), 0) / items.length;
+          value = typedItems.reduce((sum, item) => sum + (item[aggregateField] || 0), 0) / typedItems.length;
           break;
         case 'count':
-          value = items.length;
+          value = typedItems.length;
           break;
         default:
           value = 0;

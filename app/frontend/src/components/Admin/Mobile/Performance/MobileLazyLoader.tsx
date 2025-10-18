@@ -111,19 +111,19 @@ export const LazyChartLoader: React.FC<{
         let component;
         switch (chartType) {
           case 'line':
-            const { LineChart } = await import('../../Visualizations/LineChart');
+            const LineChart = (await import('../../Visualizations/LineChart')).default;
             component = LineChart;
             break;
           case 'bar':
-            const { BarChart } = await import('../../Visualizations/BarChart');
+            const BarChart = (await import('../../Visualizations/BarChart')).default;
             component = BarChart;
             break;
           case 'pie':
-            const { PieChart } = await import('../../Visualizations/PieChart');
+            const PieChart = (await import('../../Visualizations/PieChart')).default;
             component = PieChart;
             break;
           case 'heatmap':
-            const { HeatmapChart } = await import('../../Visualizations/HeatmapChart');
+            const HeatmapChart = (await import('../../Visualizations/HeatmapChart')).default;
             component = HeatmapChart;
             break;
           default:

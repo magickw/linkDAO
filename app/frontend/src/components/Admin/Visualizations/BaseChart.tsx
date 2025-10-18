@@ -65,7 +65,7 @@ const BaseChart: React.FC<BaseChartComponentProps> = ({
         intersect: false,
         mode: 'index',
       },
-      onClick: (event, elements) => {
+      onClick: (event: any, elements: any) => {
         if (onDataPointClick && elements.length > 0) {
           const element = elements[0];
           const datasetIndex = element.datasetIndex;
@@ -74,7 +74,7 @@ const BaseChart: React.FC<BaseChartComponentProps> = ({
           onDataPointClick(dataPoint, index);
         }
       },
-      onHover: (event, elements) => {
+      onHover: (event: any, elements: any) => {
         if (onHover && elements.length > 0) {
           const element = elements[0];
           const datasetIndex = element.datasetIndex;

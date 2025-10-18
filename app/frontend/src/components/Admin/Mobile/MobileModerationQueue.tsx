@@ -43,7 +43,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
     { id: 'low', label: 'Low', count: 0 }
   ];
 
-  const handleAction = (itemId: string, action: 'approve' | 'reject' | 'escalate') => {
+  const handleAction = (itemId: string, action: 'approve' | 'reject' | 'escalate' | 'view') => {
     console.log(`Action ${action} on item ${itemId}`);
     // TODO: Implement actual moderation actions
   };

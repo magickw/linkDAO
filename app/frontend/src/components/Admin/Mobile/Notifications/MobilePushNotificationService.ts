@@ -162,13 +162,7 @@ class MobilePushNotificationService {
         timestamp: notification.timestamp.toISOString()
       },
       requireInteraction: notification.priority === 'critical' || notification.requiresAction,
-      silent: !category.sound,
-      vibrate: category.vibration ? this.getVibrationPattern(notification.priority) : undefined,
-      actions: notification.actions?.map(action => ({
-        action: action.id,
-        title: action.title,
-        icon: action.icon
-      }))
+      silent: !category.sound
     };
 
     if (this.registration) {
@@ -347,36 +341,27 @@ class MobilePushNotificationService {
   }
 
   // Handle notification clicks and actions
-  handleNotificationClick(event: NotificationEvent): void {
-    event.notification.close();
+  handleNotificationClick(event: any): void {
+    // This method is called from service worker context, but we're typing it as 'any' 
+    // since the NotificationEvent type is only available in web workers
+    const notificationEvent = event as any;
+    notificationEvent.notification.close();
     
-    const data = event.notification.data;
+    const data = notificationEvent.notification.data;
     if (data?.type) {
       this.navigateToRelevantSection(data.type, data);
     }
   }
 
-  handleNotificationAction(event: NotificationEvent, action: string): void {
-    event.notification.close();
+  handleNotificationAction(event: any, action: string): void {
+    // This method is called from service worker context, but we're typing it as 'any'
+    // since the NotificationEvent type is only available in web workers
+    const notificationEvent = event as any;
+    notificationEvent.notification.close();
     
-    const data = event.notification.data;
-    
-    switch (action) {
-      case 'review':
-        this.navigateToRelevantSection(data.type, data);
-        break;
-      case 'dismiss':
-        // Just close the notification
-        break;
-      case 'investigate':
-        this.navigateToRelevantSection('system_monitoring', data);
-        break;
-      case 'block':
-        this.handleSecurityAction('block', data);
-        break;
-      case 'assign':
-        this.navigateToRelevantSection('dispute_assignment', data);
-        break;
+    const data = notificationEvent.notification.data;
+    if (data?.type) {
+      this.handleAction(data.type, action, data);
     }
   }
 
@@ -395,6 +380,28 @@ class MobilePushNotificationService {
       if (typeof window !== 'undefined') {
         window.location.href = route;
       }
+    }
+  }
+
+  private handleAction(type: string, action: string, data: any): void {
+    switch (type) {
+      case 'moderation_queue':
+      case 'system_alert':
+      case 'security_alert':
+      case 'dispute_alert':
+        this.navigateToRelevantSection(type, data);
+        break;
+      case 'system_monitoring':
+        this.navigateToRelevantSection('system_monitoring', data);
+        break;
+      case 'dispute_assignment':
+        this.navigateToRelevantSection('dispute_assignment', data);
+        break;
+      case 'security_action':
+        this.handleSecurityAction(action, data);
+        break;
+      default:
+        console.warn(`Unknown notification type: ${type}`);
     }
   }
 

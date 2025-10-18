@@ -142,7 +142,7 @@ const DynamicTooltip: React.FC<DynamicTooltipProps> = ({
               <div key={key} className="flex justify-between">
                 <span className="text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
                 <span className="font-medium">
-                  {typeof value === 'number' ? value.toLocaleString() : value}
+                  {typeof value === 'number' ? value.toLocaleString() : String(value)}
                 </span>
               </div>
             ))}

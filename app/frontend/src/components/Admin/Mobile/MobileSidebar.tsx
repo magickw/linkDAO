@@ -49,7 +49,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             </div>
             <div>
               <p className="text-white font-medium text-sm">
-                {user?.name || 'Admin User'}
+                {user?.handle || 'Admin User'}
               </p>
               <p className="text-white/70 text-xs">Administrator</p>
             </div>

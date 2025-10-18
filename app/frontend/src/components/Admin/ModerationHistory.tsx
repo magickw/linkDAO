@@ -268,7 +268,7 @@ export function ModerationHistory() {
                         {action.action !== 'undo' && (
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleUndo(action.id);
@@ -291,7 +291,7 @@ export function ModerationHistory() {
               <div className="flex justify-center gap-2 mt-6">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="small"
                   disabled={pagination.page === 1}
                   onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
                 >
@@ -302,7 +302,7 @@ export function ModerationHistory() {
                 </span>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="small"
                   disabled={pagination.page === pagination.totalPages}
                   onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
                 >

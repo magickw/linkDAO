@@ -258,7 +258,7 @@ export function SellerApplications() {
                 onClick={() => handleBulkAction('approve')}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -268,7 +268,7 @@ export function SellerApplications() {
                 onClick={() => handleBulkAction('reject')}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <XCircle className="w-4 h-4" />
@@ -627,7 +627,7 @@ export function SellerApplications() {
                                 <div className="flex items-center gap-2">
                                   <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="small"
                                     className="flex items-center gap-1 text-xs"
                                   >
                                     <Eye className="w-3 h-3" />
@@ -635,7 +635,7 @@ export function SellerApplications() {
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    size="sm"
+                                    size="small"
                                     className="flex items-center gap-1 text-xs"
                                   >
                                     <Download className="w-3 h-3" />
@@ -644,7 +644,7 @@ export function SellerApplications() {
                                   {!isVerified && (
                                     <Button
                                       variant="primary"
-                                      size="sm"
+                                      size="small"
                                       className="flex items-center gap-1 text-xs ml-auto"
                                     >
                                       <CheckCircle className="w-3 h-3" />

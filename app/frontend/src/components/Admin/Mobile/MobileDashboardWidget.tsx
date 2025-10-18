@@ -1,16 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { MoreVertical, Maximize2, Minimize2, RefreshCw, Settings, Trash2, GripVertical } from 'lucide-react';
 import { DashboardWidget as BaseDashboardWidget } from '../Dashboard/DashboardWidget';
+import { LayoutConfig } from '../../../stores/adminDashboardStore';
 
-interface Widget {
-  id: string;
-  type: string;
+interface Widget extends Omit<LayoutConfig, 'minimized'> {
   title: string;
-  position: { x: number; y: number; w: number; h: number };
-  config: any;
-  visible: boolean;
-  minimized: boolean;
   category: string;
+  minimized: boolean;
 }
 
 interface MobileDashboardWidgetProps {
@@ -160,7 +156,10 @@ export const MobileDashboardWidget: React.FC<MobileDashboardWidgetProps> = ({
       {!widget.minimized && (
         <div className="widget-content">
           <BaseDashboardWidget
-            widget={widget}
+            widget={{
+              ...widget,
+              minimized: widget.minimized
+            }}
             isEditMode={false}
             onAction={onAction}
           />

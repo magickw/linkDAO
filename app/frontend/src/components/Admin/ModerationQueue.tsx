@@ -341,7 +341,7 @@ export function ModerationQueue() {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="small"
                     onClick={clearFilters}
                     className="flex items-center gap-2"
                   >
@@ -351,7 +351,7 @@ export function ModerationQueue() {
 
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="small"
                     onClick={() => setShowSaveFilterDialog(true)}
                     className="flex items-center gap-2"
                   >
@@ -429,7 +429,7 @@ export function ModerationQueue() {
                 />
                 <Button
                   variant="primary"
-                  size="sm"
+                  size="small"
                   onClick={saveCurrentFilter}
                   disabled={!filterName.trim()}
                 >
@@ -437,7 +437,7 @@ export function ModerationQueue() {
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="small"
                   onClick={() => {
                     setShowSaveFilterDialog(false);
                     setFilterName('');
@@ -466,7 +466,7 @@ export function ModerationQueue() {
                 onClick={() => handleBulkAction('approve')}
                 disabled={bulkActionLoading}
                 variant="primary"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -476,7 +476,7 @@ export function ModerationQueue() {
                 onClick={() => handleBulkAction('reject')}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <XCircle className="w-4 h-4" />
@@ -486,7 +486,7 @@ export function ModerationQueue() {
                 onClick={() => handleBulkAction('escalate')}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -496,7 +496,7 @@ export function ModerationQueue() {
                 onClick={() => handleBulkAction('delete')}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2 text-red-400 hover:text-red-300"
               >
                 <Trash2 className="w-4 h-4" />

@@ -189,6 +189,7 @@ import linkSafetyRoutes from './routes/linkSafetyRoutes';
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
+import { systemHealthMonitoringRoutes } from './routes/systemHealthMonitoringRoutes';
 // Import analytics routes
 import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
@@ -268,6 +269,9 @@ app.use('/api/admin', adminRoutes);
 
 // Admin dashboard routes
 app.use('/api/admin/dashboard', adminDashboardRoutes);
+
+// System health monitoring routes
+app.use('/api/admin/system-health', systemHealthMonitoringRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);
@@ -352,6 +356,22 @@ app.use('/api/order-management', orderManagementRoutes);
 
 // Seller performance routes
 app.use('/api/seller-performance', sellerPerformanceRoutes);
+
+// Report builder routes
+import reportBuilderRoutes from './routes/reportBuilderRoutes.js';
+app.use('/api/admin/report-builder', reportBuilderRoutes);
+
+// Report scheduler routes
+import reportSchedulerRoutes from './routes/reportSchedulerRoutes.js';
+app.use('/api/admin/report-scheduler', reportSchedulerRoutes);
+
+// Report export routes
+import reportExportRoutes from './routes/reportExportRoutes.js';
+app.use('/api/admin/report-export', reportExportRoutes);
+
+// Report template library routes
+import reportTemplateLibraryRoutes from './routes/reportTemplateLibraryRoutes.js';
+app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 

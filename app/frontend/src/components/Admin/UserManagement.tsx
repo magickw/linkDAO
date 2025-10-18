@@ -454,7 +454,7 @@ export function UserManagement() {
               <div className="flex gap-2 mt-4">
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="small"
                   onClick={() => setFilters({
                     role: '',
                     status: '',
@@ -492,7 +492,7 @@ export function UserManagement() {
                 onClick={() => setActionModal({ type: 'bulk-suspend', user: null })}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <Ban className="w-4 h-4" />
@@ -502,7 +502,7 @@ export function UserManagement() {
                 onClick={handleBulkUnsuspend}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <UserCheck className="w-4 h-4" />
@@ -512,7 +512,7 @@ export function UserManagement() {
                 onClick={() => setActionModal({ type: 'bulk-role', user: null })}
                 disabled={bulkActionLoading}
                 variant="outline"
-                size="sm"
+                size="small"
                 className="flex items-center gap-2"
               >
                 <Shield className="w-4 h-4" />

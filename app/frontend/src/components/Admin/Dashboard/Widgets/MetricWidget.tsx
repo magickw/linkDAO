@@ -1,6 +1,28 @@
 import React from 'react';
 import { LayoutConfig } from '../../../../stores/adminDashboardStore';
 
+// Define the types for our metric data
+interface SystemMetrics {
+  cpu: number;
+  memory: number;
+  disk: number;
+  network: number;
+}
+
+interface UserMetrics {
+  total: number;
+  active: number;
+  growth: number;
+}
+
+interface BusinessMetrics {
+  revenue: number;
+  transactions: number;
+  conversion: number;
+}
+
+type MetricData = SystemMetrics | UserMetrics | BusinessMetrics;
+
 interface MetricWidgetProps {
   widget: LayoutConfig;
   isEditMode: boolean;
@@ -35,74 +57,89 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
   const metricType = widget.config.metric || 'system';
   const data = mockData[metricType as keyof typeof mockData] || mockData.system;
 
-  const renderSystemMetrics = () => (
-    <div className="metric-grid">
-      <div className="metric-item">
-        <div className="metric-label">CPU Usage</div>
-        <div className="metric-value">{data.cpu}%</div>
-        <div className={`metric-trend ${data.cpu > 80 ? 'trend-danger' : data.cpu > 60 ? 'trend-warning' : 'trend-success'}`}>
-          {data.cpu > 80 ? '↑' : data.cpu > 60 ? '→' : '↓'}
+  const renderSystemMetrics = () => {
+    // Type guard to ensure we're working with system metrics
+    const systemData = data as SystemMetrics;
+    
+    return (
+      <div className="metric-grid">
+        <div className="metric-item">
+          <div className="metric-label">CPU Usage</div>
+          <div className="metric-value">{systemData.cpu}%</div>
+          <div className={`metric-trend ${systemData.cpu > 80 ? 'trend-danger' : systemData.cpu > 60 ? 'trend-warning' : 'trend-success'}`}>
+            {systemData.cpu > 80 ? '↑' : systemData.cpu > 60 ? '→' : '↓'}
+          </div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Memory</div>
+          <div className="metric-value">{systemData.memory}%</div>
+          <div className={`metric-trend ${systemData.memory > 80 ? 'trend-danger' : systemData.memory > 60 ? 'trend-warning' : 'trend-success'}`}>
+            {systemData.memory > 80 ? '↑' : systemData.memory > 60 ? '→' : '↓'}
+          </div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Disk Usage</div>
+          <div className="metric-value">{systemData.disk}%</div>
+          <div className={`metric-trend ${systemData.disk > 80 ? 'trend-danger' : systemData.disk > 60 ? 'trend-warning' : 'trend-success'}`}>
+            {systemData.disk > 80 ? '↑' : systemData.disk > 60 ? '→' : '↓'}
+          </div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Network I/O</div>
+          <div className="metric-value">{systemData.network} MB/s</div>
+          <div className="metric-trend trend-info">→</div>
         </div>
       </div>
-      <div className="metric-item">
-        <div className="metric-label">Memory</div>
-        <div className="metric-value">{data.memory}%</div>
-        <div className={`metric-trend ${data.memory > 80 ? 'trend-danger' : data.memory > 60 ? 'trend-warning' : 'trend-success'}`}>
-          {data.memory > 80 ? '↑' : data.memory > 60 ? '→' : '↓'}
-        </div>
-      </div>
-      <div className="metric-item">
-        <div className="metric-label">Disk Usage</div>
-        <div className="metric-value">{data.disk}%</div>
-        <div className={`metric-trend ${data.disk > 80 ? 'trend-danger' : data.disk > 60 ? 'trend-warning' : 'trend-success'}`}>
-          {data.disk > 80 ? '↑' : data.disk > 60 ? '→' : '↓'}
-        </div>
-      </div>
-      <div className="metric-item">
-        <div className="metric-label">Network I/O</div>
-        <div className="metric-value">{data.network} MB/s</div>
-        <div className="metric-trend trend-info">→</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
-  const renderUserMetrics = () => (
-    <div className="metric-grid">
-      <div className="metric-item large">
-        <div className="metric-label">Total Users</div>
-        <div className="metric-value large">{data.total?.toLocaleString()}</div>
+  const renderUserMetrics = () => {
+    // Type guard to ensure we're working with user metrics
+    const userData = data as UserMetrics;
+    
+    return (
+      <div className="metric-grid">
+        <div className="metric-item large">
+          <div className="metric-label">Total Users</div>
+          <div className="metric-value large">{userData.total?.toLocaleString()}</div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Active Now</div>
+          <div className="metric-value">{userData.active}</div>
+          <div className="metric-trend trend-success">↑</div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Growth Rate</div>
+          <div className="metric-value">+{userData.growth}%</div>
+          <div className="metric-trend trend-success">↑</div>
+        </div>
       </div>
-      <div className="metric-item">
-        <div className="metric-label">Active Now</div>
-        <div className="metric-value">{data.active}</div>
-        <div className="metric-trend trend-success">↑</div>
-      </div>
-      <div className="metric-item">
-        <div className="metric-label">Growth Rate</div>
-        <div className="metric-value">+{data.growth}%</div>
-        <div className="metric-trend trend-success">↑</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
-  const renderBusinessMetrics = () => (
-    <div className="metric-grid">
-      <div className="metric-item large">
-        <div className="metric-label">Revenue</div>
-        <div className="metric-value large">${data.revenue?.toLocaleString()}</div>
+  const renderBusinessMetrics = () => {
+    // Type guard to ensure we're working with business metrics
+    const businessData = data as BusinessMetrics;
+    
+    return (
+      <div className="metric-grid">
+        <div className="metric-item large">
+          <div className="metric-label">Revenue</div>
+          <div className="metric-value large">${businessData.revenue?.toLocaleString()}</div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Transactions</div>
+          <div className="metric-value">{businessData.transactions}</div>
+          <div className="metric-trend trend-success">↑</div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Conversion</div>
+          <div className="metric-value">{businessData.conversion}%</div>
+          <div className="metric-trend trend-warning">→</div>
+        </div>
       </div>
-      <div className="metric-item">
-        <div className="metric-label">Transactions</div>
-        <div className="metric-value">{data.transactions}</div>
-        <div className="metric-trend trend-success">↑</div>
-      </div>
-      <div className="metric-item">
-        <div className="metric-label">Conversion</div>
-        <div className="metric-value">{data.conversion}%</div>
-        <div className="metric-trend trend-warning">→</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderMetrics = () => {
     switch (metricType) {
@@ -121,9 +158,9 @@ export const MetricWidget: React.FC<MetricWidgetProps> = ({
         <div className="minimized-content">
           <span className="widget-title">{widget.config.title || 'Metrics'}</span>
           <span className="minimized-summary">
-            {metricType === 'system' && `CPU: ${data.cpu}%`}
-            {metricType === 'users' && `${data.total?.toLocaleString()} users`}
-            {metricType === 'business' && `$${data.revenue?.toLocaleString()}`}
+            {metricType === 'system' && `CPU: ${(data as SystemMetrics).cpu}%`}
+            {metricType === 'users' && `${(data as UserMetrics).total?.toLocaleString()} users`}
+            {metricType === 'business' && `$${(data as BusinessMetrics).revenue?.toLocaleString()}`}
           </span>
         </div>
       </div>
