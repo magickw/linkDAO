@@ -189,7 +189,7 @@ contract Governance is Ownable, ReentrancyGuard {
     /**
      * @dev Create a simple proposal (backward compatibility)
      */
-    function propose(
+    function proposeSimple(
         string memory title,
         string memory description,
         address[] memory targets,
@@ -259,7 +259,7 @@ contract Governance is Ownable, ReentrancyGuard {
     /**
      * @dev Cast a vote (backward compatibility)
      */
-    function castVote(uint256 proposalId, bool support, string memory reason) external {
+    function castVoteSimple(uint256 proposalId, bool support, string memory reason) external {
         castVote(proposalId, support ? 1 : 0, reason);
     }
     

@@ -1,0 +1,40 @@
+{
+  "enabled": true,
+  "network": "mainnet",
+  "checkInterval": 300,
+  "metrics": {
+    "contractHealth": {
+      "balanceChecks": true,
+      "transactionCounting": true,
+      "gasUsageTracking": true,
+      "errorRateMonitoring": true
+    },
+    "networkHealth": {
+      "gasPriceMonitoring": true,
+      "blockTimeTracking": true,
+      "networkCongestionAlerts": true
+    },
+    "businessMetrics": {
+      "transactionVolume": true,
+      "userActivity": true,
+      "governanceParticipation": true,
+      "treasuryBalance": true
+    }
+  },
+  "alertThresholds": {
+    "gasPrice": 100,
+    "balanceThreshold": "0.1",
+    "transactionFailures": 3
+  },
+  "dashboards": {
+    "grafana": {
+      "enabled": true,
+      "url": "",
+      "apiKey": ""
+    },
+    "custom": {
+      "enabled": true,
+      "endpoint": "/monitoring/dashboard"
+    }
+  }
+}

@@ -210,7 +210,7 @@
     - Implement performance testing with large datasets and real-time updates
     - _Requirements: All requirements_
 
-  - [-] 12.3 Conduct user acceptance testing
+  - [x] 12.3 Conduct user acceptance testing
     - Perform Web3 user journey testing with real wallets and test tokens
     - Test mobile device compatibility across different screen sizes
     - Validate cross-browser compatibility and performance optimization

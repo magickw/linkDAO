@@ -1,0 +1,228 @@
+{
+  "timestamp": "2025-10-18T05:51:15.619Z",
+  "network": "mainnet",
+  "totalContracts": 12,
+  "totalDeploymentGas": 36800000,
+  "estimatedCosts": {
+    "lowGas": "0.736000",
+    "mediumGas": "1.840000",
+    "highGas": "3.680000"
+  },
+  "contracts": [
+    {
+      "contractName": "LDAOToken",
+      "deploymentGas": 2500000,
+      "estimatedCost": {
+        "lowGas": "0.050000",
+        "mediumGas": "0.125000",
+        "highGas": "0.250000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns",
+        "Optimize staking calculations",
+        "Use bitmap for permission tracking",
+        "Batch transfer operations"
+      ]
+    },
+    {
+      "contractName": "Governance",
+      "deploymentGas": 3200000,
+      "estimatedCost": {
+        "lowGas": "0.064000",
+        "mediumGas": "0.160000",
+        "highGas": "0.320000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns",
+        "Optimize proposal storage structure",
+        "Use merkle trees for large voter sets",
+        "Implement efficient vote counting"
+      ]
+    },
+    {
+      "contractName": "ReputationSystem",
+      "deploymentGas": 2800000,
+      "estimatedCost": {
+        "lowGas": "0.056000",
+        "mediumGas": "0.140000",
+        "highGas": "0.280000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "Marketplace",
+      "deploymentGas": 4500000,
+      "estimatedCost": {
+        "lowGas": "0.090000",
+        "mediumGas": "0.225000",
+        "highGas": "0.450000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns",
+        "Optimize listing storage layout",
+        "Use events for search indexing",
+        "Batch operations for multiple items"
+      ]
+    },
+    {
+      "contractName": "EnhancedEscrow",
+      "deploymentGas": 3500000,
+      "estimatedCost": {
+        "lowGas": "0.070000",
+        "mediumGas": "0.175000",
+        "highGas": "0.350000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns",
+        "Optimize escrow state transitions",
+        "Use time-based unlocking patterns",
+        "Minimize external calls"
+      ]
+    },
+    {
+      "contractName": "DisputeResolution",
+      "deploymentGas": 3000000,
+      "estimatedCost": {
+        "lowGas": "0.060000",
+        "mediumGas": "0.150000",
+        "highGas": "0.300000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "PaymentRouter",
+      "deploymentGas": 2200000,
+      "estimatedCost": {
+        "lowGas": "0.044000",
+        "mediumGas": "0.110000",
+        "highGas": "0.220000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "RewardPool",
+      "deploymentGas": 2600000,
+      "estimatedCost": {
+        "lowGas": "0.052000",
+        "mediumGas": "0.130000",
+        "highGas": "0.260000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "NFTMarketplace",
+      "deploymentGas": 4200000,
+      "estimatedCost": {
+        "lowGas": "0.084000",
+        "mediumGas": "0.210000",
+        "highGas": "0.420000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns",
+        "Optimize metadata storage",
+        "Use lazy minting patterns",
+        "Implement efficient royalty calculations"
+      ]
+    },
+    {
+      "contractName": "NFTCollectionFactory",
+      "deploymentGas": 3800000,
+      "estimatedCost": {
+        "lowGas": "0.076000",
+        "mediumGas": "0.190000",
+        "highGas": "0.380000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "TipRouter",
+      "deploymentGas": 2400000,
+      "estimatedCost": {
+        "lowGas": "0.048000",
+        "mediumGas": "0.120000",
+        "highGas": "0.240000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    },
+    {
+      "contractName": "FollowModule",
+      "deploymentGas": 2100000,
+      "estimatedCost": {
+        "lowGas": "0.042000",
+        "mediumGas": "0.105000",
+        "highGas": "0.210000"
+      },
+      "optimizations": [
+        "Use packed structs to reduce storage slots",
+        "Optimize loop operations and array access",
+        "Use custom errors instead of require strings",
+        "Implement efficient access control patterns"
+      ]
+    }
+  ],
+  "recommendations": [
+    "Deploy during low network congestion periods",
+    "Use CREATE2 for deterministic addresses",
+    "Consider proxy patterns for upgradeable contracts",
+    "Implement batch deployment scripts",
+    "Monitor gas prices and deploy strategically",
+    "Use optimized compiler settings",
+    "Consider layer 2 deployment for testing",
+    "Implement gas-efficient initialization patterns"
+  ],
+  "optimizationStrategies": [
+    "Storage Optimization: Pack structs and use appropriate data types",
+    "Function Optimization: Use view/pure functions where possible",
+    "Loop Optimization: Minimize iterations and use efficient algorithms",
+    "External Call Optimization: Batch calls and minimize cross-contract interactions",
+    "Event Optimization: Use indexed parameters efficiently",
+    "Modifier Optimization: Inline simple checks to save gas",
+    "Library Usage: Use libraries for common functionality",
+    "Compiler Optimization: Enable optimizer with appropriate runs setting"
+  ]
+}

@@ -297,9 +297,10 @@ contract ContractRegistry is Ownable, Pausable {
     function verifyContract(bytes32 name) external view returns (bool) {
         if (_contracts[name].contractAddress == address(0)) return false;
         
+        address contractAddr = _contracts[name].contractAddress;
         bytes32 currentCodeHash;
         assembly {
-            currentCodeHash := extcodehash(_contracts[name].contractAddress)
+            currentCodeHash := extcodehash(contractAddr)
         }
         
         return currentCodeHash == _contracts[name].codeHash;

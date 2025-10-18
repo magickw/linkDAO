@@ -1,0 +1,37 @@
+{
+  "treasury": {
+    "address": "0x1234567890123456789012345678901234567890",
+    "purpose": "Fee collection, token distribution, treasury management",
+    "requiredSignatures": 3,
+    "signers": [
+      "Treasury Manager 1",
+      "Treasury Manager 2",
+      "Treasury Manager 3",
+      "Emergency Backup 1",
+      "Emergency Backup 2"
+    ]
+  },
+  "emergency": {
+    "address": "0x2345678901234567890123456789012345678901",
+    "purpose": "Emergency pause, incident response, contract upgrades",
+    "requiredSignatures": 2,
+    "signers": [
+      "Security Lead",
+      "Technical Lead",
+      "Emergency Responder 1",
+      "Emergency Responder 2"
+    ]
+  },
+  "governance": {
+    "address": "0x3456789012345678901234567890123456789012",
+    "purpose": "Governance proposal execution, parameter updates",
+    "requiredSignatures": 3,
+    "signers": [
+      "Governance Lead",
+      "Community Representative 1",
+      "Community Representative 2",
+      "Technical Advisor",
+      "Legal Advisor"
+    ]
+  }
+}

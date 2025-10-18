@@ -1,0 +1,62 @@
+{
+  "timestamp": "2025-10-18T05:12:26.160Z",
+  "summary": {
+    "totalFiles": 4,
+    "validFiles": 2,
+    "totalTests": 71,
+    "totalCoverage": 37,
+    "totalRequired": 37,
+    "coveragePercentage": 100
+  },
+  "results": [
+    {
+      "file": "Web3UserJourneyTests.test.tsx",
+      "exists": true,
+      "hasValidStructure": true,
+      "testCount": 15,
+      "requiredTestsCovered": 8,
+      "missingTests": [],
+      "issues": [],
+      "recommendations": []
+    },
+    {
+      "file": "MobileCompatibilityTests.test.tsx",
+      "exists": true,
+      "hasValidStructure": true,
+      "testCount": 22,
+      "requiredTestsCovered": 10,
+      "missingTests": [],
+      "issues": [
+        "Insufficient performance test coverage"
+      ],
+      "recommendations": [
+        "Add comprehensive performance tests"
+      ]
+    },
+    {
+      "file": "CrossBrowserCompatibilityTests.test.tsx",
+      "exists": true,
+      "hasValidStructure": true,
+      "testCount": 16,
+      "requiredTestsCovered": 10,
+      "missingTests": [],
+      "issues": [],
+      "recommendations": []
+    },
+    {
+      "file": "PerformanceOptimizationTests.test.tsx",
+      "exists": true,
+      "hasValidStructure": true,
+      "testCount": 18,
+      "requiredTestsCovered": 9,
+      "missingTests": [],
+      "issues": [
+        "Insufficient accessibility test coverage"
+      ],
+      "recommendations": [
+        "Add comprehensive accessibility tests"
+      ]
+    }
+  ],
+  "overallValid": false
+}

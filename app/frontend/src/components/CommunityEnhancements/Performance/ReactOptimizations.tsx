@@ -156,7 +156,7 @@ export const OptimizedPostCard = memo<PostCardProps>(({
   // Memoize engagement calculations
   const engagementMetrics = useMemo(() => {
     const { upvotes, downvotes, comments, tips } = post.engagement;
-    const totalEngagement = upvotes + downvotes + comments.length + tips.length;
+    const totalEngagement = upvotes + downvotes + comments + tips.length;
     const engagementRatio = upvotes > 0 ? upvotes / (upvotes + downvotes) : 0;
     
     return {

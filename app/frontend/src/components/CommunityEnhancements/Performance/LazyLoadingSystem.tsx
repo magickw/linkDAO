@@ -48,6 +48,9 @@ const WidgetSkeleton: React.FC<{ className?: string }> = ({ className = '' }) =>
   </div>
 );
 
+// Export skeleton components
+export { LoadingSkeleton, CardSkeleton, WidgetSkeleton };
+
 // Lazy loaded components
 const LazyGovernanceWidget = lazy(() => 
   import('../EnhancedRightSidebar/ExpandedGovernanceWidget').then(module => ({
@@ -69,13 +72,13 @@ const LazySuggestedCommunitiesWidget = lazy(() =>
 
 const LazyInlinePreviewSystem = lazy(() => 
   import('../EnhancedCentralFeed/InlinePreviewSystem/NFTPreviewCard').then(module => ({
-    default: module.NFTPreviewCard
+    default: module.default
   }))
 );
 
 const LazyMiniProfileCard = lazy(() => 
   import('../SharedComponents/MiniProfileCard').then(module => ({
-    default: module.MiniProfileCard
+    default: module.default
   }))
 );
 
@@ -197,6 +200,7 @@ interface LazyGovernanceWidgetProps {
   onVoteClick: (proposalId: string) => void;
   showProgressBars?: boolean;
   className?: string;
+  communityId: string; // Add missing required prop
 }
 
 export const LazyGovernanceWidgetWrapper: React.FC<LazyGovernanceWidgetProps> = (props) => (
@@ -217,6 +221,7 @@ interface LazyWalletActivityFeedProps {
   showRealTimeUpdates?: boolean;
   onActivityClick?: (activity: any) => void;
   className?: string;
+  communityId: string; // Add missing required prop
 }
 
 export const LazyWalletActivityFeedWrapper: React.FC<LazyWalletActivityFeedProps> = (props) => (
@@ -232,10 +237,11 @@ export const LazyWalletActivityFeedWrapper: React.FC<LazyWalletActivityFeedProps
 
 // Lazy Suggested Communities Widget
 interface LazySuggestedCommunitiesWidgetProps {
-  suggestions: any[];
-  onJoinCommunity: (communityId: string) => void;
-  onPreviewCommunity: (communityId: string) => void;
+  suggestedCommunities: any[]; // Fix prop type to match component
+  onJoinCommunity: (communityId: string) => Promise<boolean>; // Fix return type
+  onCommunityClick: (communityId: string) => void; // Add missing required prop
   className?: string;
+  maxSuggestions?: number; // Add optional prop
 }
 
 export const LazySuggestedCommunitiesWidgetWrapper: React.FC<LazySuggestedCommunitiesWidgetProps> = (props) => (

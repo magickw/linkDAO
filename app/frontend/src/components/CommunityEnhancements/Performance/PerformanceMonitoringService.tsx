@@ -88,7 +88,7 @@ const defaultConfig: PerformanceConfig = {
 /**
  * Performance Monitoring Service
  */
-class PerformanceMonitoringService {
+export class PerformanceMonitoringService {
   private metrics: PerformanceMetrics;
   private alerts: PerformanceAlert[] = [];
   private config: PerformanceConfig;
@@ -293,7 +293,15 @@ class PerformanceMonitoringService {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const startTime = performance.now();
-      const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+      // Properly extract URL from fetch arguments
+      let url: string;
+      if (typeof args[0] === 'string') {
+        url = args[0];
+      } else if (args[0] instanceof Request) {
+        url = args[0].url;
+      } else {
+        url = String(args[0]);
+      }
       
       try {
         const response = await originalFetch(...args);
@@ -372,7 +380,8 @@ class PerformanceMonitoringService {
    * Handle navigation timing entry
    */
   private handleNavigationEntry(entry: PerformanceNavigationTiming): void {
-    this.metrics.loadTime = entry.loadEventEnd - entry.navigationStart;
+    // Use fetchStart as the starting point instead of navigationStart
+    this.metrics.loadTime = entry.loadEventEnd - entry.fetchStart;
     
     if (this.metrics.loadTime > 3000) {
       this.addAlert({

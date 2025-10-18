@@ -1,0 +1,46 @@
+{
+  "network": "mainnet",
+  "multisigWallets": {
+    "treasury": "0x1234567890123456789012345678901234567890",
+    "emergency": "0x2345678901234567890123456789012345678901",
+    "governance": "0x3456789012345678901234567890123456789012"
+  },
+  "rpcEndpoints": {
+    "primary": "https://mainnet.infura.io/v3/CONFIGURED_KEY",
+    "backup": "https://eth-mainnet.alchemyapi.io/v2/YOUR_KEY",
+    "websocket": "wss://mainnet.infura.io/ws/v3/YOUR_KEY"
+  },
+  "monitoring": {
+    "enabled": true,
+    "checkInterval": 300,
+    "alertThresholds": {
+      "gasPrice": 100,
+      "balanceThreshold": "0.1",
+      "transactionFailures": 3
+    },
+    "notifications": {
+      "email": [
+        "admin@linkdao.com"
+      ]
+    }
+  },
+  "security": {
+    "emergencyPause": true,
+    "timeDelays": {
+      "governance": 86400,
+      "treasury": 43200
+    },
+    "rateLimits": {
+      "proposalCreation": 5,
+      "largeTransactions": 10
+    }
+  },
+  "deployment": {
+    "gasSettings": {
+      "maxFeePerGas": "50",
+      "maxPriorityFeePerGas": "2"
+    },
+    "confirmations": 5,
+    "verifyContracts": true
+  }
+}

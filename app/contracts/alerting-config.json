@@ -1,0 +1,54 @@
+{
+  "channels": {
+    "slack": {
+      "enabled": false,
+      "channels": {
+        "critical": "#alerts-critical",
+        "warning": "#alerts-warning",
+        "info": "#alerts-info"
+      }
+    },
+    "discord": {
+      "enabled": false,
+      "channels": {
+        "critical": "alerts-critical",
+        "warning": "alerts-warning"
+      }
+    },
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "admin@linkdao.com"
+      ],
+      "smtp": {
+        "host": "",
+        "port": 587,
+        "secure": false,
+        "auth": {
+          "user": "",
+          "pass": ""
+        }
+      }
+    }
+  },
+  "rules": {
+    "critical": {
+      "contractPaused": true,
+      "emergencyWithdrawal": true,
+      "highGasPrice": true,
+      "contractExploit": true,
+      "treasuryDrained": true
+    },
+    "warning": {
+      "lowBalance": true,
+      "highTransactionFailures": true,
+      "governanceProposal": true,
+      "unusualActivity": true
+    },
+    "info": {
+      "deploymentComplete": true,
+      "configurationChange": true,
+      "regularHealthCheck": true
+    }
+  }
+}

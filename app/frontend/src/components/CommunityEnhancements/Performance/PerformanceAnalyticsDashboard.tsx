@@ -316,7 +316,7 @@ export const PerformanceAnalyticsDashboard: React.FC<{ className?: string }> = (
         {/* Performance Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {performanceTrends.map(trend => (
-            <TrendCard key={trend.metric} trend={trend} />
+            <TrendCard key={trend.metric} trend={trend} timeRange={selectedTimeRange} />
           ))}
         </div>
 
@@ -378,7 +378,7 @@ export const PerformanceAnalyticsDashboard: React.FC<{ className?: string }> = (
 };
 
 // Trend Card Component
-const TrendCard: React.FC<{ trend: PerformanceTrend }> = ({ trend }) => {
+const TrendCard: React.FC<{ trend: PerformanceTrend; timeRange: string }> = ({ trend, timeRange }) => {
   const trendColors = {
     improving: 'text-green-600 bg-green-50 border-green-200',
     degrading: 'text-red-600 bg-red-50 border-red-200',
@@ -409,7 +409,7 @@ const TrendCard: React.FC<{ trend: PerformanceTrend }> = ({ trend }) => {
       </div>
       
       <div className="mt-2 text-xs text-gray-600">
-        {trend.data.length} data points over {selectedTimeRange}
+        {trend.data.length} data points over {timeRange}
       </div>
     </motion.div>
   );
