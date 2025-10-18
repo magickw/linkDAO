@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Search, ShoppingCart, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
+import { CartBadge } from '../Cart/CartBadge';
 
 const Header = () => {
   const { isConnected, address } = useWeb3();
@@ -70,12 +71,7 @@ const Header = () => {
             </div>
 
             {/* Cart */}
-            <Link href="/marketplace/cart" className="relative p-2">
-              <ShoppingCart size={24} className="text-gray-700" />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
-              </span>
-            </Link>
+            <CartBadge size="medium" />
 
             {/* Profile Menu */}
             {isConnected && (

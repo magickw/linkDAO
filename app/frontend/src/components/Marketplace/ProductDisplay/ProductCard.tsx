@@ -18,6 +18,8 @@ import {
   AnimatedEngagementMetrics, 
   AnimatedTrustIndicator 
 } from '../../../components/VisualPolish/MarketplaceAnimations';
+import { useCart } from '../../../hooks/useCart';
+import { useToast } from '../../../context/ToastContext';
 
 interface Product {
   id: string;
@@ -113,6 +115,7 @@ interface ProductCardProps {
   onSellerClick?: (sellerId: string) => void;
   onAddToCart?: (productId: string) => void;
   onAddToWishlist?: (productId: string) => void;
+  onBidClick?: (productId: string) => void;
   className?: string;
 }
 
@@ -262,10 +265,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onSellerClick,
   onAddToCart,
   onAddToWishlist,
+  onBidClick,
   className = '',
 }) => {
   const router = useRouter();
+  const { actions: cartActions, state: cartState } = useCart();
+  const { addToast } = useToast();
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  
+  // Check if product is in cart
+  const isInCart = cartActions.isInCart(product.id);
+  const cartItem = cartActions.getItem(product.id);
 
   const handleProductClick = () => {
     // Use direct navigation with fallback to callback
@@ -286,9 +297,63 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart?.(product.id);
+    
+    if (isAddingToCart) return;
+    
+    setIsAddingToCart(true);
+    
+    try {
+      // Create cart item from product
+      const cartItem = {
+        id: product.id,
+        title: product.title,
+        description: product.description,
+        image: product.images[0] || '',
+        price: {
+          crypto: product.price.amount,
+          cryptoSymbol: product.price.currency,
+          fiat: product.price.usdEquivalent || '0',
+          fiatSymbol: 'USD'
+        },
+        seller: {
+          id: product.seller.id,
+          name: product.seller.name,
+          avatar: product.seller.avatar,
+          verified: product.seller.verified,
+          daoApproved: product.seller.daoApproved,
+          escrowSupported: product.trust.escrowProtected
+        },
+        category: product.category,
+        isDigital: product.category === 'digital' || product.isNFT || false,
+        isNFT: product.isNFT || false,
+        inventory: product.inventory || 1,
+        shipping: {
+          cost: product.shipping?.freeShipping ? '0' : '0.001',
+          freeShipping: product.shipping?.freeShipping || product.category === 'digital' || product.isNFT || false,
+          estimatedDays: product.shipping?.handlingTime || (product.category === 'digital' || product.isNFT ? 'instant' : '3-5'),
+          regions: ['US', 'CA', 'EU']
+        },
+        trust: {
+          escrowProtected: product.trust.escrowProtected,
+          onChainCertified: product.trust.onChainCertified,
+          safetyScore: 95
+        }
+      };
+
+      await cartActions.addItem(cartItem, 1);
+      
+      // Call optional callback
+      onAddToCart?.(product.id);
+      
+      addToast(`Added "${product.title}" to cart! 🛒`, 'success');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      addToast('Failed to add item to cart. Please try again.', 'error');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
@@ -464,8 +529,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     variant="primary"
                     size="small"
                     onClick={handleAddToCart}
+                    disabled={product.inventory === 0 || isAddingToCart}
                   >
-                    Add to Cart
+                    {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
                   </Button>
                   <Button
                     variant="ghost"
@@ -669,7 +735,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <Button
               variant="primary"
               size="small"
-              onClick={handleAddToCart}
+              onClick={handleProductClick}
               className="flex-1"
               disabled={product.inventory === 0}
             >
@@ -680,9 +746,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               size="small"
               onClick={handleAddToCart}
               className="flex-1"
-              disabled={product.inventory === 0}
+              disabled={product.inventory === 0 || isAddingToCart}
             >
-              Add to Cart
+              {isAddingToCart ? 'Adding...' : isInCart ? `In Cart (${cartItem?.quantity || 0})` : 'Add to Cart'}
             </Button>
           </div>
         </div>

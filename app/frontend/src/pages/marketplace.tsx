@@ -10,7 +10,7 @@ import BidModal from '@/components/Marketplace/BidModal';
 import PurchaseModal from '@/components/Marketplace/PurchaseModal';
 import MakeOfferModal from '@/components/Marketplace/MakeOfferModal';
 import ProductDetailModal from '@/components/Marketplace/ProductDetailModal';
-import { useEnhancedCart } from '@/hooks/useEnhancedCart';
+import { useCart } from '@/hooks/useCart';
 import { useDebounce } from '@/hooks/useDebounce';
 
 // New redesigned components
@@ -62,7 +62,7 @@ const MarketplaceContent: React.FC = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
 
-  const cart = useEnhancedCart();
+  const cart = useCart();
   const browseSectionRef = useRef<HTMLDivElement | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement | null>(null);
   
@@ -711,7 +711,7 @@ const MarketplaceContent: React.FC = () => {
                                     safetyScore: 95,
                                   },
                                 };
-                                cart.addItem(cartProduct);
+                                cart.actions.addItem(cartProduct);
                                 addToast('Added to cart! 🛒', 'success');
                               }}
                               onBidClick={(id) => {
