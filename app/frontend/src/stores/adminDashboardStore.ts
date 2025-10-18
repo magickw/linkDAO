@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 
 // Types
-interface LayoutConfig {
+export interface LayoutConfig {
   id: string;
   type: 'metric' | 'chart' | 'table' | 'alert' | 'custom';
   position: { x: number; y: number; w: number; h: number };

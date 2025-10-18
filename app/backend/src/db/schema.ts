@@ -2537,3 +2537,133 @@ export const reputationCalculationRules = pgTable("reputation_calculation_rules"
   eventTypeIdx: index("idx_reputation_rules_event_type").on(t.eventType),
   activeIdx: index("idx_reputation_rules_active").on(t.isActive),
 }));
+
+// Seller Performance Management Tables
+
+// Seller Performance Scorecards
+export const sellerScorecards = pgTable("seller_scorecards", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  overallScore: numeric("overall_score", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  customerSatisfaction: numeric("customer_satisfaction", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  orderFulfillment: numeric("order_fulfillment", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  responseTime: numeric("response_time", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  disputeRate: numeric("dispute_rate", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  growthRate: numeric("growth_rate", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  performanceTier: varchar("performance_tier", { length: 20 }).default("bronze"),
+  lastCalculatedAt: timestamp("last_calculated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerWalletIdx: index("idx_seller_scorecards_wallet").on(t.sellerWalletAddress),
+  performanceTierIdx: index("idx_seller_scorecards_tier").on(t.performanceTier),
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Seller Performance History
+export const sellerPerformanceHistory = pgTable("seller_performance_history", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  metricType: varchar("metric_type", { length: 50 }).notNull(),
+  metricValue: numeric("metric_value", { precision: 10, scale: 4 }).notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  metadata: jsonb("metadata").default("{}"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerMetricIdx: index("idx_seller_performance_history_wallet_type").on(t.sellerWalletAddress, t.metricType),
+  periodIdx: index("idx_seller_performance_history_period").on(t.periodStart, t.periodEnd),
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Seller Risk Assessments
+export const sellerRiskAssessments = pgTable("seller_risk_assessments", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  overallRiskScore: numeric("overall_risk_score", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  financialRisk: numeric("financial_risk", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  operationalRisk: numeric("operational_risk", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  reputationRisk: numeric("reputation_risk", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  complianceRisk: numeric("compliance_risk", { precision: 5, scale: 2 }).notNull().default("0.00"),
+  riskFactors: jsonb("risk_factors").default("[]"),
+  riskLevel: varchar("risk_level", { length: 20 }).default("low"),
+  mitigationRecommendations: jsonb("mitigation_recommendations").default("[]"),
+  lastAssessedAt: timestamp("last_assessed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  sellerWalletIdx: index("idx_seller_risk_assessments_wallet").on(t.sellerWalletAddress),
+  riskLevelIdx: index("idx_seller_risk_assessments_level").on(t.riskLevel),
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Seller Performance Alerts
+export const sellerPerformanceAlerts = pgTable("seller_performance_alerts", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  alertType: varchar("alert_type", { length: 50 }).notNull(),
+  severity: varchar("severity", { length: 20 }).notNull().default("medium"),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  thresholdValue: numeric("threshold_value", { precision: 10, scale: 4 }),
+  currentValue: numeric("current_value", { precision: 10, scale: 4 }),
+  recommendations: jsonb("recommendations").default("[]"),
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  acknowledgedBy: varchar("acknowledged_by", { length: 66 }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerWalletIdx: index("idx_seller_performance_alerts_wallet").on(t.sellerWalletAddress),
+  alertTypeIdx: index("idx_seller_performance_alerts_type").on(t.alertType),
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));
+
+// Marketplace Health Metrics
+export const marketplaceHealthMetrics = pgTable("marketplace_health_metrics", {
+  id: serial("id").primaryKey(),
+  metricName: varchar("metric_name", { length: 100 }).notNull(),
+  metricValue: numeric("metric_value", { precision: 15, scale: 4 }).notNull(),
+  metricUnit: varchar("metric_unit", { length: 50 }),
+  category: varchar("category", { length: 50 }).notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  metadata: jsonb("metadata").default("{}"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  categoryIdx: index("idx_marketplace_health_metrics_category").on(t.category),
+  periodIdx: index("idx_marketplace_health_metrics_period").on(t.periodStart, t.periodEnd),
+}));
+
+// Seller Growth Projections
+export const sellerGrowthProjections = pgTable("seller_growth_projections", {
+  id: serial("id").primaryKey(),
+  sellerWalletAddress: varchar("seller_wallet_address", { length: 66 }).notNull(),
+  projectionType: varchar("projection_type", { length: 50 }).notNull(),
+  currentValue: numeric("current_value", { precision: 15, scale: 4 }).notNull(),
+  projectedValue: numeric("projected_value", { precision: 15, scale: 4 }).notNull(),
+  confidenceInterval: numeric("confidence_interval", { precision: 5, scale: 2 }).notNull(),
+  projectionPeriodMonths: integer("projection_period_months").notNull(),
+  successFactors: jsonb("success_factors").default("[]"),
+  improvementRecommendations: jsonb("improvement_recommendations").default("[]"),
+  modelVersion: varchar("model_version", { length: 20 }).default("1.0"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  sellerWalletIdx: index("idx_seller_growth_projections_wallet").on(t.sellerWalletAddress),
+  projectionTypeIdx: index("idx_seller_growth_projections_type").on(t.projectionType),
+  sellerFk: foreignKey({
+    columns: [t.sellerWalletAddress],
+    foreignColumns: [sellers.walletAddress]
+  })
+}));

@@ -10,6 +10,19 @@ export { default as NetworkGraph } from './NetworkGraph';
 export { default as InteractiveChart } from './InteractiveChart';
 export { default as RealTimeChart } from './RealTimeChart';
 
+// Interactive Features
+export { default as DynamicTooltip } from './DynamicTooltip';
+export { CrossFilterManager, useCrossFilter, useChartCrossFilter } from './CrossFilterManager';
+
+// Data Management
+export { 
+  ChartDataCacheProvider, 
+  useChartDataCache, 
+  useCachedChartData, 
+  useChartPerformance,
+  useChartDataTransformer 
+} from './ChartDataCache';
+
 // Types and interfaces
 export * from './types';
 export * from './theme';

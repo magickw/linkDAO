@@ -248,6 +248,9 @@ import transactionRoutes from './routes/transactionRoutes';
 // Import order management routes
 import orderManagementRoutes from './routes/orderManagementRoutes';
 
+// Import seller performance routes
+import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
+
 // Authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
 
@@ -346,6 +349,9 @@ app.use('/api/transactions', transactionRoutes);
 
 // Order management routes
 app.use('/api/order-management', orderManagementRoutes);
+
+// Seller performance routes
+app.use('/api/seller-performance', sellerPerformanceRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
