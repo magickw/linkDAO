@@ -170,8 +170,8 @@ contract OptimizedLDAOToken is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         
         userStake.amount = uint128(amount);
         userStake.stakingStartTime = uint64(block.timestamp);
-        userStake.lockPeriod = tier.lockPeriod;
-        userStake.rewardRate = tier.rewardRate;
+        userStake.lockPeriod = uint32(tier.lockPeriod);
+        userStake.rewardRate = uint16(tier.rewardRate);
         userStake.tierId = tierId;
         userStake.isActive = true;
         
@@ -241,8 +241,8 @@ contract OptimizedLDAOToken is ERC20, ERC20Permit, Ownable, ReentrancyGuard {
         _stakes[msg.sender] = PackedStakeInfo({
             amount: uint128(amount),
             stakingStartTime: uint64(block.timestamp),
-            lockPeriod: tier.lockPeriod,
-            rewardRate: tier.rewardRate,
+            lockPeriod: uint32(tier.lockPeriod),
+            rewardRate: uint16(tier.rewardRate),
             tierId: tierId,
             isActive: true
         });

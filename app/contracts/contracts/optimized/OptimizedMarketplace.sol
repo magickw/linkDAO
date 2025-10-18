@@ -141,58 +141,53 @@ contract OptimizedMarketplace is ReentrancyGuard, Pausable, Ownable {
         uint8[] calldata itemTypes,
         uint8[] calldata listingTypes
     ) external whenNotPaused nonReentrant returns (uint256[] memory listingIds) {
-        uint256 length = tokenAddresses.length;
-        if (length != prices.length || length != quantities.length || 
-            length != itemTypes.length || length != listingTypes.length) {
+        // Validate array lengths
+        if (tokenAddresses.length != prices.length || tokenAddresses.length != quantities.length ||
+            tokenAddresses.length != itemTypes.length || tokenAddresses.length != listingTypes.length) {
             revert ArrayLengthMismatch();
         }
-        
-        if (_userListings[msg.sender].length + length > _state.maxListingsPerUser) {
+
+        if (_userListings[msg.sender].length + tokenAddresses.length > _state.maxListingsPerUser) {
             revert MaxListingsExceeded();
         }
-        
-        listingIds = new uint256[](length);
-        uint256 startId = _state.nextListingId;
-        uint32 timestamp = uint32(block.timestamp);
-        
-        // Cache storage references
-        mapping(uint256 => PackedListing) storage listings = _listings;
-        uint256[] storage userListings = _userListings[msg.sender];
-        
-        for (uint256 i = 0; i < length;) {
-            if (prices[i] == 0 || quantities[i] == 0) revert InvalidPrice();
-            if (prices[i] > type(uint96).max || quantities[i] > type(uint64).max) {
-                revert InvalidPrice();
-            }
-            
-            uint256 listingId = startId + i;
-            listingIds[i] = listingId;
-            
-            listings[listingId] = PackedListing({
-                seller: msg.sender,
-                price: uint96(prices[i]),
-                quantity: uint64(quantities[i]),
-                createdAt: timestamp,
-                categoryId: 0,
-                itemType: itemTypes[i],
-                listingType: listingTypes[i],
-                isActive: true
-            });
-            
-            userListings.push(listingId);
-            
-            emit ListingCreated(listingId, msg.sender, tokenAddresses[i], prices[i], quantities[i]);
-            
-            unchecked { ++i; }
-        }
-        
-        // Update state once
+
+        listingIds = new uint256[](tokenAddresses.length);
+
         unchecked {
-            _state.nextListingId = uint64(startId + length);
-            _state.totalListings += uint128(length);
+            uint256 startId = _state.nextListingId;
+            uint32 timestamp = uint32(block.timestamp);
+
+            for (uint256 i = 0; i < tokenAddresses.length; ++i) {
+                if (prices[i] == 0 || quantities[i] == 0) revert InvalidPrice();
+                if (prices[i] > type(uint96).max || quantities[i] > type(uint64).max) {
+                    revert InvalidPrice();
+                }
+
+                uint256 listingId = startId + i;
+                listingIds[i] = listingId;
+
+                _listings[listingId] = PackedListing({
+                    seller: msg.sender,
+                    price: uint96(prices[i]),
+                    quantity: uint64(quantities[i]),
+                    createdAt: timestamp,
+                    categoryId: 0,
+                    itemType: itemTypes[i],
+                    listingType: listingTypes[i],
+                    isActive: true
+                });
+
+                _userListings[msg.sender].push(listingId);
+
+                emit ListingCreated(listingId, msg.sender, tokenAddresses[i], prices[i], quantities[i]);
+            }
+
+            // Update state once
+            _state.nextListingId = uint64(startId + tokenAddresses.length);
+            _state.totalListings += uint128(tokenAddresses.length);
+
+            emit BatchListingsCreated(msg.sender, startId, tokenAddresses.length);
         }
-        
-        emit BatchListingsCreated(msg.sender, startId, length);
     }
     
     /**

@@ -319,7 +319,7 @@ contract DisputeResolution is Ownable, ReentrancyGuard {
         require(!hasVoted[disputeId][msg.sender], "Already voted");
         require(block.timestamp <= disputes[disputeId].votingDeadline, "Voting period ended");
         
-        uint256 votingPower = reputationSystem.getReputationScore(msg.sender);
+        uint256 votingPower = reputationSystem.getReputationScore(msg.sender).totalPoints;
         require(votingPower >= minimumVotingPower, "Insufficient voting power");
         
         CommunityVote memory vote = CommunityVote({
@@ -363,7 +363,7 @@ contract DisputeResolution is Ownable, ReentrancyGuard {
      * @notice Apply to become an arbitrator
      */
     function applyForArbitrator(string calldata qualifications) external {
-        uint256 reputationScore = reputationSystem.getReputationScore(msg.sender);
+        uint256 reputationScore = reputationSystem.getReputationScore(msg.sender).totalPoints;
         require(reputationScore >= arbitratorMinReputation, "Insufficient reputation");
         require(arbitratorApplications[msg.sender].applicant == address(0), "Already applied");
         

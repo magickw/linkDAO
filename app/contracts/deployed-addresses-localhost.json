@@ -1,0 +1,47 @@
+{
+  "network": "localhost",
+  "chainId": 31337,
+  "deployedAt": "2024-12-19",
+  "contracts": {
+    "LDAOToken": {
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "size": "9.624 KiB",
+      "description": "Main governance token with staking and utility features"
+    },
+    "Counter": {
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "size": "0.426 KiB",
+      "description": "Simple test contract for basic functionality"
+    },
+    "MockERC20": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "size": "2.597 KiB",
+      "description": "Mock ERC20 token for testing payments"
+    },
+    "ReputationSystem": {
+      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "size": "8.333 KiB",
+      "description": "User reputation and review system"
+    },
+    "Governance": {
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "size": "10.540 KiB",
+      "description": "DAO governance with proposal and voting mechanisms"
+    },
+    "EnhancedEscrow": {
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "size": "12.110 KiB",
+      "description": "Advanced escrow with dispute resolution and automation"
+    },
+    "Marketplace": {
+      "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "size": "13.244 KiB",
+      "description": "Main marketplace for buying/selling with auctions and offers"
+    }
+  },
+  "deployment": {
+    "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "totalGasUsed": "Estimated ~2.5M gas",
+    "status": "successful"
+  }
+}

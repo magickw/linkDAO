@@ -43,7 +43,7 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
         string bioCid
     );
     
-    constructor() ERC721("LinkDAOProfile", "LDP") Ownable(msg.sender) {}
+    constructor() ERC721("LinkDAOProfile", "LDP") Ownable() {}
     
     /**
      * @dev Creates a new profile for the caller
@@ -134,16 +134,13 @@ contract ProfileRegistry is ERC721, ERC721Enumerable, Ownable {
     }
     
     // The following functions are overrides required by Solidity.
-    function _update(
+    function _beforeTokenTransfer(
+        address from,
         address to,
         uint256 tokenId,
-        address auth
-    ) internal override(ERC721, ERC721Enumerable) returns (address) {
-        return super._update(to, tokenId, auth);
-    }
-    
-    function _increaseBalance(address account, uint128 value) internal override(ERC721, ERC721Enumerable) {
-        super._increaseBalance(account, value);
+        uint256 batchSize
+    ) internal override(ERC721, ERC721Enumerable) {
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
     
     function supportsInterface(bytes4 interfaceId)

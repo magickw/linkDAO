@@ -27,7 +27,7 @@ contract SimpleProfileRegistry is ERC721, Ownable {
         uint256 createdAt
     );
     
-    constructor() ERC721("SimpleProfile", "SP") Ownable(msg.sender) {}
+    constructor() ERC721("SimpleProfile", "SP") {}
     
     /**
      * @dev Creates a new profile for the caller

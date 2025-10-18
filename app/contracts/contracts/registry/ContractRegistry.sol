@@ -327,7 +327,7 @@ contract ContractRegistry is Ownable, Pausable {
         for (uint256 i = 0; i < names.length; i++) {
             // Check if contract doesn't already exist
             if (_contracts[names[i]].contractAddress == address(0)) {
-                registerContract(names[i], addresses[i], versions[i], descriptions[i], categories[i]);
+                this.registerContract(names[i], addresses[i], versions[i], descriptions[i], categories[i]);
             }
         }
     }

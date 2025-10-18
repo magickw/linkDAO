@@ -45,13 +45,13 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
         collectionInfo.createdAt = block.timestamp;
         
         if (royalty > 0) {
-            _setDefaultRoyalty(msg.sender, royalty);
+            _setDefaultRoyalty(msg.sender, uint96(royalty));
         }
         
         _transferOwnership(msg.sender);
     }
     
-    function mint(address to, string memory tokenURI) external payable returns (uint256) {
+    function mint(address to, string memory _tokenURI) external payable returns (uint256) {
         require(
             collectionInfo.isPublicMint || whitelist[msg.sender] || msg.sender == owner(),
             "Not authorized to mint"
@@ -66,14 +66,14 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
         _tokenIdCounter.increment();
         
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, _tokenURI);
         
         // Send payment to creator
         if (msg.value > 0) {
             payable(collectionInfo.creator).transfer(msg.value);
         }
         
-        emit NFTMinted(tokenId, to, tokenURI);
+        emit NFTMinted(tokenId, to, _tokenURI);
         return tokenId;
     }
     
@@ -103,7 +103,7 @@ contract NFTCollection is ERC721, ERC721URIStorage, ERC721Royalty, Ownable {
         return super.tokenURI(tokenId);
     }
     
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Royalty) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Royalty) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

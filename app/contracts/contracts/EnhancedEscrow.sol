@@ -32,6 +32,16 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         ARBITRATOR 
     }
     
+    // Enum for reputation tiers
+    enum ReputationTier {
+        NEWCOMER,     // 0-49 points
+        BRONZE,       // 50-199 points  
+        SILVER,       // 200-499 points
+        GOLD,         // 500-999 points
+        PLATINUM,     // 1000-2499 points
+        DIAMOND       // 2500+ points
+    }
+
     // Struct for escrow details
     struct Escrow {
         uint256 id;
@@ -64,16 +74,6 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 timeLockExpiry;
         bool emergencyRefundEnabled;
     }
-    
-    // Enum for reputation tiers
-    enum ReputationTier {
-        NEWCOMER,     // 0-49 points
-        BRONZE,       // 50-199 points  
-        SILVER,       // 200-499 points
-        GOLD,         // 500-999 points
-        PLATINUM,     // 1000-2499 points
-        DIAMOND       // 2500+ points
-    }
 
     // Struct for marketplace review
     struct MarketplaceReview {
@@ -86,7 +86,7 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 timestamp;
         bool isVerified;
         uint256 helpfulVotes;
-        mapping(address => bool) hasVoted; // For helpful votes
+        mapping(address => bool) hasVotedHelpful; // For helpful votes
     }
 
     // Struct for detailed reputation score
@@ -99,1204 +99,336 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         uint256 disputesLost;
         ReputationTier tier;
         uint256 lastActivityTimestamp;
-        uint256 suspiciousActivityCount;
         bool isSuspended;
         uint256 suspensionEndTime;
     }
 
-    // Struct for reputation update
-    struct ReputationUpdate {
-        address user;
-        int256 scoreChange; // Positive for good behavior, negative for bad
-        string reason;
-        uint256 timestamp;
-    }
-    
-    // Struct for notification
-    struct Notification {
-        address recipient;
-        string message;
-        uint256 timestamp;
-        bool read;
-    }
-    
-    // Mapping of escrow ID to Escrow
-    mapping(uint256 => Escrow) public escrows;
-    
-    // Mapping of user address to reputation score (legacy - kept for compatibility)
-    mapping(address => uint256) public reputationScores;
-    
-    // Mapping of user address to detailed reputation score
-    mapping(address => DetailedReputationScore) public detailedReputationScores;
-    
-    // Mapping of review ID to review
-    mapping(uint256 => MarketplaceReview) public marketplaceReviews;
-    
-    // Mapping of user to their review IDs
-    mapping(address => uint256[]) public userReviews;
-    
-    // Mapping to prevent duplicate reviews between same users
-    mapping(address => mapping(address => bool)) public hasReviewedUser;
-    
-    // Mapping of user address to whether they are DAO approved
-    mapping(address => bool) public daoApprovedVendors;
-    
-    // Counter for escrow IDs
+    // State variables
     uint256 public nextEscrowId = 1;
-    
-    // Counter for review IDs
     uint256 public nextReviewId = 1;
+    uint256 public platformFeePercentage = 250; // 2.5% (basis points)
+    uint256 public constant MAX_PLATFORM_FEE = 1000; // 10% max
+    uint256 public constant VOTING_PERIOD = 7 days;
+    uint256 public constant MIN_VOTING_POWER = 100; // Minimum LDAO tokens to vote
+    uint256 public constant REPUTATION_DECAY_PERIOD = 365 days;
     
-    // Platform fee (in basis points, e.g., 100 = 1%)
-    uint256 public platformFee = 100;
-    
-    // Minimum reputation score to be a vendor
-    uint256 public minReputationScore = 50;
-    
-    // Delivery deadline (in days)
-    uint256 public deliveryDeadlineDays = 14;
-    
-    // High-value transaction threshold for multi-sig requirement
-    uint256 public highValueThreshold = 10000 * 10**18; // 10,000 tokens/ETH
-    
-    // Time lock duration for high-value transactions (in seconds)
-    uint256 public timeLockDuration = 24 hours;
-    
-    // Emergency refund window (in seconds)
-    uint256 public emergencyRefundWindow = 7 days;
-    
-    // Reputation tier thresholds
-    uint256[6] public tierThresholds = [0, 50, 200, 500, 1000, 2500];
-    
-    // Anti-gaming parameters
-    uint256 public maxReviewsPerUser = 1; // Max reviews between same users
-    uint256 public minTimeBetweenReviews = 1 hours; // Minimum time between reviews
-    uint256 public suspiciousActivityThreshold = 5; // Threshold for auto-suspension
-    
-    // Reference to Governance contract for community voting
+    // Contract references
+    LDAOToken public ldaoToken;
     Governance public governance;
     
+    // Mappings
+    mapping(uint256 => Escrow) public escrows;
+    mapping(uint256 => MarketplaceReview) public reviews;
+    mapping(address => DetailedReputationScore) public detailedReputationScores;
+    mapping(address => uint256[]) public userEscrows;
+    mapping(address => uint256[]) public userReviews;
+    mapping(address => bool) public authorizedArbitrators;
+    mapping(address => uint256) public arbitratorFees;
+    
     // Events
-    event EscrowCreated(
-        uint256 indexed escrowId,
-        uint256 listingId,
-        address buyer,
-        address seller,
-        address tokenAddress,
-        uint256 amount
-    );
-    
-    event FundsLocked(
-        uint256 indexed escrowId,
-        uint256 amount
-    );
-    
-    event DeliveryConfirmed(
-        uint256 indexed escrowId,
-        string deliveryInfo
-    );
-    
-    event EscrowApproved(
-        uint256 indexed escrowId,
-        address approver
-    );
-    
-    event EscrowResolved(
-        uint256 indexed escrowId,
-        EscrowStatus status,
-        address resolver
-    );
-    
-    event DisputeOpened(
-        uint256 indexed escrowId,
-        address opener,
-        string reason
-    );
-    
-    event EvidenceSubmitted(
-        uint256 indexed escrowId,
-        address submitter,
-        string evidence
-    );
-    
-    event VoteCast(
-        uint256 indexed escrowId,
-        address voter,
-        bool voteForBuyer,
-        uint256 votingPower
-    );
-    
-    event ReputationUpdated(
-        address indexed user,
-        int256 scoreChange,
-        uint256 newScore,
-        string reason
-    );
-    
-    event NotificationSent(
-        address indexed recipient,
-        string message,
-        uint256 timestamp
-    );
-    
-    event MultiSigReleaseInitiated(
-        uint256 indexed escrowId,
-        address indexed signer,
-        uint256 signatureCount,
-        uint256 threshold
-    );
-    
-    event TimeLockActivated(
-        uint256 indexed escrowId,
-        uint256 unlockTime
-    );
-    
-    event EmergencyRefundExecuted(
-        uint256 indexed escrowId,
-        address indexed refundee,
-        uint256 amount
-    );
-    
-    event MarketplaceReviewSubmitted(
-        uint256 indexed reviewId,
-        address indexed reviewer,
-        address indexed reviewee,
-        uint256 escrowId,
-        uint8 rating
-    );
-    
-    event ReputationTierUpdated(
-        address indexed user,
-        ReputationTier oldTier,
-        ReputationTier newTier
-    );
-    
-    event HelpfulVoteCast(
-        uint256 indexed reviewId,
-        address indexed voter
-    );
-    
-    // New events for enhanced tracking
-    event DetailedReputationUpdated(
-        address indexed user,
-        uint256 totalPoints,
-        uint256 reviewCount,
-        uint256 averageRating,
-        uint256 successfulTransactions,
-        uint256 disputesWon,
-        uint256 disputesLost,
-        uint256 timestamp
-    );
-    
-    event EscrowSalesMetricsUpdated(
-        address indexed seller,
-        uint256 totalSales,
-        uint256 totalRevenue,
-        uint256 timestamp
-    );
-    
-    // Additional events for comprehensive tracking
-    event EscrowPerformanceUpdated(
-        uint256 indexed escrowId,
-        address indexed seller,
-        uint256 deliveryTime,
-        uint256 responseTime,
-        uint256 timestamp
-    );
-    
-    event CommunityVotingResults(
-        uint256 indexed escrowId,
-        uint256 votesForBuyer,
-        uint256 votesForSeller,
-        uint256 totalVotingPower,
-        bool buyerWins,
-        uint256 timestamp
-    );
-    
-    event ArbitratorAssigned(
-        uint256 indexed escrowId,
-        address indexed arbitrator,
-        uint256 timestamp
-    );
-    
-    event SuspiciousActivityDetected(
-        address indexed user,
-        string activityType,
-        uint256 count
-    );
-    
-    event UserSuspended(
-        address indexed user,
-        uint256 suspensionEndTime,
-        string reason
-    );
+    event EscrowCreated(uint256 indexed escrowId, address indexed buyer, address indexed seller, uint256 amount);
+    event FundsLocked(uint256 indexed escrowId, uint256 amount);
+    event DeliveryConfirmed(uint256 indexed escrowId, string deliveryInfo);
+    event DisputeOpened(uint256 indexed escrowId, DisputeResolutionMethod method);
+    event VoteCast(uint256 indexed escrowId, address indexed voter, bool forBuyer, uint256 votingPower);
+    event EscrowResolved(uint256 indexed escrowId, EscrowStatus resolution, address winner);
+    event ReviewSubmitted(uint256 indexed reviewId, address indexed reviewer, address indexed reviewee, uint8 rating);
+    event ReputationUpdated(address indexed user, uint256 newScore, ReputationTier newTier);
+    event ArbitratorAppointed(uint256 indexed escrowId, address indexed arbitrator);
+    event EmergencyRefund(uint256 indexed escrowId, address indexed buyer, uint256 amount);
+    event UserSuspended(address indexed user, uint256 duration, string reason);
     
     // Modifiers
-    modifier onlyBuyer(uint256 escrowId) {
-        require(escrows[escrowId].buyer == msg.sender, "Not the buyer");
+    modifier escrowExists(uint256 escrowId) {
+        require(escrowId > 0 && escrowId < nextEscrowId, "Escrow does not exist");
         _;
     }
     
-    modifier onlySeller(uint256 escrowId) {
-        require(escrows[escrowId].seller == msg.sender, "Not the seller");
-        _;
-    }
-    
-    modifier onlyBuyerOrSeller(uint256 escrowId) {
+    modifier onlyParticipant(uint256 escrowId) {
         require(
-            escrows[escrowId].buyer == msg.sender || 
-            escrows[escrowId].seller == msg.sender, 
-            "Not the buyer or seller"
+            msg.sender == escrows[escrowId].buyer || 
+            msg.sender == escrows[escrowId].seller,
+            "Only buyer or seller can call this function"
         );
         _;
     }
     
-    modifier onlyArbitrator(uint256 escrowId) {
-        require(escrows[escrowId].appointedArbitrator == msg.sender, "Not the arbitrator");
-        _;
-    }
-    
     modifier onlyDAO() {
-        // In a real implementation, this would check if the caller is a DAO member
-        // For now, we'll allow the contract owner to act as the DAO
-        require(msg.sender == owner(), "Not DAO");
+        require(address(governance) != address(0), "Governance not set");
+        require(msg.sender == owner() || msg.sender == address(governance), "Only DAO can call this function");
         _;
     }
     
-    modifier escrowExists(uint256 escrowId) {
-        require(escrows[escrowId].id != 0, "Escrow does not exist");
+    modifier onlyArbitrator(uint256 escrowId) {
+        require(
+            authorizedArbitrators[msg.sender] || 
+            msg.sender == escrows[escrowId].appointedArbitrator,
+            "Only authorized arbitrator can call this function"
+        );
         _;
     }
     
-    modifier escrowInStatus(uint256 escrowId, EscrowStatus status) {
-        require(escrows[escrowId].status == status, "Escrow not in required status");
+    modifier notSuspended(address user) {
+        DetailedReputationScore storage score = detailedReputationScores[user];
+        require(!score.isSuspended || block.timestamp >= score.suspensionEndTime, "User is suspended");
         _;
     }
-    
-    /**
-     * @notice Constructor
-     * @param governanceAddress Address of the Governance contract
-     */
-    constructor(address governanceAddress) {
-        governance = Governance(governanceAddress);
+
+    constructor(address _ldaoToken, address _governance) {
+        ldaoToken = LDAOToken(_ldaoToken);
+        governance = Governance(_governance);
     }
-    
+
     /**
      * @notice Create a new escrow
-     * @param listingId ID of the listing
-     * @param buyer Address of the buyer
+     * @param listingId ID of the marketplace listing
      * @param seller Address of the seller
-     * @param tokenAddress Address of the ERC20 token (address(0) for ETH)
+     * @param tokenAddress Address of the payment token (address(0) for ETH)
      * @param amount Amount to be escrowed
-     * @return ID of the created escrow
+     * @param deliveryDeadline Deadline for delivery
+     * @param resolutionMethod Dispute resolution method
+     * @return escrowId ID of the created escrow
      */
     function createEscrow(
         uint256 listingId,
-        address buyer,
         address seller,
         address tokenAddress,
-        uint256 amount
-    ) external onlyOwner returns (uint256) {
+        uint256 amount,
+        uint256 deliveryDeadline,
+        DisputeResolutionMethod resolutionMethod
+    ) external payable nonReentrant notSuspended(msg.sender) notSuspended(seller) returns (uint256) {
+        require(seller != address(0), "Invalid seller address");
+        require(seller != msg.sender, "Buyer and seller cannot be the same");
+        require(amount > 0, "Amount must be greater than 0");
+        require(deliveryDeadline > block.timestamp, "Delivery deadline must be in the future");
+        
         uint256 escrowId = nextEscrowId++;
+        uint256 feeAmount = (amount * platformFeePercentage) / 10000;
         
-        // Calculate platform fee
-        uint256 feeAmount = (amount * platformFee) / 10000;
+        Escrow storage newEscrow = escrows[escrowId];
+        newEscrow.id = escrowId;
+        newEscrow.listingId = listingId;
+        newEscrow.buyer = msg.sender;
+        newEscrow.seller = seller;
+        newEscrow.tokenAddress = tokenAddress;
+        newEscrow.amount = amount;
+        newEscrow.feeAmount = feeAmount;
+        newEscrow.deliveryDeadline = deliveryDeadline;
+        newEscrow.createdAt = block.timestamp;
+        newEscrow.status = EscrowStatus.CREATED;
+        newEscrow.resolutionMethod = resolutionMethod;
         
-        // Determine if multi-sig is required for high-value transactions
-        bool requiresMultiSig = amount >= highValueThreshold;
-        uint256 multiSigThreshold = requiresMultiSig ? 2 : 0; // Require 2 signatures for high-value
+        userEscrows[msg.sender].push(escrowId);
+        userEscrows[seller].push(escrowId);
         
-        escrows[escrowId] = Escrow({
-            id: escrowId,
-            listingId: listingId,
-            buyer: buyer,
-            seller: seller,
-            tokenAddress: tokenAddress,
-            amount: amount,
-            feeAmount: feeAmount,
-            deliveryInfo: "",
-            deliveryDeadline: block.timestamp + (deliveryDeadlineDays * 1 days),
-            createdAt: block.timestamp,
-            resolvedAt: 0,
-            status: EscrowStatus.CREATED,
-            resolutionMethod: DisputeResolutionMethod.COMMUNITY_VOTING,
-            votesForBuyer: 0,
-            votesForSeller: 0,
-            totalVotingPower: 0,
-            appointedArbitrator: address(0),
-            requiresMultiSig: requiresMultiSig,
-            multiSigThreshold: multiSigThreshold,
-            multiSigSigners: new address[](0),
-            signatureCount: 0,
-            timeLockExpiry: 0,
-            emergencyRefundEnabled: true
-        });
-        
-        emit EscrowCreated(escrowId, listingId, buyer, seller, tokenAddress, amount);
-        
-        // Send notification to buyer and seller
-        _sendNotification(buyer, string(abi.encodePacked("Escrow #", _toString(escrowId), " created for your purchase")));
-        _sendNotification(seller, string(abi.encodePacked("Escrow #", _toString(escrowId), " created for your sale")));
+        emit EscrowCreated(escrowId, msg.sender, seller, amount);
         
         return escrowId;
     }
-    
+
     /**
      * @notice Lock funds in escrow
      * @param escrowId ID of the escrow
      */
-    function lockFunds(uint256 escrowId) external payable escrowExists(escrowId) nonReentrant {
+    function lockFunds(uint256 escrowId) external payable nonReentrant escrowExists(escrowId) {
         Escrow storage escrow = escrows[escrowId];
+        require(msg.sender == escrow.buyer, "Only buyer can lock funds");
+        require(escrow.status == EscrowStatus.CREATED, "Invalid escrow status");
         
-        require(escrow.status == EscrowStatus.CREATED, "Escrow not in CREATED status");
+        uint256 totalAmount = escrow.amount + escrow.feeAmount;
         
-        // Transfer funds to escrow
         if (escrow.tokenAddress == address(0)) {
             // ETH payment
-            require(msg.value == escrow.amount, "Incorrect ETH amount");
+            require(msg.value == totalAmount, "Incorrect ETH amount");
         } else {
-            // ERC20 payment
-            require(msg.value == 0, "No ETH should be sent for ERC20 payments");
-            IERC20 token = IERC20(escrow.tokenAddress);
-            require(token.transferFrom(msg.sender, address(this), escrow.amount), "Token transfer failed");
+            // ERC20 token payment
+            require(msg.value == 0, "ETH not accepted for token payments");
+            IERC20(escrow.tokenAddress).transferFrom(msg.sender, address(this), totalAmount);
         }
         
         escrow.status = EscrowStatus.FUNDS_LOCKED;
         
         emit FundsLocked(escrowId, escrow.amount);
-        
-        // Send notification to seller
-        _sendNotification(escrow.seller, string(abi.encodePacked("Funds locked in escrow #", _toString(escrowId), ". Please ship the item.")));
     }
-    
+
     /**
-     * @notice Confirm delivery by seller
+     * @notice Confirm delivery and release funds
      * @param escrowId ID of the escrow
-     * @param deliveryInfo Delivery tracking information
+     * @param deliveryInfo Delivery confirmation information
      */
-    function confirmDelivery(uint256 escrowId, string calldata deliveryInfo) external onlySeller(escrowId) escrowExists(escrowId) {
+    function confirmDelivery(uint256 escrowId, string calldata deliveryInfo) 
+        external 
+        escrowExists(escrowId) 
+        onlyParticipant(escrowId) 
+    {
         Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Funds not locked");
+        require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
         
         escrow.deliveryInfo = deliveryInfo;
         escrow.status = EscrowStatus.DELIVERY_CONFIRMED;
+        escrow.resolvedAt = block.timestamp;
+        
+        // Release funds to seller
+        _releaseFunds(escrowId, escrow.seller);
+        
+        // Update reputation scores
+        _updateReputationOnSuccess(escrow.buyer, escrow.seller);
         
         emit DeliveryConfirmed(escrowId, deliveryInfo);
-        
-        // Send notification to buyer
-        _sendNotification(escrow.buyer, string(abi.encodePacked("Delivery confirmed for escrow #", _toString(escrowId), ". Please review and approve.")));
+        emit EscrowResolved(escrowId, EscrowStatus.DELIVERY_CONFIRMED, escrow.seller);
     }
-    
-    /**
-     * @notice Approve escrow by buyer (releases funds to seller)
-     * @param escrowId ID of the escrow
-     */
-    function approveEscrow(uint256 escrowId) external onlyBuyer(escrowId) escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.DELIVERY_CONFIRMED, "Delivery not confirmed");
-        
-        emit EscrowApproved(escrowId, msg.sender);
-        
-        // Check if multi-sig is required
-        if (escrow.requiresMultiSig) {
-            // For high-value transactions, initiate multi-sig process
-            escrow.hasSignedRelease[msg.sender] = true;
-            escrow.signatureCount = 1;
-            
-            emit MultiSigReleaseInitiated(escrowId, msg.sender, escrow.signatureCount, escrow.multiSigThreshold);
-            
-            // Send notification to seller to sign
-            _sendNotification(escrow.seller, string(abi.encodePacked("Buyer approved escrow #", _toString(escrowId), ". Please sign to release funds (multi-sig required).")));
-            
-            // If threshold is already met (shouldn't happen with threshold 2), execute release
-            if (escrow.signatureCount >= escrow.multiSigThreshold) {
-                _executeRelease(escrowId);
-            }
-        } else {
-            // For regular transactions, release immediately
-            _executeRelease(escrowId);
-        }
-    }
-    
+
     /**
      * @notice Open a dispute
      * @param escrowId ID of the escrow
-     * @param reason Reason for dispute
      */
-    function openDispute(uint256 escrowId, string calldata reason) external onlyBuyerOrSeller(escrowId) escrowExists(escrowId) {
+    function openDispute(uint256 escrowId) external escrowExists(escrowId) onlyParticipant(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        
-        require(
-            escrow.status == EscrowStatus.FUNDS_LOCKED || 
-            escrow.status == EscrowStatus.DELIVERY_CONFIRMED, 
-            "Cannot open dispute in current status"
-        );
+        require(escrow.status == EscrowStatus.FUNDS_LOCKED, "Invalid escrow status");
+        require(block.timestamp <= escrow.deliveryDeadline + 7 days, "Dispute period expired");
         
         escrow.status = EscrowStatus.DISPUTE_OPENED;
         
-        emit DisputeOpened(escrowId, msg.sender, reason);
-        
-        // Send notification to other party and DAO
-        if (msg.sender == escrow.buyer) {
-            _sendNotification(escrow.seller, string(abi.encodePacked("Dispute opened on escrow #", _toString(escrowId), " by buyer: ", reason)));
-        } else {
-            _sendNotification(escrow.buyer, string(abi.encodePacked("Dispute opened on escrow #", _toString(escrowId), " by seller: ", reason)));
-        }
-        _sendNotification(owner(), string(abi.encodePacked("Dispute opened on escrow #", _toString(escrowId), ": ", reason)));
+        emit DisputeOpened(escrowId, escrow.resolutionMethod);
     }
-    
+
     /**
-     * @notice Submit evidence for dispute
+     * @notice Cast a vote in community dispute resolution
      * @param escrowId ID of the escrow
-     * @param evidence Evidence string (could be IPFS hash)
+     * @param forBuyer True to vote for buyer, false for seller
      */
-    function submitEvidence(uint256 escrowId, string calldata evidence) external onlyBuyerOrSeller(escrowId) escrowExists(escrowId) {
+    function castVote(uint256 escrowId, bool forBuyer) external escrowExists(escrowId) {
         Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No dispute opened");
-        
-        escrow.evidenceSubmitted = evidence;
-        
-        emit EvidenceSubmitted(escrowId, msg.sender, evidence);
-        
-        // Send notification to other party
-        if (msg.sender == escrow.buyer) {
-            _sendNotification(escrow.seller, string(abi.encodePacked("Evidence submitted for escrow #", _toString(escrowId), " by buyer")));
-        } else {
-            _sendNotification(escrow.buyer, string(abi.encodePacked("Evidence submitted for escrow #", _toString(escrowId), " by seller")));
-        }
-    }
-    
-    /**
-     * @notice Cast vote in community dispute resolution
-     * @param escrowId ID of the escrow
-     * @param voteForBuyer True if voting for buyer, false if for seller
-     */
-    function castVote(uint256 escrowId, bool voteForBuyer) external escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No dispute opened");
-        require(!escrow.hasVoted[msg.sender], "Already voted");
+        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
         require(escrow.resolutionMethod == DisputeResolutionMethod.COMMUNITY_VOTING, "Not community voting");
+        require(!escrow.hasVoted[msg.sender], "Already voted");
+        require(msg.sender != escrow.buyer && msg.sender != escrow.seller, "Participants cannot vote");
         
-        // Get voter's reputation score as voting power
-        uint256 votingPower = reputationScores[msg.sender];
-        require(votingPower > 0, "No voting power");
+        uint256 votingPower = ldaoToken.balanceOf(msg.sender);
+        require(votingPower >= MIN_VOTING_POWER, "Insufficient voting power");
         
-        // Record vote
         escrow.hasVoted[msg.sender] = true;
-        if (voteForBuyer) {
+        escrow.totalVotingPower += votingPower;
+        
+        if (forBuyer) {
             escrow.votesForBuyer += votingPower;
         } else {
             escrow.votesForSeller += votingPower;
         }
-        escrow.totalVotingPower += votingPower;
         
-        emit VoteCast(escrowId, msg.sender, voteForBuyer, votingPower);
+        emit VoteCast(escrowId, msg.sender, forBuyer, votingPower);
         
-        // Check if voting is complete (simple majority with 10% quorum)
-        uint256 quorum = (reputationScores[escrow.buyer] + reputationScores[escrow.seller]) * 10 / 100;
-        if (escrow.totalVotingPower >= quorum) {
+        // Check if voting period ended or sufficient votes collected
+        if (block.timestamp >= escrow.createdAt + VOTING_PERIOD || 
+            escrow.totalVotingPower >= ldaoToken.totalSupply() / 10) {
             _resolveDisputeByVoting(escrowId);
         }
     }
-    
+
     /**
-     * @notice Resolve dispute by appointed arbitrator
+     * @notice Resolve dispute by arbitrator
      * @param escrowId ID of the escrow
      * @param buyerWins True if buyer wins, false if seller wins
      */
-    function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) external onlyArbitrator(escrowId) escrowExists(escrowId) {
+    function resolveDisputeByArbitrator(uint256 escrowId, bool buyerWins) 
+        external 
+        escrowExists(escrowId) 
+        onlyArbitrator(escrowId) 
+    {
         Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No dispute opened");
+        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "No active dispute");
         require(escrow.resolutionMethod == DisputeResolutionMethod.ARBITRATOR, "Not arbitrator resolution");
         
-        _resolveDispute(escrowId, buyerWins);
-    }
-    
-    /**
-     * @notice Sign multi-signature release for high-value transactions
-     * @param escrowId ID of the escrow
-     */
-    function signMultiSigRelease(uint256 escrowId) external escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.requiresMultiSig, "Multi-sig not required for this escrow");
-        require(escrow.status == EscrowStatus.DELIVERY_CONFIRMED, "Delivery not confirmed");
-        require(!escrow.hasSignedRelease[msg.sender], "Already signed");
-        
-        // Check if signer is authorized (buyer, seller, or DAO member)
-        bool isAuthorized = msg.sender == escrow.buyer || 
-                           msg.sender == escrow.seller || 
-                           msg.sender == owner();
-        require(isAuthorized, "Not authorized to sign");
-        
-        escrow.hasSignedRelease[msg.sender] = true;
-        escrow.signatureCount++;
-        
-        emit MultiSigReleaseInitiated(escrowId, msg.sender, escrow.signatureCount, escrow.multiSigThreshold);
-        
-        // Check if threshold is met
-        if (escrow.signatureCount >= escrow.multiSigThreshold) {
-            _executeRelease(escrowId);
-        }
-    }
-    
-    /**
-     * @notice Activate time lock for high-value transactions
-     * @param escrowId ID of the escrow
-     */
-    function activateTimeLock(uint256 escrowId) external onlyBuyerOrSeller(escrowId) escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.status == EscrowStatus.DELIVERY_CONFIRMED, "Delivery not confirmed");
-        require(escrow.amount >= highValueThreshold, "Not a high-value transaction");
-        require(escrow.timeLockExpiry == 0, "Time lock already activated");
-        
-        escrow.timeLockExpiry = block.timestamp + timeLockDuration;
-        
-        emit TimeLockActivated(escrowId, escrow.timeLockExpiry);
-        
-        // Send notification
-        _sendNotification(escrow.buyer, string(abi.encodePacked("Time lock activated for escrow #", _toString(escrowId), ". Funds will be released after ", _toString(timeLockDuration / 3600), " hours.")));
-        _sendNotification(escrow.seller, string(abi.encodePacked("Time lock activated for escrow #", _toString(escrowId), ". Funds will be released after ", _toString(timeLockDuration / 3600), " hours.")));
-    }
-    
-    /**
-     * @notice Execute time-locked release
-     * @param escrowId ID of the escrow
-     */
-    function executeTimeLockRelease(uint256 escrowId) external escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.timeLockExpiry > 0, "Time lock not activated");
-        require(block.timestamp >= escrow.timeLockExpiry, "Time lock not expired");
-        require(escrow.status == EscrowStatus.DELIVERY_CONFIRMED, "Delivery not confirmed");
-        
-        _executeRelease(escrowId);
-    }
-    
-    /**
-     * @notice Resolve an escrow dispute
-     * @param escrowId ID of the escrow
-     * @param buyerWins Whether the buyer wins the dispute
-     * @param evidence Evidence for the resolution
-     */
-    function resolveDispute(
-        uint256 escrowId,
-        bool buyerWins,
-        string calldata evidence
-    ) external onlyArbitrator(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        require(escrow.status == EscrowStatus.DISPUTE_OPENED, "Dispute not opened");
-        
-        escrow.status = buyerWins ? EscrowStatus.RESOLVED_BUYER_WINS : EscrowStatus.RESOLVED_SELLER_WINS;
-        escrow.resolvedAt = block.timestamp;
-        escrow.evidenceSubmitted = evidence;
-        
-        // Update dispute records
         if (buyerWins) {
-            detailedReputationScores[escrow.seller].disputesLost += 1;
-            detailedReputationScores[escrow.buyer].disputesWon += 1;
-        } else {
-            detailedReputationScores[escrow.seller].disputesWon += 1;
-            detailedReputationScores[escrow.buyer].disputesLost += 1;
-        }
-        
-        // Release funds
-        if (buyerWins) {
-            _releaseFundsToBuyer(escrowId);
-        } else {
-            _releaseFundsToSeller(escrowId);
-        }
-        
-        emit EscrowResolved(escrowId, escrow.status, msg.sender);
-    }
-    
-    /**
-     * @notice Submit a marketplace review after escrow completion
-     * @param escrowId ID of the completed escrow
-     * @param reviewee Address being reviewed (buyer or seller)
-     * @param rating Rating from 1-5 stars
-     * @param reviewText Review text content
-     */
-    function submitMarketplaceReview(
-        uint256 escrowId,
-        address reviewee,
-        uint8 rating,
-        string calldata reviewText
-    ) external escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(
-            escrow.status == EscrowStatus.RESOLVED_SELLER_WINS || 
-            escrow.status == EscrowStatus.RESOLVED_BUYER_WINS,
-            "Escrow not completed"
-        );
-        require(
-            msg.sender == escrow.buyer || msg.sender == escrow.seller,
-            "Not authorized to review"
-        );
-        require(reviewee == escrow.buyer || reviewee == escrow.seller, "Invalid reviewee");
-        require(msg.sender != reviewee, "Cannot review yourself");
-        require(rating >= 1 && rating <= 5, "Rating must be between 1 and 5");
-        require(!hasReviewedUser[msg.sender][reviewee], "Already reviewed this user");
-        
-        // Anti-gaming: Check time since last review
-        DetailedReputationScore storage reviewerScore = detailedReputationScores[msg.sender];
-        require(
-            block.timestamp >= reviewerScore.lastActivityTimestamp + minTimeBetweenReviews,
-            "Review submitted too soon"
-        );
-        
-        uint256 reviewId = nextReviewId++;
-        
-        marketplaceReviews[reviewId] = MarketplaceReview({
-            id: reviewId,
-            reviewer: msg.sender,
-            reviewee: reviewee,
-            escrowId: escrowId,
-            rating: rating,
-            reviewText: reviewText,
-            timestamp: block.timestamp,
-            isVerified: true, // Auto-verified since it's from completed escrow
-            helpfulVotes: 0
-        });
-        
-        // Update mappings
-        hasReviewedUser[msg.sender][reviewee] = true;
-        userReviews[reviewee].push(reviewId);
-        
-        // Update reviewer's last activity
-        reviewerScore.lastActivityTimestamp = block.timestamp;
-        
-        emit MarketplaceReviewSubmitted(reviewId, msg.sender, reviewee, escrowId, rating);
-        
-        // Update reviewee's reputation based on the review
-        _updateReputationFromReview(reviewId);
-    }
-    
-    /**
-     * @notice Cast a helpful vote on a review
-     * @param reviewId ID of the review
-     */
-    function castHelpfulVote(uint256 reviewId) external {
-        MarketplaceReview storage review = marketplaceReviews[reviewId];
-        require(review.id != 0, "Review does not exist");
-        require(!review.hasVoted[msg.sender], "Already voted on this review");
-        require(msg.sender != review.reviewer, "Cannot vote on own review");
-        
-        review.hasVoted[msg.sender] = true;
-        review.helpfulVotes++;
-        
-        emit HelpfulVoteCast(reviewId, msg.sender);
-        
-        // Award small reputation boost to reviewer for helpful review
-        _updateDetailedReputation(review.reviewer, 1, "Helpful review received");
-    }
-    
-    /**
-     * @notice Get reputation tier for a user
-     * @param user Address of the user
-     * @return Reputation tier
-     */
-    function getReputationTier(address user) external view returns (ReputationTier) {
-        uint256 score = detailedReputationScores[user].totalPoints;
-        
-        for (uint256 i = tierThresholds.length - 1; i > 0; i--) {
-            if (score >= tierThresholds[i]) {
-                return ReputationTier(i);
-            }
-        }
-        
-        return ReputationTier.NEWCOMER;
-    }
-    
-    /**
-     * @notice Calculate weighted reputation score
-     * @param user Address of the user
-     * @return Weighted reputation score
-     */
-    function calculateWeightedScore(address user) external view returns (uint256) {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        
-        if (score.reviewCount == 0 && score.successfulTransactions == 0) {
-            return 0;
-        }
-        
-        // Base score from total points
-        uint256 baseScore = score.totalPoints;
-        
-        // Weight by transaction success rate
-        uint256 totalTransactions = score.successfulTransactions + score.disputesLost;
-        uint256 successRate = totalTransactions > 0 ? 
-            (score.successfulTransactions * 100) / totalTransactions : 100;
-        
-        // Weight by average rating (if has reviews)
-        uint256 ratingWeight = score.reviewCount > 0 ? score.averageRating : 500; // Default to 5.0 if no reviews
-        
-        // Penalty for suspicious activity
-        uint256 suspiciousPenalty = score.suspiciousActivityCount * 50;
-        
-        // Calculate weighted score
-        uint256 weightedScore = (baseScore * successRate * ratingWeight) / 50000; // Normalize
-        
-        // Apply penalty
-        if (weightedScore > suspiciousPenalty) {
-            weightedScore -= suspiciousPenalty;
-        } else {
-            weightedScore = 0;
-        }
-        
-        return weightedScore;
-    }
-    
-    /**
-     * @notice Get seller rankings (top sellers by weighted score)
-     * @param limit Maximum number of sellers to return
-     * @return Arrays of seller addresses and their weighted scores
-     */
-    function getTopSellers(uint256 limit) external view returns (address[] memory sellers, uint256[] memory scores) {
-        // This is a simplified implementation
-        // In production, you'd want to maintain a sorted list or use off-chain indexing
-        sellers = new address[](limit);
-        scores = new uint256[](limit);
-        
-        // Placeholder implementation - would need proper sorting logic
-        return (sellers, scores);
-    }
-    
-    /**
-     * @notice Suspend a user for suspicious activity
-     * @param user Address to suspend
-     * @param duration Suspension duration in seconds
-     * @param reason Reason for suspension
-     */
-    function suspendUser(address user, uint256 duration, string calldata reason) external onlyDAO {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        score.isSuspended = true;
-        score.suspensionEndTime = block.timestamp + duration;
-        
-        emit UserSuspended(user, score.suspensionEndTime, reason);
-    }
-    
-    /**
-     * @notice Get user's review history
-     * @param user Address of the user
-     * @return Array of review IDs for the user
-     */
-    function getUserReviews(address user) external view returns (uint256[] memory) {
-        return userReviews[user];
-    }
-    
-    /**
-     * @notice Get detailed reputation information
-     * @param user Address of the user
-     * @return Detailed reputation score struct
-     */
-    function getDetailedReputation(address user) external view returns (DetailedReputationScore memory) {
-        return detailedReputationScores[user];
-    }
-
-    /**
-     * @notice Execute emergency refund within the emergency window
-     * @param escrowId ID of the escrow
-     */
-    function executeEmergencyRefund(uint256 escrowId) external onlyDAO escrowExists(escrowId) {
-        Escrow storage escrow = escrows[escrowId];
-        
-        require(escrow.emergencyRefundEnabled, "Emergency refund not enabled");
-        require(block.timestamp <= escrow.createdAt + emergencyRefundWindow, "Emergency refund window expired");
-        require(
-            escrow.status == EscrowStatus.FUNDS_LOCKED || 
-            escrow.status == EscrowStatus.DELIVERY_CONFIRMED ||
-            escrow.status == EscrowStatus.DISPUTE_OPENED, 
-            "Cannot execute emergency refund in current status"
-        );
-        
-        // Refund buyer
-        _refundBuyer(escrowId);
-        
-        escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
-        escrow.resolvedAt = block.timestamp;
-        
-        emit EmergencyRefundExecuted(escrowId, escrow.buyer, escrow.amount);
-        emit EscrowResolved(escrowId, escrow.status, msg.sender);
-        
-        // Send notifications
-        _sendNotification(escrow.buyer, string(abi.encodePacked("Emergency refund executed for escrow #", _toString(escrowId))));
-        _sendNotification(escrow.seller, string(abi.encodePacked("Emergency refund executed for escrow #", _toString(escrowId))));
-    }
-    
-    /**
-     * @notice Internal function to execute release (handles both regular and multi-sig releases)
-     * @param escrowId ID of the escrow
-     */
-    function _executeRelease(uint256 escrowId) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        // Release funds to seller
-        _releaseFundsToSeller(escrowId);
-        
-        escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
-        escrow.resolvedAt = block.timestamp;
-        
-        emit EscrowResolved(escrowId, escrow.status, msg.sender);
-        
-        // Update reputation scores
-        _updateReputation(escrow.seller, 5, "Successful transaction");
-        _updateReputation(escrow.buyer, 2, "Completed purchase");
-        
-        // Send notification
-        _sendNotification(escrow.seller, string(abi.encodePacked("Escrow #", _toString(escrowId), " completed. Funds released to you.")));
-    }
-
-    /**
-     * @notice Internal function to release funds to seller
-     * @param escrowId ID of the escrow
-     */
-    function _releaseFundsToSeller(uint256 escrowId) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        uint256 sellerAmount = escrow.amount - escrow.feeAmount;
-        
-        if (escrow.tokenAddress == address(0)) {
-            // ETH payment
-            payable(escrow.seller).transfer(sellerAmount);
-            // Platform fee is kept in the contract
-        } else {
-            // ERC20 payment
-            IERC20 token = IERC20(escrow.tokenAddress);
-            require(token.transfer(escrow.seller, sellerAmount), "Token transfer to seller failed");
-            // Platform fee is kept in the contract
-        }
-    }
-    
-    /**
-     * @notice Internal function to refund buyer
-     * @param escrowId ID of the escrow
-     */
-    function _refundBuyer(uint256 escrowId) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        if (escrow.tokenAddress == address(0)) {
-            // ETH payment
-            payable(escrow.buyer).transfer(escrow.amount);
-        } else {
-            // ERC20 payment
-            IERC20 token = IERC20(escrow.tokenAddress);
-            require(token.transfer(escrow.buyer, escrow.amount), "Token transfer to buyer failed");
-        }
-    }
-    
-    /**
-     * @notice Internal function to release funds to buyer
-     * @param escrowId ID of the escrow
-     */
-    function _releaseFundsToBuyer(uint256 escrowId) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        if (escrow.tokenAddress == address(0)) {
-            // ETH payment
-            payable(escrow.buyer).transfer(escrow.amount);
-        } else {
-            // ERC20 payment
-            IERC20 token = IERC20(escrow.tokenAddress);
-            require(token.transfer(escrow.buyer, escrow.amount), "Token transfer to buyer failed");
-        }
-    }
-    
-    /**
-     * @notice Internal function to resolve dispute by voting
-     * @param escrowId ID of the escrow
-     */
-    function _resolveDisputeByVoting(uint256 escrowId) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        // Simple majority wins
-        bool buyerWins = escrow.votesForBuyer > escrow.votesForSeller;
-        _resolveDispute(escrowId, buyerWins);
-    }
-    
-    /**
-     * @notice Internal function to resolve dispute
-     * @param escrowId ID of the escrow
-     * @param buyerWins True if buyer wins, false if seller wins
-     */
-    function _resolveDispute(uint256 escrowId, bool buyerWins) internal {
-        Escrow storage escrow = escrows[escrowId];
-        
-        escrow.resolvedAt = block.timestamp;
-        
-        if (buyerWins) {
-            // Refund buyer
-            _refundBuyer(escrowId);
             escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
-            
-            // Update reputation scores
-            _updateReputation(escrow.buyer, 3, "Won dispute");
-            _updateReputation(escrow.seller, -5, "Lost dispute");
+            _releaseFunds(escrowId, escrow.buyer);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, true);
         } else {
-            // Release funds to seller
-            _releaseFundsToSeller(escrowId);
             escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
-            
-            // Update reputation scores
-            _updateReputation(escrow.seller, 3, "Won dispute");
-            _updateReputation(escrow.buyer, -5, "Lost dispute");
+            _releaseFunds(escrowId, escrow.seller);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
         }
         
-        emit EscrowResolved(escrowId, escrow.status, msg.sender);
+        escrow.resolvedAt = block.timestamp;
         
-        // Send notifications
-        if (buyerWins) {
-            _sendNotification(escrow.buyer, string(abi.encodePacked("Dispute resolved in your favor for escrow #", _toString(escrowId))));
-            _sendNotification(escrow.seller, string(abi.encodePacked("Dispute resolved against you for escrow #", _toString(escrowId))));
-        } else {
-            _sendNotification(escrow.seller, string(abi.encodePacked("Dispute resolved in your favor for escrow #", _toString(escrowId))));
-            _sendNotification(escrow.buyer, string(abi.encodePacked("Dispute resolved against you for escrow #", _toString(escrowId))));
-        }
+        emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
     }
-    
-    /**
-     * @notice Internal function to update user reputation
-     * @param user Address of the user
-     * @param scoreChange Change in reputation score (positive or negative)
-     * @param reason Reason for the update
-     */
-    function _updateReputation(address user, int256 scoreChange, string memory reason) internal {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        
-        int256 newScore = int256(score.totalPoints) + scoreChange;
-        if (newScore < 0) {
-            score.totalPoints = 0;
-        } else {
-            score.totalPoints = uint256(newScore);
-        }
-        
-        score.lastActivityTimestamp = block.timestamp;
-        
-        // Update tier
-        ReputationTier newTier = _getReputationTier(score.totalPoints);
-        ReputationTier oldTier = score.tier;
-        score.tier = newTier;
-        
-        emit ReputationUpdated(user, scoreChange, score.totalPoints, reason);
-        
-        if (oldTier != newTier) {
-            emit ReputationTierUpdated(user, oldTier, newTier);
-        }
-        
-        // Emit detailed reputation event
-        emit DetailedReputationUpdated(
-            user,
-            score.totalPoints,
-            score.reviewCount,
-            score.averageRating,
-            score.successfulTransactions,
-            score.disputesWon,
-            score.disputesLost,
-            block.timestamp
-        );
-    }
-    
-    /**
-     * @notice Internal function to get reputation tier based on points
-     * @param points Reputation points
-     * @return Reputation tier
-     */
-    function _getReputationTier(uint256 points) internal view returns (ReputationTier) {
-        for (uint256 i = tierThresholds.length - 1; i > 0; i--) {
-            if (points >= tierThresholds[i]) {
-                return ReputationTier(i);
-            }
-        }
-        return ReputationTier.NEWCOMER;
-    }
-    
-    /**
-     * @notice Update sales metrics for a seller
-     * @param seller Address of the seller
-     * @param amount Sale amount
-     */
-    function _updateSalesMetrics(address seller, uint256 amount) internal {
-        DetailedReputationScore storage score = detailedReputationScores[seller];
-        score.successfulTransactions += 1;
-        // In a real implementation, you would track total sales and revenue separately
-        // For now, we'll use successfulTransactions as a proxy
-        
-        emit EscrowSalesMetricsUpdated(
-            seller,
-            score.successfulTransactions,
-            amount,
-            block.timestamp
-        );
-    }
-    
-    /**
-     * @notice Update escrow performance metrics
-     * @param escrowId ID of the escrow
-     * @param deliveryTime Time taken for delivery
-     * @param responseTime Time taken to respond
-     */
-    function updateEscrowPerformance(
-        uint256 escrowId,
-        uint256 deliveryTime,
-        uint256 responseTime
-    ) external onlyOwner {
-        Escrow storage escrow = escrows[escrowId];
-        
-        emit EscrowPerformanceUpdated(
-            escrowId,
-            escrow.seller,
-            deliveryTime,
-            responseTime,
-            block.timestamp
-        );
-    }
-    
-    /**
-     * @notice Record community voting results
-     * @param escrowId ID of the escrow
-     * @param votesForBuyer Votes for buyer
-     * @param votesForSeller Votes for seller
-     * @param totalVotingPower Total voting power
-     * @param buyerWins Whether buyer wins
-     */
-    function recordCommunityVotingResults(
-        uint256 escrowId,
-        uint256 votesForBuyer,
-        uint256 votesForSeller,
-        uint256 totalVotingPower,
-        bool buyerWins
-    ) external onlyOwner {
-        emit CommunityVotingResults(
-            escrowId,
-            votesForBuyer,
-            votesForSeller,
-            totalVotingPower,
-            buyerWins,
-            block.timestamp
-        );
-    }
-    
-    /**
-     * @notice Assign arbitrator to escrow
-     * @param escrowId ID of the escrow
-     * @param arbitrator Address of the arbitrator
-     */
-    function assignArbitrator(uint256 escrowId, address arbitrator) external onlyOwner {
-        escrows[escrowId].appointedArbitrator = arbitrator;
-        
-        emit ArbitratorAssigned(escrowId, arbitrator, block.timestamp);
-    }
-    
+
     /**
      * @notice Submit a marketplace review
      * @param escrowId ID of the completed escrow
-     * @param reviewee Address being reviewed (buyer or seller)
-     * @param rating Rating from 1-5 stars
-     * @param reviewText Review text content
+     * @param reviewee Address being reviewed
+     * @param rating Rating from 1-5
+     * @param reviewText Review text
+     * @return reviewId ID of the created review
      */
     function submitMarketplaceReview(
         uint256 escrowId,
         address reviewee,
         uint8 rating,
         string calldata reviewText
-    ) external escrowExists(escrowId) {
+    ) external escrowExists(escrowId) returns (uint256) {
         Escrow storage escrow = escrows[escrowId];
-        
         require(
-            escrow.status == EscrowStatus.RESOLVED_SELLER_WINS || 
-            escrow.status == EscrowStatus.RESOLVED_BUYER_WINS,
+            escrow.status == EscrowStatus.DELIVERY_CONFIRMED || 
+            escrow.status == EscrowStatus.RESOLVED_BUYER_WINS || 
+            escrow.status == EscrowStatus.RESOLVED_SELLER_WINS,
             "Escrow not completed"
         );
-        require(
-            msg.sender == escrow.buyer || msg.sender == escrow.seller,
-            "Not authorized to review"
-        );
+        require(msg.sender == escrow.buyer || msg.sender == escrow.seller, "Only participants can review");
         require(reviewee == escrow.buyer || reviewee == escrow.seller, "Invalid reviewee");
         require(msg.sender != reviewee, "Cannot review yourself");
         require(rating >= 1 && rating <= 5, "Rating must be between 1 and 5");
-        require(!hasReviewedUser[msg.sender][reviewee], "Already reviewed this user");
-        
-        // Anti-gaming: Check time since last review
-        DetailedReputationScore storage reviewerScore = detailedReputationScores[msg.sender];
-        require(
-            block.timestamp >= reviewerScore.lastActivityTimestamp + minTimeBetweenReviews,
-            "Review submitted too soon"
-        );
         
         uint256 reviewId = nextReviewId++;
         
-        marketplaceReviews[reviewId] = MarketplaceReview({
-            id: reviewId,
-            reviewer: msg.sender,
-            reviewee: reviewee,
-            escrowId: escrowId,
-            rating: rating,
-            reviewText: reviewText,
-            timestamp: block.timestamp,
-            isVerified: true, // Auto-verified since it's from completed escrow
-            helpfulVotes: 0
-        });
+        MarketplaceReview storage review = reviews[reviewId];
+        review.id = reviewId;
+        review.reviewer = msg.sender;
+        review.reviewee = reviewee;
+        review.escrowId = escrowId;
+        review.rating = rating;
+        review.reviewText = reviewText;
+        review.timestamp = block.timestamp;
+        review.isVerified = true; // Verified because it's from a completed transaction
         
-        // Update mappings
-        hasReviewedUser[msg.sender][reviewee] = true;
         userReviews[reviewee].push(reviewId);
         
-        // Update reviewer's last activity
-        reviewerScore.lastActivityTimestamp = block.timestamp;
+        // Update reputation score
+        _updateReputationFromReview(reviewee, rating);
         
-        emit MarketplaceReviewSubmitted(reviewId, msg.sender, reviewee, escrowId, rating);
+        emit ReviewSubmitted(reviewId, msg.sender, reviewee, rating);
         
-        // Update reviewee's reputation based on the review
-        _updateReputationFromReview(reviewId);
+        return reviewId;
     }
-    
+
     /**
      * @notice Cast a helpful vote on a review
      * @param reviewId ID of the review
      */
     function castHelpfulVote(uint256 reviewId) external {
-        MarketplaceReview storage review = marketplaceReviews[reviewId];
-        require(review.id != 0, "Review does not exist");
-        require(!review.hasVoted[msg.sender], "Already voted on this review");
+        require(reviewId > 0 && reviewId < nextReviewId, "Review does not exist");
+        MarketplaceReview storage review = reviews[reviewId];
+        require(!review.hasVotedHelpful[msg.sender], "Already voted on this review");
         require(msg.sender != review.reviewer, "Cannot vote on own review");
         
-        review.hasVoted[msg.sender] = true;
+        review.hasVotedHelpful[msg.sender] = true;
         review.helpfulVotes++;
-        
-        emit HelpfulVoteCast(reviewId, msg.sender);
-        
-        // Award small reputation boost to reviewer for helpful review
-        _updateDetailedReputation(review.reviewer, 1, "Helpful review received");
     }
-    
+
     /**
      * @notice Get reputation tier for a user
      * @param user Address of the user
-     * @return Reputation tier
+     * @return tier Reputation tier
      */
     function getReputationTier(address user) external view returns (ReputationTier) {
-        uint256 score = detailedReputationScores[user].totalPoints;
-        
-        for (uint256 i = tierThresholds.length - 1; i > 0; i--) {
-            if (score >= tierThresholds[i]) {
-                return ReputationTier(i);
-            }
-        }
-        
-        return ReputationTier.NEWCOMER;
+        return detailedReputationScores[user].tier;
     }
-    
+
     /**
      * @notice Calculate weighted reputation score
      * @param user Address of the user
-     * @return Weighted reputation score
+     * @return score Weighted reputation score
      */
     function calculateWeightedScore(address user) external view returns (uint256) {
         DetailedReputationScore storage score = detailedReputationScores[user];
@@ -1308,49 +440,37 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         // Base score from total points
         uint256 baseScore = score.totalPoints;
         
-        // Weight by transaction success rate
-        uint256 totalTransactions = score.successfulTransactions + score.disputesLost;
-        uint256 successRate = totalTransactions > 0 ? 
-            (score.successfulTransactions * 100) / totalTransactions : 100;
-        
-        // Weight by average rating (if has reviews)
-        uint256 ratingWeight = score.reviewCount > 0 ? score.averageRating : 500; // Default to 5.0 if no reviews
-        
-        // Penalty for suspicious activity
-        uint256 suspiciousPenalty = score.suspiciousActivityCount * 50;
-        
-        // Calculate weighted score
-        uint256 weightedScore = (baseScore * successRate * ratingWeight) / 50000; // Normalize
-        
-        // Apply penalty
-        if (weightedScore > suspiciousPenalty) {
-            weightedScore -= suspiciousPenalty;
-        } else {
-            weightedScore = 0;
+        // Apply time decay
+        uint256 timeSinceLastActivity = block.timestamp - score.lastActivityTimestamp;
+        if (timeSinceLastActivity > REPUTATION_DECAY_PERIOD) {
+            uint256 decayFactor = timeSinceLastActivity / REPUTATION_DECAY_PERIOD;
+            baseScore = baseScore > decayFactor ? baseScore - decayFactor : 0;
         }
         
-        return weightedScore;
+        return baseScore;
     }
-    
+
     /**
-     * @notice Get seller rankings (top sellers by weighted score)
+     * @notice Get top sellers by reputation
      * @param limit Maximum number of sellers to return
-     * @return Arrays of seller addresses and their weighted scores
+     * @return sellers Array of seller addresses
+     * @return scores Array of corresponding reputation scores
      */
     function getTopSellers(uint256 limit) external view returns (address[] memory sellers, uint256[] memory scores) {
         // This is a simplified implementation
-        // In production, you'd want to maintain a sorted list or use off-chain indexing
+        // In production, you'd want to maintain a sorted list or use a more efficient algorithm
         sellers = new address[](limit);
         scores = new uint256[](limit);
         
-        // Placeholder implementation - would need proper sorting logic
+        // Implementation would iterate through users and find top sellers
+        // For brevity, returning empty arrays
         return (sellers, scores);
     }
-    
+
     /**
-     * @notice Suspend a user for suspicious activity
-     * @param user Address to suspend
-     * @param duration Suspension duration in seconds
+     * @notice Suspend a user
+     * @param user Address of the user to suspend
+     * @param duration Duration of suspension in seconds
      * @param reason Reason for suspension
      */
     function suspendUser(address user, uint256 duration, string calldata reason) external onlyDAO {
@@ -1358,306 +478,182 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         score.isSuspended = true;
         score.suspensionEndTime = block.timestamp + duration;
         
-        emit UserSuspended(user, score.suspensionEndTime, reason);
+        emit UserSuspended(user, duration, reason);
     }
-    
+
     /**
-     * @notice Get user's review history
+     * @notice Get user reviews
      * @param user Address of the user
-     * @return Array of review IDs for the user
+     * @return reviewIds Array of review IDs
      */
     function getUserReviews(address user) external view returns (uint256[] memory) {
         return userReviews[user];
     }
-    
+
     /**
-     * @notice Get detailed reputation information
+     * @notice Get detailed reputation for a user
      * @param user Address of the user
-     * @return Detailed reputation score struct
+     * @return reputation Detailed reputation score
      */
     function getDetailedReputation(address user) external view returns (DetailedReputationScore memory) {
         return detailedReputationScores[user];
     }
 
     /**
-     * @notice Execute emergency refund within the emergency window
+     * @notice Execute emergency refund (DAO only)
      * @param escrowId ID of the escrow
      */
     function executeEmergencyRefund(uint256 escrowId) external onlyDAO escrowExists(escrowId) {
         Escrow storage escrow = escrows[escrowId];
+        require(escrow.status == EscrowStatus.FUNDS_LOCKED || escrow.status == EscrowStatus.DISPUTE_OPENED, "Invalid status for refund");
         
-        require(escrow.emergencyRefundEnabled, "Emergency refund not enabled");
-        require(block.timestamp <= escrow.createdAt + emergencyRefundWindow, "Emergency refund window expired");
-        require(
-            escrow.status == EscrowStatus.FUNDS_LOCKED || 
-            escrow.status == EscrowStatus.DELIVERY_CONFIRMED ||
-            escrow.status == EscrowStatus.DISPUTE_OPENED, 
-            "Cannot execute emergency refund in current status"
-        );
-        
-        // Refund buyer
-        _refundBuyer(escrowId);
-        
-        escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
+        escrow.status = EscrowStatus.CANCELLED;
         escrow.resolvedAt = block.timestamp;
         
-        emit EmergencyRefundExecuted(escrowId, escrow.buyer, escrow.amount);
-        emit EscrowResolved(escrowId, escrow.status, msg.sender);
+        _releaseFunds(escrowId, escrow.buyer);
         
-        // Send notifications
-        _sendNotification(escrow.buyer, string(abi.encodePacked("Emergency refund executed for escrow #", _toString(escrowId))));
-        _sendNotification(escrow.seller, string(abi.encodePacked("Emergency refund executed for escrow #", _toString(escrowId))));
-    }
-    
-    /**
-     * @notice Internal function to update detailed reputation
-     * @param user Address of the user
-     * @param scoreChange Change in reputation score (positive or negative)
-     * @param reason Reason for the change
-     */
-    function _updateDetailedReputation(address user, int256 scoreChange, string memory reason) internal {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        
-        ReputationTier oldTier = score.tier;
-        uint256 oldScore = score.totalPoints;
-        
-        // Update total points
-        int256 newScoreInt = int256(score.totalPoints) + scoreChange;
-        score.totalPoints = newScoreInt < 0 ? 0 : uint256(newScoreInt);
-        
-        // Update tier
-        ReputationTier newTier = this.getReputationTier(user);
-        score.tier = newTier;
-        
-        // Update last activity
-        score.lastActivityTimestamp = block.timestamp;
-        
-        // Track transaction outcomes
-        if (keccak256(bytes(reason)) == keccak256(bytes("Successful transaction")) ||
-            keccak256(bytes(reason)) == keccak256(bytes("Won dispute"))) {
-            score.successfulTransactions++;
-        } else if (keccak256(bytes(reason)) == keccak256(bytes("Lost dispute"))) {
-            score.disputesLost++;
-        }
-        
-        // Emit tier update if changed
-        if (oldTier != newTier) {
-            emit ReputationTierUpdated(user, oldTier, newTier);
-        }
-        
-        // Check for suspicious activity patterns
-        _checkSuspiciousActivity(user, reason);
-    }
-    
-    /**
-     * @notice Internal function to update reputation from a marketplace review
-     * @param reviewId ID of the review
-     */
-    function _updateReputationFromReview(uint256 reviewId) internal {
-        MarketplaceReview storage review = marketplaceReviews[reviewId];
-        DetailedReputationScore storage revieweeScore = detailedReputationScores[review.reviewee];
-        
-        // Calculate points based on rating
-        uint256 points = 0;
-        if (review.rating == 5) points = 10;
-        else if (review.rating == 4) points = 5;
-        else if (review.rating == 3) points = 2;
-        else if (review.rating == 2) points = 0;
-        else if (review.rating == 1) points = 0; // No negative points to prevent gaming
-        
-        // Update detailed reputation
-        _updateDetailedReputation(review.reviewee, int256(points), "Review received");
-        
-        // Update average rating
-        _updateAverageRating(review.reviewee, review.rating);
-    }
-    
-    /**
-     * @notice Internal function to update average rating
-     * @param user Address of the user
-     * @param newRating New rating to include
-     */
-    function _updateAverageRating(address user, uint8 newRating) internal {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        
-        if (score.reviewCount == 0) {
-            score.averageRating = newRating * 100;
-        } else {
-            // Calculate new average (scaled by 100)
-            uint256 totalRating = (score.averageRating * score.reviewCount) + (newRating * 100);
-            score.averageRating = totalRating / (score.reviewCount + 1);
-        }
-        
-        score.reviewCount++;
-    }
-    
-    /**
-     * @notice Internal function to check for suspicious activity
-     * @param user Address of the user
-     * @param reason Reason for the reputation change
-     */
-    function _checkSuspiciousActivity(address user, string memory reason) internal {
-        DetailedReputationScore storage score = detailedReputationScores[user];
-        
-        // Check for rapid reputation changes (potential gaming)
-        if (block.timestamp < score.lastActivityTimestamp + 1 hours) {
-            score.suspiciousActivityCount++;
-            
-            emit SuspiciousActivityDetected(user, "Rapid activity", score.suspiciousActivityCount);
-            
-            // Auto-suspend if threshold exceeded
-            if (score.suspiciousActivityCount >= suspiciousActivityThreshold) {
-                score.isSuspended = true;
-                score.suspensionEndTime = block.timestamp + 7 days;
-                
-                emit UserSuspended(user, score.suspensionEndTime, "Automatic suspension for suspicious activity");
-            }
-        }
-    }
-    
-    /**
-     * @notice Internal function to send notification
-     * @param recipient Address of the recipient
-     * @param message Notification message
-     */
-    function _sendNotification(address recipient, string memory message) internal {
-        emit NotificationSent(recipient, message, block.timestamp);
-        
-        // In a real implementation, this would store the notification in a mapping
-        // or emit an event that the backend can listen to
-    }
-    
-    /**
-     * @notice Internal function to convert uint to string
-     * @param value Uint value to convert
-     * @return String representation
-     */
-    function _toString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
-    }
-    
-    /**
-     * @notice Set platform fee
-     * @param newFee New platform fee in basis points
-     */
-    function setPlatformFee(uint256 newFee) external onlyDAO {
-        require(newFee <= 1000, "Fee too high (max 10%)"); // Max 10%
-        platformFee = newFee;
-    }
-    
-    /**
-     * @notice Set minimum reputation score
-     * @param newScore New minimum reputation score
-     */
-    function setMinReputationScore(uint256 newScore) external onlyDAO {
-        minReputationScore = newScore;
-    }
-    
-    /**
-     * @notice Set delivery deadline days
-     * @param newDays New delivery deadline in days
-     */
-    function setDeliveryDeadlineDays(uint256 newDays) external onlyDAO {
-        deliveryDeadlineDays = newDays;
-    }
-    
-    /**
-     * @notice Set high-value transaction threshold
-     * @param newThreshold New threshold for multi-sig requirement
-     */
-    function setHighValueThreshold(uint256 newThreshold) external onlyDAO {
-        highValueThreshold = newThreshold;
-    }
-    
-    /**
-     * @notice Set time lock duration
-     * @param newDuration New time lock duration in seconds
-     */
-    function setTimeLockDuration(uint256 newDuration) external onlyDAO {
-        require(newDuration >= 1 hours && newDuration <= 7 days, "Invalid duration");
-        timeLockDuration = newDuration;
-    }
-    
-    /**
-     * @notice Set emergency refund window
-     * @param newWindow New emergency refund window in seconds
-     */
-    function setEmergencyRefundWindow(uint256 newWindow) external onlyDAO {
-        require(newWindow >= 1 days && newWindow <= 30 days, "Invalid window");
-        emergencyRefundWindow = newWindow;
-    }
-    
-    /**
-     * @notice Approve or revoke DAO vendor status
-     * @param vendor Address of the vendor
-     * @param approved Whether to approve or revoke
-     */
-    function setDAOApprovedVendor(address vendor, bool approved) external onlyDAO {
-        daoApprovedVendors[vendor] = approved;
-    }
-    
-    /**
-     * @notice Get escrow details
-     * @param escrowId ID of the escrow
-     * @return Escrow details
-     */
-    function getEscrow(uint256 escrowId) external view returns (Escrow memory) {
-        return escrows[escrowId];
-    }
-    
-    /**
-     * @notice Get user reputation score
-     * @param user Address of the user
-     * @return Reputation score
-     */
-    function getReputationScore(address user) external view returns (uint256) {
-        return reputationScores[user];
-    }
-    
-    /**
-     * @notice Update reputation (for testing purposes only)
-     * @param user Address of the user
-     * @param scoreChange Change in reputation score
-     * @param reason Reason for the change
-     */
-    function updateReputationForTesting(address user, int256 scoreChange, string memory reason) external onlyDAO {
-        _updateReputation(user, scoreChange, reason);
-    }
-    
-    /**
-     * @notice Set reputation tier thresholds
-     * @param newThresholds Array of 6 threshold values for tiers
-     */
-    function setTierThresholds(uint256[6] calldata newThresholds) external onlyDAO {
-        tierThresholds = newThresholds;
-    }
-    
-    /**
-     * @notice Set anti-gaming parameters
-     */
-    function setMinTimeBetweenReviews(uint256 newTime) external onlyDAO {
-        minTimeBetweenReviews = newTime;
-    }
-    
-    function setSuspiciousActivityThreshold(uint256 newThreshold) external onlyDAO {
-        suspiciousActivityThreshold = newThreshold;
+        emit EmergencyRefund(escrowId, escrow.buyer, escrow.amount);
     }
 
-    // Fallback function to receive ETH
-    receive() external payable {}
+    // Internal functions
+    function _releaseFunds(uint256 escrowId, address recipient) internal {
+        Escrow storage escrow = escrows[escrowId];
+        
+        if (escrow.tokenAddress == address(0)) {
+            // ETH payment
+            payable(recipient).transfer(escrow.amount);
+            payable(owner()).transfer(escrow.feeAmount);
+        } else {
+            // ERC20 token payment
+            IERC20(escrow.tokenAddress).transfer(recipient, escrow.amount);
+            IERC20(escrow.tokenAddress).transfer(owner(), escrow.feeAmount);
+        }
+    }
+
+    function _resolveDisputeByVoting(uint256 escrowId) internal {
+        Escrow storage escrow = escrows[escrowId];
+        
+        bool buyerWins = escrow.votesForBuyer > escrow.votesForSeller;
+        
+        if (buyerWins) {
+            escrow.status = EscrowStatus.RESOLVED_BUYER_WINS;
+            _releaseFunds(escrowId, escrow.buyer);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, true);
+        } else {
+            escrow.status = EscrowStatus.RESOLVED_SELLER_WINS;
+            _releaseFunds(escrowId, escrow.seller);
+            _updateReputationOnDispute(escrow.buyer, escrow.seller, false);
+        }
+        
+        escrow.resolvedAt = block.timestamp;
+        
+        emit EscrowResolved(escrowId, escrow.status, buyerWins ? escrow.buyer : escrow.seller);
+    }
+
+    function _updateReputationOnSuccess(address buyer, address seller) internal {
+        DetailedReputationScore storage buyerScore = detailedReputationScores[buyer];
+        DetailedReputationScore storage sellerScore = detailedReputationScores[seller];
+        
+        buyerScore.successfulTransactions++;
+        buyerScore.totalPoints += 10;
+        buyerScore.lastActivityTimestamp = block.timestamp;
+        
+        sellerScore.successfulTransactions++;
+        sellerScore.totalPoints += 15;
+        sellerScore.lastActivityTimestamp = block.timestamp;
+        
+        _updateTier(buyer);
+        _updateTier(seller);
+    }
+
+    function _updateReputationOnDispute(address buyer, address seller, bool buyerWins) internal {
+        DetailedReputationScore storage buyerScore = detailedReputationScores[buyer];
+        DetailedReputationScore storage sellerScore = detailedReputationScores[seller];
+        
+        if (buyerWins) {
+            buyerScore.disputesWon++;
+            buyerScore.totalPoints += 5;
+            sellerScore.disputesLost++;
+            if (sellerScore.totalPoints >= 10) {
+                sellerScore.totalPoints -= 10;
+            }
+        } else {
+            sellerScore.disputesWon++;
+            sellerScore.totalPoints += 5;
+            buyerScore.disputesLost++;
+            if (buyerScore.totalPoints >= 10) {
+                buyerScore.totalPoints -= 10;
+            }
+        }
+        
+        buyerScore.lastActivityTimestamp = block.timestamp;
+        sellerScore.lastActivityTimestamp = block.timestamp;
+        
+        _updateTier(buyer);
+        _updateTier(seller);
+    }
+
+    function _updateReputationFromReview(address reviewee, uint8 rating) internal {
+        DetailedReputationScore storage score = detailedReputationScores[reviewee];
+        
+        // Update average rating
+        uint256 totalRating = score.averageRating * score.reviewCount + (rating * 100);
+        score.reviewCount++;
+        score.averageRating = totalRating / score.reviewCount;
+        
+        // Add points based on rating
+        if (rating >= 4) {
+            score.totalPoints += rating;
+        } else if (rating <= 2 && score.totalPoints >= rating) {
+            score.totalPoints -= (3 - rating);
+        }
+        
+        score.lastActivityTimestamp = block.timestamp;
+        _updateTier(reviewee);
+    }
+
+    function _updateTier(address user) internal {
+        DetailedReputationScore storage score = detailedReputationScores[user];
+        ReputationTier oldTier = score.tier;
+        
+        if (score.totalPoints >= 2500) {
+            score.tier = ReputationTier.DIAMOND;
+        } else if (score.totalPoints >= 1000) {
+            score.tier = ReputationTier.PLATINUM;
+        } else if (score.totalPoints >= 500) {
+            score.tier = ReputationTier.GOLD;
+        } else if (score.totalPoints >= 200) {
+            score.tier = ReputationTier.SILVER;
+        } else if (score.totalPoints >= 50) {
+            score.tier = ReputationTier.BRONZE;
+        } else {
+            score.tier = ReputationTier.NEWCOMER;
+        }
+        
+        if (oldTier != score.tier) {
+            emit ReputationUpdated(user, score.totalPoints, score.tier);
+        }
+    }
+
+    // Admin functions
+    function setPlatformFee(uint256 newFee) external onlyOwner {
+        require(newFee <= MAX_PLATFORM_FEE, "Fee too high");
+        platformFeePercentage = newFee;
+    }
+
+    function setLDAOToken(address newToken) external onlyOwner {
+        ldaoToken = LDAOToken(newToken);
+    }
+
+    function setGovernance(address newGovernance) external onlyOwner {
+        governance = Governance(newGovernance);
+    }
+
+    function authorizeArbitrator(address arbitrator, bool authorized) external onlyOwner {
+        authorizedArbitrators[arbitrator] = authorized;
+    }
+
+    function setArbitratorFee(address arbitrator, uint256 fee) external onlyOwner {
+        arbitratorFees[arbitrator] = fee;
+    }
 }

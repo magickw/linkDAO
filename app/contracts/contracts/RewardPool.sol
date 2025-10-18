@@ -18,7 +18,7 @@ contract RewardPool is Ownable {
     event Funded(uint256 epoch, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
 
-    constructor(address _ldao) Ownable(msg.sender) { 
+    constructor(address _ldao) { 
         ldao = IERC20(_ldao); 
     }
 

@@ -77,7 +77,7 @@ abstract contract UpgradeableProxy is
      * @dev Initialize the upgradeable contract
      */
     function __UpgradeableProxy_init(address initialOwner, uint256 _upgradeTimelock) internal onlyInitializing {
-        __Ownable_init(initialOwner);
+        __Ownable_init();
         __Pausable_init();
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -207,7 +207,7 @@ abstract contract UpgradeableProxy is
     /**
      * @dev Required by UUPSUpgradeable
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {
         // Additional authorization logic can be added here
         // For now, only owner can authorize upgrades
     }

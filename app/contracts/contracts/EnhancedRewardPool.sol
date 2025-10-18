@@ -154,7 +154,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         require(rewardCategories[category].active, "Category not active");
         
         // Apply reputation multiplier
-        uint256 reputationScore = reputationSystem.getReputationScore(user);
+        uint256 reputationScore = reputationSystem.getReputationScore(user).totalPoints;
         uint256 multiplier = _calculateReputationMultiplier(reputationScore);
         uint256 finalAmount = baseAmount.mul(multiplier).div(100);
         
@@ -195,7 +195,7 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < users.length; i++) {
             if (baseAmounts[i] > 0) {
                 // Apply reputation multiplier
-                uint256 reputationScore = reputationSystem.getReputationScore(users[i]);
+                uint256 reputationScore = reputationSystem.getReputationScore(users[i]).totalPoints;
                 uint256 multiplier = _calculateReputationMultiplier(reputationScore);
                 uint256 finalAmount = baseAmounts[i].mul(multiplier).div(100);
                 
@@ -377,7 +377,9 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
     /**
      * @notice Get epoch information
      * @param epochId Epoch ID
-     * @return Epoch details
+     * @return id Epoch ID
+     * @return startTime Epoch start time
+     * @return endTime Epoch end time
      */
     function getEpochInfo(uint256 epochId) external view returns (
         uint256 id,
@@ -403,7 +405,10 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
     /**
      * @notice Get reward category information
      * @param categoryId Category ID
-     * @return Category details
+     * @return name Category name
+     * @return weight Category weight
+     * @return active Whether category is active
+     * @return totalDistributed Total tokens distributed
      */
     function getRewardCategory(uint256 categoryId) external view returns (
         string memory name,
@@ -418,7 +423,11 @@ contract EnhancedRewardPool is Ownable, ReentrancyGuard {
     /**
      * @notice Get user statistics
      * @param user User address
-     * @return User stats
+     * @return totalEarned Total tokens earned
+     * @return totalClaimed Total tokens claimed
+     * @return lastClaimEpoch Last claim epoch
+     * @return participationCount Participation count
+     * @return reputationBonus Reputation bonus
      */
     function getUserStats(address user) external view returns (
         uint256 totalEarned,

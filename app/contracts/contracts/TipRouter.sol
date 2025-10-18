@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract TipRouter is Ownable {
@@ -12,7 +12,7 @@ contract TipRouter is Ownable {
 
     event Tipped(bytes32 indexed postId, address indexed from, address indexed to, uint256 amount, uint256 fee);
 
-    constructor(address _ldao, address _rewardPool) Ownable(msg.sender) {
+    constructor(address _ldao, address _rewardPool) {
         ldao = IERC20(_ldao);
         rewardPool = _rewardPool;
     }
@@ -40,6 +40,6 @@ contract TipRouter is Ownable {
         uint8 v, bytes32 r, bytes32 s
     ) external {
         ERC20Permit(address(ldao)).permit(msg.sender, address(this), amount, deadline, v, r, s);
-        tip(postId, creator, amount);
+        this.tip(postId, creator, amount);
     }
 }

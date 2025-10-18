@@ -148,20 +148,20 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
     /**
      * @notice Mint a new NFT with metadata and royalty settings
      * @param to Address to mint the NFT to
-     * @param tokenURI IPFS URI for the NFT metadata
+     * @param _tokenURI IPFS URI for the NFT metadata
      * @param royalty Royalty percentage in basis points (e.g., 250 = 2.5%)
      * @param contentHash Hash of the NFT content to prevent duplicates
      */
     function mintNFT(
         address to,
-        string memory tokenURI,
+        string memory _tokenURI,
         uint256 royalty,
         bytes32 contentHash,
         NFTMetadata memory metadata
     ) external returns (uint256) {
         require(royalty <= maxRoyalty, "Royalty exceeds maximum");
         require(!usedHashes[contentHash], "Content already exists");
-        require(bytes(tokenURI).length > 0, "Token URI required");
+        require(bytes(_tokenURI).length > 0, "Token URI required");
         
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
@@ -180,15 +180,15 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         
         // Set royalty
         if (royalty > 0) {
-            _setTokenRoyalty(tokenId, msg.sender, royalty);
+            _setTokenRoyalty(tokenId, msg.sender, uint96(royalty));
             creatorRoyalties[msg.sender] = royalty;
         }
         
         // Mint the NFT
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, tokenURI);
+        _setTokenURI(tokenId, _tokenURI);
         
-        emit NFTMinted(tokenId, msg.sender, to, tokenURI, royalty);
+        emit NFTMinted(tokenId, msg.sender, to, _tokenURI, royalty);
         
         return tokenId;
     }
@@ -539,7 +539,7 @@ contract NFTMarketplace is ERC721, ERC721URIStorage, ERC721Royalty, Ownable, Ree
         return super.tokenURI(tokenId);
     }
     
-    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Royalty) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage, ERC721Royalty) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

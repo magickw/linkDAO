@@ -186,19 +186,7 @@ contract Governance is Ownable, ReentrancyGuard {
         return proposalId;
     }
     
-    /**
-     * @dev Create a simple proposal (backward compatibility)
-     */
-    function proposeSimple(
-        string memory title,
-        string memory description,
-        address[] memory targets,
-        uint256[] memory values,
-        string[] memory signatures,
-        bytes[] memory calldatas
-    ) external returns (uint256) {
-        return propose(title, description, ProposalCategory.GENERAL, targets, values, signatures, calldatas);
-    }
+
     
     /**
      * @dev Cast a vote on a proposal with enhanced voting power
@@ -256,12 +244,7 @@ contract Governance is Ownable, ReentrancyGuard {
         emit VoteCast(msg.sender, proposalId, support, votes, reason);
     }
     
-    /**
-     * @dev Cast a vote (backward compatibility)
-     */
-    function castVoteSimple(uint256 proposalId, bool support, string memory reason) external {
-        castVote(proposalId, support ? 1 : 0, reason);
-    }
+
     
     /**
      * @dev Delegate voting power to another address

@@ -309,7 +309,7 @@ contract MultiSigWallet is ReentrancyGuard {
         uint256 value,
         bytes memory data,
         bool executed,
-        uint256 confirmations,
+        uint256 _confirmations,
         uint256 createdAt,
         uint256 executeAfter,
         string memory description

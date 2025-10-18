@@ -64,7 +64,7 @@ contract LDAOToken is ERC20Permit, Ownable, ReentrancyGuard {
     constructor(address treasury) 
         ERC20("LinkDAO Token", "LDAO") 
         ERC20Permit("LinkDAO Token")
-        Ownable(msg.sender)
+        Ownable()
     {
         _mint(treasury, INITIAL_SUPPLY);
         
