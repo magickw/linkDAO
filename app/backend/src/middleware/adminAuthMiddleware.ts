@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
@@ -288,3 +288,6 @@ export const defaultAdminMiddleware = [
   adminRateLimit(),
   auditAdminAction('admin_operation')
 ];
+
+// Backward compatibility aliases
+export const adminAuthMiddleware = validateAdminRole;

@@ -1,10 +1,10 @@
 import { eq, desc, and, sql, gte, lte } from 'drizzle-orm';
 import { db } from '../db/connection';
-import { 
+import {
   sellerGrowthProjections,
   sellerPerformanceHistory,
   sellers,
-  orders,
+  orders as ordersTable,
   marketplaceListings,
   reviews,
   sellerScorecards
@@ -177,20 +177,20 @@ class SellerGrowthProjectionService {
       // Get monthly revenue data
       const revenueData = await db
         .select({
-          month: sql<string>`date_trunc('month', orders.created_at)`,
-          revenue: sql<number>`coalesce(sum(orders.total_amount::numeric), 0)`,
+          month: sql<string>`date_trunc('month', ordersTable.created_at)`,
+          revenue: sql<number>`coalesce(sum(ordersTable.total_amount::numeric), 0)`,
           orderCount: sql<number>`count(*)`,
-          uniqueCustomers: sql<number>`count(distinct orders.buyer_id)`
+          uniqueCustomers: sql<number>`count(distinct ordersTable.buyer_id)`
         })
-        .from(orders)
-        .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
+        .from(ordersTable)
+        .innerJoin(marketplaceListings, eq(ordersTable.listingId, marketplaceListings.id))
         .where(and(
           eq(marketplaceListings.sellerAddress, sellerWalletAddress),
-          eq(orders.status, 'completed'),
-          gte(orders.createdAt, twelveMonthsAgo)
+          eq(ordersTable.status, 'completed'),
+          gte(ordersTable.createdAt, twelveMonthsAgo)
         ))
-        .groupBy(sql`date_trunc('month', orders.created_at)`)
-        .orderBy(sql`date_trunc('month', orders.created_at)`);
+        .groupBy(sql`date_trunc('month', ordersTable.created_at)`)
+        .orderBy(sql`date_trunc('month', ordersTable.created_at)`);
 
       // Get monthly rating data
       const ratingData = await db

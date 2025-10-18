@@ -5,7 +5,7 @@ import AuditLoggingService from "../services/auditLoggingService";
 import { adminConfigurationService } from "../services/adminConfigurationService";
 import { eq, desc } from "drizzle-orm";
 import { users, disputes, marketplaceUsers, sellerVerifications, moderationCases } from "../db/schema";
-import { AdminAuthenticatedRequest } from "../middleware/adminAuthMiddleware";
+import { AuthenticatedRequest } from "../middleware/adminAuthMiddleware";
 
 export class AdminController {
   private auditLoggingService: AuditLoggingService;
@@ -17,8 +17,8 @@ export class AdminController {
   // Policy Configuration Methods
   async createPolicyConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
 
       if (!adminId) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -38,8 +38,8 @@ export class AdminController {
 
   async updatePolicyConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
       const { id } = req.params;
 
       if (!adminId) {
@@ -77,8 +77,8 @@ export class AdminController {
 
   async deletePolicyConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
       const { id } = req.params;
 
       if (!adminId) {
@@ -99,8 +99,8 @@ export class AdminController {
   // Threshold Configuration Methods
   async createThresholdConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
 
       if (!adminId) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -120,8 +120,8 @@ export class AdminController {
 
   async updateThresholdConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
       const { id } = req.params;
 
       if (!adminId) {
@@ -161,8 +161,8 @@ export class AdminController {
   // Vendor Configuration Methods
   async createVendorConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
 
       if (!adminId) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -182,8 +182,8 @@ export class AdminController {
 
   async updateVendorConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
       const { id } = req.params;
 
       if (!adminId) {
@@ -244,8 +244,8 @@ export class AdminController {
   // Alert Configuration Methods
   async createAlertConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
 
       if (!adminId) {
         return res.status(401).json({ success: false, error: "Unauthorized" });
@@ -265,8 +265,8 @@ export class AdminController {
 
   async updateAlertConfiguration(req: Request, res: Response) {
     try {
-      const adminReq = req as AdminAuthenticatedRequest;
-      const adminId = adminReq.user?.userId;
+      const adminReq = req as AuthenticatedRequest;
+      const adminId = adminReq.user?.id;
       const { id } = req.params;
 
       if (!adminId) {

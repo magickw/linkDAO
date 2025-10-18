@@ -195,7 +195,7 @@ import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
 import marketplaceRegistrationRoutes from './routes/marketplaceRegistrationRoutes';
 // Import dispute resolution routes
-import { disputeRouter } from './routes/disputeRoutes';
+import disputeRouter from './routes/disputeRoutes';
 // Import gas fee sponsorship routes
 import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
 // Import DAO shipping partners routes

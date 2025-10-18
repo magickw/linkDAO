@@ -5,31 +5,29 @@ import sellerRoutes from './sellerRoutes';
 import disputeRoutes from './disputeRoutes';
 import userRoutes from './userRoutes';
 import {
-  adminAuthMiddleware,
+  validateAdminRole,
   requirePermission,
   requireRole,
-  adminRateLimiter,
-  strictAdminRateLimiter,
-  adminAuditLogger,
-  AdminRole
+  adminRateLimit,
+  auditAdminAction
 } from '../middleware/adminAuthMiddleware';
 
 const router = Router();
 
 // Apply admin authentication to all routes
-router.use(adminAuthMiddleware);
+router.use(validateAdminRole);
 
 // Apply rate limiting to all admin routes
-router.use(adminRateLimiter);
+router.use(adminRateLimit());
 
 // Apply audit logging to all admin actions
-router.use(adminAuditLogger);
+router.use(auditAdminAction('admin_operation'));
 
 // Policy Configuration Routes (requires system.settings permission)
 router.post('/policies', requirePermission('system.settings'), adminController.createPolicyConfiguration.bind(adminController));
 router.put('/policies/:id', requirePermission('system.settings'), adminController.updatePolicyConfiguration.bind(adminController));
 router.get('/policies', requirePermission('system.settings'), adminController.getPolicyConfigurations.bind(adminController));
-router.delete('/policies/:id', requirePermission('system.settings'), strictAdminRateLimiter, adminController.deletePolicyConfiguration.bind(adminController));
+router.delete('/policies/:id', requirePermission('system.settings'), adminRateLimit(10, 15 * 60 * 1000), adminController.deletePolicyConfiguration.bind(adminController));
 
 // Threshold Configuration Routes (requires system.settings permission)
 router.post('/thresholds', requirePermission('system.settings'), adminController.createThresholdConfiguration.bind(adminController));
@@ -58,8 +56,8 @@ router.get('/stats', adminController.getAdminStats.bind(adminController));
 // Audit Log Analysis Routes (requires system.audit permission)
 router.get('/audit/search', requirePermission('system.audit'), adminController.searchAuditLogs.bind(adminController));
 router.get('/audit/analytics', requirePermission('system.audit'), adminController.getAuditAnalytics.bind(adminController));
-router.get('/audit/compliance', requireRole(AdminRole.ADMIN), adminController.generateComplianceReport.bind(adminController));
-router.get('/audit/export', requireRole(AdminRole.ADMIN), strictAdminRateLimiter, adminController.exportAuditLogs.bind(adminController));
+router.get('/audit/compliance', requireRole('admin'), adminController.generateComplianceReport.bind(adminController));
+router.get('/audit/export', requireRole('admin'), adminRateLimit(10, 15 * 60 * 1000), adminController.exportAuditLogs.bind(adminController));
 router.get('/audit/violations', requirePermission('system.audit'), adminController.detectPolicyViolations.bind(adminController));
 router.get('/audit/logs', requirePermission('system.audit'), adminController.getAuditLogs.bind(adminController));
 

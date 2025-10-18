@@ -1,4 +1,4 @@
-import { db } from '../db/connectionPool';
+import { db } from '../db';
 import { 
   policy_configurations, 
   threshold_configurations, 

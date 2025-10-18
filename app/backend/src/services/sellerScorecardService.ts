@@ -178,7 +178,7 @@ class SellerScorecardService {
           totalDisputes: sql<number>`count(*)`,
         })
         .from(disputes)
-        .innerJoin(orders, eq(disputes.orderId, orders.id))
+        .innerJoin(orders, eq(disputes.escrowId, orders.escrowId))
         .innerJoin(marketplaceListings, eq(orders.listingId, marketplaceListings.id))
         .where(eq(marketplaceListings.sellerAddress, sellerWalletAddress));
 

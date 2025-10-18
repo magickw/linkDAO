@@ -670,17 +670,3 @@ export class DisputeService {
 }
 
 export const disputeService = new DisputeService();
-export { DisputeService };
-export type { 
-  CreateDisputeRequest, 
-  SubmitEvidenceRequest, 
-  CommunityVote, 
-  ArbitratorDecision,
-  DisputeType,
-  DisputeStatus,
-  VerdictType,
-  ResolutionMethod,
-  DisputeEvidence,
-  DisputeAnalytics
-};
-export const disputeService = new DisputeService();

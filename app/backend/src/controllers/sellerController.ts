@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { databaseService } from "../services/databaseService";
 import { eq, desc } from "drizzle-orm";
 import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
+import { users } from "../db/schema";
 
 export class SellerController {
   // Get seller applications
@@ -320,6 +321,305 @@ export class SellerController {
     } catch (error) {
       console.error("Error exporting seller performance:", error);
       res.status(500).json({ error: "Failed to export seller performance" });
+    }
+  }
+
+  // Marketplace seller profile methods
+  async getProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const db = databaseService.getDatabase();
+
+      const [seller] = await db.select()
+        .from(marketplaceUsers)
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, walletAddress));
+
+      if (!seller) {
+        return res.status(404).json({ error: "Seller profile not found" });
+      }
+
+      res.json({ ...seller.marketplace_users, ...seller.users });
+    } catch (error) {
+      console.error("Error fetching seller profile:", error);
+      res.status(500).json({ error: "Failed to fetch seller profile" });
+    }
+  }
+
+  async createProfile(req: Request, res: Response) {
+    try {
+      const profileData = req.body;
+      const db = databaseService.getDatabase();
+
+      // First, find or create the user by wallet address
+      let [user] = await db.select()
+        .from(users)
+        .where(eq(users.walletAddress, profileData.walletAddress));
+
+      if (!user) {
+        // Create user if doesn't exist
+        [user] = await db.insert(users)
+          .values({
+            walletAddress: profileData.walletAddress,
+            handle: profileData.handle || null,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .returning();
+      }
+
+      // Create marketplace user profile
+      const [newProfile] = await db.insert(marketplaceUsers)
+        .values({
+          userId: user.id,
+          role: 'seller',
+          legalName: profileData.legalName,
+          email: profileData.email,
+          country: profileData.country,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+
+      res.json({ success: true, profile: { ...newProfile, walletAddress: user.walletAddress } });
+    } catch (error) {
+      console.error("Error creating seller profile:", error);
+      res.status(500).json({ error: "Failed to create seller profile" });
+    }
+  }
+
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const updateData = req.body;
+      const db = databaseService.getDatabase();
+
+      // Find user by wallet address
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress));
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const [updatedProfile] = await db.update(marketplaceUsers)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(marketplaceUsers.userId, user.id))
+        .returning();
+
+      if (!updatedProfile) {
+        return res.status(404).json({ error: "Seller profile not found" });
+      }
+
+      res.json({ success: true, profile: { ...updatedProfile, walletAddress } });
+    } catch (error) {
+      console.error("Error updating seller profile:", error);
+      res.status(500).json({ error: "Failed to update seller profile" });
+    }
+  }
+
+  async updateProfileEnhanced(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const updateData = req.body;
+      // Handle file uploads if present
+      const files = req.files as any;
+
+      const db = databaseService.getDatabase();
+
+      // Find user by wallet address
+      const [user] = await db.select()
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress));
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const profileUpdate: any = { ...updateData, updatedAt: new Date() };
+
+      if (files?.profileImage) {
+        // In production, upload to IPFS or S3 and get URL
+        profileUpdate.profileImageUrl = `/uploads/profile-${Date.now()}.jpg`;
+      }
+
+      if (files?.coverImage) {
+        profileUpdate.coverImageUrl = `/uploads/cover-${Date.now()}.jpg`;
+      }
+
+      const [updatedProfile] = await db.update(marketplaceUsers)
+        .set(profileUpdate)
+        .where(eq(marketplaceUsers.userId, user.id))
+        .returning();
+
+      if (!updatedProfile) {
+        return res.status(404).json({ error: "Seller profile not found" });
+      }
+
+      res.json({ success: true, profile: { ...updatedProfile, walletAddress } });
+    } catch (error) {
+      console.error("Error updating seller profile (enhanced):", error);
+      res.status(500).json({ error: "Failed to update seller profile" });
+    }
+  }
+
+  async getProfileCompleteness(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const db = databaseService.getDatabase();
+
+      const [result] = await db.select()
+        .from(marketplaceUsers)
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, walletAddress));
+
+      if (!result) {
+        return res.status(404).json({ error: "Seller profile not found" });
+      }
+
+      const seller = result.marketplace_users;
+
+      // Calculate profile completeness
+      const fields = ['legalName', 'email', 'country', 'shippingAddress', 'billingAddress'];
+      const completedFields = fields.filter(field => seller[field as keyof typeof seller]);
+      const completeness = (completedFields.length / fields.length) * 100;
+
+      res.json({
+        completeness,
+        missingFields: fields.filter(field => !seller[field as keyof typeof seller])
+      });
+    } catch (error) {
+      console.error("Error calculating profile completeness:", error);
+      res.status(500).json({ error: "Failed to calculate profile completeness" });
+    }
+  }
+
+  async validateProfile(req: Request, res: Response) {
+    try {
+      const profileData = req.body;
+
+      // Basic validation
+      const errors = [];
+      if (!profileData.walletAddress) errors.push("Wallet address is required");
+      if (!profileData.legalName) errors.push("Legal name is required");
+      if (!profileData.email) errors.push("Email is required");
+
+      if (errors.length > 0) {
+        return res.status(400).json({ valid: false, errors });
+      }
+
+      res.json({ valid: true, errors: [] });
+    } catch (error) {
+      console.error("Error validating profile:", error);
+      res.status(500).json({ error: "Failed to validate profile" });
+    }
+  }
+
+  async getSellerStats(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+      const db = databaseService.getDatabase();
+
+      const [verification] = await db.select()
+        .from(sellerVerifications)
+        .leftJoin(marketplaceUsers, eq(sellerVerifications.userId, marketplaceUsers.userId))
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, walletAddress));
+
+      if (!verification) {
+        return res.json({
+          totalSales: 0,
+          totalRevenue: 0,
+          averageRating: 0,
+          totalReviews: 0
+        });
+      }
+
+      res.json({
+        totalSales: verification.seller_verifications.successfulTransactions || 0,
+        totalRevenue: parseFloat(verification.seller_verifications.totalVolume || '0'),
+        averageRating: (verification.seller_verifications.reputationScore || 0) / 20,
+        totalReviews: Math.floor((verification.seller_verifications.successfulTransactions || 0) * 0.7)
+      });
+    } catch (error) {
+      console.error("Error fetching seller stats:", error);
+      res.status(500).json({ error: "Failed to fetch seller stats" });
+    }
+  }
+
+  async validateENS(req: Request, res: Response) {
+    try {
+      const { ensName } = req.body;
+
+      // Mock ENS validation - in production, validate against ENS
+      const isValid = ensName && ensName.endsWith('.eth');
+
+      res.json({ valid: isValid, ensName });
+    } catch (error) {
+      console.error("Error validating ENS:", error);
+      res.status(500).json({ error: "Failed to validate ENS" });
+    }
+  }
+
+  async verifyENSOwnership(req: Request, res: Response) {
+    try {
+      const { ensName, walletAddress } = req.body;
+
+      // Mock ownership verification - in production, verify on-chain
+      const isOwner = ensName && walletAddress;
+
+      res.json({ verified: isOwner, ensName, walletAddress });
+    } catch (error) {
+      console.error("Error verifying ENS ownership:", error);
+      res.status(500).json({ error: "Failed to verify ENS ownership" });
+    }
+  }
+
+  async forceSyncProfile(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+
+      // Mock sync - in production, sync with blockchain/IPFS
+      res.json({ success: true, message: "Profile synced successfully", walletAddress });
+    } catch (error) {
+      console.error("Error syncing profile:", error);
+      res.status(500).json({ error: "Failed to sync profile" });
+    }
+  }
+
+  async validateProfileSync(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+
+      // Mock validation - in production, check sync status
+      res.json({ inSync: true, lastSync: new Date(), walletAddress });
+    } catch (error) {
+      console.error("Error validating profile sync:", error);
+      res.status(500).json({ error: "Failed to validate profile sync" });
+    }
+  }
+
+  async getProfileHistory(req: Request, res: Response) {
+    try {
+      const { walletAddress } = req.params;
+
+      // Mock history - in production, fetch from audit log
+      res.json({
+        history: [
+          {
+            timestamp: new Date(),
+            action: 'profile_updated',
+            field: 'legalName',
+            oldValue: 'Old Name',
+            newValue: 'New Name'
+          }
+        ],
+        walletAddress
+      });
+    } catch (error) {
+      console.error("Error fetching profile history:", error);
+      res.status(500).json({ error: "Failed to fetch profile history" });
     }
   }
 }

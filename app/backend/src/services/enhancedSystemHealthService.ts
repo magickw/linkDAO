@@ -102,8 +102,7 @@ export class EnhancedSystemHealthService extends EventEmitter {
       criticality: 'critical',
       timeout: 10000
     });
-  } 
-   this.addComponentDependency({
+    this.addComponentDependency({
       id: 'analytics_service',
       name: 'Analytics Service',
       type: 'microservice',

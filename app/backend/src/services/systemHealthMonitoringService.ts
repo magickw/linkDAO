@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { gracefulDegradationService } from './gracefulDegradationService';
-import { circuitBreakerManager } from './circuitBreakerService';
+import { circuitBreakerService } from './circuitBreakerService';
 
 export interface HealthMetrics {
   timestamp: Date;
@@ -115,7 +115,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
    */
   async collectMetrics(): Promise<HealthMetrics> {
     const systemHealth = gracefulDegradationService.getSystemHealth();
-    const circuitBreakerStats = circuitBreakerManager.getAllStats();
+    const circuitBreakerStats = circuitBreakerService.getAllStates();
     
     // Collect system load metrics
     const memoryUsage = process.memoryUsage();
@@ -137,7 +137,7 @@ export class SystemHealthMonitoringService extends EventEmitter {
 
     // Build circuit breaker metrics
     const circuitBreakers: HealthMetrics['circuitBreakers'] = {};
-    for (const [name, stats] of circuitBreakerStats) {
+    for (const [name, stats] of Object.entries(circuitBreakerStats)) {
       circuitBreakers[name] = {
         state: stats.state,
         failureCount: stats.failureCount,

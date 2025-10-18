@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events';
-import { CircuitBreaker, CircuitBreakerManager, circuitBreakerManager } from './circuitBreakerService';
+import { CircuitBreaker, circuitBreakerService as circuitBreakerServiceInstance } from './circuitBreakerService';
+
+// Get the type from the instance
+type CircuitBreakerService = typeof circuitBreakerServiceInstance;
 
 export interface DegradationConfig {
   enableFallbacks: boolean;
@@ -48,7 +51,7 @@ export class GracefulDegradationService extends EventEmitter {
   private degradationState: DegradationState;
   private fallbackStrategies: Map<string, FallbackStrategy[]> = new Map();
   private healthCheckTimer?: NodeJS.Timeout;
-  private circuitBreakerManager: CircuitBreakerManager;
+  private circuitBreakerService: CircuitBreakerService;
 
   constructor(config?: Partial<DegradationConfig>) {
     super();
@@ -74,7 +77,7 @@ export class GracefulDegradationService extends EventEmitter {
       reason: 'System initialized'
     };
 
-    this.circuitBreakerManager = circuitBreakerManager;
+    this.circuitBreakerService = circuitBreakerServiceInstance;
     this.startHealthMonitoring();
     this.setupDefaultFallbackStrategies();
   }
@@ -87,18 +90,16 @@ export class GracefulDegradationService extends EventEmitter {
     operation: () => Promise<T>,
     context?: any
   ): Promise<T> {
-    const circuitBreaker = this.circuitBreakerManager.getCircuitBreaker(
-      operationName,
-      {
+    let circuitBreaker = this.circuitBreakerService.getCircuitBreaker(operationName);
+
+    if (!circuitBreaker) {
+      circuitBreaker = this.circuitBreakerService.createCircuitBreaker(operationName, {
         failureThreshold: 5,
         recoveryTimeout: 60000,
         monitoringPeriod: 300000,
-        expectedErrors: ['TimeoutError', 'RateLimitError', 'ServiceUnavailableError'],
-        slowCallThreshold: 0.3,
-        slowCallDurationThreshold: 10000
-      },
-      () => this.executeFallback(operationName, context)
-    );
+        expectedErrors: ['TimeoutError', 'RateLimitError', 'ServiceUnavailableError']
+      });
+    }
 
     try {
       const result = await circuitBreaker.execute(operation);
@@ -280,10 +281,10 @@ export class GracefulDegradationService extends EventEmitter {
     overallStatus: 'healthy' | 'degraded' | 'critical';
     services: ServiceHealth[];
     degradationState: DegradationState;
-    circuitBreakerStats: Map<string, any>;
+    circuitBreakerStats: Record<string, any>;
   } {
     const services = Array.from(this.serviceHealth.values());
-    const circuitBreakerStats = this.circuitBreakerManager.getAllStats();
+    const circuitBreakerStats = this.circuitBreakerService.getAllStates();
     
     let overallStatus: 'healthy' | 'degraded' | 'critical' = 'healthy';
     
@@ -476,9 +477,9 @@ export class GracefulDegradationService extends EventEmitter {
     try {
       // This would integrate with actual service health checks
       // For now, we'll update based on circuit breaker states
-      const circuitStats = this.circuitBreakerManager.getAllStats();
-      
-      for (const [serviceName, stats] of circuitStats) {
+      const circuitStats = this.circuitBreakerService.getAllStates();
+
+      for (const [serviceName, stats] of Object.entries(circuitStats)) {
         const isHealthy = stats.state === 'closed' && stats.failureCount < 3;
         this.updateServiceHealth(serviceName, isHealthy, stats.averageResponseTime);
       }
