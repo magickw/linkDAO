@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { SmartRightSidebar } from '@/components/SmartRightSidebar';
 import FeedView from '@/components/FeedView';
@@ -10,11 +10,12 @@ import { useNavigation } from '@/context/NavigationContext';
 import { useFeed, useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
 import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
 import BottomSheet from '@/components/BottomSheet';
 import Link from 'next/link';
-import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart } from 'lucide-react';
+import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart, RefreshCw } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export default function Home() {
@@ -26,14 +27,47 @@ export default function Home() {
   const { navigationState } = useNavigation();
   
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
+  const [activeTab, setActiveTab] = useState<'for-you' | 'following' | 'hot' | 'new' | 'top' | 'rising'>('for-you');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [isPostLoading, setIsPostLoading] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
+  const [feedSource, setFeedSource] = useState<'all' | 'following'>('all');
+  const [hasNewPosts, setHasNewPosts] = useState(false);
+
+  // Initialize WebSocket for real-time updates
+  const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
+    walletAddress: address || '',
+    autoConnect: isConnected && !!address,
+    autoReconnect: true
+  });
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Subscribe to feed updates when connected
+  useEffect(() => {
+    if (wsConnected && address) {
+      // Subscribe to global feed updates
+      const feedSubId = subscribe('feed', 'all', {
+        eventTypes: ['feed_update', 'new_post']
+      });
+
+      // Listen for new posts
+      const handleFeedUpdate = (data: any) => {
+        console.log('New post received:', data);
+        setHasNewPosts(true);
+        // Optionally show a toast
+        addToast('New posts available', 'info');
+      };
+
+      on('feed_update', handleFeedUpdate);
+
+      return () => {
+        off('feed_update', handleFeedUpdate);
+      };
+    }
+  }, [wsConnected, address, subscribe, on, off, addToast]);
 
   // Use real feed data - ensure it's always an array
   const displayPosts = useMemo(() => {
@@ -464,10 +498,39 @@ export default function Home() {
 
                 {/* Feed Tabs */}
                 <div className="flex space-x-1 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
+                  <button
+                    onClick={() => {
+                      setActiveTab('for-you');
+                      setFeedSource('all');
+                    }}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
+                      activeTab === 'for-you'
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    For You
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveTab('following');
+                      setFeedSource('following');
+                    }}
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
+                      activeTab === 'following'
+                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    Following
+                  </button>
                   {(['hot', 'new', 'top', 'rising'] as const).map((tab) => (
                     <button
                       key={tab}
-                      onClick={() => setActiveTab(tab)}
+                      onClick={() => {
+                        setActiveTab(tab);
+                        setFeedSource('all');
+                      }}
                       className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
                         activeTab === tab
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
@@ -478,6 +541,22 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
+
+                {/* New Posts Banner - Real-time Update Indicator */}
+                {hasNewPosts && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => {
+                        setHasNewPosts(false);
+                        window.location.reload(); // Simple refresh for now
+                      }}
+                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      New posts available - Click to refresh
+                    </button>
+                  </div>
+                )}
 
                 {/* Top Trending Tags */}
                 <div className="mb-4">

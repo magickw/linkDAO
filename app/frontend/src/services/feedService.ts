@@ -1,5 +1,7 @@
-import { EnhancedPost, FeedFilter, CommunityEngagementMetrics, LeaderboardEntry, LikedByData, FeedSortType } from '../types/feed';
+import { EnhancedPost, FeedFilter, CommunityEngagementMetrics, LeaderboardEntry, LikedByData, FeedSortType, FeedError, FeedAnalyticsEvent } from '../types/feed';
 import { requestManager } from './requestManager';
+import { convertBackendPostToPost } from '../models/Post';
+import { analyticsService } from './analyticsService';
 
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
@@ -19,6 +21,27 @@ interface BackendFeedResponse {
   };
 }
 
+// Analytics service integration
+class FeedAnalytics {
+  private events: FeedAnalyticsEvent[] = [];
+  
+  trackEvent(event: FeedAnalyticsEvent) {
+    this.events.push(event);
+    // In a real implementation, this would send to an analytics service
+    console.log('Feed Analytics Event:', event);
+  }
+  
+  getEvents(): FeedAnalyticsEvent[] {
+    return this.events;
+  }
+  
+  clearEvents() {
+    this.events = [];
+  }
+}
+
+const feedAnalytics = new FeedAnalytics();
+
 export class FeedService {
   static async getEnhancedFeed(
     filter: FeedFilter,
@@ -33,6 +56,11 @@ export class FeedService {
         timeRange: filter.timeRange || 'all'
       });
 
+      // Add feedSource parameter
+      if (filter.feedSource) {
+        params.append('feedSource', filter.feedSource);
+      }
+
       if (filter.communityId) {
         params.append('communities', filter.communityId);
       }
@@ -45,7 +73,16 @@ export class FeedService {
         params.append('author', filter.author);
       }
 
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/feed/enhanced?${params}`, {
+      const url = `${BACKEND_API_BASE_URL}/api/feed/enhanced?${params}`;
+      
+      // Track analytics event
+      feedAnalytics.trackEvent({
+        eventType: 'feed_load',
+        timestamp: new Date(),
+        metadata: { filter, page, limit }
+      });
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -53,18 +90,68 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch feed: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch feed: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
       const data: BackendFeedResponse = await response.json();
       
+      // Transform backend posts to frontend posts
+      const posts = data.posts.map(convertBackendPostToPost);
+      
+      // Track success event with more detailed analytics
+      feedAnalytics.trackEvent({
+        eventType: 'feed_load_success',
+        timestamp: new Date(),
+        metadata: { 
+          filter, 
+          page, 
+          limit,
+          postCount: posts.length,
+          hasMore: data.pagination.page < data.pagination.totalPages,
+          totalPages: data.pagination.totalPages
+        }
+      });
+      
+      // Also track with the main analytics service
+      analyticsService.trackUserEvent('feed_load', {
+        filter,
+        page,
+        limit,
+        postCount: posts.length,
+        success: true
+      });
+
       return {
-        posts: data.posts.map(this.transformBackendPost),
+        posts,
         hasMore: data.pagination.page < data.pagination.totalPages,
         totalPages: data.pagination.totalPages
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching enhanced feed:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'feed_error',
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
+      // Track error with main analytics service
+      analyticsService.trackUserEvent('feed_load_error', {
+        filter,
+        page,
+        limit,
+        error: error.message || 'Unknown error',
+        timestamp: new Date()
+      });
       
       // Return empty feed on error instead of mock data
       return {
@@ -92,12 +179,55 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch community metrics: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch community metrics: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const metrics = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'community_metrics_load',
+        timestamp: new Date(),
+        metadata: { communityId, timeRange }
+      });
+      
+      // Track with main analytics service
+      analyticsService.trackUserEvent('community_metrics_load', {
+        communityId,
+        timeRange,
+        success: true
+      });
+      
+      return metrics;
+    } catch (error: any) {
       console.error('Error fetching community engagement metrics:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'community_metrics_error',
+        timestamp: new Date(),
+        metadata: { 
+          communityId, 
+          timeRange, 
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
+      // Track error with main analytics service
+      analyticsService.trackUserEvent('community_metrics_error', {
+        communityId,
+        timeRange,
+        error: error.message || 'Unknown error',
+        timestamp: new Date()
+      });
       
       // Return empty metrics on error
       return {
@@ -130,12 +260,42 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch community leaderboard: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch community leaderboard: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const leaderboard = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'leaderboard_load',
+        timestamp: new Date(),
+        metadata: { communityId, metric, limit }
+      });
+      
+      return leaderboard;
+    } catch (error: any) {
       console.error('Error fetching community leaderboard:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'leaderboard_error',
+        timestamp: new Date(),
+        metadata: { 
+          communityId, 
+          metric, 
+          limit,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       return [];
     }
   }
@@ -150,12 +310,37 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch liked by data: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch liked by data: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const data = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'liked_by_load',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return data;
+    } catch (error: any) {
       console.error('Error fetching liked by data:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'liked_by_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
       
       return {
         reactions: [],
@@ -184,13 +369,42 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch trending posts: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch trending posts: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
       const data: BackendFeedResponse = await response.json();
-      return data.posts.map(this.transformBackendPost);
-    } catch (error) {
+      const posts = data.posts.map(convertBackendPostToPost);
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'trending_posts_load',
+        timestamp: new Date(),
+        metadata: { timeRange, limit }
+      });
+      
+      return posts;
+    } catch (error: any) {
       console.error('Error fetching trending posts:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'trending_posts_error',
+        timestamp: new Date(),
+        metadata: { 
+          timeRange, 
+          limit,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       return [];
     }
   }
@@ -214,12 +428,41 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch trending hashtags: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch trending hashtags: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const hashtags = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'trending_hashtags_load',
+        timestamp: new Date(),
+        metadata: { timeRange, limit }
+      });
+      
+      return hashtags;
+    } catch (error: any) {
       console.error('Error fetching trending hashtags:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'trending_hashtags_error',
+        timestamp: new Date(),
+        metadata: { 
+          timeRange, 
+          limit,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       return [];
     }
   }
@@ -235,12 +478,38 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch content popularity metrics: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch content popularity metrics: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const metrics = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'popularity_metrics_load',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return metrics;
+    } catch (error: any) {
       console.error('Error fetching content popularity metrics:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'popularity_metrics_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
       return null;
     }
   }
@@ -260,12 +529,42 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to add comment: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to add comment: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const comment = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'comment_add',
+        postId,
+        timestamp: new Date(),
+        metadata: { hasParent: !!parentCommentId }
+      });
+      
+      return comment;
+    } catch (error: any) {
       console.error('Error adding comment:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'comment_add_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { 
+          hasParent: !!parentCommentId,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       throw error;
     }
   }
@@ -292,12 +591,44 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch comments: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch comments: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const comments = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'comments_load',
+        postId,
+        timestamp: new Date(),
+        metadata: { page, limit, sort }
+      });
+      
+      return comments;
+    } catch (error: any) {
       console.error('Error fetching comments:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'comments_load_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { 
+          page, 
+          limit, 
+          sort,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       return { comments: [], pagination: { page, limit, total: 0, totalPages: 0 } };
     }
   }
@@ -324,12 +655,43 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch comment replies: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch comment replies: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const replies = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'replies_load',
+        timestamp: new Date(),
+        metadata: { commentId, page, limit, sort }
+      });
+      
+      return replies;
+    } catch (error: any) {
       console.error('Error fetching comment replies:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'replies_load_error',
+        timestamp: new Date(),
+        metadata: { 
+          commentId, 
+          page, 
+          limit, 
+          sort,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       return { replies: [], pagination: { page, limit, total: 0, totalPages: 0 } };
     }
   }
@@ -349,12 +711,43 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to add reaction: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to add reaction: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const reaction = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'reaction_add',
+        postId,
+        timestamp: new Date(),
+        metadata: { type, tokenAmount }
+      });
+      
+      return reaction;
+    } catch (error: any) {
       console.error('Error adding reaction:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'reaction_add_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { 
+          type, 
+          tokenAmount,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       throw error;
     }
   }
@@ -370,12 +763,38 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch post reactions: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to fetch post reactions: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const reactions = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'reactions_load',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return reactions;
+    } catch (error: any) {
       console.error('Error fetching post reactions:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'reactions_load_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
       return { postId, totalReactions: 0, reactionsByType: [], recentReactions: [] };
     }
   }
@@ -396,12 +815,44 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to send tip: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to send tip: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const tip = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'tip_send',
+        postId,
+        timestamp: new Date(),
+        metadata: { amount, tokenType, hasMessage: !!message }
+      });
+      
+      return tip;
+    } catch (error: any) {
       console.error('Error sending tip:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'tip_send_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { 
+          amount, 
+          tokenType, 
+          hasMessage: !!message,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       throw error;
     }
   }
@@ -421,12 +872,43 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to share post: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to share post: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const share = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'post_share',
+        postId,
+        timestamp: new Date(),
+        metadata: { platform, hasMessage: !!message }
+      });
+      
+      return share;
+    } catch (error: any) {
       console.error('Error sharing post:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'post_share_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { 
+          platform, 
+          hasMessage: !!message,
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       throw error;
     }
   }
@@ -442,12 +924,38 @@ export class FeedService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to toggle bookmark: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const error: FeedError = {
+          code: `HTTP_${response.status}`,
+          message: errorData.error || `Failed to toggle bookmark: ${response.statusText}`,
+          timestamp: new Date(),
+          retryable: response.status >= 500 || response.status === 429
+        };
+        
+        throw error;
       }
 
-      return await response.json();
-    } catch (error) {
+      const bookmark = await response.json();
+      
+      // Track success event
+      feedAnalytics.trackEvent({
+        eventType: 'bookmark_toggle',
+        postId,
+        timestamp: new Date()
+      });
+      
+      return bookmark;
+    } catch (error: any) {
       console.error('Error toggling bookmark:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'bookmark_toggle_error',
+        postId,
+        timestamp: new Date(),
+        metadata: { error: error.message || 'Unknown error' }
+      });
+      
       throw error;
     }
   }
@@ -466,111 +974,68 @@ export class FeedService {
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'new_post') {
-            const transformedPost = this.transformBackendPost(data.post);
+            const transformedPost = convertBackendPostToPost(data.post);
             callback(transformedPost);
+            
+            // Track success event
+            feedAnalytics.trackEvent({
+              eventType: 'realtime_post_received',
+              postId: transformedPost.id,
+              timestamp: new Date()
+            });
           }
         } catch (error) {
           console.error('Error processing WebSocket message:', error);
+          
+          // Track error event
+          feedAnalytics.trackEvent({
+            eventType: 'realtime_message_error',
+            timestamp: new Date(),
+            metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
+          });
         }
       };
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        
+        // Track error event
+        feedAnalytics.trackEvent({
+          eventType: 'websocket_error',
+          timestamp: new Date(),
+          metadata: { error: error instanceof Error ? error.message : 'Unknown error' }
+        });
       };
 
       // Return cleanup function
       return () => {
         ws.close();
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting up feed updates subscription:', error);
+      
+      // Track error event
+      feedAnalytics.trackEvent({
+        eventType: 'subscription_setup_error',
+        timestamp: new Date(),
+        metadata: { 
+          filter: filter ? JSON.stringify(filter) : 'none',
+          error: error.message || 'Unknown error' 
+        }
+      });
+      
       // Return no-op cleanup function
       return () => {};
     }
   }
 
-  // Transform backend post data to frontend format
-  private static transformBackendPost(backendPost: any): EnhancedPost {
-    return {
-      id: backendPost.id.toString(),
-      author: backendPost.walletAddress || backendPost.authorId,
-      contentCid: backendPost.contentCid,
-      mediaCids: backendPost.mediaCids ? JSON.parse(backendPost.mediaCids) : [],
-      tags: backendPost.tags ? JSON.parse(backendPost.tags) : [],
-      createdAt: new Date(backendPost.createdAt),
-      updatedAt: new Date(backendPost.updatedAt || backendPost.createdAt),
-      reactions: this.transformReactions(backendPost.reactions || []),
-      tips: this.transformTips(backendPost.tips || []),
-      comments: backendPost.commentCount || 0,
-      shares: backendPost.shareCount || 0,
-      views: backendPost.viewCount || 0,
-      engagementScore: backendPost.engagementScore || 0,
-      previews: [], // Will be populated by content preview service
-      socialProof: undefined, // Will be populated by social proof service
-      trendingStatus: backendPost.trendingScore > 0 ? 'trending' : null,
-      trendingScore: backendPost.trendingScore || 0,
-      isBookmarked: false, // Will be populated by user preferences
-      communityId: backendPost.dao,
-      contentType: this.detectContentType(backendPost)
-    };
+  // Get analytics events
+  static getAnalyticsEvents(): FeedAnalyticsEvent[] {
+    return feedAnalytics.getEvents();
   }
 
-  private static transformReactions(reactions: any[]): any[] {
-    // Group reactions by type
-    const reactionMap = new Map();
-    
-    reactions.forEach(reaction => {
-      const type = reaction.type;
-      if (!reactionMap.has(type)) {
-        reactionMap.set(type, {
-          type,
-          users: [],
-          totalAmount: 0,
-          tokenType: 'LDAO'
-        });
-      }
-      
-      const reactionGroup = reactionMap.get(type);
-      reactionGroup.users.push({
-        address: reaction.userAddress,
-        username: reaction.username || reaction.userAddress.slice(0, 8),
-        avatar: reaction.avatar || '',
-        amount: parseFloat(reaction.amount || '0'),
-        timestamp: new Date(reaction.createdAt)
-      });
-      reactionGroup.totalAmount += parseFloat(reaction.amount || '0');
-    });
-
-    return Array.from(reactionMap.values());
-  }
-
-  private static transformTips(tips: any[]): any[] {
-    return tips.map(tip => ({
-      from: tip.fromAddress,
-      amount: parseFloat(tip.amount),
-      tokenType: tip.token || 'LDAO',
-      message: tip.message,
-      timestamp: new Date(tip.createdAt)
-    }));
-  }
-
-  private static detectContentType(post: any): 'text' | 'media' | 'link' | 'poll' | 'proposal' {
-    if (post.mediaCids && JSON.parse(post.mediaCids || '[]').length > 0) {
-      return 'media';
-    }
-    
-    if (post.contentCid && post.contentCid.includes('http')) {
-      return 'link';
-    }
-    
-    if (post.tags && JSON.parse(post.tags || '[]').includes('poll')) {
-      return 'poll';
-    }
-    
-    if (post.tags && JSON.parse(post.tags || '[]').includes('proposal')) {
-      return 'proposal';
-    }
-    
-    return 'text';
+  // Clear analytics events
+  static clearAnalyticsEvents(): void {
+    feedAnalytics.clearEvents();
   }
 }

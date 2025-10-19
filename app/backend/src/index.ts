@@ -158,6 +158,15 @@ import feedRoutes from './routes/feedRoutes';
 // Import view tracking routes
 import viewRoutes from './routes/viewRoutes';
 
+// Import bookmark routes
+import bookmarkRoutes from './routes/bookmarkRoutes';
+
+// Import share routes
+import shareRoutes from './routes/shareRoutes';
+
+// Import follow routes
+import followRoutes from './routes/followRoutes';
+
 // Import community routes
 import communityRoutes from './routes/communityRoutes';
 
@@ -178,6 +187,15 @@ app.use('/api/feed', feedRoutes);
 
 // Use view tracking routes
 app.use('/api/views', viewRoutes);
+
+// Use bookmark routes
+app.use('/api/bookmarks', bookmarkRoutes);
+
+// Use share routes
+app.use('/api/shares', shareRoutes);
+
+// Use follow routes
+app.use('/api/follows', followRoutes);
 
 // Use community routes
 app.use('/api/communities', communityRoutes);

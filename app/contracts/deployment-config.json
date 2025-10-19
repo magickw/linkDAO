@@ -1,0 +1,231 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LinkDAO Deployment Configuration",
+  "description": "Comprehensive deployment configuration for LinkDAO smart contracts",
+
+  "networks": {
+    "mainnet": {
+      "chainId": 1,
+      "name": "Ethereum Mainnet",
+      "rpcUrl": "${MAINNET_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "2000000000",
+        "maxFeePerGas": "100000000000"
+      },
+      "confirmations": 3,
+      "timeout": 600000
+    },
+    "sepolia": {
+      "chainId": 11155111,
+      "name": "Sepolia Testnet",
+      "rpcUrl": "${SEPOLIA_RPC_URL}",
+      "gasPrice": {
+        "type": "auto",
+        "maxPriorityFeePerGas": "1000000000",
+        "maxFeePerGas": "50000000000"
+      },
+      "confirmations": 2,
+      "timeout": 300000
+    },
+    "localhost": {
+      "chainId": 31337,
+      "name": "Hardhat Local",
+      "rpcUrl": "http://127.0.0.1:8545",
+      "gasPrice": {
+        "type": "auto"
+      },
+      "confirmations": 1,
+      "timeout": 60000
+    }
+  },
+
+  "contracts": {
+    "LDAOToken": {
+      "priority": 1,
+      "constructor": {
+        "treasury": "${TREASURY_ADDRESS}"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "Governance": {
+      "priority": 2,
+      "constructor": {
+        "governanceToken": "LDAOToken"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "ReputationSystem": {
+      "priority": 3,
+      "constructor": {},
+      "verify": true,
+      "critical": true
+    },
+    "ProfileRegistry": {
+      "priority": 4,
+      "constructor": {},
+      "verify": true,
+      "critical": false
+    },
+    "SimpleProfileRegistry": {
+      "priority": 5,
+      "constructor": {},
+      "verify": true,
+      "critical": false
+    },
+    "PaymentRouter": {
+      "priority": 6,
+      "constructor": {
+        "feeBasisPoints": 250,
+        "feeCollector": "${FEE_COLLECTOR_ADDRESS}"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "EnhancedEscrow": {
+      "priority": 7,
+      "constructor": {
+        "ldaoToken": "LDAOToken",
+        "governance": "Governance"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "DisputeResolution": {
+      "priority": 8,
+      "constructor": {
+        "reputationSystem": "ReputationSystem",
+        "governance": "Governance"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "Marketplace": {
+      "priority": 9,
+      "constructor": {
+        "ldaoToken": "LDAOToken"
+      },
+      "verify": true,
+      "critical": true
+    },
+    "RewardPool": {
+      "priority": 10,
+      "constructor": {
+        "ldao": "LDAOToken"
+      },
+      "verify": true,
+      "critical": false
+    },
+    "NFTMarketplace": {
+      "priority": 11,
+      "constructor": {},
+      "verify": true,
+      "critical": false
+    },
+    "NFTCollectionFactory": {
+      "priority": 12,
+      "constructor": {},
+      "verify": true,
+      "critical": false
+    },
+    "TipRouter": {
+      "priority": 13,
+      "constructor": {
+        "ldao": "LDAOToken",
+        "rewardPool": "RewardPool"
+      },
+      "verify": true,
+      "critical": false
+    },
+    "FollowModule": {
+      "priority": 14,
+      "constructor": {},
+      "verify": true,
+      "critical": false
+    }
+  },
+
+  "postDeployment": {
+    "verifyContracts": true,
+    "setupInterconnections": true,
+    "transferOwnership": true,
+    "renounceOwnership": false,
+    "pauseContracts": false,
+    "steps": [
+      {
+        "name": "Configure PaymentRouter tokens",
+        "contract": "PaymentRouter",
+        "method": "setTokenSupported",
+        "params": [
+          ["${USDC_ADDRESS}", true],
+          ["${USDT_ADDRESS}", true],
+          ["${DAI_ADDRESS}", true]
+        ]
+      },
+      {
+        "name": "Transfer ownership to multisig",
+        "contracts": ["*"],
+        "method": "transferOwnership",
+        "params": ["${GOVERNANCE_MULTISIG_ADDRESS}"]
+      }
+    ]
+  },
+
+  "verification": {
+    "etherscan": {
+      "apiKey": "${ETHERSCAN_API_KEY}",
+      "enabled": true
+    },
+    "sourcify": {
+      "enabled": true
+    }
+  },
+
+  "monitoring": {
+    "enabled": true,
+    "endpoints": {
+      "slack": "${SLACK_WEBHOOK_URL}",
+      "discord": "${DISCORD_WEBHOOK_URL}",
+      "email": "${ALERT_EMAIL}"
+    },
+    "events": {
+      "deploymentStart": true,
+      "deploymentComplete": true,
+      "deploymentFailed": true,
+      "verificationComplete": true,
+      "ownershipTransferred": true
+    }
+  },
+
+  "security": {
+    "pauseOnDeploy": false,
+    "requireMultisigApproval": true,
+    "maxGasPrice": "150000000000",
+    "slippageTolerance": "5",
+    "dryRun": false
+  },
+
+  "backup": {
+    "saveDeploymentData": true,
+    "backupPath": "./deployments",
+    "includeABI": true,
+    "includeSourceCode": true
+  },
+
+  "emergencyContacts": {
+    "primary": "${PRIMARY_CONTACT_EMAIL}",
+    "secondary": "${SECONDARY_CONTACT_EMAIL}",
+    "oncall": "${ONCALL_PHONE}"
+  },
+
+  "metadata": {
+    "version": "1.0.0",
+    "deployer": "${DEPLOYER_NAME}",
+    "organization": "LinkDAO",
+    "license": "MIT",
+    "repository": "https://github.com/linkdao/contracts",
+    "documentation": "https://docs.linkdao.com"
+  }
+}

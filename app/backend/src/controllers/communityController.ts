@@ -351,7 +351,7 @@ export class CommunityController {
         return;
       }
 
-      res.json(createSuccessResponse(result.data, {}));
+      res.json(createSuccessResponse((result as any).data || result, {}));
     } catch (error) {
       console.error('Error moderating content:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to moderate content'));
@@ -556,6 +556,430 @@ export class CommunityController {
     } catch (error) {
       console.error('Error searching communities:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search communities'));
+    }
+  }
+
+  // Create delegation
+  async createDelegation(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { delegatorAddress, delegateAddress, expiryDate, metadata } = req.body;
+
+      // Only allow users to create delegations where they are the delegator
+      if (delegatorAddress !== userAddress) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Can only create delegations for yourself'));
+        return;
+      }
+
+      const result = await communityService.createDelegation({
+        communityId: id,
+        delegatorAddress,
+        delegateAddress,
+        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+        metadata
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create delegation', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+    } catch (error) {
+      console.error('Error creating delegation:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create delegation'));
+    }
+  }
+
+  // Revoke delegation
+  async revokeDelegation(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { delegatorAddress } = req.body;
+
+      // Only allow users to revoke delegations where they are the delegator
+      if (delegatorAddress !== userAddress) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Can only revoke delegations for yourself'));
+        return;
+      }
+
+      const result = await communityService.revokeDelegation(id, delegatorAddress);
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to revoke delegation', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      console.error('Error revoking delegation:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to revoke delegation'));
+    }
+  }
+
+  // Get delegations as delegate
+  async getDelegationsAsDelegate(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { delegateAddress, page = 1, limit = 10 } = req.query;
+
+      // Only allow users to get delegations where they are the delegate
+      if (delegateAddress !== userAddress) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Can only get delegations where you are the delegate'));
+        return;
+      }
+
+      const delegations = await communityService.getDelegationsAsDelegate(id, delegateAddress as string, {
+        page: Number(page),
+        limit: Number(limit)
+      });
+
+      res.json(createSuccessResponse(delegations, {}));
+    } catch (error) {
+      console.error('Error getting delegations:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get delegations'));
+    }
+  }
+
+  // Create proxy vote
+  async createProxyVote(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { proposalId, proxyAddress, voterAddress, vote, reason } = req.body;
+
+      // Only allow users to create proxy votes where they are the proxy
+      if (proxyAddress !== userAddress) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Can only create proxy votes for yourself'));
+        return;
+      }
+
+      const result = await communityService.createProxyVote({
+        proposalId,
+        proxyAddress,
+        voterAddress,
+        vote,
+        reason
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create proxy vote', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+    } catch (error) {
+      console.error('Error creating proxy vote:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create proxy vote'));
+    }
+  }
+
+  // Create multi-signature approval
+  async createMultiSigApproval(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { proposalId, approverAddress, signature, metadata } = req.body;
+
+      // Only allow users to create approvals where they are the approver
+      if (approverAddress !== userAddress) {
+        res.status(403).json(createErrorResponse('FORBIDDEN', 'Can only create approvals for yourself'));
+        return;
+      }
+
+      const result = await communityService.createMultiSigApproval({
+        proposalId,
+        approverAddress,
+        signature,
+        metadata
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create multi-signature approval', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+    } catch (error) {
+      console.error('Error creating multi-signature approval:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create multi-signature approval'));
+    }
+  }
+
+  // Get multi-signature approvals
+  async getMultiSigApprovals(req: Request, res: Response): Promise<void> {
+    try {
+      const { proposalId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      const approvals = await communityService.getMultiSigApprovals(proposalId as string, {
+        page: Number(page),
+        limit: Number(limit)
+      });
+
+      res.json(createSuccessResponse(approvals, {}));
+    } catch (error) {
+      console.error('Error getting multi-signature approvals:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get multi-signature approvals'));
+    }
+  }
+
+  // Create automated execution
+  async createAutomatedExecution(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { proposalId, executionType, executionTime, recurrencePattern, dependencyProposalId, metadata } = req.body;
+
+      const result = await communityService.createAutomatedExecution({
+        proposalId,
+        executionType,
+        executionTime: executionTime ? new Date(executionTime) : undefined,
+        recurrencePattern,
+        dependencyProposalId,
+        metadata
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to create automated execution', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse((result as any).data || result, {}));
+    } catch (error) {
+      console.error('Error creating automated execution:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create automated execution'));
+    }
+  }
+
+  // Get automated executions
+  async getAutomatedExecutions(req: Request, res: Response): Promise<void> {
+    try {
+      const { proposalId } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+
+      const executions = await communityService.getAutomatedExecutions(proposalId as string, {
+        page: Number(page),
+        limit: Number(limit)
+      });
+
+      res.json(createSuccessResponse(executions, {}));
+    } catch (error) {
+      console.error('Error getting automated executions:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get automated executions'));
+    }
+  }
+
+  // Check if user has access to token-gated content
+  async checkContentAccess(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { contentId } = req.params;
+
+      const hasAccess = await communityService.checkContentAccess(contentId, userAddress);
+
+      res.json(createSuccessResponse({ hasAccess }, {}));
+    } catch (error) {
+      console.error('Error checking content access:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to check content access'));
+    }
+  }
+
+  // Grant access to token-gated content
+  async grantContentAccess(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { contentId } = req.params;
+      const { accessLevel } = req.body;
+
+      const success = await communityService.grantContentAccess(contentId, userAddress, accessLevel);
+
+      if (!success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Failed to grant content access', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse({ success: true }, {}));
+    } catch (error) {
+      console.error('Error granting content access:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to grant content access'));
+    }
+  }
+
+  // Create token-gated content
+  async createTokenGatedContent(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { communityId } = req.params;
+      const data = req.body;
+
+      // Add communityId to the data
+      const contentData = {
+        ...data,
+        communityId
+      };
+
+      const content = await communityService.createTokenGatedContent(contentData);
+
+      res.status(201).json(createSuccessResponse(content, {}));
+    } catch (error) {
+      console.error('Error creating token-gated content:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create token-gated content'));
+    }
+  }
+
+  // Get token-gated content by post ID
+  async getTokenGatedContentByPost(req: Request, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+
+      const content = await communityService.getTokenGatedContentByPost(Number(postId));
+
+      if (!content) {
+        res.status(404).json(createErrorResponse('NOT_FOUND', 'Token-gated content not found', 404));
+        return;
+      }
+
+      res.json(createSuccessResponse(content, {}));
+    } catch (error) {
+      console.error('Error getting token-gated content:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get token-gated content'));
+    }
+  }
+
+  // Create subscription tier
+  async createSubscriptionTier(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { communityId } = req.params;
+      const data = req.body;
+
+      // Add communityId to the data
+      const tierData = {
+        ...data,
+        communityId
+      };
+
+      const tier = await communityService.createSubscriptionTier(tierData);
+
+      res.status(201).json(createSuccessResponse(tier, {}));
+    } catch (error) {
+      console.error('Error creating subscription tier:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create subscription tier'));
+    }
+  }
+
+  // Get subscription tiers for a community
+  async getSubscriptionTiers(req: Request, res: Response): Promise<void> {
+    try {
+      const { communityId } = req.params;
+
+      const tiers = await communityService.getSubscriptionTiers(communityId);
+
+      res.json(createSuccessResponse(tiers, {}));
+    } catch (error) {
+      console.error('Error getting subscription tiers:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get subscription tiers'));
+    }
+  }
+
+  // Subscribe user to a tier
+  async subscribeUser(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { communityId } = req.params;
+      const { tierId, paymentTxHash, metadata } = req.body;
+
+      const subscription = await communityService.subscribeUser({
+        userId: userAddress,
+        communityId,
+        tierId,
+        paymentTxHash,
+        metadata
+      });
+
+      res.status(201).json(createSuccessResponse(subscription, {}));
+    } catch (error) {
+      console.error('Error subscribing user:', error);
+      if (error.message.includes('not found')) {
+        res.status(404).json(createErrorResponse('NOT_FOUND', error.message, 404));
+      } else {
+        res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to subscribe user'));
+      }
+    }
+  }
+
+  // Get user subscriptions
+  async getUserSubscriptions(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { communityId } = req.params;
+      const subscriptions = await communityService.getUserSubscriptions(userAddress, communityId);
+
+      res.json(createSuccessResponse(subscriptions, {}));
+    } catch (error) {
+      console.error('Error getting user subscriptions:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get user subscriptions'));
     }
   }
 }

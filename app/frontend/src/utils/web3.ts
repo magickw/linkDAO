@@ -7,9 +7,10 @@ import { ethers } from 'ethers'
  */
 export async function getProvider() {
   try {
-    const client = getPublicClient(config)
-    // Convert wagmi client to ethers provider
-    const provider = new ethers.providers.Web3Provider(client.transport.provider as any)
+  const client = getPublicClient(config)
+  // Convert wagmi client to ethers provider. Cast to `any` because `transport`
+  // has a union type and not all variants expose a `provider` property.
+  const provider = new ethers.providers.Web3Provider((client as any).transport?.provider as any)
     return provider
   } catch (error) {
     console.error('Error getting provider:', error)
@@ -22,12 +23,12 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
-    const client = await getWalletClient(config)
-    if (!client) return null
-    
-    // Convert wagmi client to ethers signer
-    const provider = new ethers.providers.Web3Provider(client.transport.provider as any)
-    const signer = provider.getSigner()
+  const client = await getWalletClient(config)
+  if (!client) return null
+
+  // Convert wagmi client to ethers signer. Cast to `any` as above.
+  const provider = new ethers.providers.Web3Provider((client as any).transport?.provider as any)
+  const signer = provider.getSigner()
     return signer
   } catch (error) {
     console.error('Error getting signer:', error)

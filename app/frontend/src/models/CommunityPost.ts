@@ -1,6 +1,8 @@
 import { Post } from './Post';
 
-export interface CommunityPost extends Omit<Post, 'parentId'> {
+// Omit 'parentId' and 'comments' from base Post so CommunityPost can
+// define comments as a structured Comment[] instead of the numeric count
+export interface CommunityPost extends Omit<Post, 'parentId' | 'comments'> {
   communityId: string;
   flair?: string;
   isPinned: boolean;

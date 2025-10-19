@@ -51,6 +51,8 @@ export const posts = pgTable("posts", {
   dao: varchar("dao", { length: 64 }), // DAO community this post belongs to (legacy)
   communityId: uuid("community_id"), // New reference to communities table
   pollId: uuid("poll_id"), // Reference to poll if this is a poll post
+  isTokenGated: boolean("is_token_gated").default(false), // Whether this post is token gated
+  gatedContentPreview: text("gated_content_preview"), // Preview content for gated posts
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   authorFk: foreignKey({
@@ -62,6 +64,7 @@ export const posts = pgTable("posts", {
     foreignColumns: [communities.id]
   }),
   communityIdIdx: index("idx_posts_community_id").on(t.communityId),
+  tokenGatedIdx: index("idx_posts_token_gated").on(t.isTokenGated),
 }));
 
 // Post Tags - for efficient querying of posts by tags
@@ -137,6 +140,47 @@ export const views = pgTable("views", {
 }, (t) => ({
   postUserIdx: index("view_post_user_idx").on(t.postId, t.userId),
   postCreatedIdx: index("view_post_created_idx").on(t.postId, t.createdAt),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
+// Bookmarks - user-saved posts
+export const bookmarks = pgTable("bookmarks", {
+  userId: uuid("user_id").notNull().references(() => users.id),
+  postId: integer("post_id").notNull().references(() => posts.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  pk: primaryKey(t.userId, t.postId),
+  userIdx: index("bookmark_user_idx").on(t.userId),
+  postIdx: index("bookmark_post_idx").on(t.postId),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  }),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  })
+}));
+
+// Shares - track when users share posts
+export const shares = pgTable("shares", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  targetType: varchar("target_type", { length: 32 }).notNull(), // 'community', 'dm', 'external'
+  targetId: uuid("target_id"), // Community ID or User ID for DMs
+  message: text("message"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  postUserIdx: index("share_post_user_idx").on(t.postId, t.userId),
+  postCreatedIdx: index("share_post_created_idx").on(t.postId, t.createdAt),
   postFk: foreignKey({
     columns: [t.postId],
     foreignColumns: [posts.id]
@@ -915,8 +959,8 @@ export const communityGovernanceProposals = pgTable("community_governance_propos
   proposerAddress: varchar("proposer_address", { length: 66 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
-  type: varchar("type", { length: 50 }).notNull(), // 'text', 'parameter', 'membership', 'spending'
-  status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'active', 'passed', 'rejected', 'executed', 'expired'
+  type: varchar("type", { length: 50 }).notNull(), // 'text', 'parameter', 'membership', 'spending', 'rule_change', 'moderator_election', 'budget_allocation', 'feature_request', 'parameter_change', 'grant'
+  status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'active', 'passed', 'rejected', 'executed', 'expired', 'multi_sig_pending'
   votingStartTime: timestamp("voting_start_time").notNull(),
   votingEndTime: timestamp("voting_end_time").notNull(),
   executionEta: timestamp("execution_eta"),
@@ -929,6 +973,13 @@ export const communityGovernanceProposals = pgTable("community_governance_propos
   quorum: numeric("quorum", { precision: 20, scale: 8 }).default("0"),
   quorumReached: boolean("quorum_reached").default(false),
   requiredMajority: integer("required_majority").default(50), // percentage needed for approval
+  requiredStake: numeric("required_stake", { precision: 20, scale: 8 }).default("0"), // minimum stake required to vote
+  executionDelay: integer("execution_delay"), // delay in seconds before execution
+  requiredSignatures: integer("required_signatures").default(1), // number of signatures required for multi-sig proposals
+  signaturesObtained: integer("signatures_obtained").default(0), // number of signatures obtained
+  multiSigEnabled: boolean("multi_sig_enabled").default(false), // whether multi-sig is required
+  autoExecute: boolean("auto_execute").default(false), // whether to auto-execute when passed
+  executionTemplate: text("execution_template"), // JSON template for automated execution
   metadata: text("metadata"), // JSON additional data
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -953,6 +1004,295 @@ export const communityGovernanceVotes = pgTable("community_governance_votes", {
   proposalIdIdx: index("idx_community_governance_votes_proposal_id").on(t.proposalId),
   voterAddressIdx: index("idx_community_governance_votes_voter_address").on(t.voterAddress),
   voteChoiceIdx: index("idx_community_governance_votes_choice").on(t.voteChoice),
+}));
+
+// Community delegation
+export const communityDelegations = pgTable("community_delegations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  delegatorAddress: varchar("delegator_address", { length: 66 }).notNull(),
+  delegateAddress: varchar("delegate_address", { length: 66 }).notNull(),
+  votingPower: numeric("voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  isRevocable: boolean("is_revocable").default(true),
+  expiryDate: timestamp("expiry_date"),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueDelegation: primaryKey(t.communityId, t.delegatorAddress),
+  communityIdIdx: index("idx_community_delegations_community_id").on(t.communityId),
+  delegatorAddressIdx: index("idx_community_delegations_delegator").on(t.delegatorAddress),
+  delegateAddressIdx: index("idx_community_delegations_delegate").on(t.delegateAddress),
+  expiryDateIdx: index("idx_community_delegations_expiry").on(t.expiryDate),
+}));
+
+// Community automated proposal executions
+export const communityAutomatedExecutions = pgTable("community_automated_executions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  proposalId: uuid("proposal_id").references(() => communityGovernanceProposals.id, { onDelete: 'cascade' }).notNull(),
+  executionType: varchar("execution_type", { length: 50 }).notNull(), // 'scheduled', 'recurring', 'dependent'
+  executionTime: timestamp("execution_time"),
+  recurrencePattern: varchar("recurrence_pattern", { length: 100 }), // cron expression or interval
+  dependencyProposalId: uuid("dependency_proposal_id"),
+  executionStatus: varchar("execution_status", { length: 32 }).default("pending"), // 'pending', 'executed', 'failed', 'cancelled'
+  executionResult: text("execution_result"), // JSON result of execution
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  proposalIdIdx: index("idx_community_automated_executions_proposal_id").on(t.proposalId),
+  executionTypeIdx: index("idx_community_automated_executions_type").on(t.executionType),
+  executionTimeIdx: index("idx_community_automated_executions_time").on(t.executionTime),
+  executionStatusIdx: index("idx_community_automated_executions_status").on(t.executionStatus),
+  dependencyProposalIdIdx: index("idx_community_automated_executions_dependency").on(t.dependencyProposalId),
+}));
+
+// Community token gated content
+export const communityTokenGatedContent = pgTable("community_token_gated_content", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: 'cascade' }),
+  gatingType: varchar("gating_type", { length: 50 }).notNull(), // 'token_balance', 'nft_ownership', 'subscription'
+  tokenAddress: varchar("token_address", { length: 66 }),
+  tokenId: varchar("token_id", { length: 128 }),
+  minimumBalance: numeric("minimum_balance", { precision: 20, scale: 8 }),
+  subscriptionTier: varchar("subscription_tier", { length: 50 }),
+  accessType: varchar("access_type", { length: 50 }).default("view"), // 'view', 'interact', 'full'
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_token_gated_content_community_id").on(t.communityId),
+  postIdIdx: index("idx_community_token_gated_content_post_id").on(t.postId),
+  gatingTypeIdx: index("idx_community_token_gated_content_gating_type").on(t.gatingType),
+  tokenAddressIdx: index("idx_community_token_gated_content_token_address").on(t.tokenAddress),
+}));
+
+// Community user content access
+export const communityUserContentAccess = pgTable("community_user_content_access", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  contentId: uuid("content_id").references(() => communityTokenGatedContent.id, { onDelete: 'cascade' }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  accessLevel: varchar("access_level", { length: 50 }).notNull(), // 'denied', 'view', 'interact', 'full'
+  accessGrantedAt: timestamp("access_granted_at").defaultNow().notNull(),
+  accessExpiresAt: timestamp("access_expires_at"),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueAccess: primaryKey(t.contentId, t.userAddress),
+  contentIdIdx: index("idx_community_user_content_access_content_id").on(t.contentId),
+  userAddressIdx: index("idx_community_user_content_access_user_address").on(t.userAddress),
+  accessLevelIdx: index("idx_community_user_content_access_level").on(t.accessLevel),
+}));
+
+// Community subscription tiers
+export const communitySubscriptionTiers = pgTable("community_subscription_tiers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  price: numeric("price", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  benefits: text("benefits"), // JSON array of benefits
+  accessLevel: varchar("access_level", { length: 50 }).notNull(), // 'view', 'interact', 'full'
+  durationDays: integer("duration_days"),
+  isActive: boolean("is_active").default(true),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_subscription_tiers_community_id").on(t.communityId),
+  isActiveIdx: index("idx_community_subscription_tiers_is_active").on(t.isActive),
+}));
+
+// Marketplace-specific moderation tables
+// The detailed marketplace moderation tables (e.g. marketplaceVerifications, sellerVerifications)
+// are defined in app/backend/src/db/marketplaceSchema.ts and imported at the top of this file.
+// We intentionally do not redeclare them here to avoid duplicate symbol errors.
+
+// Revenue Sharing and Treasury Management Tables
+
+// Community treasury pools for collecting fees
+export const communityTreasuryPools = pgTable("community_treasury_pools", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  tokenAddress: varchar("token_address", { length: 66 }).notNull(),
+  tokenSymbol: varchar("token_symbol", { length: 20 }).notNull(),
+  balance: numeric("balance", { precision: 20, scale: 8 }).default("0").notNull(),
+  totalContributions: numeric("total_contributions", { precision: 20, scale: 8 }).default("0").notNull(),
+  totalDistributions: numeric("total_distributions", { precision: 20, scale: 8 }).default("0").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_treasury_pools_community_id").on(t.communityId),
+  tokenAddressIdx: index("idx_community_treasury_pools_token_address").on(t.tokenAddress),
+  isActiveIdx: index("idx_community_treasury_pools_is_active").on(t.isActive),
+}));
+
+// Community fee distributions to creators
+export const communityCreatorRewards = pgTable("community_creator_rewards", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  postId: integer("post_id").references(() => posts.id, { onDelete: 'cascade' }),
+  creatorAddress: varchar("creator_address", { length: 66 }).notNull(),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
+  tokenAddress: varchar("token_address", { length: 66 }).notNull(),
+  tokenSymbol: varchar("token_symbol", { length: 20 }).notNull(),
+  distributionType: varchar("distribution_type", { length: 30 }).notNull(), // 'post_fee', 'community_fee', 'tip'
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'distributed', 'failed'
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  distributedAt: timestamp("distributed_at"),
+}, (t) => ({
+  communityIdIdx: index("idx_community_creator_rewards_community_id").on(t.communityId),
+  creatorAddressIdx: index("idx_community_creator_rewards_creator_address").on(t.creatorAddress),
+  postIdIdx: index("idx_community_creator_rewards_post_id").on(t.postId),
+  statusIdx: index("idx_community_creator_rewards_status").on(t.status),
+  createdAtIdx: index("idx_community_creator_rewards_created_at").on(t.createdAt),
+}));
+
+// Community member staking for rewards
+export const communityStaking = pgTable("community_staking", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  stakedAmount: numeric("staked_amount", { precision: 20, scale: 8 }).notNull(),
+  tokenAddress: varchar("token_address", { length: 66 }).notNull(),
+  tokenSymbol: varchar("token_symbol", { length: 20 }).notNull(),
+  stakedAt: timestamp("staked_at").defaultNow().notNull(),
+  unstakedAt: timestamp("unstaked_at"),
+  rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 8 }).default("0").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_staking_community_id").on(t.communityId),
+  userAddressIdx: index("idx_community_staking_user_address").on(t.userAddress),
+  isActiveIdx: index("idx_community_staking_is_active").on(t.isActive),
+  stakedAtIdx: index("idx_community_staking_staked_at").on(t.stakedAt),
+}));
+
+// Community staking rewards distributions
+export const communityStakingRewards = pgTable("community_staking_rewards", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  stakingId: uuid("staking_id").references(() => communityStaking.id, { onDelete: 'cascade' }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
+  tokenAddress: varchar("token_address", { length: 66 }).notNull(),
+  tokenSymbol: varchar("token_symbol", { length: 20 }).notNull(),
+  rewardType: varchar("reward_type", { length: 30 }).notNull(), // 'participation', 'liquidity', 'governance'
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'distributed', 'failed'
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  distributedAt: timestamp("distributed_at"),
+}, (t) => ({
+  stakingIdIdx: index("idx_community_staking_rewards_staking_id").on(t.stakingId),
+  userAddressIdx: index("idx_community_staking_rewards_user_address").on(t.userAddress),
+  statusIdx: index("idx_community_staking_rewards_status").on(t.status),
+  rewardTypeIdx: index("idx_community_staking_rewards_type").on(t.rewardType),
+}));
+
+// Community referral programs
+export const communityReferralPrograms = pgTable("community_referral_programs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
+  rewardToken: varchar("reward_token", { length: 66 }).notNull(),
+  rewardTokenSymbol: varchar("reward_token_symbol", { length: 20 }).notNull(),
+  referralLimit: integer("referral_limit"), // Max referrals per user
+  isActive: boolean("is_active").default(true).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_referral_programs_community_id").on(t.communityId),
+  isActiveIdx: index("idx_community_referral_programs_is_active").on(t.isActive),
+  startDateIdx: index("idx_community_referral_programs_start_date").on(t.startDate),
+}));
+
+// Community user referrals
+export const communityUserReferrals = pgTable("community_user_referrals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  programId: uuid("program_id").references(() => communityReferralPrograms.id, { onDelete: 'cascade' }).notNull(),
+  referrerAddress: varchar("referrer_address", { length: 66 }).notNull(),
+  referredAddress: varchar("referred_address", { length: 66 }).notNull(),
+  rewardAmount: numeric("reward_amount", { precision: 20, scale: 8 }).notNull(),
+  rewardToken: varchar("reward_token", { length: 66 }).notNull(),
+  rewardTokenSymbol: varchar("reward_token_symbol", { length: 20 }).notNull(),
+  rewardStatus: varchar("reward_status", { length: 20 }).default("pending"), // 'pending', 'claimed', 'distributed'
+  transactionHash: varchar("transaction_hash", { length: 66 }),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  rewardedAt: timestamp("rewarded_at"),
+}, (t) => ({
+  programIdIdx: index("idx_community_user_referrals_program_id").on(t.programId),
+  referrerAddressIdx: index("idx_community_user_referrals_referrer_address").on(t.referrerAddress),
+  referredAddressIdx: index("idx_community_user_referrals_referred_address").on(t.referredAddress),
+  rewardStatusIdx: index("idx_community_user_referrals_reward_status").on(t.rewardStatus),
+  uniqueReferral: index("idx_community_user_referrals_unique").on(t.programId, t.referrerAddress, t.referredAddress),
+}));
+
+// Counterfeit detection results
+
+// Community user subscriptions
+export const communityUserSubscriptions = pgTable("community_user_subscriptions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  tierId: uuid("tier_id").references(() => communitySubscriptionTiers.id, { onDelete: 'cascade' }).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  status: varchar("status", { length: 20 }).default("active"), // 'active', 'expired', 'cancelled'
+  paymentTxHash: varchar("payment_tx_hash", { length: 66 }),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_community_user_subscriptions_user_id").on(t.userId),
+  communityIdIdx: index("idx_community_user_subscriptions_community_id").on(t.communityId),
+  tierIdIdx: index("idx_community_user_subscriptions_tier_id").on(t.tierId),
+  statusIdx: index("idx_community_user_subscriptions_status").on(t.status),
+}));
+
+// Community multi-signature approvals
+export const communityMultiSigApprovals = pgTable("community_multi_sig_approvals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  proposalId: uuid("proposal_id").references(() => communityGovernanceProposals.id, { onDelete: 'cascade' }).notNull(),
+  approverAddress: varchar("approver_address", { length: 66 }).notNull(),
+  signature: text("signature"), // Blockchain signature
+  approvedAt: timestamp("approved_at").defaultNow().notNull(),
+  metadata: text("metadata"), // JSON additional data
+}, (t) => ({
+  uniqueApproval: primaryKey(t.proposalId, t.approverAddress),
+  proposalIdIdx: index("idx_community_multi_sig_approvals_proposal_id").on(t.proposalId),
+  approverAddressIdx: index("idx_community_multi_sig_approvals_approver").on(t.approverAddress),
+  approvedAtIdx: index("idx_community_multi_sig_approvals_approved_at").on(t.approvedAt),
+}));
+
+// Community proxy votes
+export const communityProxyVotes = pgTable("community_proxy_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  proposalId: uuid("proposal_id").references(() => communityGovernanceProposals.id, { onDelete: 'cascade' }).notNull(),
+  proxyAddress: varchar("proxy_address", { length: 66 }).notNull(),
+  voterAddress: varchar("voter_address", { length: 66 }).notNull(),
+  voteChoice: varchar("vote_choice", { length: 10 }).notNull(), // 'yes', 'no', 'abstain'
+  votingPower: numeric("voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueProxyVote: primaryKey(t.proposalId, t.voterAddress),
+  proposalIdIdx: index("idx_community_proxy_votes_proposal_id").on(t.proposalId),
+  proxyAddressIdx: index("idx_community_proxy_votes_proxy").on(t.proxyAddress),
+  voterAddressIdx: index("idx_community_proxy_votes_voter").on(t.voterAddress),
 }));
 
 // Community moderation actions

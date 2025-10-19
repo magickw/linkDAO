@@ -211,21 +211,43 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           ) : (
             <PostComposer
               onPost={async (postData) => {
-                // Create a mock post for now
+                // Create a mock post for now (include all required EnhancedPost fields)
                 const newPost: EnhancedPost = {
                   id: Date.now().toString(),
                   author: 'current-user',
+                  parentId: null,
+                  title: postData.title || '',
                   contentCid: postData.content,
+                  mediaCids: postData.media || [],
                   tags: postData.tags || [],
                   createdAt: new Date(),
                   updatedAt: new Date(),
+                  onchainRef: '',
+                  stakedValue: 0,
+                  reputationScore: 0,
+                  dao: '',
+
+                  // Engagement data
                   reactions: [],
                   tips: [],
                   comments: 0,
                   shares: 0,
                   views: 0,
                   engagementScore: 0,
-                  previews: []
+
+                  // Enhanced features
+                  previews: [],
+                  socialProof: {
+                    followedUsersWhoEngaged: [],
+                    totalEngagementFromFollowed: 0,
+                    communityLeadersWhoEngaged: [],
+                    verifiedUsersWhoEngaged: []
+                  },
+                  trendingStatus: null,
+                  trendingScore: 0,
+                  isBookmarked: false,
+                  communityId: communityId,
+                  contentType: 'text'
                 };
                 handlePostCreated(newPost);
               }}

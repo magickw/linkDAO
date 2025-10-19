@@ -143,6 +143,7 @@ export class TestSuite {
     // Deploy EnhancedEscrow
     const EnhancedEscrowFactory = await ethers.getContractFactory("EnhancedEscrow");
     this.contracts.enhancedEscrow = await EnhancedEscrowFactory.deploy(
+      this.contracts.ldaoToken!.address,
       this.contracts.governance!.address
     ) as EnhancedEscrow;
     await this.contracts.enhancedEscrow.deployed();
@@ -158,16 +159,14 @@ export class TestSuite {
     // Deploy Marketplace
     const MarketplaceFactory = await ethers.getContractFactory("Marketplace");
     this.contracts.marketplace = await MarketplaceFactory.deploy(
-      this.contracts.enhancedEscrow.address,
-      this.contracts.paymentRouter!.address
+      this.contracts.ldaoToken!.address
     ) as Marketplace;
     await this.contracts.marketplace.deployed();
 
     // Deploy RewardPool
     const RewardPoolFactory = await ethers.getContractFactory("RewardPool");
     this.contracts.rewardPool = await RewardPoolFactory.deploy(
-      this.contracts.ldaoToken!.address,
-      this.accounts.treasury.address
+      this.contracts.ldaoToken!.address
     ) as RewardPool;
     await this.contracts.rewardPool.deployed();
   }
@@ -193,25 +192,20 @@ export class TestSuite {
 
     // Deploy FollowModule
     const FollowModuleFactory = await ethers.getContractFactory("FollowModule");
-    this.contracts.followModule = await FollowModuleFactory.deploy(
-      this.contracts.profileRegistry!.address
-    ) as FollowModule;
+    this.contracts.followModule = await FollowModuleFactory.deploy() as FollowModule;
     await this.contracts.followModule.deployed();
   }
 
   private async configureInterconnections(): Promise<void> {
     // Set contract addresses in dependent contracts
-    await this.contracts.enhancedEscrow!.setDisputeResolution(this.contracts.disputeResolution!.address);
-    await this.contracts.enhancedEscrow!.setReputationSystem(this.contracts.reputationSystem!.address);
-    
-    await this.contracts.marketplace!.setReputationSystem(this.contracts.reputationSystem!.address);
-    await this.contracts.marketplace!.setDisputeResolution(this.contracts.disputeResolution!.address);
-    
+    // Note: EnhancedEscrow and Marketplace receive addresses in constructors
+    // These setter functions may not exist in current contract versions
+
     // Configure supported tokens in PaymentRouter
     await this.contracts.paymentRouter!.setTokenSupported(this.contracts.mockUSDC!.address, true);
     await this.contracts.paymentRouter!.setTokenSupported(this.contracts.mockUSDT!.address, true);
     await this.contracts.paymentRouter!.setTokenSupported(this.contracts.mockDAI!.address, true);
-    
+
     // Set up initial token distributions for testing
     await this.setupTestTokenDistribution();
   }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { EnhancedPost, FeedFilter, InfiniteScrollState } from '../../types/feed';
+import { EnhancedPost, FeedFilter, InfiniteScrollState, FeedError } from '../../types/feed';
 import { FeedService } from '../../services/feedService';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 interface InfiniteScrollFeedProps {
   filter: FeedFilter;
@@ -10,6 +11,7 @@ interface InfiniteScrollFeedProps {
   threshold?: number; // Distance from bottom to trigger load (in pixels)
   initialLoad?: boolean;
   postsPerPage?: number;
+  onError?: (error: FeedError) => void;
 }
 
 export default function InfiniteScrollFeed({
@@ -19,8 +21,10 @@ export default function InfiniteScrollFeed({
   className = '',
   threshold = 1000,
   initialLoad = true,
-  postsPerPage = 20
+  postsPerPage = 20,
+  onError
 }: InfiniteScrollFeedProps) {
+  const { isMobile } = useMobileOptimization();
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [scrollState, setScrollState] = useState<InfiniteScrollState>({
     hasMore: true,
@@ -61,15 +65,25 @@ export default function InfiniteScrollFeed({
       }
 
       onPostsLoad(response.posts);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load posts';
+    } catch (error: any) {
+      const feedError: FeedError = {
+        code: error.code || 'FEED_LOAD_ERROR',
+        message: error.message || 'Failed to load posts',
+        timestamp: new Date(),
+        retryable: error.retryable !== false
+      };
+      
       setScrollState(prev => ({
         ...prev,
         isLoading: false,
-        error: errorMessage
+        error: feedError.message
       }));
+      
+      if (onError) {
+        onError(feedError);
+      }
     }
-  }, [filter, postsPerPage, onPostsLoad, scrollState.isLoading]);
+  }, [filter, postsPerPage, onPostsLoad, scrollState.isLoading, onError]);
 
   // Reset and load initial posts when filter changes
   useEffect(() => {
@@ -142,8 +156,74 @@ export default function InfiniteScrollFeed({
     }
   }, [loadMorePosts, posts.length, scrollState.page]);
 
+  // Add pull-to-refresh for mobile
+  const [pullStart, setPullStart] = useState(0);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isMobile && e.touches[0].clientY === 0) {
+      setPullStart(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isMobile && pullStart > 0) {
+      const distance = e.touches[0].clientY - pullStart;
+      if (distance > 0 && window.scrollY === 0) {
+        e.preventDefault();
+        setPullDistance(Math.min(distance, 100)); // Max 100px pull
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isMobile && pullDistance > 50) { // Pull threshold of 50px
+      setIsRefreshing(true);
+      refresh();
+      setTimeout(() => setIsRefreshing(false), 1000); // Simulate refresh
+    }
+    setPullStart(0);
+    setPullDistance(0);
+  };
+
   return (
-    <div className={className}>
+    <div 
+      className={className}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={isMobile && pullDistance > 0 ? { transform: `translateY(${pullDistance}px)` } : {}}
+    >
+      {isMobile && pullDistance > 0 && (
+        <div className="flex justify-center py-2 bg-gray-100 dark:bg-gray-800">
+          <div className="flex items-center space-x-2">
+            {isRefreshing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Refreshing...</span>
+              </>
+            ) : pullDistance > 50 ? (
+              <>
+                <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Release to refresh</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Pull to refresh</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      
       {children(posts, { ...scrollState, refresh, retry } as any)}
       
       {/* Loading trigger element */}
@@ -158,7 +238,7 @@ export default function InfiniteScrollFeed({
             <ErrorState error={scrollState.error} onRetry={retry} />
           ) : (
             <div className="text-gray-500 dark:text-gray-400 text-sm">
-              Scroll to load more posts...
+              {isMobile ? 'Pull up to load more' : 'Scroll to load more posts...'}
             </div>
           )}
         </div>
@@ -266,11 +346,18 @@ export function useInfiniteScroll(
       }));
 
       setPosts(prev => [...prev, ...response.posts]);
-    } catch (error) {
+    } catch (error: any) {
+      const feedError: FeedError = {
+        code: error.code || 'FEED_LOAD_ERROR',
+        message: error.message || 'Failed to load posts',
+        timestamp: new Date(),
+        retryable: error.retryable !== false
+      };
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to load posts'
+        error: feedError.message
       }));
     }
   }, [filter, state.isLoading, state.hasMore, state.page, postsPerPage]);
@@ -301,11 +388,18 @@ export function useInfiniteScroll(
       });
 
       setPosts(response.posts);
-    } catch (error) {
+    } catch (error: any) {
+      const feedError: FeedError = {
+        code: error.code || 'FEED_REFRESH_ERROR',
+        message: error.message || 'Failed to refresh posts',
+        timestamp: new Date(),
+        retryable: error.retryable !== false
+      };
+      
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to refresh posts'
+        error: feedError.message
       }));
     }
   }, [filter, postsPerPage, reset]);

@@ -1,6 +1,7 @@
 import { Post } from '../models/Post';
 import { Community } from '../models/Community';
 import { UserProfile } from '../models/UserProfile';
+import { User } from './feed';
 
 // Enhanced search types for the advanced search and discovery system
 export interface EnhancedSearchFilters {
@@ -118,10 +119,10 @@ export interface ReactionCount {
 }
 
 export interface SocialProof {
-  followedUsersWhoEngaged: UserProfile[];
+  followedUsersWhoEngaged: User[];
   totalEngagementFromFollowed: number;
-  communityLeadersWhoEngaged: UserProfile[];
-  verifiedUsersWhoEngaged: UserProfile[];
+  communityLeadersWhoEngaged: User[];
+  verifiedUsersWhoEngaged: User[];
 }
 
 export interface UserReputation {

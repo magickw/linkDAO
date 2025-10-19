@@ -217,7 +217,7 @@ router.post('/:id/governance',
     body: {
       title: { type: 'string', required: true, minLength: 5, maxLength: 200 },
       description: { type: 'string', required: true, minLength: 20, maxLength: 2000 },
-      type: { type: 'string', required: true, enum: ['rule_change', 'moderator_election', 'budget_allocation', 'feature_request'] },
+      type: { type: 'string', required: true, enum: ['rule_change', 'moderator_election', 'budget_allocation', 'feature_request', 'spending', 'parameter_change', 'grant', 'membership'] },
       votingDuration: { type: 'number', optional: true, min: 1, max: 30 }, // days
       requiredStake: { type: 'number', optional: true, min: 0 }
     }
@@ -297,6 +297,245 @@ router.get('/search/query',
     }
   }),
   communityController.searchCommunities
+);
+
+// Create delegation (auth required)
+router.post('/:id/delegations',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      delegatorAddress: { type: 'string', required: true },
+      delegateAddress: { type: 'string', required: true },
+      expiryDate: { type: 'string', optional: true },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createDelegation
+);
+
+// Revoke delegation (auth required)
+router.delete('/:id/delegations',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      delegatorAddress: { type: 'string', required: true }
+    }
+  }),
+  communityController.revokeDelegation
+);
+
+// Get delegations as delegate (auth required)
+router.get('/:id/delegations',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      delegateAddress: { type: 'string', required: true },
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  communityController.getDelegationsAsDelegate
+);
+
+// Create proxy vote (auth required)
+router.post('/proxy-votes',
+  authRequired,
+  validateRequest({
+    body: {
+      proposalId: { type: 'string', required: true },
+      proxyAddress: { type: 'string', required: true },
+      voterAddress: { type: 'string', required: true },
+      vote: { type: 'string', required: true, enum: ['yes', 'no', 'abstain'] },
+      reason: { type: 'string', optional: true, maxLength: 500 }
+    }
+  }),
+  communityController.createProxyVote
+);
+
+// Create multi-signature approval (auth required)
+router.post('/multi-sig-approvals',
+  authRequired,
+  validateRequest({
+    body: {
+      proposalId: { type: 'string', required: true },
+      approverAddress: { type: 'string', required: true },
+      signature: { type: 'string', optional: true },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createMultiSigApproval
+);
+
+// Get multi-signature approvals
+router.get('/:proposalId/multi-sig-approvals',
+  validateRequest({
+    params: {
+      proposalId: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  communityController.getMultiSigApprovals
+);
+
+// Create automated execution (auth required)
+router.post('/automated-executions',
+  authRequired,
+  validateRequest({
+    body: {
+      proposalId: { type: 'string', required: true },
+      executionType: { type: 'string', required: true, enum: ['scheduled', 'recurring', 'dependent'] },
+      executionTime: { type: 'string', optional: true },
+      recurrencePattern: { type: 'string', optional: true },
+      dependencyProposalId: { type: 'string', optional: true },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createAutomatedExecution
+);
+
+// Get automated executions
+router.get('/:proposalId/automated-executions',
+  validateRequest({
+    params: {
+      proposalId: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 }
+    }
+  }),
+  communityController.getAutomatedExecutions
+);
+
+// Token-gated content routes
+
+// Check if user has access to token-gated content
+router.get('/token-gated-content/:contentId/access',
+  authRequired,
+  validateRequest({
+    params: {
+      contentId: { type: 'string', required: true }
+    }
+  }),
+  communityController.checkContentAccess
+);
+
+// Grant access to token-gated content
+router.post('/token-gated-content/:contentId/access',
+  authRequired,
+  validateRequest({
+    params: {
+      contentId: { type: 'string', required: true }
+    },
+    body: {
+      accessLevel: { type: 'string', optional: true, enum: ['denied', 'view', 'interact', 'full'] }
+    }
+  }),
+  communityController.grantContentAccess
+);
+
+// Create token-gated content
+router.post('/:communityId/token-gated-content',
+  authRequired,
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    body: {
+      postId: { type: 'number', optional: true },
+      gatingType: { type: 'string', required: true, enum: ['token_balance', 'nft_ownership', 'subscription'] },
+      tokenAddress: { type: 'string', optional: true },
+      tokenId: { type: 'string', optional: true },
+      minimumBalance: { type: 'string', optional: true },
+      subscriptionTier: { type: 'string', optional: true },
+      accessType: { type: 'string', optional: true, enum: ['view', 'interact', 'full'] },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createTokenGatedContent
+);
+
+// Get token-gated content by post ID
+router.get('/posts/:postId/token-gated-content',
+  validateRequest({
+    params: {
+      postId: { type: 'number', required: true }
+    }
+  }),
+  communityController.getTokenGatedContentByPost
+);
+
+// Subscription tier routes
+
+// Create subscription tier
+router.post('/:communityId/subscription-tiers',
+  authRequired,
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    body: {
+      name: { type: 'string', required: true, minLength: 1, maxLength: 100 },
+      description: { type: 'string', optional: true, maxLength: 500 },
+      price: { type: 'string', required: true },
+      currency: { type: 'string', required: true, minLength: 1, maxLength: 10 },
+      benefits: { type: 'array', optional: true },
+      accessLevel: { type: 'string', required: true, enum: ['view', 'interact', 'full'] },
+      durationDays: { type: 'number', optional: true, min: 1 },
+      isActive: { type: 'boolean', optional: true },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createSubscriptionTier
+);
+
+// Get subscription tiers for a community
+router.get('/:communityId/subscription-tiers',
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    }
+  }),
+  communityController.getSubscriptionTiers
+);
+
+// Subscribe user to a tier
+router.post('/:communityId/subscriptions',
+  authRequired,
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    },
+    body: {
+      tierId: { type: 'string', required: true },
+      paymentTxHash: { type: 'string', optional: true },
+      metadata: { type: 'object', optional: true }
+    }
+  }),
+  communityController.subscribeUser
+);
+
+// Get user subscriptions
+router.get('/:communityId/subscriptions',
+  authRequired,
+  validateRequest({
+    params: {
+      communityId: { type: 'string', required: true }
+    }
+  }),
+  communityController.getUserSubscriptions
 );
 
 export default router;

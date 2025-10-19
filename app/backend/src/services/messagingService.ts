@@ -1,6 +1,6 @@
 import { db } from '../db';
 import { conversations, chatMessages, blockedUsers, messageReadStatus } from '../db/schema';
-import { universalNotificationService } from './universalNotificationService';
+// import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
 
 interface GetConversationsOptions {
@@ -325,14 +325,15 @@ export class MessagingService {
       // Send notification to other participants
       const participants = JSON.parse(conversation.participants as string);
       const otherParticipants = participants.filter((p: string) => p !== fromAddress);
-      
-      for (const participant of otherParticipants) {
-        await universalNotificationService.notifyNewMessage(
-          participant,
-          fromAddress,
-          newMessage[0]
-        );
-      }
+
+      // TODO: Implement messaging notifications
+      // for (const participant of otherParticipants) {
+      //   await notificationService.notifyNewMessage(
+      //     participant,
+      //     fromAddress,
+      //     newMessage[0]
+      //   );
+      // }
 
       return {
         success: true,

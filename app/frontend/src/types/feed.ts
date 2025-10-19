@@ -29,20 +29,31 @@ export interface FeedFilter {
   web3SortDirection?: 'asc' | 'desc';
 }
 
+// Standardized post interface that matches backend schema
 export interface EnhancedPost {
   id: string;
   author: string;
+  parentId: string | null;
+  title: string;
   contentCid: string;
-  mediaCids?: string[];
+  mediaCids: string[];
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  onchainRef: string;
+  stakedValue: number;
+  reputationScore: number;
+  dao: string;
+  
+  // Engagement data
   reactions: Reaction[];
   tips: Tip[];
   comments: number;
   shares: number;
   views: number;
   engagementScore: number;
+  
+  // Enhanced features
   previews: ContentPreview[];
   socialProof?: SocialProof;
   trendingStatus?: string | null;
@@ -76,9 +87,13 @@ export interface Tip {
 }
 
 export interface ContentPreview {
+  id?: string;
   type: string;
   url: string;
   data?: any;
+  metadata?: any;
+  cached?: boolean;
+  securityStatus?: 'safe' | 'warning' | 'danger';
 }
 
 export interface SocialProof {
@@ -115,6 +130,8 @@ export interface InfiniteScrollState {
   page: number;
   totalPages: number;
   error?: string;
+  refresh?: () => void;
+  retry?: () => void;
 }
 
 // Community engagement metrics
@@ -154,4 +171,22 @@ export interface TipActivity {
   tokenType: string;
   message?: string;
   timestamp: Date;
+}
+
+// Analytics tracking interface
+export interface FeedAnalyticsEvent {
+  eventType: string;
+  postId?: string;
+  userId?: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
+}
+
+// Error handling interface
+export interface FeedError {
+  code: string;
+  message: string;
+  timestamp: Date;
+  retryable: boolean;
+  details?: any;
 }

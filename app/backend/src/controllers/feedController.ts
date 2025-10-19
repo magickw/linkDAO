@@ -18,7 +18,8 @@ export class FeedController {
         limit = 20,
         sort = 'hot',
         communities = [],
-        timeRange = 'day'
+        timeRange = 'day',
+        feedSource = 'all' // New parameter for following feed
       } = req.query;
 
       const feedData = await feedService.getEnhancedFeed({
@@ -27,7 +28,8 @@ export class FeedController {
         limit: Number(limit),
         sort: sort as string,
         communities: Array.isArray(communities) ? communities as string[] : [],
-        timeRange: timeRange as string
+        timeRange: timeRange as string,
+        feedSource: feedSource as 'following' | 'all'
       });
 
       res.json(apiResponse.success(feedData, 'Feed retrieved successfully'));

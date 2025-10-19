@@ -1,6 +1,8 @@
 import { db } from '../db';
-import { posts, reactions, tips, users, postTags, views } from '../db/schema';
+import { posts, reactions, tips, users, postTags, views, bookmarks, shares, follows } from '../db/schema';
 import { eq, desc, and, inArray, sql, gt, isNull } from 'drizzle-orm';
+import { trendingCacheService } from './trendingCacheService';
+import { getWebSocketService } from './webSocketService';
 
 interface FeedOptions {
   userAddress: string;
@@ -9,6 +11,7 @@ interface FeedOptions {
   sort: string;
   communities: string[];
   timeRange: string;
+  feedSource?: 'following' | 'all'; // New field for following feed
 }
 
 interface CreatePostData {
@@ -60,16 +63,47 @@ interface CommentData {
 export class FeedService {
   // Get enhanced personalized feed
   async getEnhancedFeed(options: FeedOptions) {
-    const { userAddress, page, limit, sort, communities: filterCommunities, timeRange } = options;
+    const { userAddress, page, limit, sort, communities: filterCommunities, timeRange, feedSource = 'all' } = options;
     const offset = (page - 1) * limit;
 
     // Build time range filter
     const timeFilter = this.buildTimeFilter(timeRange);
-    
+
     // Build community filter
     let communityFilter = sql`1=1`;
     if (filterCommunities.length > 0) {
       communityFilter = inArray(posts.dao, filterCommunities);
+    }
+
+    // Build following filter if feedSource is 'following'
+    let followingFilter = sql`1=1`;
+    if (feedSource === 'following') {
+      // Get the user ID from address
+      const user = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.walletAddress, userAddress))
+        .limit(1);
+
+      if (user.length > 0) {
+        const userId = user[0].id;
+        // Get list of users the current user is following
+        const followingList = await db.select({ followingId: follows.followingId })
+          .from(follows)
+          .where(eq(follows.followerId, userId));
+
+        const followingIds = followingList.map(f => f.followingId);
+
+        // Filter posts to only show from followed users
+        if (followingIds.length > 0) {
+          followingFilter = inArray(posts.authorId, followingIds);
+        } else {
+          // If not following anyone, return empty result
+          followingFilter = sql`1=0`;
+        }
+      } else {
+        // User doesn't exist, return empty result
+        followingFilter = sql`1=0`;
+      }
     }
 
     // Build sort order
@@ -95,7 +129,8 @@ export class FeedService {
         .leftJoin(users, eq(posts.authorId, users.id))
         .where(and(
           timeFilter,
-          communityFilter
+          communityFilter,
+          followingFilter
         ))
         .orderBy(sortOrder)
         .limit(limit)
@@ -144,7 +179,8 @@ export class FeedService {
         .from(posts)
         .where(and(
           timeFilter,
-          communityFilter
+          communityFilter,
+          followingFilter
         ));
 
       return {
@@ -169,6 +205,26 @@ export class FeedService {
     const timeFilter = this.buildTimeFilter(timeRange);
 
     try {
+      // Check cache first (only for first page)
+      if (page === 1) {
+        const cachedTrending = await trendingCacheService.getTrendingScores(timeRange);
+        if (cachedTrending) {
+          console.log(`Cache hit for trending ${timeRange}`);
+          return {
+            posts: cachedTrending.slice(0, limit),
+            pagination: {
+              page,
+              limit,
+              total: cachedTrending.length,
+              totalPages: Math.ceil(cachedTrending.length / limit),
+              cached: true
+            }
+          };
+        }
+      }
+
+      // Cache miss - calculate trending scores
+      console.log(`Cache miss for trending ${timeRange} - calculating...`);
       // Get posts with engagement metrics using a single optimized query
       const trendingPosts = await db
         .select({
@@ -276,11 +332,18 @@ export class FeedService {
       // Sort by trending score
       postsWithAdvancedScoring.sort((a, b) => b.trendingScore - a.trendingScore);
 
+      // Cache the results (store top 100 for pagination)
+      if (page === 1) {
+        const topPosts = postsWithAdvancedScoring.slice(0, 100);
+        await trendingCacheService.setTrendingScores(timeRange, topPosts);
+        console.log(`Cached trending ${timeRange} (${topPosts.length} posts)`);
+      }
+
       // Get total count for pagination
       const totalCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(posts)
-        .where(timeFilter);
+        .where(and(timeFilter, isNull(posts.parentId)));
 
       return {
         posts: postsWithAdvancedScoring,
@@ -288,7 +351,8 @@ export class FeedService {
           page,
           limit,
           total: totalCount[0]?.count || 0,
-          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit)
+          totalPages: Math.ceil((totalCount[0]?.count || 0) / limit),
+          cached: false
         }
       };
     } catch (error) {
@@ -457,13 +521,27 @@ export class FeedService {
         await db.insert(postTags).values(tagInserts);
       }
 
-      return {
+      const postResponse = {
         ...newPost[0],
         walletAddress: authorAddress,
         reactionCount: 0,
         tipCount: 0,
-        totalTipAmount: 0
+        totalTipAmount: 0,
+        commentCount: 0
       };
+
+      // Broadcast new post via WebSocket for real-time updates
+      const wsService = getWebSocketService();
+      if (wsService) {
+        wsService.sendFeedUpdate({
+          postId: newPost[0].id.toString(),
+          authorAddress,
+          communityId,
+          contentType: 'post'
+        });
+      }
+
+      return postResponse;
     } catch (error) {
       console.error('Error creating post:', error);
       throw new Error('Failed to create post');
@@ -697,7 +775,7 @@ export class FeedService {
       }
 
       // Get engagement metrics
-      const [reactionData, tipData, commentData, viewData] = await Promise.all([
+      const [reactionData, tipData, commentData, viewData, bookmarkData, shareData] = await Promise.all([
         db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
@@ -722,7 +800,19 @@ export class FeedService {
           count: sql<number>`COUNT(*)`
         })
         .from(views)
-        .where(eq(views.postId, postIdInt))
+        .where(eq(views.postId, postIdInt)),
+
+        db.select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(bookmarks)
+        .where(eq(bookmarks.postId, postIdInt)),
+
+        db.select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(shares)
+        .where(eq(shares.postId, postIdInt))
       ]);
 
       return {
@@ -731,6 +821,8 @@ export class FeedService {
         commentCount: commentData[0]?.count || 0,
         tipCount: tipData[0]?.count || 0,
         viewCount: viewData[0]?.count || 0,
+        bookmarkCount: bookmarkData[0]?.count || 0,
+        shareCount: shareData[0]?.count || 0,
         totalTipAmount: tipData[0]?.totalAmount || 0,
         totalReactionAmount: reactionData[0]?.totalAmount || 0,
         stakedValue: post[0].stakedValue,

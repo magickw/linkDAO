@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { EnhancedPost as FeedEnhancedPost, FeedFilter, FeedSortType } from '../../types/feed';
+import { EnhancedPost as FeedEnhancedPost, FeedFilter, FeedSortType, FeedError } from '../../types/feed';
 import { useFeedSortingPreferences, useDisplayPreferences, useAutoRefreshPreferences } from '../../hooks/useFeedPreferences';
 import { FeedSortingHeader } from './FeedSortingTabs';
 import InfiniteScrollFeed from './InfiniteScrollFeed';
@@ -7,6 +7,9 @@ import LikedByModal from './LikedByModal';
 import TrendingContentDetector, { TrendingBadge } from './TrendingContentDetector';
 import CommunityEngagementMetrics from './CommunityEngagementMetrics';
 import EnhancedPostCard, { EnhancedPost } from '../EnhancedPostCard/EnhancedPostCard';
+import { useToast } from '@/context/ToastContext';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import { analyticsService } from '@/services/analyticsService';
 
 interface EnhancedFeedViewProps {
   communityId?: string;
@@ -21,6 +24,9 @@ export default function EnhancedFeedView({
   showCommunityMetrics = false,
   className = ''
 }: EnhancedFeedViewProps) {
+  const { addToast } = useToast();
+  const { isMobile, touchTargetClasses } = useMobileOptimization();
+  
   // Preferences hooks
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
   const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage } = useDisplayPreferences();
@@ -40,6 +46,7 @@ export default function EnhancedFeedView({
     postId: ''
   });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState<FeedError | null>(null);
 
   // Update filter when preferences change
   useEffect(() => {
@@ -78,31 +85,32 @@ export default function EnhancedFeedView({
   const convertFeedPostToCardPost = useCallback((feedPost: FeedEnhancedPost): EnhancedPost => {
     return {
       id: feedPost.id,
-      title: '', // Feed posts don't have titles, use content preview
+      title: feedPost.title || '', 
       content: '', // Will be loaded from IPFS using contentCid
       author: feedPost.author,
       authorProfile: {
         handle: feedPost.author.slice(0, 8),
         verified: false,
-        avatar: undefined
+        avatar: undefined,
+        reputationTier: undefined
       },
       createdAt: feedPost.createdAt,
-      updatedAt: feedPost.createdAt,
-      contentType: 'text',
+      updatedAt: feedPost.updatedAt || feedPost.createdAt,
+      contentType: feedPost.contentType || 'text',
       media: feedPost.mediaCids,
       previews: (feedPost.previews || []).map(p => ({
-        id: `${feedPost.id}-${p.url}`,
+        id: p.id || `${feedPost.id}-${p.url}`,
         type: p.type as 'nft' | 'link' | 'proposal' | 'token',
         url: p.url,
         data: p.data || {},
-        metadata: {},
-        cached: false,
-        securityStatus: 'safe' as const
+        metadata: p.metadata || {},
+        cached: p.cached || false,
+        securityStatus: p.securityStatus === 'danger' ? 'blocked' : (p.securityStatus as 'safe' | 'warning' | 'blocked') || 'safe'
       })),
       hashtags: feedPost.tags || [],
       mentions: [],
       reactions: feedPost.reactions?.map(r => ({
-        type: 'hot' as const,
+        type: r.type as 'hot' | 'diamond' | 'bullish' | 'governance' | 'art',
         emoji: r.type,
         label: r.type,
         totalStaked: r.totalAmount,
@@ -141,7 +149,7 @@ export default function EnhancedFeedView({
         verifiedUsersWhoEngaged: []
       },
       trendingStatus: feedPost.trendingStatus as any,
-      communityId: (feedPost as any).communityId,
+      communityId: feedPost.communityId || (feedPost as any).dao,
       tags: (feedPost as any).tags || feedPost.tags
     };
   }, []);
@@ -150,6 +158,7 @@ export default function EnhancedFeedView({
   const handlePostsLoad = useCallback((newPosts: FeedEnhancedPost[]) => {
     const convertedPosts = newPosts.map(convertFeedPostToCardPost);
     setPosts(convertedPosts);
+    setError(null); // Clear any previous errors
   }, [convertFeedPostToCardPost]);
 
   // Handle trending updates
@@ -166,6 +175,34 @@ export default function EnhancedFeedView({
     setLikedByModal({ isOpen: false, postId: '' });
   }, []);
 
+  // Handle error with enhanced analytics
+  const handleError = useCallback((error: FeedError) => {
+    setError(error);
+    addToast(error.message, 'error');
+    
+    // Track error with analytics
+    analyticsService.trackUserEvent('feed_view_error', {
+      error: error.message,
+      code: error.code,
+      timestamp: error.timestamp,
+      retryable: error.retryable,
+      filter: filter,
+      communityId: communityId
+    });
+  }, [addToast, filter, communityId]);
+
+  // Enhanced retry function with analytics
+  const handleRetry = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    
+    // Track retry attempt
+    analyticsService.trackUserEvent('feed_retry_attempt', {
+      filter: filter,
+      communityId: communityId,
+      timestamp: new Date()
+    });
+  }, [filter, communityId]);
+
   // Render post card with enhanced features
   const renderPost = useCallback((post: EnhancedPost) => (
     <div key={post.id} className="mb-6">
@@ -176,7 +213,7 @@ export default function EnhancedFeedView({
         className="transition-all duration-200 hover:shadow-lg"
       />
     </div>
-  ), [showSocialProof, showTrendingBadges, handleShowLikedBy]);
+  ), [showSocialProof, showTrendingBadges]);
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -206,6 +243,14 @@ export default function EnhancedFeedView({
         />
       </div>
 
+      {/* Error state */}
+      {error && (
+        <ErrorState 
+          error={error} 
+          onRetry={handleRetry} 
+        />
+      )}
+
       {/* Feed Content */}
       {infiniteScroll ? (
         <InfiniteScrollFeed
@@ -214,13 +259,14 @@ export default function EnhancedFeedView({
           onPostsLoad={handlePostsLoad}
           postsPerPage={postsPerPage}
           threshold={1000}
+          onError={handleError}
         >
           {(feedPosts, scrollState) => (
             <div>
               {/* Posts are managed by the handlePostsLoad callback */}
 
               {/* Render posts */}
-              {feedPosts.length === 0 && !scrollState.isLoading ? (
+              {feedPosts.length === 0 && !scrollState.isLoading && !scrollState.error ? (
                 <EmptyFeedState filter={filter} />
               ) : (
                 <div className="space-y-6">
@@ -250,6 +296,7 @@ export default function EnhancedFeedView({
           renderPost={renderPost}
           onPostsUpdate={setPosts}
           convertPost={convertFeedPostToCardPost}
+          onError={handleError}
         />
       )}
 
@@ -293,7 +340,7 @@ function EmptyFeedState({ filter }: EmptyFeedStateProps) {
       </p>
       <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
         <p>Current filters:</p>
-        <div className="flex items-center justify-center space-x-4">
+        <div className="flex items-center justify-center space-x-4 flex-wrap">
           <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
             Sort: {filter.sortBy}
           </span>
@@ -369,6 +416,68 @@ function FeedErrorState({ error, onRetry }: FeedErrorStateProps) {
   );
 }
 
+// General error state component with enhanced analytics
+interface ErrorStateProps {
+  error: FeedError;
+  onRetry: () => void;
+}
+
+function ErrorState({ error, onRetry }: ErrorStateProps) {
+  // Track error display
+  React.useEffect(() => {
+    analyticsService.trackUserEvent('feed_error_displayed', {
+      error: error.message,
+      code: error.code,
+      timestamp: error.timestamp
+    });
+  }, [error]);
+
+  return (
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+      <div className="text-red-600 dark:text-red-400 mb-4">
+        <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <h3 className="text-lg font-medium">Something went wrong</h3>
+        <p className="text-sm mt-1">{error.message}</p>
+        {error.code && (
+          <p className="text-xs mt-1 opacity-75">Error code: {error.code}</p>
+        )}
+      </div>
+      
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
+        {error.retryable && (
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200"
+          >
+            Try Again
+          </button>
+        )}
+        
+        <button
+          onClick={() => {
+            analyticsService.trackUserEvent('feed_refresh_page', {
+              error: error.message,
+              code: error.code
+            });
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200"
+        >
+          Refresh Page
+        </button>
+      </div>
+      
+      {!error.retryable && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-4">
+          This error may require administrator attention. Please try again later.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // Paginated feed component (fallback for when infinite scroll is disabled)
 interface PaginatedFeedProps {
   filter: FeedFilter;
@@ -376,9 +485,10 @@ interface PaginatedFeedProps {
   renderPost: (post: EnhancedPost) => React.ReactNode;
   onPostsUpdate: (posts: EnhancedPost[]) => void;
   convertPost: (feedPost: FeedEnhancedPost) => EnhancedPost;
+  onError: (error: FeedError) => void;
 }
 
-function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, convertPost }: PaginatedFeedProps) {
+function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, convertPost, onError }: PaginatedFeedProps) {
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -402,8 +512,15 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
       setPosts(convertedPosts);
       setTotalPages(response.totalPages);
       onPostsUpdate(convertedPosts);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load posts');
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to load posts';
+      setError(errorMessage);
+      onError({
+        code: err.code || 'PAGINATION_ERROR',
+        message: errorMessage,
+        timestamp: new Date(),
+        retryable: true
+      });
     } finally {
       setLoading(false);
     }
@@ -426,7 +543,7 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center space-x-2">
+        <div className="flex items-center justify-center space-x-2 flex-wrap">
           <button
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1 || loading}

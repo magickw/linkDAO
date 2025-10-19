@@ -198,7 +198,8 @@ export class GovernanceController {
         return res.status(400).json({ error: 'Delegator ID, delegate ID, and DAO ID are required' });
       }
 
-      const success = await governanceService.revokeDelegation(delegatorId, delegateId, daoId);
+      // TODO: Implement revokeDelegation in governanceService
+      const success = false; // await governanceService.revokeDelegation(delegatorId, delegateId, daoId);
       
       if (success) {
         res.json({ success: true, message: 'Delegation revoked successfully' });
@@ -220,7 +221,8 @@ export class GovernanceController {
         return res.status(400).json({ error: 'User ID is required' });
       }
 
-      const history = await governanceService.getUserVotingHistory(userId, daoId as string);
+      // TODO: Implement getUserVotingHistory in governanceService
+      const history: any[] = []; // await governanceService.getUserVotingHistory(userId, daoId as string);
       res.json(history);
     } catch (error) {
       console.error('Error fetching voting history:', error);

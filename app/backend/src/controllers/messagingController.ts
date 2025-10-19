@@ -322,7 +322,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(encryptedMessage.data, 'Message encrypted successfully'));
+      res.json(apiResponse.success((encryptedMessage as any).data, 'Message encrypted successfully'));
     } catch (error) {
       console.error('Error encrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to encrypt message'));
@@ -353,7 +353,7 @@ export class MessagingController {
         return;
       }
 
-      res.json(apiResponse.success(decryptedMessage.data, 'Message decrypted successfully'));
+      res.json(apiResponse.success((decryptedMessage as any).data, 'Message decrypted successfully'));
     } catch (error) {
       console.error('Error decrypting message:', error);
       res.status(500).json(apiResponse.error('Failed to decrypt message'));

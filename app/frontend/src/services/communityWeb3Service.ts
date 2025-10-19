@@ -54,6 +54,17 @@ export interface StakingReward {
   earned: boolean;
 }
 
+// Add the DeFiProtocolData interface
+export interface DeFiProtocolData {
+  protocol: string;
+  tvl: string;
+  apy: string;
+  token: string;
+  description: string;
+  riskLevel: 'Low' | 'Medium' | 'High';
+  category: string;
+}
+
 export class CommunityWeb3Service {
   private governanceContract: ethers.Contract | null = null;
   private tokenContract: ethers.Contract | null = null;
@@ -150,7 +161,7 @@ export class CommunityWeb3Service {
       const receipt = await tx.wait();
       
       // Extract proposal ID from events
-      const proposalCreatedEvent = receipt.events?.find(e => e.event === 'ProposalCreated');
+      const proposalCreatedEvent = receipt.events?.find((e: { event: string; args?: { id?: any }; }) => e.event === 'ProposalCreated');
       const proposalId = proposalCreatedEvent?.args?.id?.toString() || receipt.hash;
       
       return proposalId;
@@ -317,6 +328,99 @@ export class CommunityWeb3Service {
       };
     } catch (error) {
       console.error('Error checking staking requirement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get DeFi protocol data - Mock implementation for now
+   */
+  async getDeFiProtocolData(protocolName: string): Promise<DeFiProtocolData> {
+    try {
+      // Mock data for different DeFi protocols
+      const protocolDataMap: Record<string, DeFiProtocolData> = {
+        'Aave': {
+          protocol: 'Aave',
+          tvl: '$12.5B',
+          apy: '4.2%',
+          token: 'AAVE',
+          description: 'Aave is a decentralized lending and borrowing protocol where users can earn interest on deposits and borrow assets.',
+          riskLevel: 'Low',
+          category: 'Lending'
+        },
+        'Compound': {
+          protocol: 'Compound',
+          tvl: '$8.3B',
+          apy: '3.8%',
+          token: 'COMP',
+          description: 'Compound is an algorithmic, autonomous interest rate protocol built for developers to unlock a universe of open financial applications.',
+          riskLevel: 'Low',
+          category: 'Lending'
+        },
+        'Uniswap': {
+          protocol: 'Uniswap',
+          tvl: '$5.7B',
+          apy: '12.5%',
+          token: 'UNI',
+          description: 'Uniswap is a decentralized trading protocol that enables automated liquidity provision on Ethereum.',
+          riskLevel: 'Medium',
+          category: 'DEX'
+        },
+        'Curve': {
+          protocol: 'Curve',
+          tvl: '$6.2B',
+          apy: '6.1%',
+          token: 'CRV',
+          description: 'Curve is an exchange liquidity pool on Ethereum designed for extremely efficient stablecoin trading.',
+          riskLevel: 'Low',
+          category: 'DEX'
+        },
+        'Yearn': {
+          protocol: 'Yearn Finance',
+          tvl: '$2.1B',
+          apy: '8.9%',
+          token: 'YFI',
+          description: 'Yearn Finance is a suite of products in Decentralized Finance (DeFi) that provides lending aggregation, yield generation, and insurance.',
+          riskLevel: 'Medium',
+          category: 'Yield'
+        }
+      };
+
+      // Return mock data for the requested protocol, or default to Aave if not found
+      return protocolDataMap[protocolName] || protocolDataMap['Aave'];
+    } catch (error) {
+      console.error('Error getting DeFi protocol data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get NFT metadata for a given contract and tokenId
+   * Mock implementation: returns a shaped object matching frontend expectations
+   */
+  async getNFTMetadata(contractAddress: string, tokenId: string): Promise<any> {
+    try {
+      // In a real implementation, this would call an on-chain contract or an off-chain metadata service
+      // For now, return a mock metadata object compatible with CommunityNFTEmbed
+      const mockMetadata = {
+        name: `Token #${tokenId}`,
+        description: `Mock description for token ${tokenId} from ${contractAddress}`,
+        image: `https://via.placeholder.com/512.png?text=${encodeURIComponent(`NFT+${tokenId}`)}`,
+        attributes: [
+          { trait_type: 'Rarity', value: 'Rare' },
+          { trait_type: 'Background', value: 'Space' }
+        ],
+        contractAddress,
+        tokenId,
+        owner: '0x000000000000000000000000000000000000dead',
+        floorPrice: '$0.5'
+      };
+
+      // Simulate async delay
+      await new Promise((res) => setTimeout(res, 200));
+      return mockMetadata;
+    } catch (error) {
+      console.error('Error getting NFT metadata:', error);
       throw error;
     }
   }

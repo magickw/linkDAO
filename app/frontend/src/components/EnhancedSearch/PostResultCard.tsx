@@ -220,18 +220,24 @@ export function PostResultCard({ post, position, onClick, onBookmark }: PostResu
         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex -space-x-1">
-              {post.socialProof.followedUsersWhoEngaged.slice(0, 3).map((user, index) => (
-                <img
-                  key={user.walletAddress}
-                  src={user.avatarCid || 'https://placehold.co/20'}
-                  alt={user.handle}
-                  className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800"
-                  style={{ zIndex: 10 - index }}
-                />
-              ))}
+              {post.socialProof.followedUsersWhoEngaged.slice(0, 3).map((user, index) => {
+                const keyId = (user as any).address || (user as any).walletAddress || (user as any).id || index;
+                const avatarSrc = (user as any).avatar || (user as any).avatarCid || 'https://placehold.co/20';
+                const displayHandle = (user as any).handle || (user as any).username || (user as any).displayName || 'User';
+
+                return (
+                  <img
+                    key={keyId}
+                    src={avatarSrc}
+                    alt={displayHandle}
+                    className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800"
+                    style={{ zIndex: 10 - index }}
+                  />
+                );
+              })}
             </div>
             <span>
-              Liked by {post.socialProof.followedUsersWhoEngaged[0]?.handle}
+              Liked by {(post.socialProof.followedUsersWhoEngaged[0] as any)?.handle || (post.socialProof.followedUsersWhoEngaged[0] as any)?.username || (post.socialProof.followedUsersWhoEngaged[0] as any)?.displayName || 'Someone'}
               {post.socialProof.followedUsersWhoEngaged.length > 1 && (
                 <> and {post.socialProof.followedUsersWhoEngaged.length - 1} others you follow</>
               )}
