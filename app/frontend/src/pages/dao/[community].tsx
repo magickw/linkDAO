@@ -28,203 +28,12 @@ import { useToast } from '@/context/ToastContext';
 import { useWeb3 } from '@/context/Web3Context';
 import { useCreatePost } from '@/hooks/usePosts';
 import { CreatePostInput } from '@/models/Post';
+import { communityWebSocket } from '@/services/communityWebSocket';
+import { governanceContract } from '@/services/governanceContract';
+import { notificationService } from '@/services/notificationService';
+import { ethers } from 'ethers';
 
-// Mock data
-const mockProfiles: Record<string, any> = {
-  '0x1234567890123456789012345678901234567890': {
-    handle: 'alexj',
-    ens: 'alex.eth',
-    avatarCid: 'https://placehold.co/40',
-  },
-  '0x2345678901234567890123456789012345678901': {
-    handle: 'samc',
-    ens: 'sam.eth',
-    avatarCid: 'https://placehold.co/40',
-  },
-  '0x3456789012345678901234567890123456789012': {
-    handle: 'taylorr',
-    ens: 'taylor.eth',
-    avatarCid: 'https://placehold.co/40',
-  },
-};
 
-const mockPosts: Record<string, any[]> = {
-  'ethereum-builders': [
-    {
-      id: '1',
-      title: 'New EIP-4844 Implementation Guide',
-      author: '0x1234567890123456789012345678901234567890',
-      authorName: 'vitalik.eth',
-      content: 'Just published a comprehensive guide on implementing EIP-4844 proto-danksharding. This will significantly reduce L2 costs and improve scalability...',
-      type: 'discussion',
-      upvotes: 245,
-      downvotes: 12,
-      commentCount: 67,
-      createdAt: new Date(Date.now() - 3600000),
-      tags: ['eip-4844', 'scaling', 'ethereum'],
-      stakedTokens: 150,
-      isStaked: true
-    },
-    {
-      id: '2',
-      title: 'Solidity Gas Optimization Techniques',
-      author: '0x2345678901234567890123456789012345678901',
-      authorName: 'austingriffith.eth',
-      content: 'Sharing some advanced gas optimization techniques I discovered while building Scaffold-ETH...',
-      type: 'analysis',
-      upvotes: 189,
-      downvotes: 8,
-      commentCount: 45,
-      createdAt: new Date(Date.now() - 7200000),
-      tags: ['solidity', 'gas-optimization', 'development'],
-      stakedTokens: 89,
-      isStaked: false
-    }
-  ],
-  'defi-traders': [
-    {
-      id: '3',
-      title: 'Arbitrum Yield Farming Strategy - 15% APY',
-      author: '0x3456789012345678901234567890123456789012',
-      authorName: 'defi_alpha',
-      content: 'Found a new yield farming opportunity on Arbitrum with sustainable 15% APY. Risk analysis included...',
-      type: 'analysis',
-      upvotes: 156,
-      downvotes: 23,
-      commentCount: 34,
-      createdAt: new Date(Date.now() - 3600000),
-      tags: ['arbitrum', 'yield-farming', 'strategy'],
-      stakedTokens: 67,
-      isStaked: true
-    }
-  ],
-  'nft-collectors': [
-    {
-      id: '4',
-      title: 'My Latest NFT Collection Drop',
-      author: '0x4567890123456789012345678901234567890123',
-      authorName: 'cryptoartist',
-      content: 'Excited to share my latest NFT collection representing different DeFi protocols. Each piece tells a story...',
-      type: 'showcase',
-      upvotes: 134,
-      downvotes: 5,
-      commentCount: 28,
-      createdAt: new Date(Date.now() - 5400000),
-      tags: ['nft', 'art', 'defi'],
-      stakedTokens: 45,
-      isStaked: true
-    }
-  ]
-};
-
-// Mock community data
-const mockCommunityData: Record<string, any> = {
-  'ethereum-builders': {
-    id: 'ethereum-builders',
-    name: 'ethereum-builders',
-    displayName: 'Ethereum Builders',
-    description: 'A community for Ethereum developers, builders, and researchers. Share your projects, ask questions, and collaborate on the future of Ethereum.',
-    memberCount: 12400,
-    onlineCount: 1247,
-    avatar: '🔷',
-    banner: 'https://placehold.co/800x200/667eea/ffffff?text=Ethereum+Builders',
-    category: 'Development',
-    tags: ['ethereum', 'development', 'smart-contracts'],
-    isPublic: true,
-    rules: [
-      'Be respectful and constructive in discussions',
-      'No spam or self-promotion without context',
-      'Share quality content and resources',
-      'Help newcomers learn and grow',
-      'Follow Ethereum community guidelines'
-    ],
-    moderators: ['vitalik.eth', 'danfinlay.eth', 'austingriffith.eth'],
-    treasuryAddress: '0x1234567890123456789012345678901234567890',
-    governanceToken: 'ETH-BUILD',
-    treasury: {
-      totalValue: '$294.7K',
-      assets: [
-        { token: 'WETH', amount: '89.2', value: '$245.3K' },
-        { token: 'USDC', amount: '28.4K', value: '$28.4K' },
-        { token: 'DAI', amount: '21.0K', value: '$21.0K' }
-      ]
-    },
-    proposals: [
-      {
-        id: '1',
-        title: 'Increase minimum reputation requirement',
-        description: 'Proposal to increase minimum reputation from 50 to 100 for posting',
-        status: 'active',
-        votesFor: 1247,
-        votesAgainst: 234,
-        endsAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
-      }
-    ]
-  },
-  'defi-traders': {
-    id: 'defi-traders',
-    name: 'defi-traders',
-    displayName: 'DeFi Traders',
-    description: 'Decentralized Finance trading strategies, insights, and alpha sharing',
-    memberCount: 8900,
-    onlineCount: 567,
-    avatar: '💰',
-    banner: 'https://placehold.co/800x200/10b981/ffffff?text=DeFi+Traders',
-    category: 'Finance',
-    tags: ['defi', 'trading', 'yield-farming'],
-    isPublic: true,
-    rules: [
-      'No financial advice - share research only',
-      'Always DYOR (Do Your Own Research)',
-      'Verify claims with sources',
-      'No pump and dump schemes',
-      'Respect risk tolerance differences'
-    ],
-    moderators: ['hayden.eth', 'kain.eth', 'stani.eth'],
-    treasuryAddress: '0x2345678901234567890123456789012345678901',
-    governanceToken: 'DEFI-TRD',
-    treasury: {
-      totalValue: '$156.2K',
-      assets: [
-        { token: 'WETH', amount: '45.1', value: '$124.2K' },
-        { token: 'USDC', amount: '18.0K', value: '$18.0K' },
-        { token: 'AAVE', amount: '180', value: '$14.0K' }
-      ]
-    },
-    proposals: []
-  },
-  'nft-collectors': {
-    id: 'nft-collectors',
-    name: 'nft-collectors',
-    displayName: 'NFT Collectors',
-    description: 'Discover, trade, and showcase NFT collections and digital art',
-    memberCount: 21000,
-    onlineCount: 1890,
-    avatar: '🎨',
-    banner: 'https://placehold.co/800x200/8b5cf6/ffffff?text=NFT+Collectors',
-    category: 'Art',
-    tags: ['nft', 'art', 'collectibles'],
-    isPublic: true,
-    rules: [
-      'Original content and authentic collections only',
-      'No price manipulation or fake sales',
-      'Respect artists and creators',
-      'Provide context for shared collections',
-      'No copyright infringement'
-    ],
-    moderators: ['beeple.eth', 'pak.eth', 'xcopy.eth'],
-    treasuryAddress: '0x3456789012345678901234567890123456789012',
-    governanceToken: 'NFT-COL',
-    treasury: {
-      totalValue: '$89.5K',
-      assets: [
-        { token: 'WETH', amount: '28.7', value: '$79.0K' },
-        { token: 'USDC', amount: '10.5K', value: '$10.5K' }
-      ]
-    },
-    proposals: []
-  }
-};
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -237,53 +46,285 @@ export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [communityData, setCommunityData] = useState<any>(null);
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tokenBalance, setTokenBalance] = useState<string>('0');
+  const [stakedBalance, setStakedBalance] = useState<string>('0');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  // Get community data
-  const communityData = typeof community === 'string' ? mockCommunityData[community] : null;
-  const communityPosts = typeof community === 'string' ? mockPosts[community] || [] : [];
-
+  // Fetch community data from API
   useEffect(() => {
-    if (typeof community === 'string' && !communityData) {
-      // Community not found, redirect to communities page
-      router.push('/communities');
-    }
-  }, [community, communityData, router]);
+    if (!community || typeof community !== 'string') return;
 
-  const handleJoinToggle = () => {
-    setUserJoined(!userJoined);
-    addToast(
-      userJoined 
-        ? 'Left the community' 
-        : 'Joined the community successfully!', 
-      'success'
-    );
+    const fetchCommunityData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch community details
+        const communityResponse = await fetch(`/api/communities/${community}`);
+        if (!communityResponse.ok) {
+          if (communityResponse.status === 404) {
+            router.push('/communities');
+            return;
+          }
+          throw new Error('Failed to fetch community data');
+        }
+        const communityResult = await communityResponse.json();
+        setCommunityData(communityResult.data);
+
+        // Fetch community posts
+        const postsResponse = await fetch(`/api/communities/${community}/posts?sort=${activeTab}&time=${timeFilter}`);
+        if (postsResponse.ok) {
+          const postsResult = await postsResponse.json();
+          setCommunityPosts(postsResult.data || []);
+        }
+
+        // Check if user is a member and initialize governance contract
+        if (isConnected && address && communityResult.data?.governanceToken) {
+          const memberResponse = await fetch(`/api/communities/${community}/members/${address}`);
+          if (memberResponse.ok) {
+            const memberResult = await memberResponse.json();
+            setUserJoined(memberResult.data?.isActive || false);
+          }
+
+          // Initialize governance contract
+          if (window.ethereum) {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await governanceContract.initialize(communityResult.data.treasuryAddress, provider);
+            
+            // Get token balances
+            try {
+              const balance = await governanceContract.getTokenBalance(address);
+              const staked = await governanceContract.getStakedBalance(address);
+              setTokenBalance(balance);
+              setStakedBalance(staked);
+            } catch (err) {
+              console.error('Error fetching token balances:', err);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching community data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load community');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCommunityData();
+  }, [community, activeTab, timeFilter, isConnected, address, router]);
+
+  // WebSocket real-time updates
+  useEffect(() => {
+    if (!community || typeof community !== 'string') return;
+
+    communityWebSocket.connect(community);
+
+    const handleNewPost = (post: any) => {
+      setCommunityPosts(prev => [post, ...prev]);
+      addToast('New post in community!', 'info');
+      
+      // Show push notification if enabled
+      if (notificationsEnabled) {
+        notificationService.showMessageNotification({
+          id: post.id,
+          fromAddress: post.author?.address || 'Unknown',
+          toAddress: 'community',
+          content: `New post in ${communityData?.displayName}: ${post.title}`,
+          timestamp: new Date(),
+          conversationId: community as string
+        });
+      }
+    };
+
+    const handleVoteUpdate = (update: any) => {
+      setCommunityPosts(prev => 
+        prev.map(post => 
+          post.id === update.postId 
+            ? { ...post, upvotes: update.upvotes, downvotes: update.downvotes }
+            : post
+        )
+      );
+    };
+
+    const handleMemberUpdate = (update: any) => {
+      if (communityData) {
+        setCommunityData((prev: any) => ({
+          ...prev!,
+          memberCount: update.memberCount
+        }));
+      }
+    };
+
+    communityWebSocket.subscribe('new_post', handleNewPost);
+    communityWebSocket.subscribe('vote_update', handleVoteUpdate);
+    communityWebSocket.subscribe('member_joined', handleMemberUpdate);
+    communityWebSocket.subscribe('member_left', handleMemberUpdate);
+
+    return () => {
+      communityWebSocket.unsubscribe('new_post', handleNewPost);
+      communityWebSocket.unsubscribe('vote_update', handleVoteUpdate);
+      communityWebSocket.unsubscribe('member_joined', handleMemberUpdate);
+      communityWebSocket.unsubscribe('member_left', handleMemberUpdate);
+      communityWebSocket.disconnect();
+    };
+  }, [community, communityData, addToast, notificationsEnabled]);
+
+  // Initialize notifications
+  useEffect(() => {
+    const initNotifications = async () => {
+        if (isConnected && address) {
+          const hasPermission = await notificationService.requestPermission();
+          if (hasPermission === 'granted') {
+                        // Fix the subscribeToPush call - it expects a PushSubscription object
+                        // For now, we'll just set the state directly since we don't have a proper subscription
+                        setNotificationsEnabled(true);
+          }
+        }
+      };
+
+      initNotifications();
+  }, [isConnected, address]);
+
+  const handleJoinToggle = async () => {
+    if (!isConnected || !address) {
+      addToast('Please connect your wallet to join', 'error');
+      return;
+    }
+
+    try {
+      const method = userJoined ? 'DELETE' : 'POST';
+      const response = await fetch(`/api/communities/${community}/members`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userAddress: address })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update membership');
+      }
+
+      setUserJoined(!userJoined);
+      addToast(
+        userJoined 
+          ? 'Left the community' 
+          : 'Joined the community successfully!', 
+        'success'
+      );
+    } catch (err) {
+      console.error('Error updating membership:', err);
+      addToast('Failed to update membership', 'error');
+    }
   };
 
-  const handleVote = (postId: string, type: 'up' | 'down', amount: number) => {
-    if (!isConnected) {
+  const handleVote = async (postId: string, type: 'up' | 'down', amount: number) => {
+    if (!isConnected || !address) {
       addToast('Please connect your wallet to vote', 'error');
       return;
     }
     
-    // Simulate voting with token staking
-    addToast(`${type === 'up' ? 'Upvoted' : 'Downvoted'} with ${amount} tokens staked!`, 'success');
+    try {
+      // Stake tokens for voting if governance contract is available
+      if (communityData?.treasuryAddress && amount > 0) {
+        const txHash = await governanceContract.stakeTokens(amount.toString());
+        addToast(`Tokens staked! Transaction: ${txHash.slice(0, 10)}...`, 'success');
+      }
+
+      const response = await fetch(`/api/posts/${postId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: type === 'up' ? 'hot' : 'diamond',
+          amount: amount.toString(),
+          userAddress: address
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to vote');
+      }
+
+      addToast(`${type === 'up' ? 'Upvoted' : 'Downvoted'} with ${amount} tokens staked!`, 'success');
+      
+      // Refresh token balances
+      if (communityData?.treasuryAddress) {
+        const balance = await governanceContract.getTokenBalance(address);
+        const staked = await governanceContract.getStakedBalance(address);
+        setTokenBalance(balance);
+        setStakedBalance(staked);
+      }
+      
+      // Refresh posts to show updated vote counts
+      const postsResponse = await fetch(`/api/communities/${community}/posts?sort=${activeTab}&time=${timeFilter}`);
+      if (postsResponse.ok) {
+        const postsResult = await postsResponse.json();
+        setCommunityPosts(postsResult.data || []);
+      }
+    } catch (err) {
+      console.error('Error voting:', err);
+      addToast('Failed to vote', 'error');
+    }
   };
 
-  const handleTip = (postId: string, amount: string, token: string) => {
-    if (!isConnected) {
+  const handleTip = async (postId: string, amount: string, token: string) => {
+    if (!isConnected || !address) {
       addToast('Please connect your wallet to tip', 'error');
       return;
     }
     
-    addToast(`Successfully tipped ${amount} ${token}!`, 'success');
+    try {
+      const response = await fetch(`/api/posts/${postId}/tips`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount,
+          token,
+          fromAddress: address,
+          message: 'Great post!'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send tip');
+      }
+
+      addToast(`Successfully tipped ${amount} ${token}!`, 'success');
+    } catch (err) {
+      console.error('Error sending tip:', err);
+      addToast('Failed to send tip', 'error');
+    }
   };
 
-  if (!communityData) {
+  if (loading) {
+    return (
+      <Layout title="Loading Community - LinkDAO" fullWidth={true}>
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading community...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !communityData) {
     return (
       <Layout title="Community Not Found - LinkDAO" fullWidth={true}>
         <div className="flex items-center justify-center min-h-96">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Community Not Found</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              {error || 'Community Not Found'}
+            </h1>
             <Link href="/communities" className="text-primary-600 hover:text-primary-700">
               ← Back to Communities
             </Link>
@@ -350,9 +391,28 @@ export default function CommunityPage() {
                     <Search className="w-4 h-4" />
                     <span>Search Posts</span>
                   </button>
-                  <button className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded">
+                  <button 
+                    onClick={async () => {
+                      if (!notificationsEnabled) {
+                        const hasPermission = await notificationService.requestPermission();
+                        if (hasPermission === 'granted' && address) {
+                          // Fix the subscribeToPush call - it expects a PushSubscription object
+                          // For now, we'll just set the state directly since we don't have a proper subscription
+                          setNotificationsEnabled(true);
+                          addToast('Notifications enabled!', 'success');
+                        }
+                      } else {
+                        addToast('Notifications already enabled', 'info');
+                      }
+                    }}
+                    className={`w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded ${
+                      notificationsEnabled 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
                     <Bell className="w-4 h-4" />
-                    <span>Notifications</span>
+                    <span>{notificationsEnabled ? 'Notifications On' : 'Enable Notifications'}</span>
                   </button>
                 </div>
               </div>

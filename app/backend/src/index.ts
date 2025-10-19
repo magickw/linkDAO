@@ -161,6 +161,9 @@ import communityRoutes from './routes/communityRoutes';
 // Import messaging routes
 import messagingRoutes from './routes/messagingRoutes';
 
+// Import notification preferences routes
+import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
 
@@ -175,6 +178,9 @@ app.use('/api/communities', communityRoutes);
 
 // Use messaging routes
 app.use('/api/messaging', messagingRoutes);
+
+// Use notification preferences routes
+app.use('/api/notification-preferences', notificationPreferencesRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
