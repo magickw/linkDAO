@@ -503,6 +503,103 @@ export class SearchService {
     return analytics;
   }
 
+  /**
+   * Get community recommendations for a user
+   */
+  async getRecommendedCommunities(options: {
+    userId?: string;
+    limit?: number;
+    excludeJoined?: boolean;
+    basedOn?: string;
+  }): Promise<any[]> {
+    // Import the recommendation service dynamically to avoid circular dependencies
+    const { RecommendationService } = await import('./recommendationService');
+    const recommendationService = new RecommendationService();
+    
+    if (options.userId) {
+      return await recommendationService.getPrecomputedCommunityRecommendations(
+        options.userId,
+        options.limit || 10
+      );
+    }
+    
+    // Fallback to trending communities if no user ID
+    return await this.getTrendingCommunities(options.limit || 10);
+  }
+
+  /**
+   * Get user recommendations for a user
+   */
+  async getRecommendedUsers(options: {
+    userId?: string;
+    limit?: number;
+    basedOn?: string;
+  }): Promise<any[]> {
+    // Import the recommendation service dynamically to avoid circular dependencies
+    const { RecommendationService } = await import('./recommendationService');
+    const recommendationService = new RecommendationService();
+    
+    if (options.userId) {
+      return await recommendationService.getPrecomputedUserRecommendations(
+        options.userId,
+        options.limit || 10
+      );
+    }
+    
+    // Return empty array if no user ID
+    return [];
+  }
+
+  /**
+   * Get trending communities
+   */
+  private async getTrendingCommunities(limit: number): Promise<any[]> {
+    const db = this.databaseService.getDatabase();
+    
+    try {
+      const communitiesResult = await db
+        .select({
+          id: schema.communities.id,
+          name: schema.communities.name,
+          displayName: schema.communities.displayName,
+          description: schema.communities.description,
+          category: schema.communities.category,
+          tags: schema.communities.tags,
+          avatar: schema.communities.avatar,
+          banner: schema.communities.banner,
+          memberCount: schema.communities.memberCount,
+          postCount: schema.communities.postCount,
+          createdAt: schema.communities.createdAt,
+          trendingScore: schema.communityStats.trendingScore,
+          growthRate7d: schema.communityStats.growthRate7d,
+        })
+        .from(schema.communities)
+        .leftJoin(schema.communityStats, eq(schema.communityStats.communityId, schema.communities.id))
+        .where(eq(schema.communities.isPublic, true))
+        .orderBy(desc(schema.communityStats.trendingScore))
+        .limit(limit);
+
+      return communitiesResult.map(community => ({
+        id: community.id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description || '',
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        banner: community.banner,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        createdAt: community.createdAt,
+        trendingScore: community.trendingScore ? Number(community.trendingScore) : 0,
+        growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
+      }));
+    } catch (error) {
+      console.error('Error getting trending communities:', error);
+      return [];
+    }
+  }
+
   // Private helper methods
 
   private async buildSearchConditions(filters: AdvancedSearchFilters): Promise<any[]> {

@@ -1086,6 +1086,126 @@ export const communityUserContentAccess = pgTable("community_user_content_access
   accessLevelIdx: index("idx_community_user_content_access_level").on(t.accessLevel),
 }));
 
+// User interaction logs for recommendation training
+export const userInteractions = pgTable("user_interactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  targetType: varchar("target_type", { length: 32 }).notNull(), // 'community', 'post', 'user'
+  targetId: varchar("target_id", { length: 66 }).notNull(), // ID of the target
+  interactionType: varchar("interaction_type", { length: 32 }).notNull(), // 'view', 'join', 'follow', 'like', 'comment', 'share'
+  interactionValue: numeric("interaction_value", { precision: 10, scale: 4 }).default("1.0"), // Weight/value of interaction
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_user_interactions_user_id").on(t.userId),
+  targetTypeIdx: index("idx_user_interactions_target_type").on(t.targetType),
+  targetIdIdx: index("idx_user_interactions_target_id").on(t.targetId),
+  interactionTypeIdx: index("idx_user_interactions_interaction_type").on(t.interactionType),
+  createdAtIdx: index("idx_user_interactions_created_at").on(t.createdAt),
+}));
+
+// Community recommendations for precomputed recommendations
+export const communityRecommendations = pgTable("community_recommendations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  score: numeric("score", { precision: 10, scale: 4 }).notNull(), // Recommendation score
+  reasons: text("reasons"), // JSON array of reasons for recommendation
+  algorithmVersion: varchar("algorithm_version", { length: 32 }).default("v1.0"),
+  expiresAt: timestamp("expires_at"), // When recommendation expires
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueRecommendation: primaryKey(t.userId, t.communityId),
+  userIdx: index("idx_community_recommendations_user_id").on(t.userId),
+  communityIdx: index("idx_community_recommendations_community_id").on(t.communityId),
+  scoreIdx: index("idx_community_recommendations_score").on(t.score),
+  expiresAtIdx: index("idx_community_recommendations_expires_at").on(t.expiresAt),
+}));
+
+// User recommendations for precomputed user suggestions
+export const userRecommendations = pgTable("user_recommendations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(), // User receiving the recommendation
+  recommendedUserId: uuid("recommended_user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(), // User being recommended
+  score: numeric("score", { precision: 10, scale: 4 }).notNull(), // Recommendation score
+  reasons: text("reasons"), // JSON array of reasons for recommendation
+  mutualConnections: integer("mutual_connections").default(0),
+  sharedInterests: text("shared_interests"), // JSON array of shared interests
+  algorithmVersion: varchar("algorithm_version", { length: 32 }).default("v1.0"),
+  expiresAt: timestamp("expires_at"), // When recommendation expires
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueRecommendation: primaryKey(t.userId, t.recommendedUserId),
+  userIdx: index("idx_user_recommendations_user_id").on(t.userId),
+  recommendedUserIdx: index("idx_user_recommendations_recommended_user_id").on(t.recommendedUserId),
+  scoreIdx: index("idx_user_recommendations_score").on(t.score),
+  expiresAtIdx: index("idx_user_recommendations_expires_at").on(t.expiresAt),
+}));
+
+// Trending content for cross-community trending
+export const trendingContent = pgTable("trending_content", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  contentType: varchar("content_type", { length: 32 }).notNull(), // 'community', 'post', 'user', 'topic'
+  contentId: varchar("content_id", { length: 66 }).notNull(), // ID of the content
+  score: numeric("score", { precision: 10, scale: 4 }).notNull(), // Trending score
+  timeframe: varchar("timeframe", { length: 16 }).notNull(), // 'hourly', 'daily', 'weekly'
+  rank: integer("rank").notNull(), // Rank within timeframe
+  metadata: text("metadata"), // JSON additional data
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueTrending: primaryKey(t.contentType, t.contentId, t.timeframe),
+  contentTypeIdx: index("idx_trending_content_content_type").on(t.contentType),
+  contentIdIdx: index("idx_trending_content_content_id").on(t.contentId),
+  timeframeIdx: index("idx_trending_content_timeframe").on(t.timeframe),
+  scoreIdx: index("idx_trending_content_score").on(t.score),
+  rankIdx: index("idx_trending_content_rank").on(t.rank),
+  calculatedAtIdx: index("idx_trending_content_calculated_at").on(t.calculatedAt),
+}));
+
+// Community events for event calendar
+export const communityEvents = pgTable("community_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // 'meeting', 'ama', 'workshop', 'competition', 'other'
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  location: text("location"), // Could be physical address or virtual link
+  isRecurring: boolean("is_recurring").default(false),
+  recurrencePattern: varchar("recurrence_pattern", { length: 100 }), // cron expression or simple pattern
+  maxAttendees: integer("max_attendees"),
+  rsvpRequired: boolean("rsvp_required").default(false),
+  rsvpDeadline: timestamp("rsvp_deadline"),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdx: index("idx_community_events_community_id").on(t.communityId),
+  startTimeIdx: index("idx_community_events_start_time").on(t.startTime),
+  eventTypeIdx: index("idx_community_events_event_type").on(t.eventType),
+  isRecurringIdx: index("idx_community_events_is_recurring").on(t.isRecurring),
+}));
+
+// User event RSVPs
+export const eventRsvps = pgTable("event_rsvps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventId: uuid("event_id").references(() => communityEvents.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  status: varchar("status", { length: 20 }).default("confirmed"), // 'confirmed', 'maybe', 'declined'
+  attendeesCount: integer("attendees_count").default(1),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueRsvp: primaryKey(t.eventId, t.userId),
+  eventIdx: index("idx_event_rsvps_event_id").on(t.eventId),
+  userIdx: index("idx_event_rsvps_user_id").on(t.userId),
+  statusIdx: index("idx_event_rsvps_status").on(t.status),
+}));
+
 // Community subscription tiers
 export const communitySubscriptionTiers = pgTable("community_subscription_tiers", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -2898,6 +3018,71 @@ export const marketplaceListings = pgTable("marketplace_listings", {
   categoryActiveIdx: index("idx_marketplace_listings_category_active").on(t.category, t.isActive, t.createdAt),
 }));
 
+// Mobile Device Tokens for push notifications
+export const mobileDeviceTokens = pgTable("mobile_device_tokens", {
+  id: serial("id").primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  token: varchar("token", { length: 255 }).notNull(),
+  platform: varchar("platform", { length: 32 }).notNull(), // 'ios', 'android', 'web'
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userTokenIdx: index("idx_mobile_device_tokens_user_token").on(t.userAddress, t.token),
+  platformIdx: index("idx_mobile_device_tokens_platform").on(t.platform),
+}));
+
+// Offline Content Cache
+export const offlineContentCache = pgTable("offline_content_cache", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  contentType: varchar("content_type", { length: 50 }).notNull(), // 'post', 'community', 'user', 'comment'
+  contentId: varchar("content_id", { length: 64 }).notNull(),
+  contentData: text("content_data").notNull(), // JSON serialized content
+  expiresAt: timestamp("expires_at"),
+  priority: integer("priority").default(0), // Higher priority content is kept longer
+  accessedAt: timestamp("accessed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userContentIdx: index("idx_offline_content_cache_user_content").on(t.userAddress, t.contentType, t.contentId),
+  expiresAtIdx: index("idx_offline_content_cache_expires_at").on(t.expiresAt),
+  priorityIdx: index("idx_offline_content_cache_priority").on(t.priority),
+}));
+
+// Offline Action Queue
+export const offlineActionQueue = pgTable("offline_action_queue", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  actionType: varchar("action_type", { length: 50 }).notNull(), // 'post', 'comment', 'vote', 'like'
+  actionData: text("action_data").notNull(), // JSON serialized action data
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'processing', 'completed', 'failed'
+  retryCount: integer("retry_count").default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userActionIdx: index("idx_offline_action_queue_user_action").on(t.userAddress, t.actionType),
+  statusIdx: index("idx_offline_action_queue_status").on(t.status),
+  createdAtIdx: index("idx_offline_action_queue_created_at").on(t.createdAt),
+}));
+
+// Mobile Governance Sessions
+export const mobileGovernanceSessions = pgTable("mobile_governance_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  sessionId: varchar("session_id", { length: 64 }).notNull(),
+  proposalId: uuid("proposal_id").references(() => proposals.id),
+  actionType: varchar("action_type", { length: 50 }), // 'view', 'vote', 'create'
+  biometricUsed: boolean("biometric_used").default(false),
+  sessionStart: timestamp("session_start").defaultNow(),
+  sessionEnd: timestamp("session_end"),
+  actionsPerformed: integer("actions_performed").default(0),
+}, (t) => ({
+  userSessionIdx: index("idx_mobile_governance_sessions_user_session").on(t.userAddress, t.sessionId),
+  proposalIdx: index("idx_mobile_governance_sessions_proposal").on(t.proposalId),
+  sessionStartIdx: index("idx_mobile_governance_sessions_start").on(t.sessionStart),
+}));
+
 // Authentication System Tables
 export const authSessions = pgTable("auth_sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -3141,4 +3326,35 @@ export const sellerGrowthProjections = pgTable("seller_growth_projections", {
     columns: [t.sellerWalletAddress],
     foreignColumns: [sellers.walletAddress]
   })
+}));
+
+// Shopping Cart System Tables
+export const carts = pgTable("carts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  sessionId: varchar("session_id", { length: 255 }),
+  status: varchar("status", { length: 20 }).default("active").notNull(),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdIdx: index("idx_carts_user_id").on(t.userId),
+  sessionIdIdx: index("idx_carts_session_id").on(t.sessionId),
+  statusIdx: index("idx_carts_status").on(t.status),
+}));
+
+export const cartItems = pgTable("cart_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  cartId: uuid("cart_id").references(() => carts.id, { onDelete: "cascade" }).notNull(),
+  productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").notNull(),
+  priceAtTime: numeric("price_at_time", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  cartIdIdx: index("idx_cart_items_cart_id").on(t.cartId),
+  productIdIdx: index("idx_cart_items_product_id").on(t.productId),
+  uniqueCartProduct: index("idx_cart_items_unique_cart_product").on(t.cartId, t.productId),
 }));

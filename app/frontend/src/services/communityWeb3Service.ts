@@ -70,7 +70,11 @@ export class CommunityWeb3Service {
   private tokenContract: ethers.Contract | null = null;
 
   constructor() {
-    this.initializeContracts();
+    // Avoid initializing contracts during SSR/build.
+    if (typeof window !== 'undefined') {
+      // Defer initialization to the client environment
+      this.initializeContracts();
+    }
   }
 
   private async initializeContracts() {

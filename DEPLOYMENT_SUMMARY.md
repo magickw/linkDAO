@@ -19,7 +19,8 @@ The LinkDAO platform consists of:
 - **Environment Variables Required**:
   - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
   - `NEXT_PUBLIC_BACKEND_URL`
-  - `NEXT_PUBLIC_BASE_RPC_URL`
+   - `NEXT_PUBLIC_BASE_RPC_URL`
+   - `NEXT_PUBLIC_RPC_URL` (optional): a single RPC URL used during server-side rendering/build; if set, this will be used for SSR reads. Optionally set `NEXT_PUBLIC_RPC_CHAIN_ID`.
   - `NEXT_PUBLIC_BASE_GOERLI_RPC_URL`
   - `NEXT_PUBLIC_ADMIN_ADDRESS`
 

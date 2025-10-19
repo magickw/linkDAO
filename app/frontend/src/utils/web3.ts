@@ -1,6 +1,7 @@
 import { getPublicClient, getWalletClient } from '@wagmi/core'
 import { config } from '@/lib/wagmi'
 import { ethers } from 'ethers'
+import { getChainRpcUrl } from '@/lib/wagmi'
 
 /**
  * Get the public client for read operations
@@ -8,10 +9,38 @@ import { ethers } from 'ethers'
 export async function getProvider() {
   try {
   const client = getPublicClient(config)
-  // Convert wagmi client to ethers provider. Cast to `any` because `transport`
-  // has a union type and not all variants expose a `provider` property.
-  const provider = new ethers.providers.Web3Provider((client as any).transport?.provider as any)
-    return provider
+    // If wagmi transport exposes an injected provider, use it.
+    const injectedProvider = (client as any).transport?.provider
+    if (injectedProvider) {
+      return new ethers.providers.Web3Provider(injectedProvider as any)
+    }
+
+    // Fallback: prefer an env-driven RPC URL for server-side reads. This lets
+    // deployments control which RPC the app uses during SSR/build.
+    const envRpc = process.env.NEXT_PUBLIC_RPC_URL
+    const envChainId = process.env.NEXT_PUBLIC_RPC_CHAIN_ID
+    if (envRpc) {
+      try {
+        const chainId = envChainId ? parseInt(envChainId, 10) : undefined
+        return new ethers.providers.JsonRpcProvider(envRpc, chainId)
+      } catch (e) {
+        console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e)
+      }
+    }
+
+    // If no env RPC configured, fall back to wagmi's chain URLs (use mainnet by default)
+    try {
+      const chainId = envChainId ? parseInt(envChainId, 10) : 1
+      const rpcUrl = getChainRpcUrl(chainId)
+      if (rpcUrl) {
+        return new ethers.providers.JsonRpcProvider(rpcUrl)
+      }
+    } catch (e) {
+      // ignore and use default provider below
+    }
+
+    // Last-resort: use ethers default provider (may require API keys)
+    return ethers.getDefaultProvider()
   } catch (error) {
     console.error('Error getting provider:', error)
     return null
@@ -26,9 +55,11 @@ export async function getSigner() {
   const client = await getWalletClient(config)
   if (!client) return null
 
-  // Convert wagmi client to ethers signer. Cast to `any` as above.
-  const provider = new ethers.providers.Web3Provider((client as any).transport?.provider as any)
-  const signer = provider.getSigner()
+    const injectedProvider = (client as any).transport?.provider
+    if (!injectedProvider) return null
+
+    const provider = new ethers.providers.Web3Provider(injectedProvider as any)
+    const signer = provider.getSigner()
     return signer
   } catch (error) {
     console.error('Error getting signer:', error)

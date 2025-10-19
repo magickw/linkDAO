@@ -175,6 +175,7 @@ import messagingRoutes from './routes/messagingRoutes';
 
 // Import notification preferences routes
 import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+import mobileRoutes from './routes/mobileRoutes';
 
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
@@ -205,6 +206,7 @@ app.use('/api/messaging', messagingRoutes);
 
 // Use notification preferences routes
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
@@ -267,6 +269,8 @@ import authRoutes from './routes/authRoutes';
 import pollRoutes from './routes/pollRoutes';
 // Import cache routes
 import cacheRoutes from './routes/cacheRoutes';
+// Import cart routes
+import cartRoutes from './routes/cartRoutes';
 // Import marketplace search routes
 import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
 // Import price oracle routes
@@ -284,6 +288,12 @@ import orderManagementRoutes from './routes/orderManagementRoutes';
 
 // Import seller performance routes
 import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
+
+// Import member behavior routes
+import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
+
+// Import content performance routes
+import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
 // Authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
@@ -373,6 +383,9 @@ app.use('/api/polls', pollRoutes);
 // Cache management routes
 app.use('/api/cache', cacheRoutes);
 
+// Cart routes
+app.use('/api/cart', cartRoutes);
+
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
 
@@ -393,6 +406,12 @@ app.use('/api/order-management', orderManagementRoutes);
 
 // Seller performance routes
 app.use('/api/seller-performance', sellerPerformanceRoutes);
+
+// Use member behavior routes
+app.use('/api/member-behavior', memberBehaviorRoutes);
+
+// Use content performance routes
+app.use('/api/content-performance', contentPerformanceRoutes);
 
 // Report builder routes
 import reportBuilderRoutes from './routes/reportBuilderRoutes';

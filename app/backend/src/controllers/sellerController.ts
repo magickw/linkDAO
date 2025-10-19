@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { databaseService } from "../services/databaseService";
-import { eq, desc } from "drizzle-orm";
-import { marketplaceUsers, sellerVerifications } from "../db/marketplaceSchema";
+import { eq, desc, and, sql } from "drizzle-orm";
+import { marketplaceUsers, sellerVerifications, marketplaceProducts, marketplaceOrders } from "../db/marketplaceSchema";
 import { users } from "../db/schema";
 
 export class SellerController {
@@ -324,100 +324,7 @@ export class SellerController {
     }
   }
 
-  // Marketplace seller profile methods
-  async getProfile(req: Request, res: Response) {
-    try {
-      const { walletAddress } = req.params;
-      const db = databaseService.getDatabase();
 
-      const [seller] = await db.select()
-        .from(marketplaceUsers)
-        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
-        .where(eq(users.walletAddress, walletAddress));
-
-      if (!seller) {
-        return res.status(404).json({ error: "Seller profile not found" });
-      }
-
-      res.json({ ...seller.marketplace_users, ...seller.users });
-    } catch (error) {
-      console.error("Error fetching seller profile:", error);
-      res.status(500).json({ error: "Failed to fetch seller profile" });
-    }
-  }
-
-  async createProfile(req: Request, res: Response) {
-    try {
-      const profileData = req.body;
-      const db = databaseService.getDatabase();
-
-      // First, find or create the user by wallet address
-      let [user] = await db.select()
-        .from(users)
-        .where(eq(users.walletAddress, profileData.walletAddress));
-
-      if (!user) {
-        // Create user if doesn't exist
-        [user] = await db.insert(users)
-          .values({
-            walletAddress: profileData.walletAddress,
-            handle: profileData.handle || null,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          })
-          .returning();
-      }
-
-      // Create marketplace user profile
-      const [newProfile] = await db.insert(marketplaceUsers)
-        .values({
-          userId: user.id,
-          role: 'seller',
-          legalName: profileData.legalName,
-          email: profileData.email,
-          country: profileData.country,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning();
-
-      res.json({ success: true, profile: { ...newProfile, walletAddress: user.walletAddress } });
-    } catch (error) {
-      console.error("Error creating seller profile:", error);
-      res.status(500).json({ error: "Failed to create seller profile" });
-    }
-  }
-
-  async updateProfile(req: Request, res: Response) {
-    try {
-      const { walletAddress } = req.params;
-      const updateData = req.body;
-      const db = databaseService.getDatabase();
-
-      // Find user by wallet address
-      const [user] = await db.select()
-        .from(users)
-        .where(eq(users.walletAddress, walletAddress));
-
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-
-      const [updatedProfile] = await db.update(marketplaceUsers)
-        .set({ ...updateData, updatedAt: new Date() })
-        .where(eq(marketplaceUsers.userId, user.id))
-        .returning();
-
-      if (!updatedProfile) {
-        return res.status(404).json({ error: "Seller profile not found" });
-      }
-
-      res.json({ success: true, profile: { ...updatedProfile, walletAddress } });
-    } catch (error) {
-      console.error("Error updating seller profile:", error);
-      res.status(500).json({ error: "Failed to update seller profile" });
-    }
-  }
 
   async updateProfileEnhanced(req: Request, res: Response) {
     try {
@@ -621,6 +528,595 @@ export class SellerController {
       console.error("Error fetching profile history:", error);
       res.status(500).json({ error: "Failed to fetch profile history" });
     }
+  }
+
+  // New Seller Management API Methods
+
+  // Create new product listing
+  async createListing(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      if (!user?.walletAddress) {
+        return res.status(401).json({ success: false, error: "Authentication required" });
+      }
+
+      const listingData = req.body;
+      const db = databaseService.getDatabase();
+
+      // Get or create marketplace user
+      let [marketplaceUser] = await db.select()
+        .from(marketplaceUsers)
+        .leftJoin(users, eq(marketplaceUsers.userId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
+
+      if (!marketplaceUser) {
+        // Create marketplace user if doesn't exist
+        const [newUser] = await db.insert(users)
+          .values({
+            walletAddress: user.walletAddress,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .onConflictDoNothing()
+          .returning();
+
+        const userId = newUser?.id || user.id;
+        
+        await db.insert(marketplaceUsers)
+          .values({
+            userId,
+            role: 'seller',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .onConflictDoNothing();
+      }
+
+      // Create the listing
+      const [newListing] = await db.insert(marketplaceProducts)
+        .values({
+          sellerId: marketplaceUser?.users?.id || user.id,
+          title: listingData.title,
+          description: listingData.description,
+          category: listingData.category,
+          priceCrypto: listingData.priceCrypto.toString(),
+          currency: listingData.currency || 'USDC',
+          isPhysical: listingData.isPhysical || false,
+          stock: listingData.stock || 1,
+          metadataUri: listingData.metadataUri,
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
+
+      res.status(201).json({
+        success: true,
+        data: {
+          id: newListing.id,
+          title: newListing.title,
+          description: newListing.description,
+          category: newListing.category,
+          priceCrypto: parseFloat(newListing.priceCrypto),
+          currency: newListing.currency,
+          isPhysical: newListing.isPhysical,
+          stock: newListing.stock,
+          status: newListing.status,
+          createdAt: newListing.createdAt
+        }
+      });
+    } catch (error) {
+      console.error("Error creating listing:", error);
+      res.status(500).json({ success: false, error: "Failed to create listing" });
+    }
+  }
+
+  // Update existing listing
+  async updateListing(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { id } = req.params;
+      const updates = req.body;
+      const db = databaseService.getDatabase();
+
+      // Verify ownership
+      const [listing] = await db.select()
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(marketplaceProducts.id, id));
+
+      if (!listing || listing.users?.walletAddress !== user.walletAddress) {
+        return res.status(404).json({ success: false, error: "Listing not found or access denied" });
+      }
+
+      // Update the listing
+      const updateData: any = { updatedAt: new Date() };
+      if (updates.title) updateData.title = updates.title;
+      if (updates.description) updateData.description = updates.description;
+      if (updates.category) updateData.category = updates.category;
+      if (updates.priceCrypto) updateData.priceCrypto = updates.priceCrypto.toString();
+      if (updates.currency) updateData.currency = updates.currency;
+      if (updates.isPhysical !== undefined) updateData.isPhysical = updates.isPhysical;
+      if (updates.stock !== undefined) updateData.stock = updates.stock;
+      if (updates.status) updateData.status = updates.status;
+      if (updates.metadataUri) updateData.metadataUri = updates.metadataUri;
+
+      const [updatedListing] = await db.update(marketplaceProducts)
+        .set(updateData)
+        .where(eq(marketplaceProducts.id, id))
+        .returning();
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedListing.id,
+          title: updatedListing.title,
+          description: updatedListing.description,
+          category: updatedListing.category,
+          priceCrypto: parseFloat(updatedListing.priceCrypto),
+          currency: updatedListing.currency,
+          isPhysical: updatedListing.isPhysical,
+          stock: updatedListing.stock,
+          status: updatedListing.status,
+          updatedAt: updatedListing.updatedAt
+        }
+      });
+    } catch (error) {
+      console.error("Error updating listing:", error);
+      res.status(500).json({ success: false, error: "Failed to update listing" });
+    }
+  }
+
+  // Delete listing
+  async deleteListing(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { id } = req.params;
+      const db = databaseService.getDatabase();
+
+      // Verify ownership
+      const [listing] = await db.select()
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(marketplaceProducts.id, id));
+
+      if (!listing || listing.users?.walletAddress !== user.walletAddress) {
+        return res.status(404).json({ success: false, error: "Listing not found or access denied" });
+      }
+
+      // Soft delete by setting status to inactive
+      await db.update(marketplaceProducts)
+        .set({ status: 'inactive', updatedAt: new Date() })
+        .where(eq(marketplaceProducts.id, id));
+
+      res.json({ success: true, message: "Listing deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting listing:", error);
+      res.status(500).json({ success: false, error: "Failed to delete listing" });
+    }
+  }
+
+  // Get seller dashboard data
+  async getDashboard(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { period = '30d', includeOrders = 'true', includeAnalytics = 'true' } = req.query;
+      const db = databaseService.getDatabase();
+
+      // Get basic stats
+      const stats = await this.getSellerStatsInternal(user.walletAddress);
+      
+      // Get recent listings
+      const recentListings = await db.select({
+        id: marketplaceProducts.id,
+        title: marketplaceProducts.title,
+        status: marketplaceProducts.status,
+        priceCrypto: marketplaceProducts.priceCrypto,
+        currency: marketplaceProducts.currency,
+        createdAt: marketplaceProducts.createdAt
+      })
+      .from(marketplaceProducts)
+      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .where(eq(users.walletAddress, user.walletAddress))
+      .orderBy(desc(marketplaceProducts.createdAt))
+      .limit(5);
+
+      const dashboardData: any = {
+        stats,
+        recentListings: recentListings.map(listing => ({
+          ...listing,
+          priceCrypto: parseFloat(listing.priceCrypto)
+        }))
+      };
+
+      if (includeOrders === 'true') {
+        dashboardData.recentOrders = await this.getRecentOrdersInternal(user.walletAddress, 5);
+      }
+
+      if (includeAnalytics === 'true') {
+        dashboardData.analytics = {
+          period,
+          salesTrend: this.generateMockTrend(period as string),
+          topCategories: await this.getTopCategoriesInternal(user.walletAddress),
+          conversionRate: 0.15 + Math.random() * 0.1 // Mock conversion rate
+        };
+      }
+
+      res.json({ success: true, data: dashboardData });
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch dashboard data" });
+    }
+  }
+
+  // Update seller profile
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const updates = req.body;
+
+      // Use the existing seller service
+      const { sellerService } = await import('../services/sellerService');
+      
+      try {
+        const updatedProfile = await sellerService.updateSellerProfile(user.walletAddress, updates);
+        res.json({ success: true, data: updatedProfile });
+      } catch (serviceError: any) {
+        if (serviceError.message.includes('not found')) {
+          // Create profile if it doesn't exist
+          const newProfile = await sellerService.createSellerProfile({
+            walletAddress: user.walletAddress,
+            ...updates
+          });
+          res.status(201).json({ success: true, data: newProfile });
+        } else {
+          throw serviceError;
+        }
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ success: false, error: "Failed to update profile" });
+    }
+  }
+
+  // Get seller's own listings
+  async getMyListings(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { 
+        status, 
+        category, 
+        page = 1, 
+        limit = 20, 
+        sortBy = 'created_at', 
+        sortOrder = 'desc' 
+      } = req.query;
+      
+      const db = databaseService.getDatabase();
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+      let query = db.select({
+        id: marketplaceProducts.id,
+        title: marketplaceProducts.title,
+        description: marketplaceProducts.description,
+        category: marketplaceProducts.category,
+        priceCrypto: marketplaceProducts.priceCrypto,
+        currency: marketplaceProducts.currency,
+        isPhysical: marketplaceProducts.isPhysical,
+        stock: marketplaceProducts.stock,
+        status: marketplaceProducts.status,
+        createdAt: marketplaceProducts.createdAt,
+        updatedAt: marketplaceProducts.updatedAt
+      })
+      .from(marketplaceProducts)
+      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .where(eq(users.walletAddress, user.walletAddress));
+
+      // Apply filters
+      if (status) {
+        query = query.where(eq(marketplaceProducts.status, status as string));
+      }
+      if (category) {
+        query = query.where(eq(marketplaceProducts.category, category as string));
+      }
+
+      // Apply sorting
+      const sortColumn = sortBy === 'price' ? marketplaceProducts.priceCrypto : 
+                        sortBy === 'title' ? marketplaceProducts.title :
+                        sortBy === 'updated_at' ? marketplaceProducts.updatedAt :
+                        marketplaceProducts.createdAt;
+      
+      query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
+
+      const listings = await query.limit(parseInt(limit as string)).offset(offset);
+
+      // Get total count
+      const totalResult = await db.select({ count: sql<number>`count(*)` })
+        .from(marketplaceProducts)
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
+      
+      const total = totalResult[0]?.count || 0;
+
+      res.json({
+        success: true,
+        data: {
+          listings: listings.map(listing => ({
+            ...listing,
+            priceCrypto: parseFloat(listing.priceCrypto)
+          })),
+          pagination: {
+            page: parseInt(page as string),
+            limit: parseInt(limit as string),
+            total,
+            totalPages: Math.ceil(total / parseInt(limit as string))
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching listings:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch listings" });
+    }
+  }
+
+  // Get seller's orders
+  async getMyOrders(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { 
+        status, 
+        page = 1, 
+        limit = 20, 
+        sortBy = 'created_at', 
+        sortOrder = 'desc' 
+      } = req.query;
+      
+      const db = databaseService.getDatabase();
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+      let query = db.select({
+        id: marketplaceOrders.id,
+        productId: marketplaceOrders.productId,
+        productTitle: marketplaceProducts.title,
+        buyerId: marketplaceOrders.buyerId,
+        amount: marketplaceOrders.amount,
+        currency: marketplaceOrders.currency,
+        status: marketplaceOrders.status,
+        createdAt: marketplaceOrders.createdAt,
+        updatedAt: marketplaceOrders.updatedAt
+      })
+      .from(marketplaceOrders)
+      .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
+      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .where(eq(users.walletAddress, user.walletAddress));
+
+      // Apply filters
+      if (status) {
+        query = query.where(eq(marketplaceOrders.status, status as string));
+      }
+
+      // Apply sorting
+      const sortColumn = sortBy === 'amount' ? marketplaceOrders.amount :
+                        sortBy === 'updated_at' ? marketplaceOrders.updatedAt :
+                        marketplaceOrders.createdAt;
+      
+      query = sortOrder === 'asc' ? query.orderBy(sortColumn) : query.orderBy(desc(sortColumn));
+
+      const orders = await query.limit(parseInt(limit as string)).offset(offset);
+
+      // Get total count
+      const totalResult = await db.select({ count: sql<number>`count(*)` })
+        .from(marketplaceOrders)
+        .leftJoin(marketplaceProducts, eq(marketplaceOrders.productId, marketplaceProducts.id))
+        .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+        .where(eq(users.walletAddress, user.walletAddress));
+      
+      const total = totalResult[0]?.count || 0;
+
+      res.json({
+        success: true,
+        data: {
+          orders: orders.map(order => ({
+            ...order,
+            amount: parseFloat(order.amount)
+          })),
+          pagination: {
+            page: parseInt(page as string),
+            limit: parseInt(limit as string),
+            total,
+            totalPages: Math.ceil(total / parseInt(limit as string))
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch orders" });
+    }
+  }
+
+  // Get seller analytics
+  async getAnalytics(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { period = '30d', metrics } = req.query;
+
+      const analytics = {
+        period,
+        salesTrend: this.generateMockTrend(period as string),
+        topCategories: await this.getTopCategoriesInternal(user.walletAddress),
+        conversionRate: 0.15 + Math.random() * 0.1,
+        averageOrderValue: 150 + Math.random() * 100,
+        customerRetentionRate: 0.25 + Math.random() * 0.15,
+        topPerformingProducts: await this.getTopProductsInternal(user.walletAddress)
+      };
+
+      // Filter metrics if specified
+      if (metrics) {
+        const requestedMetrics = (metrics as string).split(',');
+        const filteredAnalytics: any = { period };
+        requestedMetrics.forEach(metric => {
+          if (analytics[metric as keyof typeof analytics]) {
+            filteredAnalytics[metric] = analytics[metric as keyof typeof analytics];
+          }
+        });
+        res.json({ success: true, data: filteredAnalytics });
+      } else {
+        res.json({ success: true, data: analytics });
+      }
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch analytics" });
+    }
+  }
+
+  // Get seller profile (using seller service)
+  async getProfile(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { sellerService } = await import('../services/sellerService');
+      
+      const profile = await sellerService.getSellerProfile(user.walletAddress);
+      
+      if (!profile) {
+        return res.json({ success: true, data: null });
+      }
+
+      res.json({ success: true, data: profile });
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch profile" });
+    }
+  }
+
+  // Get seller stats (using seller service)
+  async getStats(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const stats = await this.getSellerStatsInternal(user.walletAddress);
+      res.json({ success: true, data: stats });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      res.status(500).json({ success: false, error: "Failed to fetch stats" });
+    }
+  }
+
+  // Request seller verification
+  async requestVerification(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+      const { verificationType, verificationData } = req.body;
+      const { sellerService } = await import('../services/sellerService');
+      
+      const result = await sellerService.verifySellerProfile(user.walletAddress, verificationType);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      console.error("Error requesting verification:", error);
+      res.status(500).json({ success: false, error: "Failed to request verification" });
+    }
+  }
+
+  // Helper methods
+  private async getSellerStatsInternal(walletAddress: string) {
+    try {
+      const { sellerService } = await import('../services/sellerService');
+      return await sellerService.getSellerStats(walletAddress);
+    } catch (error) {
+      console.error("Error fetching seller stats:", error);
+      // Return default stats if service fails
+      return {
+        totalListings: 0,
+        activeListings: 0,
+        totalSales: 0,
+        averageRating: 0,
+        profileCompleteness: 0,
+        totalRevenue: '0',
+        completedOrders: 0,
+        pendingOrders: 0,
+        disputedOrders: 0,
+        reputationScore: 0
+      };
+    }
+  }
+
+  private async getRecentOrdersInternal(walletAddress: string, limit: number) {
+    try {
+      const { sellerService } = await import('../services/sellerService');
+      const orders = await sellerService.getSellerOrders(walletAddress);
+      return orders.slice(0, limit);
+    } catch (error) {
+      console.error("Error fetching recent orders:", error);
+      return [];
+    }
+  }
+
+  private async getTopCategoriesInternal(walletAddress: string) {
+    try {
+      const db = databaseService.getDatabase();
+      const categories = await db.select({
+        category: marketplaceProducts.category,
+        count: sql<number>`count(*)`
+      })
+      .from(marketplaceProducts)
+      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .where(eq(users.walletAddress, walletAddress))
+      .groupBy(marketplaceProducts.category)
+      .orderBy(desc(sql<number>`count(*)`))
+      .limit(5);
+
+      return categories.map(cat => ({
+        category: cat.category || 'Uncategorized',
+        count: cat.count
+      }));
+    } catch (error) {
+      console.error("Error fetching top categories:", error);
+      return [];
+    }
+  }
+
+  private async getTopProductsInternal(walletAddress: string) {
+    try {
+      const db = databaseService.getDatabase();
+      const products = await db.select({
+        id: marketplaceProducts.id,
+        title: marketplaceProducts.title,
+        priceCrypto: marketplaceProducts.priceCrypto,
+        currency: marketplaceProducts.currency
+      })
+      .from(marketplaceProducts)
+      .leftJoin(users, eq(marketplaceProducts.sellerId, users.id))
+      .where(and(
+        eq(users.walletAddress, walletAddress),
+        eq(marketplaceProducts.status, 'active')
+      ))
+      .orderBy(desc(marketplaceProducts.createdAt))
+      .limit(5);
+
+      return products.map(product => ({
+        ...product,
+        priceCrypto: parseFloat(product.priceCrypto),
+        sales: Math.floor(Math.random() * 50) // Mock sales data
+      }));
+    } catch (error) {
+      console.error("Error fetching top products:", error);
+      return [];
+    }
+  }
+
+  private generateMockTrend(period: string) {
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    const trend = [];
+    
+    for (let i = days; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      trend.push({
+        date: date.toISOString().split('T')[0],
+        sales: Math.floor(Math.random() * 10),
+        revenue: Math.floor(Math.random() * 1000)
+      });
+    }
+    
+    return trend;
   }
 }
 

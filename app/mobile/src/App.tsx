@@ -8,6 +8,9 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import WalletScreen from './screens/WalletScreen';
 import GovernanceScreen from './screens/GovernanceScreen';
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
+import OfflineContentScreen from './screens/OfflineContentScreen';
+import MobileGovernanceScreen from './screens/MobileGovernanceScreen';
 
 // Types
 export type RootStackParamList = {
@@ -15,6 +18,9 @@ export type RootStackParamList = {
   Profile: undefined;
   Wallet: undefined;
   Governance: undefined;
+  NotificationSettings: undefined;
+  OfflineContent: undefined;
+  MobileGovernance: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -43,6 +49,21 @@ export default function App() {
             name="Governance" 
             component={GovernanceScreen} 
             options={{ title: 'Governance' }} 
+          />
+          <Stack.Screen 
+            name="NotificationSettings" 
+            component={NotificationSettingsScreen} 
+            options={{ title: 'Notification Settings' }} 
+          />
+          <Stack.Screen 
+            name="OfflineContent" 
+            component={OfflineContentScreen} 
+            options={{ title: 'Offline Content' }} 
+          />
+          <Stack.Screen 
+            name="MobileGovernance" 
+            component={MobileGovernanceScreen} 
+            options={{ title: 'Mobile Governance' }} 
           />
         </Stack.Navigator>
       </NavigationContainer>

@@ -25,6 +25,10 @@
       "@/*": [
         "./src/*"
       ]
+      ,
+      "@/contracts/*": [
+        "./src/types/typechain/*"
+      ]
     },
     "plugins": [
       {

@@ -39,7 +39,7 @@ const getRpcUrl = (chainId: number) => {
   return getChainRpcUrl(chainId);
 };
 
-const getChainRpcUrl = (chainId: number) => {
+export const getChainRpcUrl = (chainId: number) => {
   switch (chainId) {
     case base.id:
       return process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org';

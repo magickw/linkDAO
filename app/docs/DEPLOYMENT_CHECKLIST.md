@@ -22,6 +22,8 @@
 - [ ] Add all required environment variables:
   - [ ] `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
   - [ ] `NEXT_PUBLIC_BASE_RPC_URL`
+  - [ ] `NEXT_PUBLIC_RPC_URL` (optional): set to the RPC endpoint to use during SSR/build
+  - [ ] `NEXT_PUBLIC_RPC_CHAIN_ID` (optional): the chain id for the RPC endpoint
   - [ ] `NEXT_PUBLIC_BASE_GOERLI_RPC_URL`
   - [ ] `NEXT_PUBLIC_ADMIN_ADDRESS`
   - [ ] `NEXT_PUBLIC_BACKEND_URL`

@@ -20,11 +20,7 @@ module.exports = {
     '<rootDir>/src/__tests__/accessibility/Web3*.test.{ts,tsx}',
   ],
   
-  // Setup files
-  setupFilesAfterEnv: [
-    '<rootDir>/src/__tests__/setup/web3TestSetup.ts',
-    '<rootDir>/jest.setup.ts',
-  ],
+  // Note: setupFilesAfterEnv is merged later with baseConfig.setupFilesAfterEnv
   
   // Global setup and teardown for blockchain
   globalSetup: '<rootDir>/src/__tests__/setup/web3GlobalSetup.ts',
@@ -35,7 +31,8 @@ module.exports = {
     ...baseConfig.moduleNameMapping,
     '^@/web3/(.*)$': '<rootDir>/src/services/web3/$1',
     '^@/blockchain/(.*)$': '<rootDir>/src/services/blockchain/$1',
-    '^@/contracts/(.*)$': '<rootDir>/src/contracts/$1',
+  // Redirect contract type imports to the generated TypeChain types (shims exist)
+  '^@/contracts/(.*)$': '<rootDir>/src/types/typechain/$1',
   },
   
   // Transform configuration

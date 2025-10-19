@@ -9,6 +9,8 @@ module.exports = {
     '^@/services/(.*)$': '<rootDir>/src/services/$1',
     '^@/context/(.*)$': '<rootDir>/src/context/$1',
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
+  // Map contract imports to generated TypeChain types/shims
+  '^@/contracts/(.*)$': '<rootDir>/src/types/typechain/$1',
   },
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   transform: {

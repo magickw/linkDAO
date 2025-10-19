@@ -40,10 +40,13 @@
     "seed:test": "node scripts/seed-test-data.js",
     "seed:test:minimal": "node scripts/seed-test-data.js minimal",
     "seed:test:comprehensive": "node scripts/seed-test-data.js comprehensive",
-    "seed:test:clean": "node scripts/seed-test-data.js clean"
+    "seed:test:clean": "node scripts/seed-test-data.js clean",
+    "seed:marketplace": "ts-node scripts/seedDatabase.ts",
+    "seed:marketplace:large": "ts-node scripts/seedDatabase.ts --users=50 --sellers=20 --products=150 --orders=100"
   },
   "dependencies": {
     "@types/express-fileupload": "^1.5.1",
+    "@types/joi": "^17.2.2",
     "@types/multer": "^2.0.0",
     "@types/socket.io": "^3.0.1",
     "aws-sdk": "^2.1692.0",
@@ -63,6 +66,7 @@
     "ioredis": "^5.8.0",
     "ipfs-http-client": "^60.0.1",
     "isomorphic-dompurify": "^2.29.0",
+    "joi": "^17.13.3",
     "jsonwebtoken": "^8.5.1",
     "multer": "^2.0.2",
     "pg": "^8.16.3",

@@ -412,7 +412,7 @@ export class SearchService {
       if (options.basedOn) searchParams.append('basedOn', options.basedOn);
 
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/recommendations/communities?${searchParams}`,
+        `${BACKEND_API_BASE_URL}/api/search/recommendations/communities?${searchParams}`,
         {
           method: 'GET',
           headers: {
@@ -464,7 +464,7 @@ export class SearchService {
       if (options.basedOn) searchParams.append('basedOn', options.basedOn);
 
       const response = await fetch(
-        `${BACKEND_API_BASE_URL}/api/recommendations/users?${searchParams}`,
+        `${BACKEND_API_BASE_URL}/api/search/recommendations/users?${searchParams}`,
         {
           method: 'GET',
           headers: {

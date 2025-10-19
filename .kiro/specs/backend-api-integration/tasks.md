@@ -7,28 +7,28 @@
   - Add proper error handling and response formatting using standardized ApiResponse utility
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
 
-- [-] 2. Implement authentication API routes with wallet integration
+- [x] 2. Implement authentication API routes with wallet integration
   - Create `app/backend/src/routes/authRoutes.ts` for wallet-based authentication endpoints
   - Create `app/backend/src/controllers/authController.ts` with JWT token generation and validation
   - Integrate with existing `authenticationService` for wallet signature verification
   - Add authentication middleware to protect sensitive routes
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
 
-- [ ] 3. Build shopping cart API with backend persistence
+- [x] 3. Build shopping cart API with backend persistence
   - Create `app/backend/src/routes/cartRoutes.ts` for cart management endpoints
   - Create `app/backend/src/controllers/cartController.ts` for cart operations
   - Integrate with existing cart database schema and services
   - Add cart synchronization logic for authenticated users
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 4. Implement seller management API routes
+- [x] 4. Implement seller management API routes
   - Create `app/backend/src/routes/sellerRoutes.ts` for seller dashboard and listing management
   - Create `app/backend/src/controllers/sellerController.ts` with seller-specific business logic
   - Integrate with existing seller services and database operations
   - Add proper authorization checks for seller-only operations
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 5. Create database seeding system with realistic sample data
+- [x] 5. Create database seeding system with realistic sample data
   - Create `app/backend/scripts/seedDatabase.ts` with automated data generation using Faker.js
   - Generate 50+ sample products across multiple categories with realistic pricing and descriptions
   - Generate 10+ sample sellers with complete profiles, store information, and reputation data
@@ -36,7 +36,7 @@
   - Add CLI script for easy database seeding during development
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-- [ ] 6. Implement API response standardization and validation
+- [-] 6. Implement API response standardization and validation
   - Create `app/backend/src/utils/apiResponse.ts` utility class for consistent response formatting
   - Add request validation middleware using Joi schema validation
   - Implement proper HTTP status codes and error message formatting
