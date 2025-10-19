@@ -284,8 +284,12 @@ class MarketplaceDataCache {
         }
       };
 
-      this.compressionWorker.addEventListener('message', handleMessage);
-      this.compressionWorker.postMessage({ action: 'compress', data, id });
+      if (this.compressionWorker) {
+        this.compressionWorker.addEventListener('message', handleMessage);
+        this.compressionWorker.postMessage({ action: 'compress', data, id });
+      } else {
+        reject(new Error('Compression worker not available'));
+      }
 
       // Timeout after 5 seconds
       setTimeout(() => {
@@ -316,8 +320,12 @@ class MarketplaceDataCache {
         }
       };
 
-      this.compressionWorker.addEventListener('message', handleMessage);
-      this.compressionWorker.postMessage({ action: 'decompress', data, id });
+      if (this.compressionWorker) {
+        this.compressionWorker.addEventListener('message', handleMessage);
+        this.compressionWorker.postMessage({ action: 'decompress', data, id });
+      } else {
+        reject(new Error('Compression worker not available'));
+      }
 
       // Timeout after 5 seconds
       setTimeout(() => {

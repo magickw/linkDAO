@@ -1,465 +1,239 @@
 import { Request, Response } from 'express';
-import { generateToken, verifySignature } from '../middleware/authMiddleware';
-import { UserProfileService } from '../services/userProfileService';
-import { AppError, UnauthorizedError, ValidationError, NotFoundError } from '../middleware/errorHandler';
-import { AuthService } from '../services/authService';
-import { KYCService } from '../services/kycService';
+import { validationResult } from 'express-validator';
+import jwt from 'jsonwebtoken';
+import { ethers } from 'ethers';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import { eq } from 'drizzle-orm';
+import { users } from '../db/schema';
+import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
-const userProfileService = new UserProfileService();
-const authService = new AuthService();
-const kycService = new KYCService();
+// Initialize database connection
+const connectionString = process.env.DATABASE_URL!;
+const sql = postgres(connectionString, { ssl: 'require' });
+const db = drizzle(sql);
 
-export class AuthController {
+interface WalletConnectRequest {
+  walletAddress: string;
+  signature: string;
+  message: string;
+}
+
+interface ProfileUpdateRequest {
+  displayName?: string;
+  bio?: string;
+  profileImageUrl?: string;
+  ensName?: string;
+}
+
+class AuthController {
   /**
-   * Web3 wallet authentication with signature verification
+   * Authenticate user with wallet signature
+   * POST /api/auth/wallet-connect
    */
-  async authenticateWallet(req: Request, res: Response): Promise<Response> {
+  async walletConnect(req: Request, res: Response) {
     try {
-      const { address, signature, message, nonce } = req.body;
-      
-      if (!address || !signature || !message || !nonce) {
-        throw new ValidationError('Address, signature, message, and nonce are required');
+      // Validate request
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return validationErrorResponse(res, errors.array());
       }
-      
-      // Verify the signature
-      const isValidSignature = await verifySignature(address, signature, message);
-      if (!isValidSignature) {
-        throw new UnauthorizedError('Invalid signature');
-      }
-      
-      // Verify nonce
-      const isValidNonce = await authService.verifyNonce(address, nonce);
-      if (!isValidNonce) {
-        throw new UnauthorizedError('Invalid or expired nonce');
-      }
-      
-      // Get or create user profile
-      let profile = await userProfileService.getProfileByAddress(address);
-      if (!profile) {
-        profile = await userProfileService.createProfile({
-          walletAddress: address,
-          handle: `user_${address.slice(-8)}`,
-          ens: ''
-        });
-      }
-      
-      // Generate JWT token with enhanced claims
-      const token = generateToken(address, {
-        userId: profile.id,
-        kycStatus: profile.kycStatus || 'none',
-        permissions: await authService.getUserPermissions(address)
-      });
-      
-      // Update last login
-      await authService.updateLastLogin(address);
-      
-      return res.json({
-        success: true,
-        token,
-        user: {
-          id: profile.id,
-          address: profile.walletAddress,
-          handle: profile.handle,
-          ens: profile.ens,
-          kycStatus: profile.kycStatus || 'none',
-          createdAt: profile.createdAt
+
+      const { walletAddress, signature, message }: WalletConnectRequest = req.body;
+
+      // Verify signature
+      try {
+        const recoveredAddress = ethers.verifyMessage(message, signature);
+        
+        if (recoveredAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+          return errorResponse(res, 'INVALID_SIGNATURE', 'Signature verification failed', 401);
         }
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
+      } catch (error) {
+        console.error('Signature verification error:', error);
+        return errorResponse(res, 'SIGNATURE_ERROR', 'Invalid signature format', 400);
       }
-      throw new AppError('Wallet authentication failed', 500, 'AUTH_ERROR');
-    }
-  }
 
-  /**
-   * Get authentication nonce for wallet signature
-   */
-  async getNonce(req: Request, res: Response): Promise<Response> {
-    try {
-      const { address } = req.params;
-      
-      if (!address) {
-        throw new ValidationError('Wallet address is required');
-      }
-      
-      const nonce = await authService.generateNonce(address);
-      const message = `Sign this message to authenticate with LinkDAO Marketplace.\n\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
-      
-      return res.json({
-        success: true,
-        nonce,
-        message
-      });
-    } catch (error: any) {
-      throw new AppError('Failed to generate nonce', 500, 'NONCE_ERROR');
-    }
-  }
+      // Find or create user
+      let user = await db
+        .select()
+        .from(users)
+        .where(eq(users.walletAddress, walletAddress.toLowerCase()))
+        .limit(1);
 
-  /**
-   * Legacy login endpoint - generates a JWT token for the user
-   */
-  async login(req: Request, res: Response): Promise<Response> {
-    try {
-      const { address } = req.body;
-      
-      if (!address) {
-        throw new ValidationError('Wallet address is required');
+      if (user.length === 0) {
+        // Create new user
+        const newUser = await db
+          .insert(users)
+          .values({
+            walletAddress: walletAddress.toLowerCase(),
+            createdAt: new Date()
+          })
+          .returning();
+        
+        user = newUser;
       }
-      
-      // Check if user profile exists
-      const profile = await userProfileService.getProfileByAddress(address);
-      
-      if (!profile) {
-        throw new NotFoundError('User profile not found. Please register first.');
-      }
-      
+
+      const userData = user[0];
+
       // Generate JWT token
-      const token = generateToken(address, {
-        userId: profile.id,
-        kycStatus: profile.kycStatus || 'none'
-      });
-      
-      return res.json({
-        success: true,
-        token,
-        user: {
-          id: profile.id,
-          address: profile.walletAddress,
-          handle: profile.handle,
-          ens: profile.ens
-        }
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Internal server error', 500, 'INTERNAL_ERROR');
-    }
-  }
-
-  /**
-   * Enhanced user registration with profile setup
-   */
-  async register(req: Request, res: Response): Promise<Response> {
-    try {
-      const { 
-        address, 
-        handle, 
-        ens, 
-        email, 
-        preferences,
-        privacySettings 
-      } = req.body;
-      
-      if (!address || !handle) {
-        throw new ValidationError('Wallet address and handle are required');
-      }
-      
-      // Validate handle format
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(handle)) {
-        throw new ValidationError('Handle must be 3-20 characters and contain only letters, numbers, and underscores');
-      }
-      
-      // Check if user profile already exists
-      const existingProfile = await userProfileService.getProfileByAddress(address);
-      if (existingProfile) {
-        throw new ValidationError('User profile already exists for this address');
-      }
-      
-      // Check if handle is already taken
-      const existingHandle = await userProfileService.getProfileByHandle(handle);
-      if (existingHandle) {
-        throw new ValidationError('Handle is already taken');
-      }
-      
-      // Create user profile with enhanced data
-      const profile = await userProfileService.createProfile({
-        walletAddress: address,
-        handle,
-        ens: ens || '',
-        email: email || null,
-        preferences: preferences || {
-          notifications: {
-            email: false,
-            push: true,
-            inApp: true
-          },
-          privacy: {
-            showEmail: false,
-            showTransactions: false,
-            allowDirectMessages: true
-          },
-          trading: {
-            autoApproveSmallAmounts: false,
-            defaultSlippage: 0.5,
-            preferredCurrency: 'USDC'
-          }
+      const token = jwt.sign(
+        {
+          userId: userData.id,
+          walletAddress: userData.walletAddress,
+          timestamp: Date.now()
         },
-        privacySettings: privacySettings || {
-          profileVisibility: 'public',
-          activityVisibility: 'public',
-          contactVisibility: 'friends'
-        }
-      });
-      
-      // Initialize user session
-      await authService.initializeUserSession(address);
-      
-      // Generate JWT token with enhanced claims
-      const token = generateToken(address, {
-        userId: profile.id,
-        kycStatus: 'none',
-        permissions: ['basic_trading', 'profile_management']
-      });
-      
-      return res.status(201).json({
-        success: true,
+        process.env.JWT_SECRET || 'fallback-secret',
+        { expiresIn: '24h' }
+      );
+
+      // Return success response
+      successResponse(res, {
         token,
         user: {
-          id: profile.id,
-          address: profile.walletAddress,
-          handle: profile.handle,
-          ens: profile.ens,
-          email: profile.email,
-          kycStatus: 'none',
-          preferences: profile.preferences,
-          privacySettings: profile.privacySettings,
-          createdAt: profile.createdAt
-        }
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Registration failed', 500, 'REGISTRATION_ERROR');
+          id: userData.id,
+          walletAddress: userData.walletAddress,
+          handle: userData.handle,
+          profileCid: userData.profileCid
+        },
+        expiresIn: '24h'
+      }, 200);
+
+    } catch (error) {
+      console.error('Wallet connect error:', error);
+      errorResponse(res, 'AUTHENTICATION_ERROR', 'Authentication failed', 500);
     }
   }
 
   /**
-   * Get current user profile with enhanced data
+   * Get authenticated user profile
+   * GET /api/auth/profile
    */
-  async getCurrentUser(req: Request, res: Response): Promise<Response> {
+  async getProfile(req: AuthenticatedRequest, res: Response) {
     try {
       if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
       }
-      
-      const profile = await userProfileService.getProfileByAddress(req.user.walletAddress);
-      if (!profile) {
-        throw new NotFoundError('User profile not found');
+
+      // Get user from database
+      const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.walletAddress, req.user.walletAddress))
+        .limit(1);
+
+      if (user.length === 0) {
+        return errorResponse(res, 'USER_NOT_FOUND', 'User not found', 404);
       }
-      
-      // Get additional user data
-      const kycStatus = await kycService.getKYCStatus(req.user.walletAddress);
-      const sessionInfo = await authService.getSessionInfo(req.user.walletAddress);
-      
-      return res.json({
-        success: true,
-        user: {
-          id: profile.id,
-          address: profile.walletAddress,
-          handle: profile.handle,
-          ens: profile.ens,
-          email: profile.email,
-          avatarCid: profile.avatarCid,
-          bioCid: profile.bioCid,
-          kycStatus: kycStatus.status,
-          kycTier: kycStatus.tier,
-          preferences: profile.preferences,
-          privacySettings: profile.privacySettings,
-          sessionInfo: {
-            lastLogin: sessionInfo.lastLogin,
-            loginCount: sessionInfo.loginCount,
-            deviceInfo: sessionInfo.deviceInfo
-          },
-          createdAt: profile.createdAt,
-          updatedAt: profile.updatedAt
-        }
+
+      const userData = user[0];
+
+      successResponse(res, {
+        id: userData.id,
+        walletAddress: userData.walletAddress,
+        handle: userData.handle,
+        profileCid: userData.profileCid,
+        billingAddress: {
+          firstName: userData.billingFirstName,
+          lastName: userData.billingLastName,
+          company: userData.billingCompany,
+          address1: userData.billingAddress1,
+          address2: userData.billingAddress2,
+          city: userData.billingCity,
+          state: userData.billingState,
+          zipCode: userData.billingZipCode,
+          country: userData.billingCountry,
+          phone: userData.billingPhone
+        },
+        shippingAddress: {
+          firstName: userData.shippingFirstName,
+          lastName: userData.shippingLastName,
+          company: userData.shippingCompany,
+          address1: userData.shippingAddress1,
+          address2: userData.shippingAddress2,
+          city: userData.shippingCity,
+          state: userData.shippingState,
+          zipCode: userData.shippingZipCode,
+          country: userData.shippingCountry,
+          phone: userData.shippingPhone,
+          sameAsBilling: userData.shippingSameAsBilling
+        },
+        createdAt: userData.createdAt
       });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Failed to get user profile', 500, 'PROFILE_ERROR');
+
+    } catch (error) {
+      console.error('Get profile error:', error);
+      errorResponse(res, 'PROFILE_ERROR', 'Failed to get profile', 500);
     }
   }
 
   /**
-   * Update user preferences
+   * Update authenticated user profile
+   * PUT /api/auth/profile
    */
-  async updatePreferences(req: Request, res: Response): Promise<Response> {
+  async updateProfile(req: AuthenticatedRequest, res: Response) {
     try {
+      // Validate request
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return validationErrorResponse(res, errors.array());
+      }
+
       if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
+        return errorResponse(res, 'UNAUTHORIZED', 'Authentication required', 401);
       }
-      
-      const { preferences } = req.body;
-      
-      if (!preferences) {
-        throw new ValidationError('Preferences are required');
+
+      const updateData: ProfileUpdateRequest = req.body;
+
+      // Update user profile
+      const updatedUser = await db
+        .update(users)
+        .set({
+          handle: updateData.displayName,
+          profileCid: updateData.profileImageUrl,
+          // Add other fields as needed
+        })
+        .where(eq(users.walletAddress, req.user.walletAddress))
+        .returning();
+
+      if (updatedUser.length === 0) {
+        return errorResponse(res, 'USER_NOT_FOUND', 'User not found', 404);
       }
-      
-      const updatedProfile = await userProfileService.updatePreferences(
-        req.user.walletAddress,
-        preferences
-      );
-      
-      return res.json({
-        success: true,
-        preferences: updatedProfile.preferences
+
+      const userData = updatedUser[0];
+
+      successResponse(res, {
+        id: userData.id,
+        walletAddress: userData.walletAddress,
+        handle: userData.handle,
+        profileCid: userData.profileCid,
+        message: 'Profile updated successfully'
       });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Failed to update preferences', 500, 'PREFERENCES_ERROR');
+
+    } catch (error) {
+      console.error('Update profile error:', error);
+      errorResponse(res, 'UPDATE_ERROR', 'Failed to update profile', 500);
     }
   }
 
   /**
-   * Update privacy settings
+   * Logout user
+   * POST /api/auth/logout
    */
-  async updatePrivacySettings(req: Request, res: Response): Promise<Response> {
+  async logout(req: AuthenticatedRequest, res: Response) {
     try {
-      if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
-      }
+      // In a JWT-based system, logout is typically handled client-side
+      // by removing the token. Here we just confirm the logout.
       
-      const { privacySettings } = req.body;
-      
-      if (!privacySettings) {
-        throw new ValidationError('Privacy settings are required');
-      }
-      
-      const updatedProfile = await userProfileService.updatePrivacySettings(
-        req.user.walletAddress,
-        privacySettings
-      );
-      
-      return res.json({
-        success: true,
-        privacySettings: updatedProfile.privacySettings
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Failed to update privacy settings', 500, 'PRIVACY_SETTINGS_ERROR');
-    }
-  }
-
-  /**
-   * Initiate KYC verification process
-   */
-  async initiateKYC(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
-      }
-      
-      const { tier, documents } = req.body;
-      
-      if (!tier || !['basic', 'intermediate', 'advanced'].includes(tier)) {
-        throw new ValidationError('Valid KYC tier is required (basic, intermediate, advanced)');
-      }
-      
-      const kycResult = await kycService.initiateKYC(req.user.walletAddress, tier, documents);
-      
-      return res.json({
-        success: true,
-        kycId: kycResult.id,
-        status: kycResult.status,
-        requiredDocuments: kycResult.requiredDocuments,
-        estimatedProcessingTime: kycResult.estimatedProcessingTime
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Failed to initiate KYC', 500, 'KYC_INITIATE_ERROR');
-    }
-  }
-
-  /**
-   * Get KYC status
-   */
-  async getKYCStatus(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
-      }
-      
-      const kycStatus = await kycService.getKYCStatus(req.user.walletAddress);
-      
-      return res.json({
-        success: true,
-        ...kycStatus
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Failed to get KYC status', 500, 'KYC_STATUS_ERROR');
-    }
-  }
-
-  /**
-   * Logout and invalidate session
-   */
-  async logout(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
-      }
-      
-      await authService.invalidateSession(req.user.walletAddress);
-      
-      return res.json({
-        success: true,
+      successResponse(res, {
         message: 'Successfully logged out'
       });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Logout failed', 500, 'LOGOUT_ERROR');
-    }
-  }
 
-  /**
-   * Refresh JWT token
-   */
-  async refreshToken(req: Request, res: Response): Promise<Response> {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedError('Unauthorized');
-      }
-      
-      const profile = await userProfileService.getProfileByAddress(req.user.walletAddress);
-      if (!profile) {
-        throw new NotFoundError('User profile not found');
-      }
-      
-      const kycStatus = await kycService.getKYCStatus(req.user.walletAddress);
-      const permissions = await authService.getUserPermissions(req.user.walletAddress);
-      
-      const newToken = generateToken(req.user.walletAddress, {
-        userId: profile.id,
-        kycStatus: kycStatus.status,
-        permissions
-      });
-      
-      return res.json({
-        success: true,
-        token: newToken
-      });
-    } catch (error: any) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError('Token refresh failed', 500, 'TOKEN_REFRESH_ERROR');
+    } catch (error) {
+      console.error('Logout error:', error);
+      errorResponse(res, 'LOGOUT_ERROR', 'Failed to logout', 500);
     }
   }
 }
+
+export const authController = new AuthController();

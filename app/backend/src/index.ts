@@ -212,6 +212,8 @@ import sellerProfileRoutes from './routes/sellerProfileRoutes';
 import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
+// Import core marketplace routes
+import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -230,6 +232,7 @@ import governanceRoutes from './routes/governanceRoutes';
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
 // Import authentication routes
 import { createDefaultAuthRoutes } from './routes/authenticationRoutes';
+import authRoutes from './routes/authRoutes';
 // Import poll routes
 import pollRoutes from './routes/pollRoutes';
 // Import cache routes
@@ -254,6 +257,7 @@ import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
 
 // Authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
+app.use('/api/auth', authRoutes);
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -308,6 +312,9 @@ app.use('/api/marketplace', sellerProfileRoutes);
 
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
+
+// Core marketplace routes (should be before more specific routes)
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Marketplace listings routes
 app.use('/api/marketplace', marketplaceListingsRoutes);

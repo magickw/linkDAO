@@ -119,11 +119,7 @@ export const useMarketplaceErrorHandler = () => {
 
     // Show toast notification for certain error types
     if (marketplaceError.type === 'network' || marketplaceError.type === 'server') {
-      addToast({
-        type: 'error',
-        message: marketplaceError.message,
-        duration: 5000
-      });
+      addToast(marketplaceError.message, 'error', 5000);
     }
 
     // Log error for debugging
@@ -176,19 +172,11 @@ export const useMarketplaceErrorHandler = () => {
   }, [router, navigateToMarketplace]);
 
   const showErrorToast = useCallback((message: string, duration: number = 5000) => {
-    addToast({
-      type: 'error',
-      message,
-      duration
-    });
+    addToast(message, 'error', duration);
   }, [addToast]);
 
   const showSuccessToast = useCallback((message: string, duration: number = 3000) => {
-    addToast({
-      type: 'success',
-      message,
-      duration
-    });
+    addToast(message, 'success', duration);
   }, [addToast]);
 
   return {

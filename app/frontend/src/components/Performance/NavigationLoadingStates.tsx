@@ -293,8 +293,8 @@ const ProductCardSkeleton: React.FC = () => (
       <div className="flex items-center justify-between">
         <LoadingSkeleton variant="avatar" width="24px" height="24px" />
         <div className="flex gap-1">
-          <LoadingSkeleton variant="badge" width="20px" height="20px" />
-          <LoadingSkeleton variant="badge" width="20px" height="20px" />
+          <LoadingSkeleton variant="text" width="20px" height="20px" />
+          <LoadingSkeleton variant="text" width="20px" height="20px" />
         </div>
       </div>
       

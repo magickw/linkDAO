@@ -1,97 +1,74 @@
-import express from 'express';
-import { AuthController } from '../controllers/authController';
-import { authenticateToken, requireKYC, requirePermission } from '../middleware/authMiddleware';
+import { Router } from 'express';
+import { authController } from '../controllers/authController';
+import { authMiddleware } from '../middleware/authMiddleware';
+import { body } from 'express-validator';
 
-const router = express.Router();
-const authController = new AuthController();
+const router = Router();
 
-/**
- * GET /api/auth/nonce/:address
- * Get authentication nonce for wallet signature
- * @param {address} string - Wallet address
- */
-router.get('/nonce/:address', authController.getNonce);
+// Validation rules
+const walletConnectValidation = [
+  body('walletAddress')
+    .isString()
+    .matches(/^0x[a-fA-F0-9]{40}$/)
+    .withMessage('Valid Ethereum wallet address is required'),
+  body('signature')
+    .isString()
+    .isLength({ min: 130, max: 132 })
+    .withMessage('Valid signature is required'),
+  body('message')
+    .isString()
+    .isLength({ min: 1 })
+    .withMessage('Message is required')
+];
 
-/**
- * POST /api/auth/wallet
- * Web3 wallet authentication with signature verification
- * @body {address} string - Wallet address
- * @body {signature} string - Signed message
- * @body {message} string - Original message
- * @body {nonce} string - Authentication nonce
- */
-router.post('/wallet', authController.authenticateWallet);
-
-/**
- * POST /api/auth/login
- * Legacy login endpoint - generates a JWT token for the user
- * @body {address} string - Wallet address
- */
-router.post('/login', authController.login);
-
-/**
- * POST /api/auth/register
- * Enhanced user registration with profile setup
- * @body {address} string - Wallet address
- * @body {handle} string - User handle
- * @body {ens} string - ENS name (optional)
- * @body {email} string - Email address (optional)
- * @body {preferences} object - User preferences (optional)
- * @body {privacySettings} object - Privacy settings (optional)
- */
-router.post('/register', authController.register);
-
-/**
- * GET /api/auth/me
- * Get current user profile with enhanced data
- * @header {Authorization} string - Bearer token
- */
-router.get('/me', authenticateToken, authController.getCurrentUser);
+const profileUpdateValidation = [
+  body('displayName')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Display name must be between 1 and 100 characters'),
+  body('bio')
+    .optional()
+    .isString()
+    .isLength({ max: 500 })
+    .withMessage('Bio must be less than 500 characters'),
+  body('profileImageUrl')
+    .optional()
+    .isURL()
+    .withMessage('Profile image must be a valid URL'),
+  body('ensName')
+    .optional()
+    .isString()
+    .matches(/^[a-zA-Z0-9-]+\.eth$/)
+    .withMessage('ENS name must be a valid .eth domain')
+];
 
 /**
- * PUT /api/auth/preferences
- * Update user preferences
- * @header {Authorization} string - Bearer token
- * @body {preferences} object - Updated preferences
+ * @route POST /api/auth/wallet-connect
+ * @desc Authenticate with wallet signature
+ * @access Public
  */
-router.put('/preferences', authenticateToken, authController.updatePreferences);
+router.post('/wallet-connect', walletConnectValidation, authController.walletConnect);
 
 /**
- * PUT /api/auth/privacy
- * Update privacy settings
- * @header {Authorization} string - Bearer token
- * @body {privacySettings} object - Updated privacy settings
+ * @route GET /api/auth/profile
+ * @desc Get authenticated user profile
+ * @access Private
  */
-router.put('/privacy', authenticateToken, authController.updatePrivacySettings);
+router.get('/profile', authMiddleware, authController.getProfile);
 
 /**
- * POST /api/auth/kyc/initiate
- * Initiate KYC verification process
- * @header {Authorization} string - Bearer token
- * @body {tier} string - KYC tier (basic, intermediate, advanced)
- * @body {documents} array - Initial documents (optional)
+ * @route PUT /api/auth/profile
+ * @desc Update authenticated user profile
+ * @access Private
  */
-router.post('/kyc/initiate', authenticateToken, authController.initiateKYC);
+router.put('/profile', authMiddleware, profileUpdateValidation, authController.updateProfile);
 
 /**
- * GET /api/auth/kyc/status
- * Get KYC verification status
- * @header {Authorization} string - Bearer token
+ * @route POST /api/auth/logout
+ * @desc Logout user and invalidate session
+ * @access Private
  */
-router.get('/kyc/status', authenticateToken, authController.getKYCStatus);
-
-/**
- * POST /api/auth/logout
- * Logout and invalidate session
- * @header {Authorization} string - Bearer token
- */
-router.post('/logout', authenticateToken, authController.logout);
-
-/**
- * POST /api/auth/refresh
- * Refresh JWT token
- * @header {Authorization} string - Bearer token
- */
-router.post('/refresh', authenticateToken, authController.refreshToken);
+router.post('/logout', authMiddleware, authController.logout);
 
 export default router;

@@ -135,16 +135,24 @@ export class PerformanceMonitoringService {
   };
 
   constructor() {
-    this.initializePerformanceObservers();
-    this.initializeUserInteractionTracking();
-    this.initializeErrorTracking();
-    this.startPeriodicCollection();
+    // Only initialize in browser environment
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      this.initializePerformanceObservers();
+      this.initializeUserInteractionTracking();
+      this.initializeErrorTracking();
+      this.startPeriodicCollection();
+    }
   }
 
   /**
    * Initialize performance observers for Core Web Vitals
    */
   private initializePerformanceObservers(): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     if (!('PerformanceObserver' in window)) {
       console.warn('PerformanceObserver not supported');
       return;
@@ -234,6 +242,11 @@ export class PerformanceMonitoringService {
    * Initialize user interaction tracking
    */
   private initializeUserInteractionTracking(): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     // Track clicks
     document.addEventListener('click', () => {
       this.userInteractions.clicks++;
@@ -263,6 +276,11 @@ export class PerformanceMonitoringService {
    * Initialize error tracking
    */
   private initializeErrorTracking(): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     // Track JavaScript errors
     window.addEventListener('error', (event) => {
       this.errors.push({
@@ -294,6 +312,11 @@ export class PerformanceMonitoringService {
    * Start periodic metrics collection
    */
   private startPeriodicCollection(): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     // Collect metrics every 30 seconds
     setInterval(() => {
       this.collectMetrics();
@@ -313,6 +336,11 @@ export class PerformanceMonitoringService {
    * Collect comprehensive performance metrics
    */
   private collectMetrics(): void {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    
     try {
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       const memory = (performance as any).memory;
@@ -510,9 +538,12 @@ export class PerformanceMonitoringService {
     // - Send to Slack/email
     
     // Dispatch custom event for UI components to listen to
-    window.dispatchEvent(new CustomEvent('performance-alert', {
-      detail: alert
-    }));
+    // Only dispatch in browser environment
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('performance-alert', {
+        detail: alert
+      }));
+    }
   }
 
   /**

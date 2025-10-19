@@ -3,7 +3,7 @@
  * Implements automatic retry mechanisms with exponential backoff
  */
 
-import { marketplaceService, Product, ProductFilters, SellerInfo } from './marketplaceService';
+import { marketplaceService, Product, ProductFilters, SearchFilters, SellerInfo } from './marketplaceService';
 
 export interface RetryConfig {
   maxRetries: number;
@@ -277,8 +277,13 @@ export class EnhancedMarketplaceService {
 
   async searchProducts(query: string, filters?: ProductFilters): Promise<ApiResponse<Product[]>> {
     try {
+      const searchFilters: SearchFilters = {
+        query,
+        ...filters
+      };
+      
       const products = await this.retryWithExponentialBackoff(
-        () => marketplaceService.searchProducts(query, filters)
+        () => marketplaceService.searchProducts(query, searchFilters)
       );
 
       return {

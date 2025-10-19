@@ -179,9 +179,9 @@ class NavigationPreloadService {
     try {
       const routeData = this.parseRoute(href);
       
-      if (routeData.type === 'product') {
+      if (routeData.type === 'product' && routeData.id) {
         await this.preloadProductData(routeData.id);
-      } else if (routeData.type === 'seller') {
+      } else if (routeData.type === 'seller' && routeData.id) {
         await this.preloadSellerData(routeData.id);
       } else if (routeData.type === 'marketplace') {
         await this.preloadMarketplaceData(routeData.filters);
@@ -289,13 +289,13 @@ class NavigationPreloadService {
         ].filter(Boolean);
         
         await Promise.allSettled(imagePromises);
-      }
 
-      // Preload seller's products (first page)
-      await marketplaceService.getProducts({
-        sellerId,
-        limit: 12
-      });
+        // Preload seller's products (first page)
+        await marketplaceService.getProducts({
+          seller: seller.id,
+          limit: 12
+        });
+      }
     } catch (error) {
       console.debug('Failed to preload seller data:', sellerId, error);
     }
