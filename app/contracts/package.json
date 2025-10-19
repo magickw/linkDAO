@@ -33,7 +33,10 @@
     "lint:fix": "solhint 'contracts/**/*.sol' --fix",
     "format": "prettier --write 'contracts/**/*.sol' 'scripts/**/*.ts' 'test/**/*.ts'",
     "analyze": "slither . --json slither-report.json || echo 'Slither not available'",
-    "benchmark": "REPORT_GAS=true hardhat test --grep 'gas'"
+    "benchmark": "REPORT_GAS=true hardhat test --grep 'gas'",
+    "validate:mainnet": "hardhat run scripts/pre-mainnet-validation.ts --network mainnet",
+    "validate:sepolia": "hardhat run scripts/pre-mainnet-validation.ts --network sepolia",
+    "validate:localhost": "hardhat run scripts/pre-mainnet-validation.ts --network localhost"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.3",

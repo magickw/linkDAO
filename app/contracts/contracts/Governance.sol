@@ -78,6 +78,9 @@ contract Governance is Ownable, ReentrancyGuard {
     mapping(address => address) public delegates;
     mapping(address => uint256) public delegatedVotes;
     
+    // Target whitelist for execution security
+    mapping(address => bool) public authorizedTargets;
+    
     // Governance parameters
     uint256 public proposalCount;
     uint256 public votingDelay; // Delay before voting starts (in blocks)
@@ -111,6 +114,10 @@ contract Governance is Ownable, ReentrancyGuard {
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
     event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
     event CategoryParametersUpdated(ProposalCategory category, uint256 quorum, uint256 threshold, bool requiresStaking);
+    event VotingPowerUpdated(address indexed user, uint256 newVotingPower);
+    event DelegationUpdated(address indexed delegator, address indexed delegate, uint256 votingPower);
+    event TargetAuthorized(address indexed target);
+    event TargetRevoked(address indexed target);
     
     constructor(address _governanceToken) {
         require(_governanceToken != address(0), "Invalid token address");
@@ -186,7 +193,36 @@ contract Governance is Ownable, ReentrancyGuard {
         return proposalId;
     }
     
-
+    /**
+     * @dev Authorize a target for proposal execution (owner only)
+     * @param target Address to authorize
+     */
+    function authorizeTarget(address target) external onlyOwner {
+        authorizedTargets[target] = true;
+        emit TargetAuthorized(target);
+    }
+    
+    /**
+     * @dev Revoke authorization for a target (owner only)
+     * @param target Address to revoke
+     */
+    function revokeTarget(address target) external onlyOwner {
+        authorizedTargets[target] = false;
+        emit TargetRevoked(target);
+    }
+    
+    /**
+     * @dev Allow proposer to cancel their own proposal
+     * @param proposalId Proposal ID to cancel
+     */
+    function cancelProposal(uint256 proposalId) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.state == ProposalState.Pending || proposal.state == ProposalState.Active, "Proposal not active");
+        require(proposal.proposer == msg.sender || msg.sender == owner(), "Not proposer or owner");
+        
+        proposal.state = ProposalState.Canceled;
+        emit ProposalCanceled(proposalId);
+    }
     
     /**
      * @dev Cast a vote on a proposal with enhanced voting power
@@ -198,45 +234,38 @@ contract Governance is Ownable, ReentrancyGuard {
         require(support <= 2, "Invalid vote type");
         
         Proposal storage proposal = proposals[proposalId];
-        require(
-            block.number >= proposal.startBlock && block.number <= proposal.endBlock,
-            "Voting not active"
-        );
-        require(proposal.state == ProposalState.Active || proposal.state == ProposalState.Pending, "Invalid proposal state");
         
-        // Check staking requirements
+        // Check proposal is active
+        require(proposal.state == ProposalState.Active, "Voting not active");
+        require(block.number >= proposal.startBlock, "Voting not started");
+        require(block.number <= proposal.endBlock, "Voting ended");
+        
+        // Check staking requirements if needed
         if (proposal.requiresStaking) {
-            require(
-                governanceToken.totalStaked(msg.sender) >= proposal.minStakeToVote,
-                "Insufficient staking to vote on this proposal"
-            );
+            uint256 stakedAmount = governanceToken.totalStaked(msg.sender);
+            require(stakedAmount >= proposal.minStakeToVote, "Insufficient staked tokens to vote");
         }
         
-        // Update proposal state if it's pending
-        if (proposal.state == ProposalState.Pending) {
-            proposal.state = ProposalState.Active;
-        }
-        
-        // Calculate total voting power (tokens + staking bonus)
+        // Get voter's voting power
         uint256 votes = _getVotingPower(msg.sender);
         require(votes > 0, "No voting power");
+        
+        // Check if user has already voted
         require(!proposalVotes[proposalId][msg.sender].hasVoted, "Already voted");
         
-        // Get staking power for additional weight
-        uint256 stakingPower = governanceToken.totalStaked(msg.sender);
-        
+        // Record vote
         proposalVotes[proposalId][msg.sender] = Receipt({
             hasVoted: true,
             support: support,
             votes: votes,
-            stakingPower: stakingPower
+            stakingPower: governanceToken.totalStaked(msg.sender)
         });
         
-        // Update vote counts
-        if (support == 1) {
-            proposal.forVotes += votes;
-        } else if (support == 0) {
+        // Update proposal vote counts
+        if (support == 0) {
             proposal.againstVotes += votes;
+        } else if (support == 1) {
+            proposal.forVotes += votes;
         } else {
             proposal.abstainVotes += votes;
         }
@@ -244,62 +273,27 @@ contract Governance is Ownable, ReentrancyGuard {
         emit VoteCast(msg.sender, proposalId, support, votes, reason);
     }
     
-
-    
     /**
-     * @dev Delegate voting power to another address
-     * @param delegatee Address to delegate to
-     */
-    function delegate(address delegatee) external {
-        address currentDelegate = delegates[msg.sender];
-        uint256 delegatorBalance = _getVotingPower(msg.sender);
-        
-        delegates[msg.sender] = delegatee;
-        
-        emit DelegateChanged(msg.sender, currentDelegate, delegatee);
-        
-        _moveDelegates(currentDelegate, delegatee, delegatorBalance);
-    }
-    
-    /**
-     * @dev Queue a successful proposal for execution
-     * @param proposalId Proposal ID
-     */
-    function queue(uint256 proposalId) external {
-        Proposal storage proposal = proposals[proposalId];
-        require(state(proposalId) == ProposalState.Succeeded, "Proposal not succeeded");
-        
-        uint256 executionTime = block.timestamp + proposal.executionDelay;
-        proposal.queuedAt = executionTime;
-        proposal.state = ProposalState.Queued;
-        
-        emit ProposalQueued(proposalId, executionTime);
-    }
-    
-    /**
-     * @dev Execute a proposal
-     * @param proposalId Proposal ID
+     * @dev Execute a proposal after it has passed
+     * @param proposalId Proposal ID to execute
      */
     function execute(uint256 proposalId) external nonReentrant {
         Proposal storage proposal = proposals[proposalId];
-        require(proposal.state == ProposalState.Queued, "Proposal not queued");
-        require(block.timestamp >= proposal.queuedAt, "Execution delay not met");
         
-        // Check if quorum is met
-        require(
-            proposal.forVotes >= proposal.quorum,
-            "Quorum not reached"
-        );
+        // Check proposal is in correct state
+        require(proposal.state == ProposalState.Succeeded || proposal.state == ProposalState.Queued, "Proposal not executable");
         
-        // Check if proposal passed
-        require(
-            proposal.forVotes > proposal.againstVotes,
-            "Proposal failed"
-        );
+        // Check execution delay has passed
+        if (proposal.state == ProposalState.Queued) {
+            require(block.timestamp >= proposal.queuedAt + proposal.executionDelay, "Execution delay not passed");
+        }
         
-        // Execute proposal
+        // Execute proposal actions
         for (uint256 i = 0; i < proposal.targets.length; i++) {
-            // Execute the transaction
+            // Check target is authorized
+            require(authorizedTargets[proposal.targets[i]], "Unauthorized target");
+            
+            // Execute call
             (bool success, ) = proposal.targets[i].call{value: proposal.values[i]}(
                 abi.encodePacked(
                     bytes4(keccak256(bytes(proposal.signatures[i]))),
@@ -307,204 +301,67 @@ contract Governance is Ownable, ReentrancyGuard {
                 )
             );
             
-            require(success, "Transaction failed");
+            require(success, "Execution failed");
         }
         
+        // Update proposal state
         proposal.state = ProposalState.Executed;
         emit ProposalExecuted(proposalId);
     }
     
     /**
-     * @dev Cancel a proposal
-     * @param proposalId Proposal ID
+     * @dev Queue a proposal for execution after it has passed
+     * @param proposalId Proposal ID to queue
      */
-    function cancel(uint256 proposalId) external onlyOwner {
-        Proposal storage proposal = proposals[proposalId];
-        require(
-            proposal.state == ProposalState.Pending || proposal.state == ProposalState.Active,
-            "Proposal not active"
-        );
-        
-        proposal.state = ProposalState.Canceled;
-        emit ProposalCanceled(proposalId);
-    }
-    
-    /**
-     * @dev Get the state of a proposal
-     * @param proposalId Proposal ID
-     * @return ProposalState Current state of the proposal
-     */
-    function state(uint256 proposalId) public view returns (ProposalState) {
+    function queue(uint256 proposalId) external {
         Proposal storage proposal = proposals[proposalId];
         
-        if (proposal.state == ProposalState.Canceled) {
-            return ProposalState.Canceled;
-        } else if (block.number < proposal.startBlock) {
-            return ProposalState.Pending;
-        } else if (block.number <= proposal.endBlock) {
-            return ProposalState.Active;
-        } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < proposal.quorum) {
-            return ProposalState.Defeated;
-        } else if (proposal.state == ProposalState.Succeeded) {
-            return ProposalState.Succeeded;
-        } else if (proposal.state == ProposalState.Queued) {
-            return ProposalState.Queued;
-        } else if (proposal.state == ProposalState.Executed) {
-            return ProposalState.Executed;
-        } else {
-            return ProposalState.Succeeded;
-        }
-    }
-    
-    /**
-     * @dev Set voting delay
-     * @param newVotingDelay New voting delay in blocks
-     */
-    function setVotingDelay(uint256 newVotingDelay) external onlyOwner {
-        votingDelay = newVotingDelay;
-    }
-    
-    /**
-     * @dev Set voting period
-     * @param newVotingPeriod New voting period in blocks
-     */
-    function setVotingPeriod(uint256 newVotingPeriod) external onlyOwner {
-        votingPeriod = newVotingPeriod;
-    }
-    
-    /**
-     * @dev Set quorum votes
-     * @param newQuorumVotes New quorum votes
-     */
-    function setQuorumVotes(uint256 newQuorumVotes) external onlyOwner {
-        quorumVotes = newQuorumVotes;
-    }
-    
-    /**
-     * @dev Set proposal threshold
-     * @param newProposalThreshold New proposal threshold
-     */
-    function setProposalThreshold(uint256 newProposalThreshold) external onlyOwner {
-        proposalThreshold = newProposalThreshold;
-    }
-    
-    /**
-     * @dev Set execution delay
-     * @param newExecutionDelay New execution delay in seconds
-     */
-    function setExecutionDelay(uint256 newExecutionDelay) external onlyOwner {
-        executionDelay = newExecutionDelay;
-    }
-    
-    /**
-     * @dev Set category-specific parameters
-     * @param category Proposal category
-     * @param quorum Quorum for this category
-     * @param threshold Proposal threshold for this category
-     * @param requiresStaking Whether staking is required for voting
-     */
-    function setCategoryParameters(
-        ProposalCategory category,
-        uint256 quorum,
-        uint256 threshold,
-        bool requiresStaking
-    ) external onlyOwner {
-        categoryQuorum[category] = quorum;
-        categoryThreshold[category] = threshold;
-        categoryRequiresStaking[category] = requiresStaking;
+        // Check proposal has succeeded
+        require(proposal.state == ProposalState.Succeeded, "Proposal not succeeded");
         
-        emit CategoryParametersUpdated(category, quorum, threshold, requiresStaking);
+        // Queue proposal
+        proposal.state = ProposalState.Queued;
+        proposal.queuedAt = block.timestamp;
+        
+        emit ProposalQueued(proposalId, block.timestamp + proposal.executionDelay);
     }
     
     /**
-     * @dev Get voting power including staking bonus
-     * @param account Address to check
-     * @return Total voting power
-     */
-    function getVotingPower(address account) external view returns (uint256) {
-        return _getVotingPower(account);
-    }
-    
-    /**
-     * @dev Get proposal details
-     * @param proposalId Proposal ID
-     * @return Proposal struct
-     */
-    function getProposal(uint256 proposalId) external view returns (Proposal memory) {
-        return proposals[proposalId];
-    }
-    
-    /**
-     * @dev Get vote receipt for a proposal
-     * @param proposalId Proposal ID
-     * @param voter Voter address
-     * @return Vote receipt
-     */
-    function getReceipt(uint256 proposalId, address voter) external view returns (Receipt memory) {
-        return proposalVotes[proposalId][voter];
-    }
-    
-    /**
-     * @dev Internal function to get voting power
+     * @dev Get voting power for an account
+     * @param account Address to get voting power for
+     * @return Voting power
      */
     function _getVotingPower(address account) internal view returns (uint256) {
-        // Use the enhanced voting power from the token contract
         return governanceToken.votingPower(account);
-    }
-    
-    /**
-     * @dev Internal function to move delegate votes
-     */
-    function _moveDelegates(address srcRep, address dstRep, uint256 amount) internal {
-        if (srcRep != dstRep && amount > 0) {
-            if (srcRep != address(0)) {
-                uint256 srcRepOld = delegatedVotes[srcRep];
-                uint256 srcRepNew = srcRepOld - amount;
-                delegatedVotes[srcRep] = srcRepNew;
-                
-                emit DelegateVotesChanged(srcRep, srcRepOld, srcRepNew);
-            }
-            
-            if (dstRep != address(0)) {
-                uint256 dstRepOld = delegatedVotes[dstRep];
-                uint256 dstRepNew = dstRepOld + amount;
-                delegatedVotes[dstRep] = dstRepNew;
-                
-                emit DelegateVotesChanged(dstRep, dstRepOld, dstRepNew);
-            }
-        }
     }
     
     /**
      * @dev Initialize category-specific parameters
      */
     function _initializeCategoryParameters() internal {
-        // MARKETPLACE_POLICY: Higher quorum, requires staking
+        // Marketplace Policy
         categoryQuorum[ProposalCategory.MARKETPLACE_POLICY] = 200000 * 10**18; // 200k tokens
         categoryThreshold[ProposalCategory.MARKETPLACE_POLICY] = 25000 * 10**18; // 25k tokens
         categoryRequiresStaking[ProposalCategory.MARKETPLACE_POLICY] = true;
         
-        // FEE_STRUCTURE: Very high quorum, requires staking
+        // Fee Structure
         categoryQuorum[ProposalCategory.FEE_STRUCTURE] = 500000 * 10**18; // 500k tokens
         categoryThreshold[ProposalCategory.FEE_STRUCTURE] = 50000 * 10**18; // 50k tokens
-        categoryRequiresStaking[ProposalCategory.FEE_STRUCTURE] = true;
+        categoryRequiresStaking[ProposalCategory.FEE_STRUCTURE] = false;
         
-        // SECURITY_UPGRADE: Highest quorum, requires staking
-        categoryQuorum[ProposalCategory.SECURITY_UPGRADE] = 750000 * 10**18; // 750k tokens
-        categoryThreshold[ProposalCategory.SECURITY_UPGRADE] = 100000 * 10**18; // 100k tokens
-        categoryRequiresStaking[ProposalCategory.SECURITY_UPGRADE] = true;
-        
-        // TOKEN_ECONOMICS: Highest quorum, requires staking
-        categoryQuorum[ProposalCategory.TOKEN_ECONOMICS] = 750000 * 10**18; // 750k tokens
-        categoryThreshold[ProposalCategory.TOKEN_ECONOMICS] = 100000 * 10**18; // 100k tokens
-        categoryRequiresStaking[ProposalCategory.TOKEN_ECONOMICS] = true;
-        
-        // REPUTATION_SYSTEM: Medium quorum, requires staking
+        // Reputation System
         categoryQuorum[ProposalCategory.REPUTATION_SYSTEM] = 300000 * 10**18; // 300k tokens
         categoryThreshold[ProposalCategory.REPUTATION_SYSTEM] = 30000 * 10**18; // 30k tokens
-        categoryRequiresStaking[ProposalCategory.REPUTATION_SYSTEM] = true;
+        categoryRequiresStaking[ProposalCategory.REPUTATION_SYSTEM] = false;
         
-        // GENERAL: Use default parameters, no staking required
-        categoryRequiresStaking[ProposalCategory.GENERAL] = false;
+        // Security Upgrade
+        categoryQuorum[ProposalCategory.SECURITY_UPGRADE] = 750000 * 10**18; // 750k tokens
+        categoryThreshold[ProposalCategory.SECURITY_UPGRADE] = 75000 * 10**18; // 75k tokens
+        categoryRequiresStaking[ProposalCategory.SECURITY_UPGRADE] = true;
+        
+        // Token Economics
+        categoryQuorum[ProposalCategory.TOKEN_ECONOMICS] = 750000 * 10**18; // 750k tokens
+        categoryThreshold[ProposalCategory.TOKEN_ECONOMICS] = 75000 * 10**18; // 75k tokens
+        categoryRequiresStaking[ProposalCategory.TOKEN_ECONOMICS] = true;
     }
 }

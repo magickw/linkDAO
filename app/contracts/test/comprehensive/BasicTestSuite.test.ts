@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { parseEther } from "ethers";
+
+const { parseEther } = ethers.utils;
 
 describe("Basic Comprehensive Test Suite", function () {
   let accounts: SignerWithAddress[];

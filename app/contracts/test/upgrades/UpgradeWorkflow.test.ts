@@ -28,13 +28,13 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await proxy.waitForDeployment();
-      proxyAddress = await proxy.getAddress();
+      await proxy.deployed();
+      proxyAddress = proxy.address;
 
       expect(proxyAddress).to.not.equal(ethers.ZeroAddress);
       
       const totalSupply = await proxy.totalSupply();
-      expect(totalSupply).to.equal(ethers.parseEther("1000000000")); // 1B tokens
+      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000")); // 1B tokens
     });
 
     it("Should validate upgrade compatibility", async function () {
@@ -51,14 +51,14 @@ describe("Upgrade Workflow", function () {
       const LDAOTokenV2 = await ethers.getContractFactory("LDAOToken");
       
       const upgraded = await upgrades.upgradeProxy(proxyAddress, LDAOTokenV2);
-      await upgraded.waitForDeployment();
+      await upgraded.deployed();
 
       // Verify proxy address remains the same
-      expect(await upgraded.getAddress()).to.equal(proxyAddress);
+      expect(upgraded.address).to.equal(proxyAddress);
       
       // Verify state is preserved
       const totalSupply = await upgraded.totalSupply();
-      expect(totalSupply).to.equal(ethers.parseEther("1000000000"));
+      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000"));
     });
   });
 
@@ -80,16 +80,16 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await upgradeableProxy.waitForDeployment();
-      proxyAddress = await upgradeableProxy.getAddress();
+      await upgradeableProxy.deployed();
+      proxyAddress = upgradeableProxy.address;
 
       // Deploy new implementation
       newImplementation = await TestUpgradeable.deploy();
-      await newImplementation.waitForDeployment();
+      await newImplementation.deployed();
     });
 
     it("Should propose upgrade with timelock", async function () {
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
       
       await expect(
         upgradeableProxy.proposeUpgrade(newImplAddress, "Test upgrade")
@@ -102,7 +102,7 @@ describe("Upgrade Workflow", function () {
     });
 
     it("Should not allow immediate execution", async function () {
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
       
       await upgradeableProxy.proposeUpgrade(newImplAddress, "Test upgrade");
       
@@ -112,7 +112,7 @@ describe("Upgrade Workflow", function () {
     });
 
     it("Should allow execution after timelock", async function () {
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
       
       await upgradeableProxy.proposeUpgrade(newImplAddress, "Test upgrade");
       
@@ -128,7 +128,7 @@ describe("Upgrade Workflow", function () {
     });
 
     it("Should allow cancelling proposed upgrade", async function () {
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
       
       await upgradeableProxy.proposeUpgrade(newImplAddress, "Test upgrade");
       
@@ -141,7 +141,7 @@ describe("Upgrade Workflow", function () {
     });
 
     it("Should not allow multiple active proposals", async function () {
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
       
       await upgradeableProxy.proposeUpgrade(newImplAddress, "Test upgrade");
       
@@ -160,7 +160,7 @@ describe("Upgrade Workflow", function () {
       // Deploy mock governance contract
       const MockGovernance = await ethers.getContractFactory("MockGovernance");
       mockGovernance = await MockGovernance.deploy();
-      await mockGovernance.waitForDeployment();
+      await mockGovernance.deployed();
 
       // Deploy governance-controlled proxy
       const TestGovernanceUpgradeable = await ethers.getContractFactory("TestGovernanceUpgradeableContract");
@@ -169,7 +169,7 @@ describe("Upgrade Workflow", function () {
         TestGovernanceUpgradeable,
         [
           owner.address,
-          await mockGovernance.getAddress(),
+          mockGovernance.address,
           86400, // upgrade timelock
           604800, // voting period (7 days)
           2000 // 20% quorum
@@ -180,14 +180,14 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await governanceProxy.waitForDeployment();
-      proxyAddress = await governanceProxy.getAddress();
+      await governanceProxy.deployed();
+      proxyAddress = governanceProxy.address;
     });
 
     it("Should start upgrade vote", async function () {
       const newImpl = await ethers.getContractFactory("TestGovernanceUpgradeableContract");
       const newImplementation = await newImpl.deploy();
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
 
       // Mock governance starts vote
       await mockGovernance.startUpgradeVote(
@@ -208,7 +208,7 @@ describe("Upgrade Workflow", function () {
     it("Should allow voting on upgrade", async function () {
       const newImpl = await ethers.getContractFactory("TestGovernanceUpgradeableContract");
       const newImplementation = await newImpl.deploy();
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
 
       await mockGovernance.startUpgradeVote(
         proxyAddress,
@@ -219,19 +219,19 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Mock voting power
-      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("1000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("1000"));
       
       // Cast vote
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
       const vote = await governanceProxy.getUpgradeVote(voteId);
-      expect(vote.forVotes).to.equal(ethers.parseEther("1000"));
+      expect(vote.forVotes).to.equal(ethers.utils.parseEther("1000"));
     });
 
     it("Should execute upgrade after successful vote", async function () {
       const newImpl = await ethers.getContractFactory("TestGovernanceUpgradeableContract");
       const newImplementation = await newImpl.deploy();
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
 
       await mockGovernance.startUpgradeVote(
         proxyAddress,
@@ -242,8 +242,8 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Set up voting power and cast votes
-      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("3000"));
-      await mockGovernance.setTotalVotingPower(ethers.parseEther("10000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("3000"));
+      await mockGovernance.setTotalVotingPower(ethers.utils.parseEther("10000"));
       
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
@@ -262,7 +262,7 @@ describe("Upgrade Workflow", function () {
     it("Should reject upgrade with insufficient quorum", async function () {
       const newImpl = await ethers.getContractFactory("TestGovernanceUpgradeableContract");
       const newImplementation = await newImpl.deploy();
-      const newImplAddress = await newImplementation.getAddress();
+      const newImplAddress = newImplementation.address;
 
       await mockGovernance.startUpgradeVote(
         proxyAddress,
@@ -273,8 +273,8 @@ describe("Upgrade Workflow", function () {
       const voteId = await governanceProxy.currentVoteId();
 
       // Set up insufficient voting power
-      await mockGovernance.setVotingPower(user1.address, ethers.parseEther("1000"));
-      await mockGovernance.setTotalVotingPower(ethers.parseEther("10000"));
+      await mockGovernance.setVotingPower(user1.address, ethers.utils.parseEther("1000"));
+      await mockGovernance.setTotalVotingPower(ethers.utils.parseEther("10000"));
       
       await governanceProxy.connect(user1).castUpgradeVote(voteId, true);
 
@@ -307,8 +307,8 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await proxy.waitForDeployment();
-      proxyAddress = await proxy.getAddress();
+      await proxy.deployed();
+      proxyAddress = proxy.address;
       implementationV1 = await upgrades.erc1967.getImplementationAddress(proxyAddress);
 
       // Upgrade to V2
@@ -325,7 +325,7 @@ describe("Upgrade Workflow", function () {
 
     it("Should preserve state during upgrade", async function () {
       const totalSupply = await proxy.totalSupply();
-      expect(totalSupply).to.equal(ethers.parseEther("1000000000"));
+      expect(totalSupply).to.equal(ethers.utils.parseEther("1000000000"));
     });
 
     it("Should be able to rollback to previous version", async function () {
@@ -360,14 +360,14 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await proxy.waitForDeployment();
+      await proxy.deployed();
       
       // Set some state
       const initialSupply = await proxy.totalSupply();
       
       // Upgrade (in real scenario, this would be a contract with different storage)
       const ContractV2 = await ethers.getContractFactory("LDAOToken");
-      const upgraded = await upgrades.upgradeProxy(await proxy.getAddress(), ContractV2);
+      const upgraded = await upgrades.upgradeProxy(proxy.address, ContractV2);
       
       // Verify state is preserved
       const finalSupply = await upgraded.totalSupply();
@@ -375,7 +375,7 @@ describe("Upgrade Workflow", function () {
     });
 
     it("Should validate storage layout compatibility", async function () {
-      const proxyAddress = await proxy.getAddress();
+      const proxyAddress = proxy.address;
       const ContractV2 = await ethers.getContractFactory("LDAOToken");
       
       // This should not revert for compatible upgrades
@@ -400,7 +400,7 @@ describe("Upgrade Workflow", function () {
         }
       );
 
-      await upgradeableContract.waitForDeployment();
+      await upgradeableContract.deployed();
     });
 
     it("Should allow emergency pause", async function () {

@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestSuite } from "./TestSuite";
-import { parseEther, parseUnits } from "ethers";
+
+const { parseEther, parseUnits } = ethers.utils;
 
 describe("Comprehensive Security Tests", function () {
   let testSuite: TestSuite;

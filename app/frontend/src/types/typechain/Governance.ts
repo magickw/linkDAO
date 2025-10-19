@@ -27,19 +27,104 @@ import type {
   PromiseOrValue,
 } from "../common";
 
+export declare namespace Governance {
+  export type ProposalStruct = {
+    id: PromiseOrValue<BigNumberish>;
+    proposer: PromiseOrValue<string>;
+    title: PromiseOrValue<string>;
+    description: PromiseOrValue<string>;
+    startBlock: PromiseOrValue<BigNumberish>;
+    endBlock: PromiseOrValue<BigNumberish>;
+    forVotes: PromiseOrValue<BigNumberish>;
+    againstVotes: PromiseOrValue<BigNumberish>;
+    abstainVotes: PromiseOrValue<BigNumberish>;
+    quorum: PromiseOrValue<BigNumberish>;
+    state: PromiseOrValue<BigNumberish>;
+    category: PromiseOrValue<BigNumberish>;
+    targets: PromiseOrValue<string>[];
+    values: PromiseOrValue<BigNumberish>[];
+    signatures: PromiseOrValue<string>[];
+    calldatas: PromiseOrValue<BytesLike>[];
+    executionDelay: PromiseOrValue<BigNumberish>;
+    queuedAt: PromiseOrValue<BigNumberish>;
+    requiresStaking: PromiseOrValue<boolean>;
+    minStakeToVote: PromiseOrValue<BigNumberish>;
+  };
+
+  export type ProposalStructOutput = [
+    BigNumber,
+    string,
+    string,
+    string,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    BigNumber,
+    number,
+    number,
+    string[],
+    BigNumber[],
+    string[],
+    string[],
+    BigNumber,
+    BigNumber,
+    boolean,
+    BigNumber
+  ] & {
+    id: BigNumber;
+    proposer: string;
+    title: string;
+    description: string;
+    startBlock: BigNumber;
+    endBlock: BigNumber;
+    forVotes: BigNumber;
+    againstVotes: BigNumber;
+    abstainVotes: BigNumber;
+    quorum: BigNumber;
+    state: number;
+    category: number;
+    targets: string[];
+    values: BigNumber[];
+    signatures: string[];
+    calldatas: string[];
+    executionDelay: BigNumber;
+    queuedAt: BigNumber;
+    requiresStaking: boolean;
+    minStakeToVote: BigNumber;
+  };
+
+  export type ReceiptStruct = {
+    hasVoted: PromiseOrValue<boolean>;
+    support: PromiseOrValue<BigNumberish>;
+    votes: PromiseOrValue<BigNumberish>;
+    stakingPower: PromiseOrValue<BigNumberish>;
+  };
+
+  export type ReceiptStructOutput = [boolean, number, BigNumber, BigNumber] & {
+    hasVoted: boolean;
+    support: number;
+    votes: BigNumber;
+    stakingPower: BigNumber;
+  };
+}
+
 export interface GovernanceInterface extends utils.Interface {
   functions: {
-    "authorizeTarget(address)": FunctionFragment;
-    "authorizedTargets(address)": FunctionFragment;
-    "cancelProposal(uint256)": FunctionFragment;
+    "cancel(uint256)": FunctionFragment;
     "castVote(uint256,uint8,string)": FunctionFragment;
     "categoryQuorum(uint8)": FunctionFragment;
     "categoryRequiresStaking(uint8)": FunctionFragment;
     "categoryThreshold(uint8)": FunctionFragment;
+    "delegate(address)": FunctionFragment;
     "delegatedVotes(address)": FunctionFragment;
     "delegates(address)": FunctionFragment;
     "execute(uint256)": FunctionFragment;
     "executionDelay()": FunctionFragment;
+    "getProposal(uint256)": FunctionFragment;
+    "getReceipt(uint256,address)": FunctionFragment;
+    "getVotingPower(address)": FunctionFragment;
     "governanceToken()": FunctionFragment;
     "owner()": FunctionFragment;
     "proposalCount()": FunctionFragment;
@@ -50,7 +135,13 @@ export interface GovernanceInterface extends utils.Interface {
     "queue(uint256)": FunctionFragment;
     "quorumVotes()": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
-    "revokeTarget(address)": FunctionFragment;
+    "setCategoryParameters(uint8,uint256,uint256,bool)": FunctionFragment;
+    "setExecutionDelay(uint256)": FunctionFragment;
+    "setProposalThreshold(uint256)": FunctionFragment;
+    "setQuorumVotes(uint256)": FunctionFragment;
+    "setVotingDelay(uint256)": FunctionFragment;
+    "setVotingPeriod(uint256)": FunctionFragment;
+    "state(uint256)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "votingDelay()": FunctionFragment;
     "votingPeriod()": FunctionFragment;
@@ -59,17 +150,19 @@ export interface GovernanceInterface extends utils.Interface {
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "authorizeTarget"
-      | "authorizedTargets"
-      | "cancelProposal"
+      | "cancel"
       | "castVote"
       | "categoryQuorum"
       | "categoryRequiresStaking"
       | "categoryThreshold"
+      | "delegate"
       | "delegatedVotes"
       | "delegates"
       | "execute"
       | "executionDelay"
+      | "getProposal"
+      | "getReceipt"
+      | "getVotingPower"
       | "governanceToken"
       | "owner"
       | "proposalCount"
@@ -80,7 +173,13 @@ export interface GovernanceInterface extends utils.Interface {
       | "queue"
       | "quorumVotes"
       | "renounceOwnership"
-      | "revokeTarget"
+      | "setCategoryParameters"
+      | "setExecutionDelay"
+      | "setProposalThreshold"
+      | "setQuorumVotes"
+      | "setVotingDelay"
+      | "setVotingPeriod"
+      | "state"
       | "transferOwnership"
       | "votingDelay"
       | "votingPeriod"
@@ -88,15 +187,7 @@ export interface GovernanceInterface extends utils.Interface {
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "authorizeTarget",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "authorizedTargets",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "cancelProposal",
+    functionFragment: "cancel",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
@@ -120,6 +211,10 @@ export interface GovernanceInterface extends utils.Interface {
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
+    functionFragment: "delegate",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "delegatedVotes",
     values: [PromiseOrValue<string>]
   ): string;
@@ -134,6 +229,18 @@ export interface GovernanceInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "executionDelay",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getProposal",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getReceipt",
+    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getVotingPower",
+    values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "governanceToken",
@@ -181,8 +288,37 @@ export interface GovernanceInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "revokeTarget",
-    values: [PromiseOrValue<string>]
+    functionFragment: "setCategoryParameters",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<BigNumberish>,
+      PromiseOrValue<boolean>
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setExecutionDelay",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setProposalThreshold",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setQuorumVotes",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setVotingDelay",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setVotingPeriod",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "state",
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
@@ -201,18 +337,7 @@ export interface GovernanceInterface extends utils.Interface {
     values: [PromiseOrValue<string>]
   ): string;
 
-  decodeFunctionResult(
-    functionFragment: "authorizeTarget",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "authorizedTargets",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "cancelProposal",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "cancel", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "castVote", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "categoryQuorum",
@@ -226,6 +351,7 @@ export interface GovernanceInterface extends utils.Interface {
     functionFragment: "categoryThreshold",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "delegate", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "delegatedVotes",
     data: BytesLike
@@ -234,6 +360,15 @@ export interface GovernanceInterface extends utils.Interface {
   decodeFunctionResult(functionFragment: "execute", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "executionDelay",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getProposal",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "getReceipt", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getVotingPower",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -265,9 +400,30 @@ export interface GovernanceInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "revokeTarget",
+    functionFragment: "setCategoryParameters",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "setExecutionDelay",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setProposalThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setQuorumVotes",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setVotingDelay",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setVotingPeriod",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "state", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
     data: BytesLike
@@ -289,31 +445,23 @@ export interface GovernanceInterface extends utils.Interface {
     "CategoryParametersUpdated(uint8,uint256,uint256,bool)": EventFragment;
     "DelegateChanged(address,address,address)": EventFragment;
     "DelegateVotesChanged(address,uint256,uint256)": EventFragment;
-    "DelegationUpdated(address,address,uint256)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "ProposalCanceled(uint256)": EventFragment;
     "ProposalCreated(uint256,address,string,string,uint256,uint256)": EventFragment;
     "ProposalExecuted(uint256)": EventFragment;
     "ProposalQueued(uint256,uint256)": EventFragment;
-    "TargetAuthorized(address)": EventFragment;
-    "TargetRevoked(address)": EventFragment;
     "VoteCast(address,uint256,uint8,uint256,string)": EventFragment;
-    "VotingPowerUpdated(address,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "CategoryParametersUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "DelegateChanged"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "DelegateVotesChanged"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "DelegationUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalCanceled"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalCreated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalExecuted"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "ProposalQueued"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "TargetAuthorized"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "TargetRevoked"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "VoteCast"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "VotingPowerUpdated"): EventFragment;
 }
 
 export interface CategoryParametersUpdatedEventObject {
@@ -354,19 +502,6 @@ export type DelegateVotesChangedEvent = TypedEvent<
 
 export type DelegateVotesChangedEventFilter =
   TypedEventFilter<DelegateVotesChangedEvent>;
-
-export interface DelegationUpdatedEventObject {
-  delegator: string;
-  delegate: string;
-  votingPower: BigNumber;
-}
-export type DelegationUpdatedEvent = TypedEvent<
-  [string, string, BigNumber],
-  DelegationUpdatedEventObject
->;
-
-export type DelegationUpdatedEventFilter =
-  TypedEventFilter<DelegationUpdatedEvent>;
 
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
@@ -428,24 +563,6 @@ export type ProposalQueuedEvent = TypedEvent<
 
 export type ProposalQueuedEventFilter = TypedEventFilter<ProposalQueuedEvent>;
 
-export interface TargetAuthorizedEventObject {
-  target: string;
-}
-export type TargetAuthorizedEvent = TypedEvent<
-  [string],
-  TargetAuthorizedEventObject
->;
-
-export type TargetAuthorizedEventFilter =
-  TypedEventFilter<TargetAuthorizedEvent>;
-
-export interface TargetRevokedEventObject {
-  target: string;
-}
-export type TargetRevokedEvent = TypedEvent<[string], TargetRevokedEventObject>;
-
-export type TargetRevokedEventFilter = TypedEventFilter<TargetRevokedEvent>;
-
 export interface VoteCastEventObject {
   voter: string;
   proposalId: BigNumber;
@@ -459,18 +576,6 @@ export type VoteCastEvent = TypedEvent<
 >;
 
 export type VoteCastEventFilter = TypedEventFilter<VoteCastEvent>;
-
-export interface VotingPowerUpdatedEventObject {
-  user: string;
-  newVotingPower: BigNumber;
-}
-export type VotingPowerUpdatedEvent = TypedEvent<
-  [string, BigNumber],
-  VotingPowerUpdatedEventObject
->;
-
-export type VotingPowerUpdatedEventFilter =
-  TypedEventFilter<VotingPowerUpdatedEvent>;
 
 export interface Governance extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -499,17 +604,7 @@ export interface Governance extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    authorizeTarget(
-      target: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
-    authorizedTargets(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
-
-    cancelProposal(
+    cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
@@ -536,6 +631,11 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
+    delegate(
+      delegatee: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -552,6 +652,22 @@ export interface Governance extends BaseContract {
     ): Promise<ContractTransaction>;
 
     executionDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    getProposal(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[Governance.ProposalStructOutput]>;
+
+    getReceipt(
+      proposalId: PromiseOrValue<BigNumberish>,
+      voter: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[Governance.ReceiptStructOutput]>;
+
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
     governanceToken(overrides?: CallOverrides): Promise<[string]>;
 
@@ -637,10 +753,43 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    revokeTarget(
-      target: PromiseOrValue<string>,
+    setCategoryParameters(
+      category: PromiseOrValue<BigNumberish>,
+      quorum: PromiseOrValue<BigNumberish>,
+      threshold: PromiseOrValue<BigNumberish>,
+      requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    setExecutionDelay(
+      newExecutionDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setProposalThreshold(
+      newProposalThreshold: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setQuorumVotes(
+      newQuorumVotes: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setVotingDelay(
+      newVotingDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setVotingPeriod(
+      newVotingPeriod: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    state(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[number]>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
@@ -657,17 +806,7 @@ export interface Governance extends BaseContract {
     ): Promise<[BigNumber]>;
   };
 
-  authorizeTarget(
-    target: PromiseOrValue<string>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
-  authorizedTargets(
-    arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
-  cancelProposal(
+  cancel(
     proposalId: PromiseOrValue<BigNumberish>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
@@ -694,6 +833,11 @@ export interface Governance extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
+  delegate(
+    delegatee: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   delegatedVotes(
     arg0: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -710,6 +854,22 @@ export interface Governance extends BaseContract {
   ): Promise<ContractTransaction>;
 
   executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+
+  getProposal(
+    proposalId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<Governance.ProposalStructOutput>;
+
+  getReceipt(
+    proposalId: PromiseOrValue<BigNumberish>,
+    voter: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<Governance.ReceiptStructOutput>;
+
+  getVotingPower(
+    account: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
   governanceToken(overrides?: CallOverrides): Promise<string>;
 
@@ -795,10 +955,43 @@ export interface Governance extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  revokeTarget(
-    target: PromiseOrValue<string>,
+  setCategoryParameters(
+    category: PromiseOrValue<BigNumberish>,
+    quorum: PromiseOrValue<BigNumberish>,
+    threshold: PromiseOrValue<BigNumberish>,
+    requiresStaking: PromiseOrValue<boolean>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  setExecutionDelay(
+    newExecutionDelay: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setProposalThreshold(
+    newProposalThreshold: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setQuorumVotes(
+    newQuorumVotes: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setVotingDelay(
+    newVotingDelay: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setVotingPeriod(
+    newVotingPeriod: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  state(
+    proposalId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<number>;
 
   transferOwnership(
     newOwner: PromiseOrValue<string>,
@@ -815,17 +1008,7 @@ export interface Governance extends BaseContract {
   ): Promise<BigNumber>;
 
   callStatic: {
-    authorizeTarget(
-      target: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    authorizedTargets(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    cancelProposal(
+    cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -852,6 +1035,11 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    delegate(
+      delegatee: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -868,6 +1056,22 @@ export interface Governance extends BaseContract {
     ): Promise<void>;
 
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getProposal(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<Governance.ProposalStructOutput>;
+
+    getReceipt(
+      proposalId: PromiseOrValue<BigNumberish>,
+      voter: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<Governance.ReceiptStructOutput>;
+
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     governanceToken(overrides?: CallOverrides): Promise<string>;
 
@@ -951,10 +1155,43 @@ export interface Governance extends BaseContract {
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
-    revokeTarget(
-      target: PromiseOrValue<string>,
+    setCategoryParameters(
+      category: PromiseOrValue<BigNumberish>,
+      quorum: PromiseOrValue<BigNumberish>,
+      threshold: PromiseOrValue<BigNumberish>,
+      requiresStaking: PromiseOrValue<boolean>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    setExecutionDelay(
+      newExecutionDelay: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setProposalThreshold(
+      newProposalThreshold: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setQuorumVotes(
+      newQuorumVotes: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setVotingDelay(
+      newVotingDelay: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setVotingPeriod(
+      newVotingPeriod: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    state(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<number>;
 
     transferOwnership(
       newOwner: PromiseOrValue<string>,
@@ -1007,17 +1244,6 @@ export interface Governance extends BaseContract {
       newBalance?: null
     ): DelegateVotesChangedEventFilter;
 
-    "DelegationUpdated(address,address,uint256)"(
-      delegator?: PromiseOrValue<string> | null,
-      delegate?: PromiseOrValue<string> | null,
-      votingPower?: null
-    ): DelegationUpdatedEventFilter;
-    DelegationUpdated(
-      delegator?: PromiseOrValue<string> | null,
-      delegate?: PromiseOrValue<string> | null,
-      votingPower?: null
-    ): DelegationUpdatedEventFilter;
-
     "OwnershipTransferred(address,address)"(
       previousOwner?: PromiseOrValue<string> | null,
       newOwner?: PromiseOrValue<string> | null
@@ -1056,20 +1282,6 @@ export interface Governance extends BaseContract {
     ): ProposalQueuedEventFilter;
     ProposalQueued(id?: null, executionTime?: null): ProposalQueuedEventFilter;
 
-    "TargetAuthorized(address)"(
-      target?: PromiseOrValue<string> | null
-    ): TargetAuthorizedEventFilter;
-    TargetAuthorized(
-      target?: PromiseOrValue<string> | null
-    ): TargetAuthorizedEventFilter;
-
-    "TargetRevoked(address)"(
-      target?: PromiseOrValue<string> | null
-    ): TargetRevokedEventFilter;
-    TargetRevoked(
-      target?: PromiseOrValue<string> | null
-    ): TargetRevokedEventFilter;
-
     "VoteCast(address,uint256,uint8,uint256,string)"(
       voter?: null,
       proposalId?: null,
@@ -1084,29 +1296,10 @@ export interface Governance extends BaseContract {
       votes?: null,
       reason?: null
     ): VoteCastEventFilter;
-
-    "VotingPowerUpdated(address,uint256)"(
-      user?: PromiseOrValue<string> | null,
-      newVotingPower?: null
-    ): VotingPowerUpdatedEventFilter;
-    VotingPowerUpdated(
-      user?: PromiseOrValue<string> | null,
-      newVotingPower?: null
-    ): VotingPowerUpdatedEventFilter;
   };
 
   estimateGas: {
-    authorizeTarget(
-      target: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
-    authorizedTargets(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    cancelProposal(
+    cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
@@ -1133,6 +1326,11 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    delegate(
+      delegatee: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1149,6 +1347,22 @@ export interface Governance extends BaseContract {
     ): Promise<BigNumber>;
 
     executionDelay(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getProposal(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getReceipt(
+      proposalId: PromiseOrValue<BigNumberish>,
+      voter: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     governanceToken(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1191,9 +1405,42 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    revokeTarget(
-      target: PromiseOrValue<string>,
+    setCategoryParameters(
+      category: PromiseOrValue<BigNumberish>,
+      quorum: PromiseOrValue<BigNumberish>,
+      threshold: PromiseOrValue<BigNumberish>,
+      requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setExecutionDelay(
+      newExecutionDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setProposalThreshold(
+      newProposalThreshold: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setQuorumVotes(
+      newQuorumVotes: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setVotingDelay(
+      newVotingDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setVotingPeriod(
+      newVotingPeriod: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    state(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     transferOwnership(
@@ -1212,17 +1459,7 @@ export interface Governance extends BaseContract {
   };
 
   populateTransaction: {
-    authorizeTarget(
-      target: PromiseOrValue<string>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
-    authorizedTargets(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    cancelProposal(
+    cancel(
       proposalId: PromiseOrValue<BigNumberish>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
@@ -1249,6 +1486,11 @@ export interface Governance extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    delegate(
+      delegatee: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     delegatedVotes(
       arg0: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -1265,6 +1507,22 @@ export interface Governance extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     executionDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getProposal(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getReceipt(
+      proposalId: PromiseOrValue<BigNumberish>,
+      voter: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getVotingPower(
+      account: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
 
     governanceToken(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -1307,9 +1565,42 @@ export interface Governance extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    revokeTarget(
-      target: PromiseOrValue<string>,
+    setCategoryParameters(
+      category: PromiseOrValue<BigNumberish>,
+      quorum: PromiseOrValue<BigNumberish>,
+      threshold: PromiseOrValue<BigNumberish>,
+      requiresStaking: PromiseOrValue<boolean>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setExecutionDelay(
+      newExecutionDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setProposalThreshold(
+      newProposalThreshold: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setQuorumVotes(
+      newQuorumVotes: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setVotingDelay(
+      newVotingDelay: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setVotingPeriod(
+      newVotingPeriod: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    state(
+      proposalId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     transferOwnership(

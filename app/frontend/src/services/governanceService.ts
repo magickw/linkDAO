@@ -42,7 +42,7 @@ export class GovernanceService {
         }
       }
       
-      // Fallback to Web3 service for mock data
+      // Fallback to Web3 service for real data
       const web3Proposals = await communityWeb3Service.getCommunityProposals(communityId);
       return this.transformWeb3Proposals(web3Proposals);
     } catch (error) {
@@ -305,51 +305,81 @@ export class GovernanceService {
   }
 
   /**
-   * Vote on a governance proposal
+   * Vote on a proposal
    */
   async voteOnProposal(
-    proposalId: string, 
-    choice: VoteChoice, 
-    votingPower?: number,
-    userId?: string
+    proposalId: string,
+    support: boolean
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     try {
-      // Map VoteChoice to backend format
-      const voteMap: Record<VoteChoice, 'yes' | 'no' | 'abstain'> = {
-        for: 'yes',
-        against: 'no',
-        abstain: 'abstain'
+      // Try to vote via Web3
+      const transactionHash = await communityWeb3Service.voteOnProposal(proposalId, support);
+      
+      return { 
+        success: true, 
+        transactionHash 
       };
-
-      // Try backend API first
-      const response = await fetch(`${this.baseUrl}/api/governance/proposals/${proposalId}/vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId || 'anonymous',
-          vote: voteMap[choice],
-          votingPower
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return { success: true, transactionHash: data.transactionHash };
-      }
-
-      // Fallback to Web3 service
-      const support = choice === 'for';
-      const txHash = await communityWeb3Service.voteOnProposal(
-        proposalId, 
-        support, 
-        votingPower?.toString()
-      );
-
-      return { success: true, transactionHash: txHash };
     } catch (error) {
       console.error('Error voting on proposal:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Create a new governance proposal via Web3
+   */
+  async createProposalWeb3(proposalData: {
+    title: string;
+    description: string;
+    communityId: string;
+    actions: Array<{
+      target: string;
+      value: string;
+      signature: string;
+      calldata: string;
+    }>;
+  }): Promise<{ success: boolean; proposalId?: string; error?: string }> {
+    try {
+      const proposalId = await communityWeb3Service.createGovernanceProposal(
+        proposalData.communityId,
+        proposalData.title,
+        proposalData.description,
+        proposalData.actions
+      );
+      
+      return { 
+        success: true, 
+        proposalId 
+      };
+    } catch (error) {
+      console.error('Error creating proposal:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      };
+    }
+  }
+
+  /**
+   * Get user's voting power via Web3
+   */
+  async getVotingPowerWeb3(communityId: string, userAddress: string): Promise<{ 
+    success: boolean; 
+    votingPower?: string; 
+    error?: string 
+  }> {
+    try {
+      const votingPower = await communityWeb3Service.getVotingPower(communityId, userAddress);
+      
+      return { 
+        success: true, 
+        votingPower 
+      };
+    } catch (error) {
+      console.error('Error getting voting power:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error occurred' 

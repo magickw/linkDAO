@@ -28,25 +28,25 @@ describe("DisputeResolution", function () {
     // Deploy LDAOToken
     const LDAOToken = await ethers.getContractFactory("LDAOToken");
     ldaoToken = await LDAOToken.deploy(owner.address);
-    await ldaoToken.waitForDeployment();
+    await ldaoToken.deployed();
 
     // Deploy Governance
     const Governance = await ethers.getContractFactory("Governance");
-    governance = await Governance.deploy(await ldaoToken.getAddress());
-    await governance.waitForDeployment();
+    governance = await Governance.deploy(ldaoToken.address);
+    await governance.deployed();
 
     // Deploy ReputationSystem
     const ReputationSystem = await ethers.getContractFactory("ReputationSystem");
     reputationSystem = await ReputationSystem.deploy();
-    await reputationSystem.waitForDeployment();
+    await reputationSystem.deployed();
 
     // Deploy DisputeResolution
     const DisputeResolution = await ethers.getContractFactory("DisputeResolution");
     disputeResolution = await DisputeResolution.deploy(
-      await governance.getAddress(),
-      await reputationSystem.getAddress()
+      governance.address,
+      reputationSystem.address
     );
-    await disputeResolution.waitForDeployment();
+    await disputeResolution.deployed();
 
     // Setup initial reputation scores for testing
     // Note: This would normally be done through the reputation system's normal flow
@@ -55,8 +55,8 @@ describe("DisputeResolution", function () {
 
   describe("Deployment", function () {
     it("Should set the correct governance and reputation system addresses", async function () {
-      expect(await disputeResolution.governance()).to.equal(await governance.getAddress());
-      expect(await disputeResolution.reputationSystem()).to.equal(await reputationSystem.getAddress());
+      expect(await disputeResolution.governance()).to.equal(governance.address);
+      expect(await disputeResolution.reputationSystem()).to.equal(reputationSystem.address);
     });
 
     it("Should initialize with correct default parameters", async function () {

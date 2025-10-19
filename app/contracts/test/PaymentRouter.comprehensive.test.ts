@@ -2,7 +2,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { PaymentRouter, MockERC20 } from "../typechain-types";
-import { parseEther, parseUnits, formatEther, formatUnits } from "ethers";
+
+const { parseEther, parseUnits, formatEther, formatUnits } = ethers.utils;
 
 describe("PaymentRouter System", function () {
   let paymentRouter: PaymentRouter;
@@ -154,8 +155,8 @@ describe("PaymentRouter System", function () {
 
   describe("ETH Payment Processing", function () {
     const paymentAmount = parseEther("1"); // 1 ETH
-    const expectedFee = (paymentAmount * BigInt(FEE_BASIS_POINTS)) / BigInt(10000);
-    const expectedNet = paymentAmount - expectedFee;
+    const expectedFee = paymentAmount.mul(FEE_BASIS_POINTS).div(10000);
+    const expectedNet = paymentAmount.sub(expectedFee);
 
     it("Should process ETH payments with correct fee distribution", async function () {
       const recipientBalanceBefore = await ethers.provider.getBalance(recipient.address);
@@ -247,8 +248,8 @@ describe("PaymentRouter System", function () {
 
   describe("ERC20 Token Payment Processing", function () {
     const paymentAmount = parseUnits("100", 6); // 100 USDC
-    const expectedFee = (paymentAmount * BigInt(FEE_BASIS_POINTS)) / BigInt(10000);
-    const expectedNet = paymentAmount - expectedFee;
+    const expectedFee = paymentAmount.mul(FEE_BASIS_POINTS).div(10000);
+    const expectedNet = paymentAmount.sub(expectedFee);
 
     beforeEach(async function () {
       // Approve PaymentRouter to spend user's tokens
@@ -281,8 +282,8 @@ describe("PaymentRouter System", function () {
 
     it("Should process DAI payments (18 decimals)", async function () {
       const daiPaymentAmount = parseEther("100"); // 100 DAI
-      const daiExpectedFee = (daiPaymentAmount * BigInt(FEE_BASIS_POINTS)) / BigInt(10000);
-      const daiExpectedNet = daiPaymentAmount - daiExpectedFee;
+      const daiExpectedFee = daiPaymentAmount.mul(FEE_BASIS_POINTS).div(10000);
+      const daiExpectedNet = daiPaymentAmount.sub(daiExpectedFee);
       
       const recipientBalanceBefore = await mockDAI.balanceOf(recipient.address);
       const feeCollectorBalanceBefore = await mockDAI.balanceOf(feeCollector.address);
@@ -373,7 +374,7 @@ describe("PaymentRouter System", function () {
   describe("Fee Calculation Edge Cases", function () {
     it("Should handle very small amounts", async function () {
       const smallAmount = parseUnits("0.01", 6); // 0.01 USDC
-      const expectedFee = (smallAmount * BigInt(FEE_BASIS_POINTS)) / BigInt(10000);
+      const expectedFee = smallAmount.mul(FEE_BASIS_POINTS).div(10000);
       
       await mockUSDC.connect(user1).approve(paymentRouter.address, smallAmount);
       
@@ -394,7 +395,7 @@ describe("PaymentRouter System", function () {
       await paymentRouter.setFee(1); // 0.01%
       
       const tinyAmount = parseUnits("0.001", 6); // 0.001 USDC
-      const expectedFee = (tinyAmount * BigInt(1)) / BigInt(10000); // Should be 0
+      const expectedFee = tinyAmount.mul(1).div(10000); // Should be 0
       
       await mockUSDC.connect(user1).approve(paymentRouter.address, tinyAmount);
       
@@ -417,8 +418,8 @@ describe("PaymentRouter System", function () {
       await paymentRouter.setFee(MAX_FEE_BASIS_POINTS); // 10%
       
       const amount = parseUnits("100", 6);
-      const expectedFee = (amount * BigInt(MAX_FEE_BASIS_POINTS)) / BigInt(10000);
-      const expectedNet = amount - expectedFee;
+      const expectedFee = amount.mul(MAX_FEE_BASIS_POINTS).div(10000);
+      const expectedNet = amount.sub(expectedFee);
       
       await mockUSDC.connect(user1).approve(paymentRouter.address, amount);
       
@@ -501,16 +502,16 @@ describe("PaymentRouter System", function () {
         { amount: parseUnits("75", 6), memo: "Payment 2" },
         { amount: parseUnits("25", 6), memo: "Payment 3" }
       ];
-      
-      let totalFees = BigInt(0);
-      let totalNet = BigInt(0);
-      
+
+      let totalFees = ethers.BigNumber.from(0);
+      let totalNet = ethers.BigNumber.from(0);
+
       for (const payment of payments) {
-        const expectedFee = (payment.amount * BigInt(FEE_BASIS_POINTS)) / BigInt(10000);
-        const expectedNet = payment.amount - expectedFee;
-        
-        totalFees += expectedFee;
-        totalNet += expectedNet;
+        const expectedFee = payment.amount.mul(FEE_BASIS_POINTS).div(10000);
+        const expectedNet = payment.amount.sub(expectedFee);
+
+        totalFees = totalFees.add(expectedFee);
+        totalNet = totalNet.add(expectedNet);
         
         await paymentRouter.connect(user1).sendTokenPayment(
           mockUSDC.address,

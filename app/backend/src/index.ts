@@ -155,7 +155,10 @@ import postRoutes from './routes/postRoutes';
 // Import feed routes
 import feedRoutes from './routes/feedRoutes';
 
-// Import community routes  
+// Import view tracking routes
+import viewRoutes from './routes/viewRoutes';
+
+// Import community routes
 import communityRoutes from './routes/communityRoutes';
 
 // Import messaging routes
@@ -172,6 +175,9 @@ app.use('/api/posts', postRoutes);
 
 // Use feed routes
 app.use('/api/feed', feedRoutes);
+
+// Use view tracking routes
+app.use('/api/views', viewRoutes);
 
 // Use community routes
 app.use('/api/communities', communityRoutes);

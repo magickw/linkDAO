@@ -2,8 +2,9 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Governance, LDAOToken } from "../typechain-types";
-import { parseEther, formatEther } from "ethers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+
+const { parseEther, formatEther } = ethers.utils;
 
 describe("Governance System", function () {
   let governance: Governance;

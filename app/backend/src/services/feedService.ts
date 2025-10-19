@@ -1,6 +1,6 @@
 import { db } from '../db';
-import { posts, reactions, tips, users, postTags } from '../db/schema';
-import { eq, desc, and, inArray, sql, gt } from 'drizzle-orm';
+import { posts, reactions, tips, users, postTags, views } from '../db/schema';
+import { eq, desc, and, inArray, sql, gt, isNull } from 'drizzle-orm';
 
 interface FeedOptions {
   userAddress: string;
@@ -104,7 +104,7 @@ export class FeedService {
       // Get engagement metrics for each post
       const postsWithMetrics = await Promise.all(
         feedPosts.map(async (post) => {
-          const [reactionCount, tipCount, tipTotal] = await Promise.all([
+          const [reactionCount, tipCount, tipTotal, commentCount, viewCount] = await Promise.all([
             db.select({ count: sql<number>`COUNT(*)` })
               .from(reactions)
               .where(eq(reactions.postId, post.id)),
@@ -113,7 +113,13 @@ export class FeedService {
               .where(eq(tips.postId, post.id)),
             db.select({ total: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)` })
               .from(tips)
-              .where(eq(tips.postId, post.id))
+              .where(eq(tips.postId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(posts)
+              .where(eq(posts.parentId, post.id)),
+            db.select({ count: sql<number>`COUNT(*)` })
+              .from(views)
+              .where(eq(views.postId, post.id))
           ]);
 
           return {
@@ -121,10 +127,12 @@ export class FeedService {
             reactionCount: reactionCount[0]?.count || 0,
             tipCount: tipCount[0]?.count || 0,
             totalTipAmount: tipTotal[0]?.total || 0,
+            commentCount: commentCount[0]?.count || 0,
+            viewCount: viewCount[0]?.count || 0,
             engagementScore: this.calculateEngagementScore(
               reactionCount[0]?.count || 0,
               tipCount[0]?.count || 0,
-              0 // comments - not implemented yet
+              commentCount[0]?.count || 0
             )
           };
         })
@@ -177,54 +185,59 @@ export class FeedService {
           profileCid: users.profileCid,
           reactionCount: sql<number>`COALESCE(reaction_counts.count, 0)`,
           tipCount: sql<number>`COALESCE(tip_counts.count, 0)`,
-          totalTipAmount: sql<number>`COALESCE(tip_amounts.total, 0)`,
+          totalTipAmount: sql<number>`COALESCE(tip_counts.total, 0)`,
+          commentCount: sql<number>`COALESCE(comment_counts.count, 0)`,
           viewCount: sql<number>`COALESCE(view_counts.count, 0)`
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
         .leftJoin(
           db.select({
-            postId: reactions.postId,
-            count: sql<number>`COUNT(*)`
+            post_id: reactions.postId,
+            count: sql<number>`COUNT(*)`.as('count')
           })
           .from(reactions)
           .groupBy(reactions.postId)
           .as('reaction_counts'),
-          eq(posts.id, sql`reaction_counts.postId`)
+          eq(posts.id, sql.raw(`reaction_counts.post_id`))
         )
         .leftJoin(
           db.select({
-            postId: tips.postId,
-            count: sql<number>`COUNT(*)`,
-            total: sql<number>`SUM(CAST(amount AS DECIMAL))`
+            post_id: tips.postId,
+            count: sql<number>`COUNT(*)`.as('count'),
+            total: sql<number>`SUM(CAST(amount AS DECIMAL))`.as('total')
           })
           .from(tips)
           .groupBy(tips.postId)
           .as('tip_counts'),
-          eq(posts.id, sql`tip_counts.postId`)
+          eq(posts.id, sql.raw(`tip_counts.post_id`))
         )
         .leftJoin(
           db.select({
-            postId: tips.postId,
-            total: sql<number>`SUM(CAST(amount AS DECIMAL))`
+            post_id: sql`parent_id`.as('post_id'),
+            count: sql<number>`COUNT(*)`.as('count')
           })
-          .from(tips)
-          .groupBy(tips.postId)
-          .as('tip_amounts'),
-          eq(posts.id, sql`tip_amounts.postId`)
+          .from(posts)
+          .where(sql`parent_id IS NOT NULL`)
+          .groupBy(sql`parent_id`)
+          .as('comment_counts'),
+          eq(posts.id, sql.raw(`comment_counts.post_id`))
         )
         .leftJoin(
           // Placeholder for view counts - would need a views table
           db.select({
-            postId: sql<number>`0`,
+            post_id: sql`0`.as('post_id'),
             count: sql<number>`0`
           })
           .from(posts)
           .where(sql`false`)
           .as('view_counts'),
-          eq(posts.id, sql`view_counts.postId`)
+          eq(posts.id, sql.raw(`view_counts.post_id`))
         )
-        .where(timeFilter)
+        .where(and(
+          timeFilter,
+          isNull(posts.parentId) // Exclude comments (only show top-level posts)
+        ))
         .limit(limit)
         .offset(offset);
 
@@ -684,34 +697,47 @@ export class FeedService {
       }
 
       // Get engagement metrics
-      const [reactionData, tipData] = await Promise.all([
-        db.select({ 
+      const [reactionData, tipData, commentData, viewData] = await Promise.all([
+        db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
         .from(reactions)
         .where(eq(reactions.postId, postIdInt)),
-        
-        db.select({ 
+
+        db.select({
           count: sql<number>`COUNT(*)`,
           totalAmount: sql<number>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`
         })
         .from(tips)
-        .where(eq(tips.postId, postIdInt))
+        .where(eq(tips.postId, postIdInt)),
+
+        db.select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(posts)
+        .where(eq(posts.parentId, postIdInt)),
+
+        db.select({
+          count: sql<number>`COUNT(*)`
+        })
+        .from(views)
+        .where(eq(views.postId, postIdInt))
       ]);
 
       return {
         postId: post[0].id,
         reactionCount: reactionData[0]?.count || 0,
-        commentCount: 0, // Comments not implemented yet
+        commentCount: commentData[0]?.count || 0,
         tipCount: tipData[0]?.count || 0,
+        viewCount: viewData[0]?.count || 0,
         totalTipAmount: tipData[0]?.totalAmount || 0,
         totalReactionAmount: reactionData[0]?.totalAmount || 0,
         stakedValue: post[0].stakedValue,
         engagementScore: this.calculateEngagementScore(
           reactionData[0]?.count || 0,
           tipData[0]?.count || 0,
-          0 // comments
+          commentData[0]?.count || 0
         )
       };
     } catch (error) {

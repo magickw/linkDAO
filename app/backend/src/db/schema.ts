@@ -126,6 +126,27 @@ export const tips = pgTable("tips", {
   })
 }));
 
+// Views - track post views with deduplication
+export const views = pgTable("views", {
+  id: serial("id").primaryKey(),
+  postId: integer("post_id").notNull().references(() => posts.id),
+  userId: uuid("user_id").references(() => users.id), // Nullable for anonymous views
+  ipAddress: varchar("ip_address", { length: 45 }), // IPv4 or IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  postUserIdx: index("view_post_user_idx").on(t.postId, t.userId),
+  postCreatedIdx: index("view_post_created_idx").on(t.postId, t.createdAt),
+  postFk: foreignKey({
+    columns: [t.postId],
+    foreignColumns: [posts.id]
+  }),
+  userFk: foreignKey({
+    columns: [t.userId],
+    foreignColumns: [users.id]
+  })
+}));
+
 // Follows
 export const follows = pgTable("follows", {
   followerId: uuid("follower_id").notNull(),
@@ -174,7 +195,25 @@ export const proposals = pgTable("proposals", {
   executionEta: timestamp("execution_eta"),
   executedAt: timestamp("executed_at"),
   cancelledAt: timestamp("cancelled_at"),
-});
+  // New fields for governance integration
+  proposerAddress: varchar("proposer_address", { length: 66 }),
+  category: varchar("category", { length: 32 }).default("general"),
+  quorum: numeric("quorum", { precision: 20, scale: 8 }),
+  executionDelay: integer("execution_delay"),
+  requiresStaking: boolean("requires_staking").default(false),
+  minStakeToVote: numeric("min_stake_to_vote", { precision: 20, scale: 8 }).default("0"),
+  targets: text("targets"), // JSON array of target addresses
+  values: text("values"), // JSON array of values
+  signatures: text("signatures"), // JSON array of function signatures
+  calldatas: text("calldatas"), // JSON array of calldata
+  queuedAt: timestamp("queued_at"),
+  requiredMajority: integer("required_majority").default(50),
+}, (t) => ({
+  daoIdx: index("idx_proposals_dao_id").on(t.daoId),
+  statusIdx: index("idx_proposals_status").on(t.status),
+  proposerIdx: index("idx_proposals_proposer").on(t.proposerId),
+  categoryIdx: index("idx_proposals_category").on(t.category),
+}));
 
 // Votes
 export const votes = pgTable("votes", {

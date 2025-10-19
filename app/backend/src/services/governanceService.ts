@@ -111,6 +111,40 @@ export class GovernanceService {
     }
   }
 
+  private async calculateProposalVotes(proposalId: number, voteType: 'yes' | 'no' | 'abstain'): Promise<number> {
+    try {
+      let voteChoice: string;
+      switch (voteType) {
+        case 'yes':
+          voteChoice = 'for';
+          break;
+        case 'no':
+          voteChoice = 'against';
+          break;
+        case 'abstain':
+          voteChoice = 'abstain';
+          break;
+        default:
+          voteChoice = 'for';
+      }
+
+      const result = await db
+        .select({ total: sum(votes.votingPower) })
+        .from(votes)
+        .where(
+          and(
+            eq(votes.proposalId, proposalId),
+            eq(votes.voteChoice, voteChoice)
+          )
+        );
+
+      return parseFloat(result[0]?.total || '0');
+    } catch (error) {
+      console.error(`Error calculating ${voteType} votes for proposal ${proposalId}:`, error);
+      return 0;
+    }
+  }
+
   async getProposalsByDao(daoId: string, limit: number = 20): Promise<ProposalData[]> {
     try {
       const dbProposals = await db
@@ -120,23 +154,25 @@ export class GovernanceService {
         .orderBy(desc(proposals.id))
         .limit(limit);
 
-      return dbProposals.map(proposal => ({
+      const result = await Promise.all(dbProposals.map(async (proposal) => ({
         id: proposal.id.toString(),
         title: proposal.titleCid || 'Untitled Proposal',
         description: proposal.bodyCid || 'No description available',
         status: proposal.status || 'pending',
         votingStarts: new Date((proposal.startBlock || 0) * 1000).toISOString(),
         votingEnds: new Date((proposal.endBlock || 0) * 1000).toISOString(),
-        yesVotes: 0, // TODO: Calculate from votes table
-        noVotes: 0,
-        abstainVotes: 0,
-        quorum: 1000,
-        proposer: 'Unknown', // TODO: Get from proposer relation
-        category: 'general',
-        executionDelay: 48,
-        requiredMajority: 50,
+        yesVotes: await this.calculateProposalVotes(proposal.id, 'yes'),
+        noVotes: await this.calculateProposalVotes(proposal.id, 'no'),
+        abstainVotes: await this.calculateProposalVotes(proposal.id, 'abstain'),
+        quorum: parseFloat(proposal.quorum || '1000'),
+        proposer: proposal.proposerAddress || 'Unknown',
+        category: proposal.category || 'general',
+        executionDelay: proposal.executionDelay || 48,
+        requiredMajority: proposal.requiredMajority || 50,
         daoId: proposal.daoId || undefined
-      }));
+      })));
+
+      return result;
     } catch (error) {
       console.error('Error fetching DAO proposals:', error);
       return [];
@@ -159,23 +195,25 @@ export class GovernanceService {
         .orderBy(desc(proposals.id))
         .limit(limit);
 
-      return dbProposals.map(proposal => ({
+      const result = await Promise.all(dbProposals.map(async (proposal) => ({
         id: proposal.id.toString(),
         title: proposal.titleCid || 'Untitled Proposal',
         description: proposal.bodyCid || 'No description available',
         status: proposal.status || 'pending',
         votingStarts: new Date((proposal.startBlock || 0) * 1000).toISOString(),
         votingEnds: new Date((proposal.endBlock || 0) * 1000).toISOString(),
-        yesVotes: 0, // TODO: Calculate from votes table
-        noVotes: 0,
-        abstainVotes: 0,
-        quorum: 1000,
-        proposer: 'Unknown', // TODO: Get from proposer relation
-        category: 'general',
-        executionDelay: 48,
-        requiredMajority: 50,
+        yesVotes: await this.calculateProposalVotes(proposal.id, 'yes'),
+        noVotes: await this.calculateProposalVotes(proposal.id, 'no'),
+        abstainVotes: await this.calculateProposalVotes(proposal.id, 'abstain'),
+        quorum: parseFloat(proposal.quorum || '1000'),
+        proposer: proposal.proposerAddress || 'Unknown',
+        category: proposal.category || 'general',
+        executionDelay: proposal.executionDelay || 48,
+        requiredMajority: proposal.requiredMajority || 50,
         daoId: proposal.daoId || undefined
-      }));
+      })));
+
+      return result;
     } catch (error) {
       console.error('Error fetching active proposals:', error);
       return [];
@@ -230,14 +268,14 @@ export class GovernanceService {
         status: proposal.status || 'pending',
         votingStarts: new Date((proposal.startBlock || 0) * 1000).toISOString(),
         votingEnds: new Date((proposal.endBlock || 0) * 1000).toISOString(),
-        yesVotes: 0, // TODO: Calculate from votes table
-        noVotes: 0,
-        abstainVotes: 0,
-        quorum: 1000,
-        proposer: 'Unknown', // TODO: Get from proposer relation
-        category: 'general',
-        executionDelay: 48,
-        requiredMajority: 50,
+        yesVotes: await this.calculateProposalVotes(proposal.id, 'yes'),
+        noVotes: await this.calculateProposalVotes(proposal.id, 'no'),
+        abstainVotes: await this.calculateProposalVotes(proposal.id, 'abstain'),
+        quorum: parseFloat(proposal.quorum || '1000'),
+        proposer: proposal.proposerAddress || 'Unknown',
+        category: proposal.category || 'general',
+        executionDelay: proposal.executionDelay || 48,
+        requiredMajority: proposal.requiredMajority || 50,
         daoId: proposal.daoId || undefined
       };
     } catch (error) {
@@ -262,7 +300,7 @@ export class GovernanceService {
       }
 
       // Calculate user's voting power
-      const votingPower = await this.calculateVotingPower(voteData.userId, proposal.daoId || 'general');
+      const votingPower = await this.getVotingPower(voteData.userId, proposal.daoId || 'general');
       
       // Store the vote in the database
       await db.insert(votes).values({
@@ -287,54 +325,6 @@ export class GovernanceService {
     } catch (error) {
       console.error('Error voting on proposal:', error);
       return false;
-    }
-  }
-
-  private async calculateVotingPower(userId: string, daoId: string): Promise<VotingPower> {
-    try {
-      // Get user's base token balance (mock for now)
-      const baseTokens = 100 + (parseInt(userId.slice(-2), 16) || 0) * 10;
-      
-      // Get delegated power from others
-      const delegatedResult = await db
-        .select({ totalDelegated: sum(votingDelegations.votingPower) })
-        .from(votingDelegations)
-        .where(
-          and(
-            eq(votingDelegations.delegateId, userId),
-            eq(votingDelegations.daoId, daoId),
-            eq(votingDelegations.active, true)
-          )
-        );
-      
-      const delegatedPower = parseFloat(delegatedResult[0]?.totalDelegated || '0');
-      
-      // Get governance settings for staking multiplier
-      const [settings] = await db
-        .select()
-        .from(governanceSettings)
-        .where(eq(governanceSettings.daoId, daoId))
-        .limit(1);
-      
-      const stakingMultiplier = settings?.stakingEnabled 
-        ? 1 + Math.random() * (parseFloat(settings.stakingMultiplierMax || '2.0') - 1)
-        : 1.0;
-      
-      const votingPower = baseTokens * stakingMultiplier;
-      const totalPower = votingPower + delegatedPower;
-      
-      return {
-        userId,
-        daoId,
-        votingPower,
-        delegatedPower,
-        totalPower,
-        tokenBalance: baseTokens,
-        stakingMultiplier
-      };
-    } catch (error) {
-      console.error('Error calculating voting power:', error);
-      return this.getMockVotingPower(userId, daoId);
     }
   }
 
@@ -364,65 +354,6 @@ export class GovernanceService {
     } catch (error) {
       console.error('Error delegating voting power:', error);
       return false;
-    }
-  }
-
-  async revokeDelegation(delegatorId: string, delegateId: string, daoId: string): Promise<boolean> {
-    try {
-      await db
-        .update(votingDelegations)
-        .set({ active: false })
-        .where(
-          and(
-            eq(votingDelegations.delegatorId, delegatorId),
-            eq(votingDelegations.delegateId, delegateId),
-            eq(votingDelegations.daoId, daoId)
-          )
-        );
-
-      return true;
-    } catch (error) {
-      console.error('Error revoking delegation:', error);
-      return false;
-    }
-  }
-
-  async getUserVotingHistory(userId: string, daoId?: string): Promise<Array<{
-    proposalId: string;
-    proposalTitle: string;
-    voteChoice: string;
-    votingPower: number;
-    createdAt: Date;
-  }>> {
-    try {
-      const userVotes = await db
-        .select({
-          proposalId: votes.proposalId,
-          proposalTitle: proposals.titleCid,
-          voteChoice: votes.voteChoice,
-          votingPower: votes.totalPower,
-          createdAt: votes.createdAt,
-        })
-        .from(votes)
-        .innerJoin(proposals, eq(votes.proposalId, proposals.id))
-        .where(
-          and(
-            eq(votes.voterId, userId),
-            daoId ? eq(proposals.daoId, daoId) : undefined
-          )
-        )
-        .orderBy(desc(votes.createdAt));
-
-      return userVotes.map(vote => ({
-        proposalId: vote.proposalId.toString(),
-        proposalTitle: vote.proposalTitle || 'Untitled Proposal',
-        voteChoice: vote.voteChoice,
-        votingPower: parseFloat(vote.votingPower || '0'),
-        createdAt: vote.createdAt || new Date(),
-      }));
-    } catch (error) {
-      console.error('Error fetching voting history:', error);
-      return [];
     }
   }
 
