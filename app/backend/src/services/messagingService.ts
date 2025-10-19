@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { conversations, chatMessages } from '../db/schema';
+import { conversations, chatMessages, blockedUsers, messageReadStatus } from '../db/schema';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
 
 interface GetConversationsOptions {
@@ -21,6 +21,7 @@ interface SendMessageData {
   conversationId: string;
   fromAddress: string;
   content: string;
+  encryptedContent?: string;
   contentType: string;
   replyToId?: string;
   attachments: any[];
@@ -42,12 +43,19 @@ interface DecryptMessageData {
 }
 
 export class MessagingService {
+  // Helper method to validate Ethereum addresses and prevent SQL injection
+  private validateAddress(address: string): void {
+    if (!/^0x[a-fA-F0-9]{40}$/i.test(address)) {
+      throw new Error('Invalid Ethereum address format');
+    }
+  }
   // Get user's conversations
   async getConversations(options: GetConversationsOptions) {
     const { userAddress, page, limit } = options;
     const offset = (page - 1) * limit;
 
     try {
+      this.validateAddress(userAddress);
       const userConversations = await db
         .select({
           id: conversations.id,
@@ -71,7 +79,7 @@ export class MessagingService {
           `
         })
         .from(conversations)
-        .where(sql`${conversations.participants}::jsonb ? ${userAddress}`)
+        .where(sql`participants::jsonb ? ${userAddress}`)
         .orderBy(desc(conversations.lastActivity))
         .limit(limit)
         .offset(offset);
@@ -95,14 +103,16 @@ export class MessagingService {
     const { initiatorAddress, participantAddress, initialMessage } = data;
 
     try {
+      this.validateAddress(initiatorAddress);
+      this.validateAddress(participantAddress);
       // Check if conversation already exists between these participants
       const existingConversation = await db
         .select()
         .from(conversations)
         .where(
           and(
-            sql`${conversations.participants} @> ARRAY[${initiatorAddress}]::jsonb`,
-            sql`${conversations.participants} @> ARRAY[${participantAddress}]::jsonb`
+            sql`participants @> ${JSON.stringify([initiatorAddress])}::jsonb`,
+            sql`participants @> ${JSON.stringify([participantAddress])}::jsonb`
           )
         )
         .limit(1);
@@ -162,13 +172,14 @@ export class MessagingService {
     const { conversationId, userAddress } = data;
 
     try {
+      this.validateAddress(userAddress);
       const conversation = await db
         .select()
         .from(conversations)
         .where(
           and(
             eq(conversations.id, conversationId),
-            sql`${conversations.participants}::jsonb ? ${userAddress}`
+            sql`participants::jsonb ? ${userAddress}`
           )
         )
         .limit(1);
@@ -196,6 +207,14 @@ export class MessagingService {
     const { conversationId, userAddress, page, limit, before, after } = data;
 
     try {
+      this.validateAddress(userAddress);
+      // Validate UUID format for before/after parameters
+      if (before && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(before)) {
+        throw new Error('Invalid before parameter format');
+      }
+      if (after && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(after)) {
+        throw new Error('Invalid after parameter format');
+      }
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
@@ -251,7 +270,7 @@ export class MessagingService {
 
   // Send message
   async sendMessage(data: SendMessageData) {
-    const { conversationId, fromAddress, content } = data;
+    const { conversationId, fromAddress, content, encryptedContent, encryptionMetadata } = data;
 
     try {
       // Check if user is participant
@@ -263,12 +282,32 @@ export class MessagingService {
         };
       }
 
+      // TODO: Implement rate limiting
+      // Check if user has sent > 100 messages in last minute
+      // Use Redis or in-memory cache for tracking
+      
+      // Store encrypted content if provided, otherwise store plaintext
+      const messageContent = encryptedContent || content;
+      
+      // Validate message size (10KB limit)
+      const contentSize = new Blob([messageContent]).size;
+      if (contentSize > 10240) {
+        return {
+          success: false,
+          message: 'Message content exceeds 10KB limit'
+        };
+      }
+      
       const newMessage = await db
         .insert(chatMessages)
         .values({
           conversationId,
           senderAddress: fromAddress,
-          content,
+          content: messageContent,
+          messageType: data.contentType || 'text',
+          encryptionMetadata: data.encryptionMetadata,
+          replyToId: data.replyToId,
+          attachments: data.attachments ? JSON.stringify(data.attachments) : null,
           sentAt: new Date()
         })
         .returning();
@@ -284,7 +323,10 @@ export class MessagingService {
 
       return {
         success: true,
-        data: newMessage[0]
+        data: {
+          ...newMessage[0],
+          encryptionMetadata: encryptionMetadata || null
+        }
       };
     } catch (error) {
       console.error('Error sending message:', error);
@@ -297,6 +339,7 @@ export class MessagingService {
     const { conversationId, userAddress } = data;
 
     try {
+      this.validateAddress(userAddress);
       // Check if user is participant
       const conversation = await this.getConversationDetails({ conversationId, userAddress });
       if (!conversation) {
@@ -306,9 +349,28 @@ export class MessagingService {
         };
       }
 
-      // In the current schema, we don't have read status tracking
-      // This would need to be implemented with a separate table or additional fields
-      console.log(`Marking conversation ${conversationId} as read for user ${userAddress}`);
+      // Get unread messages (not sent by this user)
+      const messages = await db
+        .select({ id: chatMessages.id })
+        .from(chatMessages)
+        .where(
+          and(
+            eq(chatMessages.conversationId, conversationId),
+            sql`${chatMessages.senderAddress} != ${userAddress}`
+          )
+        );
+
+      // Mark each message as read
+      for (const msg of messages) {
+        await db
+          .insert(messageReadStatus)
+          .values({
+            messageId: msg.id,
+            userAddress,
+            readAt: new Date()
+          })
+          .onConflictDoNothing();
+      }
 
       return {
         success: true,
@@ -362,47 +424,89 @@ export class MessagingService {
     }
   }
 
-  // Archive conversation (simplified - would need additional table/field)
+  // Archive conversation
   async archiveConversation(data: { conversationId: string; userAddress: string }) {
-    // For now, return success without actual implementation
-    return {
-      success: true,
-      data: null
-    };
+    const { conversationId, userAddress } = data;
+
+    try {
+      const conversation = await this.getConversationDetails({ conversationId, userAddress });
+      if (!conversation) {
+        return {
+          success: false,
+          message: 'Conversation not found or access denied'
+        };
+      }
+
+      // Get current archived users
+      const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
+      if (!archivedBy.includes(userAddress)) {
+        archivedBy.push(userAddress);
+        
+        await db
+          .update(conversations)
+          .set({ archivedBy: JSON.stringify(archivedBy) })
+          .where(eq(conversations.id, conversationId));
+      }
+
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error) {
+      console.error('Error archiving conversation:', error);
+      throw new Error('Failed to archive conversation');
+    }
   }
 
-  // Unarchive conversation (simplified)
+  // Unarchive conversation
   async unarchiveConversation(data: { conversationId: string; userAddress: string }) {
-    // For now, return success without actual implementation
-    return {
-      success: true,
-      data: null
-    };
+    const { conversationId, userAddress } = data;
+
+    try {
+      const conversation = await this.getConversationDetails({ conversationId, userAddress });
+      if (!conversation) {
+        return {
+          success: false,
+          message: 'Conversation not found or access denied'
+        };
+      }
+
+      // Get current archived users and remove this user
+      const archivedBy = JSON.parse(conversation.archivedBy as string || '[]');
+      const updatedArchivedBy = archivedBy.filter((addr: string) => addr !== userAddress);
+      
+      await db
+        .update(conversations)
+        .set({ archivedBy: JSON.stringify(updatedArchivedBy) })
+        .where(eq(conversations.id, conversationId));
+
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error) {
+      console.error('Error unarchiving conversation:', error);
+      throw new Error('Failed to unarchive conversation');
+    }
   }
 
-  // Encrypt message (simplified - would use actual encryption)
+  // Encrypt message - Backend doesn't encrypt, just stores encrypted content from frontend
   async encryptMessage(data: EncryptMessageData) {
-    // This is a placeholder for actual encryption implementation
+    // Backend should NOT decrypt messages - E2EE principle
+    // Frontend handles encryption, backend just stores encrypted content
     return {
       success: true,
-      data: {
-        encryptedContent: data.content, // Would be actually encrypted
-        encryptionMetadata: {
-          algorithm: 'AES-GCM',
-          keyId: 'placeholder'
-        }
-      }
+      message: 'Backend stores encrypted content without decrypting - E2EE maintained'
     };
   }
 
-  // Decrypt message (simplified - would use actual decryption)
+  // Decrypt message - Backend doesn't decrypt, maintains E2EE
   async decryptMessage(data: DecryptMessageData) {
-    // This is a placeholder for actual decryption implementation
+    // Backend should NOT decrypt messages - E2EE principle
+    // Frontend handles decryption with user's private keys
     return {
-      success: true,
-      data: {
-        decryptedContent: data.encryptedContent // Would be actually decrypted
-      }
+      success: false,
+      message: 'Backend cannot decrypt messages - E2EE maintained, decrypt on frontend'
     };
   }
 
@@ -492,7 +596,7 @@ export class MessagingService {
     }
   }
 
-  // Search messages (simplified)
+  // Search messages
   async searchMessages(data: {
     userAddress: string;
     query: string;
@@ -500,16 +604,53 @@ export class MessagingService {
     page: number;
     limit: number;
   }) {
-    // This would need full-text search implementation
-    // For now, return empty results
-    return {
-      messages: [],
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        total: 0
+    const { userAddress, query, conversationId, page, limit } = data;
+    const offset = (page - 1) * limit;
+
+    try {
+      this.validateAddress(userAddress);
+      let whereConditions = [
+        like(chatMessages.content, `%${query}%`)
+      ];
+
+      if (conversationId) {
+        whereConditions.push(eq(chatMessages.conversationId, conversationId));
       }
-    };
+
+      // Only search in conversations where user is a participant
+      const searchResults = await db
+        .select({
+          id: chatMessages.id,
+          conversationId: chatMessages.conversationId,
+          senderAddress: chatMessages.senderAddress,
+          content: chatMessages.content,
+          sentAt: chatMessages.sentAt,
+          messageType: chatMessages.messageType
+        })
+        .from(chatMessages)
+        .innerJoin(conversations, eq(chatMessages.conversationId, conversations.id))
+        .where(
+          and(
+            ...whereConditions,
+            sql`participants::jsonb ? ${userAddress}`
+          )
+        )
+        .orderBy(desc(chatMessages.sentAt))
+        .limit(limit)
+        .offset(offset);
+
+      return {
+        messages: searchResults,
+        pagination: {
+          page,
+          limit,
+          total: searchResults.length
+        }
+      };
+    } catch (error) {
+      console.error('Error searching messages:', error);
+      throw new Error('Failed to search messages');
+    }
   }
 
   // Get message thread (simplified)
@@ -525,28 +666,90 @@ export class MessagingService {
     };
   }
 
-  // Block user (simplified - would need blocked_users table)
+  // Block user
   async blockUser(data: { blockerAddress: string; blockedAddress: string; reason?: string }) {
-    // This would need a blocked_users table to be implemented
-    return {
-      success: false,
-      message: 'Blocking functionality not implemented yet'
-    };
+    const { blockerAddress, blockedAddress, reason } = data;
+
+    try {
+      // Check if already blocked
+      const existing = await db
+        .select()
+        .from(blockedUsers)
+        .where(
+          and(
+            eq(blockedUsers.blockerAddress, blockerAddress),
+            eq(blockedUsers.blockedAddress, blockedAddress)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return {
+          success: false,
+          message: 'User is already blocked'
+        };
+      }
+
+      await db
+        .insert(blockedUsers)
+        .values({
+          blockerAddress,
+          blockedAddress,
+          reason,
+          createdAt: new Date()
+        });
+
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      throw new Error('Failed to block user');
+    }
   }
 
-  // Unblock user (simplified)
+  // Unblock user
   async unblockUser(data: { blockerAddress: string; blockedAddress: string }) {
-    // This would need a blocked_users table to be implemented
-    return {
-      success: false,
-      message: 'Unblocking functionality not implemented yet'
-    };
+    const { blockerAddress, blockedAddress } = data;
+
+    try {
+      const result = await db
+        .delete(blockedUsers)
+        .where(
+          and(
+            eq(blockedUsers.blockerAddress, blockerAddress),
+            eq(blockedUsers.blockedAddress, blockedAddress)
+          )
+        );
+
+      return {
+        success: true,
+        data: null
+      };
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      throw new Error('Failed to unblock user');
+    }
   }
 
-  // Get blocked users (simplified)
+  // Get blocked users
   async getBlockedUsers(userAddress: string) {
-    // This would need a blocked_users table to be implemented
-    return [];
+    try {
+      const blocked = await db
+        .select()
+        .from(blockedUsers)
+        .where(eq(blockedUsers.blockerAddress, userAddress));
+
+      return blocked.map(b => ({
+        blockedAddress: b.blockedAddress,
+        reason: b.reason,
+        createdAt: b.createdAt
+      }));
+    } catch (error) {
+      console.error('Error getting blocked users:', error);
+      throw new Error('Failed to get blocked users');
+    }
   }
 
   // Report content (simplified)
@@ -621,8 +824,31 @@ export class MessagingService {
 
   // Helper method to check if user is blocked
   private async checkIfBlocked(userAddress1: string, userAddress2: string): Promise<boolean> {
-    // For now, no blocking functionality
-    return false;
+    try {
+      this.validateAddress(userAddress1);
+      this.validateAddress(userAddress2);
+      const blocked = await db
+        .select()
+        .from(blockedUsers)
+        .where(
+          or(
+            and(
+              eq(blockedUsers.blockerAddress, userAddress1),
+              eq(blockedUsers.blockedAddress, userAddress2)
+            ),
+            and(
+              eq(blockedUsers.blockerAddress, userAddress2),
+              eq(blockedUsers.blockedAddress, userAddress1)
+            )
+          )
+        )
+        .limit(1);
+
+      return blocked.length > 0;
+    } catch (error) {
+      console.error('Error checking if user is blocked:', error);
+      return false;
+    }
   }
 }
 

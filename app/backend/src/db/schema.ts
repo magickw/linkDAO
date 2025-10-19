@@ -2436,6 +2436,7 @@ export const pollVotes = pgTable("poll_votes", {
 }));
 
 // Conversations and Chat Messages
+// Note: Additional messaging tables defined above
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: varchar("title", { length: 255 }),
@@ -2443,6 +2444,7 @@ export const conversations = pgTable("conversations", {
   lastMessageId: uuid("last_message_id"),
   lastActivity: timestamp("last_activity"),
   unreadCount: integer("unread_count").default(0),
+  archivedBy: jsonb("archived_by").default("[]"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => ({
   lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
@@ -2453,11 +2455,39 @@ export const chatMessages = pgTable("chat_messages", {
   conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
   senderAddress: varchar("sender_address", { length: 66 }).notNull(),
   content: text("content").notNull(),
+  messageType: varchar("message_type", { length: 32 }).default("text"),
+  encryptionMetadata: jsonb("encryption_metadata"),
+  replyToId: uuid("reply_to_id").references(() => chatMessages.id),
+  attachments: jsonb("attachments"),
   sentAt: timestamp("timestamp").defaultNow(),
   editedAt: timestamp("edited_at"),
   deletedAt: timestamp("deleted_at"),
 }, (t) => ({
   convoTimestampIdx: index("idx_chat_messages_conversation_id_timestamp").on(t.conversationId, t.sentAt),
+  replyToIdx: index("idx_chat_messages_reply_to").on(t.replyToId),
+}));
+
+// Message read status tracking
+export const messageReadStatus = pgTable("message_read_status", {
+  messageId: uuid("message_id").references(() => chatMessages.id, { onDelete: "cascade" }).notNull(),
+  userAddress: varchar("user_address", { length: 66 }).notNull(),
+  readAt: timestamp("read_at").defaultNow(),
+}, (t) => ({
+  pk: primaryKey(t.messageId, t.userAddress),
+  messageIdx: index("idx_message_read_status_message").on(t.messageId),
+  userIdx: index("idx_message_read_status_user").on(t.userAddress),
+}));
+
+// Blocked users table
+export const blockedUsers = pgTable("blocked_users", {
+  blockerAddress: varchar("blocker_address", { length: 66 }).notNull(),
+  blockedAddress: varchar("blocked_address", { length: 66 }).notNull(),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  pk: primaryKey(t.blockerAddress, t.blockedAddress),
+  blockerIdx: index("idx_blocked_users_blocker").on(t.blockerAddress),
+  blockedIdx: index("idx_blocked_users_blocked").on(t.blockedAddress),
 }));
 
 // Marketplace Listings - for the marketplace API endpoints

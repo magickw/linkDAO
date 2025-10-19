@@ -27,6 +27,7 @@ export interface ChatMessage {
     fileSize?: number;
     rewardAmount?: string;
     transactionHash?: string;
+    decryptionFailed?: boolean; // Add this line
   };
   signature?: string;
   chainId?: number;
@@ -207,7 +208,7 @@ class MessagingService {
     // Import signature as key material
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
-      ethers.utils.arrayify(signature),
+      new Uint8Array(ethers.utils.arrayify(signature)),
       { name: 'HKDF' },
       false,
       ['deriveKey']
@@ -761,7 +762,7 @@ class MessagingService {
       } catch (error) {
         console.error('Failed to process received message:', error);
         // Emit error event for UI handling
-        this.emit('message_error', { error: error.message, messageId: message.id });
+        this.emit('message_error', { error: (error as Error).message || 'Unknown error', messageId: message.id });
       }
     });
 

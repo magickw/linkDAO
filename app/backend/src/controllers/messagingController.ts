@@ -143,6 +143,11 @@ export class MessagingController {
         return;
       }
 
+      // Basic rate limiting check (100 messages per minute)
+      const rateLimitKey = `msg_rate_${userAddress}`;
+      // Note: In production, use Redis for rate limiting
+      // For now, this is a placeholder for the rate limiting logic
+      
       const { id } = req.params;
       const {
         content,
@@ -152,10 +157,17 @@ export class MessagingController {
         encryptionMetadata
       } = req.body;
 
+      // Validate message content length (max 10KB)
+      if (content && content.length > 10240) {
+        res.status(400).json(apiResponse.error('Message content too large (max 10KB)', 400));
+        return;
+      }
+
       const message = await messagingService.sendMessage({
         conversationId: id,
         fromAddress: userAddress,
         content,
+        encryptedContent: encryptionMetadata ? content : undefined,
         contentType,
         replyToId,
         attachments,

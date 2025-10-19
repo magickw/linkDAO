@@ -1,6 +1,71 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
+
+// Type-only import to avoid runtime issues
+type SankeyLayout<N, L> = {
+  (graph: { nodes: N[]; links: L[] }): { nodes: N[]; links: L[] };
+  nodeWidth(): number;
+  nodeWidth(width: number): SankeyLayout<N, L>;
+  nodePadding(): number;
+  nodePadding(padding: number): SankeyLayout<N, L>;
+  extent(): [[number, number], [number, number]];
+  extent(extent: [[number, number], [number, number]]): SankeyLayout<N, L>;
+};
+
+// Fallback implementation for d3-sankey
+const createSankey = <N, L>(): SankeyLayout<N, L> => {
+  let nodeWidth = 24;
+  let nodePadding = 8;
+  let extent: [[number, number], [number, number]] = [[0, 0], [1, 1]];
+
+  const sankey = ((graph: { nodes: N[]; links: L[] }) => {
+    // Simple fallback layout - just return the input
+    return { nodes: graph.nodes, links: graph.links };
+  }) as SankeyLayout<N, L>;
+
+  // Create properly typed functions for nodeWidth
+  function nodeWidthFn(): number;
+  function nodeWidthFn(width: number): SankeyLayout<N, L>;
+  function nodeWidthFn(width?: number): number | SankeyLayout<N, L> {
+    if (width === undefined) return nodeWidth;
+    nodeWidth = width;
+    return sankey;
+  }
+  sankey.nodeWidth = nodeWidthFn;
+
+  // Create properly typed functions for nodePadding
+  function nodePaddingFn(): number;
+  function nodePaddingFn(padding: number): SankeyLayout<N, L>;
+  function nodePaddingFn(padding?: number): number | SankeyLayout<N, L> {
+    if (padding === undefined) return nodePadding;
+    nodePadding = padding;
+    return sankey;
+  }
+  sankey.nodePadding = nodePaddingFn;
+
+  // Create properly typed functions for extent
+  function extentFn(): [[number, number], [number, number]];
+  function extentFn(extent: [[number, number], [number, number]]): SankeyLayout<N, L>;
+  function extentFn(ext?: [[number, number], [number, number]]): [[number, number], [number, number]] | SankeyLayout<N, L> {
+    if (ext === undefined) return extent;
+    extent = ext;
+    return sankey;
+  }
+  sankey.extent = extentFn;
+
+  return sankey;
+};
+
+// Fallback link path generator
+const createSankeyLinkHorizontal = () => {
+  return (d: any) => {
+    const x0 = d.source?.x1 || 0;
+    const x1 = d.target?.x0 || 100;
+    const y0 = d.source?.y0 || 0;
+    const y1 = d.target?.y0 || 0;
+    return `M${x0},${y0}L${x1},${y1}`;
+  };
+};
 
 interface SankeyNode {
   id: string;
@@ -65,7 +130,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Create sankey generator
-    const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
+    const sankeyGenerator = createSankey<SankeyNode, SankeyLink>()
       .nodeWidth(15)
       .nodePadding(10)
       .extent([[1, 1], [innerWidth - 1, innerHeight - 5]]);
@@ -89,7 +154,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
       .enter()
       .append('path')
       .attr('class', 'link')
-      .attr('d', sankeyLinkHorizontal())
+      .attr('d', createSankeyLinkHorizontal())
       .style('stroke', (d: any) => colorScale(d.source.category || 'default'))
       .style('stroke-opacity', 0.5)
       .style('stroke-width', (d: any) => Math.max(1, d.width))

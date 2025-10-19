@@ -34,30 +34,30 @@ global.ResizeObserver = class ResizeObserver {
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => {},
+  }),
 });
 
 // Mock scrollTo
 Object.defineProperty(window, 'scrollTo', {
   writable: true,
-  value: jest.fn(),
+  value: () => {},
 });
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+  clear: () => {},
 };
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
@@ -71,23 +71,24 @@ Object.defineProperty(window, 'sessionStorage', {
 // Mock crypto for Web3 applications
 Object.defineProperty(global, 'crypto', {
   value: {
-    getRandomValues: jest.fn(() => new Uint8Array(32)),
-    randomUUID: jest.fn(() => '12345678-1234-1234-1234-123456789abc'),
+    getRandomValues: () => new Uint8Array(32),
+    randomUUID: () => '12345678-1234-1234-1234-123456789abc',
     subtle: {
-      digest: jest.fn(() => Promise.resolve(new ArrayBuffer(32))),
-      encrypt: jest.fn(),
-      decrypt: jest.fn(),
-      sign: jest.fn(),
-      verify: jest.fn(),
-      generateKey: jest.fn(),
-      importKey: jest.fn(),
-      exportKey: jest.fn(),
+      digest: () => Promise.resolve(new ArrayBuffer(32)),
+      encrypt: () => Promise.resolve(new ArrayBuffer(32)),
+      decrypt: () => Promise.resolve(new ArrayBuffer(32)),
+      sign: () => Promise.resolve(new ArrayBuffer(32)),
+      verify: () => Promise.resolve(true),
+      generateKey: () => Promise.resolve({} as CryptoKey),
+      importKey: () => Promise.resolve({} as CryptoKey),
+      exportKey: () => Promise.resolve(new ArrayBuffer(32)),
+      deriveKey: () => Promise.resolve({} as CryptoKey),
     },
   },
 });
 
 // Mock fetch for API calls
-global.fetch = jest.fn(() =>
+global.fetch = () =>
   Promise.resolve({
     ok: true,
     status: 200,
@@ -95,18 +96,17 @@ global.fetch = jest.fn(() =>
     text: () => Promise.resolve(''),
     blob: () => Promise.resolve(new Blob()),
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-  })
-) as jest.Mock;
+  } as Response);
 
 // Mock URL.createObjectURL
 Object.defineProperty(URL, 'createObjectURL', {
   writable: true,
-  value: jest.fn(() => 'mocked-url'),
+  value: () => 'mocked-url',
 });
 
 Object.defineProperty(URL, 'revokeObjectURL', {
   writable: true,
-  value: jest.fn(),
+  value: () => {},
 });
 
 // Suppress console errors in tests
@@ -147,9 +147,9 @@ afterAll(() => {
 Object.defineProperty(window, 'ethereum', {
   writable: true,
   value: {
-    request: jest.fn(() => Promise.resolve(['0x1234567890abcdef'])),
-    on: jest.fn(),
-    removeListener: jest.fn(),
+    request: () => Promise.resolve(['0x1234567890abcdef']),
+    on: () => {},
+    removeListener: () => {},
     isMetaMask: true,
     selectedAddress: '0x1234567890abcdef',
     chainId: '0x1',
@@ -157,61 +157,63 @@ Object.defineProperty(window, 'ethereum', {
 });
 
 // Mock canvas for chart libraries
-HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
-  fillRect: jest.fn(),
-  clearRect: jest.fn(),
-  getImageData: jest.fn(() => ({ data: new Array(4) })),
-  putImageData: jest.fn(),
-  createImageData: jest.fn(() => []),
-  setTransform: jest.fn(),
-  drawImage: jest.fn(),
-  save: jest.fn(),
-  fillText: jest.fn(),
-  restore: jest.fn(),
-  beginPath: jest.fn(),
-  moveTo: jest.fn(),
-  lineTo: jest.fn(),
-  closePath: jest.fn(),
-  stroke: jest.fn(),
-  translate: jest.fn(),
-  scale: jest.fn(),
-  rotate: jest.fn(),
-  arc: jest.fn(),
-  fill: jest.fn(),
-  measureText: jest.fn(() => ({ width: 0 })),
-  transform: jest.fn(),
-  rect: jest.fn(),
-  clip: jest.fn(),
-})) as any;
+HTMLCanvasElement.prototype.getContext = () => ({
+  fillRect: () => {},
+  clearRect: () => {},
+  getImageData: () => ({ data: new Array(4) }),
+  putImageData: () => {},
+  createImageData: () => [],
+  setTransform: () => {},
+  drawImage: () => {},
+  save: () => {},
+  fillText: () => {},
+  restore: () => {},
+  beginPath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  closePath: () => {},
+  stroke: () => {},
+  translate: () => {},
+  scale: () => {},
+  rotate: () => {},
+  arc: () => {},
+  fill: () => {},
+  measureText: () => ({ width: 0 }),
+  transform: () => {},
+  rect: () => {},
+  clip: () => {},
+}) as any;
 
 // Mock HTMLElement methods
-HTMLElement.prototype.scrollIntoView = jest.fn();
-HTMLElement.prototype.releasePointerCapture = jest.fn();
-HTMLElement.prototype.hasPointerCapture = jest.fn();
+HTMLElement.prototype.scrollIntoView = () => {};
+HTMLElement.prototype.releasePointerCapture = () => {};
+HTMLElement.prototype.hasPointerCapture = () => false;
 
 // Mock Web APIs for file handling
 Object.defineProperty(window, 'FileReader', {
   writable: true,
-  value: jest.fn(() => ({
-    readAsText: jest.fn(),
-    readAsDataURL: jest.fn(),
-    readAsArrayBuffer: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    result: null,
-    error: null,
-    readyState: 0,
-  })),
+  value: function() {
+    return {
+      readAsText: () => {},
+      readAsDataURL: () => {},
+      readAsArrayBuffer: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      result: null,
+      error: null,
+      readyState: 0,
+    };
+  },
 });
 
 // Mock performance API
 Object.defineProperty(window, 'performance', {
   value: {
-    now: jest.fn(() => Date.now()),
-    mark: jest.fn(),
-    measure: jest.fn(),
-    getEntriesByName: jest.fn(() => []),
-    getEntriesByType: jest.fn(() => []),
+    now: () => Date.now(),
+    mark: () => {},
+    measure: () => {},
+    getEntriesByName: () => [],
+    getEntriesByType: () => [],
   },
 });
 
