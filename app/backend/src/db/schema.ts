@@ -869,6 +869,72 @@ export const communityStats = pgTable("community_stats", {
   lastCalculatedAtIdx: index("idx_community_stats_last_calculated_at").on(t.lastCalculatedAt),
 }));
 
+// Community governance proposals
+export const communityGovernanceProposals = pgTable("community_governance_proposals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  proposerAddress: varchar("proposer_address", { length: 66 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  type: varchar("type", { length: 50 }).notNull(), // 'text', 'parameter', 'membership', 'spending'
+  status: varchar("status", { length: 32 }).default("pending"), // 'pending', 'active', 'passed', 'rejected', 'executed', 'expired'
+  votingStartTime: timestamp("voting_start_time").notNull(),
+  votingEndTime: timestamp("voting_end_time").notNull(),
+  executionEta: timestamp("execution_eta"),
+  executedAt: timestamp("executed_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  yesVotes: numeric("yes_votes", { precision: 20, scale: 8 }).default("0"),
+  noVotes: numeric("no_votes", { precision: 20, scale: 8 }).default("0"),
+  abstainVotes: numeric("abstain_votes", { precision: 20, scale: 8 }).default("0"),
+  totalVotes: numeric("total_votes", { precision: 20, scale: 8 }).default("0"),
+  quorum: numeric("quorum", { precision: 20, scale: 8 }).default("0"),
+  quorumReached: boolean("quorum_reached").default(false),
+  requiredMajority: integer("required_majority").default(50), // percentage needed for approval
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_governance_proposals_community_id").on(t.communityId),
+  proposerIdx: index("idx_community_governance_proposals_proposer").on(t.proposerAddress),
+  statusIdx: index("idx_community_governance_proposals_status").on(t.status),
+  votingEndTimeIdx: index("idx_community_governance_proposals_voting_end_time").on(t.votingEndTime),
+}));
+
+// Community governance votes
+export const communityGovernanceVotes = pgTable("community_governance_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  proposalId: uuid("proposal_id").references(() => communityGovernanceProposals.id, { onDelete: 'cascade' }).notNull(),
+  voterAddress: varchar("voter_address", { length: 66 }).notNull(),
+  voteChoice: varchar("vote_choice", { length: 10 }).notNull(), // 'yes', 'no', 'abstain'
+  votingPower: numeric("voting_power", { precision: 20, scale: 8 }).notNull().default("0"),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  uniqueVote: primaryKey(t.proposalId, t.voterAddress),
+  proposalIdIdx: index("idx_community_governance_votes_proposal_id").on(t.proposalId),
+  voterAddressIdx: index("idx_community_governance_votes_voter_address").on(t.voterAddress),
+  voteChoiceIdx: index("idx_community_governance_votes_choice").on(t.voteChoice),
+}));
+
+// Community moderation actions
+export const communityModerationActions = pgTable("community_moderation_actions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  communityId: uuid("community_id").references(() => communities.id, { onDelete: 'cascade' }).notNull(),
+  moderatorAddress: varchar("moderator_address", { length: 66 }).notNull(),
+  action: varchar("action", { length: 20 }).notNull(), // 'approve', 'reject', 'ban', 'unban', 'promote', 'demote'
+  targetType: varchar("target_type", { length: 20 }).notNull(), // 'post', 'user', 'comment'
+  targetId: varchar("target_id", { length: 66 }).notNull(),
+  reason: text("reason"),
+  metadata: text("metadata"), // JSON additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  communityIdIdx: index("idx_community_moderation_actions_community_id").on(t.communityId),
+  moderatorAddressIdx: index("idx_community_moderation_actions_moderator").on(t.moderatorAddress),
+  actionIdx: index("idx_community_moderation_actions_action").on(t.action),
+  targetTypeIdx: index("idx_community_moderation_actions_target_type").on(t.targetType),
+  createdAtIdx: index("idx_community_moderation_actions_created_at").on(t.createdAt),
+}));
+
 export const contentVerification = pgTable("content_verification", {
   id: uuid("id").defaultRandom().primaryKey(),
   assetId: uuid("asset_id").references(() => digitalAssets.id).notNull(),

@@ -141,21 +141,118 @@ export class PostService {
   }
 
   async getPostsByTag(tag: string): Promise<Post[]> {
-    // In a full implementation, you would fetch posts by tag from the database
-    // For now, we'll return an empty array
-    return [];
+    try {
+      // Get posts by tag from database
+      const dbPosts = await databaseService.getPostsByTag(tag.toLowerCase());
+      
+      // Convert to Post model with proper author information
+      const posts: Post[] = await Promise.all(dbPosts.map(async (dbPost: any) => {
+        const author = await userProfileService.getProfileById(dbPost.authorId);
+        const authorAddress = author ? author.walletAddress : 'unknown';
+        
+        return {
+          id: dbPost.id.toString(),
+          author: authorAddress,
+          parentId: dbPost.parentId ? dbPost.parentId.toString() : null,
+          contentCid: dbPost.contentCid,
+          mediaCids: dbPost.mediaCids ? JSON.parse(dbPost.mediaCids) : [],
+          tags: dbPost.tags ? JSON.parse(dbPost.tags) : [],
+          createdAt: dbPost.createdAt || new Date(),
+          onchainRef: ''
+        };
+      }));
+      
+      return posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    } catch (error) {
+      console.error('Error getting posts by tag:', error);
+      return [];
+    }
   }
 
   async updatePost(id: string, input: UpdatePostInput): Promise<Post | undefined> {
-    // In a full implementation, you would update the post in the database
-    // For now, we'll return undefined
-    return undefined;
+    try {
+      const postId = parseInt(id);
+      if (isNaN(postId)) {
+        return undefined;
+      }
+
+      // Get existing post to verify ownership
+      const existingPost = await this.getPostById(id);
+      if (!existingPost) {
+        return undefined;
+      }
+
+      // Upload new content to IPFS if content changed
+      let contentCid = existingPost.contentCid;
+      if (input.content && input.content !== existingPost.contentCid) {
+        contentCid = await this.metadataService.uploadToIPFS(input.content);
+      }
+
+      // Upload new media to IPFS if provided
+      let mediaCids = existingPost.mediaCids;
+      if (input.media) {
+        mediaCids = [];
+        for (const media of input.media) {
+          const mediaCid = await this.metadataService.uploadToIPFS(media);
+          mediaCids.push(mediaCid);
+        }
+      }
+
+      // Update post in database
+      const updateData = {
+        contentCid,
+        mediaCids: JSON.stringify(mediaCids),
+        tags: JSON.stringify(input.tags || existingPost.tags)
+      };
+
+      const updated = await databaseService.updatePost(postId, updateData);
+      if (!updated) {
+        return undefined;
+      }
+
+      return {
+        id: updated.id.toString(),
+        author: existingPost.author,
+        parentId: existingPost.parentId,
+        contentCid,
+        mediaCids,
+        tags: input.tags || existingPost.tags,
+        createdAt: existingPost.createdAt,
+        onchainRef: existingPost.onchainRef
+      };
+    } catch (error) {
+      console.error('Error updating post:', error);
+      return undefined;
+    }
   }
 
   async deletePost(id: string): Promise<boolean> {
-    // In a full implementation, you would delete the post from the database
-    // For now, we'll return true
-    return true;
+    try {
+      const postId = parseInt(id);
+      if (isNaN(postId)) {
+        return false;
+      }
+
+      // Verify post exists
+      const existingPost = await this.getPostById(id);
+      if (!existingPost) {
+        return false;
+      }
+
+      // Delete from database
+      const deleted = await databaseService.deletePost(postId);
+      
+      if (deleted) {
+        console.log(`Post ${id} deleted successfully`);
+        // Note: In production, you might want to unpin from IPFS
+        // await this.metadataService.unpinFromIPFS(existingPost.contentCid);
+      }
+      
+      return deleted;
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      return false;
+    }
   }
 
   async getAllPosts(): Promise<Post[]> {

@@ -111,6 +111,74 @@ export class DatabaseService {
     }
   }
 
+  async getPostsByTag(tag: string) {
+    try {
+      // Join with postTags table to find posts with specific tag
+      const result = await this.db
+        .select({
+          id: schema.posts.id,
+          authorId: schema.posts.authorId,
+          contentCid: schema.posts.contentCid,
+          parentId: schema.posts.parentId,
+          mediaCids: schema.posts.mediaCids,
+          tags: schema.posts.tags,
+          createdAt: schema.posts.createdAt,
+          dao: schema.posts.dao,
+          communityId: schema.posts.communityId,
+          stakedValue: schema.posts.stakedValue
+        })
+        .from(schema.posts)
+        .innerJoin(schema.postTags, eq(schema.posts.id, schema.postTags.postId))
+        .where(eq(schema.postTags.tag, tag.toLowerCase()))
+        .orderBy(desc(schema.posts.createdAt));
+      
+      return result;
+    } catch (error) {
+      console.error("Error getting posts by tag:", error);
+      throw error;
+    }
+  }
+
+  async updatePost(id: number, updates: any) {
+    try {
+      const result = await this.db
+        .update(schema.posts)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(schema.posts.id, id))
+        .returning();
+      
+      return result[0] || null;
+    } catch (error) {
+      console.error("Error updating post:", error);
+      throw error;
+    }
+  }
+
+  async deletePost(id: number) {
+    try {
+      // Delete related data first (foreign key constraints)
+      await Promise.all([
+        this.db.delete(schema.postTags).where(eq(schema.postTags.postId, id)),
+        this.db.delete(schema.reactions).where(eq(schema.reactions.postId, id)),
+        this.db.delete(schema.tips).where(eq(schema.tips.postId, id))
+      ]);
+
+      // Delete the post
+      const result = await this.db
+        .delete(schema.posts)
+        .where(eq(schema.posts.id, id))
+        .returning();
+      
+      return result.length > 0;
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      throw error;
+    }
+  }
+
   // Follow operations
   async followUser(followerId: string, followingId: string) {
     try {

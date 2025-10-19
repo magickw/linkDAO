@@ -454,6 +454,87 @@ export class CommunityController {
     }
   }
 
+  // Execute governance proposal
+  async executeProposal(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { proposalId } = req.params;
+
+      const result = await communityService.executeProposal(proposalId, userAddress);
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to execute proposal', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      console.error('Error executing proposal:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to execute proposal'));
+    }
+  }
+
+  // Get moderation queue
+  async getModerationQueue(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const {
+        page = 1,
+        limit = 20,
+        type = 'all'
+      } = req.query;
+
+      const queue = await communityService.getModerationQueue(id, {
+        page: Number(page),
+        limit: Number(limit),
+        type: type as 'posts' | 'reports' | 'all'
+      });
+
+      res.json(createSuccessResponse(queue, {}));
+    } catch (error) {
+      console.error('Error getting moderation queue:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to retrieve moderation queue'));
+    }
+  }
+
+  // Flag content
+  async flagContent(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { targetType, targetId, reason, category } = req.body;
+
+      const result = await communityService.flagContent({
+        communityId: id,
+        reporterAddress: userAddress,
+        targetType,
+        targetId,
+        reason,
+        category
+      });
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', result.message || 'Failed to flag content', 400));
+        return;
+      }
+
+      res.json(createSuccessResponse(result, {}));
+    } catch (error) {
+      console.error('Error flagging content:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to flag content'));
+    }
+  }
+
   // Search communities
   async searchCommunities(req: Request, res: Response): Promise<void> {
     try {

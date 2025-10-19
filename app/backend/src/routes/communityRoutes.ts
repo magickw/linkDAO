@@ -241,6 +241,51 @@ router.post('/:id/governance/:proposalId/vote',
   communityController.voteOnProposal
 );
 
+// Execute governance proposal (auth required)
+router.post('/:id/governance/:proposalId/execute',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true },
+      proposalId: { type: 'string', required: true }
+    }
+  }),
+  communityController.executeProposal
+);
+
+// Get moderation queue (auth required, moderator only)
+router.get('/:id/moderation/queue',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    query: {
+      page: { type: 'number', optional: true, min: 1 },
+      limit: { type: 'number', optional: true, min: 1, max: 50 },
+      type: { type: 'string', optional: true, enum: ['posts', 'reports', 'all'] }
+    }
+  }),
+  communityController.getModerationQueue
+);
+
+// Flag content (auth required)
+router.post('/:id/flag',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      targetType: { type: 'string', required: true, enum: ['post', 'comment', 'user'] },
+      targetId: { type: 'string', required: true },
+      reason: { type: 'string', required: true, minLength: 10, maxLength: 500 },
+      category: { type: 'string', required: true, enum: ['spam', 'harassment', 'inappropriate', 'other'] }
+    }
+  }),
+  communityController.flagContent
+);
+
 // Search communities (public)
 router.get('/search/query',
   validateRequest({
