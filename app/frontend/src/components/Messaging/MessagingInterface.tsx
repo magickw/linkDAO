@@ -85,6 +85,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const { addToast } = useToast();
 
   // Chat history hook (drives conversations/messages from backend)
   const chat = useChatHistory();
@@ -1040,7 +1041,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     variant="outline"
                     className="w-full"
                     onClick={() => {
-                      const { addToast } = useToast();
                       // Show available NFTs
                       const nfts = nftNegotiationBot.getAvailableNFTs();
                       addToast(`Available NFTs:\n${nfts.map(nft => `${nft.data.name}: ${nft.data.currentPrice} ETH`).join('\n')}`, 'info');

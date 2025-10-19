@@ -178,24 +178,79 @@ class MessagingService {
   }
 
   /**
-   * Initialize end-to-end encryption
+   * Initialize end-to-end encryption with wallet-derived keys
    */
   private async initializeEncryption(): Promise<void> {
     try {
-      // Generate a key for AES encryption
-      // In a real implementation, this would be derived from the wallet's private key
-      this.cryptoKey = await crypto.subtle.generateKey(
-        {
-          name: 'AES-GCM',
-          length: 256
-        },
-        true,
-        ['encrypt', 'decrypt']
-      );
+      if (this.wallet) {
+        // Derive key from wallet signature
+        this.cryptoKey = await this.deriveKeyFromWallet();
+      } else {
+        // Fallback: try to load from secure storage
+        this.cryptoKey = await this.loadOrGenerateKey();
+      }
     } catch (error) {
       console.error('Failed to initialize encryption:', error);
       throw error;
     }
+  }
+
+  /**
+   * Derive encryption key from wallet signature using HKDF
+   */
+  private async deriveKeyFromWallet(): Promise<CryptoKey> {
+    if (!this.wallet) throw new Error('Wallet not available');
+    
+    const message = `LinkDAO Messaging Key Derivation - ${this.currentAddress}`;
+    const signature = await this.wallet.signMessage(message);
+    
+    // Import signature as key material
+    const keyMaterial = await crypto.subtle.importKey(
+      'raw',
+      ethers.utils.arrayify(signature),
+      { name: 'HKDF' },
+      false,
+      ['deriveKey']
+    );
+    
+    // Derive AES key using HKDF
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: 'HKDF',
+        hash: 'SHA-256',
+        salt: new TextEncoder().encode('linkdao-messaging-salt'),
+        info: new TextEncoder().encode('messaging-encryption')
+      },
+      keyMaterial,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    
+    // Store key securely
+    await this.storeKeySecurely(key);
+    return key;
+  }
+
+  /**
+   * Load existing key or generate new one with secure storage
+   */
+  private async loadOrGenerateKey(): Promise<CryptoKey> {
+    try {
+      const stored = await this.loadKeyFromSecureStorage();
+      if (stored) return stored;
+    } catch (error) {
+      console.warn('Could not load stored key, generating new one');
+    }
+    
+    const key = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    
+    await this.storeKeySecurely(key);
+    return key;
   }
 
   /**
@@ -274,25 +329,44 @@ class MessagingService {
   }
 
   /**
-   * Sign a message with the wallet
+   * Sign a message with EIP-712 structured signing
    */
   private async signMessage(message: ChatMessage): Promise<string> {
-    if (!this.wallet && !this.currentAddress) {
+    if (!this.wallet) {
       throw new Error('Wallet not available for signing');
     }
 
-    const messageHash = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(
-        `${message.fromAddress}${message.toAddress}${message.content}${message.timestamp.getTime()}`
-      )
-    );
+    const domain = {
+      name: 'LinkDAO Messaging',
+      version: '1',
+      chainId: message.chainId || 1,
+      verifyingContract: '0x0000000000000000000000000000000000000000'
+    };
 
-    if (this.wallet) {
-      return await this.wallet.signMessage(ethers.utils.arrayify(messageHash));
+    const types = {
+      Message: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'content', type: 'string' },
+        { name: 'timestamp', type: 'uint256' },
+        { name: 'messageType', type: 'string' }
+      ]
+    };
+
+    const value = {
+      from: message.fromAddress,
+      to: message.toAddress,
+      content: message.content,
+      timestamp: message.timestamp.getTime(),
+      messageType: message.messageType
+    };
+
+    try {
+      return await this.wallet._signTypedData(domain, types, value);
+    } catch (error) {
+      console.error('EIP-712 signing failed:', error);
+      throw error;
     }
-
-    // For external signers, we'd need to request signature through the provider
-    return '';
   }
 
   /**
@@ -308,6 +382,22 @@ class MessagingService {
       throw new Error('Messaging service not initialized');
     }
 
+    // Input validation
+    if (!toAddress || !ethers.utils.isAddress(toAddress)) {
+      throw new Error('Invalid recipient address');
+    }
+
+    if (!content || content.trim().length === 0) {
+      throw new Error('Message content cannot be empty');
+    }
+
+    if (content.length > 10000) {
+      throw new Error('Message content too long (max 10,000 characters)');
+    }
+
+    // Basic XSS prevention
+    const sanitizedContent = content.replace(/<script[^>]*>.*?<\/script>/gi, '');
+
     if (this.isBlocked(toAddress)) {
       throw new Error('Cannot send message to blocked user');
     }
@@ -321,7 +411,7 @@ class MessagingService {
         id: messageId,
         fromAddress: this.currentAddress,
         toAddress: toAddress.toLowerCase(),
-        content,
+        content: sanitizedContent,
         timestamp: now,
         messageType,
         isEncrypted: true,
@@ -498,9 +588,8 @@ class MessagingService {
 
     this.blockedUsers.add(normalizedAddress);
 
-    // Store in localStorage for persistence
-    const blockedList = Array.from(this.blockedUsers);
-    localStorage.setItem(`blocked_users_${this.currentAddress}`, JSON.stringify(blockedList));
+    // Store in secure storage
+    await this.storeBlockedUsersSecurely();
 
     // Notify server
     webSocketService.send('block_user', {
@@ -524,9 +613,8 @@ class MessagingService {
 
     this.blockedUsers.delete(normalizedAddress);
 
-    // Update localStorage
-    const blockedList = Array.from(this.blockedUsers);
-    localStorage.setItem(`blocked_users_${this.currentAddress}`, JSON.stringify(blockedList));
+    // Update secure storage
+    await this.storeBlockedUsersSecurely();
 
     // Notify server
     webSocketService.send('unblock_user', {
@@ -632,7 +720,14 @@ class MessagingService {
       try {
         // Decrypt message if encrypted
         if (message.isEncrypted && message.encryptedContent) {
-          message.content = await this.decryptMessage(message.encryptedContent);
+          try {
+            message.content = await this.decryptMessage(message.encryptedContent);
+          } catch (decryptError) {
+            console.error('Failed to decrypt message:', decryptError);
+            // Keep original content as fallback, mark as undecryptable
+            message.content = '[Message could not be decrypted - encryption key may be unavailable]';
+            message.metadata = { ...message.metadata, decryptionFailed: true };
+          }
         }
 
         // Add to local storage
@@ -665,6 +760,8 @@ class MessagingService {
         this.emit('conversation_updated', conversationId);
       } catch (error) {
         console.error('Failed to process received message:', error);
+        // Emit error event for UI handling
+        this.emit('message_error', { error: error.message, messageId: message.id });
       }
     });
 
@@ -732,18 +829,17 @@ class MessagingService {
   }
 
   private async loadConversations(): Promise<void> {
-    // In a real implementation, this would load from backend/IPFS
-    const stored = localStorage.getItem(`conversations_${this.currentAddress}`);
-    if (stored) {
-      try {
-        const data = JSON.parse(stored);
+    try {
+      const data = await this.loadFromSecureStorage('conversations');
+      if (data?.conversations) {
         data.conversations.forEach((conv: any) => {
           this.conversations.set(conv.id, {
             ...conv,
             lastActivity: new Date(conv.lastActivity)
           });
         });
-        
+      }
+      if (data?.messages) {
         data.messages.forEach((msgData: any) => {
           this.messages.set(msgData.conversationId, 
             msgData.messages.map((msg: any) => ({
@@ -752,21 +848,20 @@ class MessagingService {
             }))
           );
         });
-      } catch (error) {
-        console.error('Failed to load conversations:', error);
       }
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
     }
   }
 
   private async loadBlockedUsers(): Promise<void> {
-    const stored = localStorage.getItem(`blocked_users_${this.currentAddress}`);
-    if (stored) {
-      try {
-        const blockedList = JSON.parse(stored);
+    try {
+      const blockedList = await this.loadFromSecureStorage('blocked_users');
+      if (blockedList) {
         this.blockedUsers = new Set(blockedList);
-      } catch (error) {
-        console.error('Failed to load blocked users:', error);
       }
+    } catch (error) {
+      console.error('Failed to load blocked users:', error);
     }
   }
 
@@ -801,6 +896,140 @@ class MessagingService {
         }
       });
     }
+  }
+
+  /**
+   * Secure storage methods using IndexedDB
+   */
+  private async storeKeySecurely(key: CryptoKey): Promise<void> {
+    try {
+      const exported = await crypto.subtle.exportKey('raw', key);
+      await this.storeInIndexedDB('encryption_key', Array.from(new Uint8Array(exported)));
+    } catch (error) {
+      console.error('Failed to store key securely:', error);
+    }
+  }
+
+  private async loadKeyFromSecureStorage(): Promise<CryptoKey | null> {
+    try {
+      const keyData = await this.loadFromIndexedDB('encryption_key');
+      if (!keyData) return null;
+      
+      return await crypto.subtle.importKey(
+        'raw',
+        new Uint8Array(keyData),
+        { name: 'AES-GCM' },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    } catch (error) {
+      console.error('Failed to load key from secure storage:', error);
+      return null;
+    }
+  }
+
+  private async storeBlockedUsersSecurely(): Promise<void> {
+    const blockedList = Array.from(this.blockedUsers);
+    await this.storeInSecureStorage('blocked_users', blockedList);
+  }
+
+  private async storeInSecureStorage(key: string, data: any): Promise<void> {
+    const encrypted = await this.encryptForStorage(JSON.stringify(data));
+    await this.storeInIndexedDB(key, encrypted);
+  }
+
+  private async loadFromSecureStorage(key: string): Promise<any> {
+    const encrypted = await this.loadFromIndexedDB(key);
+    if (!encrypted) return null;
+    
+    const decrypted = await this.decryptFromStorage(encrypted);
+    return JSON.parse(decrypted);
+  }
+
+  private async encryptForStorage(data: string): Promise<string> {
+    if (!this.cryptoKey) throw new Error('Encryption key not available');
+    
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      this.cryptoKey,
+      new TextEncoder().encode(data)
+    );
+    
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    
+    return btoa(String.fromCharCode(...combined));
+  }
+
+  private async decryptFromStorage(encryptedData: string): Promise<string> {
+    if (!this.cryptoKey) throw new Error('Encryption key not available');
+    
+    const combined = new Uint8Array(
+      atob(encryptedData).split('').map(char => char.charCodeAt(0))
+    );
+    
+    const iv = combined.slice(0, 12);
+    const encrypted = combined.slice(12);
+    
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      this.cryptoKey,
+      encrypted
+    );
+    
+    return new TextDecoder().decode(decrypted);
+  }
+
+  private async storeInIndexedDB(key: string, data: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('LinkDAOMessaging', 1);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['secure_storage'], 'readwrite');
+        const store = transaction.objectStore('secure_storage');
+        
+        const putRequest = store.put({ id: `${this.currentAddress}_${key}`, data });
+        putRequest.onsuccess = () => resolve();
+        putRequest.onerror = () => reject(putRequest.error);
+      };
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('secure_storage')) {
+          db.createObjectStore('secure_storage', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+
+  private async loadFromIndexedDB(key: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('LinkDAOMessaging', 1);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(['secure_storage'], 'readonly');
+        const store = transaction.objectStore('secure_storage');
+        
+        const getRequest = store.get(`${this.currentAddress}_${key}`);
+        getRequest.onsuccess = () => {
+          resolve(getRequest.result?.data || null);
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+      };
+      
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('secure_storage')) {
+          db.createObjectStore('secure_storage', { keyPath: 'id' });
+        }
+      };
+    });
   }
 
   /**
