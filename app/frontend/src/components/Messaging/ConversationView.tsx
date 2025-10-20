@@ -4,6 +4,7 @@ import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
 import { TypingIndicator } from './TypingIndicator';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { OrderConversationHeader } from './OrderConversationHeader';
 
 interface ConversationViewProps {
   conversation: Conversation;
@@ -190,8 +191,34 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  const handleViewOrder = (orderId: number) => {
+    // In a real implementation, this would navigate to the order details page
+    console.log('Viewing order:', orderId);
+  };
+
+  const handleTrackPackage = (trackingNumber: string) => {
+    // In a real implementation, this would open the tracking details
+    console.log('Tracking package:', trackingNumber);
+  };
+
   return (
     <div className="conversation-view h-full flex flex-col">
+      {/* Order Context Header */}
+      <OrderConversationHeader 
+        conversation={{
+          ...conversation,
+          orderId: (conversation as any).orderId || 12345,
+          contextMetadata: {
+            productName: 'Wireless Headphones',
+            productImage: '',
+            orderStatus: 'shipped',
+            orderId: (conversation as any).orderId || 12345
+          }
+        }}
+        onViewOrder={handleViewOrder}
+        onTrackPackage={handleTrackPackage}
+      />
+      
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="flex items-center space-x-3">

@@ -15,8 +15,10 @@ import {
   ChevronRight,
   Truck,
   RotateCcw,
-  ShieldCheck
+  ShieldCheck,
+  MessageCircle
 } from 'lucide-react';
+import { useRouter } from 'next/router';
 
 interface ProductDetailPageProps {
   product: {
@@ -88,6 +90,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(product.media[0]?.url || '');
   const [isBuying, setIsBuying] = useState(false);
+  const router = useRouter();
 
   const handleAddToCart = () => {
     // Add to cart functionality
@@ -136,6 +139,13 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     } else {
       console.log('Viewing seller profile:', product.seller.id);
     }
+  };
+
+  const handleAskSeller = () => {
+    // In a real implementation, this would create or navigate to a conversation with the seller
+    console.log('Asking seller:', product.seller.id);
+    // For now, we'll just navigate to the messaging page
+    router.push('/messages');
   };
 
   return (
@@ -314,8 +324,26 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               >
                 <Heart size={20} className="text-gray-600" />
               </button>
+              <button 
+                type="button"
+                onClick={handleAskSeller}
+                className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center"
+              >
+                <MessageCircle size={20} className="text-gray-600" />
+              </button>
               <button type="button" className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50">
                 <Share2 size={20} className="text-gray-600" />
+              </button>
+            </div>
+            
+            {/* Ask Seller Button */}
+            <div className="mb-6">
+              <button
+                onClick={handleAskSeller}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors"
+              >
+                <MessageCircle size={20} />
+                Ask Seller a Question
               </button>
             </div>
             

@@ -12,3 +12,6 @@ export { ConversationSettingsModal } from './ConversationSettingsModal';
 export { OfflineIndicator } from './OfflineIndicator';
 export { default as MessagingWidget } from './MessagingWidget';
 export { default as DiscordStyleMessagingInterface } from './DiscordStyleMessagingInterface';
+export { OrderConversationHeader } from './OrderConversationHeader';
+export { QuickReplyPanel } from './QuickReplyPanel';
+export { OrderTimeline } from './OrderTimeline';

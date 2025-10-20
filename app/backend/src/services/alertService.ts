@@ -411,7 +411,7 @@ class AlertService {
     const cutoff = Date.now() - maxAge;
     let cleaned = 0;
 
-    for (const [id, alert] of this.alerts.entries()) {
+    for (const [id, alert] of Array.from(this.alerts.entries())) {
       if (alert.resolved && alert.resolvedAt && alert.resolvedAt.getTime() < cutoff) {
         this.alerts.delete(id);
         cleaned++;

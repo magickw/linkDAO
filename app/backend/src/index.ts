@@ -29,6 +29,29 @@ import {
   healthCheckExclusionMiddleware
 } from './middleware/requestLogging';
 import { globalErrorHandler, notFoundHandler } from './middleware/globalErrorHandler';
+
+// Import enhanced error handling and logging
+import { 
+  enhancedErrorHandler, 
+  EnhancedAppError, 
+  ErrorFactory,
+  asyncHandler 
+} from './middleware/enhancedErrorHandler';
+import { 
+  enhancedRequestLoggingMiddleware,
+  databaseQueryTrackingMiddleware,
+  cacheOperationTrackingMiddleware,
+  businessContextMiddleware,
+  RequestLoggingHelpers
+} from './middleware/enhancedRequestLogging';
+import { 
+  enhancedRateLimitingService,
+  enhancedGeneralRateLimit,
+  enhancedAuthRateLimit,
+  enhancedApiRateLimit
+} from './middleware/enhancedRateLimiting';
+import { errorLoggingService } from './services/errorLoggingService';
+import { comprehensiveMonitoringService } from './services/comprehensiveMonitoringService';
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
 
@@ -100,11 +123,14 @@ app.use(requestFingerprinting);
 // Request tracking and monitoring
 app.use(metricsTrackingMiddleware);
 app.use(healthCheckExclusionMiddleware);
+app.use(enhancedRequestLoggingMiddleware);
+app.use(databaseQueryTrackingMiddleware);
+app.use(cacheOperationTrackingMiddleware);
 app.use(performanceMonitoringMiddleware);
 app.use(requestSizeMonitoringMiddleware);
 
-// Rate limiting
-app.use(generalRateLimit);
+// Enhanced rate limiting with abuse prevention
+app.use(enhancedApiRateLimit);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -279,6 +305,7 @@ import priceOracleRoutes from './routes/priceOracleRoutes';
 import { reputationRoutes } from './routes/reputationRoutes';
 // Import monitoring routes
 import monitoringRoutes from './routes/monitoringRoutes';
+import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
 
 // Import transaction routes
 import transactionRoutes from './routes/transactionRoutes';
@@ -397,6 +424,7 @@ app.use('/marketplace/reputation', reputationRoutes);
 
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/system-monitoring', systemMonitoringRoutes);
 
 // Transaction routes
 app.use('/api/transactions', transactionRoutes);
@@ -412,6 +440,19 @@ app.use('/api/member-behavior', memberBehaviorRoutes);
 
 // Use content performance routes
 app.use('/api/content-performance', contentPerformanceRoutes);
+
+// Import order event listener service
+import { orderEventListenerService } from './services/orderEventListenerService';
+
+// Import order event handler routes
+import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
+
+// Order event handler routes
+app.use('/api/order-events', orderEventHandlerRoutes);
+
+// Marketplace messaging routes
+import marketplaceMessagingRoutes from './routes/marketplaceMessagingRoutes';
+app.use('/api/marketplace/messaging', marketplaceMessagingRoutes);
 
 // Report builder routes
 import reportBuilderRoutes from './routes/reportBuilderRoutes';
@@ -442,7 +483,8 @@ app.use('/api/*', (req, res) => {
 
 // Error handling middleware (must be last)
 app.use(errorCorrelationMiddleware);
-app.use(globalErrorHandler);
+app.use(enhancedErrorHandler); // Use enhanced error handler as primary
+app.use(globalErrorHandler); // Keep as fallback
 app.use(notFoundHandler);
 
 // Start server
@@ -503,6 +545,24 @@ httpServer.listen(PORT, async () => {
     console.warn('⚠️ Cache service initialization failed:', error);
     console.log('📝 Server will continue without caching');
   }
+
+  // Start comprehensive monitoring
+  try {
+    comprehensiveMonitoringService.startMonitoring(60000); // Monitor every minute
+    console.log('✅ Comprehensive monitoring service started');
+    console.log('📊 System health monitoring active');
+  } catch (error) {
+    console.warn('⚠️ Monitoring service initialization failed:', error);
+  }
+
+  // Start order event listener
+  try {
+    orderEventListenerService.startListening();
+    console.log('✅ Order event listener started');
+    console.log('🔄 Listening for order events to trigger messaging automation');
+  } catch (error) {
+    console.warn('⚠️ Order event listener failed to start:', error);
+  }
 });
 
 // Graceful shutdown handling
@@ -514,6 +574,9 @@ const gracefulShutdown = (signal: string) => {
   
   // Close Admin WebSocket service
   shutdownAdminWebSocket();
+  
+  // Stop monitoring service
+  comprehensiveMonitoringService.stopMonitoring();
   
   // Close HTTP server
   httpServer.close(() => {

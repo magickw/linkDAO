@@ -19,7 +19,7 @@ export interface SanitizationResult {
 }
 
 // Default sanitization configurations for different content types
-export const SANITIZATION_CONFIGS = {
+export const SANITIZATION_CONFIGS: Record<string, SanitizationConfig> = {
   // Basic text input (no HTML allowed)
   TEXT: {
     allowedTags: [],
@@ -64,7 +64,7 @@ export const SANITIZATION_CONFIGS = {
     maxLength: 200,
     preserveWhitespace: false
   }
-} as const;
+};
 
 /**
  * Enhanced input sanitization utility
@@ -382,5 +382,4 @@ export const marketplaceSanitization = sanitizationMiddleware({
   params: SANITIZATION_CONFIGS.TEXT
 });
 
-// Export the main sanitizer class
-export { InputSanitizer };
+// InputSanitizer class is already exported above

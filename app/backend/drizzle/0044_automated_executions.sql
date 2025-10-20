@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS "community_automated_executions" (
 );
 
 -- Add foreign key constraints
-ALTER TABLE "community_automated_executions" ADD CONSTRAINT "community_automated_executions_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "community_governance_proposals"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "community_automated_executions" ADD CONSTRAINT "community_automated_executions_dependency_proposal_id_community_governance_proposals_id_fk" FOREIGN KEY ("dependency_proposal_id") REFERENCES "community_governance_proposals"("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "community_automated_executions" ADD CONSTRAINT "ca_executions_proposal_id_fk" FOREIGN KEY ("proposal_id") REFERENCES "community_governance_proposals"("id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "community_automated_executions" ADD CONSTRAINT "ca_executions_dependency_fk" FOREIGN KEY ("dependency_proposal_id") REFERENCES "community_governance_proposals"("id") ON DELETE SET NULL ON UPDATE NO ACTION;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS "idx_community_automated_executions_proposal_id" ON "community_automated_executions" ("proposal_id");

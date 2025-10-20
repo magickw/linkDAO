@@ -2945,8 +2945,27 @@ export const conversations = pgTable("conversations", {
   unreadCount: integer("unread_count").default(0),
   archivedBy: jsonb("archived_by").default("[]"),
   createdAt: timestamp("created_at").defaultNow(),
+  
+  // Marketplace context columns
+  conversationType: varchar("conversation_type", { length: 32 }).default("general"),
+  orderId: integer("order_id"),
+  productId: uuid("product_id"),
+  listingId: integer("listing_id"),
+  contextMetadata: jsonb("context_metadata").default("{}"),
+  isAutomated: boolean("is_automated").default(false),
+  status: varchar("status", { length: 32 }).default("active"),
+  archivedAt: timestamp("archived_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
 }, (t) => ({
   lastActivityIdx: index("idx_conversations_last_activity").on(t.lastActivity),
+  
+  // Marketplace indexes
+  orderIdIdx: index("idx_conversations_order_id").on(t.orderId),
+  productIdIdx: index("idx_conversations_product_id").on(t.productId),
+  listingIdIdx: index("idx_conversations_listing_id").on(t.listingId),
+  conversationTypeIdx: index("idx_conversations_type").on(t.conversationType),
+  statusIdx: index("idx_conversations_status").on(t.status),
+  isAutomatedIdx: index("idx_conversations_is_automated").on(t.isAutomated),
 }));
 
 export const chatMessages = pgTable("chat_messages", {
