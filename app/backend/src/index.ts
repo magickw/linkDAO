@@ -55,6 +55,10 @@ import { comprehensiveMonitoringService } from './services/comprehensiveMonitori
 import { metricsTrackingMiddleware } from './middleware/metricsMiddleware';
 import { marketplaceSecurity, generalRateLimit } from './middleware/marketplaceSecurity';
 
+// Import performance optimization middleware
+import PerformanceOptimizationIntegration from './middleware/performanceOptimizationIntegration';
+import { Pool } from 'pg';
+
 // Import services
 import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
@@ -114,6 +118,29 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 10000;
 
+// Initialize database pool for performance optimization
+const dbPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  min: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+// Initialize performance optimization
+const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
+  enableCaching: true,
+  enableCompression: true,
+  enableDatabaseOptimization: true,
+  enableConnectionPooling: true,
+  enableIndexOptimization: true,
+  enableMetrics: true,
+  enableAutoOptimization: process.env.NODE_ENV === 'production'
+});
+
+// Set performance optimizer for routes
+setPerformanceOptimizer(performanceOptimizer);
+
 // Core middleware stack (order matters!)
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
@@ -131,6 +158,9 @@ app.use(requestSizeMonitoringMiddleware);
 
 // Enhanced rate limiting with abuse prevention
 app.use(enhancedApiRateLimit);
+
+// Performance optimization middleware (should be early in the chain)
+app.use(performanceOptimizer.optimize());
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -307,6 +337,9 @@ import { reputationRoutes } from './routes/reputationRoutes';
 import monitoringRoutes from './routes/monitoringRoutes';
 import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
 
+// Import performance routes
+import performanceRoutes, { setPerformanceOptimizer } from './routes/performanceRoutes';
+
 // Import transaction routes
 import transactionRoutes from './routes/transactionRoutes';
 
@@ -425,6 +458,9 @@ app.use('/marketplace/reputation', reputationRoutes);
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/system-monitoring', systemMonitoringRoutes);
+
+// Performance optimization routes
+app.use('/api/performance', performanceRoutes);
 
 // Transaction routes
 app.use('/api/transactions', transactionRoutes);
@@ -566,23 +602,34 @@ httpServer.listen(PORT, async () => {
 });
 
 // Graceful shutdown handling
-const gracefulShutdown = (signal: string) => {
+const gracefulShutdown = async (signal: string) => {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
   
-  // Close WebSocket service
-  shutdownWebSocket();
-  
-  // Close Admin WebSocket service
-  shutdownAdminWebSocket();
-  
-  // Stop monitoring service
-  comprehensiveMonitoringService.stopMonitoring();
-  
-  // Close HTTP server
-  httpServer.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+  try {
+    // Close WebSocket service
+    shutdownWebSocket();
+    
+    // Close Admin WebSocket service
+    shutdownAdminWebSocket();
+    
+    // Stop monitoring service
+    comprehensiveMonitoringService.stopMonitoring();
+    
+    // Stop performance optimizer
+    performanceOptimizer.stop();
+    
+    // Close database pool
+    await dbPool.end();
+    
+    // Close HTTP server
+    httpServer.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error('Error during graceful shutdown:', error);
+    process.exit(1);
+  }
   
   // Force close after 10 seconds
   setTimeout(() => {

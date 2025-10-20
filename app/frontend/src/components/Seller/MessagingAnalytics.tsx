@@ -7,7 +7,8 @@ import {
   AlertCircle,
   BarChart3
 } from 'lucide-react';
-import { marketplaceMessagingAnalyticsService, MessagingAnalytics } from '../../services/marketplaceMessagingAnalyticsService';
+import { marketplaceMessagingAnalyticsService } from '../../services/marketplaceMessagingAnalyticsService';
+import type { SellerMessagingAnalytics } from '../../services/marketplaceMessagingAnalyticsService';
 
 interface StatCardProps {
   title: string;
@@ -15,6 +16,11 @@ interface StatCardProps {
   trend?: 'improving' | 'declining' | 'stable';
   alert?: boolean;
   icon: React.ReactNode;
+}
+
+interface CommonQuestion {
+  keyword: string;
+  count: number;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, trend, alert, icon }) => {
@@ -111,7 +117,7 @@ const LineChart: React.FC<{ data: Array<{ date: Date; responseTime: number }> }>
 };
 
 export const MessagingAnalytics: React.FC = () => {
-  const [analytics, setAnalytics] = useState<MessagingAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<SellerMessagingAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -202,7 +208,7 @@ export const MessagingAnalytics: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Common Questions</h3>
           <div className="space-y-4">
-            {analytics.commonQuestions.map((question, index) => (
+            {analytics.commonQuestions.map((question: CommonQuestion, index: number) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <span className="font-medium text-gray-900 dark:text-white">{question.keyword}</span>
                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-sm font-medium rounded-full">

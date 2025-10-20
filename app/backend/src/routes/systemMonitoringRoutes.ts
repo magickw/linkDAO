@@ -1,322 +1,434 @@
-import * as express from 'express';
-import { Request, Response } from 'express';
-import { comprehensiveMonitoringService } from '../services/comprehensiveMonitoringService';
-import { errorLoggingService } from '../services/errorLoggingService';
-import { enhancedRateLimitingService } from '../middleware/enhancedRateLimiting';
-import { ApiResponse } from '../utils/apiResponse';
-import { asyncHandler } from '../middleware/enhancedErrorHandler';
-import { adminAuthMiddleware } from '../middleware/adminAuthMiddleware';
+/**
+ * System Monitoring Routes
+ * 
+ * Enhanced health check and monitoring endpoints for comprehensive
+ * system observability and operational insights.
+ */
 
-const router = express.Router();
+import { Router } from 'express';
+import { healthMonitoringService } from '../services/healthMonitoringService';
+import { successResponse, errorResponse } from '../utils/apiResponse';
+import { asyncHandler } from '../middleware/globalErrorHandler';
 
-// Apply admin authentication to all monitoring routes
-router.use(adminAuthMiddleware);
+const router = Router();
 
 /**
- * Get current system health status
+ * @route GET /api/monitoring/health/comprehensive
+ * @desc Comprehensive health check with detailed service status
+ * @access Public
  */
-router.get('/health', asyncHandler(async (req: Request, res: Response) => {
-  const healthStatus = await comprehensiveMonitoringService.getCurrentHealthStatus();
+router.get('/health/comprehensive', asyncHandler(async (req, res) => {
+  const startTime = Date.now();
   
-  ApiResponse.success(res, healthStatus);
-}));
-
-/**
- * Get system metrics for a specified time period
- */
-router.get('/metrics', asyncHandler(async (req: Request, res: Response) => {
-  const hours = parseInt(req.query.hours as string) || 1;
-  const metrics = comprehensiveMonitoringService.getMetrics(hours);
-  
-  // Calculate summary statistics
-  const summary = {
-    totalDataPoints: metrics.length,
-    timeRange: {
-      start: metrics.length > 0 ? metrics[0].timestamp : null,
-      end: metrics.length > 0 ? metrics[metrics.length - 1].timestamp : null,
-      hours
-    },
-    averages: metrics.length > 0 ? {
-      memoryUsage: Math.round(metrics.reduce((sum, m) => sum + m.system.memory.heapUsed, 0) / metrics.length / 1024 / 1024),
-      responseTime: Math.round(metrics.reduce((sum, m) => sum + m.application.averageResponseTime, 0) / metrics.length),
-      errorRate: Math.round(metrics.reduce((sum, m) => sum + m.application.errorRate, 0) / metrics.length * 100) / 100
-    } : null
-  };
-  
-  ApiResponse.success(res, {
-    metrics,
-    summary
-  });
-}));
-
-/**
- * Get error statistics and patterns
- */
-router.get('/errors', asyncHandler(async (req: Request, res: Response) => {
-  const errorStats = errorLoggingService.getErrorStats();
-  const errorPatterns = errorLoggingService.getErrorPatterns();
-  
-  ApiResponse.success(res, {
-    statistics: errorStats,
-    patterns: errorPatterns,
-    summary: {
-      totalErrors: errorStats.totalErrors,
-      errorRate: errorStats.errorRate,
-      topCategories: Object.entries(errorStats.errorsByCategory)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5),
-      topSeverities: Object.entries(errorStats.errorsBySeverity)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-    }
-  });
-}));
-
-/**
- * Get rate limiting statistics
- */
-router.get('/rate-limits', asyncHandler(async (req: Request, res: Response) => {
-  const rateLimitStats = await enhancedRateLimitingService.getStatistics();
-  
-  ApiResponse.success(res, {
-    statistics: rateLimitStats,
-    summary: {
-      totalRequests: rateLimitStats.totalRequests,
-      blockedRequests: rateLimitStats.blockedRequests,
-      blockRate: rateLimitStats.totalRequests > 0 
-        ? Math.round((rateLimitStats.blockedRequests / rateLimitStats.totalRequests) * 10000) / 100
-        : 0,
-      topConsumers: rateLimitStats.topConsumers.slice(0, 10)
-    }
-  });
-}));
-
-/**
- * Get active alerts
- */
-router.get('/alerts', asyncHandler(async (req: Request, res: Response) => {
-  const acknowledged = req.query.acknowledged === 'true';
-  const alerts = comprehensiveMonitoringService.getAlerts(acknowledged);
-  
-  const summary = {
-    total: alerts.length,
-    bySeverity: alerts.reduce((acc, alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    recent: alerts.filter(a => 
-      new Date(a.timestamp).getTime() > Date.now() - 3600000 // Last hour
-    ).length
-  };
-  
-  ApiResponse.success(res, {
-    alerts,
-    summary
-  });
-}));
-
-/**
- * Acknowledge an alert
- */
-router.post('/alerts/:alertId/acknowledge', asyncHandler(async (req: Request, res: Response) => {
-  const { alertId } = req.params;
-  
-  await comprehensiveMonitoringService.acknowledgeAlert(alertId);
-  
-  ApiResponse.success(res, {
-    message: 'Alert acknowledged successfully',
-    alertId,
-    acknowledgedAt: new Date().toISOString()
-  });
-}));
-
-/**
- * Get monitoring thresholds
- */
-router.get('/thresholds', asyncHandler(async (req: Request, res: Response) => {
-  const thresholds = comprehensiveMonitoringService.getThresholds();
-  
-  ApiResponse.success(res, {
-    thresholds,
-    description: {
-      errorRate: 'Maximum errors per minute before alerting',
-      responseTime: 'Maximum average response time in milliseconds',
-      memoryUsage: 'Maximum memory usage percentage',
-      cpuUsage: 'Maximum CPU usage percentage',
-      diskUsage: 'Maximum disk usage percentage',
-      dbConnectionPool: 'Maximum database connection pool usage percentage',
-      cacheHitRate: 'Minimum cache hit rate percentage',
-      rateLimitViolations: 'Maximum rate limit violations per minute'
-    }
-  });
-}));
-
-/**
- * Update monitoring thresholds
- */
-router.put('/thresholds', asyncHandler(async (req: Request, res: Response) => {
-  const newThresholds = req.body;
-  
-  // Validate thresholds
-  const validKeys = [
-    'errorRate', 'responseTime', 'memoryUsage', 'cpuUsage', 
-    'diskUsage', 'dbConnectionPool', 'cacheHitRate', 'rateLimitViolations'
-  ];
-  
-  const invalidKeys = Object.keys(newThresholds).filter(key => !validKeys.includes(key));
-  if (invalidKeys.length > 0) {
-    return ApiResponse.badRequest(res, 'Invalid threshold keys', { invalidKeys });
-  }
-  
-  // Validate threshold values
-  for (const [key, value] of Object.entries(newThresholds)) {
-    if (typeof value !== 'number' || value < 0) {
-      return ApiResponse.badRequest(res, `Invalid threshold value for ${key}`, { 
-        key, 
-        value, 
-        expected: 'positive number' 
-      });
-    }
-  }
-  
-  comprehensiveMonitoringService.updateThresholds(newThresholds);
-  
-  ApiResponse.success(res, {
-    message: 'Thresholds updated successfully',
-    updatedThresholds: newThresholds,
-    currentThresholds: comprehensiveMonitoringService.getThresholds()
-  });
-}));
-
-/**
- * Reset rate limit for a specific key
- */
-router.post('/rate-limits/reset', asyncHandler(async (req: Request, res: Response) => {
-  const { key } = req.body;
-  
-  if (!key) {
-    return ApiResponse.badRequest(res, 'Rate limit key is required');
-  }
-  
-  await enhancedRateLimitingService.resetRateLimit(key);
-  
-  ApiResponse.success(res, {
-    message: 'Rate limit reset successfully',
-    key,
-    resetAt: new Date().toISOString()
-  });
-}));
-
-/**
- * Block a specific key
- */
-router.post('/rate-limits/block', asyncHandler(async (req: Request, res: Response) => {
-  const { key, durationMs = 300000 } = req.body; // Default 5 minutes
-  
-  if (!key) {
-    return ApiResponse.badRequest(res, 'Rate limit key is required');
-  }
-  
-  if (typeof durationMs !== 'number' || durationMs <= 0) {
-    return ApiResponse.badRequest(res, 'Duration must be a positive number in milliseconds');
-  }
-  
-  await enhancedRateLimitingService.blockKey(key, durationMs);
-  
-  ApiResponse.success(res, {
-    message: 'Key blocked successfully',
-    key,
-    durationMs,
-    blockedUntil: new Date(Date.now() + durationMs).toISOString()
-  });
-}));
-
-/**
- * Unblock a specific key
- */
-router.post('/rate-limits/unblock', asyncHandler(async (req: Request, res: Response) => {
-  const { key } = req.body;
-  
-  if (!key) {
-    return ApiResponse.badRequest(res, 'Rate limit key is required');
-  }
-  
-  await enhancedRateLimitingService.unblockKey(key);
-  
-  ApiResponse.success(res, {
-    message: 'Key unblocked successfully',
-    key,
-    unblockedAt: new Date().toISOString()
-  });
-}));
-
-/**
- * Get system performance summary
- */
-router.get('/performance', asyncHandler(async (req: Request, res: Response) => {
-  const hours = parseInt(req.query.hours as string) || 1;
-  const metrics = comprehensiveMonitoringService.getMetrics(hours);
-  
-  if (metrics.length === 0) {
-    return ApiResponse.success(res, {
-      message: 'No performance data available',
-      timeRange: { hours }
+  try {
+    const healthData = await healthMonitoringService.performComprehensiveHealthCheck();
+    const responseTime = Date.now() - startTime;
+    
+    // Determine overall status
+    const overallStatus = healthData.services.every(s => s.status === 'healthy') ? 'healthy' :
+                         healthData.services.some(s => s.status === 'unhealthy' && s.critical) ? 'unhealthy' : 'degraded';
+    
+    const response = {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      responseTime,
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || '1.0.0',
+      environment: process.env.NODE_ENV || 'development',
+      services: healthData.services,
+      dependencies: healthData.dependencies,
+      metrics: {
+        ...healthData.metrics,
+        healthCheckResponseTime: responseTime
+      },
+      alerts: healthData.alerts || []
+    };
+    
+    const statusCode = overallStatus === 'healthy' ? 200 : 
+                      overallStatus === 'degraded' ? 200 : 503;
+    
+    res.status(statusCode).json({
+      success: overallStatus !== 'unhealthy',
+      data: response,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        requestId: res.locals.requestId,
+        version: '1.0.0'
+      }
     });
+  } catch (error) {
+    console.error('Comprehensive health check failed:', error);
+    errorResponse(res, 'HEALTH_CHECK_FAILED', 'Health check service unavailable', 503);
+  }
+}));
+
+/**
+ * @route GET /api/monitoring/metrics/performance
+ * @desc Get detailed performance metrics
+ * @access Public
+ */
+router.get('/metrics/performance', asyncHandler(async (req, res) => {
+  const metrics = await healthMonitoringService.getPerformanceMetrics();
+  
+  successResponse(res, {
+    timestamp: new Date().toISOString(),
+    performance: {
+      responseTime: {
+        avg: metrics.responseTime.avg,
+        p50: metrics.responseTime.p50,
+        p95: metrics.responseTime.p95,
+        p99: metrics.responseTime.p99,
+        max: metrics.responseTime.max
+      },
+      throughput: {
+        requestsPerSecond: metrics.throughput.rps,
+        requestsPerMinute: metrics.throughput.rpm,
+        totalRequests: metrics.throughput.total
+      },
+      errorRate: {
+        percentage: metrics.errorRate.percentage,
+        total: metrics.errorRate.total,
+        byStatusCode: metrics.errorRate.byStatusCode
+      },
+      memory: {
+        heapUsed: metrics.memory.heapUsed,
+        heapTotal: metrics.memory.heapTotal,
+        external: metrics.memory.external,
+        rss: metrics.memory.rss,
+        usagePercentage: Math.round((metrics.memory.heapUsed / metrics.memory.heapTotal) * 100)
+      },
+      cpu: {
+        usage: metrics.cpu.usage,
+        loadAverage: metrics.cpu.loadAverage
+      },
+      eventLoop: {
+        lag: metrics.eventLoop.lag,
+        utilization: metrics.eventLoop.utilization
+      }
+    },
+    trends: metrics.trends || {}
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/services/:serviceName/health
+ * @desc Get health status for a specific service
+ * @access Public
+ */
+router.get('/services/:serviceName/health', asyncHandler(async (req, res) => {
+  const { serviceName } = req.params;
+  const serviceHealth = await healthMonitoringService.getServiceHealth(serviceName);
+  
+  if (!serviceHealth) {
+    return errorResponse(res, 'SERVICE_NOT_FOUND', `Service '${serviceName}' not found`, 404);
   }
   
-  // Calculate performance statistics
-  const responseTimes = metrics.map(m => m.application.averageResponseTime);
-  const memoryUsages = metrics.map(m => m.system.memory.heapUsed);
-  const errorRates = metrics.map(m => m.application.errorRate);
+  const statusCode = serviceHealth.status === 'healthy' ? 200 :
+                    serviceHealth.status === 'degraded' ? 200 : 503;
   
-  const performance = {
-    responseTime: {
-      current: responseTimes[responseTimes.length - 1],
-      average: Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length),
-      min: Math.min(...responseTimes),
-      max: Math.max(...responseTimes),
-      p95: calculatePercentile(responseTimes, 95),
-      p99: calculatePercentile(responseTimes, 99)
+  res.status(statusCode).json({
+    success: serviceHealth.status !== 'unhealthy',
+    data: {
+      service: serviceName,
+      status: serviceHealth.status,
+      lastCheck: serviceHealth.lastCheck,
+      responseTime: serviceHealth.responseTime,
+      uptime: serviceHealth.uptime,
+      details: serviceHealth.details,
+      metrics: serviceHealth.metrics,
+      history: serviceHealth.history?.slice(-10) || [] // Last 10 checks
+    },
+    metadata: {
+      timestamp: new Date().toISOString(),
+      requestId: res.locals.requestId,
+      version: '1.0.0'
+    }
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/database/health
+ * @desc Detailed database health check
+ * @access Public
+ */
+router.get('/database/health', asyncHandler(async (req, res) => {
+  const dbHealth = await healthMonitoringService.getDatabaseHealth();
+  
+  successResponse(res, {
+    status: dbHealth.status,
+    connection: {
+      active: dbHealth.connection.active,
+      pool: {
+        total: dbHealth.connection.pool.total,
+        idle: dbHealth.connection.pool.idle,
+        waiting: dbHealth.connection.pool.waiting
+      }
+    },
+    performance: {
+      queryTime: dbHealth.performance.avgQueryTime,
+      slowQueries: dbHealth.performance.slowQueries,
+      connectionTime: dbHealth.performance.connectionTime
+    },
+    storage: {
+      size: dbHealth.storage.size,
+      freeSpace: dbHealth.storage.freeSpace,
+      usage: dbHealth.storage.usage
+    },
+    replication: dbHealth.replication || null,
+    lastCheck: dbHealth.lastCheck
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/cache/health
+ * @desc Cache system health check
+ * @access Public
+ */
+router.get('/cache/health', asyncHandler(async (req, res) => {
+  const cacheHealth = await healthMonitoringService.getCacheHealth();
+  
+  successResponse(res, {
+    status: cacheHealth.status,
+    connection: {
+      active: cacheHealth.connection.active,
+      responseTime: cacheHealth.connection.responseTime
+    },
+    performance: {
+      hitRate: cacheHealth.performance.hitRate,
+      missRate: cacheHealth.performance.missRate,
+      evictionRate: cacheHealth.performance.evictionRate
     },
     memory: {
-      current: Math.round(memoryUsages[memoryUsages.length - 1] / 1024 / 1024),
-      average: Math.round(memoryUsages.reduce((a, b) => a + b, 0) / memoryUsages.length / 1024 / 1024),
-      min: Math.round(Math.min(...memoryUsages) / 1024 / 1024),
-      max: Math.round(Math.max(...memoryUsages) / 1024 / 1024),
-      trend: calculateTrend(memoryUsages)
+      used: cacheHealth.memory.used,
+      available: cacheHealth.memory.available,
+      fragmentation: cacheHealth.memory.fragmentation
     },
-    errors: {
-      current: errorRates[errorRates.length - 1],
-      average: Math.round(errorRates.reduce((a, b) => a + b, 0) / errorRates.length * 100) / 100,
-      total: errorRates.reduce((a, b) => a + b, 0),
-      trend: calculateTrend(errorRates)
+    keys: {
+      total: cacheHealth.keys.total,
+      expired: cacheHealth.keys.expired,
+      expiring: cacheHealth.keys.expiring
     },
-    uptime: process.uptime(),
-    dataPoints: metrics.length,
-    timeRange: {
-      start: metrics[0].timestamp,
-      end: metrics[metrics.length - 1].timestamp,
-      hours
-    }
-  };
-  
-  ApiResponse.success(res, performance);
+    lastCheck: cacheHealth.lastCheck
+  });
 }));
 
-// Helper functions
-function calculatePercentile(values: number[], percentile: number): number {
-  const sorted = values.slice().sort((a, b) => a - b);
-  const index = Math.ceil((percentile / 100) * sorted.length) - 1;
-  return sorted[index] || 0;
-}
+/**
+ * @route GET /api/monitoring/external-services/health
+ * @desc External services health check
+ * @access Public
+ */
+router.get('/external-services/health', asyncHandler(async (req, res) => {
+  const externalHealth = await healthMonitoringService.getExternalServicesHealth();
+  
+  successResponse(res, {
+    status: externalHealth.status,
+    services: externalHealth.services.map(service => ({
+      name: service.name,
+      status: service.status,
+      url: service.url,
+      responseTime: service.responseTime,
+      lastCheck: service.lastCheck,
+      error: service.error || null,
+      uptime: service.uptime
+    })),
+    summary: {
+      total: externalHealth.services.length,
+      healthy: externalHealth.services.filter(s => s.status === 'healthy').length,
+      degraded: externalHealth.services.filter(s => s.status === 'degraded').length,
+      unhealthy: externalHealth.services.filter(s => s.status === 'unhealthy').length
+    }
+  });
+}));
 
-function calculateTrend(values: number[]): number {
-  if (values.length < 2) return 0;
+/**
+ * @route GET /api/monitoring/alerts
+ * @desc Get active system alerts
+ * @access Public
+ */
+router.get('/alerts', asyncHandler(async (req, res) => {
+  const alerts = await healthMonitoringService.getActiveAlerts();
   
-  const first = values[0];
-  const last = values[values.length - 1];
+  successResponse(res, {
+    alerts: alerts.map(alert => ({
+      id: alert.id,
+      level: alert.level,
+      service: alert.service,
+      message: alert.message,
+      timestamp: alert.timestamp,
+      acknowledged: alert.acknowledged,
+      details: alert.details
+    })),
+    summary: {
+      total: alerts.length,
+      critical: alerts.filter(a => a.level === 'critical').length,
+      warning: alerts.filter(a => a.level === 'warning').length,
+      info: alerts.filter(a => a.level === 'info').length,
+      unacknowledged: alerts.filter(a => !a.acknowledged).length
+    }
+  });
+}));
+
+/**
+ * @route POST /api/monitoring/alerts/:alertId/acknowledge
+ * @desc Acknowledge a system alert
+ * @access Public
+ */
+router.post('/alerts/:alertId/acknowledge', asyncHandler(async (req, res) => {
+  const { alertId } = req.params;
+  const { acknowledgedBy } = req.body;
   
-  return first === 0 ? 0 : Math.round(((last - first) / first) * 10000) / 100; // Percentage change
-}
+  const result = await healthMonitoringService.acknowledgeAlert(alertId, acknowledgedBy);
+  
+  if (result.success) {
+    successResponse(res, {
+      message: 'Alert acknowledged successfully',
+      alert: result.alert
+    });
+  } else {
+    errorResponse(res, 'ALERT_NOT_FOUND', 'Alert not found or already acknowledged', 404);
+  }
+}));
+
+/**
+ * @route GET /api/monitoring/system/info
+ * @desc Get system information and configuration
+ * @access Public
+ */
+router.get('/system/info', asyncHandler(async (req, res) => {
+  const systemInfo = await healthMonitoringService.getSystemInfo();
+  
+  successResponse(res, {
+    system: {
+      platform: systemInfo.platform,
+      arch: systemInfo.arch,
+      nodeVersion: systemInfo.nodeVersion,
+      uptime: systemInfo.uptime,
+      hostname: systemInfo.hostname
+    },
+    application: {
+      name: systemInfo.app.name,
+      version: systemInfo.app.version,
+      environment: systemInfo.app.environment,
+      startTime: systemInfo.app.startTime,
+      pid: systemInfo.app.pid
+    },
+    resources: {
+      memory: systemInfo.resources.memory,
+      cpu: systemInfo.resources.cpu,
+      disk: systemInfo.resources.disk
+    },
+    configuration: {
+      database: {
+        type: systemInfo.config.database.type,
+        host: systemInfo.config.database.host,
+        port: systemInfo.config.database.port,
+        ssl: systemInfo.config.database.ssl
+      },
+      cache: {
+        type: systemInfo.config.cache.type,
+        host: systemInfo.config.cache.host,
+        port: systemInfo.config.cache.port
+      },
+      features: systemInfo.config.features
+    }
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/logs/recent
+ * @desc Get recent system logs
+ * @access Public
+ */
+router.get('/logs/recent', asyncHandler(async (req, res) => {
+  const { level = 'info', limit = 100, service } = req.query;
+  
+  const logs = await healthMonitoringService.getRecentLogs({
+    level: level as string,
+    limit: parseInt(limit as string),
+    service: service as string
+  });
+  
+  successResponse(res, {
+    logs: logs.map(log => ({
+      timestamp: log.timestamp,
+      level: log.level,
+      service: log.service,
+      message: log.message,
+      metadata: log.metadata
+    })),
+    summary: {
+      total: logs.length,
+      byLevel: logs.reduce((acc, log) => {
+        acc[log.level] = (acc[log.level] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    }
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/dependencies/status
+ * @desc Get status of all system dependencies
+ * @access Public
+ */
+router.get('/dependencies/status', asyncHandler(async (req, res) => {
+  const dependencies = await healthMonitoringService.getDependenciesStatus();
+  
+  successResponse(res, {
+    dependencies: dependencies.map(dep => ({
+      name: dep.name,
+      type: dep.type,
+      status: dep.status,
+      version: dep.version,
+      critical: dep.critical,
+      responseTime: dep.responseTime,
+      lastCheck: dep.lastCheck,
+      error: dep.error || null
+    })),
+    summary: {
+      total: dependencies.length,
+      healthy: dependencies.filter(d => d.status === 'healthy').length,
+      degraded: dependencies.filter(d => d.status === 'degraded').length,
+      unhealthy: dependencies.filter(d => d.status === 'unhealthy').length,
+      critical: dependencies.filter(d => d.critical).length
+    }
+  });
+}));
+
+/**
+ * @route GET /api/monitoring/capacity/analysis
+ * @desc Get system capacity analysis and recommendations
+ * @access Public
+ */
+router.get('/capacity/analysis', asyncHandler(async (req, res) => {
+  const analysis = await healthMonitoringService.getCapacityAnalysis();
+  
+  successResponse(res, {
+    current: {
+      cpu: analysis.current.cpu,
+      memory: analysis.current.memory,
+      disk: analysis.current.disk,
+      network: analysis.current.network,
+      database: analysis.current.database
+    },
+    trends: {
+      cpu: analysis.trends.cpu,
+      memory: analysis.trends.memory,
+      requests: analysis.trends.requests
+    },
+    projections: {
+      timeToCapacity: analysis.projections.timeToCapacity,
+      recommendedScaling: analysis.projections.recommendedScaling,
+      bottlenecks: analysis.projections.bottlenecks
+    },
+    recommendations: analysis.recommendations.map(rec => ({
+      type: rec.type,
+      priority: rec.priority,
+      description: rec.description,
+      impact: rec.impact,
+      effort: rec.effort
+    }))
+  });
+}));
 
 export default router;

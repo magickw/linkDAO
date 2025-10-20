@@ -1,375 +1,546 @@
-import { Express, Request, Response, NextFunction } from 'express';
-import { databaseOptimizationService } from '../services/databaseOptimizationService';
-import { 
-  dynamicRateLimit, 
-  extractUserTier, 
-  rateLimitMonitoring,
-  internalServiceBypass,
-  emergencyRateLimitOverride
-} from './dynamicRateLimit';
-import { 
-  deduplicationMiddleware, 
-  responseCacheMiddleware,
-  requestDeduplicationService
-} from '../services/requestDeduplicationService';
-import { 
-  standardCompression, 
-  responseOptimization, 
-  largePayloadOptimization 
-} from './compressionMiddleware';
-import { 
-  defaultApiCache,
-  apiResponseCacheService
-} from '../services/apiResponseCacheService';
-import { logger } from '../utils/logger';
+import { Request, Response, NextFunction } from 'express';
+import { Pool } from 'pg';
+import { ResponseCachingMiddleware } from './responseCachingMiddleware';
+import DatabaseOptimizationMiddleware from './databaseOptimizationMiddleware';
+import CompressionOptimizationMiddleware from './compressionOptimizationMiddleware';
+import ConnectionPoolOptimizer from '../services/connectionPoolOptimizer';
+import DatabaseIndexOptimizer from '../services/databaseIndexOptimizer';
+import { performance } from 'perf_hooks';
+
+interface PerformanceMetrics {
+  totalRequests: number;
+  averageResponseTime: number;
+  cacheHitRate: number;
+  compressionRate: number;
+  databaseQueryTime: number;
+  poolUtilization: number;
+  indexEfficiency: number;
+  errorRate: number;
+}
+
+interface OptimizationConfig {
+  enableCaching: boolean;
+  enableCompression: boolean;
+  enableDatabaseOptimization: boolean;
+  enableConnectionPooling: boolean;
+  enableIndexOptimization: boolean;
+  enableMetrics: boolean;
+  enableAutoOptimization: boolean;
+}
 
 /**
- * Performance optimization integration service
+ * Performance Optimization Integration Middleware
+ * Integrates all performance optimization components
  */
 export class PerformanceOptimizationIntegration {
-  private static instance: PerformanceOptimizationIntegration;
-  private isInitialized = false;
+  private pool: Pool;
+  private config: OptimizationConfig;
+  private metrics: PerformanceMetrics;
+  
+  // Optimization components
+  private responseCaching: ResponseCachingMiddleware;
+  private databaseOptimization: DatabaseOptimizationMiddleware;
+  private compressionOptimization: CompressionOptimizationMiddleware;
+  private connectionPoolOptimizer: ConnectionPoolOptimizer;
+  private databaseIndexOptimizer: DatabaseIndexOptimizer;
 
-  public static getInstance(): PerformanceOptimizationIntegration {
-    if (!PerformanceOptimizationIntegration.instance) {
-      PerformanceOptimizationIntegration.instance = new PerformanceOptimizationIntegration();
-    }
-    return PerformanceOptimizationIntegration.instance;
+  // Monitoring
+  private requestTimes: number[] = [];
+  private monitoringInterval?: NodeJS.Timeout;
+  private optimizationInterval?: NodeJS.Timeout;
+
+  constructor(pool: Pool, config: Partial<OptimizationConfig> = {}) {
+    this.pool = pool;
+    this.config = {
+      enableCaching: true,
+      enableCompression: true,
+      enableDatabaseOptimization: true,
+      enableConnectionPooling: true,
+      enableIndexOptimization: true,
+      enableMetrics: true,
+      enableAutoOptimization: true,
+      ...config
+    };
+
+    this.metrics = this.initializeMetrics();
+    this.initializeComponents();
+    this.startMonitoring();
   }
 
   /**
-   * Initialize all performance optimizations
+   * Initialize metrics
    */
-  public async initialize(app: Express): Promise<void> {
-    if (this.isInitialized) {
-      logger.warn('Performance optimizations already initialized');
-      return;
+  private initializeMetrics(): PerformanceMetrics {
+    return {
+      totalRequests: 0,
+      averageResponseTime: 0,
+      cacheHitRate: 0,
+      compressionRate: 0,
+      databaseQueryTime: 0,
+      poolUtilization: 0,
+      indexEfficiency: 0,
+      errorRate: 0
+    };
+  }
+
+  /**
+   * Initialize optimization components
+   */
+  private initializeComponents(): void {
+    if (this.config.enableCaching) {
+      this.responseCaching = new ResponseCachingMiddleware();
     }
 
-    try {
-      logger.info('Initializing performance optimizations...');
+    if (this.config.enableDatabaseOptimization) {
+      this.databaseOptimization = new DatabaseOptimizationMiddleware(this.pool, {
+        enableQueryLogging: true,
+        slowQueryThreshold: 1000,
+        enableIndexHints: true,
+        enableQueryPlan: true,
+        cacheQueryPlans: true
+      });
+    }
 
-      // 1. Database optimizations
-      await this.initializeDatabaseOptimizations();
+    if (this.config.enableCompression) {
+      this.compressionOptimization = new CompressionOptimizationMiddleware({
+        threshold: 1024,
+        level: 6,
+        enableBrotli: true,
+        enableGzip: true
+      });
+    }
 
-      // 2. Apply middleware in correct order
-      this.applyPerformanceMiddleware(app);
+    if (this.config.enableConnectionPooling) {
+      this.connectionPoolOptimizer = new ConnectionPoolOptimizer(this.pool);
+    }
 
-      // 3. Initialize monitoring and cleanup
-      this.initializeMonitoring();
-
-      this.isInitialized = true;
-      logger.info('Performance optimizations initialized successfully');
-    } catch (error) {
-      logger.error('Failed to initialize performance optimizations:', error);
-      throw error;
+    if (this.config.enableIndexOptimization) {
+      this.databaseIndexOptimizer = new DatabaseIndexOptimizer(this.pool);
     }
   }
 
   /**
-   * Initialize database optimizations
+   * Start monitoring and auto-optimization
    */
-  private async initializeDatabaseOptimizations(): Promise<void> {
-    try {
-      // Create performance indexes
-      await databaseOptimizationService.createOptimizationIndexes();
-      
-      // Optimize connection settings
-      await databaseOptimizationService.optimizeConnectionSettings();
-      
-      logger.info('Database optimizations applied');
-    } catch (error) {
-      logger.error('Database optimization failed:', error);
-      // Don't throw - continue with other optimizations
+  private startMonitoring(): void {
+    if (!this.config.enableMetrics) return;
+
+    // Update metrics every minute
+    this.monitoringInterval = setInterval(() => {
+      this.updateMetrics();
+    }, 60000);
+
+    // Run optimization every 10 minutes
+    if (this.config.enableAutoOptimization) {
+      this.optimizationInterval = setInterval(() => {
+        this.runAutoOptimization();
+      }, 600000);
     }
   }
 
   /**
-   * Apply performance middleware in the correct order
+   * Main performance optimization middleware
    */
-  private applyPerformanceMiddleware(app: Express): void {
-    // 1. Emergency overrides (highest priority)
-    app.use(emergencyRateLimitOverride);
+  optimize() {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      const startTime = performance.now();
+      this.metrics.totalRequests++;
 
-    // 2. Internal service bypass
-    app.use(internalServiceBypass);
+      // Add performance context to request
+      req.performance = {
+        startTime,
+        optimizations: {
+          caching: this.config.enableCaching,
+          compression: this.config.enableCompression,
+          database: this.config.enableDatabaseOptimization,
+          pooling: this.config.enableConnectionPooling,
+          indexing: this.config.enableIndexOptimization
+        },
+        metrics: () => this.getMetrics()
+      };
 
-    // 3. Request monitoring and user tier extraction
-    app.use(rateLimitMonitoring);
-    app.use(extractUserTier);
+      // Apply optimizations in order
+      const middlewares: Array<(req: Request, res: Response, next: NextFunction) => void> = [];
 
-    // 4. Rate limiting (before caching to prevent cache pollution)
-    app.use(dynamicRateLimit);
-
-    // 5. Request deduplication (prevent duplicate processing)
-    app.use(deduplicationMiddleware);
-
-    // 6. Response caching (cache successful responses)
-    app.use(responseCacheMiddleware(300)); // 5 minutes default TTL
-    app.use(defaultApiCache);
-
-    // 7. Response compression and optimization
-    app.use(standardCompression);
-    app.use(responseOptimization);
-    app.use(largePayloadOptimization);
-
-    logger.info('Performance middleware applied');
-  }
-
-  /**
-   * Initialize monitoring and cleanup processes
-   */
-  private initializeMonitoring(): void {
-    // Start performance monitoring
-    setInterval(async () => {
-      try {
-        await this.collectPerformanceMetrics();
-      } catch (error) {
-        logger.error('Error collecting performance metrics:', error);
+      // 1. Compression (should be early in the chain)
+      if (this.config.enableCompression) {
+        middlewares.push(this.compressionOptimization.adaptiveCompression());
+        middlewares.push(this.compressionOptimization.contentAwareCompression());
       }
-    }, 60000); // Every minute
 
-    // Start cleanup processes
-    setInterval(async () => {
-      try {
-        await this.performCleanup();
-      } catch (error) {
-        logger.error('Error during cleanup:', error);
+      // 2. Caching (before database operations)
+      if (this.config.enableCaching) {
+        middlewares.push(this.getCachingMiddleware(req));
       }
-    }, 300000); // Every 5 minutes
 
-    logger.info('Performance monitoring initialized');
-  }
+      // 3. Database optimization
+      if (this.config.enableDatabaseOptimization) {
+        middlewares.push(this.databaseOptimization.optimize());
+      }
 
-  /**
-   * Collect performance metrics
-   */
-  private async collectPerformanceMetrics(): Promise<void> {
-    try {
-      // Database performance metrics
-      const dbStats = await databaseOptimizationService.getDatabaseStats();
-      
-      // Cache performance metrics
-      const cacheStats = apiResponseCacheService.getCacheStats();
-      const deduplicationStats = requestDeduplicationService.getCacheStats();
-
-      // Query performance analysis
-      const queryAnalysis = await databaseOptimizationService.analyzeQueryPerformance();
-
-      const metrics = {
-        timestamp: new Date().toISOString(),
-        database: dbStats,
-        cache: cacheStats,
-        deduplication: deduplicationStats,
-        queries: {
-          slowQueryCount: queryAnalysis.slowQueries.length,
-          averageExecutionTime: queryAnalysis.performanceStats.averageExecutionTime,
-          totalQueries: queryAnalysis.performanceStats.totalQueries
+      // Execute middleware chain
+      let currentIndex = 0;
+      const executeNext = () => {
+        if (currentIndex < middlewares.length) {
+          const middleware = middlewares[currentIndex++];
+          middleware(req, res, executeNext);
+        } else {
+          // All optimizations applied, continue to next middleware
+          this.trackRequestCompletion(req, res, startTime);
+          next();
         }
       };
 
-      // Log metrics for monitoring systems
-      logger.info('Performance metrics collected', metrics);
-
-      // Alert on performance issues
-      this.checkPerformanceAlerts(metrics);
-    } catch (error) {
-      logger.error('Error collecting performance metrics:', error);
-    }
+      executeNext();
+    };
   }
 
   /**
-   * Check for performance alerts
+   * Get appropriate caching middleware based on request
    */
-  private checkPerformanceAlerts(metrics: any): void {
-    // Database connection alerts
-    if (metrics.database.connectionStats.active_connections > 20) {
-      logger.warn('High database connection usage', {
-        activeConnections: metrics.database.connectionStats.active_connections
+  private getCachingMiddleware(req: Request) {
+    const path = req.path.toLowerCase();
+    
+    // Different caching strategies for different endpoints
+    if (path.includes('/marketplace/listings')) {
+      return this.responseCaching.cache({
+        ttl: 60, // 1 minute for listings
+        keyGenerator: (req) => {
+          const query = new URLSearchParams(req.query as any).toString();
+          return `listings:${Buffer.from(query).toString('base64')}`;
+        },
+        varyBy: ['query:category', 'query:search', 'query:page']
       });
     }
 
-    // Cache hit rate alerts
-    if (metrics.cache.hitRate < 50) {
-      logger.warn('Low cache hit rate', {
-        hitRate: metrics.cache.hitRate
+    if (path.includes('/sellers/') && path.includes('/profile')) {
+      return this.responseCaching.cache({
+        ttl: 300, // 5 minutes for seller profiles
+        keyGenerator: (req) => `seller:${req.params.sellerId}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200
       });
     }
 
-    // Slow query alerts
-    if (metrics.queries.slowQueryCount > 10) {
-      logger.warn('High number of slow queries detected', {
-        slowQueryCount: metrics.queries.slowQueryCount,
-        averageTime: metrics.queries.averageExecutionTime
+    if (path.includes('/products/')) {
+      return this.responseCaching.cache({
+        ttl: 600, // 10 minutes for product details
+        keyGenerator: (req) => `product:${req.params.productId}`,
+        condition: (req, res) => req.method === 'GET' && res.statusCode === 200
       });
     }
 
-    // Average response time alerts
-    if (metrics.queries.averageExecutionTime > 1000) {
-      logger.warn('High average query execution time', {
-        averageTime: metrics.queries.averageExecutionTime
-      });
-    }
+    // Default caching
+    return this.responseCaching.cache({
+      ttl: 300,
+      condition: (req, res) => req.method === 'GET' && res.statusCode === 200
+    });
   }
 
   /**
-   * Perform cleanup operations
+   * Track request completion and update metrics
    */
-  private async performCleanup(): Promise<void> {
+  private trackRequestCompletion(req: Request, res: Response, startTime: number): void {
+    res.on('finish', () => {
+      const endTime = performance.now();
+      const responseTime = endTime - startTime;
+      
+      this.requestTimes.push(responseTime);
+      
+      // Keep only recent request times
+      if (this.requestTimes.length > 1000) {
+        this.requestTimes = this.requestTimes.slice(-1000);
+      }
+
+      // Track query analysis for index optimization
+      if (this.config.enableIndexOptimization && req.db) {
+        // This would be called after database queries are executed
+        // Implementation would depend on how queries are tracked
+      }
+
+      // Add performance headers
+      res.set({
+        'X-Response-Time': `${responseTime.toFixed(2)}ms`,
+        'X-Performance-Optimized': 'true',
+        'X-Optimizations': Object.entries(req.performance?.optimizations || {})
+          .filter(([_, enabled]) => enabled)
+          .map(([name]) => name)
+          .join(',')
+      });
+    });
+  }
+
+  /**
+   * Update performance metrics
+   */
+  private updateMetrics(): void {
     try {
-      // Clean up expired cache entries
-      await this.cleanupExpiredCache();
+      // Calculate average response time
+      if (this.requestTimes.length > 0) {
+        const sum = this.requestTimes.reduce((a, b) => a + b, 0);
+        this.metrics.averageResponseTime = sum / this.requestTimes.length;
+      }
 
-      // Clean up old performance metrics
-      await this.cleanupOldMetrics();
+      // Get cache metrics
+      if (this.config.enableCaching && this.responseCaching) {
+        const cacheMetrics = this.responseCaching.getMetrics();
+        this.metrics.cacheHitRate = cacheMetrics.hitRate;
+      }
 
-      logger.debug('Cleanup operations completed');
+      // Get compression metrics
+      if (this.config.enableCompression && this.compressionOptimization) {
+        const compressionMetrics = this.compressionOptimization.getMetrics();
+        this.metrics.compressionRate = compressionMetrics.compressionRate;
+      }
+
+      // Get database metrics
+      if (this.config.enableDatabaseOptimization && this.databaseOptimization) {
+        const dbMetrics = this.databaseOptimization.getMetrics();
+        this.metrics.databaseQueryTime = dbMetrics.averageQueryTime;
+      }
+
+      // Get pool metrics
+      if (this.config.enableConnectionPooling && this.connectionPoolOptimizer) {
+        const poolMetrics = this.connectionPoolOptimizer.getMetrics();
+        this.metrics.poolUtilization = poolMetrics.poolUtilization;
+      }
+
     } catch (error) {
-      logger.error('Error during cleanup operations:', error);
+      console.error('Error updating performance metrics:', error);
     }
   }
 
   /**
-   * Clean up expired cache entries
+   * Run automatic optimization
    */
-  private async cleanupExpiredCache(): Promise<void> {
-    // This would be implemented based on your cache service capabilities
-    logger.debug('Cache cleanup completed');
+  private async runAutoOptimization(): Promise<void> {
+    try {
+      console.log('Running automatic performance optimization...');
+
+      // Optimize connection pool
+      if (this.config.enableConnectionPooling && this.connectionPoolOptimizer) {
+        await this.connectionPoolOptimizer.forceOptimization();
+      }
+
+      // Generate index recommendations
+      if (this.config.enableIndexOptimization && this.databaseIndexOptimizer) {
+        const recommendations = await this.databaseIndexOptimizer.generateIndexRecommendations();
+        
+        if (recommendations.length > 0) {
+          console.log(`Generated ${recommendations.length} index recommendations`);
+          
+          // Auto-apply critical recommendations
+          const criticalRecs = recommendations.filter(rec => rec.priority === 'critical');
+          for (const rec of criticalRecs.slice(0, 3)) { // Limit to 3 at a time
+            const result = await this.databaseIndexOptimizer.createIndex(rec);
+            if (result.success) {
+              console.log(`Auto-applied critical index: ${rec.createStatement}`);
+            }
+          }
+        }
+      }
+
+      console.log('Automatic optimization completed');
+
+    } catch (error) {
+      console.error('Auto-optimization error:', error);
+    }
   }
 
   /**
-   * Clean up old performance metrics
+   * Get comprehensive performance metrics
    */
-  private async cleanupOldMetrics(): Promise<void> {
-    // Clean up old query metrics in database optimization service
-    logger.debug('Metrics cleanup completed');
+  getMetrics(): PerformanceMetrics & {
+    components: {
+      caching?: any;
+      compression?: any;
+      database?: any;
+      connectionPool?: any;
+      indexing?: any;
+    };
+  } {
+    const componentMetrics: any = {};
+
+    if (this.config.enableCaching && this.responseCaching) {
+      componentMetrics.caching = this.responseCaching.getMetrics();
+    }
+
+    if (this.config.enableCompression && this.compressionOptimization) {
+      componentMetrics.compression = this.compressionOptimization.getMetrics();
+    }
+
+    if (this.config.enableDatabaseOptimization && this.databaseOptimization) {
+      componentMetrics.database = this.databaseOptimization.getMetrics();
+    }
+
+    if (this.config.enableConnectionPooling && this.connectionPoolOptimizer) {
+      componentMetrics.connectionPool = this.connectionPoolOptimizer.getMetrics();
+    }
+
+    if (this.config.enableIndexOptimization && this.databaseIndexOptimizer) {
+      componentMetrics.indexing = {
+        recommendations: this.databaseIndexOptimizer.getIndexRecommendations().length,
+        queryPatterns: this.databaseIndexOptimizer.getQueryPatterns().length
+      };
+    }
+
+    return {
+      ...this.metrics,
+      components: componentMetrics
+    };
   }
 
   /**
-   * Get comprehensive performance status
+   * Get performance report
    */
-  public async getPerformanceStatus(): Promise<{
-    status: 'healthy' | 'degraded' | 'critical';
-    metrics: any;
-    recommendations: string[];
+  async getPerformanceReport(): Promise<{
+    overall: {
+      status: 'excellent' | 'good' | 'fair' | 'poor';
+      score: number;
+      recommendations: string[];
+    };
+    components: {
+      [key: string]: {
+        status: string;
+        metrics: any;
+        recommendations: string[];
+      };
+    };
   }> {
-    try {
-      const metrics = {
-        database: await databaseOptimizationService.getDatabaseStats(),
-        cache: apiResponseCacheService.getCacheStats(),
-        deduplication: requestDeduplicationService.getCacheStats(),
-        queries: await databaseOptimizationService.analyzeQueryPerformance()
+    const metrics = this.getMetrics();
+    const recommendations: string[] = [];
+    let score = 100;
+
+    // Evaluate overall performance
+    if (metrics.averageResponseTime > 2000) {
+      recommendations.push('High average response time - review query optimization');
+      score -= 20;
+    }
+
+    if (metrics.cacheHitRate < 0.5) {
+      recommendations.push('Low cache hit rate - review caching strategy');
+      score -= 15;
+    }
+
+    if (metrics.compressionRate < 0.3) {
+      recommendations.push('Low compression rate - review content optimization');
+      score -= 10;
+    }
+
+    if (metrics.poolUtilization > 90) {
+      recommendations.push('High pool utilization - consider scaling');
+      score -= 15;
+    }
+
+    // Determine overall status
+    let status: 'excellent' | 'good' | 'fair' | 'poor';
+    if (score >= 90) status = 'excellent';
+    else if (score >= 75) status = 'good';
+    else if (score >= 60) status = 'fair';
+    else status = 'poor';
+
+    // Get component reports
+    const components: any = {};
+
+    if (this.config.enableCompression && this.compressionOptimization) {
+      const compressionReport = this.compressionOptimization.getCompressionReport();
+      components.compression = {
+        status: compressionReport.efficiency,
+        metrics: compressionReport.stats,
+        recommendations: compressionReport.recommendations
       };
+    }
 
-      const recommendations: string[] = [];
-      let status: 'healthy' | 'degraded' | 'critical' = 'healthy';
+    if (this.config.enableConnectionPooling && this.connectionPoolOptimizer) {
+      const poolStatus = this.connectionPoolOptimizer.getPoolStatus();
+      components.connectionPool = {
+        status: poolStatus.status,
+        metrics: metrics.components.connectionPool,
+        recommendations: poolStatus.issues
+      };
+    }
 
-      // Analyze metrics and generate recommendations
-      if (metrics.cache.hitRate < 30) {
-        status = 'degraded';
-        recommendations.push('Consider increasing cache TTL or warming cache for popular endpoints');
-      }
-
-      if (metrics.queries.performanceStats.averageExecutionTime > 2000) {
-        status = 'critical';
-        recommendations.push('Database queries are slow - consider adding indexes or optimizing queries');
-      }
-
-      if (metrics.database.connectionStats.active_connections > 25) {
-        status = 'degraded';
-        recommendations.push('High database connection usage - consider connection pooling optimization');
-      }
-
-      return {
+    return {
+      overall: {
         status,
-        metrics,
+        score,
         recommendations
-      };
-    } catch (error) {
-      logger.error('Error getting performance status:', error);
-      return {
-        status: 'critical',
-        metrics: {},
-        recommendations: ['Unable to collect performance metrics - check system health']
-      };
+      },
+      components
+    };
+  }
+
+  /**
+   * Manual optimization trigger
+   */
+  async runOptimization(): Promise<void> {
+    await this.runAutoOptimization();
+  }
+
+  /**
+   * Reset all metrics
+   */
+  resetMetrics(): void {
+    this.metrics = this.initializeMetrics();
+    this.requestTimes = [];
+
+    if (this.responseCaching) {
+      this.responseCaching.resetMetrics();
+    }
+
+    if (this.compressionOptimization) {
+      this.compressionOptimization.resetMetrics();
+    }
+
+    if (this.databaseOptimization) {
+      this.databaseOptimization.resetMetrics();
+    }
+
+    if (this.connectionPoolOptimizer) {
+      this.connectionPoolOptimizer.resetMetrics();
     }
   }
 
   /**
-   * Invalidate caches for specific operations
+   * Stop monitoring and cleanup
    */
-  public async invalidateRelatedCaches(operation: string, data: any): Promise<void> {
-    try {
-      switch (operation) {
-        case 'seller_profile_update':
-          await apiResponseCacheService.invalidateByTags(['seller', 'profile']);
-          await requestDeduplicationService.invalidateCache('seller');
-          break;
-        
-        case 'listing_created':
-        case 'listing_updated':
-          await apiResponseCacheService.invalidateByTags(['listings', 'marketplace']);
-          await requestDeduplicationService.invalidateCache('listings');
-          break;
-        
-        case 'reputation_updated':
-          await apiResponseCacheService.invalidateByTags(['reputation']);
-          await requestDeduplicationService.invalidateCache('reputation');
-          break;
-        
-        default:
-          logger.debug(`No cache invalidation rules for operation: ${operation}`);
-      }
-
-      logger.info(`Cache invalidated for operation: ${operation}`);
-    } catch (error) {
-      logger.error('Error invalidating caches:', error);
+  stop(): void {
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = undefined;
     }
-  }
 
-  /**
-   * Warm caches for popular endpoints
-   */
-  public async warmPopularCaches(): Promise<void> {
-    try {
-      const popularRequests = [
-        { method: 'GET', path: '/marketplace/listings', query: { limit: 20, sortBy: 'createdAt' } },
-        { method: 'GET', path: '/health' },
-        // Add more popular endpoints as needed
-      ];
-
-      await apiResponseCacheService.warmCache(popularRequests);
-      logger.info('Cache warming completed for popular endpoints');
-    } catch (error) {
-      logger.error('Error warming caches:', error);
+    if (this.optimizationInterval) {
+      clearInterval(this.optimizationInterval);
+      this.optimizationInterval = undefined;
     }
-  }
 
-  /**
-   * Get optimization recommendations
-   */
-  public async getOptimizationRecommendations(): Promise<string[]> {
-    try {
-      const queryAnalysis = await databaseOptimizationService.analyzeQueryPerformance();
-      const recommendations: string[] = [];
+    if (this.connectionPoolOptimizer) {
+      this.connectionPoolOptimizer.stopMonitoring();
+    }
 
-      // Add database recommendations
-      recommendations.push(...queryAnalysis.indexRecommendations.map(rec => 
-        `Add index on ${rec.table}.${rec.columns.join(', ')}: ${rec.reason}`
-      ));
-
-      // Add cache recommendations
-      const cacheStats = apiResponseCacheService.getCacheStats();
-      if (cacheStats.hitRate < 50) {
-        recommendations.push('Consider increasing cache TTL for frequently accessed endpoints');
-      }
-
-      return recommendations;
-    } catch (error) {
-      logger.error('Error getting optimization recommendations:', error);
-      return ['Unable to generate recommendations - check system health'];
+    if (this.databaseIndexOptimizer) {
+      this.databaseIndexOptimizer.stopMonitoring();
     }
   }
 }
 
-export const performanceOptimizationIntegration = PerformanceOptimizationIntegration.getInstance();
+// Extend Request interface
+declare global {
+  namespace Express {
+    interface Request {
+      performance?: {
+        startTime: number;
+        optimizations: {
+          caching: boolean;
+          compression: boolean;
+          database: boolean;
+          pooling: boolean;
+          indexing: boolean;
+        };
+        metrics: () => PerformanceMetrics;
+      };
+    }
+  }
+}
+
+export default PerformanceOptimizationIntegration;

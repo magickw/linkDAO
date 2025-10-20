@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import compression from 'compression';
+import { constants } from 'zlib';
 import { performance } from 'perf_hooks';
 
 interface CompressionMetrics {
@@ -45,7 +46,7 @@ export class CompressionOptimizationMiddleware {
       chunkSize: options.chunkSize ?? 16384, // 16KB chunks
       windowBits: options.windowBits ?? 15,
       memLevel: options.memLevel ?? 8,
-      strategy: options.strategy ?? compression.constants.Z_DEFAULT_STRATEGY,
+      strategy: options.strategy ?? constants.Z_DEFAULT_STRATEGY,
       enableBrotli: options.enableBrotli ?? true,
       enableGzip: options.enableGzip ?? true,
       enableDeflate: options.enableDeflate ?? true,

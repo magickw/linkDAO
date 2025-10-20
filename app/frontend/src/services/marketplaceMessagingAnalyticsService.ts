@@ -5,7 +5,7 @@
 
 import { Conversation } from '../types/messaging';
 
-export interface MessagingAnalytics {
+export interface SellerMessagingAnalytics {
   avgResponseTime: number; // in minutes
   responseTimeTrend: 'improving' | 'declining' | 'stable';
   conversionRate: number; // percentage
@@ -36,7 +36,7 @@ class MarketplaceMessagingAnalyticsService {
   /**
    * Get messaging analytics for a seller
    */
-  async getSellerMessagingAnalytics(sellerAddress: string): Promise<MessagingAnalytics> {
+  async getSellerMessagingAnalytics(sellerAddress: string): Promise<SellerMessagingAnalytics> {
     // In a real implementation, this would fetch data from the backend
     // For now, we'll return mock data
     return {
