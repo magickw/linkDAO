@@ -10,6 +10,11 @@ import {
   SellerProfileUpdateResponse,
   ENSValidationResult
 } from '../types/seller';
+import { 
+  SellerTier, 
+  TierProgress, 
+  TierUpgradeInfo 
+} from '../types/sellerTier';
 
 // Standardized API endpoint pattern using `/api/marketplace/seller` base
 const SELLER_API_BASE = '/api/marketplace/seller';
@@ -65,6 +70,12 @@ interface SellerAPIEndpoints {
   // Dispute endpoints
   getDisputes: (walletAddress: string) => string;
   respondToDispute: (disputeId: string) => string;
+  
+  // Tier endpoints
+  getSellerTier: (walletAddress: string) => string;
+  getTierProgress: (walletAddress: string) => string;
+  getTierUpgradeEligibility: (walletAddress: string) => string;
+  refreshTierData: (walletAddress: string) => string;
 }
 
 // Unified error types for seller system
@@ -145,6 +156,12 @@ export class UnifiedSellerAPIClient {
     // Dispute endpoints
     getDisputes: (walletAddress: string) => `${this.baseURL}/disputes/${walletAddress}`,
     respondToDispute: (disputeId: string) => `${this.baseURL}/disputes/${disputeId}/respond`,
+    
+    // Tier endpoints
+    getSellerTier: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier`,
+    getTierProgress: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/progress`,
+    getTierUpgradeEligibility: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/upgrade-eligibility`,
+    refreshTierData: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/refresh`,
   };
 
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -499,6 +516,25 @@ export class UnifiedSellerAPIClient {
     await this.request<void>(this.endpoints.respondToDispute(disputeId), {
       method: 'POST',
       body: JSON.stringify({ response, evidence }),
+    });
+  }
+
+  // Tier API methods
+  async getSellerTier(walletAddress: string): Promise<SellerTier> {
+    return await this.request<SellerTier>(this.endpoints.getSellerTier(walletAddress));
+  }
+
+  async getTierProgress(walletAddress: string): Promise<TierProgress> {
+    return await this.request<TierProgress>(this.endpoints.getTierProgress(walletAddress));
+  }
+
+  async getTierUpgradeEligibility(walletAddress: string): Promise<TierUpgradeInfo> {
+    return await this.request<TierUpgradeInfo>(this.endpoints.getTierUpgradeEligibility(walletAddress));
+  }
+
+  async refreshTierData(walletAddress: string): Promise<void> {
+    await this.request<void>(this.endpoints.refreshTierData(walletAddress), {
+      method: 'POST',
     });
   }
 }

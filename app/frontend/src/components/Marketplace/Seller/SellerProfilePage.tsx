@@ -5,6 +5,9 @@ import { useToast } from '@/context/ToastContext';
 import { sellerService } from '@/services/sellerService';
 import { useSeller } from '@/hooks/useMarketplaceData';
 import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
+import { TierProvider } from '../../../contexts/TierContext';
+import TierInfoCard from '../../Seller/TierSystem/TierInfoCard';
+import { useTier } from '../../../contexts/TierContext';
 
 interface FormData {
   displayName: string;
@@ -419,7 +422,8 @@ function SellerProfilePageComponent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+    <TierProvider walletAddress={walletAddress!}>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div>
@@ -550,6 +554,9 @@ function SellerProfilePageComponent() {
               )}
             </GlassPanel>
           )}
+
+          {/* Tier Information */}
+          <TierInfoCard className="mb-6" />
 
           {/* Profile Details */}
           <div className="md:col-span-2">
@@ -1074,6 +1081,7 @@ function SellerProfilePageComponent() {
         </GlassPanel>
       </div>
     </div>
+    </TierProvider>
   );
 }
 

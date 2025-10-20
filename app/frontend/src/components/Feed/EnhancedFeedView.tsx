@@ -25,7 +25,7 @@ export default function EnhancedFeedView({
   className = ''
 }: EnhancedFeedViewProps) {
   const { addToast } = useToast();
-  const { isMobile, touchTargetClasses } = useMobileOptimization();
+  const { isMobile } = useMobileOptimization();
   
   // Preferences hooks
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();

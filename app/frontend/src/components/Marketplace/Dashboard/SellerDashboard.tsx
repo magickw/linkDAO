@@ -5,6 +5,10 @@ import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { MessagingAnalytics } from '../../Seller/MessagingAnalytics';
 import { UnifiedSellerDashboard, UnifiedSellerProfile, UnifiedSellerListing } from '../../../types/unifiedSeller';
 import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
+import { TierProvider } from '../../../contexts/TierContext';
+import TierAwareComponent from '../../Seller/TierSystem/TierAwareComponent';
+import TierProgressBar from '../../Seller/TierSystem/TierProgressBar';
+import { TIER_ACTIONS } from '../../../types/sellerTier';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
@@ -17,6 +21,32 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // If no wallet address is available, show error
+  if (!dashboardAddress && !mockWalletAddress) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <GlassPanel className="max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Wallet Not Connected</h1>
+            <p className="text-gray-300 mb-6">
+              Please connect your wallet to access the seller dashboard.
+            </p>
+          </div>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Connect Wallet
+          </Button>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  const walletAddress = dashboardAddress || mockWalletAddress!;
 
   if (profileLoading || loading) {
     return (
@@ -103,8 +133,9 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-7xl mx-auto">
+    <TierProvider walletAddress={walletAddress}>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center mb-4 md:mb-0">
@@ -195,15 +226,33 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
               Edit Profile
             </Button>
-            <Button
-              onClick={() => router.push('/marketplace/seller/listings/create')}
-              variant="primary"
+            <TierAwareComponent 
+              requiredAction={TIER_ACTIONS.CREATE_LISTING}
+              showUpgradePrompt={true}
+              fallbackComponent={({ tier, validation }) => (
+                <Button
+                  onClick={() => {}}
+                  variant="primary"
+                  disabled
+                  title={validation?.reason || 'Feature not available for your tier'}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  New Listing
+                </Button>
+              )}
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Listing
-            </Button>
+              <Button
+                onClick={() => router.push('/marketplace/seller/listings/create')}
+                variant="primary"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                New Listing
+              </Button>
+            </TierAwareComponent>
           </div>
         </div>
 
@@ -478,8 +527,40 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             </GlassPanel>
           )}
 
+          {/* Analytics Tab with Tier Gating */}
+          {activeTab === 'analytics' && (
+            <TierAwareComponent 
+              requiredAction={TIER_ACTIONS.ACCESS_ANALYTICS}
+              showUpgradePrompt={true}
+              fallbackComponent={({ tier, validation }) => (
+                <GlassPanel className="p-6 text-center">
+                  <div className="py-8">
+                    <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-2">Analytics Locked</h3>
+                    <p className="text-gray-400 mb-4">
+                      {validation?.reason || 'Analytics access requires a higher tier'}
+                    </p>
+                    <p className="text-sm text-blue-400">
+                      {validation?.alternativeAction || 'Upgrade your tier to access detailed analytics'}
+                    </p>
+                  </div>
+                </GlassPanel>
+              )}
+            >
+              <GlassPanel className="p-6 text-center">
+                <p className="text-gray-400">
+                  Analytics dashboard coming soon...
+                </p>
+              </GlassPanel>
+            </TierAwareComponent>
+          )}
+
           {/* Other tabs would be implemented similarly */}
-          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && (
+          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && (
             <GlassPanel className="p-6 text-center">
               <p className="text-gray-400">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...
@@ -488,7 +569,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           )}
         </div>
       </div>
-    </div>
+    </TierProvider>
   );
 }
 

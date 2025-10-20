@@ -4,6 +4,9 @@ import { useAccount } from 'wagmi';
 import { useUnifiedSellerOnboarding, useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
+import { TierProvider } from '../../../contexts/TierContext';
+import TierAwareComponent from '../../Seller/TierSystem/TierAwareComponent';
+import { TIER_ACTIONS } from '../../../types/sellerTier';
 
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';
@@ -20,7 +23,7 @@ interface SellerOnboardingProps {
 
 function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const { profile, createProfile } = useSeller();
   const {
     steps,
@@ -36,30 +39,6 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   } = useSellerOnboarding();
 
   const [stepData, setStepData] = useState<Record<string, any>>({});
-
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-        <GlassPanel className="max-w-md w-full text-center">
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h1>
-            <p className="text-gray-300">
-              Connect your Web3 wallet to start your seller journey on our decentralized marketplace.
-            </p>
-          </div>
-          <WalletConnectStep
-            onComplete={() => { }}
-            onConnect={() => window.location.reload()}
-          />
-        </GlassPanel>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -184,9 +163,216 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
     }
   };
 
+  // Wrap the entire component with TierProvider if wallet is connected
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <GlassPanel className="max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Connect Your Wallet</h1>
+            <p className="text-gray-300">
+              Connect your Web3 wallet to start your seller journey on our decentralized marketplace.
+            </p>
+          </div>
+          <WalletConnectStep
+            onComplete={() => { }}
+            onConnect={() => window.location.reload()}
+          />
+        </GlassPanel>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4">
-      <div className="max-w-4xl mx-auto">
+    <TierProvider walletAddress={address!}>
+      <TierAwareComponent 
+        requiredAction={TIER_ACTIONS.CREATE_LISTING}
+        showUpgradePrompt={false}
+        className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4"
+      >
+        <SellerOnboardingContent 
+          onComplete={onComplete}
+          profile={profile}
+          createProfile={createProfile}
+          steps={steps}
+          currentStep={currentStep}
+          loading={loading}
+          error={error}
+          updateStep={updateStep}
+          goToStep={goToStep}
+          nextStep={nextStep}
+          previousStep={previousStep}
+          isCompleted={isCompleted}
+          progress={progress}
+        />
+      </TierAwareComponent>
+    </TierProvider>
+  );
+}
+
+// Extract the main content to a separate component for cleaner tier integration
+interface SellerOnboardingContentProps {
+  onComplete?: () => void;
+  profile: any;
+  createProfile: any;
+  steps: any[];
+  currentStep: number;
+  loading: boolean;
+  error: string | null;
+  updateStep: any;
+  goToStep: any;
+  nextStep: any;
+  previousStep: any;
+  isCompleted: boolean;
+  progress: number;
+}
+
+function SellerOnboardingContent({ 
+  onComplete, 
+  profile, 
+  createProfile, 
+  steps, 
+  currentStep, 
+  loading, 
+  error, 
+  updateStep, 
+  goToStep, 
+  nextStep, 
+  previousStep, 
+  isCompleted, 
+  progress 
+}: SellerOnboardingContentProps) {
+  const router = useRouter();
+  const [stepData, setStepData] = useState<Record<string, any>>({});
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <LoadingSkeleton className="h-8 w-64 mb-4" />
+        <LoadingSkeleton className="h-4 w-full mb-8" />
+        <LoadingSkeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-md mx-auto text-center">
+        <GlassPanel>
+          <div className="text-red-400 mb-4">
+            <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <p className="text-lg font-semibold">Oops! Something went wrong</p>
+            <p className="text-sm text-gray-300 mt-2">{error}</p>
+          </div>
+          <Button onClick={() => window.location.reload()} variant="primary">
+            Try Again
+          </Button>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  if (isCompleted) {
+    return (
+      <div className="max-w-md mx-auto text-center">
+        <GlassPanel>
+          <div className="mb-6">
+            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Welcome to the Marketplace! 🎉</h1>
+            <p className="text-gray-300 mb-6">
+              Your seller account is now set up and ready to go. Start listing your products and building your reputation!
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={() => router.push('/marketplace/seller/dashboard')}
+              variant="primary"
+              className="w-full"
+            >
+              Go to Seller Dashboard
+            </Button>
+            <Button
+              onClick={() => router.push('/marketplace/seller/profile')}
+              variant="outline"
+              className="w-full"
+            >
+              View Your Profile
+            </Button>
+            <Button
+              onClick={() => router.push('/marketplace/seller/listings/create')}
+              variant="secondary"
+              className="w-full"
+            >
+              Create Your First Listing
+            </Button>
+          </div>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  const currentStepData = steps[currentStep];
+  if (!currentStepData) return null;
+
+  const handleStepComplete = async (data: any) => {
+    try {
+      // Special handling for profile setup step
+      if (currentStepData.id === 'profile-setup') {
+        // Create the actual seller profile
+        await createProfile(data);
+      }
+      
+      await updateStep(currentStepData.id, data);
+      setStepData(prev => ({ ...prev, [currentStepData.id]: data }));
+
+      // Auto-advance to next step
+      if (currentStep < steps.length - 1) {
+        nextStep();
+      } else if (onComplete) {
+        onComplete();
+      }
+    } catch (err) {
+      console.error('Failed to complete step:', err);
+    }
+  };
+
+  const renderStepComponent = () => {
+    const props = {
+      onComplete: handleStepComplete,
+      data: stepData[currentStepData.id] || currentStepData.data,
+      profile,
+    };
+
+    switch (currentStepData.component) {
+      case 'WalletConnect':
+        return <WalletConnectStep {...props} />;
+      case 'ProfileSetup':
+        return <ProfileSetupStep {...props} />;
+      case 'Verification':
+        return <VerificationStep {...props} />;
+      case 'PayoutSetup':
+        return <PayoutSetupStep {...props} />;
+      case 'FirstListing':
+        return <FirstListingStep {...props} />;
+      default:
+        return <div>Unknown step component: {currentStepData.component}</div>;
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Seller Onboarding</h1>

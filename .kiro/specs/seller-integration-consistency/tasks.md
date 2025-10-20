@@ -64,7 +64,7 @@
   - Optimize forms for mobile input methods
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6_
 
-- [ ] 8. Integrate tier-based feature gating across all components
+- [x] 8. Integrate tier-based feature gating across all components
   - Create TierManagementService for tier operations
   - Implement SellerTier interface with requirements and benefits
   - Create TierAwareComponent for tier-based rendering
@@ -103,7 +103,7 @@
   - Add performance benchmarking tests
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
 
-- [ ]* 12. Add automated tier upgrade system
+- [ ] 12. Add automated tier upgrade system
   - Create automated tier evaluation service
   - Implement tier upgrade notifications
   - Add tier progression tracking
