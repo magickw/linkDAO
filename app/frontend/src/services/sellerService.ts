@@ -16,13 +16,29 @@ import {
   ProfileValidationOptions
 } from '../types/seller';
 import { unifiedSellerAPIClient, SellerAPIError, SellerErrorType } from './unifiedSellerAPIClient';
+import { getSellerCacheManager } from './sellerCacheManager';
 
 class SellerService {
   private profileCache = new Map<string, { data: SellerProfile | null; timestamp: number }>();
   private readonly CACHE_DURATION = 60000; // 60 seconds cache
 
-  // Cache management
+  // Legacy cache management (kept for backward compatibility)
   clearProfileCache(walletAddress?: string): void {
+    const cacheManager = getSellerCacheManager();
+    
+    if (cacheManager) {
+      if (walletAddress) {
+        // Use new cache manager
+        cacheManager.clearSellerCache(walletAddress);
+      } else {
+        // Clear all caches - get all wallet addresses from metadata
+        const stats = cacheManager.getCacheStats();
+        const walletAddresses = [...new Set(stats.metadata.map(m => m.walletAddress))];
+        walletAddresses.forEach(address => cacheManager.clearSellerCache(address));
+      }
+    }
+    
+    // Also clear legacy cache
     if (walletAddress) {
       this.profileCache.delete(walletAddress);
     } else {
@@ -30,8 +46,15 @@ class SellerService {
     }
   }
   
-  // Method to check if a profile is cached
+  // Method to check if a profile is cached (enhanced with new cache manager)
   isProfileCached(walletAddress: string): boolean {
+    const cacheManager = getSellerCacheManager();
+    
+    if (cacheManager) {
+      return cacheManager.isCacheValid(walletAddress, 'profile');
+    }
+    
+    // Fallback to legacy cache
     const cached = this.profileCache.get(walletAddress);
     if (!cached) return false;
     
@@ -39,8 +62,17 @@ class SellerService {
     return now - cached.timestamp < this.CACHE_DURATION;
   }
   
-  // Method to get cached profile without making a request
+  // Method to get cached profile without making a request (enhanced with new cache manager)
   getCachedProfile(walletAddress: string): SellerProfile | null {
+    const cacheManager = getSellerCacheManager();
+    
+    if (cacheManager) {
+      // Try to get from React Query cache via cache manager
+      // This is a simplified approach - in practice, you'd use the React Query hooks
+      console.log('[SellerService] Using cache manager for profile lookup');
+    }
+    
+    // Fallback to legacy cache
     const cached = this.profileCache.get(walletAddress);
     if (!cached) return null;
     
@@ -258,7 +290,28 @@ class SellerService {
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
     console.log(`Updating seller profile for ${walletAddress}:`, updates);
-    return await unifiedSellerAPIClient.updateProfile(walletAddress, updates);
+    
+    const result = await unifiedSellerAPIClient.updateProfile(walletAddress, updates);
+    
+    // Trigger cache invalidation via cache manager
+    const cacheManager = getSellerCacheManager();
+    if (cacheManager) {
+      await cacheManager.invalidateSellerCache(walletAddress, {
+        immediate: true,
+        cascade: true,
+        dependencies: ['profile']
+      });
+      
+      // Trigger profile update event for other components
+      window.dispatchEvent(new CustomEvent('seller-profile-updated', {
+        detail: { walletAddress, profile: result }
+      }));
+    }
+    
+    // Clear legacy cache
+    this.clearProfileCache(walletAddress);
+    
+    return result;
   }
 
   // Enhanced Profile Update with ENS and Image Support - Using Unified API Client

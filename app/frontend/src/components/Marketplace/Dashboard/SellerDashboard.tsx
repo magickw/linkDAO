@@ -4,7 +4,7 @@ import { useUnifiedSellerDashboard, useUnifiedSeller, useSellerTiers, useUnified
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { MessagingAnalytics } from '../../Seller/MessagingAnalytics';
 import { UnifiedSellerDashboard } from '../../../types/unifiedSeller';
-import { withSellerErrorBoundary } from '../Seller/ErrorHandling';
+import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;

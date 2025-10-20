@@ -2,134 +2,63 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { sellerService } from '../services/sellerService';
 import { SellerProfile, SellerDashboardStats, SellerNotification, SellerOrder, SellerListing, OnboardingStep, SellerTier } from '../types/seller';
+import { 
+  useSellerProfile as useSellerProfileCache, 
+  useSellerDashboard as useSellerDashboardCache,
+  useSellerListings as useSellerListingsCache,
+  useSellerOrders as useSellerOrdersCache,
+  useSellerNotifications as useSellerNotificationsCache
+} from './useSellerCache';
 
 export function useSeller() {
   const { address } = useAccount();
-  const [profile, setProfile] = useState<SellerProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Use the new cache-enabled hook
+  const {
+    data: profile,
+    isLoading: loading,
+    error: queryError,
+    updateProfile: updateProfileMutation,
+    invalidateProfile,
+  } = useSellerProfileCache(address);
 
-  const fetchProfile = useCallback(async () => {
-    console.log('useSeller: fetchProfile called', { address });
-    if (!address) return;
-    
-    // Check if profile is already cached before making any requests
-    if (sellerService.isProfileCached(address)) {
-      const cachedProfile = sellerService.getCachedProfile(address);
-      if (cachedProfile) {
-        console.log('useSeller: Using cached profile for address:', address);
-        setProfile(cachedProfile);
-        return;
-      }
-    }
-    
-    // Prevent unnecessary calls if we already have the profile for this address
-    if (profile && profile.walletAddress === address) {
-      console.log('useSeller: Profile already loaded for this address, skipping fetch');
-      return;
-    }
-    
-    // Prevent rapid successive calls
-    const now = Date.now();
-    const lastFetchTime = (window as any).__lastSellerProfileFetch || 0;
-    if (now - lastFetchTime < 2000) { // Increased minimum time between calls to 2 seconds
-      console.log('useSeller: Too soon since last fetch, skipping');
-      return;
-    }
-    
-    console.log('useSeller: Fetching profile for address:', address);
-    (window as any).__lastSellerProfileFetch = now;
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const sellerProfile = await sellerService.getSellerProfile(address);
-      console.log('useSeller: Received profile:', sellerProfile);
-      setProfile(sellerProfile);
-    } catch (err) {
-      console.log('useSeller: Error fetching profile:', err);
-      
-      // Handle 404 errors gracefully - seller profile doesn't exist yet
-      if (err instanceof Error && (err.message.includes('404') || err.message.includes('not found'))) {
-        console.log('useSeller: Seller profile not found (404) - this is normal for new users');
-        setProfile(null);
-        setError(null); // Don't treat 404 as an error
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to fetch seller profile');
-        setProfile(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [address, profile]);
+  // Convert query error to string for backward compatibility
+  const error = queryError ? (queryError as any).message || 'Failed to fetch seller profile' : null;
 
   const createProfile = useCallback(async (profileData: Partial<SellerProfile>) => {
     if (!address) throw new Error('Wallet not connected');
-    
-    setLoading(true);
-    setError(null);
     
     try {
       const newProfile = await sellerService.createSellerProfile({
         ...profileData,
         walletAddress: address,
       });
-      // Clear cache for this address
-      sellerService.clearProfileCache(address);
-      setProfile(newProfile);
+      
+      // Invalidate cache to refetch fresh data
+      await invalidateProfile();
+      
       return newProfile;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create seller profile';
-      setError(errorMessage);
       throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  }, [address]);
+  }, [address, invalidateProfile]);
 
   const updateProfile = useCallback(async (updates: Partial<SellerProfile>) => {
     if (!address) throw new Error('Wallet not connected');
     
-    setLoading(true);
-    setError(null);
-    
     try {
-      const updatedProfile = await sellerService.updateSellerProfile(address, updates);
-      // Clear cache for this address
-      sellerService.clearProfileCache(address);
-      setProfile(updatedProfile);
-      return updatedProfile;
+      // Use the cache-enabled mutation for optimistic updates
+      return await updateProfileMutation.mutateAsync(updates);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update seller profile';
-      setError(errorMessage);
       throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
     }
-  }, [address]);
-
-  useEffect(() => {
-    console.log('useSeller: useEffect triggered', { address });
-    if (address) {
-      console.log('useSeller: Calling fetchProfile for address:', address);
-      // Add debounce to prevent rapid calls
-      const timer = setTimeout(() => {
-        fetchProfile();
-      }, 500); // Increased debounce time
-      
-      return () => clearTimeout(timer);
-    } else {
-      console.log('useSeller: No address, setting profile to null');
-      setProfile(null);
-    }
-  }, [address]); // Remove fetchProfile from dependencies to prevent infinite loop
+  }, [address, updateProfileMutation]);
 
   const refetchProfile = useCallback(async () => {
-    if (address) {
-      sellerService.clearProfileCache(address);
-      await fetchProfile();
-    }
-  }, [address, fetchProfile]);
+    await invalidateProfile();
+  }, [invalidateProfile]);
   
   return {
     profile,
@@ -251,55 +180,41 @@ export function useSellerDashboard(mockWalletAddress?: string) {
   const { address } = useAccount();
   // Use mockWalletAddress if provided, otherwise use the actual wallet address
   const effectiveAddress = mockWalletAddress || address;
-  const [stats, setStats] = useState<SellerDashboardStats | null>(null);
-  const [notifications, setNotifications] = useState<SellerNotification[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Use cache-enabled hooks
+  const {
+    data: stats,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+    invalidateDashboard,
+  } = useSellerDashboardCache(effectiveAddress);
 
-  const fetchDashboardData = useCallback(async () => {
-    if (!effectiveAddress) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const [dashboardStats, sellerNotifications] = await Promise.all([
-        sellerService.getDashboardStats(effectiveAddress),
-        sellerService.getNotifications(effectiveAddress),
-      ]);
-      
-      setStats(dashboardStats);
-      setNotifications(sellerNotifications);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  }, [effectiveAddress]);
+  const {
+    data: notifications = [],
+    isLoading: notificationsLoading,
+    error: notificationsError,
+    markAsRead,
+  } = useSellerNotificationsCache(effectiveAddress);
+
+  // Combine loading states
+  const loading = dashboardLoading || notificationsLoading;
+  
+  // Combine errors
+  const error = dashboardError || notificationsError 
+    ? (dashboardError as any)?.message || (notificationsError as any)?.message || 'Failed to fetch dashboard data'
+    : null;
 
   const markNotificationRead = useCallback(async (notificationId: string) => {
     try {
-      await sellerService.markNotificationRead(notificationId);
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      await markAsRead.mutateAsync(notificationId);
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
     }
-  }, []);
+  }, [markAsRead]);
 
-  useEffect(() => {
-    if (effectiveAddress) {
-      fetchDashboardData();
-    } else {
-      setStats(null);
-      setNotifications([]);
-    }
-  }, [effectiveAddress, fetchDashboardData]); // Include fetchDashboardData in dependencies
+  const refetch = useCallback(async () => {
+    await invalidateDashboard();
+  }, [invalidateDashboard]);
 
   const unreadNotifications = notifications.filter(n => !n.read);
 
@@ -310,7 +225,7 @@ export function useSellerDashboard(mockWalletAddress?: string) {
     loading,
     error,
     markNotificationRead,
-    refetch: fetchDashboardData,
+    refetch,
     address: effectiveAddress,
   };
 }
