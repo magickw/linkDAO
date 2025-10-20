@@ -261,11 +261,15 @@ router.put('/seller/onboarding/:walletAddress/:step', async (req: Request, res: 
       ]);
     }
 
-    // Validate step parameter
+    // Normalize step ID: convert hyphens to underscores for backend compatibility
+    // Frontend uses: 'profile-setup', Backend uses: 'profile_setup'
+    const normalizedStep = step.replace(/-/g, '_');
+
+    // Validate step parameter (accept both formats)
     const validSteps = ['profile_setup', 'verification', 'payout_setup', 'first_listing'];
-    if (!validSteps.includes(step)) {
+    if (!validSteps.includes(normalizedStep)) {
       return validationErrorResponse(res, [
-        { field: 'step', message: 'Invalid onboarding step' }
+        { field: 'step', message: 'Invalid onboarding step. Valid steps: profile-setup, verification, payout-setup, first-listing' }
       ]);
     }
 
@@ -277,8 +281,8 @@ router.put('/seller/onboarding/:walletAddress/:step', async (req: Request, res: 
     }
 
     const onboardingStatus = await sellerProfileService.updateOnboardingStep(
-      walletAddress, 
-      step as keyof import('../types/sellerProfile').OnboardingSteps, 
+      walletAddress,
+      normalizedStep as keyof import('../types/sellerProfile').OnboardingSteps,
       completed
     );
     

@@ -19,7 +19,7 @@ export interface UseCartReturn {
 }
 
 export const useCart = (): UseCartReturn => {
-  const [state, setState] = useState<CartState>(() => cartService.getCartState());
+  const [state, setState] = useState<CartState>(() => cartService.getCartStateSync());
   const [loading, setLoading] = useState(false);
 
   // Subscribe to cart changes
@@ -28,8 +28,19 @@ export const useCart = (): UseCartReturn => {
       setState(newState);
     });
 
-    // Initial load
-    setState(cartService.getCartState());
+    // Initial load with async cart state
+    const loadInitialState = async () => {
+      try {
+        const initialState = await cartService.getCartState();
+        setState(initialState);
+      } catch (error) {
+        console.warn('Failed to load initial cart state:', error);
+        // Fallback to sync version
+        setState(cartService.getCartStateSync());
+      }
+    };
+
+    loadInitialState();
 
     return unsubscribe;
   }, []);
@@ -38,7 +49,7 @@ export const useCart = (): UseCartReturn => {
   const addItem = useCallback(async (product: Omit<CartItem, 'quantity' | 'addedAt'>, quantity: number = 1) => {
     setLoading(true);
     try {
-      cartService.addItem(product, quantity);
+      await cartService.addItem(product, quantity);
     } finally {
       setLoading(false);
     }
@@ -47,7 +58,7 @@ export const useCart = (): UseCartReturn => {
   const removeItem = useCallback(async (itemId: string) => {
     setLoading(true);
     try {
-      cartService.removeItem(itemId);
+      await cartService.removeItem(itemId);
     } finally {
       setLoading(false);
     }
@@ -56,7 +67,7 @@ export const useCart = (): UseCartReturn => {
   const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
     setLoading(true);
     try {
-      cartService.updateQuantity(itemId, quantity);
+      await cartService.updateQuantity(itemId, quantity);
     } finally {
       setLoading(false);
     }
@@ -65,7 +76,7 @@ export const useCart = (): UseCartReturn => {
   const clearCart = useCallback(async () => {
     setLoading(true);
     try {
-      cartService.clearCart();
+      await cartService.clearCart();
     } finally {
       setLoading(false);
     }

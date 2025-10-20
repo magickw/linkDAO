@@ -1,9 +1,10 @@
 /**
  * Enhanced Marketplace Service with Comprehensive Error Handling
  * Implements automatic retry mechanisms with exponential backoff
+ * Updated to use real backend API endpoints
  */
 
-import { marketplaceService, Product, ProductFilters, SearchFilters, SellerInfo } from './marketplaceService';
+import { Product, ProductFilters, SearchFilters, SellerInfo } from './marketplaceService';
 
 export interface RetryConfig {
   maxRetries: number;
@@ -24,6 +25,8 @@ export interface ApiResponse<T> {
 }
 
 export class EnhancedMarketplaceService {
+  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  
   private defaultRetryConfig: RetryConfig = {
     maxRetries: 3,
     baseDelay: 1000,
@@ -43,6 +46,18 @@ export class EnhancedMarketplaceService {
 
   private isRetryableError(error: Error): boolean {
     const errorMessage = error.message.toLowerCase();
+    const status = (error as any).status;
+    
+    // Don't retry client errors (4xx) except 429 (rate limit)
+    if (status >= 400 && status < 500 && status !== 429) {
+      return false;
+    }
+    
+    // Server errors (5xx) are retryable
+    if (status >= 500) {
+      return true;
+    }
+    
     return this.defaultRetryConfig.retryableErrors.some(retryableError =>
       errorMessage.includes(retryableError.toLowerCase())
     );
@@ -78,7 +93,7 @@ export class EnhancedMarketplaceService {
 
         // Don't retry on the last attempt
         if (attempt === finalConfig.maxRetries) {
-          throw this.enhanceError(lastError, false);
+          throw this.enhanceError(lastError, this.isRetryableError(lastError));
         }
 
         // Calculate delay and wait
@@ -88,7 +103,7 @@ export class EnhancedMarketplaceService {
       }
     }
 
-    throw this.enhanceError(lastError!, false);
+    throw this.enhanceError(lastError!, this.isRetryableError(lastError!));
   }
 
   private enhanceError(error: Error, retryable: boolean): Error {
@@ -96,13 +111,15 @@ export class EnhancedMarketplaceService {
     (enhancedError as any).originalError = error;
     (enhancedError as any).retryable = retryable;
     (enhancedError as any).suggestedActions = this.getSuggestedActions(error);
+    (enhancedError as any).status = (error as any).status; // Preserve status code
     return enhancedError;
   }
 
   private getUserFriendlyMessage(error: Error): string {
     const message = error.message.toLowerCase();
+    const status = (error as any).status;
 
-    if (message.includes('404') || message.includes('not found')) {
+    if (message.includes('404') || message.includes('not found') || status === 404) {
       return 'The requested item could not be found. It may have been removed or sold.';
     }
 
@@ -114,19 +131,20 @@ export class EnhancedMarketplaceService {
       return 'The request is taking longer than expected. Please try again.';
     }
 
-    if (message.includes('500') || message.includes('502') || message.includes('503')) {
+    if (message.includes('500') || message.includes('502') || message.includes('503') || 
+        status === 500 || status === 502 || status === 503) {
       return 'The marketplace service is temporarily unavailable. Please try again in a few moments.';
     }
 
-    if (message.includes('429') || message.includes('rate limit')) {
+    if (message.includes('429') || message.includes('rate limit') || message.includes('too many requests') || status === 429) {
       return 'Too many requests. Please wait a moment before trying again.';
     }
 
-    if (message.includes('unauthorized') || message.includes('401')) {
+    if (message.includes('unauthorized') || message.includes('401') || status === 401) {
       return 'Please connect your wallet to access this content.';
     }
 
-    if (message.includes('forbidden') || message.includes('403')) {
+    if (message.includes('forbidden') || message.includes('403') || status === 403) {
       return 'You don\'t have permission to access this content.';
     }
 
@@ -164,6 +182,11 @@ export class EnhancedMarketplaceService {
       actions.push('Refresh the page after connecting');
     }
 
+    if (message.includes('429') || message.includes('rate limit') || message.includes('too many requests')) {
+      actions.push('Please wait a moment before trying again');
+      actions.push('Try again in a few minutes');
+    }
+
     if (actions.length === 0) {
       actions.push('Try refreshing the page');
       actions.push('Return to the marketplace homepage');
@@ -172,12 +195,39 @@ export class EnhancedMarketplaceService {
     return actions;
   }
 
+  // Helper method to create HTTP errors with status codes
+  private createHttpError(response: Response): Error {
+    const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+    (error as any).status = response.status;
+    return error;
+  }
+
   // Enhanced API methods with retry logic
 
   async getListingById(id: string): Promise<ApiResponse<Product>> {
     try {
       const product = await this.retryWithExponentialBackoff(
-        () => marketplaceService.getListingById(id)
+        async () => {
+          const response = await fetch(`${this.baseURL}/marketplace/listings/${id}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              return null;
+            }
+            throw this.createHttpError(response);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to fetch listing');
+          }
+
+          return this.transformListingToProduct(result.data);
+        }
       );
 
       if (!product) {
@@ -213,15 +263,44 @@ export class EnhancedMarketplaceService {
     }
   }
 
-  async getProducts(filters?: ProductFilters): Promise<ApiResponse<Product[]>> {
+  async getProducts(filters?: ProductFilters): Promise<ApiResponse<{ products: Product[]; pagination: any }>> {
     try {
       const result = await this.retryWithExponentialBackoff(
-        () => marketplaceService.getProducts(filters)
+        async () => {
+          const queryParams = new URLSearchParams();
+          if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                queryParams.append(key, value.toString());
+              }
+            });
+          }
+
+          const response = await fetch(`${this.baseURL}/marketplace/listings?${queryParams}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to fetch listings');
+          }
+
+          return {
+            products: result.data.listings.map((listing: any) => this.transformListingToProduct(listing)),
+            pagination: result.data.pagination
+          };
+        }
       );
 
       return {
         success: true,
-        data: result.products
+        data: result
       };
     } catch (error) {
       return {
@@ -239,7 +318,27 @@ export class EnhancedMarketplaceService {
   async getSellerById(sellerId: string): Promise<ApiResponse<SellerInfo>> {
     try {
       const seller = await this.retryWithExponentialBackoff(
-        () => marketplaceService.getSellerById(sellerId)
+        async () => {
+          const response = await fetch(`${this.baseURL}/marketplace/sellers/${sellerId}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              return null;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to fetch seller');
+          }
+
+          return this.transformSellerData(result.data);
+        }
       );
 
       if (!seller) {
@@ -277,13 +376,36 @@ export class EnhancedMarketplaceService {
 
   async searchProducts(query: string, filters?: ProductFilters): Promise<ApiResponse<Product[]>> {
     try {
-      const searchFilters: SearchFilters = {
-        query,
-        ...filters
-      };
-      
       const products = await this.retryWithExponentialBackoff(
-        () => marketplaceService.searchProducts(query, searchFilters)
+        async () => {
+          const queryParams = new URLSearchParams();
+          queryParams.append('search', query);
+          
+          if (filters) {
+            Object.entries(filters).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                queryParams.append(key, value.toString());
+              }
+            });
+          }
+
+          const response = await fetch(`${this.baseURL}/marketplace/search?${queryParams}`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to search products');
+          }
+
+          return result.data.listings.map((listing: any) => this.transformListingToProduct(listing));
+        }
       );
 
       return {
@@ -306,7 +428,24 @@ export class EnhancedMarketplaceService {
   async getFeaturedProducts(): Promise<ApiResponse<Product[]>> {
     try {
       const products = await this.retryWithExponentialBackoff(
-        () => marketplaceService.getFeaturedProducts()
+        async () => {
+          const response = await fetch(`${this.baseURL}/marketplace/listings?featured=true&limit=10`, {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Failed to fetch featured products');
+          }
+
+          return result.data.listings.map((listing: any) => this.transformListingToProduct(listing));
+        }
       );
 
       return {
@@ -330,7 +469,7 @@ export class EnhancedMarketplaceService {
   async healthCheck(): Promise<boolean> {
     try {
       const isHealthy = await Promise.race([
-        marketplaceService.healthCheck(),
+        fetch(`${this.baseURL}/health`).then(response => response.ok),
         new Promise<boolean>((_, reject) => 
           setTimeout(() => reject(new Error('Health check timeout')), 5000)
         )
@@ -354,21 +493,85 @@ export class EnhancedMarketplaceService {
 
     try {
       // Preload categories
-      await marketplaceService.getCategories();
-      results.categories = true;
+      const response = await fetch(`${this.baseURL}/marketplace/categories`);
+      results.categories = response.ok;
     } catch (error) {
       console.warn('Failed to preload categories:', error);
     }
 
     try {
       // Preload featured products
-      await marketplaceService.getFeaturedProducts();
-      results.featuredProducts = true;
+      const featuredResponse = await this.getFeaturedProducts();
+      results.featuredProducts = featuredResponse.success;
     } catch (error) {
       console.warn('Failed to preload featured products:', error);
     }
 
     return results;
+  }
+
+  // Data transformation methods
+  private transformListingToProduct(listing: any): Product {
+    return {
+      id: listing.id,
+      sellerId: listing.seller?.id || listing.sellerId,
+      title: listing.title,
+      description: listing.description,
+      priceAmount: listing.price?.amount || listing.cryptoPrice || 0,
+      priceCurrency: listing.price?.currency || listing.cryptoCurrency || 'ETH',
+      categoryId: listing.category || '',
+      images: listing.images || [],
+      metadata: {
+        specifications: listing.specifications || {},
+        condition: listing.condition,
+        brand: listing.brand,
+        model: listing.model,
+      },
+      inventory: listing.inventory || 0,
+      status: listing.status || 'active',
+      tags: listing.tags || [],
+      shipping: listing.shipping ? {
+        free: listing.shipping.freeShipping || false,
+        cost: listing.shipping.cost || '0',
+        estimatedDays: listing.shipping.estimatedDays || '3-5',
+        regions: listing.shipping.regions || [],
+        expedited: listing.shipping.expedited || false,
+      } : undefined,
+      nft: listing.isNFT ? {
+        contractAddress: listing.nftContractAddress || '',
+        tokenId: listing.nftTokenId || '',
+        standard: 'ERC721',
+        blockchain: 'ethereum',
+      } : undefined,
+      views: listing.views || 0,
+      favorites: listing.favorites || 0,
+      listingStatus: listing.status || 'active',
+      publishedAt: listing.publishedAt,
+      createdAt: listing.createdAt,
+      updatedAt: listing.updatedAt,
+      seller: listing.seller ? this.transformSellerData(listing.seller) : undefined,
+      trust: {
+        verified: listing.seller?.verified || false,
+        escrowProtected: listing.trust?.escrowProtected || false,
+        onChainCertified: listing.trust?.onChainCertified || false,
+        safetyScore: listing.trust?.safetyScore || 0,
+      },
+    };
+  }
+
+  private transformSellerData(seller: any): SellerInfo {
+    return {
+      id: seller.id,
+      walletAddress: seller.walletAddress || seller.id,
+      displayName: seller.displayName || seller.name,
+      storeName: seller.storeName,
+      rating: seller.rating || seller.averageRating || 0,
+      reputation: seller.reputation || 0,
+      verified: seller.verified || false,
+      daoApproved: seller.daoApproved || false,
+      profileImageUrl: seller.profileImageUrl || seller.avatar,
+      isOnline: seller.isOnline || true,
+    };
   }
 }
 

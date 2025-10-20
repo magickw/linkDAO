@@ -143,8 +143,7 @@ module.exports = {
   
   // Custom matchers and utilities
   setupFilesAfterEnv: [
-    '<rootDir>/src/tests/integration/setupTests.ts',
-    '<rootDir>/src/tests/utils/customMatchers.ts'
+    '<rootDir>/src/tests/integration/setupTests.ts'
   ],
   
   // Error handling
@@ -167,5 +166,5 @@ module.exports = {
   silent: false,
   
   // Custom test sequencer for deterministic test order
-  testSequencer: '<rootDir>/src/tests/integration/testSequencer.js'
+  // testSequencer: '<rootDir>/src/tests/integration/testSequencer.js'
 };

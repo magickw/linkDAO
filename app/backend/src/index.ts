@@ -138,8 +138,7 @@ const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
   enableAutoOptimization: process.env.NODE_ENV === 'production'
 });
 
-// Set performance optimizer for routes
-setPerformanceOptimizer(performanceOptimizer);
+// Performance optimizer will be set after routes are imported
 
 // Core middleware stack (order matters!)
 app.use(helmetMiddleware);
@@ -180,6 +179,55 @@ import healthRoutes from './routes/healthRoutes';
 
 // Health and monitoring routes (before other routes)
 app.use('/', healthRoutes);
+
+// API documentation routes
+import apiDocsRoutes from './routes/apiDocsRoutes';
+app.use('/api/docs', apiDocsRoutes);
+
+// System monitoring routes
+import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
+app.use('/api/monitoring', systemMonitoringRoutes);
+
+// ===== BACKEND API INTEGRATION ROUTES =====
+// Import marketplace API routes (from backend-api-integration spec)
+import marketplaceApiRoutes from './routes/marketplaceRoutes';
+import authApiRoutes from './routes/authRoutes';
+import cartApiRoutes from './routes/cartRoutes';
+import sellerApiRoutes from './routes/sellerRoutes';
+
+// Marketplace API health check
+app.get('/api/marketplace/health', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      service: 'Marketplace API',
+      status: 'healthy',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        listings: '/api/marketplace/listings',
+        sellers: '/api/marketplace/sellers',
+        search: '/api/marketplace/search'
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString(),
+      requestId: res.locals.requestId
+    }
+  });
+});
+
+// API v1 routes with proper prefixes and middleware ordering
+app.use('/api/v1/marketplace', marketplaceApiRoutes);
+app.use('/api/v1/auth', authApiRoutes);
+app.use('/api/v1/cart', cartApiRoutes);
+app.use('/api/v1/sellers', sellerApiRoutes);
+
+// Backward compatibility routes (without version prefix)
+app.use('/api/marketplace', marketplaceApiRoutes);
+app.use('/api/auth', authApiRoutes);
+app.use('/api/cart', cartApiRoutes);
+app.use('/api/sellers', sellerApiRoutes);
 
 // Basic API info route
 app.get('/', (req, res) => {
@@ -290,18 +338,25 @@ import { gasFeeSponsorshipRouter } from './routes/gasFeeSponsorshipRoutes';
 import { daoShippingPartnersRouter } from './routes/daoShippingPartnersRoutes';
 // Import advanced analytics routes
 import { advancedAnalyticsRouter } from './routes/advancedAnalyticsRoutes';
-// Import seller routes
-import sellerRoutes from './routes/sellerRoutes';
+
 // Import marketplace seller routes
 import marketplaceSellerRoutes from './routes/marketplaceSellerRoutes';
 // Import seller profile API routes
 import sellerProfileRoutes from './routes/sellerProfileRoutes';
+// Import seller dashboard routes
+import sellerDashboardRoutes from './routes/sellerDashboardRoutes';
+// Import seller order routes
+import sellerOrderRoutes from './routes/sellerOrderRoutes';
+// Import seller listing routes
+import sellerListingRoutes from './routes/sellerListingRoutes';
+// Import seller image upload routes
+import sellerImageUploadRoutes from './routes/sellerImageUploadRoutes';
+// Import ENS validation routes
+import ensValidationRoutes from './routes/ensValidationRoutes';
 // Import user profile API routes
 import userProfileRoutes from './routes/userProfileRoutes';
 // Import marketplace listings routes
 import marketplaceListingsRoutes from './routes/marketplaceListingsRoutes';
-// Import core marketplace routes
-import marketplaceRoutes from './routes/marketplaceRoutes';
 // Import listing routes
 import listingRoutes from './routes/listingRoutes';
 // Import order creation routes
@@ -320,13 +375,11 @@ import governanceRoutes from './routes/governanceRoutes';
 import engagementAnalyticsRoutes from './routes/engagementAnalyticsRoutes';
 // Import authentication routes
 import { createDefaultAuthRoutes } from './routes/authenticationRoutes';
-import authRoutes from './routes/authRoutes';
 // Import poll routes
 import pollRoutes from './routes/pollRoutes';
 // Import cache routes
 import cacheRoutes from './routes/cacheRoutes';
-// Import cart routes
-import cartRoutes from './routes/cartRoutes';
+
 // Import marketplace search routes
 import marketplaceSearchRoutes from './routes/marketplaceSearchRoutes';
 // Import price oracle routes
@@ -335,7 +388,6 @@ import priceOracleRoutes from './routes/priceOracleRoutes';
 import { reputationRoutes } from './routes/reputationRoutes';
 // Import monitoring routes
 import monitoringRoutes from './routes/monitoringRoutes';
-import systemMonitoringRoutes from './routes/systemMonitoringRoutes';
 
 // Import performance routes
 import performanceRoutes, { setPerformanceOptimizer } from './routes/performanceRoutes';
@@ -355,9 +407,8 @@ import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 // Import content performance routes
 import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
-// Authentication routes
+// Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
-app.use('/api/auth', authRoutes);
 
 // Security routes
 app.use('/api/security', securityRoutes);
@@ -395,8 +446,7 @@ app.use('/api/shipping', daoShippingPartnersRouter);
 // Advanced analytics routes
 app.use('/api/analytics', advancedAnalyticsRouter);
 
-// Seller routes
-app.use('/api/sellers', sellerRoutes);
+
 
 // Listing routes
 app.use('/api/listings', listingRoutes);
@@ -410,13 +460,25 @@ app.use('/api/marketplace', marketplaceSellerRoutes);
 // Seller profile API routes
 app.use('/api/marketplace', sellerProfileRoutes);
 
+// Seller dashboard routes
+app.use('/api/marketplace', sellerDashboardRoutes);
+
+// Seller order routes
+app.use('/api/marketplace', sellerOrderRoutes);
+
+// Seller listing routes
+app.use('/api/marketplace', sellerListingRoutes);
+
+// Seller image upload routes
+app.use('/api/marketplace', sellerImageUploadRoutes);
+
+// ENS validation routes
+app.use('/api/marketplace', ensValidationRoutes);
+
 // User profile API routes
 app.use('/api/profiles', userProfileRoutes);
 
-// Core marketplace routes (should be before more specific routes)
-app.use('/api/marketplace', marketplaceRoutes);
-
-// Marketplace listings routes
+// Marketplace listings routes (legacy support)
 app.use('/api/marketplace', marketplaceListingsRoutes);
 
 // Token reaction routes
@@ -443,8 +505,7 @@ app.use('/api/polls', pollRoutes);
 // Cache management routes
 app.use('/api/cache', cacheRoutes);
 
-// Cart routes
-app.use('/api/cart', cartRoutes);
+
 
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
@@ -457,9 +518,9 @@ app.use('/marketplace/reputation', reputationRoutes);
 
 // Monitoring and alerting routes
 app.use('/api/monitoring', monitoringRoutes);
-app.use('/api/system-monitoring', systemMonitoringRoutes);
 
 // Performance optimization routes
+setPerformanceOptimizer(performanceOptimizer);
 app.use('/api/performance', performanceRoutes);
 
 // Transaction routes
