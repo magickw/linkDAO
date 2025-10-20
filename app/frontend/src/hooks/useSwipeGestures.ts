@@ -1,338 +1,192 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-interface SwipeGestureConfig {
-  onSwipeLeft?: (distance: number) => void;
-  onSwipeRight?: (distance: number) => void;
-  onSwipeUp?: (distance: number) => void;
-  onSwipeDown?: (distance: number) => void;
-  threshold?: number;
-  preventDefaultTouchMove?: boolean;
-  enableHapticFeedback?: boolean;
-  velocityThreshold?: number;
+export interface SwipeGestureConfig {
+  threshold?: number; // Minimum distance for swipe
+  velocity?: number; // Minimum velocity for swipe
+  preventDefaultTouchmoveEvent?: boolean;
+  delta?: number; // Minimum delta for swipe detection
 }
 
-interface SwipeState {
-  isActive: boolean;
-  direction: 'left' | 'right' | 'up' | 'down' | null;
-  distance: number;
+export interface SwipeGestureHandlers {
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  onSwipeUp?: () => void;
+  onSwipeDown?: () => void;
+  onSwipeStart?: (event: TouchEvent) => void;
+  onSwipeMove?: (event: TouchEvent, deltaX: number, deltaY: number) => void;
+  onSwipeEnd?: (event: TouchEvent) => void;
+}
+
+export interface SwipeGestureState {
+  isSwiping: boolean;
+  swipeDirection: 'left' | 'right' | 'up' | 'down' | null;
+  deltaX: number;
+  deltaY: number;
   velocity: number;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
 }
 
-interface SwipeGestureReturn {
-  swipeState: SwipeState;
-  swipeHandlers: {
-    onTouchStart: (e: React.TouchEvent) => void;
-    onTouchMove: (e: React.TouchEvent) => void;
-    onTouchEnd: (e: React.TouchEvent) => void;
-    onTouchCancel: (e: React.TouchEvent) => void;
-  };
-  resetSwipe: () => void;
-  isSwipeSupported: boolean;
-}
+const defaultConfig: Required<SwipeGestureConfig> = {
+  threshold: 50,
+  velocity: 0.3,
+  preventDefaultTouchmoveEvent: false,
+  delta: 10,
+};
 
-export const useSwipeGestures = (config: SwipeGestureConfig): SwipeGestureReturn => {
-  const {
-    onSwipeLeft,
-    onSwipeRight,
-    onSwipeUp,
-    onSwipeDown,
-    threshold = 50,
-    preventDefaultTouchMove = false,
-    enableHapticFeedback = true,
-    velocityThreshold = 0.3
-  } = config;
-
-  const [swipeState, setSwipeState] = useState<SwipeState>({
-    isActive: false,
-    direction: null,
-    distance: 0,
+export const useSwipeGestures = (
+  handlers: SwipeGestureHandlers,
+  config: SwipeGestureConfig = {}
+) => {
+  const finalConfig = { ...defaultConfig, ...config };
+  const [swipeState, setSwipeState] = useState<SwipeGestureState>({
+    isSwiping: false,
+    swipeDirection: null,
+    deltaX: 0,
+    deltaY: 0,
     velocity: 0,
-    startX: 0,
-    startY: 0,
-    currentX: 0,
-    currentY: 0
   });
 
-  const [isSwipeSupported, setIsSwipeSupported] = useState(false);
-  const touchStartTime = useRef<number>(0);
-  const lastTouchTime = useRef<number>(0);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const touchMoveRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
-  // Check for touch support
-  useEffect(() => {
-    const checkTouchSupport = () => {
-      return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const handleTouchStart = useCallback((event: TouchEvent) => {
+    const touch = event.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
     };
-
-    setIsSwipeSupported(checkTouchSupport());
-  }, []);
-
-  // Haptic feedback utility
-  const triggerHapticFeedback = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
-    if (!enableHapticFeedback || typeof window === 'undefined') return;
-
-    // Use Vibration API as fallback
-    if ('vibrate' in navigator) {
-      const patterns = {
-        light: [10],
-        medium: [20],
-        heavy: [30]
-      };
-      navigator.vibrate(patterns[type]);
-    }
-
-    // Use Haptic Feedback API if available (iOS Safari)
-    if ('hapticFeedback' in window) {
-      try {
-        (window as any).hapticFeedback.impact(type);
-      } catch (error) {
-        // Silently fail if haptic feedback is not available
-      }
-    }
-  }, [enableHapticFeedback]);
-
-  // Calculate swipe direction and distance
-  const calculateSwipe = useCallback((startX: number, startY: number, currentX: number, currentY: number) => {
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
-    const absDeltaX = Math.abs(deltaX);
-    const absDeltaY = Math.abs(deltaY);
-
-    let direction: 'left' | 'right' | 'up' | 'down' | null = null;
-    let distance = 0;
-
-    // Determine primary direction
-    if (absDeltaX > absDeltaY) {
-      // Horizontal swipe
-      if (absDeltaX > threshold) {
-        direction = deltaX > 0 ? 'right' : 'left';
-        distance = absDeltaX;
-      }
-    } else {
-      // Vertical swipe
-      if (absDeltaY > threshold) {
-        direction = deltaY > 0 ? 'down' : 'up';
-        distance = absDeltaY;
-      }
-    }
-
-    return { direction, distance };
-  }, [threshold]);
-
-  // Calculate velocity
-  const calculateVelocity = useCallback((distance: number, timeElapsed: number) => {
-    return timeElapsed > 0 ? distance / timeElapsed : 0;
-  }, []);
-
-  // Touch start handler
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!isSwipeSupported) return;
-
-    const touch = e.touches[0];
-    const now = Date.now();
-    
-    touchStartTime.current = now;
-    lastTouchTime.current = now;
-
-    setSwipeState({
-      isActive: true,
-      direction: null,
-      distance: 0,
-      velocity: 0,
-      startX: touch.clientX,
-      startY: touch.clientY,
-      currentX: touch.clientX,
-      currentY: touch.clientY
-    });
-  }, [isSwipeSupported]);
-
-  // Touch move handler
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isSwipeSupported || !swipeState.isActive) return;
-
-    if (preventDefaultTouchMove) {
-      e.preventDefault();
-    }
-
-    const touch = e.touches[0];
-    const now = Date.now();
-    const timeElapsed = now - lastTouchTime.current;
-
-    const { direction, distance } = calculateSwipe(
-      swipeState.startX,
-      swipeState.startY,
-      touch.clientX,
-      touch.clientY
-    );
-
-    const velocity = calculateVelocity(distance, timeElapsed);
 
     setSwipeState(prev => ({
       ...prev,
-      direction,
-      distance,
-      velocity,
-      currentX: touch.clientX,
-      currentY: touch.clientY
+      isSwiping: true,
+      swipeDirection: null,
+      deltaX: 0,
+      deltaY: 0,
+      velocity: 0,
     }));
 
-    lastTouchTime.current = now;
+    handlers.onSwipeStart?.(event);
+  }, [handlers]);
 
-    // Trigger haptic feedback when threshold is reached
-    if (direction && distance > threshold && !swipeState.direction) {
-      triggerHapticFeedback('light');
-    }
-  }, [
-    isSwipeSupported,
-    swipeState.isActive,
-    swipeState.startX,
-    swipeState.startY,
-    swipeState.direction,
-    preventDefaultTouchMove,
-    calculateSwipe,
-    calculateVelocity,
-    threshold,
-    triggerHapticFeedback
-  ]);
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (!touchStartRef.current) return;
 
-  // Touch end handler
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isSwipeSupported || !swipeState.isActive) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
 
-    const now = Date.now();
-    const totalTime = now - touchStartTime.current;
-    const finalVelocity = calculateVelocity(swipeState.distance, totalTime);
+    touchMoveRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
 
-    // Check if swipe meets criteria
-    const isValidSwipe = swipeState.distance > threshold && finalVelocity > velocityThreshold;
+    setSwipeState(prev => ({
+      ...prev,
+      deltaX,
+      deltaY,
+    }));
 
-    if (isValidSwipe && swipeState.direction) {
-      // Trigger appropriate callback
-      switch (swipeState.direction) {
-        case 'left':
-          onSwipeLeft?.(swipeState.distance);
-          break;
-        case 'right':
-          onSwipeRight?.(swipeState.distance);
-          break;
-        case 'up':
-          onSwipeUp?.(swipeState.distance);
-          break;
-        case 'down':
-          onSwipeDown?.(swipeState.distance);
-          break;
+    // Determine swipe direction
+    let direction: 'left' | 'right' | 'up' | 'down' | null = null;
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (Math.abs(deltaX) > finalConfig.delta) {
+        direction = deltaX > 0 ? 'right' : 'left';
       }
-
-      // Trigger success haptic feedback
-      triggerHapticFeedback('medium');
+    } else {
+      if (Math.abs(deltaY) > finalConfig.delta) {
+        direction = deltaY > 0 ? 'down' : 'up';
+      }
     }
 
-    // Reset state
-    setSwipeState({
-      isActive: false,
-      direction: null,
-      distance: 0,
-      velocity: 0,
-      startX: 0,
-      startY: 0,
-      currentX: 0,
-      currentY: 0
-    });
-  }, [
-    isSwipeSupported,
-    swipeState.isActive,
-    swipeState.distance,
-    swipeState.direction,
-    threshold,
-    velocityThreshold,
-    calculateVelocity,
-    onSwipeLeft,
-    onSwipeRight,
-    onSwipeUp,
-    onSwipeDown,
-    triggerHapticFeedback
-  ]);
+    setSwipeState(prev => ({
+      ...prev,
+      swipeDirection: direction,
+    }));
 
-  // Touch cancel handler
-  const onTouchCancel = useCallback((e: React.TouchEvent) => {
-    setSwipeState({
-      isActive: false,
-      direction: null,
-      distance: 0,
-      velocity: 0,
-      startX: 0,
-      startY: 0,
-      currentX: 0,
-      currentY: 0
-    });
-  }, []);
+    if (finalConfig.preventDefaultTouchmoveEvent) {
+      event.preventDefault();
+    }
 
-  // Reset swipe state
-  const resetSwipe = useCallback(() => {
-    setSwipeState({
-      isActive: false,
-      direction: null,
-      distance: 0,
-      velocity: 0,
-      startX: 0,
-      startY: 0,
-      currentX: 0,
-      currentY: 0
-    });
-  }, []);
+    handlers.onSwipeMove?.(event, deltaX, deltaY);
+  }, [handlers, finalConfig]);
+
+  const handleTouchEnd = useCallback((event: TouchEvent) => {
+    if (!touchStartRef.current || !touchMoveRef.current) {
+      setSwipeState(prev => ({
+        ...prev,
+        isSwiping: false,
+      }));
+      return;
+    }
+
+    const deltaX = touchMoveRef.current.x - touchStartRef.current.x;
+    const deltaY = touchMoveRef.current.y - touchStartRef.current.y;
+    const deltaTime = touchMoveRef.current.time - touchStartRef.current.time;
+    const velocity = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / deltaTime;
+
+    setSwipeState(prev => ({
+      ...prev,
+      isSwiping: false,
+      velocity,
+    }));
+
+    // Check if swipe meets threshold requirements
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    const meetsThreshold = Math.max(absX, absY) > finalConfig.threshold;
+    const meetsVelocity = velocity > finalConfig.velocity;
+
+    if (meetsThreshold && meetsVelocity) {
+      if (absX > absY) {
+        // Horizontal swipe
+        if (deltaX > 0) {
+          handlers.onSwipeRight?.();
+        } else {
+          handlers.onSwipeLeft?.();
+        }
+      } else {
+        // Vertical swipe
+        if (deltaY > 0) {
+          handlers.onSwipeDown?.();
+        } else {
+          handlers.onSwipeUp?.();
+        }
+      }
+    }
+
+    handlers.onSwipeEnd?.(event);
+    touchStartRef.current = null;
+    touchMoveRef.current = null;
+  }, [handlers, finalConfig]);
 
   const swipeHandlers = {
-    onTouchStart,
-    onTouchMove,
-    onTouchEnd,
-    onTouchCancel
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: handleTouchEnd,
   };
 
   return {
-    swipeState,
     swipeHandlers,
-    resetSwipe,
-    isSwipeSupported
+    swipeState,
   };
 };
 
-// Utility hook for common post card swipe actions
-export const usePostCardSwipeGestures = (
-  postId: string,
-  onVote: (postId: string, direction: 'up' | 'down') => void,
-  onSave?: (postId: string) => void,
-  onShare?: (postId: string) => void
+// Higher-order component for adding swipe gestures
+export const withSwipeGestures = <P extends object>(
+  Component: React.ComponentType<P>,
+  handlers: SwipeGestureHandlers,
+  config?: SwipeGestureConfig
 ) => {
-  const swipeConfig: SwipeGestureConfig = {
-    onSwipeLeft: useCallback((distance: number) => {
-      // Left swipe for voting actions
-      if (distance > 100) {
-        // Long swipe for downvote
-        onVote(postId, 'down');
-      } else {
-        // Short swipe for upvote
-        onVote(postId, 'up');
-      }
-    }, [postId, onVote]),
-
-    onSwipeRight: useCallback((distance: number) => {
-      // Right swipe for save/share actions
-      if (distance > 100 && onShare) {
-        // Long swipe for share
-        onShare(postId);
-      } else if (onSave) {
-        // Short swipe for save
-        onSave(postId);
-      }
-    }, [postId, onSave, onShare]),
-
-    threshold: 50,
-    enableHapticFeedback: true,
-    velocityThreshold: 0.3
-  };
-
-  return useSwipeGestures(swipeConfig);
+  return React.forwardRef<any, P>((props, ref) => {
+    const { swipeHandlers } = useSwipeGestures(handlers, config);
+    
+    return (
+      <div {...swipeHandlers}>
+        <Component {...props} ref={ref} />
+      </div>
+    );
+  });
 };
+
+export default useSwipeGestures;

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { SellerProfile } from '../../../../types/seller';
 import { Button } from '../../../../design-system';
 import { useToast } from '../../../../context/ToastContext';
+import { UnifiedImageUpload } from '../../ImageUpload';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;
@@ -328,24 +329,54 @@ export function ProfileSetupStep({ onComplete, data, profile }: ProfileSetupStep
         </div>
       </div>
 
-      {/* Cover Image - Updated from Profile Picture */}
-      <DragDropUpload
+      {/* Cover Image - Using Unified Image Upload */}
+      <UnifiedImageUpload
+        context="cover"
         label="Cover Image"
-        value={formData.coverImage}
-        onChange={(value) => handleInputChange('coverImage', value)}
-        placeholder="https://example.com/your-cover-image.jpg"
-        description="Optional: Add a cover image for your seller profile (recommended: 1200x400px)"
-        previewClassName="w-24 h-16 rounded-lg object-cover"
+        description="Add a cover image for your seller profile (recommended: 1200x400px)"
+        onUploadSuccess={(results) => {
+          if (results.length > 0) {
+            handleInputChange('coverImage', results[0].cdnUrl);
+          }
+        }}
+        onUploadError={(error) => {
+          console.error('Cover image upload error:', error);
+          addToast('Failed to upload cover image. Please try again.', 'error');
+        }}
+        initialImages={formData.coverImage ? [{
+          originalUrl: formData.coverImage,
+          cdnUrl: formData.coverImage,
+          thumbnails: { small: formData.coverImage, medium: formData.coverImage, large: formData.coverImage },
+          metadata: { width: 1200, height: 400, size: 0, format: 'jpeg' }
+        }] : []}
+        onRemoveImage={() => handleInputChange('coverImage', '')}
+        variant="compact"
+        className="mb-6"
       />
 
-      {/* Store Logo */}
-      <DragDropUpload
+      {/* Store Logo - Using Unified Image Upload */}
+      <UnifiedImageUpload
+        context="profile"
         label="Store Logo"
-        value={formData.logo}
-        onChange={(value) => handleInputChange('logo', value)}
-        placeholder="https://example.com/your-store-logo.jpg"
-        description="Optional: Add a logo for your store branding (recommended: square format)"
-        previewClassName="w-16 h-16 rounded-lg object-cover"
+        description="Add a logo for your store branding (recommended: square format)"
+        onUploadSuccess={(results) => {
+          if (results.length > 0) {
+            handleInputChange('logo', results[0].cdnUrl);
+          }
+        }}
+        onUploadError={(error) => {
+          console.error('Logo upload error:', error);
+          addToast('Failed to upload store logo. Please try again.', 'error');
+        }}
+        initialImages={formData.logo ? [{
+          originalUrl: formData.logo,
+          cdnUrl: formData.logo,
+          thumbnails: { small: formData.logo, medium: formData.logo, large: formData.logo },
+          metadata: { width: 400, height: 400, size: 0, format: 'jpeg' }
+        }] : []}
+        onRemoveImage={() => handleInputChange('logo', '')}
+        variant="compact"
+        className="mb-6"
       />
 
       {/* Bio */}

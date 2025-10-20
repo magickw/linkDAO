@@ -8,7 +8,7 @@ import { unifiedSellerService } from '@/services/unifiedSellerService';
 import { UnifiedSellerProfile, UnifiedSellerListing } from '@/types/unifiedSeller';
 import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSeller';
 import { DAOEndorsementModal } from './DAOEndorsementModal';
-import { withSellerErrorBoundary } from './ErrorHandling';
+import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 import { 
   Star, 
   Shield, 

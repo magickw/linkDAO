@@ -11,6 +11,8 @@
     "simple": "node src/index.simple.js",
     "database": "node src/index.database.js",
     "migrate": "ts-node src/scripts/migrate.ts",
+    "migrate:messaging": "ts-node src/scripts/migrate-messaging-tables.ts",
+    "migrate:messaging:check": "ts-node src/scripts/check-messaging-tables.ts",
     "migrate:production": "ts-node src/scripts/production-migrate.ts",
     "seed:production": "ts-node src/scripts/seed-production-data.ts",
     "backup": "ts-node src/scripts/database-backup.ts",

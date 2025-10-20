@@ -134,12 +134,29 @@ EXCEPTION
 END $$;
 
 -- Add foreign key for parent message (threading)
-DO $$ BEGIN
-  ALTER TABLE chat_messages
-    ADD CONSTRAINT chat_messages_parent_message_id_fk
-    FOREIGN KEY (parent_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+-- Skip if types are incompatible (e.g., parent_message_id is UUID but id is VARCHAR)
+DO $$
+DECLARE
+  id_type text;
+  parent_id_type text;
+BEGIN
+  -- Get the types of both columns
+  SELECT data_type INTO id_type FROM information_schema.columns WHERE table_name='chat_messages' AND column_name='id';
+  SELECT data_type INTO parent_id_type FROM information_schema.columns WHERE table_name='chat_messages' AND column_name='parent_message_id';
+
+  -- Only add constraint if types match
+  IF id_type = parent_id_type OR (id_type = 'uuid' AND parent_id_type = 'uuid') OR (id_type = 'character varying' AND parent_id_type = 'character varying') THEN
+    ALTER TABLE chat_messages
+      ADD CONSTRAINT chat_messages_parent_message_id_fk
+      FOREIGN KEY (parent_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+  ELSE
+    RAISE NOTICE 'Skipping parent_message_id foreign key: type mismatch (id: %, parent_message_id: %)', id_type, parent_id_type;
+  END IF;
 EXCEPTION
-  WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN
+    RAISE NOTICE 'Foreign key chat_messages_parent_message_id_fk already exists, skipping';
+  WHEN datatype_mismatch THEN
+    RAISE NOTICE 'Skipping parent_message_id foreign key: type mismatch';
 END $$;
 
 -- Create indexes for message queries
@@ -195,18 +212,42 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Create indexes for templates
+-- Create indexes for templates (only if columns exist)
 CREATE INDEX IF NOT EXISTS idx_templates_user ON message_templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_templates_category ON message_templates(category);
 CREATE INDEX IF NOT EXISTS idx_templates_active ON message_templates(is_active) WHERE is_active = true;
-CREATE INDEX IF NOT EXISTS idx_templates_public ON message_templates(is_public) WHERE is_public = true;
-CREATE INDEX IF NOT EXISTS idx_templates_usage ON message_templates(usage_count DESC);
-CREATE INDEX IF NOT EXISTS idx_templates_tags ON message_templates USING gin(tags);
 
--- Add comments
+-- Create is_public index only if column exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='message_templates' AND column_name='is_public') THEN
+    CREATE INDEX IF NOT EXISTS idx_templates_public ON message_templates(is_public) WHERE is_public = true;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_templates_usage ON message_templates(usage_count DESC);
+
+-- Create GIN index only if tags column exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='message_templates' AND column_name='tags') THEN
+    CREATE INDEX IF NOT EXISTS idx_templates_tags ON message_templates USING gin(tags);
+  END IF;
+END $$;
+
+-- Add comments (only if columns exist)
 COMMENT ON TABLE message_templates IS 'Pre-defined message templates for quick seller responses';
-COMMENT ON COLUMN message_templates.shortcut IS 'Optional keyboard shortcut to quickly insert this template (e.g., /shipping)';
-COMMENT ON COLUMN message_templates.variables IS 'Template variables that get replaced, e.g., {{buyer_name}}, {{order_id}}';
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='message_templates' AND column_name='shortcut') THEN
+    EXECUTE 'COMMENT ON COLUMN message_templates.shortcut IS ''Optional keyboard shortcut to quickly insert this template (e.g., /shipping)''';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='message_templates' AND column_name='variables') THEN
+    EXECUTE 'COMMENT ON COLUMN message_templates.variables IS ''Template variables that get replaced, e.g., {{buyer_name}}, {{order_id}}''';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PART 5: Quick Replies and Auto-Responses
@@ -244,10 +285,19 @@ CREATE INDEX IF NOT EXISTS idx_quick_replies_active ON quick_replies(is_active) 
 CREATE INDEX IF NOT EXISTS idx_quick_replies_keywords ON quick_replies USING gin(trigger_keywords);
 CREATE INDEX IF NOT EXISTS idx_quick_replies_priority ON quick_replies(priority DESC);
 
--- Add comments
+-- Add comments (only if columns exist)
 COMMENT ON TABLE quick_replies IS 'Automated reply suggestions based on message content keywords';
-COMMENT ON COLUMN quick_replies.trigger_keywords IS 'Array of keywords that trigger this quick reply suggestion';
-COMMENT ON COLUMN quick_replies.match_type IS 'How to match keywords: contains, exact, regex';
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quick_replies' AND column_name='trigger_keywords') THEN
+    EXECUTE 'COMMENT ON COLUMN quick_replies.trigger_keywords IS ''Array of keywords that trigger this quick reply suggestion''';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='quick_replies' AND column_name='match_type') THEN
+    EXECUTE 'COMMENT ON COLUMN quick_replies.match_type IS ''How to match keywords: contains, exact, regex''';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PART 6: Conversation Analytics
@@ -402,13 +452,29 @@ CREATE TABLE IF NOT EXISTS message_attachments (
   created_at timestamptz DEFAULT now()
 );
 
--- Add foreign key constraint
-DO $$ BEGIN
-  ALTER TABLE message_attachments
-    ADD CONSTRAINT message_attachments_message_id_fk
-    FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+-- Add foreign key constraint (with type compatibility check)
+DO $$
+DECLARE
+  msg_id_type text;
+  attach_msg_id_type text;
+BEGIN
+  -- Get the types of both columns
+  SELECT data_type INTO msg_id_type FROM information_schema.columns WHERE table_name='chat_messages' AND column_name='id';
+  SELECT data_type INTO attach_msg_id_type FROM information_schema.columns WHERE table_name='message_attachments' AND column_name='message_id';
+
+  -- Only add constraint if types match
+  IF msg_id_type = attach_msg_id_type OR (msg_id_type = 'uuid' AND attach_msg_id_type = 'uuid') OR (msg_id_type = 'character varying' AND attach_msg_id_type = 'character varying') THEN
+    ALTER TABLE message_attachments
+      ADD CONSTRAINT message_attachments_message_id_fk
+      FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE ON UPDATE CASCADE;
+  ELSE
+    RAISE NOTICE 'Skipping message_attachments.message_id foreign key: type mismatch (chat_messages.id: %, message_attachments.message_id: %)', msg_id_type, attach_msg_id_type;
+  END IF;
 EXCEPTION
-  WHEN duplicate_object THEN null;
+  WHEN duplicate_object THEN
+    RAISE NOTICE 'Foreign key message_attachments_message_id_fk already exists, skipping';
+  WHEN datatype_mismatch THEN
+    RAISE NOTICE 'Skipping message_attachments.message_id foreign key: type mismatch';
 END $$;
 
 -- Create indexes
@@ -483,7 +549,9 @@ VALUES (
 )
 ON CONFLICT (address) DO NOTHING;
 
--- Insert default templates
+-- Insert default templates (commented out due to schema variations)
+-- Uncomment and adjust column names if your message_templates table has is_public column
+/*
 INSERT INTO message_templates (user_id, name, content, category, is_public, tags)
 VALUES
   (
@@ -527,6 +595,7 @@ VALUES
     ARRAY['order', 'confirmation', 'received']
   )
 ON CONFLICT DO NOTHING;
+*/
 
 -- ============================================================================
 -- PART 11: Create Views for Common Queries

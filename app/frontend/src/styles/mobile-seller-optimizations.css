@@ -1,0 +1,368 @@
+/* Mobile Seller Optimizations CSS */
+
+/* Base mobile optimizations */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target sizes */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Optimize text sizes for mobile */
+  .mobile-text-small {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .mobile-text-medium {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .mobile-text-large {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-padding-small {
+    padding: 8px 12px;
+  }
+
+  .mobile-padding-medium {
+    padding: 12px 16px;
+  }
+
+  .mobile-padding-large {
+    padding: 16px 20px;
+  }
+
+  /* Mobile-friendly margins */
+  .mobile-margin-small {
+    margin: 8px;
+  }
+
+  .mobile-margin-medium {
+    margin: 12px;
+  }
+
+  .mobile-margin-large {
+    margin: 16px;
+  }
+}
+
+/* Touch-optimized interactions */
+.touch-optimized {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.touch-feedback:active {
+  transform: scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Swipe gesture indicators */
+.swipe-hint {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipe-hint::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #6c757d, transparent);
+  animation: swipe-hint 2s infinite;
+}
+
+@keyframes swipe-hint {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(-50%) translateX(0);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-50%) translateX(-10px);
+  }
+}
+
+/* Mobile form optimizations */
+.mobile-form-field {
+  margin-bottom: 20px;
+}
+
+.mobile-form-input {
+  font-size: 16px !important; /* Prevent zoom on iOS */
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-form-input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Mobile navigation styles */
+.mobile-nav-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+
+.mobile-nav-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-nav-menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100%;
+  background: white;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-nav-overlay.open .mobile-nav-menu {
+  transform: translateX(0);
+}
+
+/* Mobile bottom navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  padding: 8px 0;
+  z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  text-decoration: none;
+  color: #6c757d;
+  font-size: 12px;
+  transition: color 0.2s ease;
+}
+
+.mobile-bottom-nav-item.active {
+  color: #007bff;
+}
+
+.mobile-bottom-nav-icon {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+/* Mobile card styles */
+.mobile-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.mobile-card-header {
+  padding: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.mobile-card-content {
+  padding: 16px;
+}
+
+.mobile-card-actions {
+  padding: 12px 16px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Swipeable card styles */
+.swipeable-card-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 12px;
+}
+
+.swipeable-card {
+  position: relative;
+  z-index: 2;
+  background: white;
+  transition: transform 0.3s ease;
+}
+
+.swipe-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: #f8f9fa;
+  z-index: 1;
+}
+
+/* Mobile loading states */
+.mobile-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.mobile-skeleton-text {
+  height: 16px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.mobile-skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.mobile-skeleton-button {
+  height: 44px;
+  border-radius: 8px;
+}
+
+/* Mobile accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .swipeable-card,
+  .mobile-nav-menu,
+  .touch-feedback,
+  .mobile-skeleton {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .mobile-form-input {
+    border-width: 3px;
+  }
+  
+  .mobile-card {
+    border: 2px solid #000;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    background: #2d3748;
+    color: white;
+  }
+  
+  .mobile-form-input {
+    background: #2d3748;
+    color: white;
+    border-color: #4a5568;
+  }
+  
+  .mobile-nav-menu {
+    background: #2d3748;
+    color: white;
+  }
+  
+  .mobile-bottom-nav {
+    background: #2d3748;
+    border-top-color: #4a5568;
+  }
+}
+
+/* Responsive breakpoints */
+@media (max-width: 480px) {
+  .mobile-nav-menu {
+    width: 100%;
+  }
+  
+  .mobile-card-content {
+    padding: 12px;
+  }
+  
+  .mobile-form-input {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-padding-medium {
+    padding: 8px 12px;
+  }
+  
+  .mobile-margin-medium {
+    margin: 8px;
+  }
+  
+  .mobile-text-medium {
+    font-size: 15px;
+  }
+}
+
+/* Landscape orientation adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-nav-menu {
+    width: 240px;
+  }
+  
+  .mobile-card-content {
+    padding: 12px 16px;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .mobile-card {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .swipeable-card-container {
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  }
+}

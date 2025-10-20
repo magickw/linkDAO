@@ -4,7 +4,7 @@ import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { useToast } from '@/context/ToastContext';
 import { sellerService } from '@/services/sellerService';
 import { useSeller } from '@/hooks/useMarketplaceData';
-import { withSellerErrorBoundary } from './ErrorHandling';
+import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 
 interface FormData {
   displayName: string;

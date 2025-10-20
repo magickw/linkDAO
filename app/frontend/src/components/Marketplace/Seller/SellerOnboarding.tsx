@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { useUnifiedSellerOnboarding, useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
-import { withSellerErrorBoundary } from './ErrorHandling';
+import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';
