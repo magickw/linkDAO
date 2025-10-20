@@ -119,7 +119,7 @@ export const SellerQueryProvider: React.FC<SellerQueryProviderProps> = ({
           const isSellerQuery = Array.isArray(query.queryKey) && query.queryKey[0] === 'seller';
           const isStale = query.state.dataUpdatedAt && 
                          Date.now() - query.state.dataUpdatedAt > 30 * 60 * 1000;
-          return isSellerQuery && isStale && query.getObserversCount() === 0;
+          return Boolean(isSellerQuery && isStale && query.getObserversCount() === 0);
         }
       }).forEach(query => {
         queryClient.removeQueries({ queryKey: query.queryKey });

@@ -27,7 +27,7 @@
   - Create error recovery strategies for different error types
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
 
-- [-] 4. Add unified cache invalidation system
+- [x] 4. Add unified cache invalidation system
   - Create SellerCacheManager class with React Query integration
   - Implement cache invalidation strategies that work across components
   - Add cache invalidation triggers for profile updates
@@ -37,7 +37,7 @@
 
 ## Phase 2: Enhanced Integration (2-3 weeks)
 
-- [ ] 5. Implement centralized state management with React Query
+- [x] 5. Implement centralized state management with React Query
   - Set up React Query configuration for seller data
   - Create useSellerProfile hook with proper caching
   - Create useSellerListings hook with proper caching
@@ -46,7 +46,7 @@
   - Add loading and error states management
   - _Requirements: 2.5, 3.4, 3.5_
 
-- [ ] 6. Standardize image upload pipeline across all components
+- [-] 6. Standardize image upload pipeline across all components
   - Create UnifiedImageService for consistent image handling
   - Implement image validation and processing pipeline
   - Add support for different image contexts (profile, cover, listing)

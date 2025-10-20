@@ -8,6 +8,7 @@ import { Web3Provider } from '@/context/Web3Context';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { NavigationProvider } from '@/context/NavigationContext';
+import { SellerQueryProvider } from '@/providers/SellerQueryProvider';
 
 import { EnhancedThemeProvider } from '@/components/VisualPolish';
 // Cart provider not needed - using service-based cart
@@ -276,25 +277,27 @@ export default function App({ Component, pageProps, router }: AppProps) {
     <ErrorBoundary>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>
-            <Web3Provider>
-              <AuthProvider>
-                <ToastProvider>
-                  {/* Automatic wallet login bridge with toast notifications */}
-                  <WalletLoginBridgeWithToast />
-                  <NavigationProvider>
-                    <EnhancedThemeProvider defaultTheme="system">
-                      <AppContent
-                        Component={Component}
-                        pageProps={pageProps}
-                        router={router}
-                      />
-                    </EnhancedThemeProvider>
-                  </NavigationProvider>
-                </ToastProvider>
-              </AuthProvider>
-            </Web3Provider>
-          </RainbowKitProvider>
+          <SellerQueryProvider queryClient={queryClient}>
+            <RainbowKitProvider>
+              <Web3Provider>
+                <AuthProvider>
+                  <ToastProvider>
+                    {/* Automatic wallet login bridge with toast notifications */}
+                    <WalletLoginBridgeWithToast />
+                    <NavigationProvider>
+                      <EnhancedThemeProvider defaultTheme="system">
+                        <AppContent
+                          Component={Component}
+                          pageProps={pageProps}
+                          router={router}
+                        />
+                      </EnhancedThemeProvider>
+                    </NavigationProvider>
+                  </ToastProvider>
+                </AuthProvider>
+              </Web3Provider>
+            </RainbowKitProvider>
+          </SellerQueryProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>

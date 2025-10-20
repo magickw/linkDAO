@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useUnifiedSellerDashboard, useUnifiedSeller, useSellerTiers, useUnifiedSellerListings } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { MessagingAnalytics } from '../../Seller/MessagingAnalytics';
-import { UnifiedSellerDashboard } from '../../../types/unifiedSeller';
+import { UnifiedSellerDashboard, UnifiedSellerProfile, UnifiedSellerListing } from '../../../types/unifiedSeller';
 import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 
 interface SellerDashboardProps {
@@ -15,7 +15,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const { profile, loading: profileLoading } = useUnifiedSeller(mockWalletAddress);
   const { dashboard, stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
-  const { listings, loading: listingsLoading } = useUnifiedSellerListings(dashboardAddress);
+  const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
 
   if (profileLoading || loading) {
@@ -78,8 +78,8 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
     );
   }
 
-  const currentTier = getTierById(profile?.tier);
-  const nextTier = getNextTier(profile?.tier);
+  const currentTier = (profile as UnifiedSellerProfile).tier ? getTierById((profile as UnifiedSellerProfile).tier.id) : undefined;
+  const nextTier = (profile as UnifiedSellerProfile).tier ? getNextTier((profile as UnifiedSellerProfile).tier.id) : undefined;
 
   const formatCurrency = (amount: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -108,21 +108,21 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
           <div className="flex items-center mb-4 md:mb-0">
-            {profile?.coverImage ? (
+            {(profile as UnifiedSellerProfile)?.coverImage ? (
               <img
-                src={profile.coverImage}
-                alt={profile.displayName}
+                src={(profile as UnifiedSellerProfile).coverImage}
+                alt={(profile as UnifiedSellerProfile).displayName}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-500 mr-4"
               />
             ) : (
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center mr-4">
                 <span className="text-white text-xl font-bold">
-                  {profile?.displayName?.charAt(0) || profile?.storeName?.charAt(0) || 'S'}
+                  {(profile as UnifiedSellerProfile)?.displayName?.charAt(0) || (profile as UnifiedSellerProfile)?.storeName?.charAt(0) || 'S'}
                 </span>
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white">{profile?.storeName || profile?.displayName}</h1>
+              <h1 className="text-2xl font-bold text-white">{(profile as UnifiedSellerProfile)?.storeName || (profile as UnifiedSellerProfile)?.displayName}</h1>
               <div className="flex items-center space-x-2 mt-1">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   currentTier?.id === 'pro' ? 'bg-purple-600 text-white' :
@@ -137,7 +137,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <svg
                       key={i}
                       className={`w-4 h-4 ${
-                        i < Math.floor(profile?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
+                        i < Math.floor((profile as UnifiedSellerProfile)?.stats?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-600'
                       }`}
                       fill="currentColor"
                       viewBox="0 0 20 20"
@@ -146,7 +146,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     </svg>
                   ))}
                   <span className="text-gray-400 text-sm ml-1">
-                    ({profile?.stats?.totalReviews || 0})
+                    ({(profile as UnifiedSellerProfile)?.stats?.totalReviews || 0})
                   </span>
                 </div>
               </div>
@@ -171,7 +171,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             )}
             <Button
               onClick={() => {
-                const sellerId = profile?.walletAddress || dashboardAddress;
+                const sellerId = (profile as UnifiedSellerProfile)?.walletAddress || dashboardAddress;
                 if (sellerId) {
                   router.push(`/marketplace/seller/store/${sellerId}`);
                 } else {
@@ -219,7 +219,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 <div className="flex flex-wrap gap-2">
                   {nextTier.benefits.slice(0, 3).map((benefit, index) => (
                     <span key={index} className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
-                      {benefit}
+                      {benefit.description}
                     </span>
                   ))}
                 </div>
@@ -272,7 +272,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
 
           <StatCard
             title="Reputation Score"
-            value={profile?.stats?.reputationScore || 0}
+            value={(profile as UnifiedSellerProfile)?.stats?.reputationScore || 0}
             color="purple"
             icon={
               <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -341,7 +341,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               <h3 className="text-lg font-semibold text-white mb-4">Notifications</h3>
               <div className="space-y-3">
                 {notifications.length > 0 ? (
-                  notifications.map((notification) => (
+                  notifications.map((notification: any) => (
                     <div
                       key={notification.id}
                       className={`p-4 rounded-lg border-l-4 ${
@@ -417,9 +417,9 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <LoadingSkeleton key={i} className="h-20" />
                   ))}
                 </div>
-              ) : listings.length > 0 ? (
+              ) : (listings as UnifiedSellerListing[]).length > 0 ? (
                 <div className="space-y-4">
-                  {listings.map((listing) => (
+                  {(listings as UnifiedSellerListing[]).map((listing: UnifiedSellerListing) => (
                     <div key={listing.id} className="bg-gray-800 rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">

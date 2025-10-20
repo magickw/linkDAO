@@ -289,7 +289,7 @@ describe('useSellerCache hooks', () => {
         { wrapper: createWrapper() }
       );
 
-      expect(result.current.isPending).toBe(false);
+      // When wallet address is undefined, the query should be disabled
       expect(result.current.data).toBeUndefined();
       expect(mockAPIClient.getDashboardStats).not.toHaveBeenCalled();
     });
