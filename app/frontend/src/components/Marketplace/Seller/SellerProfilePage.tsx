@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSeller } from '../../../hooks/useSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { useToast } from '@/context/ToastContext';
-import { sellerService } from '../../../services/sellerService';
+import { sellerService } from '@/services/sellerService';
+import { useSeller } from '@/hooks/useMarketplaceData';
+import { withSellerErrorBoundary } from './ErrorHandling';
 
 interface FormData {
   displayName: string;
@@ -44,7 +45,7 @@ interface ImageUploadState {
   isUploading: boolean;
 }
 
-export function SellerProfilePage() {
+function SellerProfilePageComponent() {
   const router = useRouter();
   const { profile, loading, error, updateProfile, walletAddress, isConnected } = useSeller();
   const [isEditing, setIsEditing] = useState(false);
@@ -1075,3 +1076,9 @@ export function SellerProfilePage() {
     </div>
   );
 }
+
+// Wrap with error boundary
+export const SellerProfilePage = withSellerErrorBoundary(SellerProfilePageComponent, {
+  context: 'SellerProfilePage',
+  enableRecovery: true,
+});

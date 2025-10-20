@@ -15,9 +15,9 @@ import {
   ProfileValidationRule,
   ProfileValidationOptions
 } from '../types/seller';
+import { unifiedSellerAPIClient, SellerAPIError, SellerErrorType } from './unifiedSellerAPIClient';
 
 class SellerService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   private profileCache = new Map<string, { data: SellerProfile | null; timestamp: number }>();
   private readonly CACHE_DURATION = 60000; // 60 seconds cache
 
@@ -52,19 +52,6 @@ class SellerService {
     // Cache expired, remove it
     this.profileCache.delete(walletAddress);
     return null;
-  }
-  
-  // Helper method to determine the correct base URL based on context
-  private getApiBaseUrl(): string {
-    // When running in browser, use relative URLs which will be handled by Next.js rewrites
-    // When running in Node.js (API routes), use the full backend URL
-    if (typeof window === 'undefined') {
-      // Server-side (API routes) - use backend URL directly
-      return this.baseUrl;
-    } else {
-      // Client-side (browser) - use relative URLs for proxying
-      return '';
-    }
   }
 
   // Profile validation rules with weights for completeness scoring
@@ -151,7 +138,7 @@ class SellerService {
     ];
   }
 
-  // Onboarding Flow
+  // Onboarding Flow - Using Unified API Client
   async getOnboardingSteps(walletAddress: string): Promise<OnboardingStep[]> {
     const defaultSteps: OnboardingStep[] = [
       {
@@ -197,63 +184,21 @@ class SellerService {
     ];
 
     try {
-      const baseUrl = this.getApiBaseUrl();
-      const endpoint = typeof window === 'undefined'
-        ? `${baseUrl}/api/sellers/onboarding/${walletAddress}`
-        : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}`;
-      console.log(`Making GET request to: ${endpoint}`);
-      const response = await fetch(endpoint);
-      console.log(`Response status: ${response.status}`);
-
-      // Gracefully handle 404/5xx by returning defaults instead of throwing
-      if (!response.ok) {
-        console.warn(`Onboarding steps unavailable (${response.status}). Using defaults.`);
-        return defaultSteps;
-      }
-      
-      const result = await response.json().catch(() => ({ success: false }));
-      console.log(`Response data:`, result);
-      if (result?.success && Array.isArray(result.data)) {
-        return result.data as OnboardingStep[];
-      }
-
-      console.warn('Onboarding steps response not successful. Using defaults.');
-      return defaultSteps;
+      console.log(`Fetching onboarding steps for: ${walletAddress}`);
+      const steps = await unifiedSellerAPIClient.getOnboardingSteps(walletAddress);
+      return Array.isArray(steps) ? steps : defaultSteps;
     } catch (error) {
-      console.error('Error fetching onboarding steps:', error);
+      console.warn('Onboarding steps unavailable. Using defaults.', error);
       return defaultSteps;
     }
   }
 
   async updateOnboardingStep(walletAddress: string, stepId: string, data: any): Promise<void> {
-    const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint (using plural 'sellers' as per memory)
-    const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/api/sellers/onboarding/${walletAddress}/${stepId}`  // Server-side direct call
-      : `${baseUrl}/api/marketplace/seller/onboarding/${walletAddress}/${stepId}`;  // Client-side through proxy
-    console.log(`Making PUT request to: ${endpoint}`, data);
-    const response = await fetch(endpoint, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-    
-    console.log(`Response status: ${response.status}`);
-    if (!response.ok) {
-      throw new Error(`Failed to update onboarding step: ${response.status} ${response.statusText}`);
-    }
-    
-    // Parse the response to ensure it's successful
-    const result = await response.json();
-    console.log(`Response data:`, result);
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to update onboarding step');
-    }
+    console.log(`Updating onboarding step ${stepId} for: ${walletAddress}`, data);
+    await unifiedSellerAPIClient.updateOnboardingStep(walletAddress, stepId, data);
   }
 
-  // Seller Profile Management
+  // Seller Profile Management - Using Unified API Client
   async getSellerProfile(walletAddress: string): Promise<SellerProfile | null> {
     // Check cache first using the new method
     const cachedProfile = this.getCachedProfile(walletAddress);
@@ -263,228 +208,70 @@ class SellerService {
     }
     
     try {
-      const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint (using plural 'sellers' as per memory)
-      const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/api/sellers/profile/${walletAddress}`  // Server-side direct call
-        : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
-      console.log(`Making GET request to: ${endpoint}`);
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-      });
-      console.log(`Response status: ${response.status}`);
-      if (!response.ok) {
-        if (response.status === 404) {
+      console.log(`Fetching seller profile for: ${walletAddress}`);
+      const profile = await unifiedSellerAPIClient.getProfile(walletAddress);
+      
+      if (profile) {
+        // Calculate profile completeness if not already calculated or outdated
+        if (!profile.profileCompleteness || this.isCompletenessOutdated(profile.profileCompleteness.lastCalculated)) {
+          profile.profileCompleteness = this.calculateProfileCompleteness(profile);
+        }
+        
+        // Ensure ENS verification status is properly set
+        if (!profile.ensVerified) {
+          profile.ensVerified = false;
+        }
+      }
+      
+      // Cache the result
+      this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
+      
+      return profile;
+    } catch (error) {
+      console.error('Error fetching seller profile:', error);
+      
+      // Handle specific error types gracefully
+      if (error instanceof SellerAPIError) {
+        if (error.status === 404) {
           // Cache 404 responses as well to prevent repeated calls
           this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
           return null;
         }
-        if (response.status === 503) {
-          // Backend temporarily unavailable — retry briefly once, then gracefully return null
-          await new Promise(r => setTimeout(r, 1000));
-          try {
-            const retry = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
-            if (retry.ok) {
-              const retriedResult = await retry.json();
-              if (retriedResult?.success) {
-                const profile = retriedResult.data || null;
-                this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
-                return profile;
-              }
-            }
-          } catch {}
+        if (error.status === 503) {
           console.warn('Seller profile fetch 503, returning null to avoid crashing UI');
           this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
           return null;
         }
-        // For other errors, don’t throw—gracefully return null so the UI can recover
-        console.warn(`Failed to fetch seller profile (HTTP ${response.status}). Returning null.`);
-        this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
-        return null;
       }
       
-      const result = await response.json();
-      console.log(`Response data:`, result);
-      // The backend returns { success: true, data: {...} }
-      // We need to return the data object
-      if (result.success) {
-        const profile = result.data || null;
-        
-        if (profile) {
-          // Calculate profile completeness if not already calculated or outdated
-          if (!profile.profileCompleteness || this.isCompletenessOutdated(profile.profileCompleteness.lastCalculated)) {
-            profile.profileCompleteness = this.calculateProfileCompleteness(profile);
-          }
-          
-          // Ensure ENS verification status is properly set
-          if (!profile.ensVerified) {
-            profile.ensVerified = false;
-          }
-        }
-        
-        // Cache the result
-        this.profileCache.set(walletAddress, { data: profile, timestamp: Date.now() });
-        
-        return profile;
-      } else {
-        throw new Error(result.message || 'Failed to fetch seller profile');
-      }
-    } catch (error) {
-      console.error('Error fetching seller profile:', error);
+      // For other errors, don't throw—gracefully return null so the UI can recover
+      console.warn(`Failed to fetch seller profile. Returning null.`);
+      this.profileCache.set(walletAddress, { data: null, timestamp: Date.now() });
       return null;
     }
   }
 
   async createSellerProfile(profileData: Partial<SellerProfile>): Promise<SellerProfile> {
-    const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint (using plural 'sellers' as per memory)
-    const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/api/sellers/profile`  // Server-side direct call
-      : `${baseUrl}/api/marketplace/seller/profile`;  // Client-side through proxy
-    console.log(`Making POST request to: ${endpoint}`, profileData);
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(profileData),
-    });
-    
-    console.log(`Response status: ${response.status}`);
-    if (!response.ok) {
-      throw new Error(`Failed to create seller profile: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    console.log(`Response data:`, result);
-    // The backend returns { success: true, data: {...} }
-    // We need to return the data object
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.message || 'Failed to create seller profile');
-    }
+    console.log(`Creating seller profile:`, profileData);
+    return await unifiedSellerAPIClient.createProfile(profileData);
   }
 
   async updateSellerProfile(walletAddress: string, updates: Partial<SellerProfile>): Promise<SellerProfile> {
-    const baseUrl = this.getApiBaseUrl();
-    // Use the correct backend endpoint (using plural 'sellers' as per memory)
-    const endpoint = typeof window === 'undefined' 
-      ? `${baseUrl}/api/sellers/profile/${walletAddress}`  // Server-side direct call
-      : `${baseUrl}/api/marketplace/seller/${walletAddress}`;     // Client-side through proxy
-    console.log(`Making PUT request to: ${endpoint}`, updates);
-    const response = await fetch(endpoint, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-    
-    console.log(`Response status: ${response.status}`);
-    if (!response.ok) {
-      throw new Error(`Failed to update seller profile: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    console.log(`Response data:`, result);
-    // The backend returns { success: true, data: {...} }
-    // We need to return the data object
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.message || 'Failed to update seller profile');
-    }
+    console.log(`Updating seller profile for ${walletAddress}:`, updates);
+    return await unifiedSellerAPIClient.updateProfile(walletAddress, updates);
   }
 
-  // Enhanced Profile Update with ENS and Image Support
+  // Enhanced Profile Update with ENS and Image Support - Using Unified API Client
   async updateSellerProfileEnhanced(walletAddress: string, updates: SellerProfileUpdateRequest): Promise<SellerProfileUpdateResponse> {
-    try {
-      const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint (using plural 'sellers' as per memory)
-      const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/api/sellers/profile/${walletAddress}/enhanced`  // Server-side direct call
-        : `${baseUrl}/api/marketplace/seller/${walletAddress}/enhanced`;     // Client-side through proxy
-      console.log(`Making PUT request to: ${endpoint}`);
-
-      const formData = new FormData();
-      
-      // Add text fields
-      Object.entries(updates).forEach(([key, value]) => {
-        if (key !== 'profileImage' && key !== 'coverImage' && value !== undefined) {
-          if (typeof value === 'object') {
-            formData.append(key, JSON.stringify(value));
-          } else {
-            formData.append(key, value.toString());
-          }
-        }
-      });
-      
-      // Add image files
-      if (updates.profileImage) {
-        formData.append('profileImage', updates.profileImage);
-      }
-      if (updates.coverImage) {
-        formData.append('coverImage', updates.coverImage);
-      }
-
-      // Use the correct backend endpoint
-      const response = await fetch(endpoint, {
-        method: 'PUT',
-        body: formData,
-      });
-
-      console.log(`Response status: ${response.status}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update seller profile');
-      }
-
-      const result = await response.json();
-      console.log(`Response data:`, result);
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to update seller profile');
-      }
-    } catch (error) {
-      console.error('Error updating seller profile:', error);
-      throw error;
-    }
+    console.log(`Updating seller profile enhanced for ${walletAddress}`);
+    return await unifiedSellerAPIClient.updateProfileEnhanced(walletAddress, updates);
   }
 
-  // ENS Validation Methods
+  // ENS Validation Methods - Using Unified API Client
   async validateENSHandle(ensHandle: string): Promise<ENSValidationResult> {
     try {
-      const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint (using plural 'sellers' as per memory)
-      const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/api/sellers/ens/validate`  // Server-side direct call
-        : `${baseUrl}/api/marketplace/seller/ens/validate`;  // Client-side through proxy
-      console.log(`Making POST request to: ${endpoint}`, { ensHandle });
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ensHandle }),
-      });
-
-      console.log(`Response status: ${response.status}`);
-      if (!response.ok) {
-        throw new Error('Failed to validate ENS handle');
-      }
-
-      const result = await response.json();
-      console.log(`Response data:`, result);
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to validate ENS handle');
-      }
+      console.log(`Validating ENS handle: ${ensHandle}`);
+      return await unifiedSellerAPIClient.validateENS(ensHandle);
     } catch (error) {
       console.error('Error validating ENS handle:', error);
       return {
@@ -499,35 +286,279 @@ class SellerService {
 
   async verifyENSOwnership(ensHandle: string, walletAddress: string): Promise<boolean> {
     try {
-      const baseUrl = this.getApiBaseUrl();
-      // Use the correct backend endpoint (using plural 'sellers' as per memory)
-      const endpoint = typeof window === 'undefined' 
-        ? `${baseUrl}/api/sellers/ens/verify-ownership`  // Server-side direct call
-        : `${baseUrl}/api/marketplace/seller/ens/verify-ownership`;  // Client-side through proxy
-      console.log(`Making POST request to: ${endpoint}`, { ensHandle, walletAddress });
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ensHandle, walletAddress }),
-      });
-
-      console.log(`Response status: ${response.status}`);
-      if (!response.ok) {
-        return false;
-      }
-
-      const result = await response.json();
-      console.log(`Response data:`, result);
-      return result.success && result.data?.isOwned;
+      console.log(`Verifying ENS ownership: ${ensHandle} for ${walletAddress}`);
+      return await unifiedSellerAPIClient.verifyENSOwnership(ensHandle, walletAddress);
     } catch (error) {
       console.error('Error verifying ENS ownership:', error);
       return false;
     }
   }
 
-  // Profile Validation and Completeness
+  // Dashboard Data - Using Unified API Client
+  async getDashboardStats(walletAddress: string): Promise<SellerDashboardStats> {
+    try {
+      console.log(`Fetching dashboard stats for: ${walletAddress}`);
+      return await unifiedSellerAPIClient.getDashboardStats(walletAddress);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      return this.getDefaultDashboardStats();
+    }
+  }
+  
+  // Helper method to get default dashboard stats
+  private getDefaultDashboardStats(): SellerDashboardStats {
+    return {
+      sales: {
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        total: 0,
+      },
+      orders: {
+        pending: 0,
+        processing: 0,
+        shipped: 0,
+        delivered: 0,
+        disputed: 0,
+      },
+      listings: {
+        active: 0,
+        draft: 0,
+        sold: 0,
+        expired: 0,
+      },
+      balance: {
+        crypto: {},
+        fiatEquivalent: 0,
+        pendingEscrow: 0,
+        availableWithdraw: 0,
+      },
+      reputation: {
+        score: 0,
+        trend: 'stable',
+        recentReviews: 0,
+        averageRating: 0,
+      },
+    };
+  }
+
+  // Notifications - Using Unified API Client
+  async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
+    try {
+      console.log(`Fetching notifications for: ${walletAddress}`);
+      return await unifiedSellerAPIClient.getNotifications(walletAddress);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+  }
+
+  async markNotificationRead(notificationId: string): Promise<void> {
+    console.log(`Marking notification as read: ${notificationId}`);
+    await unifiedSellerAPIClient.markNotificationRead(notificationId);
+  }
+
+  // Orders Management - Using Unified API Client
+  async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
+    try {
+      console.log(`Fetching orders for: ${walletAddress}`, status ? `with status: ${status}` : '');
+      return await unifiedSellerAPIClient.getOrders(walletAddress, status);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      return [];
+    }
+  }
+
+  async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
+    console.log(`Updating order ${orderId} status to: ${status}`, data);
+    await unifiedSellerAPIClient.updateOrderStatus(orderId, status, data);
+  }
+
+  async addTrackingNumber(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
+    console.log(`Adding tracking number ${trackingNumber} to order: ${orderId}`);
+    await unifiedSellerAPIClient.addTrackingNumber(orderId, trackingNumber, carrier);
+  }
+
+  // Listings Management - Using Unified API Client
+  async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
+    try {
+      console.log(`Fetching listings for: ${walletAddress}`, status ? `with status: ${status}` : '');
+      const backendListings = await unifiedSellerAPIClient.getListings(walletAddress, status);
+      
+      // Transform backend data to match SellerListing interface
+      return backendListings.map((listing: any): SellerListing => {
+        // Extract enhanced data if available
+        const enhanced = listing.enhancedData || {};
+        const title = enhanced.title || listing.metadataURI || listing.title || 'Untitled Listing';
+        const description = enhanced.description || listing.description || '';
+        const images = enhanced.images || listing.images || [];
+        const tags = enhanced.tags || listing.tags || [];
+        const condition = enhanced.condition || listing.condition || 'new';
+        const category = enhanced.category || listing.category || 'general';
+        
+        return {
+          id: listing.id,
+          title,
+          description,
+          category,
+          subcategory: listing.subcategory,
+          price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
+          currency: listing.currency || 'ETH',
+          quantity: listing.quantity || 1,
+          condition,
+          images,
+          specifications: listing.specifications || {},
+          tags,
+          status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
+          saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
+          escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
+          shippingOptions: {
+            free: false,
+            cost: 0,
+            estimatedDays: '3-5 days',
+            international: false
+          },
+          views: enhanced.views || listing.views || 0,
+          favorites: enhanced.favorites || listing.favorites || 0,
+          questions: listing.questions || 0,
+          createdAt: listing.createdAt || new Date().toISOString(),
+          updatedAt: listing.updatedAt || new Date().toISOString()
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+      return [];
+    }
+  }
+
+  async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
+    console.log(`Creating listing for ${walletAddress}:`, listingData);
+    return await unifiedSellerAPIClient.createListing(walletAddress, listingData);
+  }
+
+  async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {
+    console.log(`Updating listing ${listingId}:`, updates);
+    return await unifiedSellerAPIClient.updateListing(listingId, updates);
+  }
+
+  async deleteListing(listingId: string): Promise<void> {
+    console.log(`Deleting listing: ${listingId}`);
+    await unifiedSellerAPIClient.deleteListing(listingId);
+  }
+
+  // Analytics - Using Unified API Client
+  async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
+    try {
+      console.log(`Fetching analytics for: ${walletAddress}, period: ${period}`);
+      return await unifiedSellerAPIClient.getAnalytics(walletAddress, period);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      return this.getDefaultSellerAnalytics();
+    }
+  }
+  
+  // Helper method to get default seller analytics
+  private getDefaultSellerAnalytics(): SellerAnalytics {
+    return {
+      overview: {
+        totalRevenue: 0,
+        totalOrders: 0,
+        conversionRate: 0,
+        averageOrderValue: 0,
+      },
+      sales: {
+        daily: [],
+        byCategory: [],
+        byProduct: [],
+      },
+      buyers: {
+        demographics: {
+          countries: [],
+          walletTypes: [],
+        },
+        behavior: {
+          repeatCustomers: 0,
+          averageOrdersPerCustomer: 0,
+          customerLifetimeValue: 0,
+        },
+      },
+      reputation: {
+        ratingHistory: [],
+        reviewSentiment: {
+          positive: 0,
+          neutral: 0,
+          negative: 0,
+        },
+        badges: [],
+      },
+    };
+  }
+
+  // Verification - Using Unified API Client
+  async sendEmailVerification(email: string): Promise<void> {
+    console.log(`Sending email verification to: ${email}`);
+    await unifiedSellerAPIClient.sendEmailVerification(email);
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    console.log(`Verifying email with token: ${token}`);
+    await unifiedSellerAPIClient.verifyEmail(token);
+  }
+
+  async sendPhoneVerification(phone: string): Promise<void> {
+    console.log(`Sending phone verification to: ${phone}`);
+    await unifiedSellerAPIClient.sendPhoneVerification(phone);
+  }
+
+  async verifyPhone(phone: string, code: string): Promise<void> {
+    console.log(`Verifying phone ${phone} with code: ${code}`);
+    await unifiedSellerAPIClient.verifyPhone(phone, code);
+  }
+
+  // KYC - Using Unified API Client
+  async submitKYC(walletAddress: string, kycData: any): Promise<void> {
+    console.log(`Submitting KYC for: ${walletAddress}`);
+    await unifiedSellerAPIClient.submitKYC(walletAddress, kycData);
+  }
+
+  async getKYCStatus(walletAddress: string): Promise<{ status: string; documents: string[] }> {
+    console.log(`Fetching KYC status for: ${walletAddress}`);
+    return await unifiedSellerAPIClient.getKYCStatus(walletAddress);
+  }
+
+  // Payments & Withdrawals - Using Unified API Client
+  async getPaymentHistory(walletAddress: string): Promise<any[]> {
+    try {
+      console.log(`Fetching payment history for: ${walletAddress}`);
+      return await unifiedSellerAPIClient.getPaymentHistory(walletAddress);
+    } catch (error) {
+      console.error('Error fetching payment history:', error);
+      return [];
+    }
+  }
+
+  async requestWithdrawal(walletAddress: string, amount: number, currency: string, method: string): Promise<void> {
+    console.log(`Requesting withdrawal for ${walletAddress}: ${amount} ${currency} via ${method}`);
+    await unifiedSellerAPIClient.requestWithdrawal(walletAddress, amount, currency, method);
+  }
+
+  // Disputes - Using Unified API Client
+  async getDisputes(walletAddress: string): Promise<any[]> {
+    try {
+      console.log(`Fetching disputes for: ${walletAddress}`);
+      return await unifiedSellerAPIClient.getDisputes(walletAddress);
+    } catch (error) {
+      console.error('Error fetching disputes:', error);
+      return [];
+    }
+  }
+
+  async respondToDispute(disputeId: string, response: string, evidence?: string[]): Promise<void> {
+    console.log(`Responding to dispute ${disputeId}:`, response);
+    await unifiedSellerAPIClient.respondToDispute(disputeId, response, evidence);
+  }
+
+  // Profile Validation and Completeness (keeping existing logic)
   validateProfile(profile: Partial<SellerProfile>, options: ProfileValidationOptions = {
     ensRequired: false,
     imageRequired: false,
@@ -613,7 +644,7 @@ class SellerService {
     };
   }
 
-  // Helper Methods
+  // Helper Methods (keeping existing logic)
   private getNestedValue(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
@@ -708,544 +739,6 @@ class SellerService {
     const now = new Date();
     const hoursDiff = (now.getTime() - lastCalc.getTime()) / (1000 * 60 * 60);
     return hoursDiff > 24; // Recalculate if older than 24 hours
-  }
-
-  // Dashboard Data
-  async getDashboardStats(walletAddress: string): Promise<SellerDashboardStats> {
-    try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/dashboard/${walletAddress}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch dashboard stats: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      // The backend returns { success: true, data: {...} }
-      // We need to return the data object
-      if (result.success) {
-        return result.data || this.getDefaultDashboardStats();
-      } else {
-        throw new Error(result.message || 'Failed to fetch dashboard stats');
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      throw error; // Don't return mock data, let the error propagate
-    }
-  }
-  
-  // Helper method to get default dashboard stats
-  private getDefaultDashboardStats(): SellerDashboardStats {
-    return {
-      sales: {
-        today: 0,
-        thisWeek: 0,
-        thisMonth: 0,
-        total: 0,
-      },
-      orders: {
-        pending: 0,
-        processing: 0,
-        shipped: 0,
-        delivered: 0,
-        disputed: 0,
-      },
-      listings: {
-        active: 0,
-        draft: 0,
-        sold: 0,
-        expired: 0,
-      },
-      balance: {
-        crypto: {},
-        fiatEquivalent: 0,
-        pendingEscrow: 0,
-        availableWithdraw: 0,
-      },
-      reputation: {
-        score: 0,
-        trend: 'stable',
-        recentReviews: 0,
-        averageRating: 0,
-      },
-    };
-  }
-
-  // Notifications
-  async getNotifications(walletAddress: string): Promise<SellerNotification[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${walletAddress}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      // The backend returns { success: true, data: [...] }
-      // We need to return the data array
-      if (result.success) {
-        return Array.isArray(result.data) ? result.data : [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch notifications');
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      return [];
-    }
-  }
-
-  async markNotificationRead(notificationId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/notifications/${notificationId}/read`, {
-      method: 'PUT',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to mark notification as read: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to mark notification as read');
-    }
-  }
-
-  // Orders Management
-  async getOrders(walletAddress: string, status?: string): Promise<SellerOrder[]> {
-    const url = new URL(`${this.baseUrl}/marketplace/seller/orders/${walletAddress}`);
-    if (status) {
-      url.searchParams.append('status', status);
-    }
-    
-    try {
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`Failed to fetch orders: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      // The backend returns { success: true, data: [...] }
-      // We need to return the data array
-      if (result.success) {
-        return Array.isArray(result.data) ? result.data : [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch orders');
-      }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      return [];
-    }
-  }
-
-  async updateOrderStatus(orderId: string, status: string, data?: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ status, ...data }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to update order status: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to update order status');
-    }
-  }
-
-  async addTrackingNumber(orderId: string, trackingNumber: string, carrier: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/orders/${orderId}/tracking`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ trackingNumber, carrier }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to add tracking number: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to add tracking number');
-    }
-  }
-
-  // Listings Management
-  async getListings(walletAddress: string, status?: string): Promise<SellerListing[]> {
-    const url = new URL(`${this.baseUrl}/marketplace/seller/listings/${walletAddress}`);
-    if (status) {
-      url.searchParams.append('status', status);
-    }
-    
-    try {
-      const response = await fetch(url.toString());
-      if (!response.ok) {
-        throw new Error(`Failed to fetch listings: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      // The backend returns { success: true, data: [...] }
-      // We need to transform and return the data array
-      if (result.success) {
-        const backendListings = Array.isArray(result.data) ? result.data : [];
-        
-        // Transform backend data to match SellerListing interface
-        return backendListings.map((listing: any): SellerListing => {
-          // Extract enhanced data if available
-          const enhanced = listing.enhancedData || {};
-          const title = enhanced.title || listing.metadataURI || listing.title || 'Untitled Listing';
-          const description = enhanced.description || listing.description || '';
-          const images = enhanced.images || listing.images || [];
-          const tags = enhanced.tags || listing.tags || [];
-          const condition = enhanced.condition || listing.condition || 'new';
-          const category = enhanced.category || listing.category || 'general';
-          
-          return {
-            id: listing.id,
-            title,
-            description,
-            category,
-            subcategory: listing.subcategory,
-            price: typeof listing.price === 'string' ? parseFloat(listing.price) : (listing.price || 0),
-            currency: listing.currency || 'ETH',
-            quantity: listing.quantity || 1,
-            condition,
-            images,
-            specifications: listing.specifications || {},
-            tags,
-            status: listing.status === 'ACTIVE' ? 'active' : (listing.status?.toLowerCase() || 'active'),
-            saleType: listing.saleType || (listing.listingType === 'AUCTION' ? 'auction' : 'fixed'),
-            escrowEnabled: enhanced.escrowEnabled || listing.escrowEnabled || false,
-            shippingOptions: {
-              free: false,
-              cost: 0,
-              estimatedDays: '3-5 days',
-              international: false
-            },
-            views: enhanced.views || listing.views || 0,
-            favorites: enhanced.favorites || listing.favorites || 0,
-            questions: listing.questions || 0,
-            createdAt: listing.createdAt || new Date().toISOString(),
-            updatedAt: listing.updatedAt || new Date().toISOString()
-          };
-        });
-      } else {
-        throw new Error(result.message || 'Failed to fetch listings');
-      }
-    } catch (error) {
-      console.error('Error fetching listings:', error);
-      return [];
-    }
-  }
-
-  async createListing(walletAddress: string, listingData: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...listingData, sellerWalletAddress: walletAddress }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create listing: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    // The backend returns { success: true, data: {...} }
-    // We need to return the data object
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.message || 'Failed to create listing');
-    }
-  }
-
-  async updateListing(listingId: string, updates: Partial<SellerListing>): Promise<SellerListing> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to update listing: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    // The backend returns { success: true, data: {...} }
-    // We need to return the data object
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.message || 'Failed to update listing');
-    }
-  }
-
-  async deleteListing(listingId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/listings/${listingId}`, {
-      method: 'DELETE',
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to delete listing: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to delete listing');
-    }
-  }
-
-  // Analytics
-  async getAnalytics(walletAddress: string, period: string = '30d'): Promise<SellerAnalytics> {
-    try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/analytics/${walletAddress}?period=${period}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch analytics: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      // The backend returns { success: true, data: {...} }
-      // We need to return the data object
-      if (result.success) {
-        return result.data || this.getDefaultSellerAnalytics();
-      } else {
-        throw new Error(result.message || 'Failed to fetch analytics');
-      }
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-      throw error; // Don't return mock data, let the error propagate
-    }
-  }
-  
-  // Helper method to get default seller analytics
-  private getDefaultSellerAnalytics(): SellerAnalytics {
-    return {
-      overview: {
-        totalRevenue: 0,
-        totalOrders: 0,
-        conversionRate: 0,
-        averageOrderValue: 0,
-      },
-      sales: {
-        daily: [],
-        byCategory: [],
-        byProduct: [],
-      },
-      buyers: {
-        demographics: {
-          countries: [],
-          walletTypes: [],
-        },
-        behavior: {
-          repeatCustomers: 0,
-          averageOrdersPerCustomer: 0,
-          customerLifetimeValue: 0,
-        },
-      },
-      reputation: {
-        ratingHistory: [],
-        reviewSentiment: {
-          positive: 0,
-          neutral: 0,
-          negative: 0,
-        },
-        badges: [],
-      },
-    };
-  }
-
-  // Verification
-  async sendEmailVerification(email: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to send email verification: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to send email verification');
-    }
-  }
-
-  async verifyEmail(token: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/email/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to verify email: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to verify email');
-    }
-  }
-
-  async sendPhoneVerification(phone: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phone }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to send phone verification: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to send phone verification');
-    }
-  }
-
-  async verifyPhone(phone: string, code: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/verification/phone/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ phone, code }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to verify phone: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to verify phone');
-    }
-  }
-
-  // KYC
-  async submitKYC(walletAddress: string, kycData: any): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/kyc/${walletAddress}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(kycData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to submit KYC: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to submit KYC');
-    }
-  }
-
-  async getKYCStatus(walletAddress: string): Promise<{ status: string; documents: string[] }> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/kyc/${walletAddress}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch KYC status: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (result.success) {
-      return result.data;
-    } else {
-      throw new Error(result.message || 'Failed to fetch KYC status');
-    }
-  }
-
-  // Payments & Withdrawals
-  async getPaymentHistory(walletAddress: string): Promise<any[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/payments/${walletAddress}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch payment history: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to fetch payment history');
-      }
-    } catch (error) {
-      console.error('Error fetching payment history:', error);
-      return [];
-    }
-  }
-
-  async requestWithdrawal(walletAddress: string, amount: number, currency: string, method: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/marketplace/seller/withdraw`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ walletAddress, amount, currency, method }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to request withdrawal: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to request withdrawal');
-    }
-  }
-
-  // Disputes
-  async getDisputes(walletAddress: string): Promise<any[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/disputes/${walletAddress}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch disputes: ${response.status} ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to fetch disputes');
-      }
-    } catch (error) {
-      console.error('Error fetching disputes:', error);
-      return [];
-    }
-  }
-
-  async respondToDispute(disputeId: string, response: string, evidence?: string[]): Promise<void> {
-    const apiResponse = await fetch(`${this.baseUrl}/marketplace/seller/disputes/${disputeId}/respond`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ response, evidence }),
-    });
-    
-    if (!apiResponse.ok) {
-      throw new Error(`Failed to respond to dispute: ${apiResponse.status} ${apiResponse.statusText}`);
-    }
-    
-    const result = await apiResponse.json();
-    if (!result.success) {
-      throw new Error(result.message || 'Failed to respond to dispute');
-    }
   }
 }
 

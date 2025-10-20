@@ -2,6 +2,10 @@ import { Request, Response } from 'express';
 import { marketplaceMessagingService } from '../services/marketplaceMessagingService';
 import { orderMessagingAutomation } from '../services/orderMessagingAutomation';
 import { apiResponse } from '../utils/apiResponse';
+import { db } from '../db';
+import { messageTemplates, quickReplies } from '../db/schema';
+import { sanitizeMessageTemplate, sanitizeQuickReply } from '../utils/sanitization';
+import { eq, and } from 'drizzle-orm';
 
 export class MarketplaceMessagingController {
   /**
@@ -130,15 +134,37 @@ export class MarketplaceMessagingController {
   async createTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
+      const userId = req.user?.id;
       const { name, content, category, tags } = req.body;
 
-      if (!userAddress) {
+      if (!userAddress || !userId) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement template creation
-      res.status(201).json(apiResponse.success({}, 'Template created successfully'));
+      // Sanitize template data to prevent XSS
+      const sanitizedTemplate = sanitizeMessageTemplate({
+        name,
+        content,
+        category,
+        tags
+      });
+
+      // Create template in database
+      const newTemplate = await db.insert(messageTemplates).values({
+        userId,
+        walletAddress: userAddress,
+        name: sanitizedTemplate.name,
+        content: sanitizedTemplate.content,
+        category: sanitizedTemplate.category,
+        tags: sanitizedTemplate.tags ? JSON.stringify(sanitizedTemplate.tags) : '[]',
+        isActive: true,
+        usageCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      res.status(201).json(apiResponse.success(newTemplate[0], 'Template created successfully'));
     } catch (error) {
       console.error('Error creating template:', error);
       res.status(500).json(apiResponse.error('Failed to create template'));
@@ -152,16 +178,36 @@ export class MarketplaceMessagingController {
   async updateTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
+      const userId = req.user?.id;
       const { id } = req.params;
       const { name, content, category, tags, isActive } = req.body;
 
-      if (!userAddress) {
+      if (!userAddress || !userId) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement template update
-      res.json(apiResponse.success({}, 'Template updated successfully'));
+      // Sanitize template data to prevent XSS
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = sanitizeMessageTemplate({ name, content: '' }).name;
+      if (content !== undefined) updateData.content = sanitizeMessageTemplate({ name: '', content }).content;
+      if (category !== undefined) updateData.category = sanitizeMessageTemplate({ name: '', content: '', category }).category;
+      if (tags !== undefined) updateData.tags = JSON.stringify(sanitizeMessageTemplate({ name: '', content: '', tags }).tags);
+      if (isActive !== undefined) updateData.isActive = isActive;
+      updateData.updatedAt = new Date();
+
+      // Update only if user owns the template
+      const updated = await db.update(messageTemplates)
+        .set(updateData)
+        .where(and(eq(messageTemplates.id, id), eq(messageTemplates.userId, userId)))
+        .returning();
+
+      if (updated.length === 0) {
+        res.status(404).json(apiResponse.error('Template not found or unauthorized', 404));
+        return;
+      }
+
+      res.json(apiResponse.success(updated[0], 'Template updated successfully'));
     } catch (error) {
       console.error('Error updating template:', error);
       res.status(500).json(apiResponse.error('Failed to update template'));
@@ -175,14 +221,24 @@ export class MarketplaceMessagingController {
   async deleteTemplate(req: Request, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
+      const userId = req.user?.id;
       const { id } = req.params;
 
-      if (!userAddress) {
+      if (!userAddress || !userId) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement template deletion
+      // Delete only if user owns the template
+      const deleted = await db.delete(messageTemplates)
+        .where(and(eq(messageTemplates.id, id), eq(messageTemplates.userId, userId)))
+        .returning();
+
+      if (deleted.length === 0) {
+        res.status(404).json(apiResponse.error('Template not found or unauthorized', 404));
+        return;
+      }
+
       res.json(apiResponse.success(null, 'Template deleted successfully'));
     } catch (error) {
       console.error('Error deleting template:', error);
@@ -197,15 +253,36 @@ export class MarketplaceMessagingController {
   async createQuickReply(req: Request, res: Response): Promise<void> {
     try {
       const userAddress = req.user?.address;
-      const { triggerKeywords, responseText, category, isActive } = req.body;
+      const userId = req.user?.id;
+      const { triggerKeywords, responseText, category, isActive, priority } = req.body;
 
-      if (!userAddress) {
+      if (!userAddress || !userId) {
         res.status(401).json(apiResponse.error('Authentication required', 401));
         return;
       }
 
-      // TODO: Implement quick reply creation
-      res.status(201).json(apiResponse.success({}, 'Quick reply created successfully'));
+      // Sanitize quick reply data to prevent XSS
+      const sanitizedQuickReply = sanitizeQuickReply({
+        triggerKeywords,
+        responseText,
+        category
+      });
+
+      // Create quick reply in database
+      const newQuickReply = await db.insert(quickReplies).values({
+        userId,
+        walletAddress: userAddress,
+        triggerKeywords: JSON.stringify(sanitizedQuickReply.triggerKeywords),
+        responseText: sanitizedQuickReply.responseText,
+        category: sanitizedQuickReply.category,
+        isActive: isActive !== undefined ? isActive : true,
+        priority: priority !== undefined ? priority : 0,
+        usageCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      res.status(201).json(apiResponse.success(newQuickReply[0], 'Quick reply created successfully'));
     } catch (error) {
       console.error('Error creating quick reply:', error);
       res.status(500).json(apiResponse.error('Failed to create quick reply'));

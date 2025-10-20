@@ -3008,6 +3008,91 @@ export const blockedUsers = pgTable("blocked_users", {
   blockedIdx: index("idx_blocked_users_blocked").on(t.blockedAddress),
 }));
 
+// Message templates table for marketplace messaging
+export const messageTemplates = pgTable("message_templates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 64 }),
+  tags: jsonb("tags").default("[]"),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_message_templates_user_id").on(t.userId),
+  walletAddressIdx: index("idx_message_templates_wallet_address").on(t.walletAddress),
+  categoryIdx: index("idx_message_templates_category").on(t.category),
+  isActiveIdx: index("idx_message_templates_is_active").on(t.isActive),
+  createdAtIdx: index("idx_message_templates_created_at").on(t.createdAt),
+  usageCountIdx: index("idx_message_templates_usage_count").on(t.usageCount),
+}));
+
+// Quick replies table for marketplace messaging
+export const quickReplies = pgTable("quick_replies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  triggerKeywords: jsonb("trigger_keywords").notNull(),
+  responseText: text("response_text").notNull(),
+  category: varchar("category", { length: 64 }),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  priority: integer("priority").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_quick_replies_user_id").on(t.userId),
+  walletAddressIdx: index("idx_quick_replies_wallet_address").on(t.walletAddress),
+  categoryIdx: index("idx_quick_replies_category").on(t.category),
+  isActiveIdx: index("idx_quick_replies_is_active").on(t.isActive),
+  priorityIdx: index("idx_quick_replies_priority").on(t.priority),
+  usageCountIdx: index("idx_quick_replies_usage_count").on(t.usageCount),
+}));
+
+// Conversation participants table for detailed participant tracking
+export const conversationParticipants = pgTable("conversation_participants", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  walletAddress: varchar("wallet_address", { length: 66 }).notNull(),
+  role: varchar("role", { length: 32 }).default("member"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  leftAt: timestamp("left_at"),
+  lastReadAt: timestamp("last_read_at"),
+  isMuted: boolean("is_muted").default(false),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  customTitle: varchar("custom_title", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  conversationIdIdx: index("idx_conversation_participants_conversation_id").on(t.conversationId),
+  userIdIdx: index("idx_conversation_participants_user_id").on(t.userId),
+  walletAddressIdx: index("idx_conversation_participants_wallet_address").on(t.walletAddress),
+  roleIdx: index("idx_conversation_participants_role").on(t.role),
+  joinedAtIdx: index("idx_conversation_participants_joined_at").on(t.joinedAt),
+  uniqueConversationUser: unique("unique_conversation_user").on(t.conversationId, t.userId),
+}));
+
+// Conversation analytics table for pre-aggregated stats
+export const conversationAnalytics = pgTable("conversation_analytics", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  conversationId: uuid("conversation_id").references(() => conversations.id, { onDelete: "cascade" }).notNull().unique(),
+  totalMessages: integer("total_messages").default(0),
+  lastMessageAt: timestamp("last_message_at"),
+  averageResponseTime: interval("average_response_time"),
+  participantStats: jsonb("participant_stats").default("{}"),
+  messageTypes: jsonb("message_types").default("{}"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  conversationIdIdx: index("idx_conversation_analytics_conversation_id").on(t.conversationId),
+  lastMessageAtIdx: index("idx_conversation_analytics_last_message_at").on(t.lastMessageAt),
+  updatedAtIdx: index("idx_conversation_analytics_updated_at").on(t.updatedAt),
+}));
+
 // Marketplace Listings - for the marketplace API endpoints
 export const marketplaceListings = pgTable("marketplace_listings", {
   id: uuid("id").defaultRandom().primaryKey(),

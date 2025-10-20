@@ -2,6 +2,7 @@ import { db } from '../db';
 import { conversations, chatMessages, blockedUsers, messageReadStatus } from '../db/schema';
 // import { notificationService } from './notificationService';
 import { eq, desc, asc, and, or, like, inArray, sql, gt, lt } from 'drizzle-orm';
+import { sanitizeMessage, sanitizeConversation, sanitizeSearchQuery } from '../utils/sanitization';
 
 interface GetConversationsOptions {
   userAddress: string;
@@ -286,10 +287,19 @@ export class MessagingService {
       // TODO: Implement rate limiting
       // Check if user has sent > 100 messages in last minute
       // Use Redis or in-memory cache for tracking
-      
-      // Store encrypted content if provided, otherwise store plaintext
-      const messageContent = encryptedContent || content;
-      
+
+      // Sanitize message content to prevent XSS attacks
+      // Note: Encrypted content should NOT be sanitized as it would break decryption
+      const sanitizedMessage = encryptedContent
+        ? { content: encryptedContent, messageType: data.contentType, attachments: data.attachments }
+        : sanitizeMessage({
+            content,
+            messageType: data.contentType,
+            attachments: data.attachments
+          });
+
+      const messageContent = sanitizedMessage.content;
+
       // Validate message size (10KB limit)
       const contentSize = new Blob([messageContent]).size;
       if (contentSize > 10240) {
@@ -298,17 +308,17 @@ export class MessagingService {
           message: 'Message content exceeds 10KB limit'
         };
       }
-      
+
       const newMessage = await db
         .insert(chatMessages)
         .values({
           conversationId,
           senderAddress: fromAddress,
           content: messageContent,
-          messageType: data.contentType || 'text',
+          messageType: sanitizedMessage.messageType || 'text',
           encryptionMetadata: data.encryptionMetadata,
           replyToId: data.replyToId,
-          attachments: data.attachments ? JSON.stringify(data.attachments) : null,
+          attachments: sanitizedMessage.attachments ? JSON.stringify(sanitizedMessage.attachments) : null,
           sentAt: new Date()
         })
         .returning();

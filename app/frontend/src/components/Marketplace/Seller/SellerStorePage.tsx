@@ -4,7 +4,11 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { marketplaceService, MarketplaceListing as ServiceMarketplaceListing } from '@/services/marketplaceService';
+import { unifiedSellerService } from '@/services/unifiedSellerService';
+import { UnifiedSellerProfile, UnifiedSellerListing } from '@/types/unifiedSeller';
+import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSeller';
 import { DAOEndorsementModal } from './DAOEndorsementModal';
+import { withSellerErrorBoundary } from './ErrorHandling';
 import { 
   Star, 
   Shield, 
@@ -135,7 +139,7 @@ interface SellerInfo {
   topCategories: string[];
   totalListings: number;
   activeListings: number;
-  featuredListings: DisplayMarketplaceListing[];
+  featuredListings: UnifiedSellerListing[];
   featuredProducts: FeaturedProduct[];
   
   // Performance & Activity
@@ -199,35 +203,13 @@ interface NFTItem {
   blockchain: string;
 }
 
-interface DisplayMarketplaceListing {
-  id: string;
-  title: string;
-  price: number;
-  currency: 'ETH' | 'USDC' | 'DAI';
-  image: string;
-  category: string;
-  status: 'ACTIVE' | 'SOLD' | 'DRAFT';
-  createdAt: Date;
-  views: number;
-  likes: number;
-  isEscrowProtected: boolean;
-}
+// Using UnifiedSellerListing instead of DisplayMarketplaceListing
+// This interface is now replaced by UnifiedSellerListing from @/types/unifiedSeller
 
-// Transform service listing to display listing
-const transformListing = (serviceListing: ServiceMarketplaceListing): DisplayMarketplaceListing => {
-  return {
-    id: serviceListing.id,
-    title: serviceListing.metadataURI || 'Untitled Listing',
-    price: parseFloat(serviceListing.price) || 0,
-    currency: 'ETH', // Default currency
-    image: '', // MarketplaceListing doesn't have image info
-    category: serviceListing.itemType.toLowerCase(),
-    status: serviceListing.status as 'ACTIVE' | 'SOLD' | 'DRAFT',
-    createdAt: new Date(serviceListing.startTime || serviceListing.createdAt),
-    views: 0, // MarketplaceListing doesn't have views
-    likes: 0, // MarketplaceListing doesn't have favorites
-    isEscrowProtected: serviceListing.isEscrowed
-  };
+// Transform service listing to unified listing using the transformation utility
+const transformListing = (serviceListing: ServiceMarketplaceListing): UnifiedSellerListing => {
+  const transformResult = unifiedSellerService.transformExternalListing(serviceListing, 'marketplace');
+  return transformResult.data;
 };
 
 interface Review {
@@ -247,13 +229,13 @@ interface SellerStorePageProps {
   onProductClick?: (productId: string) => void;
 }
 
-const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick }) => {
+const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick }) => {
   const router = useRouter();
   const { address } = useAccount();
   
   // State management
   const [seller, setSeller] = useState<SellerInfo | null>(null);
-  const [listings, setListings] = useState<DisplayMarketplaceListing[]>([]);
+  const [listings, setListings] = useState<UnifiedSellerListing[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -571,21 +553,11 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId, onProductCl
         const sellerListings = await sellerService.getListings(sellerId);
         
         if (sellerListings && sellerListings.length > 0) {
-          // Transform seller listings to display format
-          const transformedListings: DisplayMarketplaceListing[] = sellerListings.map(listing => ({
-            id: listing.id,
-            title: listing.title,
-            price: listing.price,
-            currency: (listing.currency === 'USDC' || listing.currency === 'DAI') ? listing.currency : 'ETH' as 'ETH' | 'USDC' | 'DAI',
-            image: listing.images?.[0] || '',
-            category: listing.category,
-            status: listing.status === 'active' ? 'ACTIVE' : 
-                   listing.status === 'sold' ? 'SOLD' : 'DRAFT',
-            createdAt: new Date(listing.createdAt),
-            views: listing.views || 0,
-            likes: listing.favorites || 0,
-            isEscrowProtected: listing.escrowEnabled
-          }));
+          // Transform seller listings to unified format
+          const transformedListings: UnifiedSellerListing[] = sellerListings.map(listing => {
+            const transformResult = unifiedSellerService.transformExternalListing(listing, 'seller');
+            return transformResult.data;
+          });
           setListings(transformedListings);
         } else {
           setListings([]);
@@ -1545,5 +1517,11 @@ const SellerStorePage: React.FC<SellerStorePageProps> = ({ sellerId, onProductCl
     </div>
   );
 };
+
+// Wrap with error boundary
+const SellerStorePage = withSellerErrorBoundary(SellerStorePageComponent, {
+  context: 'SellerStorePage',
+  enableRecovery: true,
+});
 
 export default SellerStorePage;

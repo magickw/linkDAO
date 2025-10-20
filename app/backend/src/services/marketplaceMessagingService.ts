@@ -1,7 +1,7 @@
 import { db } from '../db';
-import { 
-  conversations, 
-  chatMessages, 
+import {
+  conversations,
+  chatMessages,
   conversationParticipants,
   messageTemplates,
   quickReplies,
@@ -13,6 +13,12 @@ import {
 } from '../db/schema';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { WebSocketService } from './webSocketService';
+import {
+  sanitizeMessage,
+  sanitizeMessageTemplate,
+  sanitizeQuickReply,
+  sanitizeConversation
+} from '../utils/sanitization';
 
 export class MarketplaceMessagingService {
   private webSocketService: WebSocketService;

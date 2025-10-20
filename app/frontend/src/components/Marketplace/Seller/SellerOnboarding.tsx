@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
-import { useSellerOnboarding, useSeller } from '../../../hooks/useSeller';
+import { useUnifiedSellerOnboarding, useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
+import { withSellerErrorBoundary } from './ErrorHandling';
 
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';
@@ -10,12 +11,14 @@ import { ProfileSetupStep } from './onboarding/ProfileSetupStep';
 import { VerificationStep } from './onboarding/VerificationStep';
 import { PayoutSetupStep } from './onboarding/PayoutSetupStep';
 import { FirstListingStep } from './onboarding/FirstListingStep';
+import { useSellerOnboarding } from '@/hooks/useSeller';
+import { useSeller } from '@/hooks/useMarketplaceData';
 
 interface SellerOnboardingProps {
   onComplete?: () => void;
 }
 
-export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
+function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   const router = useRouter();
   const { isConnected } = useAccount();
   const { profile, createProfile } = useSeller();
@@ -292,3 +295,9 @@ export function SellerOnboarding({ onComplete }: SellerOnboardingProps) {
     </div>
   );
 }
+
+// Wrap with error boundary
+export const SellerOnboarding = withSellerErrorBoundary(SellerOnboardingComponent, {
+  context: 'SellerOnboarding',
+  enableRecovery: true,
+});

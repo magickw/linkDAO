@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSellerDashboard, useSeller, useSellerTiers, useSellerListings } from '../../../hooks/useSeller';
+import { useUnifiedSellerDashboard, useUnifiedSeller, useSellerTiers, useUnifiedSellerListings } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { MessagingAnalytics } from '../../Seller/MessagingAnalytics';
+import { UnifiedSellerDashboard } from '../../../types/unifiedSeller';
+import { withSellerErrorBoundary } from '../Seller/ErrorHandling';
 
 interface SellerDashboardProps {
   mockWalletAddress?: string;
 }
 
-export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
+function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const router = useRouter();
-  const { profile, loading: profileLoading } = useSeller();
-  const { stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useSellerDashboard(mockWalletAddress);
+  const { profile, loading: profileLoading } = useUnifiedSeller(mockWalletAddress);
+  const { dashboard, stats, notifications, unreadNotifications, loading, markNotificationRead, address: dashboardAddress } = useUnifiedSellerDashboard(mockWalletAddress);
   const { getTierById, getNextTier } = useSellerTiers();
-  const { listings, loading: listingsLoading, fetchListings } = useSellerListings(dashboardAddress);
+  const { listings, loading: listingsLoading } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
 
   if (profileLoading || loading) {
@@ -489,3 +491,9 @@ export function SellerDashboard({ mockWalletAddress }: SellerDashboardProps) {
     </div>
   );
 }
+
+// Wrap with error boundary
+export const SellerDashboard = withSellerErrorBoundary(SellerDashboardComponent, {
+  context: 'SellerDashboard',
+  enableRecovery: true,
+});
