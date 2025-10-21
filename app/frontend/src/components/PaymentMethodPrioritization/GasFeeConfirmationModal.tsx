@@ -152,13 +152,13 @@ export const GasFeeConfirmationModal: React.FC<GasFeeConfirmationModalProps> = (
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Current Gas Fee:</span>
               <span className="font-semibold text-gray-900">
-                ${gasEstimate.gasFeeUSD?.toFixed(2) || '0.00'}
+                ${gasEstimate.totalCostUSD?.toFixed(2) || '0.00'}
               </span>
             </div>
             <div className="flex justify-between items-center mt-1">
               <span className="text-sm text-gray-600">Gas Price:</span>
               <span className="text-sm text-gray-700">
-                {gasEstimate.gasPrice || 0} Gwei
+                {Number(gasEstimate.gasPrice) / 1e9 || 0} Gwei
               </span>
             </div>
           </div>

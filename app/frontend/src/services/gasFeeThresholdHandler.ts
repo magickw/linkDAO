@@ -32,14 +32,14 @@ export class GasFeeThresholdHandler {
   /**
    * Handles high gas fee scenarios and provides appropriate responses
    */
-  async handleGasFeeThreshold(
+  async handleGasFee(
     method: PaymentMethod,
     gasEstimate: GasEstimate,
     alternatives: PaymentMethod[],
     transactionAmount: number
   ): Promise<GasFeeHandlingResult> {
-    const gasFeeUSD = gasEstimate.gasFeeUSD || 0;
-    const gasPrice = gasEstimate.gasPrice || 0;
+    const gasFeeUSD = gasEstimate.totalCostUSD || 0;
+    const gasPrice = Number(gasEstimate.gasPrice) || 0;
 
     // Check if gas fee exceeds blocking threshold
     if (gasFeeUSD >= this.config.blockingThreshold) {
@@ -68,7 +68,7 @@ export class GasFeeThresholdHandler {
     alternatives: PaymentMethod[],
     transactionAmount: number
   ): Promise<GasFeeHandlingResult> {
-    const gasFeeUSD = gasEstimate.gasFeeUSD || 0;
+    const gasFeeUSD = gasEstimate.totalCostUSD || 0;
     const costComparison = await this.generateCostComparison(method, alternatives, transactionAmount);
     
     const bestAlternatives = alternatives.filter(alt => 
@@ -94,7 +94,7 @@ export class GasFeeThresholdHandler {
     alternatives: PaymentMethod[],
     transactionAmount: number
   ): Promise<GasFeeHandlingResult> {
-    const gasFeeUSD = gasEstimate.gasFeeUSD || 0;
+    const gasFeeUSD = gasEstimate.totalCostUSD || 0;
     const costComparison = await this.generateCostComparison(method, alternatives, transactionAmount);
     
     const hasSignificantSavings = costComparison.some(comp => comp.savingsPercentage > 20);
@@ -160,8 +160,14 @@ export class GasFeeThresholdHandler {
           totalCost: amount + 2, // $2 gas fee for USDC
           baseCost: amount,
           gasFee: 2,
+          currency: 'USD',
           estimatedTime: 60,
-          confidence: 0.9
+          confidence: 0.9,
+          breakdown: {
+            amount: amount,
+            networkFee: 2,
+            platformFee: 0
+          }
         };
       
       case PaymentMethodType.FIAT_STRIPE:
@@ -169,8 +175,14 @@ export class GasFeeThresholdHandler {
           totalCost: amount + (amount * 0.029), // 2.9% Stripe fee
           baseCost: amount,
           gasFee: 0,
+          currency: 'USD',
           estimatedTime: 0,
-          confidence: 1.0
+          confidence: 1.0,
+          breakdown: {
+            amount: amount,
+            networkFee: 0,
+            platformFee: amount * 0.029
+          }
         };
       
       case PaymentMethodType.NATIVE_ETH:
@@ -179,8 +191,14 @@ export class GasFeeThresholdHandler {
           totalCost: amount + 50, // High gas fee
           baseCost: amount,
           gasFee: 50,
+          currency: 'USD',
           estimatedTime: 120,
-          confidence: 0.8
+          confidence: 0.8,
+          breakdown: {
+            amount: amount,
+            networkFee: 50,
+            platformFee: 0
+          }
         };
     }
   }
@@ -203,7 +221,7 @@ export class GasFeeThresholdHandler {
    * Checks if gas fee requires user confirmation
    */
   requiresUserConfirmation(gasEstimate: GasEstimate): boolean {
-    const gasFeeUSD = gasEstimate.gasFeeUSD || 0;
+    const gasFeeUSD = gasEstimate.totalCostUSD || 0;
     return gasFeeUSD >= this.config.warningThreshold;
   }
 
@@ -211,7 +229,7 @@ export class GasFeeThresholdHandler {
    * Generates user-friendly gas fee warning message
    */
   generateWarningMessage(gasEstimate: GasEstimate, alternatives: PaymentMethod[]): string {
-    const gasFeeUSD = gasEstimate.gasFeeUSD || 0;
+    const gasFeeUSD = gasEstimate.totalCostUSD || 0;
     const hasAlternatives = alternatives.length > 0;
 
     if (gasFeeUSD >= this.config.blockingThreshold) {
