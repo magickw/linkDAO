@@ -313,7 +313,7 @@ export const SellerCacheDemo: React.FC = () => {
       {updateProfile.error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800 text-sm">
-            Update Error: {updateProfile.error.message}
+            Update Error: {updateProfile.error instanceof Error ? updateProfile.error.message : String(updateProfile.error)}
           </p>
         </div>
       )}
