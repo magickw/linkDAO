@@ -24,11 +24,13 @@ export default function FollowingList({ userAddress, className = '' }: Following
   }
 
   if (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return (
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h2>
         <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded">
-          <p>Error loading following: {error?.message}</p>
+          <p>Error loading following: {errorMessage}</p>
         </div>
       </div>
     );

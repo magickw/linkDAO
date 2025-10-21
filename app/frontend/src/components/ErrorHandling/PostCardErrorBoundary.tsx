@@ -94,13 +94,13 @@ export class PostCardErrorBoundary extends Component<Props, State> {
               <p className="text-sm text-red-700 mt-1">
                 This post couldn't be displayed properly. You can try refreshing or skip this post.
               </p>
-              {process.env.NODE_ENV === 'development' && (
+              {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="mt-2">
                   <summary className="text-xs text-red-600 cursor-pointer">
                     Error Details (Development)
                   </summary>
                   <pre className="text-xs text-red-600 mt-1 whitespace-pre-wrap">
-                    {this.state.error?.message}
+                    {this.state.error instanceof Error ? this.state.error.message : String(this.state.error)}
                   </pre>
                 </details>
               )}

@@ -125,19 +125,21 @@ const MarketplaceErrorFallback: React.FC<MarketplaceErrorFallbackProps> = ({
     if (!error) return 'An unexpected error occurred';
 
     // Provide user-friendly messages for common marketplace errors
-    if (error.message.includes('404') || error.message.includes('not found')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('404') || errorMessage.includes('not found')) {
       return 'The requested item could not be found. It may have been removed or is no longer available.';
     }
     
-    if (error.message.includes('network') || error.message.includes('fetch')) {
+    if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
       return 'Unable to connect to the marketplace. Please check your internet connection.';
     }
     
-    if (error.message.includes('timeout')) {
+    if (errorMessage.includes('timeout')) {
       return 'The request is taking longer than expected. Please try again.';
     }
     
-    if (error.message.includes('unauthorized') || error.message.includes('403')) {
+    if (errorMessage.includes('unauthorized') || errorMessage.includes('403')) {
       return 'You don\'t have permission to access this content.';
     }
 
@@ -145,7 +147,9 @@ const MarketplaceErrorFallback: React.FC<MarketplaceErrorFallbackProps> = ({
   };
 
   const getErrorIcon = () => {
-    if (error?.message.includes('404') || error?.message.includes('not found')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('404') || errorMessage.includes('not found')) {
       return (
         <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
@@ -153,7 +157,7 @@ const MarketplaceErrorFallback: React.FC<MarketplaceErrorFallbackProps> = ({
       );
     }
     
-    if (error?.message.includes('network') || error?.message.includes('fetch')) {
+    if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
       return (
         <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -230,9 +234,9 @@ const MarketplaceErrorFallback: React.FC<MarketplaceErrorFallbackProps> = ({
             </summary>
             <div className="mt-2 p-3 bg-gray-50 rounded text-xs font-mono text-gray-700 overflow-auto max-h-32">
               <div className="mb-2">
-                <strong>Error:</strong> {error.message}
+                <strong>Error:</strong> {error instanceof Error ? error.message : String(error)}
               </div>
-              {error.stack && (
+              {error instanceof Error && error.stack && (
                 <div>
                   <strong>Stack:</strong>
                   <pre className="whitespace-pre-wrap">{error.stack}</pre>

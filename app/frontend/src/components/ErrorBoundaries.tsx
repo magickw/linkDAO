@@ -54,6 +54,8 @@ interface DefaultErrorFallbackProps {
 }
 
 function DefaultErrorFallback({ error, onRetry }: DefaultErrorFallbackProps) {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
   return (
     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
       <svg className="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,7 +65,7 @@ function DefaultErrorFallback({ error, onRetry }: DefaultErrorFallbackProps) {
         Something went wrong
       </h3>
       <p className="text-red-600 dark:text-red-300 mb-4">
-        {error?.message || 'An unexpected error occurred'}
+        {errorMessage || 'An unexpected error occurred'}
       </p>
       {onRetry && (
         <button 
@@ -79,7 +81,7 @@ function DefaultErrorFallback({ error, onRetry }: DefaultErrorFallbackProps) {
             Error Details (Development)
           </summary>
           <pre className="mt-2 text-xs text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-900/40 p-2 rounded overflow-auto">
-            {error.stack}
+            {error instanceof Error ? error.stack : 'No stack trace available'}
           </pre>
         </details>
       )}

@@ -1,54 +1,60 @@
+/**
+ * Card Components
+ * Provides card layout components with consistent styling
+ */
+
 import React from 'react';
-import { GlassPanel } from '@/design-system';
 
 interface CardProps {
-  children: React.ReactNode;
   className?: string;
+  children: React.ReactNode;
 }
 
 interface CardHeaderProps {
-  children: React.ReactNode;
   className?: string;
+  children: React.ReactNode;
 }
 
 interface CardTitleProps {
-  children: React.ReactNode;
   className?: string;
+  children: React.ReactNode;
 }
 
 interface CardContentProps {
-  children: React.ReactNode;
   className?: string;
+  children: React.ReactNode;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '' }) => {
+const Card: React.FC<CardProps> = ({ className = '', children }) => {
   return (
-    <GlassPanel className={`rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}>
-      {children}
-    </GlassPanel>
-  );
-};
-
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`p-6 pb-0 ${className}`}>
+    <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}>
       {children}
     </div>
   );
 };
 
-export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '' }) => {
+const CardHeader: React.FC<CardHeaderProps> = ({ className = '', children }) => {
   return (
-    <h3 className={`text-lg font-semibold leading-none tracking-tight ${className}`}>
+    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+const CardTitle: React.FC<CardTitleProps> = ({ className = '', children }) => {
+  return (
+    <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`}>
       {children}
     </h3>
   );
 };
 
-export const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => {
+const CardContent: React.FC<CardContentProps> = ({ className = '', children }) => {
   return (
     <div className={`p-6 pt-0 ${className}`}>
       {children}
     </div>
   );
 };
+
+export { Card, CardHeader, CardTitle, CardContent };

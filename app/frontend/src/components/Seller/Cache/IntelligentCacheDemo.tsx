@@ -265,7 +265,7 @@ export const IntelligentCacheDemo: React.FC = () => {
 
           {isError && (
             <div className="text-red-600 text-sm">
-              Error: {error?.message || 'Unknown error'}
+              Error: {error instanceof Error ? error.message : String(error) || 'Unknown error'}
             </div>
           )}
 

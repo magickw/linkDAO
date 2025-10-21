@@ -378,6 +378,9 @@ function SellerProfilePageComponent() {
   }
 
   if (error) {
+    // Type guard to safely access error.message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
         <GlassPanel className="max-w-md w-full text-center">
@@ -389,7 +392,7 @@ function SellerProfilePageComponent() {
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">Error Loading Profile</h1>
             <p className="text-gray-300 mb-6">
-              {error?.message || String(error)}
+              {errorMessage}
             </p>
           </div>
           <Button onClick={() => router.push('/marketplace/seller/onboarding')} variant="primary">

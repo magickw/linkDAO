@@ -395,40 +395,41 @@ export const useWeb3ErrorHandler = () => {
         details: error.message,
         retryable: true
       };
-    } else if (error?.message?.includes('insufficient funds')) {
+    } else if (error && (error instanceof Error ? error.message : String(error)).includes('insufficient funds')) {
       web3Error = {
         type: 'insufficient_funds',
         message: 'Insufficient funds for transaction',
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         retryable: false,
         actionRequired: 'Add Funds'
       };
-    } else if (error?.message?.includes('gas')) {
+    } else if (error && (error instanceof Error ? error.message : String(error)).includes('gas')) {
       web3Error = {
         type: 'gas',
         message: 'Gas estimation failed',
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         retryable: true
       };
-    } else if (error?.message?.includes('network') || error?.message?.includes('connection')) {
+    } else if (error && ((error instanceof Error ? error.message : String(error)).includes('network') || (error instanceof Error ? error.message : String(error)).includes('connection'))) {
       web3Error = {
         type: 'network',
         message: 'Network connection error',
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         retryable: true
       };
-    } else if (error?.message?.includes('timeout')) {
+    } else if (error && (error instanceof Error ? error.message : String(error)).includes('timeout')) {
       web3Error = {
         type: 'timeout',
         message: 'Request timed out',
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
         retryable: true
       };
     } else {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       web3Error = {
         type: 'unknown',
-        message: error?.message || 'An unknown error occurred',
-        details: error?.stack,
+        message: errorMessage || 'An unknown error occurred',
+        details: error instanceof Error ? error.stack : undefined,
         retryable: true
       };
     }

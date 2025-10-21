@@ -179,7 +179,7 @@ function ErrorFallback({ error, onRetry }: { error?: Error; onRetry: () => void 
       </h3>
       
       <p className="text-sm text-gray-500 mb-4">
-        {error?.message || 'Something went wrong while loading this content.'}
+        {error instanceof Error ? error.message : String(error) || 'Something went wrong while loading this content.'}
       </p>
       
       <button
