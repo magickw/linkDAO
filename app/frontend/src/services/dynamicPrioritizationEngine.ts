@@ -153,7 +153,7 @@ export class DynamicPrioritizationEngine {
           updatedCostEstimate
         );
 
-        return {
+        const updatedPrioritizedMethod: PrioritizedPaymentMethod = {
           ...prioritizedMethod,
           costEstimate: updatedCostEstimate,
           totalScore: newScoringComponents.totalScore,
@@ -162,13 +162,16 @@ export class DynamicPrioritizationEngine {
             updatedCostEstimate
           )
         };
+
+        return updatedPrioritizedMethod;
       })
     );
 
     // Re-sort by total score and update priorities
     return this.resortByScore(updatedMethods);
-  }  /**
+  }
 
+  /**
    * Calculate dynamic prioritization from scratch
    */
   private async calculateDynamicPrioritization(
@@ -195,7 +198,7 @@ export class DynamicPrioritizationEngine {
           costEstimate
         );
 
-        return {
+        const prioritizedMethod: PrioritizedPaymentMethod = {
           method,
           priority: index + 1, // Will be updated after sorting
           costEstimate,
@@ -206,6 +209,8 @@ export class DynamicPrioritizationEngine {
           warnings: this.generateMethodWarnings(method, costEstimate, context),
           benefits: this.generateMethodBenefits(method, costEstimate, scoringComponents)
         };
+
+        return prioritizedMethod;
       })
     );
 
@@ -401,10 +406,13 @@ export class DynamicPrioritizationEngine {
   private resortByScore(methods: PrioritizedPaymentMethod[]): PrioritizedPaymentMethod[] {
     return methods
       .sort((a, b) => b.totalScore - a.totalScore)
-      .map((method, index) => ({
-        ...method,
-        priority: index + 1
-      }));
+      .map((method, index) => {
+        const prioritizedMethod: PrioritizedPaymentMethod = {
+          ...method,
+          priority: index + 1
+        };
+        return prioritizedMethod;
+      });
   }
 
   private determineAvailabilityStatus(

@@ -1,9 +1,21 @@
 /**
  * Payment Method Prioritization Components
- * Export file for payment method prioritization UI components
+ * Export all UI components for the payment method prioritization system
  */
 
-export { default as PaymentMethodPrioritizationDemo } from './PaymentMethodPrioritizationDemo';
+export { default as PaymentMethodCard } from './PaymentMethodCard';
+export { default as PaymentMethodSelector } from './PaymentMethodSelector';
+export { default as CostComparisonTable } from './CostComparisonTable';
+export { default as GasFeeWarning } from './GasFeeWarning';
+export { default as UserPreferenceIndicator } from './UserPreferenceIndicator';
+export { default as PreferenceLearningFeedback } from './PreferenceLearningFeedback';
 
-// Re-export the core services for convenience
-export * from '../../services/paymentPrioritization';
+// Re-export types for convenience
+export type {
+  PrioritizedPaymentMethod,
+  PaymentMethodType,
+  PrioritizationResult,
+  UserPreferences,
+  CostEstimate,
+  AvailabilityStatus
+} from '../../types/paymentPrioritization';

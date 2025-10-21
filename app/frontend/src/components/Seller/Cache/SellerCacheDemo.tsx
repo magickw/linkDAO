@@ -256,10 +256,10 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : profile ? (
             <div className="text-sm space-y-2">
-              <div><strong>Name:</strong> {profile.displayName || 'N/A'}</div>
-              <div><strong>Bio:</strong> {profile.bio || 'N/A'}</div>
-              <div><strong>Updated:</strong> {profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : 'N/A'}</div>
-              <div><strong>Tier:</strong> {profile.tier || 'N/A'}</div>
+              <div><strong>Name:</strong> {profile.displayName ?? 'N/A'}</div>
+              <div><strong>Bio:</strong> {profile.bio ?? 'N/A'}</div>
+              <div><strong>Updated:</strong> {profile.updatedAt ? (new Date(profile.updatedAt)).toLocaleString() : 'N/A'}</div>
+              <div><strong>Tier:</strong> {profile.tier ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No profile data</div>
@@ -273,10 +273,10 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : dashboard ? (
             <div className="text-sm space-y-2">
-              <div><strong>Total Sales:</strong> {dashboard.sales.total}</div>
-              <div><strong>Active Listings:</strong> {dashboard.listings.active}</div>
-              <div><strong>Pending Orders:</strong> {dashboard.orders.pending}</div>
-              <div><strong>Reputation:</strong> {dashboard.reputation.score}</div>
+              <div><strong>Total Sales:</strong> {dashboard.sales?.total ?? 'N/A'}</div>
+              <div><strong>Active Listings:</strong> {dashboard.listings?.active ?? 'N/A'}</div>
+              <div><strong>Pending Orders:</strong> {dashboard.orders?.pending ?? 'N/A'}</div>
+              <div><strong>Reputation:</strong> {dashboard.reputation?.score ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No dashboard data</div>
@@ -290,9 +290,9 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : listings && listings.length > 0 ? (
             <div className="text-sm space-y-2">
-              <div><strong>Total Listings:</strong> {listings.length}</div>
-              <div><strong>First Listing:</strong> {listings[0]?.title || 'N/A'}</div>
-              <div><strong>Status:</strong> {listings[0]?.status || 'N/A'}</div>
+              <div><strong>Total Listings:</strong> {listings.length.toString() ?? 'N/A'}</div>
+              <div><strong>First Listing:</strong> {listings[0]?.title ?? 'N/A'}</div>
+              <div><strong>Status:</strong> {listings[0]?.status ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No listings data</div>
@@ -304,7 +304,7 @@ export const SellerCacheDemo: React.FC = () => {
       {updateCount > 0 && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-green-800 text-sm">
-            Profile updated {updateCount} time{updateCount !== 1 ? 's' : ''} with optimistic updates!
+            Profile updated {updateCount.toString()} time{updateCount !== 1 ? 's' : ''} with optimistic updates!
           </p>
         </div>
       )}

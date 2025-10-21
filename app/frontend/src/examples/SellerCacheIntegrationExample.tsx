@@ -66,10 +66,10 @@ const SellerProfileExample: React.FC = () => {
             <div className="text-gray-500">Loading profile...</div>
           ) : profile ? (
             <div className="space-y-2 text-sm">
-              <div><strong>Name:</strong> {profile.displayName || 'N/A'}</div>
-              <div><strong>Bio:</strong> {profile.bio || 'N/A'}</div>
-              <div><strong>Tier:</strong> {profile.tier}</div>
-              <div><strong>Updated:</strong> {new Date(profile.updatedAt).toLocaleString()}</div>
+              <div><strong>Name:</strong> {profile.displayName ?? 'N/A'}</div>
+              <div><strong>Bio:</strong> {profile.bio ?? 'N/A'}</div>
+              <div><strong>Tier:</strong> {profile.tier ?? 'N/A'}</div>
+              <div><strong>Updated:</strong> {profile.updatedAt ? (new Date(profile.updatedAt)).toLocaleString() : 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No profile found</div>
@@ -99,10 +99,10 @@ const SellerProfileExample: React.FC = () => {
             <div className="text-gray-500">Loading dashboard...</div>
           ) : dashboard ? (
             <div className="space-y-2 text-sm">
-              <div><strong>Total Sales:</strong> {dashboard.sales.total}</div>
-              <div><strong>Active Listings:</strong> {dashboard.listings.active}</div>
-              <div><strong>Pending Orders:</strong> {dashboard.orders.pending}</div>
-              <div><strong>Reputation:</strong> {dashboard.reputation.score}</div>
+              <div><strong>Total Sales:</strong> {dashboard.sales?.total ?? 'N/A'}</div>
+              <div><strong>Active Listings:</strong> {dashboard.listings?.active ?? 'N/A'}</div>
+              <div><strong>Pending Orders:</strong> {dashboard.orders?.pending ?? 'N/A'}</div>
+              <div><strong>Reputation:</strong> {dashboard.reputation?.score ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No dashboard data</div>

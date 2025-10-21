@@ -57,58 +57,58 @@
     - Implement preference reset functionality
     - _Requirements: 5.3, 5.5_
 
-- [ ] 5. Implement core prioritization algorithm
-  - [ ] 5.1 Build payment method scoring system
+- [x] 5. Implement core prioritization algorithm
+  - [x] 5.1 Build payment method scoring system
     - Implement weighted scoring algorithm combining cost, preference, and availability
     - Add base priority configuration for different payment method types
     - Create scoring validation and testing utilities
     - _Requirements: 1.1, 1.2, 4.3_
   
-  - [ ] 5.2 Create dynamic prioritization logic
+  - [x] 5.2 Create dynamic prioritization logic
     - Implement real-time reordering based on market conditions
     - Add threshold-based priority adjustments
     - Build prioritization caching for performance
     - _Requirements: 4.1, 4.2, 4.3_
   
-  - [ ] 5.3 Add stablecoin prioritization rules
+  - [x] 5.3 Add stablecoin prioritization rules
     - Implement USDC-first prioritization logic
     - Add stablecoin preference over volatile assets
     - Create stablecoin availability fallback chain
     - _Requirements: 1.1, 1.2, 1.4, 1.5_
 
-- [-] 6. Build payment method selector UI components
-  - [ ] 6.1 Create prioritized payment method display
+- [x] 6. Build payment method selector UI components
+  - [x] 6.1 Create prioritized payment method display
     - Design payment method cards with priority ordering
     - Add cost estimates and recommendation reasons
     - Implement responsive design for mobile and desktop
     - _Requirements: 1.1, 4.4, 5.4_
   
-  - [ ] 6.2 Add cost comparison interface
+  - [x] 6.2 Add cost comparison interface
     - Display total transaction costs for each method
     - Show gas fee warnings for high-cost options
     - Add cost breakdown tooltips and explanations
     - _Requirements: 3.2, 3.4, 4.4_
   
-  - [ ] 6.3 Implement user preference indicators
+  - [x] 6.3 Implement user preference indicators
     - Show previously used payment methods with visual cues
     - Add preference learning feedback to users
     - Display recommendation reasons and cost savings
     - _Requirements: 5.4, 5.5_
 
-- [ ] 7. Add error handling and fallback mechanisms
-  - [ ] 7.1 Implement gas fee threshold handling
+- [x] 7. Add error handling and fallback mechanisms
+  - [x] 7.1 Implement gas fee threshold handling
     - Add high gas fee warnings and alternatives
     - Create cost-based payment method suggestions
     - Implement user confirmation for expensive transactions
     - _Requirements: 3.2, 3.3, 4.2_
   
-  - [ ] 7.2 Build network unavailability handling
+  - [x] 7.2 Build network unavailability handling
     - Add network switching suggestions for unavailable methods
     - Implement graceful fallbacks to supported networks
     - Create user-friendly error messages and guidance
     - _Requirements: 6.3, 6.4_
   
-  - [-] 7.3 Create payment method unavailability handling
+  - [x] 7.3 Create payment method unavailability handling
     - Handle insufficient balance scenarios
     - Provide alternative payment method suggestions
     - Add retry mechanisms for temporary failures

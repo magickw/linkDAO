@@ -1,397 +1,473 @@
 /**
- * Payment Method Prioritization Demo
- * Demonstrates the core payment method prioritization functionality
+ * Payment Method Prioritization Demo Component
+ * Comprehensive demo showcasing all payment method prioritization UI components
  */
 
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { 
-  CreditCard, 
-  Wallet, 
-  DollarSign, 
-  TrendingUp, 
-  Clock, 
-  AlertTriangle,
-  CheckCircle,
-  Info
-} from 'lucide-react';
-import { Button } from '@/design-system/components/Button';
-import { GlassPanel } from '@/design-system/components/GlassPanel';
 import {
-  paymentPrioritizationFactory,
-  PaymentMethodType,
+  PaymentMethodCard,
+  PaymentMethodSelector,
+  CostComparisonTable,
+  GasFeeWarning,
+  UserPreferenceIndicator,
+  PreferenceLearningFeedback
+} from './index';
+import {
   PrioritizedPaymentMethod,
+  PaymentMethodType,
   PrioritizationResult,
-  AvailabilityStatus
-} from '@/services/paymentPrioritization';
+  UserPreferences,
+  AvailabilityStatus,
+  PrioritizationRecommendation,
+  PrioritizationWarning
+} from '../../types/paymentPrioritization';
 
-interface PaymentMethodPrioritizationDemoProps {
-  transactionAmount?: number;
-  chainId?: number;
-}
+const PaymentMethodPrioritizationDemo: React.FC = () => {
+  const [selectedMethod, setSelectedMethod] = useState<PrioritizedPaymentMethod | null>(null);
+  const [viewMode, setViewMode] = useState<'selector' | 'comparison' | 'individual'>('selector');
+  const [showWarnings, setShowWarnings] = useState(true);
+  const [showPreferences, setShowPreferences] = useState(true);
 
-export const PaymentMethodPrioritizationDemo: React.FC<PaymentMethodPrioritizationDemoProps> = ({
-  transactionAmount = 100,
-  chainId = 1
-}) => {
-  const { address } = useAccount();
-  const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Mock data for demonstration
+  const mockPrioritizationResult: PrioritizationResult = {
+    prioritizedMethods: [
+      {
+        method: {
+          id: 'usdc-polygon',
+          type: PaymentMethodType.STABLECOIN_USDC,
+          name: 'USDC (Polygon)',
+          description: 'USD Coin on Polygon - stable value with low gas fees',
+          chainId: 137,
+          icon: '/icons/usdc.svg',
+          enabled: true,
+          supportedNetworks: [137]
+        },
+        priority: 1,
+        costEstimate: {
+          totalCost: 102.15,
+          baseCost: 100.00,
+          gasFee: 2.15,
+          estimatedTime: 3,
+          confidence: 0.95,
+          currency: 'USD',
+          breakdown: {
+            amount: 100.00,
+            gasLimit: BigInt(21000),
+            gasPrice: BigInt(30000000000),
+            networkFee: 2.15,
+            platformFee: 0
+          }
+        },
+        availabilityStatus: AvailabilityStatus.AVAILABLE,
+        userPreferenceScore: 0.85,
+        recommendationReason: 'Recommended: Low gas fees and stable value',
+        totalScore: 0.92,
+        benefits: ['Price stability', 'Low gas fees', 'Fast confirmation'],
+        warnings: []
+      },
+      {
+        method: {
+          id: 'fiat-stripe',
+          type: PaymentMethodType.FIAT_STRIPE,
+          name: 'Credit/Debit Card',
+          description: 'Traditional payment with Stripe - no gas fees, familiar experience',
+          icon: '/icons/credit-card.svg',
+          enabled: true,
+          supportedNetworks: []
+        },
+        priority: 2,
+        costEstimate: {
+          totalCost: 103.50,
+          baseCost: 100.00,
+          gasFee: 0,
+          estimatedTime: 1,
+          confidence: 0.99,
+          currency: 'USD',
+          breakdown: {
+            amount: 100.00,
+            platformFee: 3.50
+          }
+        },
+        availabilityStatus: AvailabilityStatus.AVAILABLE,
+        userPreferenceScore: 0.65,
+        recommendationReason: 'No gas fees and familiar payment experience',
+        totalScore: 0.88,
+        benefits: ['No gas fees', 'Familiar payment flow', 'Buyer protection'],
+        warnings: []
+      },
+      {
+        method: {
+          id: 'usdt-mainnet',
+          type: PaymentMethodType.STABLECOIN_USDT,
+          name: 'USDT (Ethereum)',
+          description: 'Tether USD on Ethereum mainnet - widely accepted stablecoin',
+          chainId: 1,
+          icon: '/icons/usdt.svg',
+          enabled: true,
+          supportedNetworks: [1]
+        },
+        priority: 3,
+        costEstimate: {
+          totalCost: 135.80,
+          baseCost: 100.00,
+          gasFee: 35.80,
+          estimatedTime: 12,
+          confidence: 0.78,
+          currency: 'USD',
+          breakdown: {
+            amount: 100.00,
+            gasLimit: BigInt(65000),
+            gasPrice: BigInt(45000000000),
+            networkFee: 35.80
+          }
+        },
+        availabilityStatus: AvailabilityStatus.AVAILABLE,
+        userPreferenceScore: 0.45,
+        recommendationReason: 'Available but high gas fees - consider alternatives',
+        totalScore: 0.65,
+        benefits: ['Widely accepted', 'Stable value'],
+        warnings: ['High gas fees: $35.80', 'Network congestion']
+      },
+      {
+        method: {
+          id: 'eth-mainnet',
+          type: PaymentMethodType.NATIVE_ETH,
+          name: 'ETH (Ethereum)',
+          description: 'Native Ethereum token - widely accepted but variable gas costs',
+          chainId: 1,
+          icon: '/icons/eth.svg',
+          enabled: true,
+          supportedNetworks: [1]
+        },
+        priority: 4,
+        costEstimate: {
+          totalCost: 142.30,
+          baseCost: 100.00,
+          gasFee: 42.30,
+          estimatedTime: 15,
+          confidence: 0.72,
+          currency: 'USD',
+          breakdown: {
+            amount: 100.00,
+            gasLimit: BigInt(21000),
+            gasPrice: BigInt(55000000000),
+            networkFee: 42.30
+          }
+        },
+        availabilityStatus: AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES,
+        userPreferenceScore: 0.30,
+        recommendationReason: 'Unavailable: Gas fees exceed acceptable threshold',
+        totalScore: 0.45,
+        benefits: ['Native token', 'Broad acceptance'],
+        warnings: ['Very high gas fees: $42.30', 'Cost exceeds threshold']
+      }
+    ],
+    defaultMethod: null, // Will be set to first available method
+    recommendations: [
+      {
+        type: 'cost_savings',
+        message: 'Save $33.65 by using USDC (Polygon) instead of USDT (Ethereum)',
+        suggestedMethod: PaymentMethodType.STABLECOIN_USDC,
+        potentialSavings: 33.65
+      },
+      {
+        type: 'convenience',
+        message: 'USDC prioritized for stable value and predictable costs',
+        suggestedMethod: PaymentMethodType.STABLECOIN_USDC
+      }
+    ],
+    warnings: [
+      {
+        type: 'high_gas_fees',
+        message: 'Gas fees are currently high on Ethereum mainnet',
+        affectedMethods: [PaymentMethodType.STABLECOIN_USDT, PaymentMethodType.NATIVE_ETH],
+        severity: 'high',
+        actionRequired: 'Consider using Polygon network or fiat payment'
+      }
+    ],
+    metadata: {
+      calculatedAt: new Date(),
+      totalMethodsEvaluated: 4,
+      averageConfidence: 0.86,
+      processingTimeMs: 245
+    }
+  };
+
+  // Set default method
+  mockPrioritizationResult.defaultMethod = mockPrioritizationResult.prioritizedMethods.find(
+    method => method.availabilityStatus === AvailabilityStatus.AVAILABLE
+  ) ?? null;
+
+  const mockUserPreferences: UserPreferences = {
+    preferredMethods: [
+      {
+        methodType: PaymentMethodType.STABLECOIN_USDC,
+        score: 0.85,
+        usageCount: 12,
+        lastUsed: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+        averageTransactionAmount: 150.00
+      },
+      {
+        methodType: PaymentMethodType.FIAT_STRIPE,
+        score: 0.65,
+        usageCount: 8,
+        lastUsed: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
+        averageTransactionAmount: 75.00
+      },
+      {
+        methodType: PaymentMethodType.STABLECOIN_USDT,
+        score: 0.45,
+        usageCount: 3,
+        lastUsed: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 1 month ago
+        averageTransactionAmount: 200.00
+      }
+    ],
+    avoidedMethods: [],
+    maxGasFeeThreshold: 25,
+    preferStablecoins: true,
+    preferFiat: false,
+    lastUsedMethods: [
+      {
+        methodType: PaymentMethodType.STABLECOIN_USDC,
+        usedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        transactionAmount: 120.00,
+        chainId: 137,
+        successful: true
+      },
+      {
+        methodType: PaymentMethodType.FIAT_STRIPE,
+        usedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        transactionAmount: 85.00,
+        successful: true
+      }
+    ],
+    autoSelectBestOption: true
+  };
 
   useEffect(() => {
-    loadPrioritization();
-  }, [address, transactionAmount, chainId]);
-
-  const loadPrioritization = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await paymentPrioritizationFactory.quickSetup(
-        address,
-        chainId,
-        transactionAmount
-      );
-
-      const prioritization = await result.prioritize();
-      setPrioritizationResult(prioritization);
-    } catch (err: any) {
-      console.error('Prioritization failed:', err);
-      setError(err.message || 'Failed to load payment method prioritization');
-    } finally {
-      setLoading(false);
+    if (mockPrioritizationResult.defaultMethod && !selectedMethod) {
+      setSelectedMethod(mockPrioritizationResult.defaultMethod);
     }
+  }, [mockPrioritizationResult.defaultMethod, selectedMethod]);
+
+  const handleMethodSelect = (method: PrioritizedPaymentMethod) => {
+    setSelectedMethod(method);
   };
 
-  const getMethodIcon = (methodType: PaymentMethodType) => {
-    switch (methodType) {
-      case PaymentMethodType.STABLECOIN_USDC:
-      case PaymentMethodType.STABLECOIN_USDT:
-        return <DollarSign className="w-5 h-5 text-green-400" />;
-      case PaymentMethodType.FIAT_STRIPE:
-        return <CreditCard className="w-5 h-5 text-blue-400" />;
-      case PaymentMethodType.NATIVE_ETH:
-        return <Wallet className="w-5 h-5 text-orange-400" />;
-      default:
-        return <Wallet className="w-5 h-5 text-gray-400" />;
-    }
+  const handlePreferenceUpdate = (methodType: PaymentMethodType, action: 'prefer' | 'avoid') => {
+    console.log(`User ${action}s ${methodType}`);
+    // In a real implementation, this would update user preferences
   };
 
-  const getAvailabilityColor = (status: AvailabilityStatus) => {
-    switch (status) {
-      case AvailabilityStatus.AVAILABLE:
-        return 'text-green-400';
-      case AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES:
-        return 'text-yellow-400';
-      default:
-        return 'text-red-400';
-    }
+  const handleFeedback = (methodType: PaymentMethodType, feedback: 'helpful' | 'not_helpful', reason?: string) => {
+    console.log(`User feedback for ${methodType}: ${feedback}`, reason);
+    // In a real implementation, this would be sent to analytics
   };
-
-  const getAvailabilityIcon = (status: AvailabilityStatus) => {
-    switch (status) {
-      case AvailabilityStatus.AVAILABLE:
-        return <CheckCircle className="w-4 h-4" />;
-      case AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES:
-        return <AlertTriangle className="w-4 h-4" />;
-      default:
-        return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
-
-  if (loading) {
-    return (
-      <GlassPanel variant="secondary" className="p-6">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-white/70">Analyzing payment methods...</p>
-        </div>
-      </GlassPanel>
-    );
-  }
-
-  if (error) {
-    return (
-      <GlassPanel variant="secondary" className="p-6">
-        <div className="text-center">
-          <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-          <p className="text-red-400 mb-4">{error}</p>
-          <Button variant="outline" onClick={loadPrioritization}>
-            Retry
-          </Button>
-        </div>
-      </GlassPanel>
-    );
-  }
-
-  if (!prioritizationResult) {
-    return (
-      <GlassPanel variant="secondary" className="p-6">
-        <div className="text-center">
-          <Info className="w-8 h-8 text-blue-400 mx-auto mb-4" />
-          <p className="text-white/70">No prioritization data available</p>
-        </div>
-      </GlassPanel>
-    );
-  }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Payment Method Prioritization
-        </h2>
-        <p className="text-white/70">
-          Smart payment method ordering for ${transactionAmount} transaction
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          Payment Method Prioritization Demo
+        </h1>
+        <p className="text-lg text-gray-600 mb-6">
+          Intelligent payment method ordering with cost estimates, user preferences, and real-time recommendations
         </p>
+
+        {/* View Mode Toggle */}
+        <div className="flex justify-center space-x-2 mb-8">
+          <button
+            onClick={() => setViewMode('selector')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'selector'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Payment Selector
+          </button>
+          <button
+            onClick={() => setViewMode('comparison')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'comparison'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Cost Comparison
+          </button>
+          <button
+            onClick={() => setViewMode('individual')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              viewMode === 'individual'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Individual Cards
+          </button>
+        </div>
+
+        {/* Options */}
+        <div className="flex justify-center space-x-4 mb-8">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={showWarnings}
+              onChange={(e) => setShowWarnings(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm text-gray-700">Show Warnings</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={showPreferences}
+              onChange={(e) => setShowPreferences(e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm text-gray-700">Show Preferences</span>
+          </label>
+        </div>
       </div>
 
-      {/* Default Method Highlight */}
-      {prioritizationResult.defaultMethod && (
-        <GlassPanel variant="primary" className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-blue-400" />
+      {/* Main Content */}
+      {viewMode === 'selector' && (
+        <div className="space-y-8">
+          <PaymentMethodSelector
+            prioritizationResult={mockPrioritizationResult}
+            selectedMethodId={selectedMethod?.method.id}
+            onMethodSelect={handleMethodSelect}
+            showCostBreakdown={true}
+            showRecommendations={true}
+            showWarnings={showWarnings}
+            layout="grid"
+            responsive={true}
+          />
+
+          {/* Gas Fee Warning */}
+          {showWarnings && selectedMethod && selectedMethod.costEstimate.gasFee > 25 && (
+            <GasFeeWarning
+              paymentMethods={mockPrioritizationResult.prioritizedMethods}
+              selectedMethod={selectedMethod}
+              gasFeeThreshold={25}
+              onAlternativeSelect={handleMethodSelect}
+            />
+          )}
+
+          {/* Preference Learning Feedback */}
+          {showPreferences && (
+            <PreferenceLearningFeedback
+              paymentMethods={mockPrioritizationResult.prioritizedMethods}
+              userPreferences={mockUserPreferences}
+              recommendations={mockPrioritizationResult.recommendations}
+              selectedMethod={selectedMethod || undefined}
+              onFeedback={handleFeedback}
+              showLearningInsights={true}
+            />
+          )}
+        </div>
+      )}
+
+      {viewMode === 'comparison' && (
+        <div className="space-y-8">
+          <CostComparisonTable
+            paymentMethods={mockPrioritizationResult.prioritizedMethods}
+            selectedMethodId={selectedMethod?.method.id}
+            onMethodSelect={handleMethodSelect}
+            showGasFeeWarnings={showWarnings}
+            showSavingsCalculation={true}
+          />
+
+          {/* Gas Fee Warning */}
+          {showWarnings && selectedMethod && selectedMethod.costEstimate.gasFee > 25 && (
+            <GasFeeWarning
+              paymentMethods={mockPrioritizationResult.prioritizedMethods}
+              selectedMethod={selectedMethod}
+              gasFeeThreshold={25}
+              onAlternativeSelect={handleMethodSelect}
+            />
+          )}
+        </div>
+      )}
+
+      {viewMode === 'individual' && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {mockPrioritizationResult.prioritizedMethods.map((method) => (
+              <div key={method.method.id} className="space-y-4">
+                <PaymentMethodCard
+                  paymentMethod={method}
+                  isSelected={selectedMethod?.method.id === method.method.id}
+                  isRecommended={method.priority === 1}
+                  onSelect={handleMethodSelect}
+                  showCostBreakdown={true}
+                />
+
+                {/* User Preference Indicator */}
+                {showPreferences && (
+                  <UserPreferenceIndicator
+                    paymentMethod={method}
+                    userPreferences={mockUserPreferences}
+                    showPreferenceDetails={true}
+                    showRecommendationReason={true}
+                    showCostSavings={true}
+                    onPreferenceUpdate={handlePreferenceUpdate}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Gas Fee Warning */}
+          {showWarnings && selectedMethod && selectedMethod.costEstimate.gasFee > 25 && (
+            <GasFeeWarning
+              paymentMethods={mockPrioritizationResult.prioritizedMethods}
+              selectedMethod={selectedMethod}
+              gasFeeThreshold={25}
+              onAlternativeSelect={handleMethodSelect}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Selected Method Summary */}
+      {selectedMethod && (
+        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-blue-900 mb-4">
+            Selected Payment Method
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <span className="text-blue-700 font-medium">Method:</span>
+              <div className="text-blue-900 font-semibold">
+                {selectedMethod.method.name}
+              </div>
             </div>
             <div>
-              <h3 className="font-semibold text-white">Recommended</h3>
-              <p className="text-white/70 text-sm">
-                {prioritizationResult.defaultMethod.method.name} - {prioritizationResult.defaultMethod.recommendationReason}
-              </p>
+              <span className="text-blue-700 font-medium">Total Cost:</span>
+              <div className="text-blue-900 font-semibold">
+                ${selectedMethod.costEstimate.totalCost.toFixed(2)}
+              </div>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-white font-semibold">
-                ${prioritizationResult.defaultMethod.costEstimate.totalCost.toFixed(2)}
-              </p>
-              <p className="text-white/60 text-sm">
-                {prioritizationResult.defaultMethod.costEstimate.estimatedTime}min
-              </p>
+            <div>
+              <span className="text-blue-700 font-medium">Priority:</span>
+              <div className="text-blue-900 font-semibold">
+                #{selectedMethod.priority}
+              </div>
             </div>
           </div>
-        </GlassPanel>
-      )}
-
-      {/* Prioritized Methods List */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-white">All Payment Methods</h3>
-        {prioritizationResult.prioritizedMethods.map((prioritizedMethod, index) => (
-          <PaymentMethodCard
-            key={prioritizedMethod.method.id}
-            prioritizedMethod={prioritizedMethod}
-            rank={index + 1}
-            isRecommended={prioritizedMethod === prioritizationResult.defaultMethod}
-          />
-        ))}
-      </div>
-
-      {/* Recommendations */}
-      {prioritizationResult.recommendations.length > 0 && (
-        <GlassPanel variant="secondary" className="p-4">
-          <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <Info className="w-4 h-4 text-blue-400" />
-            Recommendations
-          </h3>
-          <div className="space-y-2">
-            {prioritizationResult.recommendations.map((rec, index) => (
-              <div key={index} className="text-sm">
-                <p className="text-white/80">{rec.message}</p>
-                {rec.potentialSavings && (
-                  <p className="text-green-400">
-                    Potential savings: ${rec.potentialSavings.toFixed(2)}
-                  </p>
-                )}
-              </div>
-            ))}
+          <div className="mt-4">
+            <span className="text-blue-700 font-medium">Reason:</span>
+            <div className="text-blue-900">
+              {selectedMethod.recommendationReason}
+            </div>
           </div>
-        </GlassPanel>
+        </div>
       )}
-
-      {/* Warnings */}
-      {prioritizationResult.warnings.length > 0 && (
-        <GlassPanel variant="secondary" className="p-4">
-          <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-yellow-400" />
-            Warnings
-          </h3>
-          <div className="space-y-2">
-            {prioritizationResult.warnings.map((warning, index) => (
-              <div key={index} className="text-sm">
-                <p className="text-yellow-400">{warning.message}</p>
-                {warning.actionRequired && (
-                  <p className="text-white/70 mt-1">{warning.actionRequired}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </GlassPanel>
-      )}
-
-      {/* Metadata */}
-      <div className="text-center text-white/50 text-xs">
-        <p>
-          Analyzed {prioritizationResult.metadata.totalMethodsEvaluated} methods in{' '}
-          {prioritizationResult.metadata.processingTimeMs}ms
-        </p>
-        <p>
-          Average confidence: {(prioritizationResult.metadata.averageConfidence * 100).toFixed(1)}%
-        </p>
-      </div>
-
-      {/* Refresh Button */}
-      <div className="text-center">
-        <Button variant="outline" onClick={loadPrioritization}>
-          Refresh Prioritization
-        </Button>
-      </div>
     </div>
   );
 };
-
-// Individual Payment Method Card Component
-interface PaymentMethodCardProps {
-  prioritizedMethod: PrioritizedPaymentMethod;
-  rank: number;
-  isRecommended: boolean;
-}
-
-const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
-  prioritizedMethod,
-  rank,
-  isRecommended
-}) => {
-  const { method, costEstimate, availabilityStatus, warnings, benefits } = prioritizedMethod;
-
-  const getMethodIcon = (methodType: PaymentMethodType) => {
-    switch (methodType) {
-      case PaymentMethodType.STABLECOIN_USDC:
-      case PaymentMethodType.STABLECOIN_USDT:
-        return <DollarSign className="w-5 h-5 text-green-400" />;
-      case PaymentMethodType.FIAT_STRIPE:
-        return <CreditCard className="w-5 h-5 text-blue-400" />;
-      case PaymentMethodType.NATIVE_ETH:
-        return <Wallet className="w-5 h-5 text-orange-400" />;
-      default:
-        return <Wallet className="w-5 h-5 text-gray-400" />;
-    }
-  };
-
-  const getAvailabilityColor = (status: AvailabilityStatus) => {
-    switch (status) {
-      case AvailabilityStatus.AVAILABLE:
-        return 'text-green-400';
-      case AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES:
-        return 'text-yellow-400';
-      default:
-        return 'text-red-400';
-    }
-  };
-
-  const getAvailabilityIcon = (status: AvailabilityStatus) => {
-    switch (status) {
-      case AvailabilityStatus.AVAILABLE:
-        return <CheckCircle className="w-4 h-4" />;
-      case AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES:
-        return <AlertTriangle className="w-4 h-4" />;
-      default:
-        return <AlertTriangle className="w-4 h-4" />;
-    }
-  };
-
-  return (
-    <GlassPanel 
-      variant={isRecommended ? "primary" : "secondary"} 
-      className={`p-4 ${isRecommended ? 'ring-2 ring-blue-400' : ''}`}
-    >
-      <div className="flex items-start gap-4">
-        {/* Rank and Icon */}
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-            isRecommended ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/70'
-          }`}>
-            {rank}
-          </div>
-          <div className="p-2 bg-white/10 rounded-lg">
-            {getMethodIcon(method.type)}
-          </div>
-        </div>
-
-        {/* Method Details */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-semibold text-white">{method.name}</h4>
-            {isRecommended && (
-              <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                Recommended
-              </span>
-            )}
-            <div className={`flex items-center gap-1 ${getAvailabilityColor(availabilityStatus)}`}>
-              {getAvailabilityIcon(availabilityStatus)}
-              <span className="text-xs capitalize">
-                {availabilityStatus.replace('unavailable_', '').replace('_', ' ')}
-              </span>
-            </div>
-          </div>
-          
-          <p className="text-white/70 text-sm mb-2">{method.description}</p>
-          
-          {/* Cost Breakdown */}
-          <div className="grid grid-cols-3 gap-4 text-sm mb-2">
-            <div>
-              <p className="text-white/60">Total Cost</p>
-              <p className="text-white font-semibold">${costEstimate.totalCost.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-white/60">Gas Fee</p>
-              <p className="text-white">${costEstimate.gasFee.toFixed(2)}</p>
-            </div>
-            <div>
-              <p className="text-white/60">Time</p>
-              <p className="text-white flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {costEstimate.estimatedTime}min
-              </p>
-            </div>
-          </div>
-
-          {/* Benefits */}
-          {benefits && benefits.length > 0 && (
-            <div className="mb-2">
-              <div className="flex flex-wrap gap-1">
-                {benefits.slice(0, 2).map((benefit, index) => (
-                  <span key={index} className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
-                    {benefit}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Warnings */}
-          {warnings && warnings.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {warnings.slice(0, 2).map((warning, index) => (
-                <span key={index} className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded">
-                  {warning}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Score */}
-        <div className="text-right">
-          <p className="text-white/60 text-xs">Score</p>
-          <p className="text-white font-semibold">
-            {(prioritizedMethod.totalScore * 100).toFixed(0)}%
-          </p>
-        </div>
-      </div>
-    </GlassPanel>
-  );
-};
-
-
 
 export default PaymentMethodPrioritizationDemo;

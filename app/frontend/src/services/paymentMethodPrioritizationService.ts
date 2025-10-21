@@ -256,7 +256,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
           context
         );
 
-        return {
+        const prioritizedMethod: PrioritizedPaymentMethod = {
           method,
           priority: index + 1, // Will be updated after sorting
           costEstimate,
@@ -267,6 +267,8 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
           warnings: this.generateMethodWarnings(method, costEstimate, context),
           benefits: this.generateMethodBenefits(method, costEstimate, context)
         };
+
+        return prioritizedMethod;
       })
     );
 
@@ -491,7 +493,13 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
 
     return mergedMethods
       .sort((a, b) => b.totalScore - a.totalScore)
-      .map((method, index) => ({ ...method, priority: index + 1 }));
+      .map((method, index) => {
+        const prioritizedMethod: PrioritizedPaymentMethod = {
+          ...method,
+          priority: index + 1
+        };
+        return prioritizedMethod;
+      });
   }
 
   private generateEnhancedRecommendations(
