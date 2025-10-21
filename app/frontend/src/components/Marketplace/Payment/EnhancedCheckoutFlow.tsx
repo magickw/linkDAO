@@ -222,33 +222,33 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
 
   const loadSavedAddress = (type: 'billing' | 'shipping') => {
     if (!userProfile) return;
-    
-    const savedAddress = type === 'billing' 
+
+    const savedAddress = type === 'billing'
       ? {
-          firstName: userProfile.billingFirstName || '',
-          lastName: userProfile.billingLastName || '',
-          email: userProfile.email || '',
-          address1: userProfile.billingAddress1 || '',
-          address2: userProfile.billingAddress2 || '',
-          city: userProfile.billingCity || '',
-          state: userProfile.billingState || '',
-          zipCode: userProfile.billingZipCode || '',
-          country: userProfile.billingCountry || 'US',
-          phone: userProfile.billingPhone || ''
+          firstName: (userProfile as any).billingFirstName || '',
+          lastName: (userProfile as any).billingLastName || '',
+          email: (userProfile as any).email || '',
+          address1: (userProfile as any).billingAddress1 || '',
+          address2: (userProfile as any).billingAddress2 || '',
+          city: (userProfile as any).billingCity || '',
+          state: (userProfile as any).billingState || '',
+          zipCode: (userProfile as any).billingZipCode || '',
+          country: (userProfile as any).billingCountry || 'US',
+          phone: (userProfile as any).billingPhone || ''
         }
       : {
-          firstName: userProfile.shippingFirstName || '',
-          lastName: userProfile.shippingLastName || '',
-          email: userProfile.email || '',
-          address1: userProfile.shippingAddress1 || '',
-          address2: userProfile.shippingAddress2 || '',
-          city: userProfile.shippingCity || '',
-          state: userProfile.shippingState || '',
-          zipCode: userProfile.shippingZipCode || '',
-          country: userProfile.shippingCountry || 'US',
-          phone: userProfile.shippingPhone || ''
+          firstName: (userProfile as any).shippingFirstName || '',
+          lastName: (userProfile as any).shippingLastName || '',
+          email: (userProfile as any).email || '',
+          address1: (userProfile as any).shippingAddress1 || '',
+          address2: (userProfile as any).shippingAddress2 || '',
+          city: (userProfile as any).shippingCity || '',
+          state: (userProfile as any).shippingState || '',
+          zipCode: (userProfile as any).shippingZipCode || '',
+          country: (userProfile as any).shippingCountry || 'US',
+          phone: (userProfile as any).shippingPhone || ''
         };
-    
+
     setShippingAddress(savedAddress);
     setShowSavedAddresses(false);
   };
@@ -256,7 +256,7 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const ShippingStep = () => (
     <div className="space-y-4">
       {/* Saved Addresses Section */}
-      {userProfile && (userProfile.billingAddress1 || userProfile.shippingAddress1) && (
+      {userProfile && ((userProfile as any).billingAddress1 || (userProfile as any).shippingAddress1) && (
         <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -272,10 +272,10 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
               {showSavedAddresses ? 'Hide' : 'Show'} Saved
             </Button>
           </div>
-          
+
           {showSavedAddresses && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {userProfile.billingAddress1 && (
+              {(userProfile as any).billingAddress1 && (
                 <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-400/30 cursor-pointer transition-colors"
                      onClick={() => loadSavedAddress('billing')}>
                   <div className="flex items-center gap-2 mb-2">
@@ -283,14 +283,14 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
                     <span className="text-sm font-medium text-blue-400">Billing Address</span>
                   </div>
                   <div className="text-xs text-white/70">
-                    <p>{userProfile.billingFirstName} {userProfile.billingLastName}</p>
-                    <p>{userProfile.billingAddress1}</p>
-                    <p>{userProfile.billingCity}, {userProfile.billingState} {userProfile.billingZipCode}</p>
+                    <p>{(userProfile as any).billingFirstName} {(userProfile as any).billingLastName}</p>
+                    <p>{(userProfile as any).billingAddress1}</p>
+                    <p>{(userProfile as any).billingCity}, {(userProfile as any).billingState} {(userProfile as any).billingZipCode}</p>
                   </div>
                 </div>
               )}
-              
-              {userProfile.shippingAddress1 && (
+
+              {(userProfile as any).shippingAddress1 && (
                 <div className="p-3 bg-white/5 rounded border border-white/10 hover:border-blue-400/30 cursor-pointer transition-colors"
                      onClick={() => loadSavedAddress('shipping')}>
                   <div className="flex items-center gap-2 mb-2">
@@ -298,9 +298,9 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
                     <span className="text-sm font-medium text-blue-400">Shipping Address</span>
                   </div>
                   <div className="text-xs text-white/70">
-                    <p>{userProfile.shippingFirstName} {userProfile.shippingLastName}</p>
-                    <p>{userProfile.shippingAddress1}</p>
-                    <p>{userProfile.shippingCity}, {userProfile.shippingState} {userProfile.shippingZipCode}</p>
+                    <p>{(userProfile as any).shippingFirstName} {(userProfile as any).shippingLastName}</p>
+                    <p>{(userProfile as any).shippingAddress1}</p>
+                    <p>{(userProfile as any).shippingCity}, {(userProfile as any).shippingState} {(userProfile as any).shippingZipCode}</p>
                   </div>
                 </div>
               )}

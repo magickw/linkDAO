@@ -197,6 +197,7 @@ import cartApiRoutes from './routes/cartRoutes';
 import sellerApiRoutes from './routes/sellerRoutes';
 import automatedTierUpgradeRoutes from './routes/automatedTierUpgradeRoutes';
 import sellerSecurityRoutes from './routes/sellerSecurityRoutes';
+import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
 
 // Marketplace API health check
 app.get('/api/marketplace/health', (req, res) => {

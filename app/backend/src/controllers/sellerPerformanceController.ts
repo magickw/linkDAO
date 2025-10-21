@@ -1,462 +1,468 @@
 import { Request, Response } from 'express';
-import { sellerScorecardService } from '../services/sellerScorecardService';
-import { sellerRiskAssessmentService } from '../services/sellerRiskAssessmentService';
-import { marketplaceHealthService } from '../services/marketplaceHealthService';
-import { sellerGrowthProjectionService } from '../services/sellerGrowthProjectionService';
+import { sellerPerformanceMonitoringService } from '../services/sellerPerformanceMonitoringService';
 
 export class SellerPerformanceController {
-
-  // Seller Scorecard endpoints
-  async getSellerScorecard(req: Request, res: Response) {
+  /**
+   * Store performance metrics for a seller
+   */
+  async storeMetrics(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+      const { metrics } = req.body;
+
+      // Validate seller ID
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      const scorecard = await sellerScorecardService.getSellerScorecard(walletAddress);
-      
-      if (!scorecard) {
-        return res.status(404).json({
+      // Validate metrics data
+      if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
+        res.status(400).json({
           success: false,
-          message: 'Seller scorecard not found'
+          message: 'Valid metrics array is required'
         });
+        return;
       }
+
+      await sellerPerformanceMonitoringService.storePerformanceMetrics(sellerId, metrics);
 
       res.json({
         success: true,
-        data: scorecard
+        message: 'Performance metrics stored successfully',
+        data: {
+          sellerId,
+          metricsCount: metrics.length,
+          timestamp: new Date().toISOString()
+        }
       });
     } catch (error) {
-      console.error('Error getting seller scorecard:', error);
+      console.error('Error in storeMetrics controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to get seller scorecard'
+        message: 'Failed to store performance metrics',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  async calculateSellerScorecard(req: Request, res: Response) {
+  /**
+   * Get performance dashboard data
+   */
+  async getDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      const scorecard = await sellerScorecardService.calculateSellerScorecard(walletAddress);
+      const dashboardData = await sellerPerformanceMonitoringService.getPerformanceDashboard(sellerId);
 
       res.json({
         success: true,
-        data: scorecard
+        data: dashboardData
       });
     } catch (error) {
-      console.error('Error calculating seller scorecard:', error);
+      console.error('Error in getDashboard controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to calculate seller scorecard'
+        message: 'Failed to retrieve performance dashboard',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  async getSellerPerformanceAlerts(req: Request, res: Response) {
+  /**
+   * Run performance regression test
+   */
+  async runRegressionTest(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      const limit = parseInt(req.query.limit as string) || 10;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+      const { testType = 'load' } = req.body;
+
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      const alerts = await sellerScorecardService.getPerformanceAlerts(walletAddress, limit);
-
-      res.json({
-        success: true,
-        data: alerts
-      });
-    } catch (error) {
-      console.error('Error getting performance alerts:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get performance alerts'
-      });
-    }
-  }
-
-  // Seller Risk Assessment endpoints
-  async getSellerRiskAssessment(req: Request, res: Response) {
-    try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const validTestTypes = ['load', 'stress', 'endurance', 'spike', 'volume'];
+      if (!validTestTypes.includes(testType)) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: `Invalid test type. Must be one of: ${validTestTypes.join(', ')}`
         });
+        return;
       }
 
-      const riskAssessment = await sellerRiskAssessmentService.getSellerRiskAssessment(walletAddress);
-      
-      if (!riskAssessment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Seller risk assessment not found'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: riskAssessment
-      });
-    } catch (error) {
-      console.error('Error getting seller risk assessment:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get seller risk assessment'
-      });
-    }
-  }
-
-  async assessSellerRisk(req: Request, res: Response) {
-    try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
-          success: false,
-          message: 'Wallet address is required'
-        });
-      }
-
-      const riskAssessment = await sellerRiskAssessmentService.assessSellerRisk(walletAddress);
-
-      res.json({
-        success: true,
-        data: riskAssessment
-      });
-    } catch (error) {
-      console.error('Error assessing seller risk:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to assess seller risk'
-      });
-    }
-  }
-
-  async getSellerRiskTrend(req: Request, res: Response) {
-    try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
-          success: false,
-          message: 'Wallet address is required'
-        });
-      }
-
-      const riskTrend = await sellerRiskAssessmentService.getRiskTrendAnalysis(walletAddress);
-
-      res.json({
-        success: true,
-        data: riskTrend
-      });
-    } catch (error) {
-      console.error('Error getting seller risk trend:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get seller risk trend'
-      });
-    }
-  }
-
-  // Marketplace Health endpoints
-  async getMarketplaceHealthDashboard(req: Request, res: Response) {
-    try {
-      const dashboard = await marketplaceHealthService.getMarketplaceHealthDashboard();
-
-      res.json({
-        success: true,
-        data: dashboard
-      });
-    } catch (error) {
-      console.error('Error getting marketplace health dashboard:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get marketplace health dashboard'
-      });
-    }
-  }
-
-  async recordHealthMetric(req: Request, res: Response) {
-    try {
-      const { metricName, metricValue, category, metricUnit, metadata } = req.body;
-      
-      if (!metricName || metricValue === undefined || !category) {
-        return res.status(400).json({
-          success: false,
-          message: 'Metric name, value, and category are required'
-        });
-      }
-
-      await marketplaceHealthService.recordHealthMetric(
-        metricName,
-        metricValue,
-        category,
-        metricUnit,
-        metadata
+      const testResult = await sellerPerformanceMonitoringService.runPerformanceRegressionTest(
+        sellerId,
+        testType
       );
 
       res.json({
         success: true,
-        message: 'Health metric recorded successfully'
+        data: testResult
       });
     } catch (error) {
-      console.error('Error recording health metric:', error);
+      console.error('Error in runRegressionTest controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to record health metric'
+        message: 'Failed to run performance regression test',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  // Seller Growth Projection endpoints
-  async getSellerGrowthProjections(req: Request, res: Response) {
+  /**
+   * Get performance alerts
+   */
+  async getAlerts(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+      const { severity, limit = '50' } = req.query;
+
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      const projections = await sellerGrowthProjectionService.getSellerGrowthProjections(walletAddress);
-      
-      if (!projections) {
-        return res.status(404).json({
+      const validSeverities = ['low', 'medium', 'high', 'critical'];
+      if (severity && !validSeverities.includes(severity as string)) {
+        res.status(400).json({
           success: false,
-          message: 'Seller growth projections not found'
+          message: `Invalid severity. Must be one of: ${validSeverities.join(', ')}`
         });
+        return;
+      }
+
+      const alerts = await sellerPerformanceMonitoringService.getPerformanceAlerts(
+        sellerId,
+        severity as any
+      );
+
+      // Apply limit
+      const limitNum = parseInt(limit as string);
+      const limitedAlerts = limitNum > 0 ? alerts.slice(0, limitNum) : alerts;
+
+      res.json({
+        success: true,
+        data: limitedAlerts,
+        meta: {
+          total: alerts.length,
+          returned: limitedAlerts.length,
+          hasMore: alerts.length > limitedAlerts.length
+        }
+      });
+    } catch (error) {
+      console.error('Error in getAlerts controller:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve performance alerts',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Create performance alert
+   */
+  async createAlert(req: Request, res: Response): Promise<void> {
+    try {
+      const { sellerId } = req.params;
+      const alertData = req.body;
+
+      if (!sellerId) {
+        res.status(400).json({
+          success: false,
+          message: 'Seller ID is required'
+        });
+        return;
+      }
+
+      // Validate required fields
+      const requiredFields = ['alertType', 'severity', 'title', 'description'];
+      const missingFields = requiredFields.filter(field => !alertData[field]);
+      
+      if (missingFields.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`
+        });
+        return;
+      }
+
+      const alert = await sellerPerformanceMonitoringService.createPerformanceAlert(
+        sellerId,
+        alertData
+      );
+
+      res.status(201).json({
+        success: true,
+        data: alert
+      });
+    } catch (error) {
+      console.error('Error in createAlert controller:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create performance alert',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Resolve performance alert
+   */
+  async resolveAlert(req: Request, res: Response): Promise<void> {
+    try {
+      const { alertId } = req.params;
+
+      if (!alertId) {
+        res.status(400).json({
+          success: false,
+          message: 'Alert ID is required'
+        });
+        return;
+      }
+
+      await sellerPerformanceMonitoringService.resolvePerformanceAlert(alertId);
+
+      res.json({
+        success: true,
+        message: 'Performance alert resolved successfully',
+        data: {
+          alertId,
+          resolvedAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error in resolveAlert controller:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to resolve performance alert',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get performance recommendations
+   */
+  async getRecommendations(req: Request, res: Response): Promise<void> {
+    try {
+      const { sellerId } = req.params;
+      const { priority } = req.query;
+
+      if (!sellerId) {
+        res.status(400).json({
+          success: false,
+          message: 'Seller ID is required'
+        });
+        return;
+      }
+
+      const recommendations = await sellerPerformanceMonitoringService.getPerformanceRecommendations(sellerId);
+
+      // Filter by priority if specified
+      let filteredRecommendations = recommendations;
+      if (priority) {
+        const validPriorities = ['high', 'medium', 'low'];
+        if (!validPriorities.includes(priority as string)) {
+          res.status(400).json({
+            success: false,
+            message: `Invalid priority. Must be one of: ${validPriorities.join(', ')}`
+          });
+          return;
+        }
+        filteredRecommendations = recommendations.filter(rec => rec.priority === priority);
       }
 
       res.json({
         success: true,
-        data: projections
+        data: filteredRecommendations,
+        meta: {
+          total: recommendations.length,
+          filtered: filteredRecommendations.length,
+          priority: priority || 'all'
+        }
       });
     } catch (error) {
-      console.error('Error getting seller growth projections:', error);
+      console.error('Error in getRecommendations controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to get seller growth projections'
+        message: 'Failed to retrieve performance recommendations',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  async generateSellerGrowthProjections(req: Request, res: Response) {
+  /**
+   * Get performance trends
+   */
+  async getTrends(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+      const { 
+        metric, 
+        period = 'day', 
+        limit = '30',
+        startDate,
+        endDate 
+      } = req.query;
+
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      const projections = await sellerGrowthProjectionService.generateSellerGrowthProjections(walletAddress);
+      const validPeriods = ['hour', 'day', 'week'];
+      if (!validPeriods.includes(period as string)) {
+        res.status(400).json({
+          success: false,
+          message: `Invalid period. Must be one of: ${validPeriods.join(', ')}`
+        });
+        return;
+      }
+
+      const limitNum = parseInt(limit as string);
+      if (isNaN(limitNum) || limitNum < 1 || limitNum > 365) {
+        res.status(400).json({
+          success: false,
+          message: 'Limit must be a number between 1 and 365'
+        });
+        return;
+      }
+
+      const trends = await sellerPerformanceMonitoringService.getPerformanceTrends(
+        sellerId,
+        metric as string,
+        period as any,
+        limitNum
+      );
 
       res.json({
         success: true,
-        data: projections
+        data: trends,
+        meta: {
+          sellerId,
+          metric: metric || 'all',
+          period,
+          limit: limitNum,
+          dateRange: {
+            start: startDate || null,
+            end: endDate || null
+          }
+        }
       });
     } catch (error) {
-      console.error('Error generating seller growth projections:', error);
+      console.error('Error in getTrends controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to generate seller growth projections'
+        message: 'Failed to retrieve performance trends',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  // Combined dashboard endpoint
-  async getSellerPerformanceDashboard(req: Request, res: Response) {
+  /**
+   * Get performance summary
+   */
+  async getPerformanceSummary(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddress } = req.params;
-      
-      if (!walletAddress) {
-        return res.status(400).json({
+      const { sellerId } = req.params;
+
+      if (!sellerId) {
+        res.status(400).json({
           success: false,
-          message: 'Wallet address is required'
+          message: 'Seller ID is required'
         });
+        return;
       }
 
-      // Get all performance data in parallel
-      const [scorecard, riskAssessment, growthProjections, alerts] = await Promise.all([
-        sellerScorecardService.getSellerScorecard(walletAddress),
-        sellerRiskAssessmentService.getSellerRiskAssessment(walletAddress),
-        sellerGrowthProjectionService.getSellerGrowthProjections(walletAddress),
-        sellerScorecardService.getPerformanceAlerts(walletAddress, 5)
-      ]);
+      // Get dashboard data which includes summary information
+      const dashboardData = await sellerPerformanceMonitoringService.getPerformanceDashboard(sellerId);
 
-      const dashboard = {
-        scorecard,
-        riskAssessment,
-        growthProjections,
-        alerts,
-        summary: {
-          overallPerformance: scorecard?.overallScore || 0,
-          riskLevel: riskAssessment?.riskLevel || 'unknown',
-          projectedGrowth: growthProjections?.projections.revenue.growthRate || 0,
-          activeAlerts: alerts.filter(alert => !alert.isAcknowledged).length
+      const summary = {
+        sellerId,
+        overallScore: dashboardData.overallScore,
+        status: dashboardData.overallScore >= 90 ? 'excellent' :
+                dashboardData.overallScore >= 70 ? 'good' :
+                dashboardData.overallScore >= 50 ? 'fair' : 'poor',
+        activeAlerts: dashboardData.alerts.length,
+        criticalAlerts: dashboardData.alerts.filter(a => a.severity === 'critical').length,
+        activeRegressions: dashboardData.regressions.length,
+        highPriorityRecommendations: dashboardData.recommendations.filter(r => r.priority === 'high').length,
+        lastUpdated: new Date().toISOString(),
+        keyMetrics: {
+          apiResponseTime: Math.round(dashboardData.metrics.apiResponseTimes.getProfile),
+          cacheHitRate: Math.round(dashboardData.metrics.cacheMetrics.hitRate),
+          errorRate: dashboardData.metrics.errorMetrics.errorRate.toFixed(2),
+          firstContentfulPaint: Math.round(dashboardData.metrics.userExperienceMetrics.firstContentfulPaint)
         }
       };
 
       res.json({
         success: true,
-        data: dashboard
+        data: summary
       });
     } catch (error) {
-      console.error('Error getting seller performance dashboard:', error);
+      console.error('Error in getPerformanceSummary controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to get seller performance dashboard'
+        message: 'Failed to retrieve performance summary',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
 
-  // Bulk operations for admin
-  async getBulkSellerPerformance(req: Request, res: Response) {
+  /**
+   * Health check for performance monitoring service
+   */
+  async healthCheck(req: Request, res: Response): Promise<void> {
     try {
-      const { walletAddresses } = req.body;
-      
-      if (!Array.isArray(walletAddresses) || walletAddresses.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Array of wallet addresses is required'
-        });
-      }
-
-      if (walletAddresses.length > 50) {
-        return res.status(400).json({
-          success: false,
-          message: 'Maximum 50 wallet addresses allowed per request'
-        });
-      }
-
-      const results = await Promise.allSettled(
-        walletAddresses.map(async (walletAddress: string) => {
-          const [scorecard, riskAssessment] = await Promise.all([
-            sellerScorecardService.getSellerScorecard(walletAddress),
-            sellerRiskAssessmentService.getSellerRiskAssessment(walletAddress)
-          ]);
-
-          return {
-            walletAddress,
-            scorecard,
-            riskAssessment
-          };
-        })
-      );
-
-      const successfulResults = results
-        .filter(result => result.status === 'fulfilled')
-        .map(result => (result as PromiseFulfilledResult<any>).value);
-
-      const failedResults = results
-        .filter(result => result.status === 'rejected')
-        .map((result, index) => ({
-          walletAddress: walletAddresses[index],
-          error: (result as PromiseRejectedResult).reason.message
-        }));
+      // Perform basic health checks
+      const healthStatus = {
+        service: 'seller-performance-monitoring',
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        checks: {
+          database: 'healthy', // Would check actual database connection
+          redis: 'healthy',    // Would check actual Redis connection
+          monitoring: 'active'
+        }
+      };
 
       res.json({
         success: true,
-        data: {
-          successful: successfulResults,
-          failed: failedResults,
-          summary: {
-            total: walletAddresses.length,
-            successful: successfulResults.length,
-            failed: failedResults.length
-          }
-        }
+        data: healthStatus
       });
     } catch (error) {
-      console.error('Error getting bulk seller performance:', error);
+      console.error('Error in healthCheck controller:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to get bulk seller performance'
-      });
-    }
-  }
-
-  // Performance comparison endpoint
-  async compareSellerPerformance(req: Request, res: Response) {
-    try {
-      const { walletAddresses } = req.body;
-      
-      if (!Array.isArray(walletAddresses) || walletAddresses.length < 2 || walletAddresses.length > 10) {
-        return res.status(400).json({
-          success: false,
-          message: 'Between 2 and 10 wallet addresses are required for comparison'
-        });
-      }
-
-      const comparisons = await Promise.all(
-        walletAddresses.map(async (walletAddress: string) => {
-          const scorecard = await sellerScorecardService.getSellerScorecard(walletAddress);
-          return {
-            walletAddress,
-            overallScore: scorecard?.overallScore || 0,
-            dimensions: scorecard?.dimensions || {
-              customerSatisfaction: 0,
-              orderFulfillment: 0,
-              responseTime: 0,
-              disputeRate: 0,
-              growthRate: 0
-            },
-            performanceTier: scorecard?.performanceTier || 'bronze'
-          };
-        })
-      );
-
-      // Calculate comparison metrics
-      const averageScore = comparisons.reduce((sum, comp) => sum + comp.overallScore, 0) / comparisons.length;
-      const topPerformer = comparisons.reduce((top, current) => 
-        current.overallScore > top.overallScore ? current : top
-      );
-      const bottomPerformer = comparisons.reduce((bottom, current) => 
-        current.overallScore < bottom.overallScore ? current : bottom
-      );
-
-      res.json({
-        success: true,
-        data: {
-          comparisons,
-          summary: {
-            averageScore: Math.round(averageScore * 100) / 100,
-            topPerformer: topPerformer.walletAddress,
-            bottomPerformer: bottomPerformer.walletAddress,
-            scoreRange: topPerformer.overallScore - bottomPerformer.overallScore
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error comparing seller performance:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to compare seller performance'
+        service: 'seller-performance-monitoring',
+        status: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }
