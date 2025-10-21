@@ -151,11 +151,13 @@ export async function validatePrioritizationImplementation(): Promise<{
 
     // Test 7: Configuration Updates
     results.push('✓ Testing configuration updates...');
-    const originalConfig = scoringSystem.getMethodConfig(PaymentMethodType.STABLECOIN_USDC);
+    const allConfigs = scoringSystem.getAllConfigs();
+    const originalConfig = allConfigs[PaymentMethodType.STABLECOIN_USDC];
     const originalCostWeight = originalConfig.costWeight;
     
     scoringSystem.updateMethodConfig(PaymentMethodType.STABLECOIN_USDC, { costWeight: 0.5 });
-    const updatedConfig = scoringSystem.getMethodConfig(PaymentMethodType.STABLECOIN_USDC);
+    const updatedConfigs = scoringSystem.getAllConfigs();
+    const updatedConfig = updatedConfigs[PaymentMethodType.STABLECOIN_USDC];
     
     if (updatedConfig.costWeight === 0.5) {
       results.push('✓ Configuration update successful');
