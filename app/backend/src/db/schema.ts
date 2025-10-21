@@ -3462,3 +3462,74 @@ export const cartItems = pgTable("cart_items", {
   productIdIdx: index("idx_cart_items_product_id").on(t.productId),
   uniqueCartProduct: index("idx_cart_items_unique_cart_product").on(t.cartId, t.productId),
 }));
+
+// Enhanced Payment Method Preferences System
+export const paymentMethodPreferences = pgTable("payment_method_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  
+  // Encrypted preference data
+  encryptedPreferences: text("encrypted_preferences").notNull(), // JSON encrypted with user-specific key
+  
+  // Quick access fields for performance (non-encrypted)
+  preferredMethods: jsonb("preferred_methods").default("[]"), // Array of preferred payment method types in order
+  avoidedMethods: jsonb("avoided_methods").default("[]"), // Array of avoided payment method types
+  maxGasFeeThreshold: numeric("max_gas_fee_threshold", { precision: 10, scale: 2 }).default("50.00"), // Maximum acceptable gas fee in USD
+  preferStablecoins: boolean("prefer_stablecoins").default(true),
+  preferFiat: boolean("prefer_fiat").default(false),
+  
+  // Learning algorithm data
+  totalTransactions: integer("total_transactions").default(0),
+  methodUsageCounts: jsonb("method_usage_counts").default("{}"), // Count of usage per payment method
+  lastUsedMethods: jsonb("last_used_methods").default("[]"), // Recent payment methods with timestamps
+  preferenceScores: jsonb("preference_scores").default("{}"), // Calculated preference scores per method
+  
+  // Metadata
+  learningEnabled: boolean("learning_enabled").default(true),
+  lastPreferenceUpdate: timestamp("last_preference_update").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_payment_preferences_user_id").on(t.userId),
+  updatedAtIdx: index("idx_payment_preferences_updated_at").on(t.updatedAt),
+  learningEnabledIdx: index("idx_payment_preferences_learning_enabled").on(t.learningEnabled),
+}));
+
+// Payment method usage history for learning
+export const paymentMethodUsageHistory = pgTable("payment_method_usage_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  paymentMethodType: varchar("payment_method_type", { length: 50 }).notNull(), // 'STABLECOIN_USDC', 'FIAT_STRIPE', 'NATIVE_ETH', etc.
+  transactionAmount: numeric("transaction_amount", { precision: 20, scale: 8 }),
+  transactionCurrency: varchar("transaction_currency", { length: 10 }),
+  gasFeeUsd: numeric("gas_fee_usd", { precision: 10, scale: 2 }),
+  totalCostUsd: numeric("total_cost_usd", { precision: 10, scale: 2 }),
+  networkId: integer("network_id"),
+  wasPreferred: boolean("was_preferred").default(false), // Whether this was the user's preferred choice
+  wasSuggested: boolean("was_suggested").default(false), // Whether this was system-suggested
+  contextData: jsonb("context_data").default("{}"), // Additional context (market conditions, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_payment_usage_history_user_id").on(t.userId),
+  methodTypeIdx: index("idx_payment_usage_history_method_type").on(t.paymentMethodType),
+  createdAtIdx: index("idx_payment_usage_history_created_at").on(t.createdAt),
+  userMethodIdx: index("idx_payment_usage_history_user_method").on(t.userId, t.paymentMethodType),
+}));
+
+// Payment method preference overrides
+export const paymentMethodPreferenceOverrides = pgTable("payment_method_preference_overrides", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  overrideType: varchar("override_type", { length: 50 }).notNull(), // 'manual_selection', 'temporary_preference', 'network_specific'
+  paymentMethodType: varchar("payment_method_type", { length: 50 }).notNull(),
+  networkId: integer("network_id"),
+  priorityBoost: integer("priority_boost").default(0), // How much to boost this method's priority
+  expiresAt: timestamp("expires_at"), // When this override expires (NULL for permanent)
+  reason: text("reason"), // User-provided reason for override
+  metadata: jsonb("metadata").default("{}"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  userIdIdx: index("idx_payment_preference_overrides_user_id").on(t.userId),
+  expiresAtIdx: index("idx_payment_preference_overrides_expires_at").on(t.expiresAt),
+  methodTypeIdx: index("idx_payment_preference_overrides_method_type").on(t.paymentMethodType),
+}));
