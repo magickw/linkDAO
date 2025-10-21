@@ -8,42 +8,45 @@ import { getChainRpcUrl } from '@/lib/wagmi'
  */
 export async function getProvider() {
   try {
-  const client = getPublicClient(config)
-    // If wagmi transport exposes an injected provider, use it.
-    const injectedProvider = (client as any).transport?.provider
-    if (injectedProvider) {
-      return new ethers.providers.Web3Provider(injectedProvider as any)
+    const client = getPublicClient(config);
+    // Check if client is available before accessing transport
+    if (client) {
+      // If wagmi transport exposes an injected provider, use it.
+      const injectedProvider = (client as any).transport?.provider;
+      if (injectedProvider) {
+        return new ethers.providers.Web3Provider(injectedProvider as any);
+      }
     }
 
     // Fallback: prefer an env-driven RPC URL for server-side reads. This lets
     // deployments control which RPC the app uses during SSR/build.
-    const envRpc = process.env.NEXT_PUBLIC_RPC_URL
-    const envChainId = process.env.NEXT_PUBLIC_RPC_CHAIN_ID
+    const envRpc = process.env.NEXT_PUBLIC_RPC_URL;
+    const envChainId = process.env.NEXT_PUBLIC_RPC_CHAIN_ID;
     if (envRpc) {
       try {
-        const chainId = envChainId ? parseInt(envChainId, 10) : undefined
-        return new ethers.providers.JsonRpcProvider(envRpc, chainId)
+        const chainId = envChainId ? parseInt(envChainId, 10) : undefined;
+        return new ethers.providers.JsonRpcProvider(envRpc, chainId);
       } catch (e) {
-        console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e)
+        console.warn('Invalid NEXT_PUBLIC_RPC_URL or NEXT_PUBLIC_RPC_CHAIN_ID, falling back to configured chain RPC', e);
       }
     }
 
     // If no env RPC configured, fall back to wagmi's chain URLs (use mainnet by default)
     try {
-      const chainId = envChainId ? parseInt(envChainId, 10) : 1
-      const rpcUrl = getChainRpcUrl(chainId)
+      const chainId = envChainId ? parseInt(envChainId, 10) : 1;
+      const rpcUrl = getChainRpcUrl(chainId);
       if (rpcUrl) {
-        return new ethers.providers.JsonRpcProvider(rpcUrl)
+        return new ethers.providers.JsonRpcProvider(rpcUrl);
       }
     } catch (e) {
       // ignore and use default provider below
     }
 
     // Last-resort: use ethers default provider (may require API keys)
-    return ethers.getDefaultProvider()
+    return ethers.getDefaultProvider();
   } catch (error) {
-    console.error('Error getting provider:', error)
-    return null
+    console.error('Error getting provider:', error);
+    return null;
   }
 }
 
@@ -52,18 +55,19 @@ export async function getProvider() {
  */
 export async function getSigner() {
   try {
-  const client = await getWalletClient(config)
-  if (!client) return null
+    const client = await getWalletClient(config);
+    // Check if client is available before accessing transport
+    if (!client) return null;
 
-    const injectedProvider = (client as any).transport?.provider
-    if (!injectedProvider) return null
+    const injectedProvider = (client as any).transport?.provider;
+    if (!injectedProvider) return null;
 
-    const provider = new ethers.providers.Web3Provider(injectedProvider as any)
-    const signer = provider.getSigner()
-    return signer
+    const provider = new ethers.providers.Web3Provider(injectedProvider as any);
+    const signer = provider.getSigner();
+    return signer;
   } catch (error) {
-    console.error('Error getting signer:', error)
-    return null
+    console.error('Error getting signer:', error);
+    return null;
   }
 }
 
@@ -72,11 +76,12 @@ export async function getSigner() {
  */
 export async function getAccount() {
   try {
-    const client = await getWalletClient(config)
-    return client?.account
+    const client = await getWalletClient(config);
+    // Check if client is available before accessing account
+    return client?.account || null;
   } catch (error) {
-    console.error('Error getting account:', error)
-    return null
+    console.error('Error getting account:', error);
+    return null;
   }
 }
 

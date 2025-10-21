@@ -1,6 +1,7 @@
 /**
  * Complete Checkout Flow Component
  * Handles the entire checkout process with Web3 and traditional payment integration
+ * Enhanced with intelligent payment method prioritization
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,6 +24,20 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { UnifiedCheckoutService, CheckoutRecommendation, UnifiedCheckoutRequest } from '@/services/unifiedCheckoutService';
 import { CryptoPaymentService } from '@/services/cryptoPaymentService';
 import { StripePaymentService } from '@/services/stripePaymentService';
+import PaymentMethodPrioritizationService from '@/services/paymentMethodPrioritizationService';
+import CostEffectivenessCalculator from '@/services/costEffectivenessCalculator';
+import NetworkAvailabilityChecker from '@/services/networkAvailabilityChecker';
+import UserPreferenceManager from '@/services/userPreferenceManager';
+import PaymentMethodSelector from '@/components/PaymentMethodPrioritization/PaymentMethodSelector';
+import {
+  PaymentMethod as PrioritizedPaymentMethodType,
+  PaymentMethodType,
+  PrioritizedPaymentMethod,
+  PrioritizationContext,
+  PrioritizationResult,
+  UserContext,
+  MarketConditions
+} from '@/types/paymentPrioritization';
 import { toast } from 'react-hot-toast';
 
 interface CheckoutFlowProps {
@@ -51,7 +66,8 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   // State management
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'crypto' | 'fiat' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PrioritizedPaymentMethod | null>(null);
+  const [prioritizationResult, setPrioritizationResult] = useState<PrioritizationResult | null>(null);
   const [recommendation, setRecommendation] = useState<CheckoutRecommendation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,16 +80,59 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     return new UnifiedCheckoutService(cryptoService, stripeService);
   });
 
-  // Load payment recommendations on mount
-  useEffect(() => {
-    loadPaymentRecommendations();
-  }, [cartState.items]);
+  const [prioritizationService] = useState(() => {
+    const costCalculator = new CostEffectivenessCalculator();
+    const networkChecker = new NetworkAvailabilityChecker();
+    const preferenceManager = new UserPreferenceManager();
+    return new PaymentMethodPrioritizationService(
+      costCalculator,
+      networkChecker,
+      preferenceManager
+    );
+  });
 
-  const loadPaymentRecommendations = async () => {
+  // Load payment prioritization on mount
+  useEffect(() => {
+    loadPaymentPrioritization();
+  }, [cartState.items, address]);
+
+  const loadPaymentPrioritization = async () => {
     if (cartState.items.length === 0) return;
 
     setLoading(true);
     try {
+      // Create prioritization context
+      const context: PrioritizationContext = {
+        transactionAmount: parseFloat(cartState.totals.total.fiat),
+        transactionCurrency: 'USD',
+        userContext: {
+          userAddress: address || undefined,
+          chainId: 1, // Ethereum mainnet - should be dynamic
+          walletBalances: [], // Should be fetched from wallet
+          preferences: {
+            preferredMethods: [],
+            avoidedMethods: [],
+            maxGasFeeThreshold: 50,
+            preferStablecoins: true,
+            preferFiat: false,
+            lastUsedMethods: [],
+            autoSelectBestOption: true
+          }
+        },
+        availablePaymentMethods: await getAvailablePaymentMethods(),
+        marketConditions: await getCurrentMarketConditions()
+      };
+
+      // Get prioritized payment methods
+      const result = await prioritizationService.prioritizePaymentMethods(context);
+      setPrioritizationResult(result);
+
+      // Auto-select default method
+      if (result.defaultMethod) {
+        setSelectedPaymentMethod(result.defaultMethod);
+      }
+
+      // Also get legacy recommendation for backward compatibility
       const request: UnifiedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: cartState.items[0]?.id || '',
@@ -86,18 +145,110 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
       const rec = await checkoutService.getCheckoutRecommendation(request);
       setRecommendation(rec);
-      setSelectedPaymentMethod(rec.recommendedPath);
     } catch (err) {
-      console.error('Failed to load payment recommendations:', err);
+      console.error('Failed to load payment prioritization:', err);
       setError('Failed to load payment options. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePaymentMethodSelect = (method: 'crypto' | 'fiat') => {
+  const getAvailablePaymentMethods = async (): Promise<PrioritizedPaymentMethodType[]> => {
+    // Mock implementation - should be replaced with actual service calls
+    return [
+      {
+        id: 'usdc-eth',
+        type: PaymentMethodType.STABLECOIN_USDC,
+        name: 'USDC',
+        description: 'USD Coin on Ethereum',
+        chainId: 1,
+        enabled: true,
+        supportedNetworks: [1],
+        token: {
+          address: '0xA0b86a33E6441E6C7C5c8b0b8c8b0b8c8b0b8c8b',
+          symbol: 'USDC',
+          decimals: 6,
+          name: 'USD Coin',
+          chainId: 1
+        }
+      },
+      {
+        id: 'stripe-fiat',
+        type: PaymentMethodType.FIAT_STRIPE,
+        name: 'Credit/Debit Card',
+        description: 'Traditional payment via Stripe',
+        chainId: 0, // Not applicable for fiat
+        enabled: true,
+        supportedNetworks: []
+      },
+      {
+        id: 'eth-mainnet',
+        type: PaymentMethodType.NATIVE_ETH,
+        name: 'Ethereum',
+        description: 'Native ETH on Ethereum',
+        chainId: 1,
+        enabled: true,
+        supportedNetworks: [1],
+        token: {
+          address: '0x0000000000000000000000000000000000000000',
+          symbol: 'ETH',
+          decimals: 18,
+          name: 'Ethereum',
+          chainId: 1,
+          isNative: true
+        }
+      }
+    ];
+  };
+
+  const getCurrentMarketConditions = async (): Promise<MarketConditions> => {
+    // Mock implementation - should be replaced with actual market data
+    return {
+      gasConditions: [
+        {
+          chainId: 1,
+          gasPrice: BigInt(30000000000), // 30 gwei in wei
+          gasPriceUSD: 0.50,
+          networkCongestion: 'medium',
+          blockTime: 12,
+          lastUpdated: new Date()
+        }
+      ],
+      networkAvailability: [
+        {
+          chainId: 1,
+          available: true
+        }
+      ],
+      exchangeRates: [
+        { 
+          fromToken: 'ETH', 
+          toToken: 'USD', 
+          rate: 2000, 
+          source: 'coingecko',
+          confidence: 0.95,
+          lastUpdated: new Date() 
+        },
+        { 
+          fromToken: 'USDC', 
+          toToken: 'USD', 
+          rate: 1, 
+          source: 'coingecko',
+          confidence: 0.99,
+          lastUpdated: new Date() 
+        }
+      ],
+      lastUpdated: new Date()
+    };
+  };
+
+  const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
     setCurrentStep('payment-details');
+    
+    // Track user preference for future prioritization
+    // TODO: Implement user preference tracking when service exposes the interface
+    console.log('Payment method selected:', method.method.name);
   };
 
   const handleProcessPayment = async () => {
@@ -108,7 +259,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     setError(null);
 
     try {
-      // Prepare checkout request
+      // Prepare checkout request using selected prioritized method
       const request: UnifiedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: cartState.items[0]?.id || '',
@@ -116,7 +267,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         sellerAddress: cartState.items[0]?.seller.id || '',
         amount: parseFloat(cartState.totals.total.fiat),
         currency: 'USD',
-        preferredMethod: selectedPaymentMethod
+        preferredMethod: selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE ? 'fiat' : 'crypto'
       };
 
       // Process checkout
@@ -124,6 +275,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       
       setOrderData(result);
       setCurrentStep('confirmation');
+
+      // Update user preference with successful payment
+      // TODO: Implement preference tracking when service exposes the interface
+      console.log('Payment successful with:', selectedPaymentMethod.method.name);
 
       // Clear cart on successful checkout
       actions.clearCart();
@@ -139,6 +294,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       console.error('Checkout failed:', err);
       setError(err.message || 'Checkout failed. Please try again.');
       setCurrentStep('payment-details');
+      
+      // Update user preference with failed payment
+      // TODO: Implement preference tracking when service exposes the interface
+      console.log('Payment failed with:', selectedPaymentMethod?.method.name);
     } finally {
       setLoading(false);
     }
@@ -228,103 +387,57 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   );
 
   const renderPaymentMethodSelection = () => {
-    if (!recommendation) return null;
-
-    const methods: PaymentMethod[] = [
-      {
-        type: 'crypto',
-        name: 'Cryptocurrency',
-        description: 'Pay with USDC, ETH, or other supported tokens',
-        fees: recommendation.cryptoOption.fees,
-        estimatedTime: recommendation.cryptoOption.estimatedTime,
-        benefits: recommendation.cryptoOption.benefits,
-        requirements: recommendation.cryptoOption.requirements,
-        available: recommendation.cryptoOption.available
-      },
-      {
-        type: 'fiat',
-        name: 'Credit/Debit Card',
-        description: 'Pay with traditional payment methods',
-        fees: recommendation.fiatOption.fees,
-        estimatedTime: recommendation.fiatOption.estimatedTime,
-        benefits: recommendation.fiatOption.benefits,
-        requirements: recommendation.fiatOption.requirements,
-        available: recommendation.fiatOption.available
-      }
-    ];
+    if (!prioritizationResult) return null;
 
     return (
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-2">Choose Payment Method</h2>
           <p className="text-white/70">
-            We recommend <span className="font-medium text-blue-400">
-              {recommendation.recommendedPath === 'crypto' ? 'Cryptocurrency' : 'Credit Card'}
-            </span> for this purchase
+            {prioritizationResult.defaultMethod ? (
+              <>
+                We recommend <span className="font-medium text-blue-400">
+                  {prioritizationResult.defaultMethod.method.name}
+                </span> for this purchase
+              </>
+            ) : (
+              'Select your preferred payment method'
+            )}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {methods.map((method) => (
-            <GlassPanel
-              key={method.type}
-              variant={selectedPaymentMethod === method.type ? "primary" : "secondary"}
-              className={`p-6 cursor-pointer transition-all duration-200 ${
-                !method.available ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
-              } ${
-                recommendation.recommendedPath === method.type ? 'ring-2 ring-blue-400' : ''
-              }`}
-              onClick={() => method.available && handlePaymentMethodSelect(method.type)}
-            >
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-lg ${
-                  method.type === 'crypto' ? 'bg-orange-500/20' : 'bg-blue-500/20'
-                }`}>
-                  {method.type === 'crypto' ? (
-                    <Wallet className="w-6 h-6 text-orange-400" />
-                  ) : (
-                    <CreditCard className="w-6 h-6 text-blue-400" />
-                  )}
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-white">{method.name}</h3>
-                    {recommendation.recommendedPath === method.type && (
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  
-                  <p className="text-white/70 text-sm mb-3">{method.description}</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Fees:</span>
-                      <span className="text-white">${method.fees.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Time:</span>
-                      <span className="text-white">{method.estimatedTime}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <h4 className="text-white/80 text-sm font-medium mb-2">Benefits:</h4>
-                    <ul className="space-y-1">
-                      {method.benefits.slice(0, 2).map((benefit, index) => (
-                        <li key={index} className="text-white/60 text-xs flex items-center gap-2">
-                          <CheckCircle className="w-3 h-3 text-green-400" />
-                          {benefit}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </GlassPanel>
-          ))}
+        {/* Enhanced Payment Method Selector */}
+        <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
+          {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
+            <PaymentMethodSelector
+              prioritizationResult={prioritizationResult}
+              selectedMethodId={selectedPaymentMethod?.method.id}
+              onMethodSelect={handlePaymentMethodSelect}
+              showCostBreakdown={true}
+              showRecommendations={true}
+              showWarnings={true}
+              layout="grid"
+              responsive={true}
+              className="text-white"
+            />
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Payment Options Unavailable
+              </h3>
+              <p className="text-white/70 mb-4">
+                We're having trouble loading payment options. Please try refreshing the page.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.location.reload()}
+                className="mx-auto"
+              >
+                Refresh Page
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Security Notice */}
@@ -335,7 +448,10 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
               <h4 className="font-medium text-white">Secure Escrow Protection</h4>
               <p className="text-white/70 text-sm">
                 Your payment is held securely until you confirm delivery. 
-                {selectedPaymentMethod === 'crypto' ? ' Smart contract escrow ensures trustless transactions.' : ' Stripe Connect provides buyer protection.'}
+                {selectedPaymentMethod?.method.type === PaymentMethodType.FIAT_STRIPE 
+                  ? ' Stripe Connect provides buyer protection.' 
+                  : ' Smart contract escrow ensures trustless transactions.'
+                }
               </p>
             </div>
           </div>
@@ -347,19 +463,71 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const renderPaymentDetails = () => {
     if (!selectedPaymentMethod) return null;
 
+    const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
+
     return (
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-2">Payment Details</h2>
           <p className="text-white/70">
-            Complete your {selectedPaymentMethod === 'crypto' ? 'cryptocurrency' : 'card'} payment
+            Complete your {selectedPaymentMethod.method.name} payment
           </p>
         </div>
 
-        {selectedPaymentMethod === 'crypto' ? (
-          <CryptoPaymentDetails onProceed={handleProcessPayment} />
+        {/* Selected Method Summary */}
+        <GlassPanel variant="secondary" className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`p-2 rounded-lg ${
+              isCrypto ? 'bg-orange-500/20' : 'bg-blue-500/20'
+            }`}>
+              {isCrypto ? (
+                <Wallet className="w-5 h-5 text-orange-400" />
+              ) : (
+                <CreditCard className="w-5 h-5 text-blue-400" />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">{selectedPaymentMethod.method.name}</h3>
+              <p className="text-white/70 text-sm">{selectedPaymentMethod.method.description}</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-white/60">Estimated Cost:</span>
+              <span className="text-white ml-2">${selectedPaymentMethod.costEstimate.totalCost.toFixed(2)}</span>
+            </div>
+            <div>
+              <span className="text-white/60">Confirmation Time:</span>
+              <span className="text-white ml-2">~{selectedPaymentMethod.costEstimate.estimatedTime} min</span>
+            </div>
+          </div>
+
+          {selectedPaymentMethod.warnings && selectedPaymentMethod.warnings.length > 0 && (
+            <div className="mt-3 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4 text-orange-400" />
+                <span className="text-orange-400 text-sm font-medium">Warnings</span>
+              </div>
+              <ul className="text-orange-300 text-xs space-y-1">
+                {selectedPaymentMethod.warnings?.map((warning, index) => (
+                  <li key={index}>• {warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </GlassPanel>
+
+        {isCrypto ? (
+          <CryptoPaymentDetails 
+            paymentMethod={selectedPaymentMethod}
+            onProceed={handleProcessPayment} 
+          />
         ) : (
-          <FiatPaymentDetails onProceed={handleProcessPayment} />
+          <FiatPaymentDetails 
+            paymentMethod={selectedPaymentMethod}
+            onProceed={handleProcessPayment} 
+          />
         )}
 
         {error && (
@@ -380,7 +548,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Processing Payment</h2>
         <p className="text-white/70">
-          {selectedPaymentMethod === 'crypto' 
+          {selectedPaymentMethod?.method.type !== PaymentMethodType.FIAT_STRIPE
             ? 'Waiting for blockchain confirmation...' 
             : 'Processing your payment securely...'
           }
@@ -402,7 +570,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       <div>
         <h2 className="text-2xl font-bold text-white mb-2">Order Confirmed!</h2>
         <p className="text-white/70">
-          Your order has been placed successfully and is now being processed.
+          Your order has been placed successfully using {selectedPaymentMethod?.method.name} and is now being processed.
         </p>
       </div>
       
@@ -416,7 +584,11 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             </div>
             <div className="flex justify-between">
               <span className="text-white/70">Payment Method:</span>
-              <span className="text-white capitalize">{orderData.paymentPath}</span>
+              <span className="text-white">{selectedPaymentMethod?.method.name || orderData.paymentPath}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/70">Total Paid:</span>
+              <span className="text-white">${selectedPaymentMethod?.costEstimate.totalCost.toFixed(2) || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-white/70">Status:</span>
@@ -432,6 +604,36 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         </GlassPanel>
       )}
 
+      {/* Payment Method Confirmation */}
+      {selectedPaymentMethod && (
+        <GlassPanel variant="secondary" className="p-4 text-left">
+          <h4 className="font-semibold text-white mb-3">Payment Confirmation</h4>
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`p-2 rounded-lg ${
+              selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE 
+                ? 'bg-orange-500/20' : 'bg-blue-500/20'
+            }`}>
+              {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE ? (
+                <Wallet className="w-4 h-4 text-orange-400" />
+              ) : (
+                <CreditCard className="w-4 h-4 text-blue-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-white font-medium">{selectedPaymentMethod.method.name}</p>
+              <p className="text-white/70 text-sm">{selectedPaymentMethod.recommendationReason}</p>
+            </div>
+          </div>
+          
+          {selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE && (
+            <div className="text-xs text-white/60">
+              <p>• Transaction will be confirmed on {selectedPaymentMethod.method.chainId === 1 ? 'Ethereum' : `Chain ${selectedPaymentMethod.method.chainId}`}</p>
+              <p>• Funds are held in secure escrow until delivery confirmation</p>
+            </div>
+          )}
+        </GlassPanel>
+      )}
+
       <div className="flex gap-4 justify-center">
         <Button variant="outline" onClick={() => router.push('/marketplace')}>
           Continue Shopping
@@ -443,11 +645,11 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     </div>
   );
 
-  if (loading && !recommendation) {
+  if (loading && !prioritizationResult) {
     return (
       <div className="text-center py-16">
         <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-4" />
-        <p className="text-white/70">Loading payment options...</p>
+        <p className="text-white/70">Loading intelligent payment options...</p>
       </div>
     );
   }
@@ -495,9 +697,23 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 };
 
 // Crypto Payment Details Component
-const CryptoPaymentDetails: React.FC<{ onProceed: () => void }> = ({ onProceed }) => {
+const CryptoPaymentDetails: React.FC<{ 
+  paymentMethod: PrioritizedPaymentMethod;
+  onProceed: () => void;
+}> = ({ paymentMethod, onProceed }) => {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+
+  const getNetworkName = (chainId: number): string => {
+    switch (chainId) {
+      case 1: return 'Ethereum';
+      case 137: return 'Polygon';
+      case 56: return 'BSC';
+      case 42161: return 'Arbitrum';
+      case 10: return 'Optimism';
+      default: return `Chain ${chainId}`;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -537,15 +753,19 @@ const CryptoPaymentDetails: React.FC<{ onProceed: () => void }> = ({ onProceed }
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-white/70">Payment Token:</span>
-            <span className="text-white">USDC</span>
+            <span className="text-white">{paymentMethod.method.token?.symbol || 'ETH'}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/70">Network:</span>
-            <span className="text-white">Ethereum</span>
+            <span className="text-white">{getNetworkName(paymentMethod.method.chainId || 1)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/70">Gas Fee:</span>
-            <span className="text-white">~$0.50</span>
+            <span className="text-white">~${paymentMethod.costEstimate.gasFee.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Total Cost:</span>
+            <span className="text-white font-semibold">${paymentMethod.costEstimate.totalCost.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-white/70">Escrow Type:</span>
@@ -554,20 +774,38 @@ const CryptoPaymentDetails: React.FC<{ onProceed: () => void }> = ({ onProceed }
         </div>
       </GlassPanel>
 
+      {/* Benefits Display */}
+      {paymentMethod.benefits && paymentMethod.benefits.length > 0 && (
+        <GlassPanel variant="secondary" className="p-4">
+          <h4 className="text-white font-medium mb-3">Benefits of {paymentMethod.method.name}</h4>
+          <ul className="space-y-2">
+            {paymentMethod.benefits.map((benefit, index) => (
+              <li key={index} className="text-white/70 text-sm flex items-center gap-2">
+                <CheckCircle className="w-3 h-3 text-green-400" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </GlassPanel>
+      )}
+
       <Button
         variant="primary"
         onClick={onProceed}
         disabled={!isConnected}
         className="w-full"
       >
-        {isConnected ? 'Proceed with Crypto Payment' : 'Connect Wallet First'}
+        {isConnected ? `Pay with ${paymentMethod.method.name}` : 'Connect Wallet First'}
       </Button>
     </div>
   );
 };
 
 // Fiat Payment Details Component
-const FiatPaymentDetails: React.FC<{ onProceed: () => void }> = ({ onProceed }) => {
+const FiatPaymentDetails: React.FC<{ 
+  paymentMethod: PrioritizedPaymentMethod;
+  onProceed: () => void;
+}> = ({ paymentMethod, onProceed }) => {
   return (
     <div className="space-y-6">
       <GlassPanel variant="secondary" className="p-6">
@@ -642,8 +880,42 @@ const FiatPaymentDetails: React.FC<{ onProceed: () => void }> = ({ onProceed }) 
         </div>
       </GlassPanel>
 
+      {/* Payment Method Benefits */}
+      {paymentMethod.benefits && paymentMethod.benefits.length > 0 && (
+        <GlassPanel variant="secondary" className="p-4">
+          <h4 className="text-white font-medium mb-3">Benefits of Card Payment</h4>
+          <ul className="space-y-2">
+            {paymentMethod.benefits.map((benefit, index) => (
+              <li key={index} className="text-white/70 text-sm flex items-center gap-2">
+                <CheckCircle className="w-3 h-3 text-green-400" />
+                {benefit}
+              </li>
+            ))}
+          </ul>
+        </GlassPanel>
+      )}
+
+      {/* Cost Summary */}
+      <GlassPanel variant="secondary" className="p-4">
+        <h4 className="text-white font-medium mb-3">Payment Summary</h4>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-white/70">Processing Fee:</span>
+            <span className="text-white">${(paymentMethod.costEstimate.totalCost - paymentMethod.costEstimate.baseCost).toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Total Cost:</span>
+            <span className="text-white font-semibold">${paymentMethod.costEstimate.totalCost.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/70">Processing Time:</span>
+            <span className="text-white">~{paymentMethod.costEstimate.estimatedTime} min</span>
+          </div>
+        </div>
+      </GlassPanel>
+
       <Button variant="primary" onClick={onProceed} className="w-full">
-        Complete Payment
+        Complete Payment with {paymentMethod.method.name}
       </Button>
     </div>
   );

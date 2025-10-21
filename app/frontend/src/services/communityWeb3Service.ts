@@ -80,7 +80,11 @@ export class CommunityWeb3Service {
   private async initializeContracts() {
     try {
       const provider = await getProvider();
-      if (!provider) return;
+      // Check if provider is available before initializing contracts
+      if (!provider) {
+        console.warn('No provider available, skipping contract initialization');
+        return;
+      }
 
       // Initialize governance contract
       this.governanceContract = new ethers.Contract(

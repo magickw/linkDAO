@@ -157,10 +157,10 @@ export const SellerCacheDemo: React.FC = () => {
           <div className="mt-4 pt-4 border-t">
             <h3 className="text-sm font-medium mb-2">Global Cache Stats</h3>
             <div className="text-xs text-gray-600 space-y-1">
-              <div>Total Entries: {stats.totalEntries}</div>
-              <div>Queue Size: {stats.queueSize}</div>
-              <div>Dependencies: {stats.dependencies}</div>
-              <div>Metadata Entries: {stats.metadata.length}</div>
+              <div>Total Entries: {stats.totalEntries.toString()}</div>
+              <div>Queue Size: {stats.queueSize.toString()}</div>
+              <div>Dependencies: {stats.dependencies.toString()}</div>
+              <div>Metadata Entries: {stats.metadata.length.toString()}</div>
             </div>
             
             <button
@@ -256,10 +256,10 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : profile ? (
             <div className="text-sm space-y-2">
-              <div><strong>Name:</strong> {profile.displayName ?? 'N/A'}</div>
-              <div><strong>Bio:</strong> {profile.bio ?? 'N/A'}</div>
-              <div><strong>Updated:</strong> {profile.updatedAt ? (new Date(profile.updatedAt)).toLocaleString() : 'N/A'}</div>
-              <div><strong>Tier:</strong> {profile.tier ?? 'N/A'}</div>
+              <div><strong>Name:</strong> {profile.displayName?.toString() ?? 'N/A'}</div>
+              <div><strong>Bio:</strong> {profile.bio?.toString() ?? 'N/A'}</div>
+              <div><strong>Updated:</strong> {profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : 'N/A'}</div>
+              <div><strong>Tier:</strong> {profile.tier?.toString() ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No profile data</div>
@@ -273,10 +273,10 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : dashboard ? (
             <div className="text-sm space-y-2">
-              <div><strong>Total Sales:</strong> {dashboard.sales?.total ?? 'N/A'}</div>
-              <div><strong>Active Listings:</strong> {dashboard.listings?.active ?? 'N/A'}</div>
-              <div><strong>Pending Orders:</strong> {dashboard.orders?.pending ?? 'N/A'}</div>
-              <div><strong>Reputation:</strong> {dashboard.reputation?.score ?? 'N/A'}</div>
+              <div><strong>Total Sales:</strong> {dashboard.sales?.total?.toString() ?? 'N/A'}</div>
+              <div><strong>Active Listings:</strong> {dashboard.listings?.active?.toString() ?? 'N/A'}</div>
+              <div><strong>Pending Orders:</strong> {dashboard.orders?.pending?.toString() ?? 'N/A'}</div>
+              <div><strong>Reputation:</strong> {dashboard.reputation?.score?.toString() ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No dashboard data</div>
@@ -290,9 +290,9 @@ export const SellerCacheDemo: React.FC = () => {
             <div className="text-gray-500">Loading...</div>
           ) : listings && listings.length > 0 ? (
             <div className="text-sm space-y-2">
-              <div><strong>Total Listings:</strong> {listings.length.toString() ?? 'N/A'}</div>
-              <div><strong>First Listing:</strong> {listings[0]?.title ?? 'N/A'}</div>
-              <div><strong>Status:</strong> {listings[0]?.status ?? 'N/A'}</div>
+              <div><strong>Total Listings:</strong> {listings.length.toString()}</div>
+              <div><strong>First Listing:</strong> {listings[0]?.title?.toString() ?? 'N/A'}</div>
+              <div><strong>Status:</strong> {listings[0]?.status?.toString() ?? 'N/A'}</div>
             </div>
           ) : (
             <div className="text-gray-500">No listings data</div>
@@ -313,7 +313,7 @@ export const SellerCacheDemo: React.FC = () => {
       {updateProfile.error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800 text-sm">
-            Update Error: {updateProfile.error instanceof Error ? updateProfile.error.message : String(updateProfile.error)}
+            Update Error: {updateProfile.error instanceof Error ? updateProfile.error.message.toString() : String(updateProfile.error)}
           </p>
         </div>
       )}
