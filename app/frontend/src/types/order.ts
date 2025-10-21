@@ -94,6 +94,24 @@ export interface Order {
   paymentConfirmationHash?: string;
   escrowContractAddress?: string;
   
+  // Payment method prioritization data
+  selectedPaymentMethodId?: string;
+  paymentMethodPriority?: number;
+  paymentMethodRecommendationReason?: string;
+  paymentMethodCostEstimate?: {
+    totalCost: number;
+    baseCost: number;
+    gasFee: number;
+    processingFee: number;
+    estimatedTime: number;
+  };
+  alternativePaymentMethods?: Array<{
+    id: string;
+    name: string;
+    costEstimate: number;
+    priority: number;
+  }>;
+  
   // Order status and tracking
   status: OrderStatus;
   checkoutSessionId?: string;
@@ -170,6 +188,20 @@ export interface OrderStatistics {
   averageOrderValue: number;
   completionRate: number;
   statusBreakdown: Record<OrderStatus, number>;
+  paymentMethodBreakdown: Record<string, {
+    count: number;
+    totalValue: number;
+    averageCost: number;
+    successRate: number;
+  }>;
+  paymentMethodPreferences: Array<{
+    methodId: string;
+    methodName: string;
+    usageCount: number;
+    successRate: number;
+    averageCost: number;
+    lastUsed: string;
+  }>;
 }
 
 export interface OrderNotification {

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAccount } from 'wagmi';
 import { SellerQueryProvider } from '../providers/SellerQueryProvider';
 import { useSellerProfile, useSellerDashboard } from '../hooks/useSellerCache';
-import SellerCacheDemo from '../components/Seller/Cache/SellerCacheDemo';
+// Removed SellerCacheDemo import
 
 /**
  * Example component showing how to integrate the unified cache invalidation system
@@ -153,9 +153,7 @@ const SellerCacheIntegrationExample: React.FC = () => {
           
           <SellerProfileExample />
           
-          <div className="mt-12">
-            <SellerCacheDemo />
-          </div>
+          {/* Removed SellerCacheDemo component */}
         </div>
       </div>
     </SellerQueryProvider>

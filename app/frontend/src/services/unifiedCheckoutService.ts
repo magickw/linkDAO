@@ -1,6 +1,11 @@
 import { CryptoPaymentService } from './cryptoPaymentService';
 import { StripePaymentService } from './stripePaymentService';
 import { ExchangeRateService } from './exchangeRateService';
+import {
+  PrioritizedPaymentMethod,
+  PaymentMethodType,
+  AvailabilityStatus
+} from '../types/paymentPrioritization';
 
 export interface UnifiedCheckoutRequest {
   orderId: string;
@@ -11,6 +16,21 @@ export interface UnifiedCheckoutRequest {
   currency: string;
   preferredMethod?: 'crypto' | 'fiat' | 'auto';
   userCountry?: string;
+}
+
+export interface PrioritizedCheckoutRequest extends UnifiedCheckoutRequest {
+  selectedPaymentMethod: PrioritizedPaymentMethod;
+  paymentDetails?: {
+    // For crypto payments
+    walletAddress?: string;
+    tokenSymbol?: string;
+    networkId?: number;
+    
+    // For fiat payments
+    cardToken?: string;
+    billingAddress?: any;
+    saveCard?: boolean;
+  };
 }
 
 export interface CheckoutRecommendation {
@@ -42,6 +62,13 @@ export interface UnifiedCheckoutResult {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   nextSteps: string[];
   estimatedCompletionTime: Date;
+  prioritizationMetadata?: {
+    selectedMethod: any;
+    priority: number;
+    recommendationReason: string;
+    costEstimate: any;
+    alternativeMethods: any[];
+  };
 }
 
 export class UnifiedCheckoutService {
@@ -145,7 +172,45 @@ export class UnifiedCheckoutService {
   }
 
   /**
-   * Process unified checkout
+   * Process checkout with prioritized payment method
+   */
+  async processPrioritizedCheckout(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
+    try {
+      const { selectedPaymentMethod, paymentDetails } = request;
+      
+      // Determine payment path based on selected method
+      const paymentPath = this.getPaymentPathFromMethod(selectedPaymentMethod.method.type);
+      
+      // Validate payment method availability
+      await this.validatePaymentMethodAvailability(selectedPaymentMethod);
+      
+      // Process payment based on method type
+      let result: UnifiedCheckoutResult;
+      
+      if (paymentPath === 'crypto') {
+        result = await this.processCryptoPayment(request);
+      } else {
+        result = await this.processFiatPayment(request);
+      }
+      
+      // Add prioritization metadata to result
+      result.prioritizationMetadata = {
+        selectedMethod: selectedPaymentMethod.method,
+        priority: selectedPaymentMethod.priority,
+        recommendationReason: selectedPaymentMethod.recommendationReason,
+        costEstimate: selectedPaymentMethod.costEstimate,
+        alternativeMethods: [] // Could include other available methods
+      };
+      
+      return result;
+    } catch (error) {
+      console.error('Prioritized checkout failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Process unified checkout (legacy method)
    */
   async processCheckout(request: UnifiedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     try {
@@ -363,6 +428,114 @@ export class UnifiedCheckoutService {
   }
 
   // Private helper methods
+
+  private getPaymentPathFromMethod(methodType: PaymentMethodType): 'crypto' | 'fiat' {
+    switch (methodType) {
+      case PaymentMethodType.FIAT_STRIPE:
+        return 'fiat';
+      case PaymentMethodType.STABLECOIN_USDC:
+      case PaymentMethodType.STABLECOIN_USDT:
+      case PaymentMethodType.NATIVE_ETH:
+        return 'crypto';
+      default:
+        return 'fiat'; // Default fallback
+    }
+  }
+
+  private async validatePaymentMethodAvailability(method: PrioritizedPaymentMethod): Promise<void> {
+    if (method.availabilityStatus !== AvailabilityStatus.AVAILABLE) {
+      throw new Error(`Payment method ${method.method.name} is not available: ${method.availabilityStatus}`);
+    }
+
+    if (method.warnings && method.warnings.length > 0) {
+      console.warn('Payment method warnings:', method.warnings);
+    }
+  }
+
+  private async processCryptoPayment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
+    const { selectedPaymentMethod, paymentDetails } = request;
+    
+    // Prepare crypto payment request
+    const cryptoRequest = {
+      ...request,
+      tokenSymbol: selectedPaymentMethod.method.token?.symbol || 'ETH',
+      networkId: selectedPaymentMethod.method.chainId || 1,
+      walletAddress: paymentDetails?.walletAddress || request.buyerAddress
+    };
+
+    // Call existing crypto payment processing
+    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...cryptoRequest,
+        preferredMethod: 'crypto',
+        paymentMethodDetails: {
+          type: selectedPaymentMethod.method.type,
+          tokenAddress: selectedPaymentMethod.method.token?.address,
+          chainId: selectedPaymentMethod.method.chainId
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Crypto payment failed');
+    }
+
+    const { data } = await response.json();
+    return this.transformBackendResponse(data);
+  }
+
+  private async processFiatPayment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
+    const { selectedPaymentMethod, paymentDetails } = request;
+    
+    // Prepare fiat payment request
+    const fiatRequest = {
+      ...request,
+      cardToken: paymentDetails?.cardToken,
+      billingAddress: paymentDetails?.billingAddress,
+      saveCard: paymentDetails?.saveCard || false
+    };
+
+    // Call existing fiat payment processing
+    const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...fiatRequest,
+        preferredMethod: 'fiat',
+        paymentMethodDetails: {
+          type: selectedPaymentMethod.method.type,
+          provider: 'stripe'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Fiat payment failed');
+    }
+
+    const { data } = await response.json();
+    return this.transformBackendResponse(data);
+  }
+
+  private transformBackendResponse(data: any): UnifiedCheckoutResult {
+    return {
+      orderId: data.orderId,
+      paymentPath: data.paymentPath,
+      escrowType: data.escrowType,
+      transactionId: data.escrowId || data.stripePaymentIntentId || 'unknown',
+      status: data.status,
+      nextSteps: this.generateNextSteps(data),
+      estimatedCompletionTime: new Date(data.estimatedCompletionTime)
+    };
+  }
 
   private generateNextSteps(checkoutResult: any): string[] {
     const steps: string[] = [];

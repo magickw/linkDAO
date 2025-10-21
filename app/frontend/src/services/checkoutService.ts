@@ -3,10 +3,24 @@
  * Handles the complete checkout flow with Web3 and traditional payment integration
  */
 
-import { UnifiedCheckoutService, UnifiedCheckoutRequest, CheckoutRecommendation } from './unifiedCheckoutService';
+import { 
+  UnifiedCheckoutService, 
+  UnifiedCheckoutRequest, 
+  PrioritizedCheckoutRequest,
+  CheckoutRecommendation 
+} from './unifiedCheckoutService';
 import { CryptoPaymentService } from './cryptoPaymentService';
 import { StripePaymentService } from './stripePaymentService';
+import { PaymentMethodPrioritizationService } from './paymentMethodPrioritizationService';
+import { CostEffectivenessCalculator } from './costEffectivenessCalculator';
+import { NetworkAvailabilityChecker } from './networkAvailabilityChecker';
+import { UserPreferenceManager } from './userPreferenceManager';
 import { CartItem } from './cartService';
+import { 
+  PrioritizationResult, 
+  PrioritizationContext,
+  PaymentMethodType 
+} from '../types/paymentPrioritization';
 
 export interface CheckoutSession {
   sessionId: string;
@@ -21,6 +35,7 @@ export interface CheckoutSession {
   };
   paymentMethod?: 'crypto' | 'fiat';
   recommendation?: CheckoutRecommendation;
+  prioritizationResult?: PrioritizationResult;
   expiresAt: Date;
 }
 
@@ -61,12 +76,24 @@ export interface PaymentDetails {
 
 export class CheckoutService {
   private unifiedCheckoutService: UnifiedCheckoutService;
+  private prioritizationService: PaymentMethodPrioritizationService;
   private apiBaseUrl: string;
 
   constructor() {
     const cryptoService = new CryptoPaymentService();
     const stripeService = new StripePaymentService();
     this.unifiedCheckoutService = new UnifiedCheckoutService(cryptoService, stripeService);
+    
+    // Initialize prioritization service
+    const costCalculator = new CostEffectivenessCalculator();
+    const networkChecker = new NetworkAvailabilityChecker();
+    const preferenceManager = new UserPreferenceManager();
+    this.prioritizationService = new PaymentMethodPrioritizationService(
+      costCalculator,
+      networkChecker,
+      preferenceManager
+    );
+    
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
@@ -137,6 +164,12 @@ export class CheckoutService {
         };
 
         session.recommendation = await this.unifiedCheckoutService.getCheckoutRecommendation(request);
+        
+        // Get prioritized payment methods
+        session.prioritizationResult = await this.getPrioritizedPaymentMethods(
+          total,
+          userAddress
+        );
       }
 
       return session;
@@ -147,7 +180,42 @@ export class CheckoutService {
   }
 
   /**
-   * Process checkout with selected payment method
+   * Process checkout with prioritized payment method
+   */
+  async processPrioritizedCheckout(request: PrioritizedCheckoutRequest): Promise<CheckoutResult> {
+    try {
+      // Use the unified checkout service's prioritized method
+      const result = await this.unifiedCheckoutService.processPrioritizedCheckout(request);
+      
+      // Transform to CheckoutResult format
+      return {
+        success: true,
+        orderId: result.orderId,
+        paymentPath: result.paymentPath,
+        transactionId: result.transactionId,
+        status: result.status as any,
+        redirectUrl: undefined,
+        nextSteps: result.nextSteps,
+        estimatedCompletionTime: result.estimatedCompletionTime
+      };
+    } catch (error: any) {
+      console.error('Prioritized checkout processing failed:', error);
+      
+      return {
+        success: false,
+        orderId: request.orderId,
+        paymentPath: request.selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE ? 'fiat' : 'crypto',
+        transactionId: '',
+        status: 'failed',
+        nextSteps: ['Please try again or contact support'],
+        estimatedCompletionTime: new Date(),
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Process checkout with selected payment method (legacy)
    */
   async processCheckout(
     session: CheckoutSession,
@@ -236,6 +304,149 @@ export class CheckoutService {
       console.error('Failed to get session:', error);
       return null;
     }
+  }
+
+  /**
+   * Get prioritized payment methods for checkout
+   */
+  async getPrioritizedPaymentMethods(
+    amount: number,
+    userAddress?: string
+  ): Promise<PrioritizationResult> {
+    try {
+      const context: PrioritizationContext = {
+        transactionAmount: amount,
+        transactionCurrency: 'USD',
+        userContext: {
+          userAddress,
+          chainId: 1, // Default to Ethereum mainnet
+          walletBalances: [], // Should be fetched from wallet
+          preferences: {
+            preferredMethods: [],
+            avoidedMethods: [],
+            maxGasFeeThreshold: 50,
+            preferStablecoins: true,
+            preferFiat: false,
+            lastUsedMethods: [],
+            autoSelectBestOption: true
+          }
+        },
+        availablePaymentMethods: await this.getAvailablePaymentMethods(),
+        marketConditions: await this.getCurrentMarketConditions()
+      };
+
+      return await this.prioritizationService.prioritizePaymentMethods(context);
+    } catch (error) {
+      console.error('Failed to get prioritized payment methods:', error);
+      // Return fallback prioritization
+      return {
+        prioritizedMethods: [],
+        defaultMethod: null,
+        recommendations: [],
+        warnings: [],
+        metadata: {
+          calculatedAt: new Date(),
+          totalMethodsEvaluated: 0,
+          averageConfidence: 0,
+          processingTimeMs: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Get available payment methods
+   */
+  private async getAvailablePaymentMethods() {
+    // Mock implementation - should be replaced with actual service calls
+    return [
+      {
+        id: 'usdc-eth',
+        type: PaymentMethodType.STABLECOIN_USDC,
+        name: 'USDC',
+        description: 'USD Coin on Ethereum',
+        chainId: 1,
+        enabled: true,
+        supportedNetworks: [1],
+        token: {
+          address: '0xA0b86a33E6441E6C7C5c8b0b8c8b0b8c8b0b8c8b',
+          symbol: 'USDC',
+          decimals: 6,
+          name: 'USD Coin',
+          chainId: 1
+        }
+      },
+      {
+        id: 'stripe-fiat',
+        type: PaymentMethodType.FIAT_STRIPE,
+        name: 'Credit/Debit Card',
+        description: 'Traditional payment via Stripe',
+        chainId: 0,
+        enabled: true,
+        supportedNetworks: []
+      },
+      {
+        id: 'eth-mainnet',
+        type: PaymentMethodType.NATIVE_ETH,
+        name: 'Ethereum',
+        description: 'Native ETH on Ethereum',
+        chainId: 1,
+        enabled: true,
+        supportedNetworks: [1],
+        token: {
+          address: '0x0000000000000000000000000000000000000000',
+          symbol: 'ETH',
+          decimals: 18,
+          name: 'Ethereum',
+          chainId: 1,
+          isNative: true
+        }
+      }
+    ];
+  }
+
+  /**
+   * Get current market conditions
+   */
+  private async getCurrentMarketConditions() {
+    // Mock implementation - should be replaced with actual market data
+    return {
+      gasConditions: [
+        {
+          chainId: 1,
+          gasPrice: BigInt(30000000000), // 30 gwei in wei
+          gasPriceUSD: 0.50,
+          networkCongestion: 'medium' as const,
+          blockTime: 12,
+          lastUpdated: new Date()
+        }
+      ],
+      networkAvailability: [
+        {
+          chainId: 1,
+          available: true
+        }
+      ],
+      exchangeRates: [
+        { 
+          fromToken: 'ETH', 
+          toToken: 'USD', 
+          rate: 2000, 
+          source: 'coingecko',
+          confidence: 0.95,
+          lastUpdated: new Date() 
+        },
+        { 
+          fromToken: 'USDC', 
+          toToken: 'USD', 
+          rate: 1, 
+          source: 'coingecko',
+          confidence: 0.99,
+          lastUpdated: new Date() 
+        }
+      ],
+      lastUpdated: new Date()
+    };
   }
 
   /**

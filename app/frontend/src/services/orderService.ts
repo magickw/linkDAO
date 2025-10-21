@@ -270,6 +270,107 @@ export class OrderService {
   }
 
   /**
+   * Track payment method selection for analytics
+   */
+  async trackPaymentMethodSelection(
+    orderId: string,
+    paymentMethodData: {
+      selectedMethodId: string;
+      methodName: string;
+      priority: number;
+      recommendationReason: string;
+      costEstimate: any;
+      alternativeMethods?: any[];
+    }
+  ): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/payment-method`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentMethodData),
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to track payment method selection: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error tracking payment method selection:', error);
+      // Don't throw - this is analytics data
+    }
+  }
+
+  /**
+   * Get payment method analytics for user
+   */
+  async getPaymentMethodAnalytics(
+    userAddress: string,
+    timeframe: 'week' | 'month' | 'year' = 'month'
+  ): Promise<{
+    preferredMethods: Array<{
+      methodId: string;
+      methodName: string;
+      usageCount: number;
+      successRate: number;
+      averageCost: number;
+      lastUsed: string;
+    }>;
+    costSavings: {
+      totalSaved: number;
+      averageSavingsPerTransaction: number;
+      bestAlternativeUsed: string;
+    };
+    methodPerformance: Record<string, {
+      count: number;
+      successRate: number;
+      averageTime: number;
+      averageCost: number;
+    }>;
+  }> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/orders/analytics/payment-methods/${userAddress}?timeframe=${timeframe}`
+      );
+
+      if (!response.ok) {
+        console.warn(`Payment method analytics unavailable (${response.status}). Using defaults.`);
+        return {
+          preferredMethods: [],
+          costSavings: {
+            totalSaved: 0,
+            averageSavingsPerTransaction: 0,
+            bestAlternativeUsed: 'N/A'
+          },
+          methodPerformance: {}
+        };
+      }
+
+      const result = await response.json();
+      return result.success ? result.data : {
+        preferredMethods: [],
+        costSavings: {
+          totalSaved: 0,
+          averageSavingsPerTransaction: 0,
+          bestAlternativeUsed: 'N/A'
+        },
+        methodPerformance: {}
+      };
+    } catch (error) {
+      console.error('Error fetching payment method analytics:', error);
+      return {
+        preferredMethods: [],
+        costSavings: {
+          totalSaved: 0,
+          averageSavingsPerTransaction: 0,
+          bestAlternativeUsed: 'N/A'
+        },
+        methodPerformance: {}
+      };
+    }
+  }
+
+  /**
    * Get order statistics for dashboard
    */
   async getOrderStatistics(
@@ -285,6 +386,20 @@ export class OrderService {
     averageOrderValue: number;
     completionRate: number;
     statusBreakdown: Record<OrderStatus, number>;
+    paymentMethodBreakdown: Record<string, {
+      count: number;
+      totalValue: number;
+      averageCost: number;
+      successRate: number;
+    }>;
+    paymentMethodPreferences: Array<{
+      methodId: string;
+      methodName: string;
+      usageCount: number;
+      successRate: number;
+      averageCost: number;
+      lastUsed: string;
+    }>;
   }> {
     try {
       const response = await fetch(
@@ -313,13 +428,19 @@ export class OrderService {
             CANCELLED: 0,
             REFUNDED: 0,
           },
+          paymentMethodBreakdown: {},
+          paymentMethodPreferences: [],
         };
       }
 
       const result = await response.json();
       
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          paymentMethodBreakdown: result.data.paymentMethodBreakdown || {},
+          paymentMethodPreferences: result.data.paymentMethodPreferences || [],
+        };
       } else {
         console.warn('Order statistics response not successful. Using defaults.');
         return {
@@ -342,6 +463,8 @@ export class OrderService {
             CANCELLED: 0,
             REFUNDED: 0,
           },
+          paymentMethodBreakdown: {},
+          paymentMethodPreferences: [],
         };
       }
     } catch (error) {
@@ -367,6 +490,8 @@ export class OrderService {
           CANCELLED: 0,
           REFUNDED: 0,
         },
+        paymentMethodBreakdown: {},
+        paymentMethodPreferences: [],
       };
     }
   }
