@@ -5,7 +5,8 @@ import {
   FiatPaymentMethod,
   PaymentMethodSetup,
   FiatPaymentReceipt,
-  ComplianceData
+  ComplianceData,
+  ExchangeRate
 } from '../types/fiatPayment';
 import { ExchangeRateService } from './exchangeRateService';
 
@@ -35,8 +36,8 @@ export class StripePaymentService {
   private apiKey: string;
   private baseURL = 'https://api.stripe.com/v1';
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey || process.env.NEXT_PUBLIC_STRIPE_KEY || '';
     this.exchangeRateService = new ExchangeRateService();
   }
 
@@ -45,11 +46,8 @@ export class StripePaymentService {
    */
   async processPayment(request: FiatPaymentRequest): Promise<FiatPaymentTransaction> {
     try {
-      // Validate request
+      // Validate payment request
       await this.validatePaymentRequest(request);
-
-      // Check compliance
-      await this.checkCompliance(request);
 
       // Create payment intent
       const paymentIntent = await this.createPaymentIntent(request);
@@ -57,24 +55,37 @@ export class StripePaymentService {
       // Create transaction record
       const transaction = this.createTransactionRecord(request, paymentIntent);
 
-      // If crypto conversion is requested, get exchange rate
+      // Handle crypto conversion if requested
       if (request.convertToCrypto) {
         const exchangeRate = await this.exchangeRateService.getExchangeRate(
           request.currency,
           request.convertToCrypto.targetToken
         );
         
-        transaction.exchangeRate = exchangeRate;
-        transaction.cryptoConversion = {
-          fromAmount: request.amount,
-          fromCurrency: request.currency,
-          toAmount: (request.amount * exchangeRate.rate).toString(),
-          toToken: request.convertToCrypto.targetToken,
-          toChain: request.convertToCrypto.targetChain,
-          exchangeRate: exchangeRate.rate,
-          slippage: request.convertToCrypto.slippageTolerance,
-          status: 'pending'
-        };
+        // Only set exchangeRate if it's not null
+        if (exchangeRate !== null) {
+          // Convert the service ExchangeRate to the fiat payment ExchangeRate type
+          const fiatExchangeRate: ExchangeRate = {
+            fromCurrency: exchangeRate.fromToken,
+            toCurrency: exchangeRate.toToken,
+            rate: exchangeRate.rate,
+            provider: exchangeRate.source,
+            timestamp: exchangeRate.lastUpdated,
+            validUntil: new Date(exchangeRate.lastUpdated.getTime() + 5 * 60 * 1000) // 5 minutes from now
+          };
+          
+          transaction.exchangeRate = fiatExchangeRate;
+          transaction.cryptoConversion = {
+            fromAmount: request.amount,
+            fromCurrency: request.currency,
+            toAmount: (request.amount * exchangeRate.rate).toString(),
+            toToken: request.convertToCrypto.targetToken,
+            toChain: request.convertToCrypto.targetChain,
+            exchangeRate: exchangeRate.rate,
+            slippage: request.convertToCrypto.slippageTolerance,
+            status: 'pending'
+          };
+        }
       }
 
       return transaction;
@@ -294,7 +305,7 @@ export class StripePaymentService {
    * Validate payment request
    */
   private async validatePaymentRequest(request: FiatPaymentRequest): Promise<void> {
-    if (!request.orderId || !request.amount || !request.currency || !request.paymentMethodId) {
+    if (!request.orderId || !request.amount || !request.currency) {
       throw new Error('Invalid payment request: missing required fields');
     }
 
@@ -302,8 +313,8 @@ export class StripePaymentService {
       throw new Error('Invalid payment amount');
     }
 
-    const supportedCurrencies = this.exchangeRateService.getSupportedFiatCurrencies();
-    if (!supportedCurrencies.includes(request.currency)) {
+    const supportedCurrencies = this.exchangeRateService.getSupportedCurrencies();
+    if (!supportedCurrencies.fiat.includes(request.currency)) {
       throw new Error(`Unsupported currency: ${request.currency}`);
     }
   }

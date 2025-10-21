@@ -546,7 +546,7 @@ const CommunitiesPage: React.FC = () => {
                     {/* Governance Notifications */}
                     {governanceNotifications > 0 && (
                       <div className="relative">
-                        <button className="p-2 text-gray-600 hover:text-gray-900">
+                        <button className={`p-2 text-gray-600 hover:text-gray-900 ${isMobile ? 'min-w-[44px] min-h-[44px] flex items-center justify-center' : ''}`}>
                           <Vote className="w-5 h-5" />
                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                             {governanceNotifications}
@@ -596,21 +596,23 @@ const CommunitiesPage: React.FC = () => {
               />
             </div>
 
-        {/* Collapsible Sidebar */}
-        <CollapsibleWeb3Sidebar
-          communities={communityData}
-          currentCommunity={undefined}
-          onCommunitySelect={(id) => {
-            const community = communityList.find(c => c.id === id);
-            if (community) {
-              router.push(`/dao/${community.name}`);
-            }
-          }}
-          onCreateCommunity={() => router.push('/create-community')}
-          walletConnected={walletConnected}
-          totalStakingRewards={stakingRewards}
-          governanceNotifications={governanceNotifications}
-        />
+            {/* Collapsible Sidebar */}
+            <div className="px-4 mb-4">
+              <CollapsibleWeb3Sidebar
+                communities={communityData}
+                currentCommunity={undefined}
+                onCommunitySelect={(id) => {
+                  const community = communityList.find(c => c.id === id);
+                  if (community) {
+                    router.push(`/dao/${community.name}`);
+                  }
+                }}
+                onCreateCommunity={() => router.push('/create-community')}
+                walletConnected={walletConnected}
+                totalStakingRewards={stakingRewards}
+                governanceNotifications={governanceNotifications}
+              />
+            </div>
 
             {/* Enhanced Mobile Posts Feed */}
             <div className="px-4 pb-24 space-y-4">
@@ -619,127 +621,56 @@ const CommunitiesPage: React.FC = () => {
                 const stakingInfo = stakingData[post.communityId];
                 
                 return (
-                  <div key={post.id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
-                    {/* Enhanced Post Card with Web3 Features */}
-                    <div className="p-4">
-                      {/* Post Header with On-Chain Verification */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg">{community?.avatar || '🏛️'}</span>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {community?.displayName || 'Unknown'}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              by {post.authorName}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* On-Chain Verification Badge */}
-                        {post.isStaked && (
-                          <OnChainVerificationBadge
-                            proof={{
-                              id: `proof-${post.id}`,
-                              proofType: 'staking_action',
-                              transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-                              blockNumber: Math.floor(Math.random() * 1000000),
-                              contractAddress: '0x1234567890123456789012345678901234567890',
-                              status: 'verified',
-                              confirmations: 12,
-                              requiredConfirmations: 12,
-                              timestamp: new Date(post.createdAt),
-                              verified: true,
-                              verificationSource: 'blockchain',
-                              fromAddress: post.author
-                            }}
-                            size="small"
-                            showLabel={false}
-                            onViewTransaction={handleViewTransaction}
-                          />
-                        )}
-                      </div>
-
-                      {/* Post Content */}
-                      <h3 className="font-medium text-gray-900 mb-2">{post.title}</h3>
-                      <p className="text-gray-700 text-sm mb-3 line-clamp-2">{post.content}</p>
-
-                      {/* Staking Indicator */}
-                      {stakingInfo && (
-                        <div className="mb-3">
-                          <StakingIndicator
-                            stakingInfo={stakingInfo}
-                            token={{ 
-                              symbol: 'LDAO', 
-                              address: '0x1234567890123456789012345678901234567890',
-                              decimals: 18,
-                              name: 'LinkDAO Token'
-                            }}
-                            size="sm"
-                            showTooltip={false}
-                          />
-                        </div>
-                      )}
-
-                      {/* Enhanced Interaction Bar */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          {/* Token Reaction System */}
-                          <TokenReactionSystem
-                            postId={post.id}
-                            initialReactions={[
-                              { type: 'like', totalAmount: post.upvotes },
-                              { type: 'tip', totalAmount: Math.floor(Math.random() * 100) }
-                            ]}
-                            onReaction={handleTokenReaction}
-                            showAnalytics={false}
-                          />
-                          
-                          {/* Comment Count */}
-                          <button 
-                            onClick={() => handleComment(post.id)}
-                            className="flex items-center space-x-1 text-gray-500 hover:text-gray-700"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            <span className="text-sm">{post.commentCount}</span>
-                          </button>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          {/* Enhanced Tip Button */}
-                          <EnhancedTipButton
-                            postId={post.id}
-                            authorAddress={post.author}
-                            currentTipAmount={Math.floor(Math.random() * 50)}
-                            userBalance={userBalance}
-                            onTip={handleTip}
-                            size="sm"
-                          />
-                          
-                          {/* Boost Button */}
-                          <BoostButton
-                            postId={post.id}
-                            currentStake={post.stakedTokens}
-                            userBalance={userBalance}
-                            token={{ 
-                              symbol: 'LDAO',
-                              address: '0x1234567890123456789012345678901234567890',
-                              decimals: 18,
-                              name: 'LinkDAO Token'
-                            }}
-                            onBoost={handleBoost}
-                            size="sm"
-                            variant="outline"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <CompactWeb3PostCard
+                    key={post.id}
+                    post={{
+                      id: post.id,
+                      title: post.title,
+                      content: post.content,
+                      author: {
+                        name: post.authorName,
+                        avatar: '👤',
+                        address: post.author
+                      },
+                      community: {
+                        name: community?.displayName || 'Unknown',
+                        avatar: community?.avatar || '🏛️'
+                      },
+                      metrics: {
+                        upvotes: post.upvotes,
+                        comments: post.commentCount,
+                        views: Math.floor(Math.random() * 1000),
+                        stakingAmount: post.stakedTokens,
+                        stakerCount: Math.floor(Math.random() * 50)
+                      },
+                      timestamp: new Date(post.createdAt).toLocaleDateString(),
+                      isUpvoted: false,
+                      isSaved: false,
+                      postType: post.type as any,
+                      onChainProof: post.isStaked
+                    }}
+                    onUpvote={() => handleUpvote(post.id)}
+                    onComment={() => handleComment(post.id)}
+                    onShare={() => handleShare(post.id)}
+                    onSave={() => handleSave(post.id)}
+                    onTip={(amount?: number) => handleTip(post.id, amount)}
+                    onStake={() => handleStake(post.id)}
+                    onViewPost={() => handleViewPost(post.id)}
+                    walletConnected={walletConnected}
+                  />
                 );
               })}
             </div>
 
-            {/* Mobile Bottom Navigation removed as per mobile tab bar removal task */}
+            {/* Mobile Floating Action Button */}
+            <div className="fixed bottom-20 right-4 z-50">
+              <button
+                onClick={handleCreatePost}
+                className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 min-w-[44px] min-h-[44px]"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </VisualPolishIntegration>
       </ErrorBoundary>

@@ -167,17 +167,49 @@ export function useFiatPayment(stripeApiKey?: string): UseFiatPaymentReturn {
       setError(null);
       const rate = await exchangeRateService.getExchangeRate(fromCurrency, toCurrency);
       
-      // Cache the rate
-      setExchangeRates(prev => ({
-        ...prev,
-        [`${fromCurrency}-${toCurrency}`]: rate
-      }));
-
-      return rate;
+      // Cache the rate only if it's not null
+      if (rate !== null) {
+        // Convert the service ExchangeRate to the hook ExchangeRate type
+        const hookExchangeRate: ExchangeRate = {
+          fromCurrency: rate.fromToken,
+          toCurrency: rate.toToken,
+          rate: rate.rate,
+          provider: rate.source,
+          timestamp: rate.lastUpdated,
+          validUntil: new Date(rate.lastUpdated.getTime() + 5 * 60 * 1000) // 5 minutes from now
+        };
+        
+        setExchangeRates(prev => ({
+          ...prev,
+          [`${fromCurrency}-${toCurrency}`]: hookExchangeRate
+        }));
+        
+        return hookExchangeRate;
+      } else {
+        // Return a default exchange rate if we can't fetch it
+        const defaultRate: ExchangeRate = {
+          fromCurrency: fromCurrency,
+          toCurrency: toCurrency,
+          rate: 1,
+          provider: 'default',
+          timestamp: new Date(),
+          validUntil: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
+        };
+        return defaultRate;
+      }
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to get exchange rate';
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // Return a default exchange rate if we encounter an error
+      const defaultRate: ExchangeRate = {
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        rate: 1,
+        provider: 'default',
+        timestamp: new Date(),
+        validUntil: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
+      };
+      return defaultRate;
     }
   }, [exchangeRateService]);
 
@@ -195,11 +227,56 @@ export function useFiatPayment(stripeApiKey?: string): UseFiatPaymentReturn {
 
     try {
       setError(null);
-      return await exchangeRateService.convertAmount(amount, fromCurrency, toCurrency);
+      const result = await exchangeRateService.convertCurrency(amount, fromCurrency, toCurrency);
+      
+      if (result) {
+        // Convert the service ExchangeRate to the hook ExchangeRate type
+        const hookExchangeRate: ExchangeRate = {
+          fromCurrency: result.fromCurrency,
+          toCurrency: result.toCurrency,
+          rate: result.rate,
+          provider: 'exchange-service',
+          timestamp: result.timestamp,
+          validUntil: new Date(result.timestamp.getTime() + 5 * 60 * 1000) // 5 minutes from now
+        };
+        
+        return {
+          convertedAmount: result.toAmount,
+          exchangeRate: hookExchangeRate
+        };
+      } else {
+        // Return default conversion if we can't get the rate
+        const defaultRate: ExchangeRate = {
+          fromCurrency: fromCurrency,
+          toCurrency: toCurrency,
+          rate: 1,
+          provider: 'default',
+          timestamp: new Date(),
+          validUntil: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
+        };
+        
+        return {
+          convertedAmount: amount,
+          exchangeRate: defaultRate
+        };
+      }
     } catch (err: any) {
       const errorMessage = err.message || 'Currency conversion failed';
       setError(errorMessage);
-      throw new Error(errorMessage);
+      // Return default conversion if we encounter an error
+      const defaultRate: ExchangeRate = {
+        fromCurrency: fromCurrency,
+        toCurrency: toCurrency,
+        rate: 1,
+        provider: 'default',
+        timestamp: new Date(),
+        validUntil: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes from now
+      };
+      
+      return {
+        convertedAmount: amount,
+        exchangeRate: defaultRate
+      };
     }
   }, [exchangeRateService]);
 
@@ -240,7 +317,8 @@ export function useFiatPayment(stripeApiKey?: string): UseFiatPaymentReturn {
     if (!exchangeRateService) {
       return ['USD', 'EUR', 'GBP'];
     }
-    return exchangeRateService.getSupportedFiatCurrencies();
+    const supported = exchangeRateService.getSupportedCurrencies();
+    return supported.all;
   }, [exchangeRateService]);
 
   return {

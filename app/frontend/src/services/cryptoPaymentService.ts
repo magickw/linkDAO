@@ -20,14 +20,16 @@ import { GasFeeService } from './gasFeeService';
 import { PAYMENT_CONFIG } from '../config/payment';
 
 export class CryptoPaymentService {
-  private gasFeeService: GasFeeService;
+  private gasFeeService?: GasFeeService;
   private activeTransactions = new Map<string, PaymentTransaction>();
 
   constructor(
-    private publicClient: PublicClient,
-    private walletClient: WalletClient
+    private publicClient?: PublicClient,
+    private walletClient?: WalletClient
   ) {
-    this.gasFeeService = new GasFeeService(publicClient);
+    if (publicClient) {
+      this.gasFeeService = new GasFeeService(publicClient);
+    }
   }
 
   /**
@@ -91,9 +93,19 @@ export class CryptoPaymentService {
         txParams.gasPrice = gasEstimate.gasPrice;
       }
 
+      // Check if walletClient is available
+      if (!this.walletClient) {
+        throw new Error('Wallet client not initialized');
+      }
+
       return await this.walletClient.sendTransaction(txParams);
     } else {
       // ERC-20 token transfer
+      // Check if walletClient is available
+      if (!this.walletClient) {
+        throw new Error('Wallet client not initialized');
+      }
+
       const contract = getContract({
         address: token.address as `0x${string}`,
         abi: erc20Abi,
@@ -125,6 +137,11 @@ export class CryptoPaymentService {
   private async monitorTransaction(transaction: PaymentTransaction): Promise<void> {
     if (!transaction.hash) return;
 
+    // Check if publicClient is available
+    if (!this.publicClient) {
+      throw new Error('Public client not initialized');
+    }
+
     const requiredConfirmations = (PAYMENT_CONFIG.CONFIRMATION_BLOCKS as Record<number, number>)[transaction.chainId] || 12;
     let attempts = 0;
     const maxAttempts = PAYMENT_CONFIG.TRANSACTION_TIMEOUT / 5000; // Check every 5 seconds
@@ -133,7 +150,7 @@ export class CryptoPaymentService {
       try {
         attempts++;
         
-        const receipt = await this.publicClient.getTransactionReceipt({
+        const receipt = await this.publicClient!.getTransactionReceipt({
           hash: transaction.hash as Hash
         });
 
@@ -143,7 +160,7 @@ export class CryptoPaymentService {
           transaction.gasFee = receipt.gasUsed * receipt.effectiveGasPrice;
 
           // Get current block number for confirmation count
-          const currentBlock = await this.publicClient.getBlockNumber();
+          const currentBlock = await this.publicClient!.getBlockNumber();
           transaction.confirmations = Number(currentBlock) - transaction.blockNumber;
 
           if (receipt.status === 'success') {
@@ -301,6 +318,11 @@ export class CryptoPaymentService {
    * Check token balance
    */
   private async checkTokenBalance(token: PaymentToken, amount: bigint): Promise<void> {
+    // Check if walletClient is available
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+    
     const accounts = await this.walletClient.getAddresses();
     const userAddress = accounts[0];
 
@@ -310,6 +332,11 @@ export class CryptoPaymentService {
 
     let balance: bigint;
 
+    // Check if publicClient is available
+    if (!this.publicClient) {
+      throw new Error('Public client not initialized');
+    }
+    
     if (token.isNative) {
       balance = await this.publicClient.getBalance({ address: userAddress });
     } else {
@@ -331,6 +358,11 @@ export class CryptoPaymentService {
    * Estimate gas for transaction
    */
   private async estimateTransactionGas(request: PaymentRequest): Promise<GasFeeEstimate> {
+    // Check if gasFeeService is available
+    if (!this.gasFeeService) {
+      throw new Error('Gas fee service not initialized');
+    }
+    
     const { token, amount, recipient } = request;
 
     if (token.isNative) {
@@ -346,6 +378,11 @@ export class CryptoPaymentService {
    * Create transaction record
    */
   private async createTransactionRecord(request: PaymentRequest): Promise<PaymentTransaction> {
+    // Check if walletClient is available
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+    
     const accounts = await this.walletClient.getAddresses();
     
     return {

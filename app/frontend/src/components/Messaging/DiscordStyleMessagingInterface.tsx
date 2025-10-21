@@ -8,12 +8,15 @@ import {
   MessageCircle, Search, Send, User, Plus, Hash, Lock, 
   ThumbsUp, Heart, Zap, Rocket, Globe, Users, X, ChevronDown, ChevronRight,
   Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
-  Phone, Video, Shield
+  Phone, Video, Shield, ArrowLeft
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import CrossChainBridge from './CrossChainBridge';
 import useENSIntegration from '../../hooks/useENSIntegration';
 import { useChatHistory } from '@/hooks/useChatHistory';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import Web3SwipeGestureHandler from '@/components/Mobile/Web3SwipeGestureHandler';
+import { motion, PanInfo } from 'framer-motion';
 
 
 interface ChatChannel {
@@ -106,6 +109,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   onClose 
 }) => {
   const { address, isConnected } = useAccount();
+  const { isMobile, triggerHapticFeedback, touchTargetClasses } = useMobileOptimization();
   const { resolveName, resolvedNames, isLoading } = useENSIntegration();
   
   // Add typing timeout ref for channel messages
@@ -191,6 +195,9 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState([]);
+  
+  // Mobile swipe gesture state
+  const [swipeStates, setSwipeStates] = useState<Record<string, { x: number; opacity: number }>>({});
   
   // Add state for channel categories
   const [channelCategories, setChannelCategories] = useState<ChannelCategory[]>([
@@ -829,8 +836,8 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
   return (
     <div className={`flex h-full bg-gray-900 rounded-lg overflow-hidden ${className}`}>
-      {/* Channels Sidebar */}
-      <div className="w-60 border-r border-gray-700 flex flex-col bg-gray-800">
+      {/* Channels Sidebar - Hidden on mobile by default */}
+      <div className={`w-60 border-r border-gray-700 flex flex-col bg-gray-800 ${isMobile ? 'hidden md:block' : ''}`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-3">
@@ -1005,7 +1012,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
       {/* Cross-Chain Bridge Panel */}
       {showCrossChainBridge && (
-        <div className="w-80 border-r border-gray-700 bg-gray-800">
+        <div className={`w-80 border-r border-gray-700 bg-gray-800 ${isMobile ? 'hidden lg:block' : ''}`}>
           <CrossChainBridge 
             className="h-full"
             onBridgeMessage={(message) => {
@@ -1023,27 +1030,35 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         {/* Channel Header */}
         {!isViewingDM && selectedChannel && (
           <div className="border-b border-gray-700 p-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white flex items-center">
-                {channels.find(c => c.id === selectedChannel)?.icon && 
-                  <span className="mr-2">{channels.find(c => c.id === selectedChannel)?.icon}</span>}
-                <Hash size={24} className="mr-2 text-gray-400" />
-                {channels.find(c => c.id === selectedChannel)?.name}
-              </h2>
-              <p className="text-sm text-gray-400">
-                {channels.find(c => c.id === selectedChannel)?.topic}
-              </p>
+            <div className="flex items-center">
+              <button 
+                onClick={onClose}
+                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-400 hover:text-white`}
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center">
+                  {channels.find(c => c.id === selectedChannel)?.icon && 
+                    <span className="mr-2">{channels.find(c => c.id === selectedChannel)?.icon}</span>}
+                  <Hash size={24} className="mr-2 text-gray-400" />
+                  {channels.find(c => c.id === selectedChannel)?.name}
+                </h2>
+                <p className="text-sm text-gray-400 hidden sm:block">
+                  {channels.find(c => c.id === selectedChannel)?.topic}
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="flex items-center text-sm text-gray-400">
+              <div className="flex items-center text-sm text-gray-400 hidden sm:flex">
                 <Users size={16} className="mr-1" />
                 {channels.find(c => c.id === selectedChannel)?.memberCount}
               </div>
               
-              {/* Cross-Chain Bridge Toggle */}
+              {/* Cross-Chain Bridge Toggle - Hidden on mobile */}
               <button
                 onClick={() => setShowCrossChainBridge(!showCrossChainBridge)}
-                className={`flex items-center px-3 py-1 rounded text-sm ${
+                className={`flex items-center px-3 py-1 rounded text-sm hidden sm:flex ${
                   showCrossChainBridge 
                     ? 'bg-blue-600 text-white' 
                     : 'bg-gray-700 text-gray-400 hover:text-white'
@@ -1060,6 +1075,12 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         {isViewingDM && selectedDM && (
           <div className="border-b border-gray-700 p-4 flex items-center justify-between">
             <div className="flex items-center">
+              <button 
+                onClick={onClose}
+                className={`md:hidden mr-2 ${touchTargetClasses} text-gray-400 hover:text-white`}
+              >
+                <ArrowLeft size={20} />
+              </button>
               <div className="relative">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
                   <User size={20} className="text-white" />
@@ -1074,7 +1095,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                   {dmConversations.find(dm => dm.id === selectedDM)?.participantEnsName || 
                    `${dmConversations.find(dm => dm.id === selectedDM)?.participant.slice(0, 6)}...${dmConversations.find(dm => dm.id === selectedDM)?.participant.slice(-4)}`}
                 </h2>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 hidden sm:block">
                   {dmConversations.find(dm => dm.id === selectedDM)?.isOnline 
                     ? 'Online' 
                     : `Last seen ${dmConversations.find(dm => dm.id === selectedDM)?.lastSeen?.toLocaleTimeString()}`}
@@ -1082,18 +1103,18 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {/* Voice/Video Call Buttons */}
-              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2">
+              {/* Voice/Video Call Buttons - Hidden on mobile */}
+              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 hidden sm:block">
                 <Phone size={16} />
               </button>
-              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2">
+              <button className="bg-gray-700 hover:bg-gray-600 text-white rounded-full p-2 hidden sm:block">
                 <Video size={16} />
               </button>
               
               {/* Encryption Indicator */}
               <div className="flex items-center space-x-1 text-xs text-green-400">
                 <Shield size={14} />
-                <span>Encrypted</span>
+                <span className="hidden sm:inline">Encrypted</span>
               </div>
             </div>
           </div>
@@ -1109,7 +1130,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
               </div>
               <button 
                 onClick={() => setReplyingTo(null)}
-                className="text-gray-400 hover:text-white"
+                className={`${touchTargetClasses} text-gray-400 hover:text-white`}
               >
                 <X size={16} />
               </button>
@@ -1118,11 +1139,21 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
           
           <div className="space-y-4">
             {messages.map(message => (
-              <div 
-                key={message.id} 
-                className="hover:bg-gray-750 p-2 rounded"
-                id={`message-${message.id}`}
+              <Web3SwipeGestureHandler
+                key={message.id}
+                postId={message.id}
+                onUpvote={() => addReaction(message.id, '👍')}
+                onSave={() => console.log('Save message:', message.id)}
+                onTip={() => console.log('Tip message:', message.id)}
+                onStake={() => console.log('Stake on message:', message.id)}
+                walletConnected={isConnected}
+                userBalance={0}
+                className=""
               >
+                <div 
+                  className="hover:bg-gray-750 p-2 rounded"
+                  id={`message-${message.id}`}
+                >
                 <div className="flex">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 flex-shrink-0">
                     <User size={20} className="text-white" />
@@ -1264,7 +1295,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                         
                         {/* Reaction picker button */}
                         <button
-                          className="w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white"
+                          className={`w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white ${touchTargetClasses}`}
                           onClick={() => toggleReactionPicker(message.id)}
                         >
                           <span>+</span>
@@ -1277,7 +1308,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                               {['👍', '❤️', '😂', '😮', '🔥', '🚀', '👏', '🎉'].map(emoji => (
                                 <button
                                   key={emoji}
-                                  className="w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-lg"
+                                  className={`w-8 h-8 rounded hover:bg-gray-700 flex items-center justify-center text-lg ${touchTargetClasses}`}
                                   onClick={() => {
                                     addReaction(message.id, emoji);
                                     setShowReactionPicker({ messageId: '', show: false });
@@ -1327,14 +1358,14 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                     {/* Message actions */}
                     <div className="flex mt-1 space-x-3 text-xs text-gray-400">
                       <button 
-                        className="hover:text-white"
+                        className={`hover:text-white ${touchTargetClasses}`}
                         onClick={() => replyToMessage(message.id, message.fromAddress === address ? 'You' : message.fromAddress.slice(0, 6) + '...' + message.fromAddress.slice(-4))}
                       >
                         Reply
                       </button>
                       {message.threadReplies && message.threadReplies.length > 0 && (
                         <button 
-                          className="hover:text-white flex items-center"
+                          className={`hover:text-white flex items-center ${touchTargetClasses}`}
                           onClick={() => openThread(message.id)}
                         >
                           <span>Thread</span>
@@ -1347,6 +1378,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                   </div>
                 </div>
               </div>
+            </Web3SwipeGestureHandler>
             ))}
             <div ref={messagesEndRef} />
           </div>
@@ -1355,12 +1387,12 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         {/* Thread View Overlay */}
         {showThread.show && (
           <div className="absolute inset-0 bg-black/70 z-20 flex">
-            <div className="ml-auto w-2/3 h-full bg-gray-800 border-l border-gray-700 flex flex-col">
+            <div className={`ml-auto w-full md:w-2/3 h-full bg-gray-800 border-l border-gray-700 flex flex-col ${isMobile ? 'w-full' : ''}`}>
               <div className="p-4 border-b border-gray-700 flex items-center justify-between">
                 <h3 className="font-semibold text-white">Thread</h3>
                 <button 
                   onClick={closeThread}
-                  className="text-gray-400 hover:text-white"
+                  className={`${touchTargetClasses} text-gray-400 hover:text-white`}
                 >
                   <X size={20} />
                 </button>
@@ -1410,7 +1442,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                       }
                     }}
                   />
-                  <button className="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2">
+                  <button className={`ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2 ${touchTargetClasses}`}>
                     <Send size={16} />
                   </button>
                 </div>
@@ -1438,13 +1470,13 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
               <div className="flex space-x-2">
                 <button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded"
+                  className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                   onClick={() => selectedChannel && inviteLinks[selectedChannel] && copyInviteLink(inviteLinks[selectedChannel])}
                 >
                   Copy Link
                 </button>
                 <button
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded"
+                  className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                   onClick={() => setShowInviteModal(false)}
                 >
                   Close
@@ -1464,7 +1496,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
               <div className="space-y-3">
                 <button
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-3 rounded flex items-center justify-center"
+                  className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
                   onClick={() => setAttachmentType('nft')}
                 >
                   <Image size={16} className="mr-2" />
@@ -1472,7 +1504,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 </button>
 
                 <button
-                  className="w-full bg-green-600 hover:bg-green-700 text-white text-sm py-3 rounded flex items-center justify-center"
+                  className={`w-full bg-green-600 hover:bg-green-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
                   onClick={() => setAttachmentType('transaction')}
                 >
                   <Wallet size={16} className="mr-2" />
@@ -1480,7 +1512,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 </button>
 
                 <button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded flex items-center justify-center"
+                  className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Image size={16} className="mr-2" />
@@ -1488,7 +1520,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 </button>
 
                 <button
-                  className="w-full bg-gray-600 hover:bg-gray-500 text-white text-sm py-3 rounded flex items-center justify-center"
+                  className={`w-full bg-gray-600 hover:bg-gray-500 text-white text-sm py-3 rounded flex items-center justify-center ${touchTargetClasses}`}
                   onClick={() => setAttachmentType('file')}
                 >
                   <LinkIcon size={16} className="mr-2" />
@@ -1498,7 +1530,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
 
               <div className="flex space-x-2 mt-6">
                 <button
-                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded"
+                  className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                   onClick={() => setShowAttachmentModal(false)}
                 >
                   Cancel
@@ -1526,7 +1558,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                       className="w-full bg-gray-700 text-white text-sm rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <button
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded"
+                      className={`w-full bg-purple-600 hover:bg-purple-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                       onClick={() => selectedChannel && shareNFT('0x...', '1234', '0.5')}
                     >
                       Share NFT
@@ -1552,7 +1584,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                       <option value="pending">Pending</option>
                     </select>
                     <button
-                      className="w-full bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded"
+                      className={`w-full bg-green-600 hover:bg-green-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                       onClick={() => selectedChannel && shareTransaction('0x123...abc', 'success')}
                     >
                       Share Transaction
@@ -1591,7 +1623,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
                 {getMentionSuggestions(mentionQuery).map((user, index) => (
                   <button
                     key={user.address}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center space-x-2"
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-700 flex items-center space-x-2 ${touchTargetClasses}`}
                     onClick={() => insertMention(user)}
                   >
                     <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
@@ -1611,7 +1643,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
             <button
               onClick={sendChannelMessage}
               disabled={!newMessage.trim()}
-              className="ml-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg p-3"
+              className={`ml-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg p-3 ${touchTargetClasses}`}
             >
               <Send size={20} />
             </button>
@@ -1622,11 +1654,11 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
               <span className="mr-4">/ for commands</span>
             </div>
             <button
-              className="flex items-center text-xs text-gray-400 hover:text-white"
+              className={`flex items-center text-xs text-gray-400 hover:text-white ${touchTargetClasses}`}
               onClick={() => setShowAttachmentModal(true)}
             >
               <Image size={14} className="mr-1" />
-              Attach
+              <span className="hidden sm:inline">Attach</span>
             </button>
           </div>
         </div>
@@ -1637,7 +1669,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h3 className="font-semibold text-white">Members</h3>
           <button 
-            className="text-gray-400 hover:text-white"
+            className={`text-gray-400 hover:text-white ${touchTargetClasses}`}
             onClick={() => setShowChannelSettings(!showChannelSettings)}
           >
             <Settings size={16} />
@@ -1719,7 +1751,7 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
               {selectedChannel && channels.find(c => c.id === selectedChannel)?.isPrivate && (
                 <div className="space-y-2">
                   <button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded"
+                    className={`w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                     onClick={() => {
                       if (selectedChannel) {
                         generateInviteLink(selectedChannel);
@@ -1772,27 +1804,27 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
             <div className="mb-4">
               <h5 className="text-xs text-gray-400 uppercase mb-2">Channel Actions</h5>
               <div className="space-y-1">
-                <button className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded">
+                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Invite Members
                 </button>
-                <button className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded">
+                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Channel Permissions
                 </button>
-                <button className="w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded">
+                <button className={`w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Manage Members
                 </button>
-                <button className="w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded">
+                <button className={`w-full bg-red-600 hover:bg-red-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                   Delete Channel
                 </button>
               </div>
             </div>
 
             <div className="flex space-x-2">
-              <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded">
+              <button className={`flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm py-2 rounded ${touchTargetClasses}`}>
                 Save Changes
               </button>
               <button
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded"
+                className={`flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm py-2 rounded ${touchTargetClasses}`}
                 onClick={() => setShowChannelSettings(false)}
               >
                 Cancel

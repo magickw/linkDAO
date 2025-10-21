@@ -45,13 +45,13 @@ export function usePaginatedData<T>({
 
   const queryClient = useQueryClient();
   
-  const { data, isLoading, isFetching, error, refetch, ...rest } = useQuery<PaginatedResponse<T>>({
+  const { data, isLoading, isFetching, error, refetch, ...rest } = useQuery({
     queryKey: [...queryKey, pagination],
     queryFn: () => queryFn(pagination),
     enabled: autoFetch,
     placeholderData: (previousData) => previousData,
     ...options,
-  });
+  } as UseQueryOptions<PaginatedResponse<T>>);
 
   const setPage = useCallback((page: number) => {
     setPagination(prev => ({

@@ -1,18 +1,24 @@
 /**
- * Checkout Page - Placeholder for checkout process
+ * Checkout Page - Complete checkout process with Web3 and traditional payment integration
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { ArrowLeft, CreditCard, Wallet } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import Layout from '@/components/Layout';
+import CheckoutFlow from '@/components/Checkout/CheckoutFlow';
+import OrderTracking from '@/components/Checkout/OrderTracking';
+
+type CheckoutView = 'checkout' | 'tracking';
 
 const CheckoutPage: React.FC = () => {
   const router = useRouter();
   const { state } = useCart();
+  const [currentView, setCurrentView] = useState<CheckoutView>('checkout');
+  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
 
   const handleBackToCart = () => {
     router.push('/marketplace/cart');
@@ -22,7 +28,18 @@ const CheckoutPage: React.FC = () => {
     router.push('/marketplace');
   };
 
-  if (state.items.length === 0) {
+  const handleCheckoutComplete = (orderId: string) => {
+    setCompletedOrderId(orderId);
+    setCurrentView('tracking');
+  };
+
+  const handleBackToCheckout = () => {
+    setCurrentView('checkout');
+    setCompletedOrderId(null);
+  };
+
+  // Empty cart state
+  if (state.items.length === 0 && currentView === 'checkout') {
     return (
       <Layout title="Checkout - LinkDAO Marketplace">
         <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
@@ -46,85 +63,17 @@ const CheckoutPage: React.FC = () => {
   return (
     <Layout title="Checkout - LinkDAO Marketplace">
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Button
-              variant="ghost"
-              onClick={handleBackToCart}
-              className="flex items-center gap-2 text-white/70 hover:text-white"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Cart
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white">Checkout</h1>
-              <p className="text-white/70">
-                Complete your purchase securely with escrow protection
-              </p>
-            </div>
-          </div>
-
-          <GlassPanel variant="secondary" className="p-8 text-center">
-            <Wallet className="mx-auto h-16 w-16 text-white/60 mb-6" />
-            <h2 className="text-2xl font-bold text-white mb-4">Checkout Coming Soon</h2>
-            <p className="text-white/70 mb-8 max-w-2xl mx-auto">
-              The checkout process is currently under development. This will include:
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-left">
-              <div className="space-y-3">
-                <h3 className="font-semibold text-white">Payment Options</h3>
-                <ul className="space-y-2 text-white/70 text-sm">
-                  <li>• Cryptocurrency payments (ETH, USDC)</li>
-                  <li>• Credit card integration</li>
-                  <li>• Wallet-to-wallet transfers</li>
-                  <li>• Multi-signature escrow</li>
-                </ul>
-              </div>
-              
-              <div className="space-y-3">
-                <h3 className="font-semibold text-white">Security Features</h3>
-                <ul className="space-y-2 text-white/70 text-sm">
-                  <li>• Smart contract escrow</li>
-                  <li>• DAO dispute resolution</li>
-                  <li>• On-chain transaction verification</li>
-                  <li>• Automated refund protection</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="flex gap-4 justify-center">
-              <Button variant="outline" onClick={handleBackToCart}>
-                Back to Cart
-              </Button>
-              <Button variant="primary" onClick={handleBackToMarketplace}>
-                Continue Shopping
-              </Button>
-            </div>
-          </GlassPanel>
-
-          {/* Order Summary */}
-          <GlassPanel variant="secondary" className="p-6 mt-8">
-            <h3 className="text-lg font-semibold text-white mb-4">Order Summary</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-white/70">
-                <span>Items ({state.totals.itemCount})</span>
-                <span>{state.totals.subtotal.crypto} {state.totals.subtotal.cryptoSymbol}</span>
-              </div>
-              {parseFloat(state.totals.shipping.crypto) > 0 && (
-                <div className="flex justify-between text-white/70">
-                  <span>Shipping</span>
-                  <span>{state.totals.shipping.crypto} {state.totals.shipping.cryptoSymbol}</span>
-                </div>
-              )}
-              <hr className="border-white/20" />
-              <div className="flex justify-between text-white font-semibold">
-                <span>Total</span>
-                <span>{state.totals.total.crypto} {state.totals.total.cryptoSymbol}</span>
-              </div>
-            </div>
-          </GlassPanel>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {currentView === 'checkout' ? (
+            <CheckoutFlow
+              onBack={handleBackToCart}
+              onComplete={handleCheckoutComplete}
+            />
+          ) : (
+            completedOrderId && (
+              <OrderTracking orderId={completedOrderId} />
+            )
+          )}
         </div>
       </div>
     </Layout>
