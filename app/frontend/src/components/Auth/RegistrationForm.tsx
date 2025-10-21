@@ -100,7 +100,8 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({
       }
     } catch (error: any) {
       console.error('Registration failed:', error);
-      onError?.(error.message || 'Registration failed');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      onError?.(errorMessage || 'Registration failed');
     } finally {
       setIsSubmitting(false);
     }

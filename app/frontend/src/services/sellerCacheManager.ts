@@ -251,7 +251,9 @@ export class SellerCacheManager {
       if (config.rollbackFn && currentData) {
         const rollbackData = config.rollbackFn(optimisticData, error);
         this.queryClient.setQueryData(queryKey, rollbackData);
-        config.onError?.(error, rollbackData);
+        // Type guard to ensure error is an Error instance
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        config.onError?.(errorObj, rollbackData);
       } else {
         // Invalidate to refetch fresh data
         await this.queryClient.invalidateQueries({ queryKey });

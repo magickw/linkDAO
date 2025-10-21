@@ -130,7 +130,9 @@ export const IntelligentLazyLoader = memo(function IntelligentLazyLoader({
           loadContent();
         }, delay);
       } else {
-        onError?.(error);
+        // Type guard to ensure error is an Error instance
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        onError?.(errorObj);
       }
     }
   }, [hasLoaded, isLoading, retryCount, priority, finalConfig, onLoad, onError]);

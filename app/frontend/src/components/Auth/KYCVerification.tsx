@@ -73,7 +73,8 @@ export const KYCVerification: React.FC<KYCVerificationProps> = ({
       }
     } catch (error: any) {
       console.error('KYC initiation failed:', error);
-      onError?.(error.message || 'KYC initiation failed');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      onError?.(errorMessage || 'KYC initiation failed');
     } finally {
       setIsSubmitting(false);
     }

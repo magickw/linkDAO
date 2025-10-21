@@ -49,7 +49,9 @@ export function useCrudOperations<T extends Entity>({
       if (context?.previousItems) {
         queryClient.setQueryData(queryKey, context.previousItems);
       }
-      onError?.(error, 'create', newItem);
+      // Type guard to ensure error is an Error instance
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      onError?.(errorObj, 'create', newItem);
     },
     onSuccess: (data) => {
       // Invalidate and refetch
@@ -80,7 +82,9 @@ export function useCrudOperations<T extends Entity>({
       if (context?.previousItems) {
         queryClient.setQueryData(queryKey, context.previousItems);
       }
-      onError?.(error, 'update', variables);
+      // Type guard to ensure error is an Error instance
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      onError?.(errorObj, 'update', variables);
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey });
@@ -106,7 +110,9 @@ export function useCrudOperations<T extends Entity>({
       if (context?.previousItems) {
         queryClient.setQueryData(queryKey, context.previousItems);
       }
-      onError?.(error, 'delete', { id });
+      // Type guard to ensure error is an Error instance
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      onError?.(errorObj, 'delete', { id });
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey });

@@ -321,7 +321,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       hasError: true,
       error
     });
-    onError?.(error);
+    // Type guard to ensure error is an Error instance
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    onError?.(errorObj);
   }, [onError]);
 
   // Render placeholder

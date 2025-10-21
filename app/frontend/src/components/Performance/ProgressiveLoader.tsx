@@ -76,7 +76,9 @@ export function ProgressiveLoader({
         phase: 'error', 
         error 
       }));
-      onError?.(error);
+      // Type guard to ensure error is an Error instance
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      onError?.(errorObj);
     }, timeout);
 
   }, [timeout, onLoad, onError]);

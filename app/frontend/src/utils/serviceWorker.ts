@@ -55,7 +55,9 @@ class ServiceWorkerManager {
       return registration;
     } catch (error) {
       console.error('Service Worker registration failed:', error);
-      this.config.onError?.(error as Error);
+      // Type guard to ensure error is an Error instance
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      this.config.onError?.(errorObj);
       return null;
     }
   }

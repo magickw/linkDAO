@@ -157,7 +157,8 @@ export const SmartContractInteractionButton: React.FC<SmartContractInteractionBu
         setInputValues({});
       }
     } catch (error) {
-      const errorMessage = web3ErrorHandler.handleError(error as Error, {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = web3ErrorHandler.handleError(errorObj, {
         action: 'executeContract',
         component: 'SmartContractInteractionButton'
       }).message;
