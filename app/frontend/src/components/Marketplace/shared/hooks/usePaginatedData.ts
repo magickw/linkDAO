@@ -49,7 +49,7 @@ export function usePaginatedData<T>({
     queryKey: [...queryKey, pagination],
     queryFn: () => queryFn(pagination),
     enabled: autoFetch,
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previousData: PaginatedResponse<T> | undefined) => previousData,
     ...options,
   } as UseQueryOptions<PaginatedResponse<T>>);
 

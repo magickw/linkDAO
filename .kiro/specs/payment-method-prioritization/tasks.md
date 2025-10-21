@@ -25,7 +25,7 @@
     - Add currency conversion utilities for fiat display
     - _Requirements: 2.4, 4.4_
 
-- [x] 3. Build network availability and compatibility system
+- [ ] 3. Build network availability and compatibility system
   - [x] 3.1 Create supported tokens registry
     - Define network-specific token configurations
     - Implement token availability checking by network
@@ -76,7 +76,7 @@
     - Create stablecoin availability fallback chain
     - _Requirements: 1.1, 1.2, 1.4, 1.5_
 
-- [ ] 6. Build payment method selector UI components
+- [-] 6. Build payment method selector UI components
   - [ ] 6.1 Create prioritized payment method display
     - Design payment method cards with priority ordering
     - Add cost estimates and recommendation reasons
@@ -95,20 +95,20 @@
     - Display recommendation reasons and cost savings
     - _Requirements: 5.4, 5.5_
 
-- [ ] 7. Add error handling and fallback mechanisms
-  - [ ] 7.1 Implement gas fee threshold handling
+- [-] 7. Add error handling and fallback mechanisms
+  - [x] 7.1 Implement gas fee threshold handling
     - Add high gas fee warnings and alternatives
     - Create cost-based payment method suggestions
     - Implement user confirmation for expensive transactions
     - _Requirements: 3.2, 3.3, 4.2_
   
-  - [ ] 7.2 Build network unavailability handling
+  - [x] 7.2 Build network unavailability handling
     - Add network switching suggestions for unavailable methods
     - Implement graceful fallbacks to supported networks
     - Create user-friendly error messages and guidance
     - _Requirements: 6.3, 6.4_
   
-  - [ ] 7.3 Create payment method unavailability handling
+  - [-] 7.3 Create payment method unavailability handling
     - Handle insufficient balance scenarios
     - Provide alternative payment method suggestions
     - Add retry mechanisms for temporary failures

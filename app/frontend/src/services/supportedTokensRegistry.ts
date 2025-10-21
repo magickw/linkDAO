@@ -318,7 +318,7 @@ export class SupportedTokensRegistry {
   public getNetworksForToken(token: PaymentToken): number[] {
     const networks: number[] = [];
     
-    for (const [chainId, config] of this.networkConfigCache) {
+    this.networkConfigCache.forEach((config, chainId) => {
       const hasToken = config.tokens.some(t => 
         t.token.symbol === token.symbol &&
         (token.isNative || t.token.address.toLowerCase() === token.address.toLowerCase())
@@ -327,7 +327,7 @@ export class SupportedTokensRegistry {
       if (hasToken) {
         networks.push(chainId);
       }
-    }
+    });
     
     return networks;
   }
@@ -423,9 +423,9 @@ export class SupportedTokensRegistry {
   public getTokenCompatibilityMatrix(): Record<number, string[]> {
     const matrix: Record<number, string[]> = {};
     
-    for (const [chainId, config] of this.networkConfigCache) {
+    this.networkConfigCache.forEach((config, chainId) => {
       matrix[chainId] = config.tokens.map(t => t.token.symbol);
-    }
+    });
     
     return matrix;
   }
