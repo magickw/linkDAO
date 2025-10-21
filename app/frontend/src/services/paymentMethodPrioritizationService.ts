@@ -21,6 +21,9 @@ import {
   PrioritizationWarning,
   CostComparison
 } from '../types/paymentPrioritization';
+import PaymentMethodScoringSystem from './paymentMethodScoringSystem';
+import DynamicPrioritizationEngine from './dynamicPrioritizationEngine';
+import StablecoinPrioritizationRules from './stablecoinPrioritizationRules';
 
 export interface IPaymentMethodPrioritizationService {
   prioritizePaymentMethods(context: PrioritizationContext): Promise<PrioritizationResult>;
@@ -82,6 +85,9 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
   private costCalculator: ICostEffectivenessCalculator;
   private networkChecker: INetworkAvailabilityChecker;
   private preferenceManager: IUserPreferenceManager;
+  private scoringSystem: PaymentMethodScoringSystem;
+  private dynamicEngine: DynamicPrioritizationEngine;
+  private stablecoinRules: StablecoinPrioritizationRules;
 
   constructor(
     costCalculator: ICostEffectivenessCalculator,
@@ -93,34 +99,42 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     this.costCalculator = costCalculator;
     this.networkChecker = networkChecker;
     this.preferenceManager = preferenceManager;
+    
+    // Initialize new core components
+    this.scoringSystem = new PaymentMethodScoringSystem(this.configs);
+    this.dynamicEngine = new DynamicPrioritizationEngine(this.scoringSystem, this.costCalculator);
+    this.stablecoinRules = new StablecoinPrioritizationRules();
   }
 
   async prioritizePaymentMethods(context: PrioritizationContext): Promise<PrioritizationResult> {
     const startTime = Date.now();
     
     try {
-      // Filter available methods for current network
-      const availableMethods = await this.filterAvailableMethods(
-        context.availablePaymentMethods,
-        context.userContext.chainId
-      );
-
-      // Calculate costs for all methods
-      const methodsWithCosts = await this.calculateCostsForMethods(
-        availableMethods,
-        context.transactionAmount,
-        context.marketConditions
-      );
-
-      // Score and prioritize methods
-      const prioritizedMethods = await this.scoreAndPrioritizeMethods(
-        methodsWithCosts,
+      // Use the new dynamic prioritization engine
+      const dynamicResult = await this.dynamicEngine.performDynamicPrioritization(context);
+      
+      // Apply stablecoin prioritization rules
+      const stablecoinResult = this.stablecoinRules.applyStablecoinPrioritization(
+        dynamicResult.prioritizedMethods,
         context
       );
 
-      // Generate recommendations and warnings
-      const recommendations = this.generateRecommendations(prioritizedMethods, context);
-      const warnings = this.generateWarnings(prioritizedMethods, context);
+      // Use the enhanced prioritized methods
+      const prioritizedMethods = stablecoinResult.prioritizedStablecoins.length > 0 
+        ? this.mergeStablecoinResults(dynamicResult.prioritizedMethods, stablecoinResult)
+        : dynamicResult.prioritizedMethods;
+
+      // Generate enhanced recommendations and warnings
+      const recommendations = this.generateEnhancedRecommendations(
+        prioritizedMethods, 
+        context, 
+        stablecoinResult
+      );
+      const warnings = this.generateEnhancedWarnings(
+        prioritizedMethods, 
+        context, 
+        dynamicResult
+      );
 
       // Select default method
       const defaultMethod = this.getDefaultPaymentMethod(prioritizedMethods);
@@ -134,7 +148,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
         warnings,
         metadata: {
           calculatedAt: new Date(),
-          totalMethodsEvaluated: availableMethods.length,
+          totalMethodsEvaluated: context.availablePaymentMethods.length,
           averageConfidence: this.calculateAverageConfidence(prioritizedMethods),
           processingTimeMs: processingTime
         }
@@ -149,36 +163,8 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     currentMethods: PrioritizedPaymentMethod[],
     marketConditions: MarketConditions
   ): Promise<PrioritizedPaymentMethod[]> {
-    // Update cost estimates based on new market conditions
-    const updatedMethods = await Promise.all(
-      currentMethods.map(async (prioritizedMethod) => {
-        const networkCondition = marketConditions.gasConditions.find(
-          gc => gc.chainId === prioritizedMethod.method.chainId
-        );
-
-        if (networkCondition) {
-          const updatedCostEstimate = await this.costCalculator.calculateTransactionCost(
-            prioritizedMethod.method,
-            prioritizedMethod.costEstimate.baseCost,
-            networkCondition
-          );
-
-          return {
-            ...prioritizedMethod,
-            costEstimate: updatedCostEstimate,
-            availabilityStatus: this.determineAvailabilityStatus(
-              prioritizedMethod.method,
-              updatedCostEstimate
-            )
-          };
-        }
-
-        return prioritizedMethod;
-      })
-    );
-
-    // Re-sort based on updated scores
-    return this.resortByPriority(updatedMethods);
+    // Use the dynamic engine for real-time updates
+    return await this.dynamicEngine.updatePrioritization(currentMethods, marketConditions);
   }
 
   getDefaultPaymentMethod(prioritizedMethods: PrioritizedPaymentMethod[]): PrioritizedPaymentMethod | null {
@@ -205,27 +191,14 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     context: PrioritizationContext,
     costEstimate: CostEstimate
   ): Promise<number> {
-    const config = this.configs[method.type];
-    if (!config) {
-      throw new Error(`No configuration found for payment method type: ${method.type}`);
-    }
-
-    // Calculate individual scores
-    const costScore = this.calculateCostScore(costEstimate, context.transactionAmount);
-    const preferenceScore = this.preferenceManager.calculatePreferenceScore(
+    // Use the new scoring system
+    const scoringComponents = await this.scoringSystem.calculateMethodScore(
       method,
-      context.userContext.preferences
+      context,
+      costEstimate
     );
-    const availabilityScore = this.calculateAvailabilityScore(method, context);
-
-    // Apply weighted scoring
-    const totalScore = 
-      (config.basePriority * 0.1) + // Base priority has lower weight
-      (costScore * config.costWeight) +
-      (preferenceScore * config.preferenceWeight) +
-      (availabilityScore * config.availabilityWeight);
-
-    return Math.max(0, Math.min(1, totalScore)); // Normalize to 0-1 range
+    
+    return scoringComponents.totalScore;
   }
 
   private async filterAvailableMethods(
@@ -501,12 +474,83 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
       }));
   }
 
+  // Enhanced helper methods for new functionality
+  private mergeStablecoinResults(
+    allMethods: PrioritizedPaymentMethod[],
+    stablecoinResult: any
+  ): PrioritizedPaymentMethod[] {
+    // Merge stablecoin-enhanced methods back into the full list
+    const stablecoinMap = new Map<string, PrioritizedPaymentMethod>(
+      stablecoinResult.prioritizedStablecoins.map((m: PrioritizedPaymentMethod) => [m.method.id, m])
+    );
+
+    const mergedMethods: PrioritizedPaymentMethod[] = allMethods.map(method => {
+      const enhanced = stablecoinMap.get(method.method.id);
+      return enhanced || method;
+    });
+
+    return mergedMethods
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .map((method, index) => ({ ...method, priority: index + 1 }));
+  }
+
+  private generateEnhancedRecommendations(
+    prioritizedMethods: PrioritizedPaymentMethod[],
+    context: PrioritizationContext,
+    stablecoinResult: any
+  ): PrioritizationRecommendation[] {
+    const recommendations = this.generateRecommendations(prioritizedMethods, context);
+    
+    // Add stablecoin-specific recommendations
+    if (stablecoinResult.usdcFirstApplied) {
+      recommendations.unshift({
+        type: 'convenience',
+        message: 'USDC prioritized for stable value and predictable costs',
+        suggestedMethod: PaymentMethodType.STABLECOIN_USDC
+      });
+    }
+
+    if (stablecoinResult.fallbacksActivated.length > 0) {
+      recommendations.push({
+        type: 'convenience',
+        message: 'Stablecoin fallback activated - consider alternative networks',
+        suggestedMethod: PaymentMethodType.FIAT_STRIPE
+      });
+    }
+
+    return recommendations;
+  }
+
+  private generateEnhancedWarnings(
+    prioritizedMethods: PrioritizedPaymentMethod[],
+    context: PrioritizationContext,
+    dynamicResult: any
+  ): PrioritizationWarning[] {
+    const warnings = this.generateWarnings(prioritizedMethods, context);
+    
+    // Add dynamic prioritization warnings
+    if (dynamicResult.marketConditionsChanged) {
+      warnings.push({
+        type: 'network_congestion',
+        message: 'Market conditions changed - prioritization updated in real-time',
+        affectedMethods: prioritizedMethods.map(m => m.method.type),
+        severity: 'low',
+        actionRequired: 'Review updated payment method order'
+      });
+    }
+
+    return warnings;
+  }
+
   // Configuration management methods
   updateMethodConfig(methodType: PaymentMethodType, config: Partial<PaymentMethodConfig>): void {
     this.configs[methodType] = {
       ...this.configs[methodType],
       ...config
     };
+    
+    // Update scoring system configuration
+    this.scoringSystem.updateMethodConfig(methodType, this.configs[methodType]);
   }
 
   getMethodConfig(methodType: PaymentMethodType): PaymentMethodConfig {
@@ -515,6 +559,19 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
 
   getAllConfigs(): Record<PaymentMethodType, PaymentMethodConfig> {
     return { ...this.configs };
+  }
+
+  // Access to new components for advanced usage
+  getScoringSystem(): PaymentMethodScoringSystem {
+    return this.scoringSystem;
+  }
+
+  getDynamicEngine(): DynamicPrioritizationEngine {
+    return this.dynamicEngine;
+  }
+
+  getStablecoinRules(): StablecoinPrioritizationRules {
+    return this.stablecoinRules;
   }
 }
 
