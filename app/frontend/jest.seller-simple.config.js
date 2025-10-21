@@ -64,7 +64,6 @@ const customJestConfig = {
   // Coverage configuration
   collectCoverageFrom: [
     'src/components/Marketplace/Seller/**/*.{ts,tsx}',
-    'src/components/Seller/**/*.{ts,tsx}',
     'src/services/seller*.{ts,tsx}',
     'src/hooks/useSeller*.{ts,tsx}',
     '!src/**/*.d.ts',

@@ -80,7 +80,7 @@ Seller Image Routes
 ### Basic Usage
 
 ```tsx
-import { UnifiedImageUpload } from '../components/Seller/ImageUpload/UnifiedImageUpload';
+import { UnifiedImageUpload } from '../components/Marketplace/Seller';
 
 // Profile image upload
 <UnifiedImageUpload

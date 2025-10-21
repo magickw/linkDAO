@@ -1,8 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryProvider } from '@tanstack/react-query';
-import { SellerPerformanceDashboard } from '../../../components/Seller/Performance/SellerPerformanceDashboard';
-import { PerformanceRegressionTester } from '../../../components/Seller/Performance/PerformanceRegressionTester';
+import { SellerPerformanceDashboard, PerformanceRegressionTester } from '../../../components/Marketplace/Seller';
 import { useSellerPerformanceMonitoring } from '../../../hooks/useSellerPerformanceMonitoring';
 
 // Mock the performance monitoring service

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import { SellerPerformanceDashboard } from '../components/Seller/Performance/SellerPerformanceDashboard';
-import { PerformanceRegressionTester } from '../components/Seller/Performance/PerformanceRegressionTester';
+import { SellerPerformanceDashboard, PerformanceRegressionTester } from '../components/Marketplace/Seller';
 import { useSellerPerformanceMonitoring } from '../hooks/useSellerPerformanceMonitoring';
 import ErrorBoundary from '../components/ErrorBoundary';
 

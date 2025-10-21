@@ -3,7 +3,7 @@ import { SellerProfile } from '../../../../types/seller';
 import { UnifiedSellerProfile } from '../../../../types/unifiedSeller';
 import { Button } from '../../../../design-system';
 import { useToast } from '../../../../context/ToastContext';
-import { UnifiedImageUpload } from '../../../Seller/ImageUpload/UnifiedImageUpload';
+import { UnifiedImageUpload } from '../ImageUpload/UnifiedImageUpload';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;

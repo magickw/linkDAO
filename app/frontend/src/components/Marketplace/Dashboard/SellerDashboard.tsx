@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useUnifiedSellerDashboard, useUnifiedSeller, useSellerTiers, useUnifiedSellerListings } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
-import { MessagingAnalytics } from '../../Seller/MessagingAnalytics';
+import { MessagingAnalytics, withSellerErrorBoundary } from '../Seller';
 import { UnifiedSellerDashboard, UnifiedSellerProfile, UnifiedSellerListing } from '../../../types/unifiedSeller';
-import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 import { TierProvider } from '../../../contexts/TierContext';
-import TierAwareComponent from '../../Seller/TierSystem/TierAwareComponent';
-import TierProgressBar from '../../Seller/TierSystem/TierProgressBar';
+import { TierAwareComponent } from '../Seller';
+import { TierProgressBar } from '../Seller';
 import { TIER_ACTIONS } from '../../../types/sellerTier';
 
 interface SellerDashboardProps {
@@ -231,7 +230,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             <TierAwareComponent 
               requiredAction={TIER_ACTIONS.CREATE_LISTING}
               showUpgradePrompt={true}
-              fallbackComponent={({ tier, validation }) => (
+              fallbackComponent={({ tier, validation }: { tier: any; validation: any }) => (
                 <Button
                   onClick={() => {}}
                   variant="primary"
@@ -534,7 +533,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             <TierAwareComponent 
               requiredAction={TIER_ACTIONS.ACCESS_ANALYTICS}
               showUpgradePrompt={true}
-              fallbackComponent={({ tier, validation }) => (
+              fallbackComponent={({ tier, validation }: { tier: any; validation: any }) => (
                 <GlassPanel className="p-6 text-center">
                   <div className="py-8">
                     <div className="w-16 h-16 bg-gray-700 rounded-full mx-auto mb-4 flex items-center justify-center">

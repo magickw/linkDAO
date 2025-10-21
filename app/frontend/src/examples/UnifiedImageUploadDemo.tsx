@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { UnifiedImageUpload } from '../components/Seller/ImageUpload/UnifiedImageUpload';
+import { UnifiedImageUpload } from '../components/Marketplace/Seller';
 import { ImageUploadResult } from '../services/unifiedImageService';
 import { SellerError } from '../types/sellerError';
 

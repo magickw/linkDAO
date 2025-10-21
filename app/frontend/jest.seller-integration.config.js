@@ -32,7 +32,6 @@ const customJestConfig = {
   
   collectCoverageFrom: [
     'src/components/Marketplace/Seller/**/*.{ts,tsx}',
-    'src/components/Seller/**/*.{ts,tsx}',
     'src/services/seller*.{ts,tsx}',
     'src/services/unified*.{ts,tsx}',
     'src/hooks/useSeller*.{ts,tsx}',
@@ -117,7 +116,7 @@ const customJestConfig = {
     '^@/context/(.*)$': '<rootDir>/src/context/$1',
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@/contracts/(.*)$': '<rootDir>/src/types/typechain/$1',
-    '^@/seller/(.*)$': '<rootDir>/src/components/Seller/$1',
+    '^@/seller/(.*)$': '<rootDir>/src/components/Marketplace/Seller/$1',
     '^@/marketplace/(.*)$': '<rootDir>/src/components/Marketplace/$1',
     '^@/seller-services/(.*)$': '<rootDir>/src/services/seller$1',
     // Mock CSS and static files

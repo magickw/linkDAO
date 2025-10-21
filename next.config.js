@@ -6,10 +6,16 @@ const nextConfig = {
   swcMinify: true,
   trailingSlash: false,
   
+  // Fix output file tracing issues
+  outputFileTracingRoot: __dirname,
+  
   // Performance optimizations
   experimental: {
     optimizeCss: true,
     scrollRestoration: true,
+    outputFileTracingIncludes: {
+      '/': ['./app/frontend/**/*'],
+    },
   },
   
   // Compiler optimizations

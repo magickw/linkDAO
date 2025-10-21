@@ -4,10 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { jest } from '@jest/globals';
 
 // Import mobile-optimized seller components
-import { MobileSellerDashboard } from '../../../components/Seller/Mobile/MobileSellerDashboard';
-import { TouchOptimizedButton } from '../../../components/Seller/Mobile/TouchOptimizedButton';
-import { MobileOptimizedForm } from '../../../components/Seller/Mobile/MobileOptimizedForm';
-import { SwipeableSellerCard } from '../../../components/Seller/Mobile/SwipeableSellerCard';
+import { 
+  MobileSellerDashboard,
+  TouchOptimizedButton,
+  MobileOptimizedForm,
+  SwipeableSellerCard
+} from '../../../components/Marketplace/Seller';
 
 // Import hooks
 import { useMobileOptimization } from '../../../hooks/useMobileOptimization';

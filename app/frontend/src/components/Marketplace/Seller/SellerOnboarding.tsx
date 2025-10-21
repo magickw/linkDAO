@@ -3,9 +3,9 @@ import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
 import { useUnifiedSellerOnboarding, useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
-import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
+import { withSellerErrorBoundary } from './ErrorHandling';
 import { TierProvider } from '../../../contexts/TierContext';
-import TierAwareComponent from '../../Seller/TierSystem/TierAwareComponent';
+import TierAwareComponent from './TierSystem/TierAwareComponent';
 import { TIER_ACTIONS } from '../../../types/sellerTier';
 import { UnifiedSellerProfile } from '../../../types/unifiedSeller';
 

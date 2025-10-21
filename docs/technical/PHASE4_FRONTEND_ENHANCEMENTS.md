@@ -159,7 +159,7 @@ import { QuickReplyPanel } from '@/components/Messaging';
 ### Using MessagingAnalytics
 
 ```tsx
-import { MessagingAnalytics } from '@/components/Seller/MessagingAnalytics';
+import { MessagingAnalytics } from '@/components/Marketplace/Seller';
 
 <MessagingAnalytics />
 ```

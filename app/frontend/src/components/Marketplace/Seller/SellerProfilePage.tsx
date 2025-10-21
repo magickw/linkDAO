@@ -4,9 +4,9 @@ import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { useToast } from '@/context/ToastContext';
 import { sellerService } from '@/services/sellerService';
 import { useUnifiedSeller } from '@/hooks/useUnifiedSeller';
-import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
+import { withSellerErrorBoundary } from './ErrorHandling';
 import { TierProvider } from '../../../contexts/TierContext';
-import TierInfoCard from '../../Seller/TierSystem/TierInfoCard';
+import TierInfoCard from './TierSystem/TierInfoCard';
 import { useTier } from '../../../contexts/TierContext';
 import { UnifiedSellerProfile } from '@/types/unifiedSeller';
 
