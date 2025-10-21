@@ -194,13 +194,25 @@ const MobileSellerDemo: React.FC = () => {
             <div className="feature-section">
               <h4>Touch-Optimized Buttons</h4>
               <div className="button-demo">
-                <TouchOptimizedButton variant="primary" size="small">
+                <TouchOptimizedButton
+                  variant="primary"
+                  size="small"
+                  onClick={() => alert('Small button clicked')}
+                >
                   Small
                 </TouchOptimizedButton>
-                <TouchOptimizedButton variant="secondary" size="medium">
+                <TouchOptimizedButton
+                  variant="secondary"
+                  size="medium"
+                  onClick={() => alert('Medium button clicked')}
+                >
                   Medium
                 </TouchOptimizedButton>
-                <TouchOptimizedButton variant="outline" size="large">
+                <TouchOptimizedButton
+                  variant="outline"
+                  size="large"
+                  onClick={() => alert('Large button clicked')}
+                >
                   Large
                 </TouchOptimizedButton>
               </div>

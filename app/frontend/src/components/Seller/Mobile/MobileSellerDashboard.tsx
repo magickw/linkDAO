@@ -16,7 +16,7 @@ interface DashboardTab {
 
 const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAddress }) => {
   const { isMobile, shouldUseCompactLayout, getOptimalFontSize } = useMobileOptimization();
-  const { profile, listings, dashboard, isLoading } = useSellerState(walletAddress);
+  const { profile, listings, dashboardStats, isLoading } = useSellerState(walletAddress);
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mobile-specific tabs
@@ -45,9 +45,9 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
       <div className="mobile-dashboard-header">
         <div className="seller-info-compact">
           <div className="seller-avatar">
-            {profile?.profileImageUrl ? (
+            {profile?.profileImageCdn ? (
               <img 
-                src={profile.profileImageUrl} 
+                src={profile.profileImageCdn} 
                 alt={profile.displayName}
                 className="avatar-image"
               />
@@ -62,7 +62,7 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
               {profile?.displayName || 'Seller Dashboard'}
             </h2>
             <p className="tier-badge">
-              {profile?.tier?.name || 'Bronze'} Tier
+              {profile?.tier || 'Bronze'} Tier
             </p>
           </div>
         </div>
@@ -102,7 +102,7 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
         <ActiveTabComponent 
           profile={profile}
           listings={listings}
-          dashboard={dashboard}
+          dashboard={dashboardStats}
           walletAddress={walletAddress}
         />
       </div>
@@ -239,7 +239,7 @@ const MobileSellerDashboard: React.FC<MobileSellerDashboardProps> = ({ walletAdd
 };
 
 // Mobile Tab Components
-const MobileOverviewTab: React.FC<any> = ({ dashboard, profile }) => {
+const MobileOverviewTab: React.FC<any> = ({ dashboardStats, profile }) => {
   const { getOptimalFontSize } = useMobileOptimization();
   
   return (
@@ -247,11 +247,11 @@ const MobileOverviewTab: React.FC<any> = ({ dashboard, profile }) => {
       <div className="stats-grid">
         <div className="stat-card">
           <h3 style={{ fontSize: getOptimalFontSize(16) }}>Active Listings</h3>
-          <p className="stat-value">{dashboard?.listings?.length || 0}</p>
+          <p className="stat-value">{dashboardStats?.listings?.active || 0}</p>
         </div>
         <div className="stat-card">
           <h3 style={{ fontSize: getOptimalFontSize(16) }}>Total Orders</h3>
-          <p className="stat-value">{dashboard?.orders?.length || 0}</p>
+          <p className="stat-value">{dashboardStats?.orders?.pending || 0}</p>
         </div>
         <div className="stat-card">
           <h3 style={{ fontSize: getOptimalFontSize(16) }}>Rating</h3>
@@ -396,7 +396,7 @@ const MobileListingsTab: React.FC<any> = ({ listings }) => {
   );
 };
 
-const MobileOrdersTab: React.FC<any> = ({ dashboard }) => {
+const MobileOrdersTab: React.FC<any> = ({ dashboardStats }) => {
   return (
     <div className="mobile-orders-tab">
       <p>Orders functionality coming soon...</p>
@@ -404,7 +404,7 @@ const MobileOrdersTab: React.FC<any> = ({ dashboard }) => {
   );
 };
 
-const MobileAnalyticsTab: React.FC<any> = ({ dashboard }) => {
+const MobileAnalyticsTab: React.FC<any> = ({ dashboardStats }) => {
   return (
     <div className="mobile-analytics-tab">
       <p>Analytics functionality coming soon...</p>

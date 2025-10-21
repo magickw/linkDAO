@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from '../../../../design-system';
-import { UnifiedImageUpload } from '../../ImageUpload';
 import { ImageUploadResult } from '../../../../services/unifiedImageService';
 
 interface FirstListingStepProps {

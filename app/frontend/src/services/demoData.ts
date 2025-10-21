@@ -66,8 +66,14 @@ export const demoSellerApplications: SellerProfile[] = [
     ensVerified: false,
     profileCompleteness: {
       score: 85,
-      missingFields: ['ensHandle', 'sellerStory'],
-      recommendations: ['Add ENS handle for better discoverability', 'Complete your seller story'],
+      missingFields: [
+        { field: 'ensHandle', label: 'ENS Handle', weight: 10, required: false },
+        { field: 'sellerStory', label: 'Seller Story', weight: 15, required: false }
+      ],
+      recommendations: [
+        { action: 'Add ENS handle', description: 'Add ENS handle for better discoverability', impact: 10 },
+        { action: 'Complete seller story', description: 'Complete your seller story to build trust', impact: 15 }
+      ],
       lastCalculated: '2024-09-18T10:00:00Z'
     },
     socialLinks: {
@@ -146,8 +152,16 @@ export const demoSellerApplications: SellerProfile[] = [
     ensVerified: false,
     profileCompleteness: {
       score: 70,
-      missingFields: ['phone', 'kycStatus', 'sellerStory'],
-      recommendations: ['Complete phone verification', 'Submit KYC documents', 'Add your seller story'],
+      missingFields: [
+        { field: 'phone', label: 'Phone', weight: 10, required: false },
+        { field: 'kycStatus', label: 'KYC Status', weight: 20, required: false },
+        { field: 'sellerStory', label: 'Seller Story', weight: 15, required: false }
+      ],
+      recommendations: [
+        { action: 'Complete phone verification', description: 'Add and verify your phone number', impact: 10 },
+        { action: 'Submit KYC documents', description: 'Complete KYC verification for higher trust', impact: 20 },
+        { action: 'Add seller story', description: 'Add your seller story to build customer trust', impact: 15 }
+      ],
       lastCalculated: '2024-09-18T10:00:00Z'
     },
     socialLinks: {
@@ -221,8 +235,16 @@ export const demoSellerApplications: SellerProfile[] = [
     ensVerified: false,
     profileCompleteness: {
       score: 60,
-      missingFields: ['emailVerified', 'kycStatus', 'sellerStory'],
-      recommendations: ['Verify your email address', 'Complete KYC verification', 'Add detailed seller story'],
+      missingFields: [
+        { field: 'emailVerified', label: 'Email Verified', weight: 10, required: true },
+        { field: 'kycStatus', label: 'KYC Status', weight: 20, required: false },
+        { field: 'sellerStory', label: 'Seller Story', weight: 15, required: false }
+      ],
+      recommendations: [
+        { action: 'Verify email', description: 'Verify your email address for notifications', impact: 10 },
+        { action: 'Complete KYC', description: 'Complete KYC verification for full access', impact: 20 },
+        { action: 'Add detailed story', description: 'Add detailed seller story to stand out', impact: 15 }
+      ],
       lastCalculated: '2024-09-18T10:00:00Z'
     },
     socialLinks: {

@@ -107,9 +107,10 @@ export const useUnifiedImageUpload = (
 
       return result;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const sellerError = err instanceof SellerError ? err : new SellerError(
         SellerErrorType.IMAGE_UPLOAD_ERROR,
-        `Failed to upload ${file.name}: ${err.message}`,
+        `Failed to upload ${file.name}: ${errorMessage}`,
         'UPLOAD_SINGLE_ERROR',
         { fileName: file.name, originalError: err }
       );
@@ -182,9 +183,10 @@ export const useUnifiedImageUpload = (
             updateProgress(file.name, { status: 'completed', progress: 100 });
             return result;
           } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
             const sellerError = err instanceof SellerError ? err : new SellerError(
               SellerErrorType.IMAGE_UPLOAD_ERROR,
-              `Failed to upload ${file.name}: ${err.message}`,
+              `Failed to upload ${file.name}: ${errorMessage}`,
               'UPLOAD_BATCH_ERROR',
               { fileName: file.name, originalError: err }
             );
@@ -227,9 +229,10 @@ export const useUnifiedImageUpload = (
 
       return uploadResults;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const sellerError = err instanceof SellerError ? err : new SellerError(
         SellerErrorType.IMAGE_UPLOAD_ERROR,
-        `Batch upload failed: ${err.message}`,
+        `Batch upload failed: ${errorMessage}`,
         'BATCH_UPLOAD_ERROR',
         { fileCount: files.length, originalError: err }
       );
@@ -260,9 +263,10 @@ export const useUnifiedImageUpload = (
       
       return success;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const sellerError = err instanceof SellerError ? err : new SellerError(
         SellerErrorType.API_ERROR,
-        `Failed to delete image: ${err.message}`,
+        `Failed to delete image: ${errorMessage}`,
         'IMAGE_DELETE_ERROR',
         { imageId, originalError: err }
       );
@@ -326,9 +330,10 @@ export const useUnifiedImageUpload = (
     try {
       return await unifiedImageService.getImageInfo(imageId);
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       const sellerError = err instanceof SellerError ? err : new SellerError(
         SellerErrorType.API_ERROR,
-        `Failed to get image info: ${err.message}`,
+        `Failed to get image info: ${errorMessage}`,
         'IMAGE_INFO_ERROR',
         { imageId, originalError: err }
       );

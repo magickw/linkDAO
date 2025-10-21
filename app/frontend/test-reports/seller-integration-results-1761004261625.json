@@ -1,0 +1,698 @@
+{
+  "summary": {
+    "total": 101,
+    "passed": 1,
+    "failed": 0,
+    "pending": 100,
+    "success": false,
+    "duration": 1597,
+    "timestamp": "2025-10-20T23:51:01.624Z"
+  },
+  "suites": [
+    {
+      "name": "Seller Integration Test Suite",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 23,
+      "duration": 551,
+      "tests": [
+        {
+          "title": "should use consistent API endpoints across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle server-side and client-side rendering consistently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain endpoint consistency during component updates",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should synchronize profile updates across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain data consistency during concurrent updates",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate cache across all seller components when profile is updated",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache invalidation failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate related caches when seller data changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle errors consistently across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide graceful degradation when API is unavailable",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle 404 errors with appropriate fallbacks",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should retry failed requests with exponential backoff",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should render mobile-optimized seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch interactions properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize forms for mobile input",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should load seller components within performance thresholds",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle large datasets efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient caching strategies",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize memory usage during component lifecycle",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain state consistency across seller component navigation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle tier system integration across all components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should synchronize real-time updates across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller Test Framework Demo",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerTestFrameworkDemo.test.tsx",
+      "passed": 1,
+      "failed": 0,
+      "pending": 18,
+      "duration": 41,
+      "tests": [
+        {
+          "title": "should demonstrate API endpoint standardization testing",
+          "status": "passed",
+          "duration": 1,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate consistent response format validation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate data synchronization testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate cache invalidation testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate cache dependency tracking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate error handling consistency",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate graceful degradation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate mobile viewport detection",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate touch interaction testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate performance measurement",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate memory usage tracking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate custom seller profile matcher",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate performance threshold matcher",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.1: API Endpoint Consistency",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.2: Data Synchronization",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.3: Cache Invalidation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.4: Error Handling",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.5: Mobile Optimization",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.6: Performance Benchmarking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller End To End Integration Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerEndToEndIntegrationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 24,
+      "duration": 247,
+      "tests": [
+        {
+          "title": "should complete full seller onboarding to store creation workflow",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle seller profile updates across all components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle complex seller listing management workflow",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain data consistency under high load",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle database connection failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain referential integrity across seller data updates",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should recover from network failures with exponential backoff",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle API rate limiting gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle partial API failures with graceful degradation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache corruption and recovery",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should render mobile-optimized seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch interactions properly on mobile",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for mobile navigation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize forms for mobile input methods",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle orientation changes gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle multiple WebSocket connections efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle WebSocket connection failures and reconnection",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle high-frequency real-time updates efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should load seller components within performance thresholds",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle large datasets efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient virtual scrolling for large lists",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize memory usage during component lifecycle",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should work consistently across different screen sizes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle different input methods (touch, mouse, keyboard)",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller Mobile Optimization Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerMobileOptimizationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 19,
+      "duration": 75,
+      "tests": [
+        {
+          "title": "should render mobile-optimized seller dashboard on small screens",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should adapt layout for different mobile orientations",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement proper mobile navigation patterns",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement touch-optimized buttons with proper sizing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch events properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for seller cards",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide haptic feedback for touch interactions",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize form inputs for mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement mobile-friendly validation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle virtual keyboard properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement lazy loading for mobile components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize images for mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient touch event handling",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement proper ARIA labels for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should support screen readers on mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle focus management for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should detect mobile device correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should respond to orientation changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle viewport size changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller Cache Invalidation Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerCacheInvalidationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 16,
+      "duration": 80,
+      "tests": [
+        {
+          "title": "should invalidate profile cache when profile is updated",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate cache across all seller components when profile changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle partial cache invalidation correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate listing cache when listings are modified",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate dashboard cache when listings change",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle WebSocket-triggered cache invalidation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should batch multiple cache invalidations efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache invalidation failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should retry failed cache invalidations",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide fallback when cache is corrupted",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate dependent caches when parent data changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should track cache dependencies correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle circular dependencies safely",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement intelligent cache warming",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement cache size limits and eviction",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize cache invalidation performance",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    }
+  ],
+  "performance": {
+    "averageTestDuration": 0.009900990099009901,
+    "slowestTests": [
+      {
+        "name": "Seller Test Framework Demo: should demonstrate API endpoint standardization testing",
+        "duration": 1
+      }
+    ],
+    "fastestTests": [
+      {
+        "name": "Seller Test Framework Demo: should demonstrate API endpoint standardization testing",
+        "duration": 1
+      }
+    ],
+    "memoryUsage": {
+      "rss": 270712832,
+      "heapTotal": 183828480,
+      "heapUsed": 149899880,
+      "external": 19927273,
+      "arrayBuffers": 13663196
+    }
+  },
+  "coverage": null,
+  "recommendations": []
+}

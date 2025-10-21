@@ -62,6 +62,7 @@ import { Pool } from 'pg';
 // Import services
 import { initializeWebSocket, shutdownWebSocket } from './services/webSocketService';
 import { initializeAdminWebSocket, shutdownAdminWebSocket } from './services/adminWebSocketService';
+import { initializeSellerWebSocket, shutdownSellerWebSocket } from './services/sellerWebSocketService';
 
 // Use dynamic imports to avoid circular dependencies
 let cacheService: any = null;
@@ -194,6 +195,8 @@ import marketplaceApiRoutes from './routes/marketplaceRoutes';
 import authApiRoutes from './routes/authRoutes';
 import cartApiRoutes from './routes/cartRoutes';
 import sellerApiRoutes from './routes/sellerRoutes';
+import automatedTierUpgradeRoutes from './routes/automatedTierUpgradeRoutes';
+import sellerSecurityRoutes from './routes/sellerSecurityRoutes';
 
 // Marketplace API health check
 app.get('/api/marketplace/health', (req, res) => {
@@ -222,12 +225,16 @@ app.use('/api/v1/marketplace', marketplaceApiRoutes);
 app.use('/api/v1/auth', authApiRoutes);
 app.use('/api/v1/cart', cartApiRoutes);
 app.use('/api/v1/sellers', sellerApiRoutes);
+app.use('/api/v1/marketplace/seller/tier', automatedTierUpgradeRoutes);
+app.use('/api/v1/seller/security', sellerSecurityRoutes);
 
 // Backward compatibility routes (without version prefix)
 app.use('/api/marketplace', marketplaceApiRoutes);
 app.use('/api/auth', authApiRoutes);
 app.use('/api/cart', cartApiRoutes);
 app.use('/api/sellers', sellerApiRoutes);
+app.use('/api/marketplace/seller/tier', automatedTierUpgradeRoutes);
+app.use('/api/seller/security', sellerSecurityRoutes);
 
 // Basic API info route
 app.get('/', (req, res) => {
@@ -403,6 +410,9 @@ import orderManagementRoutes from './routes/orderManagementRoutes';
 // Import seller performance routes
 import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
 
+// Import seller analytics routes
+import sellerAnalyticsRoutes from './routes/sellerAnalyticsRoutes';
+
 // Import member behavior routes
 import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 
@@ -537,6 +547,9 @@ app.use('/api/order-management', orderManagementRoutes);
 // Seller performance routes
 app.use('/api/seller-performance', sellerPerformanceRoutes);
 
+// Seller analytics routes
+app.use('/api/seller-analytics', sellerAnalyticsRoutes);
+
 // Use member behavior routes
 app.use('/api/member-behavior', memberBehaviorRoutes);
 
@@ -616,6 +629,15 @@ httpServer.listen(PORT, async () => {
   } catch (error) {
     console.warn('⚠️ Admin WebSocket service initialization failed:', error);
   }
+
+  // Initialize Seller WebSocket service
+  try {
+    const sellerWebSocketService = initializeSellerWebSocket();
+    console.log('✅ Seller WebSocket service initialized');
+    console.log(`🛒 Seller real-time updates ready`);
+  } catch (error) {
+    console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+  }
   
   // Initialize cache service
   try {
@@ -677,6 +699,9 @@ const gracefulShutdown = async (signal: string) => {
     
     // Close Admin WebSocket service
     shutdownAdminWebSocket();
+    
+    // Close Seller WebSocket service
+    shutdownSellerWebSocket();
     
     // Stop monitoring service
     comprehensiveMonitoringService.stopMonitoring();

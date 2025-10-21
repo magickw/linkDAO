@@ -694,6 +694,7 @@ class SellerService {
       score,
       missingFields,
       recommendations,
+      lastCalculated: new Date().toISOString(),
     };
   }
 

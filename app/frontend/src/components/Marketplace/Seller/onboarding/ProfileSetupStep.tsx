@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { SellerProfile } from '../../../../types/seller';
+import { UnifiedSellerProfile } from '../../../../types/unifiedSeller';
 import { Button } from '../../../../design-system';
 import { useToast } from '../../../../context/ToastContext';
-import { UnifiedImageUpload } from '../../ImageUpload';
+import { UnifiedImageUpload } from '../../../Seller/ImageUpload/UnifiedImageUpload';
 
 interface ProfileSetupStepProps {
   onComplete: (data: any) => void;
   data?: any;
-  profile?: SellerProfile | null;
+  profile?: SellerProfile | UnifiedSellerProfile | null;
 }
 
 // Drag and Drop Upload Component

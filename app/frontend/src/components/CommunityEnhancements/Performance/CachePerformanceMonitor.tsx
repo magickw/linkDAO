@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useIntelligentCache } from '../../../hooks/useIntelligentCache';
+import { useIntelligentCacheSystem } from '../../../hooks/useIntelligentCache';
 import { useToast } from '@/context/ToastContext';
 
 interface CacheStats {
@@ -25,7 +25,7 @@ const CachePerformanceMonitor: React.FC<{
   isVisible?: boolean;
   onClose?: () => void;
 }> = ({ isVisible = false, onClose }) => {
-  const { getCacheStats, clearCache, monitorCachePerformance } = useIntelligentCache();
+  const { systemStatus, clearAllCaches } = useIntelligentCacheSystem();
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceData[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -35,7 +35,13 @@ const CachePerformanceMonitor: React.FC<{
   useEffect(() => {
     const updateStats = async () => {
       try {
-        const stats = getCacheStats();
+        // Get stats from systemStatus
+        const stats = {
+          totalSize: systemStatus?.intelligent?.memoryUsage || 0,
+          entryCount: systemStatus?.intelligent?.size || 0,
+          hitRate: systemStatus?.intelligent?.hitRate || 0,
+          lastCleanup: Date.now() // This would need to be tracked separately
+        };
         setCacheStats(stats);
         
         // Add to performance history
@@ -62,7 +68,7 @@ const CachePerformanceMonitor: React.FC<{
       const interval = setInterval(updateStats, 30000); // Update every 5 seconds
       return () => clearInterval(interval);
     }
-  }, [autoRefresh]);
+  }, [autoRefresh, systemStatus]);
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -96,7 +102,7 @@ const CachePerformanceMonitor: React.FC<{
   const handleClearCaches = async () => {
     if (window.confirm('Are you sure you want to clear all caches? This will reset all cached data.')) {
       try {
-        await clearCache();
+        await clearAllCaches();
         addToast('All caches cleared successfully', 'success');
       } catch (error) {
         addToast('Failed to clear caches: ' + String(error), 'error');

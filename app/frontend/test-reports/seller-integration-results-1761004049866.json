@@ -1,0 +1,735 @@
+{
+  "summary": {
+    "total": 101,
+    "passed": 3,
+    "failed": 3,
+    "pending": 95,
+    "success": false,
+    "duration": 2872,
+    "timestamp": "2025-10-20T23:47:29.865Z"
+  },
+  "suites": [
+    {
+      "name": "Seller Integration Test Suite",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx",
+      "passed": 0,
+      "failed": 3,
+      "pending": 20,
+      "duration": 1759,
+      "tests": [
+        {
+          "title": "should use consistent API endpoints across all seller components",
+          "status": "failed",
+          "duration": 1,
+          "failureMessages": [
+            "TypeError: Cannot read properties of undefined (reading '0')\n    at Object.<anonymous> (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx:114:27)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+          ]
+        },
+        {
+          "title": "should handle server-side and client-side rendering consistently",
+          "status": "failed",
+          "duration": 2,
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\nExpected: \u001b[32m{\"displayName\": \"Test Seller\", \"walletAddress\": \"0x1234567890123456789012345678901234567890\"}\u001b[39m\nReceived: \u001b[31mundefined\u001b[39m\n    at Object.<anonymous> (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx:143:25)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+          ]
+        },
+        {
+          "title": "should maintain endpoint consistency during component updates",
+          "status": "failed",
+          "duration": 1091,
+          "failureMessages": [
+            "Error: \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: \u001b[32m\"/api/marketplace/seller/0x1234567890123456789012345678901234567890\"\u001b[39m, \u001b[32mAny<Object>\u001b[39m\n\nNumber of calls: \u001b[31m0\u001b[39m\n\nIgnored nodes: comments, script, style\n\u001b[36m<html>\u001b[39m\n  \u001b[36m<head />\u001b[39m\n  \u001b[36m<body>\u001b[39m\n    \u001b[36m<div>\u001b[39m\n      \u001b[36m<div\u001b[39m\n        \u001b[33mclass\u001b[39m=\u001b[32m\"seller-error-boundary-container\"\u001b[39m\n      \u001b[36m>\u001b[39m\n        \u001b[36m<div\u001b[39m\n          \u001b[33mclass\u001b[39m=\u001b[32m\"seller-error-fallback bg-white border border-red-200 rounded-lg p-6 max-w-md mx-auto\"\u001b[39m\n        \u001b[36m>\u001b[39m\n          \u001b[36m<div\u001b[39m\n            \u001b[33mclass\u001b[39m=\u001b[32m\"text-center\"\u001b[39m\n          \u001b[36m>\u001b[39m\n            \u001b[36m<div\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"text-4xl mb-4\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[0m🔌\u001b[0m\n            \u001b[36m</div>\u001b[39m\n            \u001b[36m<h3\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"text-lg font-semibold text-gray-900 mb-2\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[0mSomething went wrong\u001b[0m\n            \u001b[36m</h3>\u001b[39m\n            \u001b[36m<p\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"text-gray-600 mb-4\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[0mWe're having trouble connecting to our servers. Please try again in a moment.\u001b[0m\n            \u001b[36m</p>\u001b[39m\n            \u001b[36m<div\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"space-y-2 mb-4\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[36m<button\u001b[39m\n                \u001b[33mclass\u001b[39m=\u001b[32m\"w-full px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400\"\u001b[39m\n              \u001b[36m>\u001b[39m\n                \u001b[0mRetry the request\u001b[0m\n              \u001b[36m</button>\u001b[39m\n            \u001b[36m</div>\u001b[39m\n            \u001b[36m<div\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"mt-4\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[36m<button\u001b[39m\n                \u001b[33mclass\u001b[39m=\u001b[32m\"text-sm text-gray-500 hover:text-gray-700 underline\"\u001b[39m\n              \u001b[36m>\u001b[39m\n                \u001b[0mShow\u001b[0m\n                \u001b[0m Error Details\u001b[0m\n              \u001b[36m</button>\u001b[39m\n            \u001b[36m</div>\u001b[39m\n            \u001b[36m<div\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"mt-4 pt-4 border-t border-gray-200\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[36m<p\u001b[39m\n                \u001b[33mclass\u001b[39m=\u001b[32m\"text-xs text-gray-500\"\u001b[39m\n              \u001b[36m>\u001b[39m\n                \u001b[0mNeed help?\u001b[0m\n                \u001b[0m \u001b[0m\n                \u001b[36m<a\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"text-blue-600 hover:text-blue-800 underline\"\u001b[39m\n                  \u001b[33mhref\u001b[39m=\u001b[32m\"/support\"\u001b[39m\n                  \u001b[33mrel\u001b[39m=\u001b[32m\"noopener noreferrer\"\u001b[39m\n                  \u001b[33mtarget\u001b[39m=\u001b[32m\"_blank\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[0mContact Support\u001b[0m\n                \u001b[36m</a>\u001b[39m\n              \u001b[36m</p>\u001b[39m\n            \u001b[36m</div>\u001b[39m\n          \u001b[36m</div>\u001b[39m\n        \u001b[36m</div>\u001b[39m\n      \u001b[36m</div>\u001b[39m\n    \u001b[36m</div>\u001b[39m\n  \u001b[36m</body>\u001b[39m\n\u001b[36m</html>\u001b[39m\n    at /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx:168:23\n    at runWithExpensiveErrorDiagnosticsDisabled (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/config.js:47:12)\n    at checkCallback (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/wait-for.js:124:77)\n    at checkRealTimersCallback (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/wait-for.js:118:16)\n    at Timeout.task [as _onTimeout] (/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/node_modules/jsdom/lib/jsdom/browser/Window.js:520:19)\n    at listOnTimeout (node:internal/timers:581:17)\n    at processTimers (node:internal/timers:519:7)"
+          ]
+        },
+        {
+          "title": "should synchronize profile updates across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain data consistency during concurrent updates",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate cache across all seller components when profile is updated",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache invalidation failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate related caches when seller data changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle errors consistently across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide graceful degradation when API is unavailable",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle 404 errors with appropriate fallbacks",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should retry failed requests with exponential backoff",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should render mobile-optimized seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch interactions properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize forms for mobile input",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should load seller components within performance thresholds",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle large datasets efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient caching strategies",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize memory usage during component lifecycle",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain state consistency across seller component navigation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle tier system integration across all components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should synchronize real-time updates across all seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": "\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mSeller Integration Test Suite › API Endpoint Consistency Tests › should use consistent API endpoints across all seller components\u001b[39m\u001b[22m\n\n    TypeError: Cannot read properties of undefined (reading '0')\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 112 |\u001b[39m       \u001b[36mconst\u001b[39m fetchCalls \u001b[33m=\u001b[39m (fetch \u001b[36mas\u001b[39m jest\u001b[33m.\u001b[39m\u001b[33mMock\u001b[39m)\u001b[33m.\u001b[39mmock\u001b[33m.\u001b[39mcalls\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 113 |\u001b[39m       \u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 114 |\u001b[39m       expect(fetchCalls[\u001b[35m0\u001b[39m][\u001b[35m0\u001b[39m])\u001b[33m.\u001b[39mtoBe(\u001b[32m`/api/marketplace/seller/${testWalletAddress}`\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                           \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 115 |\u001b[39m       expect(fetchCalls[\u001b[35m1\u001b[39m][\u001b[35m0\u001b[39m])\u001b[33m.\u001b[39mtoBe(\u001b[32m`/api/marketplace/seller/onboarding/${testWalletAddress}`\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 116 |\u001b[39m       expect(fetchCalls[\u001b[35m2\u001b[39m][\u001b[35m0\u001b[39m])\u001b[33m.\u001b[39mtoBe(\u001b[32m`/api/marketplace/seller/dashboard/${testWalletAddress}`\u001b[39m)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 117 |\u001b[39m       expect(fetchCalls[\u001b[35m3\u001b[39m][\u001b[35m0\u001b[39m])\u001b[33m.\u001b[39mtoBe(\u001b[32m`/api/marketplace/seller/listings/${testWalletAddress}`\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.<anonymous> (\u001b[22m\u001b[2m\u001b[0m\u001b[36msrc/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx\u001b[39m\u001b[0m\u001b[2m:114:27)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mSeller Integration Test Suite › API Endpoint Consistency Tests › should handle server-side and client-side rendering consistently\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoEqual\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // deep equality\u001b[22m\n\n    Expected: \u001b[32m{\"displayName\": \"Test Seller\", \"walletAddress\": \"0x1234567890123456789012345678901234567890\"}\u001b[39m\n    Received: \u001b[31mundefined\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 141 |\u001b[39m       \u001b[36mconst\u001b[39m csrResult \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m unifiedSellerAPIClient\u001b[33m.\u001b[39mgetProfile(testWalletAddress)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 142 |\u001b[39m\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 143 |\u001b[39m       expect(ssrResult)\u001b[33m.\u001b[39mtoEqual(mockProfile)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                         \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 144 |\u001b[39m       expect(csrResult)\u001b[33m.\u001b[39mtoEqual(mockProfile)\u001b[33m;\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 145 |\u001b[39m       \u001b[22m\n\u001b[2m     \u001b[90m 146 |\u001b[39m       \u001b[90m// Both should use the same endpoint\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Object.<anonymous> (\u001b[22m\u001b[2m\u001b[0m\u001b[36msrc/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx\u001b[39m\u001b[0m\u001b[2m:143:25)\u001b[22m\u001b[2m\u001b[22m\n\n\u001b[1m\u001b[31m  \u001b[1m● \u001b[22m\u001b[1mSeller Integration Test Suite › API Endpoint Consistency Tests › should maintain endpoint consistency during component updates\u001b[39m\u001b[22m\n\n    \u001b[2mexpect(\u001b[22m\u001b[31mjest.fn()\u001b[39m\u001b[2m).\u001b[22mtoHaveBeenCalledWith\u001b[2m(\u001b[22m\u001b[32m...expected\u001b[39m\u001b[2m)\u001b[22m\n\n    Expected: \u001b[32m\"/api/marketplace/seller/0x1234567890123456789012345678901234567890\"\u001b[39m, \u001b[32mAny<Object>\u001b[39m\n\n    Number of calls: \u001b[31m0\u001b[39m\n\n    Ignored nodes: comments, script, style\n    \u001b[36m<html>\u001b[39m\n      \u001b[36m<head />\u001b[39m\n      \u001b[36m<body>\u001b[39m\n        \u001b[36m<div>\u001b[39m\n          \u001b[36m<div\u001b[39m\n            \u001b[33mclass\u001b[39m=\u001b[32m\"seller-error-boundary-container\"\u001b[39m\n          \u001b[36m>\u001b[39m\n            \u001b[36m<div\u001b[39m\n              \u001b[33mclass\u001b[39m=\u001b[32m\"seller-error-fallback bg-white border border-red-200 rounded-lg p-6 max-w-md mx-auto\"\u001b[39m\n            \u001b[36m>\u001b[39m\n              \u001b[36m<div\u001b[39m\n                \u001b[33mclass\u001b[39m=\u001b[32m\"text-center\"\u001b[39m\n              \u001b[36m>\u001b[39m\n                \u001b[36m<div\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"text-4xl mb-4\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[0m🔌\u001b[0m\n                \u001b[36m</div>\u001b[39m\n                \u001b[36m<h3\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"text-lg font-semibold text-gray-900 mb-2\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[0mSomething went wrong\u001b[0m\n                \u001b[36m</h3>\u001b[39m\n                \u001b[36m<p\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"text-gray-600 mb-4\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[0mWe're having trouble connecting to our servers. Please try again in a moment.\u001b[0m\n                \u001b[36m</p>\u001b[39m\n                \u001b[36m<div\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"space-y-2 mb-4\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[36m<button\u001b[39m\n                    \u001b[33mclass\u001b[39m=\u001b[32m\"w-full px-4 py-2 rounded-md font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400\"\u001b[39m\n                  \u001b[36m>\u001b[39m\n                    \u001b[0mRetry the request\u001b[0m\n                  \u001b[36m</button>\u001b[39m\n                \u001b[36m</div>\u001b[39m\n                \u001b[36m<div\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"mt-4\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[36m<button\u001b[39m\n                    \u001b[33mclass\u001b[39m=\u001b[32m\"text-sm text-gray-500 hover:text-gray-700 underline\"\u001b[39m\n                  \u001b[36m>\u001b[39m\n                    \u001b[0mShow\u001b[0m\n                    \u001b[0m Error Details\u001b[0m\n                  \u001b[36m</button>\u001b[39m\n                \u001b[36m</div>\u001b[39m\n                \u001b[36m<div\u001b[39m\n                  \u001b[33mclass\u001b[39m=\u001b[32m\"mt-4 pt-4 border-t border-gray-200\"\u001b[39m\n                \u001b[36m>\u001b[39m\n                  \u001b[36m<p\u001b[39m\n                    \u001b[33mclass\u001b[39m=\u001b[32m\"text-xs text-gray-500\"\u001b[39m\n                  \u001b[36m>\u001b[39m\n                    \u001b[0mNeed help?\u001b[0m\n                    \u001b[0m \u001b[0m\n                    \u001b[36m<a\u001b[39m\n                      \u001b[33mclass\u001b[39m=\u001b[32m\"text-blue-600 hover:text-blue-800 underline\"\u001b[39m\n                      \u001b[33mhref\u001b[39m=\u001b[32m\"/support\"\u001b[39m\n                      \u001b[33mrel\u001b[39m=\u001b[32m\"noopener noreferrer\"\u001b[39m\n                      \u001b[33mtarget\u001b[39m=\u001b[32m\"_blank\"\u001b[39m\n                    \u001b[36m>\u001b[39m\n                      \u001b[0mContact Support\u001b[0m\n                    \u001b[36m</a>\u001b[39m\n                  \u001b[36m</p>\u001b[39m\n                \u001b[36m</div>\u001b[39m\n              \u001b[36m</div>\u001b[39m\n            \u001b[36m</div>\u001b[39m\n          \u001b[36m</div>\u001b[39m\n        \u001b[36m</div>\u001b[39m\n      \u001b[36m</body>\u001b[39m\n    \u001b[36m</html>\u001b[39m\n\u001b[2m\u001b[22m\n\u001b[2m    \u001b[0m \u001b[90m 166 |\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 167 |\u001b[39m       \u001b[36mawait\u001b[39m waitFor(() \u001b[33m=>\u001b[39m {\u001b[22m\n\u001b[2m    \u001b[31m\u001b[1m>\u001b[22m\u001b[2m\u001b[39m\u001b[90m 168 |\u001b[39m         expect(fetch)\u001b[33m.\u001b[39mtoHaveBeenCalledWith(\u001b[22m\n\u001b[2m     \u001b[90m     |\u001b[39m                       \u001b[31m\u001b[1m^\u001b[22m\u001b[2m\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 169 |\u001b[39m           \u001b[32m`/api/marketplace/seller/${testWalletAddress}`\u001b[39m\u001b[33m,\u001b[39m\u001b[22m\n\u001b[2m     \u001b[90m 170 |\u001b[39m           expect\u001b[33m.\u001b[39many(\u001b[33mObject\u001b[39m)\u001b[22m\n\u001b[2m     \u001b[90m 171 |\u001b[39m         )\u001b[33m;\u001b[39m\u001b[0m\u001b[22m\n\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat \u001b[22m\u001b[2m\u001b[0m\u001b[36msrc/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx\u001b[39m\u001b[0m\u001b[2m:168:23\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat runWithExpensiveErrorDiagnosticsDisabled (\u001b[22m\u001b[2m../node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/config.js\u001b[2m:47:12)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat checkCallback (\u001b[22m\u001b[2m../node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/wait-for.js\u001b[2m:124:77)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat checkRealTimersCallback (\u001b[22m\u001b[2m../node_modules/@testing-library/react/node_modules/@testing-library/dom/dist/wait-for.js\u001b[2m:118:16)\u001b[22m\u001b[2m\u001b[22m\n\u001b[2m      \u001b[2mat Timeout.task [as _onTimeout] (\u001b[22m\u001b[2m../node_modules/jsdom/lib/jsdom/browser/Window.js\u001b[2m:520:19)\u001b[22m\u001b[2m\u001b[22m\n"
+    },
+    {
+      "name": "Seller Test Framework Demo",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerTestFrameworkDemo.test.tsx",
+      "passed": 3,
+      "failed": 0,
+      "pending": 16,
+      "duration": 45,
+      "tests": [
+        {
+          "title": "should demonstrate API endpoint standardization testing",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate consistent response format validation",
+          "status": "passed",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate data synchronization testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate cache invalidation testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate cache dependency tracking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate error handling consistency",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate graceful degradation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate mobile viewport detection",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate touch interaction testing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate performance measurement",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate memory usage tracking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate custom seller profile matcher",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should demonstrate performance threshold matcher",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.1: API Endpoint Consistency",
+          "status": "passed",
+          "duration": 3,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.2: Data Synchronization",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.3: Cache Invalidation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.4: Error Handling",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.5: Mobile Optimization",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should cover requirement 10.6: Performance Benchmarking",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller End To End Integration Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerEndToEndIntegrationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 24,
+      "duration": 335,
+      "tests": [
+        {
+          "title": "should complete full seller onboarding to store creation workflow",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle seller profile updates across all components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle complex seller listing management workflow",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain data consistency under high load",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle database connection failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should maintain referential integrity across seller data updates",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should recover from network failures with exponential backoff",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle API rate limiting gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle partial API failures with graceful degradation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache corruption and recovery",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should render mobile-optimized seller components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch interactions properly on mobile",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for mobile navigation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize forms for mobile input methods",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle orientation changes gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle multiple WebSocket connections efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle WebSocket connection failures and reconnection",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle high-frequency real-time updates efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should load seller components within performance thresholds",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle large datasets efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient virtual scrolling for large lists",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize memory usage during component lifecycle",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should work consistently across different screen sizes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle different input methods (touch, mouse, keyboard)",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller Mobile Optimization Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerMobileOptimizationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 19,
+      "duration": 129,
+      "tests": [
+        {
+          "title": "should render mobile-optimized seller dashboard on small screens",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should adapt layout for different mobile orientations",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement proper mobile navigation patterns",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement touch-optimized buttons with proper sizing",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle touch events properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement swipe gestures for seller cards",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide haptic feedback for touch interactions",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize form inputs for mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement mobile-friendly validation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle virtual keyboard properly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement lazy loading for mobile components",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize images for mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement efficient touch event handling",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement proper ARIA labels for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should support screen readers on mobile devices",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle focus management for mobile interfaces",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should detect mobile device correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should respond to orientation changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle viewport size changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    },
+    {
+      "name": "Seller Cache Invalidation Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerCacheInvalidationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 16,
+      "duration": 98,
+      "tests": [
+        {
+          "title": "should invalidate profile cache when profile is updated",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate cache across all seller components when profile changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle partial cache invalidation correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate listing cache when listings are modified",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate dashboard cache when listings change",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle WebSocket-triggered cache invalidation",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should batch multiple cache invalidations efficiently",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle cache invalidation failures gracefully",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should retry failed cache invalidations",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should provide fallback when cache is corrupted",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should invalidate dependent caches when parent data changes",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should track cache dependencies correctly",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should handle circular dependencies safely",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement intelligent cache warming",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should implement cache size limits and eviction",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        },
+        {
+          "title": "should optimize cache invalidation performance",
+          "status": "pending",
+          "duration": 0,
+          "failureMessages": []
+        }
+      ],
+      "failureMessage": null
+    }
+  ],
+  "performance": {
+    "averageTestDuration": 10.861386138613861,
+    "slowestTests": [
+      {
+        "name": "Seller Integration Test Suite: should maintain endpoint consistency during component updates",
+        "duration": 1091
+      },
+      {
+        "name": "Seller Test Framework Demo: should cover requirement 10.1: API Endpoint Consistency",
+        "duration": 3
+      },
+      {
+        "name": "Seller Integration Test Suite: should handle server-side and client-side rendering consistently",
+        "duration": 2
+      },
+      {
+        "name": "Seller Integration Test Suite: should use consistent API endpoints across all seller components",
+        "duration": 1
+      }
+    ],
+    "fastestTests": [
+      {
+        "name": "Seller Integration Test Suite: should use consistent API endpoints across all seller components",
+        "duration": 1
+      },
+      {
+        "name": "Seller Integration Test Suite: should handle server-side and client-side rendering consistently",
+        "duration": 2
+      },
+      {
+        "name": "Seller Test Framework Demo: should cover requirement 10.1: API Endpoint Consistency",
+        "duration": 3
+      },
+      {
+        "name": "Seller Integration Test Suite: should maintain endpoint consistency during component updates",
+        "duration": 1091
+      }
+    ],
+    "memoryUsage": {
+      "rss": 260767744,
+      "heapTotal": 205537280,
+      "heapUsed": 173582088,
+      "external": 19457743,
+      "arrayBuffers": 17094531
+    }
+  },
+  "coverage": null,
+  "recommendations": [
+    {
+      "type": "error",
+      "title": "Failed Tests",
+      "description": "1 test suite(s) have failing tests that need attention.",
+      "action": "Review and fix failing tests before deployment."
+    }
+  ]
+}

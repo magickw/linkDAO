@@ -77,6 +77,10 @@ const config: HardhatUserConfig = {
       mainnet: process.env.ETHERSCAN_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
     },
+    customChains: []
+  },
+  sourcify: {
+    enabled: false
   },
   mocha: {
     timeout: 60000,

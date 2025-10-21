@@ -1,356 +1,339 @@
-/**
- * Test Database Utility
- * Provides in-memory database operations for testing
- */
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+import { jest } from '@jest/globals';
 
-export class TestDatabase {
-  private moderationCases: Map<string, any> = new Map();
-  private storedContent: Map<string, any> = new Map();
-  private reviewQueue: Map<string, any> = new Map();
-  private appeals: Map<string, any> = new Map();
-  private reports: Map<string, any> = new Map();
-  private auditLogs: Map<string, any[]> = new Map();
-  private accessLogs: Map<string, any[]> = new Map();
-  private userSettings: Map<string, any> = new Map();
-  private suspiciousActivity: any[] = [];
+// Import schema
+import * as schema from '../../db/schema';
 
-  async setup(): Promise<void> {
-    // Initialize test database
-    this.reset();
+let testDb: any;
+let testPool: Pool;
+
+export async function setupTestDatabase(): Promise<void> {
+  // Create test database connection
+  testPool = new Pool({
+    host: process.env.TEST_DB_HOST || 'localhost',
+    port: parseInt(process.env.TEST_DB_PORT || '5432'),
+    database: process.env.TEST_DB_NAME || 'linkdao_test',
+    user: process.env.TEST_DB_USER || 'postgres',
+    password: process.env.TEST_DB_PASSWORD || 'password',
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  testDb = drizzle(testPool, { schema });
+
+  try {
+    // Run migrations
+    await migrate(testDb, { migrationsFolder: './drizzle' });
+    
+    // Clear existing test data
+    await cleanupTestData();
+    
+    console.log('✅ Test database setup complete');
+  } catch (error) {
+    console.error('❌ Test database setup failed:', error);
+    throw error;
   }
+}
 
-  async cleanup(): Promise<void> {
-    // Clean up test database
-    this.reset();
-  }
-
-  reset(): void {
-    this.moderationCases.clear();
-    this.storedContent.clear();
-    this.reviewQueue.clear();
-    this.appeals.clear();
-    this.reports.clear();
-    this.auditLogs.clear();
-    this.accessLogs.clear();
-    this.userSettings.clear();
-    this.suspiciousActivity = [];
-  }
-
-  getConnection(): any {
-    return this;
-  }
-
-  // Moderation Cases
-  async storeModerationCase(caseData: any): Promise<void> {
-    this.moderationCases.set(caseData.contentId, {
-      ...caseData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
-
-    // Store content separately
-    if (caseData.content) {
-      this.storedContent.set(caseData.contentId, {
-        contentId: caseData.contentId,
-        content: caseData.content,
-        encrypted: caseData.encrypted || false
-      });
-    }
-
-    // Add to review queue if needed
-    if (caseData.status === 'quarantined') {
-      this.reviewQueue.set(caseData.contentId, {
-        caseId: caseData.contentId,
-        priority: caseData.priority || 'medium',
-        createdAt: new Date()
-      });
-    }
-  }
-
-  async getModerationCase(contentId: string): Promise<any> {
-    const caseData = this.moderationCases.get(contentId);
-    if (!caseData) {
-      throw new Error(`Moderation case not found: ${contentId}`);
-    }
-    return caseData;
-  }
-
-  async getModerationCases(): Promise<any[]> {
-    return Array.from(this.moderationCases.values());
-  }
-
-  async getRawModerationCase(contentId: string): Promise<any> {
-    const caseData = this.moderationCases.get(contentId);
-    if (!caseData) {
-      throw new Error(`Raw moderation case not found: ${contentId}`);
+export async function cleanupTestDatabase(): Promise<void> {
+  try {
+    if (testDb) {
+      await cleanupTestData();
     }
     
-    // Simulate encrypted storage
-    return {
-      ...caseData,
-      encrypted_content: caseData.content ? `encrypted_${caseData.content}` : null,
-      encryption_key: undefined // Never stored with data
-    };
-  }
-
-  // Content Storage
-  async getStoredContent(contentId: string): Promise<any> {
-    const content = this.storedContent.get(contentId);
-    if (!content) {
-      throw new Error(`Stored content not found: ${contentId}`);
+    if (testPool) {
+      await testPool.end();
     }
-    return content;
+    
+    console.log('✅ Test database cleanup complete');
+  } catch (error) {
+    console.error('❌ Test database cleanup failed:', error);
   }
+}
 
-  async getStoredMedia(contentId: string): Promise<any> {
-    // Simulate media storage
-    return {
-      contentId,
-      rawData: null, // Simulating that raw data is not stored
-      perceptualHash: 'abc123def456',
-      metadata: {
-        size: 1024,
-        type: 'image/jpeg'
+export async function cleanupTestData(): Promise<void> {
+  if (!testDb) return;
+
+  try {
+    // Clean up test data in reverse dependency order
+    await testDb.delete(schema.sellerAnalytics);
+    await testDb.delete(schema.sellerTierUpgrades);
+    await testDb.delete(schema.sellerListings);
+    await testDb.delete(schema.sellerProfiles);
+    await testDb.delete(schema.users);
+    
+    console.log('✅ Test data cleanup complete');
+  } catch (error) {
+    console.error('❌ Test data cleanup failed:', error);
+    throw error;
+  }
+}
+
+export function getTestDatabase() {
+  return testDb;
+}
+
+export function getTestPool() {
+  return testPool;
+}
+
+// Database seeding utilities
+export async function seedTestSellerProfile(profileData: any = {}) {
+  const defaultProfile = {
+    walletAddress: '0x1234567890123456789012345678901234567890',
+    displayName: 'Test Seller',
+    storeName: 'Test Store',
+    bio: 'Test seller bio',
+    profileImageUrl: null,
+    coverImageUrl: null,
+    tier: 'bronze',
+    isVerified: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...profileData,
+  };
+
+  const [profile] = await testDb.insert(schema.sellerProfiles)
+    .values(defaultProfile)
+    .returning();
+
+  return profile;
+}
+
+export async function seedTestSellerListing(listingData: any = {}) {
+  const defaultListing = {
+    id: 'test-listing-1',
+    sellerId: '0x1234567890123456789012345678901234567890',
+    title: 'Test Product',
+    description: 'Test product description',
+    price: 100,
+    currency: 'USD',
+    images: [],
+    category: 'Electronics',
+    status: 'active',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...listingData,
+  };
+
+  const [listing] = await testDb.insert(schema.sellerListings)
+    .values(defaultListing)
+    .returning();
+
+  return listing;
+}
+
+export async function seedTestSellerAnalytics(analyticsData: any = {}) {
+  const defaultAnalytics = {
+    sellerId: '0x1234567890123456789012345678901234567890',
+    totalSales: 0,
+    totalRevenue: 0,
+    averageRating: 0,
+    totalViews: 0,
+    conversionRate: 0,
+    period: 'monthly',
+    recordedAt: new Date(),
+    ...analyticsData,
+  };
+
+  const [analytics] = await testDb.insert(schema.sellerAnalytics)
+    .values(defaultAnalytics)
+    .returning();
+
+  return analytics;
+}
+
+// Database transaction utilities
+export async function withTransaction<T>(fn: (tx: any) => Promise<T>): Promise<T> {
+  return testDb.transaction(fn);
+}
+
+// Database performance testing
+export async function measureQueryPerformance<T>(
+  queryName: string,
+  queryFn: () => Promise<T>
+): Promise<{ result: T; duration: number }> {
+  const start = Date.now();
+  const result = await queryFn();
+  const duration = Date.now() - start;
+  
+  console.log(`[DB Query] ${queryName}: ${duration}ms`);
+  
+  return { result, duration };
+}
+
+// Connection pool monitoring
+export function getPoolStats() {
+  if (!testPool) return null;
+  
+  return {
+    totalCount: testPool.totalCount,
+    idleCount: testPool.idleCount,
+    waitingCount: testPool.waitingCount,
+  };
+}
+
+export function logPoolStats(context: string) {
+  const stats = getPoolStats();
+  if (stats) {
+    console.log(`[${context}] Pool Stats:`, stats);
+  }
+}
+
+// Database stress testing utilities
+export async function simulateDatabaseLoad(
+  concurrentQueries: number = 50,
+  queryFn: () => Promise<any>
+): Promise<{ successCount: number; errorCount: number; averageTime: number }> {
+  const promises = Array.from({ length: concurrentQueries }, async () => {
+    const start = Date.now();
+    try {
+      await queryFn();
+      return { success: true, duration: Date.now() - start };
+    } catch (error) {
+      return { success: false, duration: Date.now() - start, error };
+    }
+  });
+
+  const results = await Promise.all(promises);
+  
+  const successCount = results.filter(r => r.success).length;
+  const errorCount = results.filter(r => !r.success).length;
+  const averageTime = results.reduce((sum, r) => sum + r.duration, 0) / results.length;
+
+  return { successCount, errorCount, averageTime };
+}
+
+// Database connection failure simulation
+export function simulateConnectionFailure() {
+  const originalQuery = testPool.query;
+  
+  testPool.query = jest.fn().mockRejectedValue(
+    new Error('Connection to database failed')
+  );
+  
+  return () => {
+    testPool.query = originalQuery;
+  };
+}
+
+// Database deadlock simulation
+export function simulateDeadlock() {
+  const originalQuery = testPool.query;
+  let callCount = 0;
+  
+  testPool.query = jest.fn().mockImplementation((...args) => {
+    callCount++;
+    if (callCount <= 2) {
+      const error = new Error('Deadlock detected');
+      (error as any).code = 'ER_LOCK_DEADLOCK';
+      throw error;
+    }
+    return originalQuery.apply(testPool, args);
+  });
+  
+  return () => {
+    testPool.query = originalQuery;
+  };
+}
+
+// Test data validation utilities
+export async function validateSellerProfileIntegrity(walletAddress: string): Promise<boolean> {
+  try {
+    const profile = await testDb.select()
+      .from(schema.sellerProfiles)
+      .where(schema.sellerProfiles.walletAddress.eq(walletAddress))
+      .limit(1);
+
+    if (!profile.length) return false;
+
+    // Validate required fields
+    const requiredFields = ['walletAddress', 'displayName', 'storeName'];
+    return requiredFields.every(field => profile[0][field] != null);
+  } catch (error) {
+    console.error('Profile integrity validation failed:', error);
+    return false;
+  }
+}
+
+export async function validateReferentialIntegrity(): Promise<{ valid: boolean; errors: string[] }> {
+  const errors: string[] = [];
+
+  try {
+    // Check that all listings have valid seller references
+    const orphanedListings = await testDb.select()
+      .from(schema.sellerListings)
+      .leftJoin(
+        schema.sellerProfiles,
+        schema.sellerListings.sellerId.eq(schema.sellerProfiles.walletAddress)
+      )
+      .where(schema.sellerProfiles.walletAddress.isNull());
+
+    if (orphanedListings.length > 0) {
+      errors.push(`Found ${orphanedListings.length} orphaned listings`);
+    }
+
+    // Check that all analytics have valid seller references
+    const orphanedAnalytics = await testDb.select()
+      .from(schema.sellerAnalytics)
+      .leftJoin(
+        schema.sellerProfiles,
+        schema.sellerAnalytics.sellerId.eq(schema.sellerProfiles.walletAddress)
+      )
+      .where(schema.sellerProfiles.walletAddress.isNull());
+
+    if (orphanedAnalytics.length > 0) {
+      errors.push(`Found ${orphanedAnalytics.length} orphaned analytics records`);
+    }
+
+    return { valid: errors.length === 0, errors };
+  } catch (error) {
+    errors.push(`Referential integrity check failed: ${error.message}`);
+    return { valid: false, errors };
+  }
+}
+
+// Database backup and restore for testing
+export async function createTestSnapshot(snapshotName: string): Promise<void> {
+  // In a real implementation, this would create a database snapshot
+  // For testing purposes, we'll just log the operation
+  console.log(`📸 Created test snapshot: ${snapshotName}`);
+}
+
+export async function restoreTestSnapshot(snapshotName: string): Promise<void> {
+  // In a real implementation, this would restore from a database snapshot
+  // For testing purposes, we'll clean and reseed the database
+  console.log(`🔄 Restoring test snapshot: ${snapshotName}`);
+  await cleanupTestData();
+}
+
+// Database migration testing
+export async function testMigrations(): Promise<{ success: boolean; errors: string[] }> {
+  const errors: string[] = [];
+
+  try {
+    // Test that all expected tables exist
+    const expectedTables = [
+      'seller_profiles',
+      'seller_listings',
+      'seller_analytics',
+      'seller_tier_upgrades',
+    ];
+
+    for (const table of expectedTables) {
+      try {
+        await testDb.execute(`SELECT 1 FROM ${table} LIMIT 1`);
+      } catch (error) {
+        errors.push(`Table ${table} does not exist or is not accessible`);
       }
-    };
-  }
-
-  // Review Queue
-  async getReviewQueueItem(contentId: string): Promise<any> {
-    return this.reviewQueue.get(contentId);
-  }
-
-  async getReviewQueueItems(): Promise<any[]> {
-    return Array.from(this.reviewQueue.values());
-  }
-
-  // Appeals
-  async submitAppeal(appealData: any): Promise<string> {
-    const appealId = `appeal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    this.appeals.set(appealId, {
-      ...appealData,
-      appealId,
-      status: 'open',
-      createdAt: new Date()
-    });
-    return appealId;
-  }
-
-  async getAppeal(appealId: string): Promise<any> {
-    const appeal = this.appeals.get(appealId);
-    if (!appeal) {
-      throw new Error(`Appeal not found: ${appealId}`);
     }
-    return appeal;
-  }
 
-  // Reports
-  async submitReport(reportData: any): Promise<string> {
-    const reportId = `report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    this.reports.set(reportId, {
-      ...reportData,
-      reportId,
-      status: 'open',
-      weight: this.calculateReporterWeight(reportData.reporterId),
-      createdAt: new Date()
-    });
-
-    // Check if reports exceed threshold for escalation
-    await this.checkReportThreshold(reportData.contentId);
-    
-    return reportId;
-  }
-
-  private calculateReporterWeight(reporterId: string): number {
-    // Simulate reputation-based weighting
-    if (reporterId.includes('high-rep')) return 2.0;
-    if (reporterId.includes('medium-rep')) return 1.5;
-    if (reporterId.includes('low-rep')) return 0.5;
-    return 1.0;
-  }
-
-  private async checkReportThreshold(contentId: string): Promise<void> {
-    const reports = Array.from(this.reports.values())
-      .filter(r => r.contentId === contentId);
-    
-    const totalWeight = reports.reduce((sum, r) => sum + r.weight, 0);
-    
-    if (totalWeight >= 3.0) {
-      // Escalate to review
-      const moderationCase = this.moderationCases.get(contentId);
-      if (moderationCase) {
-        moderationCase.status = 'quarantined';
-        this.reviewQueue.set(contentId, {
-          caseId: contentId,
-          priority: 'high',
-          escalatedBy: 'community_reports',
-          createdAt: new Date()
-        });
-      }
-    }
-  }
-
-  // Moderation Decisions
-  async processModerationDecision(decision: any): Promise<void> {
-    const moderationCase = this.moderationCases.get(decision.caseId);
-    if (moderationCase) {
-      moderationCase.status = decision.decision === 'allow' ? 'allowed' : 'blocked';
-      moderationCase.moderatorId = decision.moderatorId;
-      moderationCase.reasoning = decision.reasoning;
-      moderationCase.updatedAt = new Date();
-      
-      // Remove from review queue
-      this.reviewQueue.delete(decision.caseId);
-      
-      // Log the decision
-      this.logAuditEvent(decision.caseId, 'moderation_decision', {
-        decision: decision.decision,
-        moderatorId: decision.moderatorId,
-        reasoning: decision.reasoning
-      });
-    }
-  }
-
-  // Audit Logging
-  private logAuditEvent(contentId: string, eventType: string, data: any): void {
-    if (!this.auditLogs.has(contentId)) {
-      this.auditLogs.set(contentId, []);
-    }
-    
-    this.auditLogs.get(contentId)!.push({
-      eventType,
-      data,
-      timestamp: new Date(),
-      eventId: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    });
-  }
-
-  async getAuditLog(contentId: string): Promise<any> {
-    const events = this.auditLogs.get(contentId) || [];
-    return { events };
-  }
-
-  // Access Logging
-  async logAccess(contentId: string, accessType: string, userId: string): Promise<void> {
-    if (!this.accessLogs.has(contentId)) {
-      this.accessLogs.set(contentId, []);
-    }
-    
-    this.accessLogs.get(contentId)!.push({
-      accessType,
-      userId,
-      timestamp: new Date(),
-      ipAddress: '127.0.0.1'
-    });
-  }
-
-  async getAccessLogs(contentId: string): Promise<any[]> {
-    return this.accessLogs.get(contentId) || [];
-  }
-
-  // User Settings
-  async updatePrivacySettings(settings: any): Promise<void> {
-    const existing = this.userSettings.get(settings.userId) || {};
-    this.userSettings.set(settings.userId, {
-      ...existing,
-      ...settings,
-      updatedAt: new Date()
-    });
-  }
-
-  async getUserSettings(userId: string): Promise<any> {
-    return this.userSettings.get(userId) || {};
-  }
-
-  // Time Simulation
-  async simulateTimePassage(contentId: string, days: number): Promise<void> {
-    const moderationCase = this.moderationCases.get(contentId);
-    if (moderationCase) {
-      const pastDate = new Date();
-      pastDate.setDate(pastDate.getDate() - days);
-      moderationCase.createdAt = pastDate;
-    }
-  }
-
-  // Data Cleanup
-  async cleanupExpiredData(): Promise<void> {
-    const now = new Date();
-    const retentionDays = 90;
-    
-    for (const [contentId, caseData] of this.moderationCases.entries()) {
-      const daysSinceCreation = Math.floor(
-        (now.getTime() - caseData.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      
-      if (daysSinceCreation > retentionDays) {
-        // Mark PII as deleted
-        caseData.piiData = null;
-        caseData.retentionStatus = 'pii_deleted';
-      }
-    }
-  }
-
-  async deleteUserData(request: any): Promise<void> {
-    const { userId, requestType } = request;
-    
-    if (requestType === 'full_deletion') {
-      // Mark all user data as deleted
-      for (const [contentId, caseData] of this.moderationCases.entries()) {
-        if (caseData.userId === userId) {
-          caseData.userData = null;
-          caseData.gdprStatus = 'deleted';
-        }
-      }
-      
-      // Remove user settings
-      this.userSettings.delete(userId);
-    }
-  }
-
-  // Suspicious Activity
-  async logSuspiciousActivity(activity: any): Promise<void> {
-    this.suspiciousActivity.push({
-      ...activity,
-      timestamp: new Date(),
-      id: `activity-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    });
-  }
-
-  async getSuspiciousActivityAlerts(): Promise<any[]> {
-    return this.suspiciousActivity;
-  }
-
-  // Test Data Seeding
-  async seedModerationCases(count: number): Promise<void> {
-    for (let i = 0; i < count; i++) {
-      const contentId = `case-${i}`;
-      await this.storeModerationCase({
-        contentId,
-        status: i % 3 === 0 ? 'blocked' : 'allowed',
-        confidence: 0.5 + (Math.random() * 0.5),
-        vendorScores: {
-          openai: Math.random(),
-          perspective: Math.random()
-        },
-        reasonCode: 'test_case',
-        userId: `user-${i % 10}`
-      });
-    }
-  }
-
-  // Performance Testing Helpers
-  async batchStoreModerationCases(cases: any[]): Promise<void> {
-    for (const caseData of cases) {
-      await this.storeModerationCase(caseData);
-    }
-  }
-
-  async getPerformanceMetrics(): Promise<any> {
-    return {
-      totalCases: this.moderationCases.size,
-      queueSize: this.reviewQueue.size,
-      appealCount: this.appeals.size,
-      reportCount: this.reports.size
-    };
+    return { success: errors.length === 0, errors };
+  } catch (error) {
+    errors.push(`Migration test failed: ${error.message}`);
+    return { success: false, errors };
   }
 }

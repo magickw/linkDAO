@@ -1,0 +1,97 @@
+{
+  "timestamp": "2025-10-20T18:31:24.368Z",
+  "totalTime": 0,
+  "summary": {
+    "totalTests": 0,
+    "passedTests": 0,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "totalSuites": 3,
+    "passedSuites": 3,
+    "failedSuites": 0
+  },
+  "testSuites": [
+    {
+      "name": "Seller Cache Invalidation Tests",
+      "filePath": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerCacheInvalidationTests.test.tsx",
+      "status": "passed",
+      "duration": 0,
+      "tests": [],
+      "coverage": null,
+      "performance": {
+        "runtime": 0,
+        "slow": false,
+        "memoryUsage": 46535464
+      }
+    },
+    {
+      "name": "Seller Mobile Optimization Tests",
+      "filePath": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerMobileOptimizationTests.test.tsx",
+      "status": "passed",
+      "duration": 0,
+      "tests": [],
+      "coverage": null,
+      "performance": {
+        "runtime": 0,
+        "slow": false,
+        "memoryUsage": 46536360
+      }
+    },
+    {
+      "name": "Seller Integration Test Suite",
+      "filePath": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx",
+      "status": "passed",
+      "duration": 0,
+      "tests": [],
+      "coverage": null,
+      "performance": {
+        "runtime": 0,
+        "slow": false,
+        "memoryUsage": 46537272
+      }
+    }
+  ],
+  "coverage": null,
+  "performance": {
+    "averageDuration": 0,
+    "slowestSuite": null,
+    "fastestSuite": null,
+    "totalDuration": 0
+  },
+  "requirements": {
+    "10.1": {
+      "name": "API Endpoint Consistency",
+      "covered": false,
+      "tests": []
+    },
+    "10.2": {
+      "name": "Data Synchronization",
+      "covered": false,
+      "tests": []
+    },
+    "10.3": {
+      "name": "Cache Invalidation",
+      "covered": true,
+      "tests": [
+        "Seller Cache Invalidation Tests"
+      ]
+    },
+    "10.4": {
+      "name": "Error Handling",
+      "covered": false,
+      "tests": []
+    },
+    "10.5": {
+      "name": "Mobile Optimization",
+      "covered": true,
+      "tests": [
+        "Seller Mobile Optimization Tests"
+      ]
+    },
+    "10.6": {
+      "name": "Performance Benchmarking",
+      "covered": false,
+      "tests": []
+    }
+  }
+}

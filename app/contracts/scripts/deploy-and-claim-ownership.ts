@@ -56,19 +56,17 @@ class DeploymentManager {
 
   private async deployFoundationContracts() {
     console.log('🏗️  Phase 1: Foundation Contracts');
-    
-    // Deploy LDAOToken
+
+    // Deploy LDAOToken - constructor takes only treasury address
     await this.deployContract('LDAOToken', [
-      ethers.utils.parseEther('1000000000'), // 1 billion tokens
-      'LDAO Token',
-      'LDAO'
+      this.deployer.address // treasury address
     ]);
 
-    // Deploy MockERC20 for testing
+    // Deploy MockERC20 for testing - constructor takes (name, symbol, decimals)
     await this.deployContract('MockERC20', [
       'Mock Token',
       'MOCK',
-      ethers.utils.parseEther('1000000')
+      18 // decimals
     ]);
 
     // Deploy Counter for testing
@@ -77,68 +75,79 @@ class DeploymentManager {
 
   private async deployCoreServiceContracts() {
     console.log('\n🔧 Phase 2: Core Service Contracts');
-    
+
     const ldaoToken = this.deployedContracts.get('LDAOToken');
-    
-    // Deploy Governance
+
+    // Deploy Governance - constructor(address _governanceToken)
     await this.deployContract('Governance', [
-      ldaoToken?.address,
-      1, // voting delay (blocks)
-      17280, // voting period (~3 days)
-      ethers.utils.parseEther('100000') // quorum
+      ldaoToken?.address
     ]);
 
-    // Deploy ReputationSystem
+    // Deploy ReputationSystem - constructor()
     await this.deployContract('ReputationSystem', []);
 
-    // Deploy ProfileRegistry
+    // Deploy ProfileRegistry - constructor()
     await this.deployContract('ProfileRegistry', []);
 
-    // Deploy SimpleProfileRegistry
+    // Deploy SimpleProfileRegistry - constructor()
     await this.deployContract('SimpleProfileRegistry', []);
 
-    // Deploy PaymentRouter
-    await this.deployContract('PaymentRouter', []);
+    // Deploy PaymentRouter - constructor(uint256 _feeBasisPoints, address _feeCollector)
+    await this.deployContract('PaymentRouter', [
+      250, // 2.5% fee
+      this.deployer.address // fee collector
+    ]);
   }
 
   private async deployMarketplaceContracts() {
     console.log('\n🏪 Phase 3: Marketplace Contracts');
-    
+
+    const ldaoToken = this.deployedContracts.get('LDAOToken');
     const governance = this.deployedContracts.get('Governance');
     const reputation = this.deployedContracts.get('ReputationSystem');
-    
-    // Deploy EnhancedEscrow
+
+    // Deploy EnhancedEscrow - constructor(address _ldaoToken, address _governance)
     await this.deployContract('EnhancedEscrow', [
-      governance?.address,
-      7 * 24 * 60 * 60 // 7 days default timeout
+      ldaoToken?.address,
+      governance?.address
     ]);
 
-    // Deploy DisputeResolution
+    // Deploy DisputeResolution - constructor(address _governance, address _reputationSystem)
     await this.deployContract('DisputeResolution', [
       governance?.address,
       reputation?.address
     ]);
 
-    // Deploy Marketplace
-    await this.deployContract('Marketplace', []);
+    // Deploy Marketplace - constructor(address _ldaoToken)
+    await this.deployContract('Marketplace', [
+      ldaoToken?.address
+    ]);
 
-    // Deploy RewardPool
-    await this.deployContract('RewardPool', []);
+    // Deploy RewardPool - constructor(address _ldao)
+    await this.deployContract('RewardPool', [
+      ldaoToken?.address
+    ]);
   }
 
   private async deployExtendedFeatureContracts() {
     console.log('\n🎨 Phase 4: Extended Feature Contracts');
-    
-    // Deploy NFTMarketplace
+
+    const ldaoToken = this.deployedContracts.get('LDAOToken');
+    const rewardPool = this.deployedContracts.get('RewardPool');
+
+    // Deploy NFTMarketplace - constructor()
     await this.deployContract('NFTMarketplace', []);
 
-    // Deploy NFTCollectionFactory
+    // Deploy NFTCollectionFactory - constructor()
     await this.deployContract('NFTCollectionFactory', []);
 
-    // Deploy TipRouter
-    await this.deployContract('TipRouter', []);
+    // Deploy TipRouter - constructor(address _ldao, address _rewardPool)
+    await this.deployContract('TipRouter', [
+      ldaoToken?.address,
+      rewardPool?.address
+    ]);
 
-    // Deploy FollowModule
+    // Deploy FollowModule - constructor()
     await this.deployContract('FollowModule', []);
   }
 
@@ -230,21 +239,21 @@ class DeploymentManager {
   async verifyContract(address: string, constructorArgs: any[]) {
     try {
       console.log(`🔍 Verifying contract at ${address}...`);
-      
-      // Use Etherscan V2 API for verification
+
+      // Use hardhat-verify plugin (V2 API compatible)
       await hre.run('verify:verify', {
         address: address,
         constructorArguments: constructorArgs,
-        // The hardhat-verify plugin will automatically use V2 API if configured
       });
-      
-      console.log(`✅ Contract verified on Etherscan V2 API`);
-    } catch (error) {
+
+      console.log(`✅ Contract verified on Etherscan`);
+    } catch (error: any) {
       if (error.message.includes('Already Verified')) {
         console.log(`✅ Contract already verified`);
+      } else if (error.message.includes('does not have bytecode')) {
+        console.log(`⚠️  Contract not yet indexed by Etherscan, skipping verification`);
       } else {
         console.log(`⚠️  Verification failed:`, error.message);
-        console.log(`   This might be due to API rate limits or network issues`);
         console.log(`   You can manually verify later on Etherscan`);
       }
     }
@@ -308,7 +317,7 @@ async function main() {
   // Configuration based on network
   const config: DeploymentConfig = {
     network,
-    verifyContracts: network !== 'localhost' && network !== 'hardhat',
+    verifyContracts: true, // Re-enabled with V2 API support
     // Add your multi-sig address here for production deployments
     multiSigAddress: process.env.MULTI_SIG_ADDRESS,
     // Or specify an initial owner

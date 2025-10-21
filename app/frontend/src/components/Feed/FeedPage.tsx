@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { FeedSortingHeader } from './FeedSortingTabs';
 import { FeedSortType, EnhancedPost } from '../../types/feed';
 import { useFeedSortingPreferences } from '../../hooks/useFeedPreferences';
-import { useIntelligentCache } from '../../hooks/useIntelligentCache';
+import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 import { FeedService } from '../../services/feedService';
 import LoadingSkeletons from '../LoadingSkeletons/PostCardSkeleton';
 
@@ -24,7 +24,8 @@ export const FeedPage: React.FC<FeedPageProps> = ({
   const [hasMore, setHasMore] = useState(true);
 
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
-  const { cacheWithStrategy, invalidateByTags, predictivePreload } = useIntelligentCache();
+  // Use the service worker cache service directly instead of the hook
+  const cacheService = serviceWorkerCacheService;
 
   useEffect(() => {
     loadPosts();
@@ -50,7 +51,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
   };
 
   const handleRefresh = async () => {
-    await invalidateByTags(['feed', 'posts']);
+    await cacheService.invalidateByTags(['feed', 'posts']);
     await loadPosts();
   };
 

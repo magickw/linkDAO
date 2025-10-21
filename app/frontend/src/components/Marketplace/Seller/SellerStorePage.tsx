@@ -1085,8 +1085,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 <div key={listing.id} className="bg-white/10 rounded-lg overflow-hidden cursor-pointer hover:bg-white/15 transition-colors"
                      onClick={() => handleProductClick(listing.id)}>
                   <div className="relative h-32">
-                    {listing.image ? (
-                      <Image src={listing.image} alt={listing.title} fill className="object-cover" />
+                    {listing.images && listing.images.length > 0 ? (
+                      <Image src={listing.images[0]} alt={listing.title} fill className="object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center text-white text-sm">
                         No Image
@@ -1214,9 +1214,9 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       onClick={() => handleProductClick(listing.id)}
                     >
                       <div className="relative">
-                        {listing.image ? (
+                        {listing.images && listing.images.length > 0 ? (
                           <Image
-                            src={listing.image}
+                            src={listing.images[0]}
                             alt={listing.title}
                             width={400}
                             height={300}
@@ -1247,8 +1247,8 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                         <div className="flex items-center justify-between text-xs text-white/60">
                           <span>{listing.views} views</span>
                           <span className={`px-2 py-1 rounded-full ${
-                            listing.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                            listing.status === 'SOLD' ? 'bg-red-500/20 text-red-400' :
+                            listing.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                            listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
                             'bg-gray-500/20 text-gray-400'
                           }`}>
                             {listing.status.toLowerCase()}

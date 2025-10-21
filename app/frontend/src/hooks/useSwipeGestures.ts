@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface SwipeGestureConfig {
   threshold?: number; // Minimum distance for swipe
@@ -12,9 +12,9 @@ export interface SwipeGestureHandlers {
   onSwipeRight?: () => void;
   onSwipeUp?: () => void;
   onSwipeDown?: () => void;
-  onSwipeStart?: (event: TouchEvent) => void;
-  onSwipeMove?: (event: TouchEvent, deltaX: number, deltaY: number) => void;
-  onSwipeEnd?: (event: TouchEvent) => void;
+  onSwipeStart?: (event: React.TouchEvent) => void;
+  onSwipeMove?: (event: React.TouchEvent, deltaX: number, deltaY: number) => void;
+  onSwipeEnd?: (event: React.TouchEvent) => void;
 }
 
 export interface SwipeGestureState {
@@ -48,7 +48,7 @@ export const useSwipeGestures = (
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const touchMoveRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
-  const handleTouchStart = useCallback((event: TouchEvent) => {
+  const handleTouchStart = useCallback((event: React.TouchEvent) => {
     const touch = event.touches[0];
     touchStartRef.current = {
       x: touch.clientX,
@@ -68,7 +68,7 @@ export const useSwipeGestures = (
     handlers.onSwipeStart?.(event);
   }, [handlers]);
 
-  const handleTouchMove = useCallback((event: TouchEvent) => {
+  const handleTouchMove = useCallback((event: React.TouchEvent) => {
     if (!touchStartRef.current) return;
 
     const touch = event.touches[0];
@@ -111,7 +111,7 @@ export const useSwipeGestures = (
     handlers.onSwipeMove?.(event, deltaX, deltaY);
   }, [handlers, finalConfig]);
 
-  const handleTouchEnd = useCallback((event: TouchEvent) => {
+  const handleTouchEnd = useCallback((event: React.TouchEvent) => {
     if (!touchStartRef.current || !touchMoveRef.current) {
       setSwipeState(prev => ({
         ...prev,
@@ -181,12 +181,121 @@ export const withSwipeGestures = <P extends object>(
   return React.forwardRef<any, P>((props, ref) => {
     const { swipeHandlers } = useSwipeGestures(handlers, config);
     
-    return (
-      <div {...swipeHandlers}>
-        <Component {...props} ref={ref} />
-      </div>
+    return React.createElement('div', { ...swipeHandlers },
+      React.createElement(Component, { ...props, ref } as any)
     );
   });
+};
+
+export const usePostCardSwipeGestures = (
+  postId: string,
+  onVote: (postId: string, direction: 'up' | 'down') => void,
+  onSave?: (postId: string) => void,
+  onShare?: (postId: string) => void
+) => {
+  const [swipeState, setSwipeState] = useState({
+    isActive: false,
+    direction: null as 'left' | 'right' | null,
+    distance: 0,
+    velocity: 0,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0
+  });
+
+  // Check if touch is supported
+  const isSwipeSupported = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+  // Handle swipe events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isSwipeSupported) return;
+    
+    const touch = e.touches[0];
+    setSwipeState(prev => ({
+      ...prev,
+      isActive: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      direction: null,
+      distance: 0
+    }));
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isSwipeSupported || !swipeState.isActive) return;
+    
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - swipeState.startX;
+    const deltaY = touch.clientY - swipeState.startY;
+    const distance = Math.abs(deltaX);
+    const direction = deltaX < 0 ? 'left' : deltaX > 0 ? 'right' : null;
+    
+    setSwipeState(prev => ({
+      ...prev,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      direction,
+      distance
+    }));
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwipeSupported || !swipeState.isActive) return;
+    
+    // Determine action based on direction and distance
+    if (swipeState.direction === 'left') {
+      // Left swipe: Vote
+      if (swipeState.distance > 150 && onVote) {
+        // Long left swipe = downvote
+        onVote(postId, 'down');
+      } else if (onVote) {
+        // Short left swipe = upvote
+        onVote(postId, 'up');
+      }
+    } else if (swipeState.direction === 'right') {
+      // Right swipe: Save or Share
+      if (swipeState.distance > 150 && onShare) {
+        // Long right swipe = share
+        onShare(postId);
+      } else if (onSave) {
+        // Short right swipe = save
+        onSave(postId);
+      }
+    }
+    
+    // Reset state
+    setSwipeState(prev => ({
+      ...prev,
+      isActive: false,
+      direction: null,
+      distance: 0
+    }));
+  };
+
+  const handleTouchCancel = () => {
+    setSwipeState(prev => ({
+      ...prev,
+      isActive: false,
+      direction: null,
+      distance: 0
+    }));
+  };
+
+  const swipeHandlers = {
+    onTouchStart: handleTouchStart,
+    onTouchMove: handleTouchMove,
+    onTouchEnd: handleTouchEnd,
+    onTouchCancel: handleTouchCancel
+  };
+
+  return {
+    swipeState,
+    swipeHandlers,
+    isSwipeSupported
+  };
 };
 
 export default useSwipeGestures;

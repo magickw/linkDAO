@@ -1,0 +1,77 @@
+{
+  "summary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "pending": 0,
+    "success": false,
+    "duration": 701,
+    "timestamp": "2025-10-21T00:04:28.243Z"
+  },
+  "suites": [
+    {
+      "name": "Seller End To End Integration Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerEndToEndIntegrationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "duration": 0,
+      "tests": [],
+      "failureMessage": "  \u001b[1m● \u001b[22mTest suite failed to run\n\n    TypeError: Cannot assign to read only property 'clipboard' of object '[object Navigator]'\n        at Function.assign (<anonymous>)\n\n    \u001b[0m \u001b[90m 35 |\u001b[39m\n     \u001b[90m 36 |\u001b[39m \u001b[90m// Mock clipboard API\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m \u001b[33mObject\u001b[39m\u001b[33m.\u001b[39massign(navigator\u001b[33m,\u001b[39m {\n     \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 38 |\u001b[39m   clipboard\u001b[33m:\u001b[39m {\n     \u001b[90m 39 |\u001b[39m     writeText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\n     \u001b[90m 40 |\u001b[39m     readText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\u001b[0m\n\n      \u001b[2mat Object.assign (\u001b[22msrc/__tests__/integration/seller/setup/sellerTestSetup.ts\u001b[2m:37:8)\u001b[22m\n"
+    },
+    {
+      "name": "Seller Test Framework Demo",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerTestFrameworkDemo.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "duration": 0,
+      "tests": [],
+      "failureMessage": "  \u001b[1m● \u001b[22mTest suite failed to run\n\n    TypeError: Cannot assign to read only property 'clipboard' of object '[object Navigator]'\n        at Function.assign (<anonymous>)\n\n    \u001b[0m \u001b[90m 35 |\u001b[39m\n     \u001b[90m 36 |\u001b[39m \u001b[90m// Mock clipboard API\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m \u001b[33mObject\u001b[39m\u001b[33m.\u001b[39massign(navigator\u001b[33m,\u001b[39m {\n     \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 38 |\u001b[39m   clipboard\u001b[33m:\u001b[39m {\n     \u001b[90m 39 |\u001b[39m     writeText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\n     \u001b[90m 40 |\u001b[39m     readText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\u001b[0m\n\n      \u001b[2mat Object.assign (\u001b[22msrc/__tests__/integration/seller/setup/sellerTestSetup.ts\u001b[2m:37:8)\u001b[22m\n"
+    },
+    {
+      "name": "Seller Integration Test Suite",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerIntegrationTestSuite.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "duration": 0,
+      "tests": [],
+      "failureMessage": "  \u001b[1m● \u001b[22mTest suite failed to run\n\n    TypeError: Cannot assign to read only property 'clipboard' of object '[object Navigator]'\n        at Function.assign (<anonymous>)\n\n    \u001b[0m \u001b[90m 35 |\u001b[39m\n     \u001b[90m 36 |\u001b[39m \u001b[90m// Mock clipboard API\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m \u001b[33mObject\u001b[39m\u001b[33m.\u001b[39massign(navigator\u001b[33m,\u001b[39m {\n     \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 38 |\u001b[39m   clipboard\u001b[33m:\u001b[39m {\n     \u001b[90m 39 |\u001b[39m     writeText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\n     \u001b[90m 40 |\u001b[39m     readText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\u001b[0m\n\n      \u001b[2mat Object.assign (\u001b[22msrc/__tests__/integration/seller/setup/sellerTestSetup.ts\u001b[2m:37:8)\u001b[22m\n"
+    },
+    {
+      "name": "Seller Mobile Optimization Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerMobileOptimizationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "duration": 0,
+      "tests": [],
+      "failureMessage": "  \u001b[1m● \u001b[22mTest suite failed to run\n\n    TypeError: Cannot assign to read only property 'clipboard' of object '[object Navigator]'\n        at Function.assign (<anonymous>)\n\n    \u001b[0m \u001b[90m 35 |\u001b[39m\n     \u001b[90m 36 |\u001b[39m \u001b[90m// Mock clipboard API\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m \u001b[33mObject\u001b[39m\u001b[33m.\u001b[39massign(navigator\u001b[33m,\u001b[39m {\n     \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 38 |\u001b[39m   clipboard\u001b[33m:\u001b[39m {\n     \u001b[90m 39 |\u001b[39m     writeText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\n     \u001b[90m 40 |\u001b[39m     readText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\u001b[0m\n\n      \u001b[2mat Object.assign (\u001b[22msrc/__tests__/integration/seller/setup/sellerTestSetup.ts\u001b[2m:37:8)\u001b[22m\n"
+    },
+    {
+      "name": "Seller Cache Invalidation Tests",
+      "path": "/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/__tests__/integration/seller/SellerCacheInvalidationTests.test.tsx",
+      "passed": 0,
+      "failed": 0,
+      "pending": 0,
+      "duration": 0,
+      "tests": [],
+      "failureMessage": "  \u001b[1m● \u001b[22mTest suite failed to run\n\n    TypeError: Cannot assign to read only property 'clipboard' of object '[object Navigator]'\n        at Function.assign (<anonymous>)\n\n    \u001b[0m \u001b[90m 35 |\u001b[39m\n     \u001b[90m 36 |\u001b[39m \u001b[90m// Mock clipboard API\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 37 |\u001b[39m \u001b[33mObject\u001b[39m\u001b[33m.\u001b[39massign(navigator\u001b[33m,\u001b[39m {\n     \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 38 |\u001b[39m   clipboard\u001b[33m:\u001b[39m {\n     \u001b[90m 39 |\u001b[39m     writeText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\n     \u001b[90m 40 |\u001b[39m     readText\u001b[33m:\u001b[39m jest\u001b[33m.\u001b[39mfn()\u001b[33m,\u001b[39m\u001b[0m\n\n      \u001b[2mat Object.assign (\u001b[22msrc/__tests__/integration/seller/setup/sellerTestSetup.ts\u001b[2m:37:8)\u001b[22m\n"
+    }
+  ],
+  "performance": {
+    "averageTestDuration": 0,
+    "slowestTests": [],
+    "fastestTests": [],
+    "memoryUsage": {
+      "rss": 247169024,
+      "heapTotal": 130269184,
+      "heapUsed": 97848024,
+      "external": 5466413,
+      "arrayBuffers": 328638
+    }
+  },
+  "coverage": null,
+  "recommendations": []
+}

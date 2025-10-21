@@ -67,7 +67,7 @@ export interface TierContext {
   progress: TierProgress | null;
   loading: boolean;
   error: string | null;
-  canPerformAction: (action: string) => TierValidationResult;
+  canPerformAction: (action: TierAction) => TierValidationResult;
   refreshTier: () => Promise<void>;
 }
 

@@ -212,8 +212,17 @@ export interface UnifiedSellerProfile {
   // Profile completeness
   profileCompleteness: {
     score: number; // 0-100
-    missingFields: string[];
-    recommendations: string[];
+    missingFields: Array<{
+      field: string;
+      label: string;
+      weight: number;
+      required: boolean;
+    }>;
+    recommendations: Array<{
+      action: string;
+      description: string;
+      impact: number;
+    }>;
     lastCalculated: string;
   };
   

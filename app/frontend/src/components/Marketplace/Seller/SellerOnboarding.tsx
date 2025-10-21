@@ -7,6 +7,7 @@ import { withSellerErrorBoundary } from '../../Seller/ErrorHandling';
 import { TierProvider } from '../../../contexts/TierContext';
 import TierAwareComponent from '../../Seller/TierSystem/TierAwareComponent';
 import { TIER_ACTIONS } from '../../../types/sellerTier';
+import { UnifiedSellerProfile } from '../../../types/unifiedSeller';
 
 // Onboarding Step Components
 import { WalletConnectStep } from './onboarding/WalletConnectStep';
@@ -15,7 +16,6 @@ import { VerificationStep } from './onboarding/VerificationStep';
 import { PayoutSetupStep } from './onboarding/PayoutSetupStep';
 import { FirstListingStep } from './onboarding/FirstListingStep';
 import { useSellerOnboarding } from '@/hooks/useSeller';
-import { useSeller } from '@/hooks/useMarketplaceData';
 
 interface SellerOnboardingProps {
   onComplete?: () => void;
@@ -24,7 +24,9 @@ interface SellerOnboardingProps {
 function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { profile, createProfile } = useSeller();
+  const sellerData = useUnifiedSeller(address);
+  const profile = sellerData.profile as UnifiedSellerProfile | null | undefined;
+  const createProfile = sellerData.createProfile;
   const {
     steps,
     currentStep,
@@ -141,7 +143,11 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
   };
 
   const renderStepComponent = () => {
-    const props = {
+    const props: {
+      onComplete: (data: any) => Promise<void>;
+      data: any;
+      profile: UnifiedSellerProfile | null | undefined;
+    } = {
       onComplete: handleStepComplete,
       data: stepData[currentStepData.id] || currentStepData.data,
       profile,
@@ -218,7 +224,7 @@ function SellerOnboardingComponent({ onComplete }: SellerOnboardingProps) {
 // Extract the main content to a separate component for cleaner tier integration
 interface SellerOnboardingContentProps {
   onComplete?: () => void;
-  profile: any;
+  profile: UnifiedSellerProfile | null | undefined;
   createProfile: any;
   steps: any[];
   currentStep: number;
@@ -349,7 +355,11 @@ function SellerOnboardingContent({
   };
 
   const renderStepComponent = () => {
-    const props = {
+    const props: {
+      onComplete: (data: any) => Promise<void>;
+      data: any;
+      profile: UnifiedSellerProfile | null | undefined;
+    } = {
       onComplete: handleStepComplete,
       data: stepData[currentStepData.id] || currentStepData.data,
       profile,
@@ -373,109 +383,108 @@ function SellerOnboardingContent({
 
   return (
     <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Seller Onboarding</h1>
-          <p className="text-gray-300">
-            Complete these steps to unlock all seller features and start selling on our marketplace
-          </p>
-        </div>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">Seller Onboarding</h1>
+        <p className="text-gray-300">
+          Complete these steps to unlock all seller features and start selling on our marketplace
+        </p>
+      </div>
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-300">
-              Step {currentStep + 1} of {steps.length}
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm text-gray-300">
+            Step {currentStep + 1} of {steps.length}
+          </span>
+          <span className="text-sm text-gray-300">
+            {Math.round(progress)}% Complete
+          </span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div
+            className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Step Navigation */}
+      <div className="flex justify-center mb-8">
+        <div className="flex space-x-4">
+          {steps.map((step, index) => (
+            <button
+              key={step.id}
+              onClick={() => goToStep(index)}
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all ${index === currentStep
+                ? 'bg-purple-600 text-white'
+                : step.completed
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              disabled={index > currentStep && !step.completed}
+            >
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step.completed ? 'bg-green-500' : index === currentStep ? 'bg-purple-500' : 'bg-gray-500'
+                }`}>
+                {step.completed ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </div>
+              <span className="hidden sm:block text-sm">{step.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Current Step Content */}
+      <GlassPanel className="mb-8">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-white mb-2">{currentStepData.title}</h2>
+          <p className="text-gray-300">{currentStepData.description}</p>
+          {currentStepData.required && (
+            <span className="inline-block mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded">
+              Required
             </span>
-            <span className="text-sm text-gray-300">
-              {Math.round(progress)}% Complete
-            </span>
-          </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div
-              className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+          )}
         </div>
 
-        {/* Step Navigation */}
-        <div className="flex justify-center mb-8">
-          <div className="flex space-x-4">
-            {steps.map((step, index) => (
-              <button
-                key={step.id}
-                onClick={() => goToStep(index)}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all ${index === currentStep
-                  ? 'bg-purple-600 text-white'
-                  : step.completed
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  }`}
-                disabled={index > currentStep && !step.completed}
-              >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step.completed ? 'bg-green-500' : index === currentStep ? 'bg-purple-500' : 'bg-gray-500'
-                  }`}>
-                  {step.completed ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                <span className="hidden sm:block text-sm">{step.title}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderStepComponent()}
+      </GlassPanel>
 
-        {/* Current Step Content */}
-        <GlassPanel className="mb-8">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-white mb-2">{currentStepData.title}</h2>
-            <p className="text-gray-300">{currentStepData.description}</p>
-            {currentStepData.required && (
-              <span className="inline-block mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded">
-                Required
-              </span>
-            )}
-          </div>
+      {/* Navigation Buttons */}
+      <div className="flex justify-between">
+        <Button
+          onClick={previousStep}
+          variant="secondary"
+          disabled={currentStep === 0}
+        >
+          Previous
+        </Button>
 
-          {renderStepComponent()}
-        </GlassPanel>
+        <div className="flex space-x-3">
+          {!currentStepData.required && (
+            <Button
+              onClick={nextStep}
+              variant="outline"
+              disabled={currentStep >= steps.length - 1}
+            >
+              Skip
+            </Button>
+          )}
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between">
-          <Button
-            onClick={previousStep}
-            variant="secondary"
-            disabled={currentStep === 0}
-          >
-            Previous
-          </Button>
-
-          <div className="flex space-x-3">
-            {!currentStepData.required && (
-              <Button
-                onClick={nextStep}
-                variant="outline"
-                disabled={currentStep >= steps.length - 1}
-              >
-                Skip
-              </Button>
-            )}
-
-            {currentStep < steps.length - 1 && (
-              <Button
-                onClick={nextStep}
-                variant="primary"
-                disabled={currentStepData.required && !currentStepData.completed}
-              >
-                Next
-              </Button>
-            )}
-          </div>
+          {currentStep < steps.length - 1 && (
+            <Button
+              onClick={nextStep}
+              variant="primary"
+              disabled={currentStepData.required && !currentStepData.completed}
+            >
+              Next
+            </Button>
+          )}
         </div>
       </div>
     </div>

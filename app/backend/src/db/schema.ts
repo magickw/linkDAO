@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, uuid, primaryKey, index, boolean, numeric, foreignKey, jsonb, interval, unique } from "drizzle-orm/pg-core";
 import * as marketplaceSchema from "./marketplaceSchema";
 
 // Users / Profiles

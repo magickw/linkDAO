@@ -1,572 +1,496 @@
-/**
- * Intelligent Cache Integration Service
- * Orchestrates all caching services for optimal performance
- */
+import { QueryClient } from '@tanstack/react-query';
+import { IntelligentSellerCache, createIntelligentSellerCache } from './intelligentSellerCache';
+import { CachePerformanceMonitor, createCachePerformanceMonitor } from './cachePerformanceMonitor';
+import { CacheOptimizationService, createCacheOptimizationService } from './cacheOptimizationService';
+import { SellerCacheManager, createSellerCacheManager } from './sellerCacheManager';
 
-import { IntelligentCacheManager } from './intelligentCacheService';
-import { ImageOptimizationService } from './imageOptimizationService';
-import { ServiceWorkerCacheService } from './serviceWorkerCacheService';
-import { 
-  communityIconsCache, 
-  previewContentCache, 
-  userProfileCache,
-  cacheInvalidationService 
-} from './communityCache';
-
-interface CacheIntegrationConfig {
-  enablePredictivePreloading: boolean;
-  enableImageOptimization: boolean;
-  enableServiceWorkerCache: boolean;
-  maxMemoryUsage: number; // in bytes
-  preloadingStrategy: 'aggressive' | 'conservative' | 'adaptive';
-  networkAwarePreloading: boolean;
+// Integration configuration
+export interface IntelligentCacheConfig {
+  maxCacheSize?: number;
+  performanceThresholds?: {
+    minHitRate?: number;
+    maxResponseTime?: number;
+    maxMemoryUsage?: number;
+    maxEvictionRate?: number;
+  };
+  monitoring?: {
+    enabled?: boolean;
+    intervalMs?: number;
+  };
+  optimization?: {
+    enabled?: boolean;
+    intervalMs?: number;
+  };
+  warming?: {
+    enabled?: boolean;
+    strategies?: string[];
+  };
 }
 
-interface CachePerformanceMetrics {
-  totalCacheHits: number;
-  totalCacheMisses: number;
-  averageResponseTime: number;
-  memoryUsage: number;
-  networkSavings: number;
-  preloadSuccessRate: number;
-  imageOptimizationSavings: number;
+// Cache system status
+export interface CacheSystemStatus {
+  intelligent: {
+    enabled: boolean;
+    size: number;
+    hitRate: number;
+    memoryUsage: number;
+  };
+  performance: {
+    monitoring: boolean;
+    alertCount: number;
+    lastCheck: number;
+  };
+  optimization: {
+    enabled: boolean;
+    lastRun: number;
+    strategiesApplied: number;
+  };
+  legacy: {
+    enabled: boolean;
+    size: number;
+  };
 }
 
 /**
- * Main cache integration service
+ * Integrated intelligent caching system for seller data
+ * Combines intelligent cache, performance monitoring, and optimization
  */
 export class IntelligentCacheIntegration {
-  private intelligentCache: IntelligentCacheManager;
-  private imageOptimization: ImageOptimizationService;
-  private serviceWorkerCache: ServiceWorkerCacheService;
-  private config: CacheIntegrationConfig;
-  private performanceMetrics: CachePerformanceMetrics;
+  private queryClient: QueryClient;
+  private config: IntelligentCacheConfig;
+  
+  // Core components
+  private intelligentCache!: IntelligentSellerCache;
+  private performanceMonitor!: CachePerformanceMonitor;
+  private optimizationService!: CacheOptimizationService;
+  private legacyCacheManager!: SellerCacheManager;
+  
+  // State
   private isInitialized = false;
+  private migrationInProgress = false;
 
-  constructor(config: Partial<CacheIntegrationConfig> = {}) {
+  constructor(queryClient: QueryClient, config: IntelligentCacheConfig = {}) {
+    this.queryClient = queryClient;
     this.config = {
-      enablePredictivePreloading: true,
-      enableImageOptimization: true,
-      enableServiceWorkerCache: true,
-      maxMemoryUsage: 100 * 1024 * 1024, // 100MB
-      preloadingStrategy: 'adaptive',
-      networkAwarePreloading: true,
+      maxCacheSize: 1000,
+      performanceThresholds: {
+        minHitRate: 70,
+        maxResponseTime: 100,
+        maxMemoryUsage: 50 * 1024 * 1024,
+        maxEvictionRate: 10
+      },
+      monitoring: {
+        enabled: true,
+        intervalMs: 5 * 60 * 1000 // 5 minutes
+      },
+      optimization: {
+        enabled: true,
+        intervalMs: 15 * 60 * 1000 // 15 minutes
+      },
+      warming: {
+        enabled: true,
+        strategies: ['seller-profile', 'seller-dashboard']
+      },
       ...config
     };
 
-    this.performanceMetrics = {
-      totalCacheHits: 0,
-      totalCacheMisses: 0,
-      averageResponseTime: 0,
-      memoryUsage: 0,
-      networkSavings: 0,
-      preloadSuccessRate: 0,
-      imageOptimizationSavings: 0
-    };
-
-    this.intelligentCache = new IntelligentCacheManager();
-    this.imageOptimization = new ImageOptimizationService();
-    this.serviceWorkerCache = new ServiceWorkerCacheService();
-
-    this.initialize();
+    this.initializeComponents();
   }
 
   /**
-   * Initialize all caching services
+   * Initialize all cache components
    */
-  private async initialize(): Promise<void> {
+  private initializeComponents(): void {
     try {
-      // Setup network listeners
-      this.serviceWorkerCache.setupNetworkListeners();
+      // Initialize intelligent cache
+      this.intelligentCache = createIntelligentSellerCache(
+        this.queryClient, 
+        this.config.maxCacheSize
+      );
 
-      // Setup cache invalidation listeners
-      this.setupCacheInvalidationListeners();
+      // Initialize performance monitor
+      this.performanceMonitor = createCachePerformanceMonitor(
+        this.intelligentCache,
+        this.config.performanceThresholds
+      );
 
-      // Setup performance monitoring
-      this.setupPerformanceMonitoring();
+      // Initialize optimization service
+      this.optimizationService = createCacheOptimizationService(
+        this.intelligentCache,
+        this.performanceMonitor
+      );
 
-      // Preload critical resources
-      await this.preloadCriticalResources();
+      // Initialize legacy cache manager for backward compatibility
+      this.legacyCacheManager = createSellerCacheManager(this.queryClient);
 
       this.isInitialized = true;
-      console.log('Intelligent cache integration initialized');
-    } catch (error) {
-      console.warn('Failed to initialize cache integration:', error);
-    }
-  }
-
-  /**
-   * Setup cache invalidation listeners
-   */
-  private setupCacheInvalidationListeners(): void {
-    // Listen for real-time updates
-    window.addEventListener('websocket-message', (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { type, data } = customEvent.detail;
-      
-      // Handle cache invalidation based on real-time updates
-      cacheInvalidationService.handleRealTimeUpdate({ type, data });
-    });
-
-    // Listen for user actions that should invalidate cache
-    window.addEventListener('user-action', (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { action, target } = customEvent.detail;
-      
-      this.handleUserActionCacheInvalidation(action, target);
-    });
-  }
-
-  /**
-   * Setup performance monitoring
-   */
-  private setupPerformanceMonitoring(): void {
-    setInterval(() => {
-      this.updatePerformanceMetrics();
-    }, 30000); // Update every 30 seconds
-
-    // Monitor memory usage
-    if ('memory' in performance) {
-      setInterval(() => {
-        this.checkMemoryUsage();
-      }, 60000); // Check every minute
-    }
-  }
-
-  /**
-   * Preload critical resources for community enhancements
-   */
-  private async preloadCriticalResources(): Promise<void> {
-    const criticalResources = [
-      '/api/communities/popular',
-      '/api/users/current/communities',
-      '/api/governance/active-proposals',
-      '/static/icons/default-community.svg',
-      '/static/icons/default-avatar.svg'
-    ];
-
-    if (this.config.enableServiceWorkerCache) {
-      await this.serviceWorkerCache.preloadCriticalResources(criticalResources);
-    }
-  }
-
-  /**
-   * Analyze user behavior and trigger predictive preloading
-   */
-  analyzeUserBehavior(userId: string, action: string, target: string): void {
-    if (!this.config.enablePredictivePreloading || !this.isInitialized) {
-      return;
-    }
-
-    // Track user behavior for predictive preloading
-    this.intelligentCache.analyzeUserBehavior(userId, action, target);
-
-    // Trigger specific preloading based on action
-    this.triggerContextualPreloading(action, target);
-  }
-
-  /**
-   * Trigger contextual preloading based on user action
-   */
-  private async triggerContextualPreloading(action: string, target: string): Promise<void> {
-    switch (action) {
-      case 'visit_community':
-        await this.preloadCommunityContext(target);
-        break;
-      case 'view_post':
-        await this.preloadPostContext(target);
-        break;
-      case 'open_profile':
-        await this.preloadUserContext(target);
-        break;
-      case 'start_governance_voting':
-        await this.preloadGovernanceContext();
-        break;
-    }
-  }
-
-  /**
-   * Preload community context
-   */
-  private async preloadCommunityContext(communityId: string): Promise<void> {
-    try {
-      // Preload community data
-      if (this.config.enableServiceWorkerCache) {
-        await this.serviceWorkerCache.cacheCommunityData(communityId, {});
-      }
-
-      // Preload community icon with optimization
-      if (this.config.enableImageOptimization) {
-        const iconUrl = `/api/communities/${communityId}/icon`;
-        await this.imageOptimization.preloadImage(iconUrl, {
-          width: 64,
-          height: 64,
-          format: 'auto',
-          priority: 'high'
-        });
-      }
-
-      // Preload related communities
-      const relatedCommunities = await this.getRelatedCommunities(communityId);
-      await this.preloadRelatedCommunityIcons(relatedCommunities);
+      console.log('[IntelligentCacheIntegration] All components initialized successfully');
 
     } catch (error) {
-      console.warn('Failed to preload community context:', error);
+      console.error('[IntelligentCacheIntegration] Failed to initialize components:', error);
+      throw error;
     }
   }
 
   /**
-   * Preload post context
+   * Start the intelligent caching system
    */
-  private async preloadPostContext(postId: string): Promise<void> {
+  async start(): Promise<void> {
+    if (!this.isInitialized) {
+      throw new Error('Cache system not initialized');
+    }
+
     try {
-      // Preload post comments
-      const commentsUrl = `/api/posts/${postId}/comments`;
-      
-      // Preload related posts
-      const relatedUrl = `/api/posts/${postId}/related`;
-      
-      // Preload author profile
-      const post = await this.getCachedPost(postId);
-      if (post?.authorId) {
-        await this.preloadUserContext(post.authorId);
+      // Start performance monitoring
+      if (this.config.monitoring?.enabled) {
+        this.performanceMonitor.startMonitoring(this.config.monitoring.intervalMs);
       }
 
-      // Preload any preview content in the post
-      if (post?.previewUrls) {
-        await this.preloadPreviewContent(post.previewUrls);
+      // Start optimization
+      if (this.config.optimization?.enabled) {
+        this.optimizationService.startOptimization(this.config.optimization.intervalMs);
       }
+
+      // Migrate from legacy cache if needed
+      await this.migrateLegacyCache();
+
+      // Warm cache with initial data
+      if (this.config.warming?.enabled) {
+        await this.performInitialCacheWarming();
+      }
+
+      console.log('[IntelligentCacheIntegration] Intelligent caching system started');
 
     } catch (error) {
-      console.warn('Failed to preload post context:', error);
+      console.error('[IntelligentCacheIntegration] Failed to start cache system:', error);
+      throw error;
     }
   }
 
   /**
-   * Preload user context
+   * Stop the intelligent caching system
    */
-  private async preloadUserContext(userId: string): Promise<void> {
+  stop(): void {
     try {
-      // Preload user profile
-      if (this.config.enableServiceWorkerCache) {
-        await this.serviceWorkerCache.preloadUserProfile(userId);
-      }
+      this.performanceMonitor.stopMonitoring();
+      this.optimizationService.stopOptimization();
+      this.intelligentCache.stopPerformanceMonitoring();
 
-      // Preload user avatar with optimization
-      if (this.config.enableImageOptimization) {
-        const avatarUrl = `/api/users/${userId}/avatar`;
-        await this.imageOptimization.preloadImage(avatarUrl, {
-          width: 48,
-          height: 48,
-          format: 'auto',
-          priority: 'medium'
-        });
-      }
-
-      // Preload mutual connections
-      const currentUserId = await this.getCurrentUserId();
-      if (currentUserId && currentUserId !== userId) {
-        await userProfileCache.getMutualConnections(userId, currentUserId);
-      }
+      console.log('[IntelligentCacheIntegration] Intelligent caching system stopped');
 
     } catch (error) {
-      console.warn('Failed to preload user context:', error);
+      console.error('[IntelligentCacheIntegration] Error stopping cache system:', error);
     }
   }
 
   /**
-   * Preload governance context
+   * Get seller data with intelligent caching
    */
-  private async preloadGovernanceContext(): Promise<void> {
+  async getSellerData<T>(
+    dataType: string, 
+    walletAddress: string, 
+    fallbackFn?: () => Promise<T>
+  ): Promise<T | null> {
     try {
-      // Preload active proposals
-      const proposalsUrl = '/api/governance/active-proposals';
+      // Try intelligent cache first
+      const cachedData = await this.intelligentCache.get<T>(dataType, walletAddress);
       
-      // Preload user voting power
-      const votingPowerUrl = '/api/governance/voting-power';
+      if (cachedData) {
+        return cachedData;
+      }
+
+      // Fallback to legacy cache
+      const legacyData = this.queryClient.getQueryData<T>(['seller', dataType, walletAddress]);
       
-      // Preload proposal previews
-      const proposals = await this.getCachedProposals();
-      if (proposals) {
-        for (const proposal of proposals) {
-          if (proposal.previewUrl) {
-            await previewContentCache.getPreview(proposal.previewUrl, 'proposal');
-          }
+      if (legacyData) {
+        // Store in intelligent cache for future use
+        await this.intelligentCache.set(`${dataType}:${walletAddress}`, legacyData);
+        return legacyData;
+      }
+
+      // Use fallback function if provided
+      if (fallbackFn) {
+        const freshData = await fallbackFn();
+        if (freshData) {
+          await this.intelligentCache.set(`${dataType}:${walletAddress}`, freshData);
         }
+        return freshData;
       }
 
+      return null;
+
     } catch (error) {
-      console.warn('Failed to preload governance context:', error);
-    }
-  }
-
-  /**
-   * Optimize and cache community icon
-   */
-  async optimizeCommunityIcon(communityId: string, iconUrl: string): Promise<string> {
-    if (!this.config.enableImageOptimization) {
-      return iconUrl;
-    }
-
-    try {
-      const optimizedUrl = await this.imageOptimization.optimizeCommunityIcon(iconUrl, {
-        width: 64,
-        height: 64,
-        format: 'auto',
-        quality: 0.8,
-        placeholder: 'blur'
-      });
-
-      // Cache the optimized icon
-      await communityIconsCache.preloadIcons([communityId]);
-
-      return optimizedUrl;
-    } catch (error) {
-      console.warn('Failed to optimize community icon:', error);
-      return iconUrl;
-    }
-  }
-
-  /**
-   * Setup lazy loading for community icons
-   */
-  setupCommunityIconLazyLoading(
-    img: HTMLImageElement, 
-    communityId: string, 
-    iconUrl: string
-  ): void {
-    if (!this.config.enableImageOptimization) {
-      img.src = iconUrl;
-      return;
-    }
-
-    this.imageOptimization.setupLazyLoading(img, iconUrl, {
-      width: 64,
-      height: 64,
-      format: 'auto',
-      lazy: true,
-      placeholder: 'blur',
-      priority: 'medium'
-    });
-  }
-
-  /**
-   * Batch preload community icons
-   */
-  async batchPreloadCommunityIcons(communities: Array<{ id: string; iconUrl: string }>): Promise<void> {
-    if (!this.config.enableImageOptimization) {
-      return;
-    }
-
-    const images = communities.map(community => ({
-      src: community.iconUrl,
-      options: {
-        width: 64,
-        height: 64,
-        format: 'auto' as const,
-        priority: 'low' as const
-      }
-    }));
-
-    await this.imageOptimization.batchPreloadImages(images);
-  }
-
-  /**
-   * Cache preview content with intelligent strategy
-   */
-  async cachePreviewContent(url: string, type: 'nft' | 'proposal' | 'defi' | 'link'): Promise<any> {
-    try {
-      const preview = await previewContentCache.getPreview(url, type);
-      
-      if (preview && this.config.enableServiceWorkerCache) {
-        await this.serviceWorkerCache.cachePreviewContent(url, type, preview);
-      }
-      
-      return preview;
-    } catch (error) {
-      console.warn('Failed to cache preview content:', error);
+      console.error(`[IntelligentCacheIntegration] Error getting seller data for ${dataType}:`, error);
       return null;
     }
   }
 
   /**
-   * Queue offline action
+   * Set seller data in intelligent cache
    */
-  async queueOfflineAction(type: string, data: any): Promise<void> {
-    if (!this.config.enableServiceWorkerCache) {
-      throw new Error('Service worker cache is disabled');
+  async setSellerData<T>(
+    dataType: string, 
+    walletAddress: string, 
+    data: T,
+    options?: {
+      priority?: any;
+      ttl?: number;
+      dependencies?: string[];
     }
+  ): Promise<void> {
+    try {
+      const cacheKey = `${dataType}:${walletAddress}`;
+      await this.intelligentCache.set(cacheKey, data, options);
 
-    await this.serviceWorkerCache.queueOfflineAction({
-      type: type as any,
-      data
-    });
-  }
+      // Also update legacy cache for backward compatibility
+      const queryKey = ['seller', dataType, walletAddress];
+      this.queryClient.setQueryData(queryKey, data);
 
-  /**
-   * Handle user action cache invalidation
-   */
-  private handleUserActionCacheInvalidation(action: string, target: string): void {
-    switch (action) {
-      case 'post_created':
-      case 'post_updated':
-        cacheInvalidationService.invalidateUser(target);
-        break;
-      case 'community_joined':
-      case 'community_left':
-        cacheInvalidationService.invalidateCommunity(target);
-        break;
-      case 'profile_updated':
-        cacheInvalidationService.invalidateUser(target);
-        break;
+    } catch (error) {
+      console.error(`[IntelligentCacheIntegration] Error setting seller data for ${dataType}:`, error);
     }
   }
 
   /**
-   * Update performance metrics
+   * Invalidate seller cache
    */
-  private updatePerformanceMetrics(): void {
-    // Get metrics from intelligent cache
-    const intelligentMetrics = this.intelligentCache.getCacheMetrics();
-    
-    // Get metrics from image optimization
-    const imageStats = this.imageOptimization.getCacheStats();
-    
-    // Get metrics from community caches
-    const cacheStats = cacheInvalidationService.getAllStats();
+  async invalidateSellerCache(walletAddress: string, dataTypes?: string[]): Promise<void> {
+    try {
+      // Invalidate in intelligent cache
+      if (dataTypes) {
+        for (const dataType of dataTypes) {
+          const cacheKey = `${dataType}:${walletAddress}`;
+          await this.intelligentCache.invalidate(cacheKey);
+        }
+      } else {
+        // Invalidate all data for wallet
+        const allDataTypes = ['profile', 'dashboard', 'listings', 'orders', 'notifications', 'store', 'analytics'];
+        for (const dataType of allDataTypes) {
+          const cacheKey = `${dataType}:${walletAddress}`;
+          await this.intelligentCache.invalidate(cacheKey);
+        }
+      }
 
-    // Update combined metrics
-    this.performanceMetrics = {
-      totalCacheHits: intelligentMetrics.networkSavings,
-      totalCacheMisses: 0, // Would need to track this
-      averageResponseTime: intelligentMetrics.averageResponseTime,
-      memoryUsage: intelligentMetrics.memoryUsage + imageStats.totalSize,
-      networkSavings: intelligentMetrics.networkSavings,
-      preloadSuccessRate: 0, // Would need to track this
-      imageOptimizationSavings: imageStats.totalSize
-    };
-  }
+      // Also invalidate legacy cache
+      await this.legacyCacheManager.invalidateSellerCache(walletAddress);
 
-  /**
-   * Check memory usage and cleanup if needed
-   */
-  private checkMemoryUsage(): void {
-    if (this.performanceMetrics.memoryUsage > this.config.maxMemoryUsage) {
-      console.log('Memory usage high, triggering cleanup');
-      this.performMemoryCleanup();
+    } catch (error) {
+      console.error(`[IntelligentCacheIntegration] Error invalidating cache for ${walletAddress}:`, error);
     }
   }
 
   /**
-   * Perform memory cleanup
+   * Warm cache for specific wallet
    */
-  private performMemoryCleanup(): void {
-    // Clear least recently used items from caches
-    // This would integrate with the LRU eviction in individual caches
-    
-    // Clear image optimization cache
-    this.imageOptimization.clearCache();
-    
-    // Clear preview cache
-    previewContentCache.cleanup();
-    
-    // Clear user profile cache
-    userProfileCache.cleanup();
+  async warmCacheForWallet(walletAddress: string, strategies?: string[]): Promise<void> {
+    try {
+      const strategiesToUse = strategies || this.config.warming?.strategies || ['seller-profile'];
+      
+      for (const strategy of strategiesToUse) {
+        await this.intelligentCache.warmCache(walletAddress, strategy);
+      }
+
+      console.log(`[IntelligentCacheIntegration] Cache warmed for wallet: ${walletAddress}`);
+
+    } catch (error) {
+      console.error(`[IntelligentCacheIntegration] Error warming cache for ${walletAddress}:`, error);
+    }
   }
 
   /**
-   * Helper methods for getting cached data
+   * Get system status
    */
-  private async getRelatedCommunities(communityId: string): Promise<string[]> {
-    // This would fetch related communities from API or cache
-    return [];
-  }
+  getSystemStatus(): CacheSystemStatus {
+    const intelligentStats = this.intelligentCache.getCacheStats();
+    const performanceMetrics = this.performanceMonitor.getCurrentMetrics();
+    const activeAlerts = this.performanceMonitor.getActiveAlerts();
+    const optimizationHistory = this.optimizationService.getOptimizationHistory(1);
+    const legacyStats = this.legacyCacheManager.getCacheStats();
 
-  private async getCachedPost(postId: string): Promise<any> {
-    // This would get post from cache
-    return null;
-  }
-
-  private async getCurrentUserId(): Promise<string | null> {
-    // This would get current user ID
-    return null;
-  }
-
-  private async getCachedProposals(): Promise<any[]> {
-    // This would get proposals from cache
-    return [];
-  }
-
-  private async preloadRelatedCommunityIcons(communityIds: string[]): Promise<void> {
-    // This would preload icons for related communities
-  }
-
-  private async preloadPreviewContent(urls: string[]): Promise<void> {
-    // This would preload preview content for URLs
-  }
-
-  /**
-   * Get current performance metrics
-   */
-  getPerformanceMetrics(): CachePerformanceMetrics {
-    return { ...this.performanceMetrics };
-  }
-
-  /**
-   * Get cache statistics
-   */
-  async getCacheStatistics(): Promise<{
-    intelligent: any;
-    images: any;
-    serviceWorker: any;
-    community: any;
-  }> {
     return {
-      intelligent: this.intelligentCache.getCacheMetrics(),
-      images: this.imageOptimization.getCacheStats(),
-      serviceWorker: await this.serviceWorkerCache.getCacheStats(),
-      community: cacheInvalidationService.getAllStats()
+      intelligent: {
+        enabled: this.isInitialized,
+        size: intelligentStats.size,
+        hitRate: performanceMetrics.hitRate,
+        memoryUsage: intelligentStats.memoryUsage
+      },
+      performance: {
+        monitoring: this.config.monitoring?.enabled || false,
+        alertCount: activeAlerts.length,
+        lastCheck: performanceMetrics.lastUpdated
+      },
+      optimization: {
+        enabled: this.config.optimization?.enabled || false,
+        lastRun: optimizationHistory[0]?.timestamp || 0,
+        strategiesApplied: optimizationHistory[0]?.actionsApplied.length || 0
+      },
+      legacy: {
+        enabled: true,
+        size: legacyStats.totalEntries
+      }
     };
+  }
+
+  /**
+   * Get comprehensive cache report
+   */
+  getCacheReport(): {
+    status: CacheSystemStatus;
+    performance: any;
+    optimization: any;
+    usageAnalysis: any;
+    recommendations: any[];
+  } {
+    const status = this.getSystemStatus();
+    const performanceReport = this.performanceMonitor.generatePerformanceReport();
+    const optimizationHistory = this.optimizationService.getOptimizationHistory(10);
+    const usageAnalysis = this.optimizationService.analyzeUsagePatterns();
+    const recommendations = this.optimizationService.getOptimizationRecommendations();
+
+    return {
+      status,
+      performance: performanceReport,
+      optimization: {
+        history: optimizationHistory,
+        strategies: Array.from(this.optimizationService.getStrategies().keys())
+      },
+      usageAnalysis,
+      recommendations
+    };
+  }
+
+  /**
+   * Run manual optimization
+   */
+  async runOptimization(): Promise<any[]> {
+    try {
+      const results = await this.optimizationService.runOptimization();
+      console.log(`[IntelligentCacheIntegration] Manual optimization completed. Applied ${results.length} strategies`);
+      return results;
+    } catch (error) {
+      console.error('[IntelligentCacheIntegration] Error running manual optimization:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(newConfig: Partial<IntelligentCacheConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    
+    // Restart services with new config if needed
+    if (this.isInitialized) {
+      this.stop();
+      this.start();
+    }
   }
 
   /**
    * Clear all caches
    */
   async clearAllCaches(): Promise<void> {
-    this.intelligentCache.reset();
-    this.imageOptimization.clearCache();
-    await this.serviceWorkerCache.clearAllCaches();
-    
-    // Clear community caches
-    communityIconsCache.invalidateIcon('*');
-    previewContentCache.cleanup();
-    userProfileCache.cleanup();
+    try {
+      this.intelligentCache.clear();
+      await this.legacyCacheManager.clearSellerCache('*'); // Clear all
+      this.queryClient.clear();
+
+      console.log('[IntelligentCacheIntegration] All caches cleared');
+
+    } catch (error) {
+      console.error('[IntelligentCacheIntegration] Error clearing caches:', error);
+    }
+  }
+
+  // Private methods
+
+  private async migrateLegacyCache(): Promise<void> {
+    if (this.migrationInProgress) {
+      return;
+    }
+
+    this.migrationInProgress = true;
+
+    try {
+      console.log('[IntelligentCacheIntegration] Starting legacy cache migration');
+
+      // Get all queries from React Query cache
+      const queries = this.queryClient.getQueryCache().getAll();
+      const sellerQueries = queries.filter(query => 
+        Array.isArray(query.queryKey) && 
+        query.queryKey[0] === 'seller' &&
+        query.state.data
+      );
+
+      let migratedCount = 0;
+
+      for (const query of sellerQueries) {
+        try {
+          const [, dataType, walletAddress] = query.queryKey as string[];
+          if (dataType && walletAddress && query.state.data) {
+            const cacheKey = `${dataType}:${walletAddress}`;
+            await this.intelligentCache.set(cacheKey, query.state.data);
+            migratedCount++;
+          }
+        } catch (error) {
+          console.warn('[IntelligentCacheIntegration] Failed to migrate query:', query.queryKey, error);
+        }
+      }
+
+      console.log(`[IntelligentCacheIntegration] Legacy cache migration completed. Migrated ${migratedCount} entries`);
+
+    } catch (error) {
+      console.error('[IntelligentCacheIntegration] Error during legacy cache migration:', error);
+    } finally {
+      this.migrationInProgress = false;
+    }
+  }
+
+  private async performInitialCacheWarming(): Promise<void> {
+    try {
+      console.log('[IntelligentCacheIntegration] Starting initial cache warming');
+
+      // This would typically warm cache for active users
+      // For now, we'll just log the warming process
+      const strategies = this.config.warming?.strategies || [];
+      
+      for (const strategy of strategies) {
+        console.log(`[IntelligentCacheIntegration] Warming cache with strategy: ${strategy}`);
+        // In a real implementation, this would warm cache for active users
+      }
+
+      console.log('[IntelligentCacheIntegration] Initial cache warming completed');
+
+    } catch (error) {
+      console.error('[IntelligentCacheIntegration] Error during initial cache warming:', error);
+    }
   }
 
   /**
-   * Update cache configuration
+   * Cleanup resources
    */
-  updateConfiguration(newConfig: Partial<CacheIntegrationConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-  }
-
-  /**
-   * Check if system is ready
-   */
-  isReady(): boolean {
-    return this.isInitialized;
-  }
-
-  /**
-   * Destroy all services and cleanup
-   */
-  destroy(): void {
-    this.intelligentCache.destroy();
-    this.imageOptimization.destroy();
-    this.serviceWorkerCache.destroy();
+  cleanup(): void {
+    this.stop();
+    this.intelligentCache.cleanup();
+    this.performanceMonitor.cleanup();
+    this.optimizationService.cleanup();
+    this.legacyCacheManager.cleanup();
   }
 }
 
-// Export singleton instance
-export const intelligentCacheIntegration = new IntelligentCacheIntegration();
-export default IntelligentCacheIntegration;
+// Export singleton factory
+let intelligentCacheIntegrationInstance: IntelligentCacheIntegration | null = null;
+
+export const createIntelligentCacheIntegration = (
+  queryClient: QueryClient,
+  config?: IntelligentCacheConfig
+): IntelligentCacheIntegration => {
+  if (!intelligentCacheIntegrationInstance) {
+    intelligentCacheIntegrationInstance = new IntelligentCacheIntegration(queryClient, config);
+  }
+  return intelligentCacheIntegrationInstance;
+};
+
+export const getIntelligentCacheIntegration = (): IntelligentCacheIntegration | null => {
+  return intelligentCacheIntegrationInstance;
+};

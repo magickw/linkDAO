@@ -76,6 +76,13 @@ interface SellerAPIEndpoints {
   getTierProgress: (walletAddress: string) => string;
   getTierUpgradeEligibility: (walletAddress: string) => string;
   refreshTierData: (walletAddress: string) => string;
+  
+  // Automated tier upgrade endpoints
+  getTierProgressionTracking: (walletAddress: string) => string;
+  triggerTierEvaluation: () => string;
+  getTierCriteria: () => string;
+  getTierEvaluationHistory: (walletAddress: string) => string;
+  getTierUpgradeNotifications: (walletAddress: string) => string;
 }
 
 // Unified error types for seller system
@@ -162,6 +169,13 @@ export class UnifiedSellerAPIClient {
     getTierProgress: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/progress`,
     getTierUpgradeEligibility: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/upgrade-eligibility`,
     refreshTierData: (walletAddress: string) => `${this.baseURL}/${walletAddress}/tier/refresh`,
+    
+    // Automated tier upgrade endpoints
+    getTierProgressionTracking: (walletAddress: string) => `/api/marketplace/seller/tier/progression/${walletAddress}`,
+    triggerTierEvaluation: () => `/api/marketplace/seller/tier/evaluate`,
+    getTierCriteria: () => `/api/marketplace/seller/tier/criteria`,
+    getTierEvaluationHistory: (walletAddress: string) => `/api/marketplace/seller/tier/history/${walletAddress}`,
+    getTierUpgradeNotifications: (walletAddress: string) => `/api/marketplace/seller/tier/notifications/${walletAddress}`,
   };
 
   async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -536,6 +550,30 @@ export class UnifiedSellerAPIClient {
     await this.request<void>(this.endpoints.refreshTierData(walletAddress), {
       method: 'POST',
     });
+  }
+
+  // Automated tier upgrade API methods
+  async getTierProgressionTracking(walletAddress: string): Promise<any> {
+    return await this.request<any>(this.endpoints.getTierProgressionTracking(walletAddress));
+  }
+
+  async triggerTierEvaluation(walletAddress: string, force: boolean = false): Promise<any> {
+    return await this.request<any>(this.endpoints.triggerTierEvaluation(), {
+      method: 'POST',
+      body: JSON.stringify({ walletAddress, force }),
+    });
+  }
+
+  async getTierCriteria(): Promise<any> {
+    return await this.request<any>(this.endpoints.getTierCriteria());
+  }
+
+  async getTierEvaluationHistory(walletAddress: string): Promise<any> {
+    return await this.request<any>(this.endpoints.getTierEvaluationHistory(walletAddress));
+  }
+
+  async getTierUpgradeNotifications(walletAddress: string): Promise<any> {
+    return await this.request<any>(this.endpoints.getTierUpgradeNotifications(walletAddress));
   }
 }
 

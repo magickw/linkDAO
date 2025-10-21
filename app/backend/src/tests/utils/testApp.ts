@@ -1,356 +1,292 @@
-/**
- * Test Application Factory
- * Creates configured Express app instances for testing
- */
-
 import express, { Express } from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import { json, urlencoded } from 'express';
-import { TestDatabase } from './testDatabase';
-import { MockAIServices } from './mockAIServices';
+import { jest } from '@jest/globals';
 
-interface TestAppConfig {
-  database?: any;
-  aiServices?: any;
-  enablePerformanceMode?: boolean;
-  enableSecurityMode?: boolean;
-  enableABTesting?: boolean;
-}
+// Import middleware
+import { globalErrorHandler } from '../../middleware/globalErrorHandler';
+import { requestLogging } from '../../middleware/requestLogging';
+import { enhancedRateLimiting } from '../../middleware/enhancedRateLimiting';
+import { enhancedCorsMiddleware } from '../../middleware/enhancedCorsMiddleware';
 
-export function createTestApp(config: TestAppConfig = {}): Express {
+// Import routes
+import { sellerRoutes } from '../../routes/sellerRoutes';
+import { sellerProfileRoutes } from '../../routes/sellerProfileRoutes';
+import { sellerAnalyticsRoutes } from '../../routes/sellerAnalyticsRoutes';
+import { sellerSecurityRoutes } from '../../routes/sellerSecurityRoutes';
+import { automatedTierUpgradeRoutes } from '../../routes/automatedTierUpgradeRoutes';
+import { healthRoutes } from '../../routes/healthRoutes';
+import { monitoringRoutes } from '../../routes/monitoringRoutes';
+
+// Import services for mocking
+import { sellerService } from '../../services/sellerService';
+import { sellerCacheManager } from '../../services/sellerCacheManager';
+import { sellerWebSocketService } from '../../services/sellerWebSocketService';
+
+export async function createTestApp(): Promise<Express> {
   const app = express();
 
   // Basic middleware
-  app.use(helmet());
-  app.use(cors());
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ extended: true }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
 
-  // Test-specific middleware
-  if (config.enablePerformanceMode) {
-    app.use((req, res, next) => {
-      req.startTime = Date.now();
-      next();
-    });
-  }
+  // CORS middleware
+  app.use(enhancedCorsMiddleware);
 
-  if (config.enableSecurityMode) {
-    app.use((req, res, next) => {
-      req.securityMode = true;
-      next();
-    });
-  }
+  // Request logging (in test mode)
+  app.use(requestLogging);
 
-  if (config.enableABTesting) {
-    app.use((req, res, next) => {
-      req.abTestVariant = req.body.abTestVariant || req.headers['x-ab-variant'];
-      next();
-    });
-  }
+  // Rate limiting (relaxed for tests)
+  app.use(enhancedRateLimiting);
 
-  // Mock database connection
-  if (config.database) {
-    app.locals.db = config.database;
-  }
+  // Health check routes (always available)
+  app.use('/api/health', healthRoutes);
+  app.use('/api/monitoring', monitoringRoutes);
 
-  // Mock AI services
-  if (config.aiServices) {
-    app.locals.aiServices = config.aiServices;
-  }
+  // Seller-related routes
+  app.use('/api/marketplace/seller', sellerRoutes);
+  app.use('/api/marketplace/seller', sellerProfileRoutes);
+  app.use('/api/marketplace/seller', sellerAnalyticsRoutes);
+  app.use('/api/marketplace/seller', sellerSecurityRoutes);
+  app.use('/api/marketplace/seller', automatedTierUpgradeRoutes);
 
-  // Content moderation routes
-  app.post('/api/content', async (req, res) => {
-    try {
-      const { type, content, userId, media } = req.body;
-      const contentId = `content-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Simulate moderation process
-      const moderationResult = await simulateModeration(req, {
-        contentId,
-        type,
-        content,
-        userId,
-        media
-      });
-
-      res.json({
-        contentId,
-        status: moderationResult.status,
-        confidence: moderationResult.confidence,
-        processingTime: req.startTime ? Date.now() - req.startTime : undefined
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get('/api/content/:contentId', async (req, res) => {
-    try {
-      const { contentId } = req.params;
-      const content = await getStoredContent(req, contentId);
-      res.json(content);
-    } catch (error) {
-      res.status(404).json({ error: 'Content not found' });
-    }
-  });
-
-  app.get('/api/moderation/:contentId', async (req, res) => {
-    try {
-      const { contentId } = req.params;
-      const moderationCase = await getModerationCase(req, contentId);
-      res.json({
-        status: moderationCase.status,
-        label: moderationCase.label,
-        canAppeal: moderationCase.canAppeal
-      });
-    } catch (error) {
-      res.status(404).json({ error: 'Moderation case not found' });
-    }
-  });
-
-  // Community reporting routes
-  app.post('/api/reports', async (req, res) => {
-    try {
-      const { contentId, reason, details, reporterId } = req.body;
-      const reportId = await submitReport(req, { contentId, reason, details, reporterId });
-      res.json({ reportId });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  // Appeals routes
-  app.post('/api/appeals', async (req, res) => {
-    try {
-      const { contentId, stakeAmount, reasoning } = req.body;
-      const appealId = await submitAppeal(req, { contentId, stakeAmount, reasoning });
-      res.json({ appealId });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  // Internal moderation routes
-  app.post('/api/_internal/moderation/decision', async (req, res) => {
-    try {
-      const { caseId, decision, reasoning, moderatorId } = req.body;
-      await processModerationDecision(req, { caseId, decision, reasoning, moderatorId });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.get('/api/_internal/moderation/audit/:contentId', async (req, res) => {
-    try {
-      const { contentId } = req.params;
-      const auditLog = await getAuditLog(req, contentId);
-      res.json({ auditLog });
-    } catch (error) {
-      res.status(404).json({ error: 'Audit log not found' });
-    }
-  });
-
-  // Marketplace routes
-  app.post('/api/marketplace/listings', async (req, res) => {
-    try {
-      const listing = req.body;
-      const listingId = `listing-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      const moderationResult = await simulateMarketplaceModeration(req, {
-        ...listing,
-        listingId
-      });
-
-      res.json({
-        listingId,
-        status: moderationResult.status,
-        processingTime: req.startTime ? Date.now() - req.startTime : undefined
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // User management routes
-  app.post('/api/user/privacy-settings', async (req, res) => {
-    try {
-      const { userId, dmScanningConsent } = req.body;
-      await updatePrivacySettings(req, { userId, dmScanningConsent });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.get('/api/user/feedback/:contentId', async (req, res) => {
-    try {
-      const { contentId } = req.params;
-      const feedback = await getUserFeedback(req, contentId);
-      res.json(feedback);
-    } catch (error) {
-      res.status(404).json({ error: 'Feedback not found' });
-    }
-  });
-
-  // Maintenance routes
-  app.post('/api/_internal/maintenance/cleanup-expired', async (req, res) => {
-    try {
-      await cleanupExpiredData(req);
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post('/api/_internal/gdpr/delete-user-data', async (req, res) => {
-    try {
-      const { userId, requestType } = req.body;
-      await deleteUserData(req, { userId, requestType });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Error handling
-  app.use((error, req, res, next) => {
-    console.error('Test app error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  });
+  // Error handling middleware (must be last)
+  app.use(globalErrorHandler);
 
   return app;
 }
 
-// Helper functions for simulating backend operations
-async function simulateModeration(req: any, content: any) {
-  const aiServices = req.app.locals.aiServices;
-  if (!aiServices) {
-    throw new Error('AI services not configured');
-  }
+export function mockSellerServices() {
+  // Mock seller service methods
+  jest.spyOn(sellerService, 'createSellerProfile').mockImplementation(async (profileData) => {
+    return {
+      walletAddress: profileData.walletAddress,
+      displayName: profileData.displayName,
+      storeName: profileData.storeName,
+      bio: profileData.bio,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
 
-  // Get AI response
-  const aiResponse = await aiServices.moderateContent(content);
-  
-  // Apply A/B test variant if present
-  if (req.abTestVariant) {
-    aiResponse.threshold = getVariantThreshold(req.abTestVariant);
-  }
+  jest.spyOn(sellerService, 'getSellerProfile').mockImplementation(async (walletAddress) => {
+    if (walletAddress === '0x9999999999999999999999999999999999999999') {
+      return null; // Simulate not found
+    }
+    return {
+      walletAddress,
+      displayName: 'Test Seller',
+      storeName: 'Test Store',
+      bio: 'Test bio',
+      createdAt: '2023-01-01T00:00:00Z',
+      updatedAt: '2023-01-01T00:00:00Z',
+    };
+  });
 
-  // Determine final status
-  let status = 'approved';
-  if (aiResponse.confidence >= 0.95 && aiResponse.action === 'block') {
-    status = 'rejected';
-  } else if (aiResponse.confidence >= 0.7 && aiResponse.action === 'review') {
-    status = 'pending';
-  }
+  jest.spyOn(sellerService, 'updateSellerProfile').mockImplementation(async (walletAddress, updates) => {
+    return {
+      walletAddress,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+  });
 
-  // Store in test database
-  const db = req.app.locals.db;
-  if (db) {
-    await db.storeModerationCase({
-      contentId: content.contentId,
-      status,
-      confidence: aiResponse.confidence,
-      vendorScores: aiResponse.vendorScores,
-      reasonCode: aiResponse.categories.join(',')
-    });
-  }
+  jest.spyOn(sellerService, 'getOnboardingSteps').mockImplementation(async (walletAddress) => {
+    return [
+      { id: 'profile', title: 'Profile Setup', completed: true },
+      { id: 'verification', title: 'Verification', completed: false },
+      { id: 'payout', title: 'Payout Setup', completed: false },
+      { id: 'first-listing', title: 'First Listing', completed: false },
+    ];
+  });
 
+  jest.spyOn(sellerService, 'getDashboardStats').mockImplementation(async (walletAddress) => {
+    return {
+      profile: {
+        walletAddress,
+        displayName: 'Test Seller',
+        storeName: 'Test Store',
+        bio: 'Test bio',
+      },
+      listings: [],
+      stats: {
+        totalSales: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        averageRating: 0,
+        totalViews: 0,
+      },
+      notifications: [],
+    };
+  });
+
+  jest.spyOn(sellerService, 'getListings').mockImplementation(async (walletAddress) => {
+    return [];
+  });
+
+  // Mock cache manager
+  jest.spyOn(sellerCacheManager, 'invalidateSellerCache').mockImplementation(async (walletAddress) => {
+    // Simulate cache invalidation
+    return Promise.resolve();
+  });
+
+  jest.spyOn(sellerCacheManager, 'clearAll').mockImplementation(async () => {
+    return Promise.resolve();
+  });
+
+  // Mock WebSocket service
+  jest.spyOn(sellerWebSocketService, 'addConnection').mockImplementation((walletAddress, ws) => {
+    // Simulate WebSocket connection management
+  });
+
+  jest.spyOn(sellerWebSocketService, 'removeConnection').mockImplementation((walletAddress) => {
+    // Simulate WebSocket disconnection
+  });
+
+  jest.spyOn(sellerWebSocketService, 'broadcast').mockImplementation((walletAddress, message) => {
+    // Simulate WebSocket broadcast
+  });
+
+  jest.spyOn(sellerWebSocketService, 'getActiveConnections').mockImplementation(() => {
+    return 0;
+  });
+}
+
+export function resetSellerServiceMocks() {
+  jest.restoreAllMocks();
+}
+
+// Test data factories
+export function createTestSellerProfile(overrides: any = {}) {
   return {
-    status,
-    confidence: aiResponse.confidence
+    walletAddress: '0x1234567890123456789012345678901234567890',
+    displayName: 'Test Seller',
+    storeName: 'Test Store',
+    bio: 'Test seller bio',
+    profileImageUrl: null,
+    coverImageUrl: null,
+    tier: {
+      id: 'bronze',
+      name: 'Bronze',
+      level: 1,
+    },
+    stats: {
+      totalSales: 0,
+      totalListings: 0,
+      rating: 0,
+    },
+    createdAt: '2023-01-01T00:00:00Z',
+    updatedAt: '2023-01-01T00:00:00Z',
+    ...overrides,
   };
 }
 
-async function simulateMarketplaceModeration(req: any, listing: any) {
-  const aiServices = req.app.locals.aiServices;
-  if (!aiServices) {
-    throw new Error('AI services not configured');
-  }
-
-  const aiResponse = await aiServices.moderateMarketplaceListing(listing);
-  
-  let status = 'approved';
-  if (aiResponse.confidence >= 0.9 && aiResponse.action === 'block') {
-    status = 'rejected';
-  } else if (aiResponse.confidence >= 0.7) {
-    status = 'pending';
-  }
-
-  return { status };
-}
-
-function getVariantThreshold(variant: string): number {
-  const thresholds = {
-    'conservative': 0.95,
-    'moderate': 0.85,
-    'aggressive': 0.75,
-    'control': 0.9,
-    'treatment': 0.8
-  };
-  return thresholds[variant] || 0.85;
-}
-
-// Placeholder implementations for other helper functions
-async function getStoredContent(req: any, contentId: string) {
-  const db = req.app.locals.db;
-  return db ? await db.getStoredContent(contentId) : { content: 'Mock content' };
-}
-
-async function getModerationCase(req: any, contentId: string) {
-  const db = req.app.locals.db;
-  return db ? await db.getModerationCase(contentId) : { status: 'allowed', canAppeal: false };
-}
-
-async function submitReport(req: any, report: any) {
-  const db = req.app.locals.db;
-  return db ? await db.submitReport(report) : `report-${Date.now()}`;
-}
-
-async function submitAppeal(req: any, appeal: any) {
-  const db = req.app.locals.db;
-  return db ? await db.submitAppeal(appeal) : `appeal-${Date.now()}`;
-}
-
-async function processModerationDecision(req: any, decision: any) {
-  const db = req.app.locals.db;
-  if (db) {
-    await db.processModerationDecision(decision);
-  }
-}
-
-async function getAuditLog(req: any, contentId: string) {
-  const db = req.app.locals.db;
-  return db ? await db.getAuditLog(contentId) : { events: [] };
-}
-
-async function updatePrivacySettings(req: any, settings: any) {
-  const db = req.app.locals.db;
-  if (db) {
-    await db.updatePrivacySettings(settings);
-  }
-}
-
-async function getUserFeedback(req: any, contentId: string) {
+export function createTestSellerListing(overrides: any = {}) {
   return {
-    feedbackProvided: true,
-    satisfactionScore: Math.random() * 5,
-    understandsDecision: Math.random() > 0.3
+    id: 'test-listing-1',
+    sellerId: '0x1234567890123456789012345678901234567890',
+    title: 'Test Product',
+    description: 'Test product description',
+    price: 100,
+    currency: 'USD',
+    images: [],
+    category: 'Electronics',
+    status: 'active',
+    createdAt: '2023-01-01T00:00:00Z',
+    updatedAt: '2023-01-01T00:00:00Z',
+    ...overrides,
   };
 }
 
-async function cleanupExpiredData(req: any) {
-  const db = req.app.locals.db;
-  if (db) {
-    await db.cleanupExpiredData();
-  }
+export function createTestDashboardData(overrides: any = {}) {
+  const profile = createTestSellerProfile();
+  return {
+    profile,
+    listings: [],
+    stats: {
+      totalSales: 0,
+      totalRevenue: 0,
+      pendingOrders: 0,
+      completedOrders: 0,
+      averageRating: 0,
+      totalViews: 0,
+    },
+    notifications: [],
+    ...overrides,
+  };
 }
 
-async function deleteUserData(req: any, request: any) {
-  const db = req.app.locals.db;
-  if (db) {
-    await db.deleteUserData(request);
+// Performance testing utilities
+export function simulateHighLoad(requestCount: number = 100) {
+  return Array.from({ length: requestCount }, (_, i) => ({
+    id: i,
+    timestamp: Date.now() + i,
+  }));
+}
+
+export function measureResponseTime<T>(fn: () => Promise<T>): Promise<{ result: T; duration: number }> {
+  const start = Date.now();
+  return fn().then(result => ({
+    result,
+    duration: Date.now() - start,
+  }));
+}
+
+// Error simulation utilities
+export function simulateServiceFailure(service: any, method: string, errorMessage: string) {
+  const originalMethod = service[method];
+  service[method] = jest.fn().mockRejectedValue(new Error(errorMessage));
+  
+  return () => {
+    service[method] = originalMethod;
+  };
+}
+
+export function simulateIntermittentFailure(service: any, method: string, failureRate: number = 0.5) {
+  const originalMethod = service[method];
+  service[method] = jest.fn().mockImplementation((...args) => {
+    if (Math.random() < failureRate) {
+      return Promise.reject(new Error('Intermittent service failure'));
+    }
+    return originalMethod.apply(service, args);
+  });
+  
+  return () => {
+    service[method] = originalMethod;
+  };
+}
+
+// Memory and resource monitoring
+export function getMemoryUsage() {
+  if (typeof process !== 'undefined' && process.memoryUsage) {
+    return process.memoryUsage();
   }
+  return {
+    rss: 0,
+    heapTotal: 0,
+    heapUsed: 0,
+    external: 0,
+    arrayBuffers: 0,
+  };
+}
+
+export function trackMemoryUsage(testName: string) {
+  const initialMemory = getMemoryUsage();
+  
+  return {
+    getMemoryDelta: () => {
+      const currentMemory = getMemoryUsage();
+      return {
+        rss: currentMemory.rss - initialMemory.rss,
+        heapTotal: currentMemory.heapTotal - initialMemory.heapTotal,
+        heapUsed: currentMemory.heapUsed - initialMemory.heapUsed,
+        external: currentMemory.external - initialMemory.external,
+        arrayBuffers: currentMemory.arrayBuffers - initialMemory.arrayBuffers,
+      };
+    },
+    logMemoryUsage: () => {
+      const delta = trackMemoryUsage(testName).getMemoryDelta();
+      console.log(`[${testName}] Memory Delta:`, delta);
+    },
+  };
 }

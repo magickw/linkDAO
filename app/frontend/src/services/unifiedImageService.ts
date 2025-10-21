@@ -151,7 +151,7 @@ export class UnifiedImageService {
       
       throw new SellerError(
         SellerErrorType.API_ERROR,
-        `Image upload failed: ${error.message}`,
+        `Image upload failed: ${error instanceof Error ? error.message : String(error)}`,
         'IMAGE_UPLOAD_ERROR',
         { context, fileName: file.name, originalError: error }
       );
@@ -183,7 +183,7 @@ export class UnifiedImageService {
             file: file.name, 
             error: error instanceof SellerError ? error : new SellerError(
               SellerErrorType.API_ERROR,
-              `Failed to upload ${file.name}: ${error.message}`,
+              `Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`,
               'BATCH_UPLOAD_ERROR'
             )
           });
@@ -333,7 +333,7 @@ export class UnifiedImageService {
     options: ImageUploadOptions
   ): Promise<StorageResult> {
     const formData = new FormData();
-    const blob = new Blob([image.buffer], { type: `image/${image.format}` });
+    const blob = new Blob([new Uint8Array(image.buffer)], { type: `image/${image.format}` });
     
     formData.append('image', blob, `${context}-${Date.now()}.${image.format}`);
     formData.append('context', context);
@@ -508,7 +508,7 @@ export class UnifiedImageService {
     } catch (error) {
       throw new SellerError(
         SellerErrorType.API_ERROR,
-        `Failed to delete image: ${error.message}`,
+        `Failed to delete image: ${error instanceof Error ? error.message : String(error)}`,
         'IMAGE_DELETE_ERROR',
         { imageId, context }
       );
@@ -534,7 +534,7 @@ export class UnifiedImageService {
     } catch (error) {
       throw new SellerError(
         SellerErrorType.API_ERROR,
-        `Failed to get image info: ${error.message}`,
+        `Failed to get image info: ${error instanceof Error ? error.message : String(error)}`,
         'IMAGE_INFO_ERROR',
         { imageId }
       );

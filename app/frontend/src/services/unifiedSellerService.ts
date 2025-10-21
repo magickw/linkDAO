@@ -109,8 +109,40 @@ export class UnifiedSellerService {
       console.error('Failed to get seller profile:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller profile: ${error.message}`,
+        `Failed to fetch seller profile: ${error instanceof Error ? error.message : String(error)}`,
         'PROFILE_FETCH_ERROR'
+      );
+    }
+  }
+
+  async createProfile(profileData: Partial<UnifiedSellerProfile>): Promise<UnifiedSellerProfile> {
+    try {
+      // Convert unified profile data to legacy format for API
+      const legacyProfileData = this.convertUnifiedProfileToLegacy(profileData);
+
+      const response = await unifiedSellerAPIClient.createProfile(legacyProfileData);
+
+      // Transform response to unified format
+      const transformResult = transformSellerProfileToUnified(response, this.transformationOptions);
+
+      // Update cache with the wallet address from the response
+      if (response.walletAddress) {
+        this.profileCache.set(response.walletAddress, {
+          data: transformResult.data,
+          timestamp: Date.now()
+        });
+
+        // Invalidate related caches
+        this.dashboardCache.delete(response.walletAddress);
+      }
+
+      return transformResult.data;
+    } catch (error) {
+      console.error('Failed to create seller profile:', error);
+      throw new SellerAPIError(
+        SellerErrorType.API_ERROR,
+        `Failed to create seller profile: ${error instanceof Error ? error.message : String(error)}`,
+        'PROFILE_CREATE_ERROR'
       );
     }
   }
@@ -148,7 +180,7 @@ export class UnifiedSellerService {
       console.error('Failed to update seller profile:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to update seller profile: ${error.message}`,
+        `Failed to update seller profile: ${error instanceof Error ? error.message : String(error)}`,
         'PROFILE_UPDATE_ERROR'
       );
     }
@@ -212,7 +244,7 @@ export class UnifiedSellerService {
       console.error('Failed to get seller listings:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller listings: ${error.message}`,
+        `Failed to fetch seller listings: ${error instanceof Error ? error.message : String(error)}`,
         'LISTINGS_FETCH_ERROR'
       );
     }
@@ -250,7 +282,7 @@ export class UnifiedSellerService {
       console.error('Failed to create listing:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to create listing: ${error.message}`,
+        `Failed to create listing: ${error instanceof Error ? error.message : String(error)}`,
         'LISTING_CREATE_ERROR'
       );
     }
@@ -289,7 +321,7 @@ export class UnifiedSellerService {
       console.error('Failed to update listing:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to update listing: ${error.message}`,
+        `Failed to update listing: ${error instanceof Error ? error.message : String(error)}`,
         'LISTING_UPDATE_ERROR'
       );
     }
@@ -342,7 +374,7 @@ export class UnifiedSellerService {
       console.error('Failed to get seller dashboard:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller dashboard: ${error.message}`,
+        `Failed to fetch seller dashboard: ${error instanceof Error ? error.message : String(error)}`,
         'DASHBOARD_FETCH_ERROR'
       );
     }
@@ -363,7 +395,7 @@ export class UnifiedSellerService {
       console.error('Failed to get seller orders:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller orders: ${error.message}`,
+        `Failed to fetch seller orders: ${error instanceof Error ? error.message : String(error)}`,
         'ORDERS_FETCH_ERROR'
       );
     }
@@ -384,7 +416,7 @@ export class UnifiedSellerService {
       console.error('Failed to get seller analytics:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller analytics: ${error.message}`,
+        `Failed to fetch seller analytics: ${error instanceof Error ? error.message : String(error)}`,
         'ANALYTICS_FETCH_ERROR'
       );
     }
@@ -405,7 +437,7 @@ export class UnifiedSellerService {
       console.error('Failed to get seller notifications:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to fetch seller notifications: ${error.message}`,
+        `Failed to fetch seller notifications: ${error instanceof Error ? error.message : String(error)}`,
         'NOTIFICATIONS_FETCH_ERROR'
       );
     }
@@ -421,7 +453,7 @@ export class UnifiedSellerService {
       console.error('Failed to mark notification as read:', error);
       throw new SellerAPIError(
         SellerErrorType.API_ERROR,
-        `Failed to mark notification as read: ${error.message}`,
+        `Failed to mark notification as read: ${error instanceof Error ? error.message : String(error)}`,
         'NOTIFICATION_UPDATE_ERROR'
       );
     }
@@ -614,7 +646,7 @@ export class UnifiedSellerService {
       condition: unified.condition,
       images: unified.images,
       tags: unified.tags,
-      status: unified.status,
+      status: unified.status as any,
       saleType: unified.listingType as any,
       escrowEnabled: unified.escrowEnabled,
       shippingOptions: unified.shippingOptions ? {
@@ -666,7 +698,7 @@ export class UnifiedSellerService {
         const transformResult = this.transformExternalListing(data, source);
         results.push(transformResult.data);
       } catch (error) {
-        errors.push(`Failed to transform ${source} listing ${data.id}: ${error.message}`);
+        errors.push(`Failed to transform ${source} listing ${data.id}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 

@@ -7,7 +7,7 @@ import React from 'react';
 import { useTier } from '../../../contexts/TierContext';
 import { TierAction, TIER_LEVELS } from '../../../types/sellerTier';
 import TierUpgradePrompt from './TierUpgradePrompt';
-import LoadingSpinner from '../../Common/LoadingSpinner';
+import LoadingSpinner from '../../ui/LoadingSpinner';
 
 interface TierAwareComponentProps {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ const TierAwareComponent: React.FC<TierAwareComponentProps> = ({
   if (loading) {
     return (
       <div className={`tier-aware-loading ${className}`}>
-        <LoadingSpinner size="sm" />
+        <LoadingSpinner size="small" />
         <span className="ml-2 text-sm text-gray-600">Loading tier information...</span>
       </div>
     );

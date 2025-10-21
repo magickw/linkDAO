@@ -130,8 +130,8 @@ export function transformDisplayListingToUnified(
       transformedFields
     };
   } catch (error) {
-    errors.push(`Transformation failed: ${error.message}`);
-    throw new Error(`Failed to transform DisplayMarketplaceListing: ${error.message}`);
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform DisplayMarketplaceListing: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -223,8 +223,8 @@ export function transformSellerListingToUnified(
       transformedFields
     };
   } catch (error) {
-    errors.push(`Transformation failed: ${error.message}`);
-    throw new Error(`Failed to transform SellerListing: ${error.message}`);
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform SellerListing: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -319,8 +319,8 @@ export function transformMarketplaceListingToUnified(
       transformedFields
     };
   } catch (error) {
-    errors.push(`Transformation failed: ${error.message}`);
-    throw new Error(`Failed to transform MarketplaceListing: ${error.message}`);
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform MarketplaceListing: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -420,16 +420,60 @@ export function transformSellerProfileToUnified(
       profileCompleteness: sellerProfile.profileCompleteness,
       
       // Settings and preferences
-      settings: sellerProfile.settings,
+      settings: {
+        notifications: {
+          orders: sellerProfile.settings?.notifications?.orders ?? true,
+          disputes: sellerProfile.settings?.notifications?.disputes ?? true,
+          daoActivity: sellerProfile.settings?.notifications?.daoActivity ?? true,
+          tips: sellerProfile.settings?.notifications?.tips ?? true,
+          marketing: sellerProfile.settings?.notifications?.marketing ?? false,
+          system: (sellerProfile.settings?.notifications as any)?.system ?? true,
+        },
+        privacy: {
+          showEmail: sellerProfile.settings?.privacy?.showEmail ?? false,
+          showPhone: sellerProfile.settings?.privacy?.showPhone ?? false,
+          showStats: sellerProfile.settings?.privacy?.showStats ?? true,
+          showLocation: (sellerProfile.settings?.privacy as any)?.showLocation ?? true,
+        },
+        escrow: {
+          defaultEnabled: (sellerProfile.settings?.escrow as any)?.defaultEnabled ?? false,
+          minimumAmount: (sellerProfile.settings?.escrow as any)?.minimumAmount ?? 0,
+          autoRelease: (sellerProfile.settings?.escrow as any)?.autoRelease ?? false,
+        },
+        shipping: {
+          defaultFree: (sellerProfile.settings as any)?.shipping?.defaultFree ?? false,
+          defaultCost: (sellerProfile.settings as any)?.shipping?.defaultCost ?? 0,
+          defaultDays: (sellerProfile.settings as any)?.shipping?.defaultDays ?? '3-5',
+          internationalEnabled: (sellerProfile.settings as any)?.shipping?.internationalEnabled ?? false,
+        },
+      },
       
       // Onboarding progress
-      onboardingProgress: sellerProfile.onboardingProgress,
+      onboardingProgress: {
+        ...sellerProfile.onboardingProgress,
+        steps: (sellerProfile.onboardingProgress as any)?.steps || [],
+      },
       
       // Payment and payout
-      payoutPreferences: sellerProfile.payoutPreferences,
+      payoutPreferences: {
+        defaultCrypto: sellerProfile.payoutPreferences.defaultCrypto,
+        cryptoAddresses: sellerProfile.payoutPreferences.cryptoAddresses,
+        fiatEnabled: sellerProfile.payoutPreferences.fiatEnabled,
+        offRampProvider: sellerProfile.payoutPreferences.offRampProvider,
+        bankAccount: sellerProfile.payoutPreferences.bankAccount ? {
+          ...sellerProfile.payoutPreferences.bankAccount,
+          verified: (sellerProfile.payoutPreferences.bankAccount as any)?.verified ?? false,
+        } : undefined,
+        autoWithdraw: (sellerProfile.payoutPreferences as any)?.autoWithdraw ?? false,
+        minimumWithdraw: (sellerProfile.payoutPreferences as any)?.minimumWithdraw ?? 0,
+      },
       
       // DAO and governance
-      daoReputation: sellerProfile.daoReputation,
+      daoReputation: sellerProfile.daoReputation ? {
+        ...sellerProfile.daoReputation,
+        stakingAmount: (sellerProfile.daoReputation as any)?.stakingAmount ?? 0,
+        delegatedVotes: (sellerProfile.daoReputation as any)?.delegatedVotes ?? 0,
+      } : undefined,
       
       // Verification badges
       badges: sellerProfile.badges,
@@ -449,8 +493,8 @@ export function transformSellerProfileToUnified(
       transformedFields
     };
   } catch (error) {
-    errors.push(`Transformation failed: ${error.message}`);
-    throw new Error(`Failed to transform SellerProfile: ${error.message}`);
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform SellerProfile: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -648,8 +692,8 @@ export function transformDashboardStatsToUnified(
       transformedFields
     };
   } catch (error) {
-    errors.push(`Transformation failed: ${error.message}`);
-    throw new Error(`Failed to transform SellerDashboardStats: ${error.message}`);
+    errors.push(`Transformation failed: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(`Failed to transform SellerDashboardStats: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

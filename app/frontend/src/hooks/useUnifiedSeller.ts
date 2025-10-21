@@ -36,12 +36,12 @@ export function useUnifiedSeller(walletAddress?: string) {
     isLoading: loading,
     error,
     refetch
-  } = useQuery({
+  } = useQuery<UnifiedSellerProfile | null>({
     queryKey: ['unified-seller', 'profile', effectiveAddress],
     queryFn: () => effectiveAddress ? unifiedSellerService.getProfile(effectiveAddress) : null,
     enabled: !!effectiveAddress,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     retry: (failureCount, error) => {
       // Don't retry on certain error types
       if (error instanceof SellerAPIError && error.type === SellerErrorType.PERMISSION_ERROR) {
@@ -53,6 +53,22 @@ export function useUnifiedSeller(walletAddress?: string) {
 
   const queryClient = useQueryClient();
 
+  const createProfile = useMutation({
+    mutationFn: (profileData: Partial<UnifiedSellerProfile>) => {
+      return unifiedSellerService.createProfile(profileData);
+    },
+    onSuccess: (createdProfile) => {
+      // Update the cache with the new profile data
+      queryClient.setQueryData(['unified-seller', 'profile', effectiveAddress], createdProfile);
+
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
+    },
+    onError: (error) => {
+      console.error('Failed to create seller profile:', error);
+    },
+  });
+
   const updateProfile = useMutation({
     mutationFn: (updates: Partial<UnifiedSellerProfile>) => {
       if (!effectiveAddress) throw new Error('No wallet address available');
@@ -63,7 +79,7 @@ export function useUnifiedSeller(walletAddress?: string) {
       queryClient.setQueryData(['unified-seller', 'profile', effectiveAddress], updatedProfile);
       
       // Invalidate related queries
-      queryClient.invalidateQueries(['unified-seller', 'dashboard', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
     },
     onError: (error) => {
       console.error('Failed to update seller profile:', error);
@@ -72,14 +88,14 @@ export function useUnifiedSeller(walletAddress?: string) {
 
   const invalidateProfile = useCallback(() => {
     if (effectiveAddress) {
-      queryClient.invalidateQueries(['unified-seller', 'profile', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'profile', effectiveAddress] });
     }
   }, [effectiveAddress, queryClient]);
 
   const clearCache = useCallback(() => {
     if (effectiveAddress) {
       unifiedSellerService.clearCache(effectiveAddress);
-      queryClient.removeQueries(['unified-seller', 'profile', effectiveAddress]);
+      queryClient.removeQueries({ queryKey: ['unified-seller', 'profile', effectiveAddress] });
     }
   }, [effectiveAddress, queryClient]);
 
@@ -88,8 +104,11 @@ export function useUnifiedSeller(walletAddress?: string) {
     loading,
     error,
     refetch,
+    createProfile: createProfile.mutate,
+    isCreating: createProfile.isPending,
+    createError: createProfile.error,
     updateProfile: updateProfile.mutate,
-    isUpdating: updateProfile.isLoading,
+    isUpdating: updateProfile.isPending,
     updateError: updateProfile.error,
     invalidateProfile,
     clearCache,
@@ -115,7 +134,7 @@ export function useUnifiedSellerListings(walletAddress?: string) {
     queryFn: () => effectiveAddress ? unifiedSellerService.getListings(effectiveAddress) : [],
     enabled: !!effectiveAddress,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const queryClient = useQueryClient();
@@ -127,8 +146,8 @@ export function useUnifiedSellerListings(walletAddress?: string) {
     },
     onSuccess: () => {
       // Invalidate listings and dashboard queries
-      queryClient.invalidateQueries(['unified-seller', 'listings', effectiveAddress]);
-      queryClient.invalidateQueries(['unified-seller', 'dashboard', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'listings', effectiveAddress] });
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
     },
   });
 
@@ -139,8 +158,8 @@ export function useUnifiedSellerListings(walletAddress?: string) {
     },
     onSuccess: () => {
       // Invalidate listings and dashboard queries
-      queryClient.invalidateQueries(['unified-seller', 'listings', effectiveAddress]);
-      queryClient.invalidateQueries(['unified-seller', 'dashboard', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'listings', effectiveAddress] });
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
     },
   });
 
@@ -172,10 +191,10 @@ export function useUnifiedSellerListings(walletAddress?: string) {
     error,
     refetch,
     createListing: createListing.mutate,
-    isCreating: createListing.isLoading,
+    isCreating: createListing.isPending,
     createError: createListing.error,
     updateListing: updateListing.mutate,
-    isUpdating: updateListing.isLoading,
+    isUpdating: updateListing.isPending,
     updateError: updateListing.error,
     listingsSummary,
     featuredListings,
@@ -201,7 +220,7 @@ export function useUnifiedSellerDashboard(walletAddress?: string) {
     queryFn: () => effectiveAddress ? unifiedSellerService.getDashboard(effectiveAddress) : null,
     enabled: !!effectiveAddress,
     staleTime: 1 * 60 * 1000, // 1 minute
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const queryClient = useQueryClient();
@@ -221,16 +240,16 @@ export function useUnifiedSellerDashboard(walletAddress?: string) {
     },
     onSuccess: () => {
       // Invalidate dashboard to refresh notifications
-      queryClient.invalidateQueries(['unified-seller', 'dashboard', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
     },
   });
 
   const refreshDashboard = useCallback(() => {
     if (effectiveAddress) {
-      queryClient.invalidateQueries(['unified-seller', 'dashboard', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', effectiveAddress] });
       // Also invalidate related queries
-      queryClient.invalidateQueries(['unified-seller', 'profile', effectiveAddress]);
-      queryClient.invalidateQueries(['unified-seller', 'listings', effectiveAddress]);
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'profile', effectiveAddress] });
+      queryClient.invalidateQueries({ queryKey: ['unified-seller', 'listings', effectiveAddress] });
     }
   }, [effectiveAddress, queryClient]);
 
@@ -243,7 +262,7 @@ export function useUnifiedSellerDashboard(walletAddress?: string) {
     error,
     refetch,
     markNotificationRead: markNotificationRead.mutate,
-    isMarkingRead: markNotificationRead.isLoading,
+    isMarkingRead: markNotificationRead.isPending,
     refreshDashboard,
     address: effectiveAddress,
   };
@@ -267,7 +286,7 @@ export function useUnifiedSellerOrders(walletAddress?: string) {
     queryFn: () => effectiveAddress ? unifiedSellerService.getOrders(effectiveAddress) : [],
     enabled: !!effectiveAddress,
     staleTime: 30 * 1000, // 30 seconds
-    cacheTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Computed values
@@ -321,7 +340,7 @@ export function useUnifiedSellerAnalytics(walletAddress?: string) {
     queryFn: () => effectiveAddress ? unifiedSellerService.getAnalytics(effectiveAddress) : null,
     enabled: !!effectiveAddress,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   return {
@@ -390,7 +409,7 @@ export function useUnifiedSellerOnboarding(walletAddress?: string) {
     queryFn: () => effectiveAddress ? unifiedSellerService.getOnboardingSteps(effectiveAddress) : [],
     enabled: !!effectiveAddress,
     staleTime: 10 * 60 * 1000, // 10 minutes
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 
   // Computed values
@@ -481,12 +500,12 @@ export function useSellerCacheManager() {
 
   const invalidateSellerCache = useCallback((walletAddress: string) => {
     // Invalidate all seller-related queries for the given address
-    queryClient.invalidateQueries(['unified-seller', 'profile', walletAddress]);
-    queryClient.invalidateQueries(['unified-seller', 'listings', walletAddress]);
-    queryClient.invalidateQueries(['unified-seller', 'dashboard', walletAddress]);
-    queryClient.invalidateQueries(['unified-seller', 'orders', walletAddress]);
-    queryClient.invalidateQueries(['unified-seller', 'analytics', walletAddress]);
-    queryClient.invalidateQueries(['unified-seller', 'onboarding', walletAddress]);
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'profile', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'listings', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'dashboard', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'orders', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'analytics', walletAddress] });
+    queryClient.invalidateQueries({ queryKey: ['unified-seller', 'onboarding', walletAddress] });
     
     // Also clear service-level cache
     unifiedSellerService.clearCache(walletAddress);
@@ -494,8 +513,8 @@ export function useSellerCacheManager() {
 
   const clearAllSellerCache = useCallback(() => {
     // Remove all seller-related queries
-    queryClient.removeQueries(['unified-seller']);
-    
+    queryClient.removeQueries({ queryKey: ['unified-seller'] });
+
     // Clear service-level cache
     unifiedSellerService.clearCache();
   }, [queryClient]);

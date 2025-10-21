@@ -47,8 +47,17 @@ export interface SellerProfile {
     // Profile Completeness
     profileCompleteness: {
         score: number; // 0-100
-        missingFields: string[];
-        recommendations: string[];
+        missingFields: Array<{
+            field: string;
+            label: string;
+            weight: number;
+            required: boolean;
+        }>;
+        recommendations: Array<{
+            action: string;
+            description: string;
+            impact: number;
+        }>;
         lastCalculated: string;
     };
     
@@ -343,6 +352,7 @@ export interface ProfileCompletenessCalculation {
         description: string;
         impact: number;
     }>;
+    lastCalculated: string;
 }
 
 // Enhanced Profile Update Types
