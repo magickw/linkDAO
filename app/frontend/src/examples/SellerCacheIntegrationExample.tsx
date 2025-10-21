@@ -126,7 +126,7 @@ const SellerProfileExample: React.FC = () => {
       {updateProfile.error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800 text-sm">
-            Update Error: {updateProfile.error.message}
+            Update Error: {updateProfile.error instanceof Error ? updateProfile.error.message : String(updateProfile.error)}
           </p>
         </div>
       )}
