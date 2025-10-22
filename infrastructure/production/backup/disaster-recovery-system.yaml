@@ -1,0 +1,401 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-config
+  namespace: web3-marketplace-prod
+data:
+  recovery-plan.yaml: |
+    disasterRecovery:
+      rto: 300  # Recovery Time Objective in seconds (5 minutes)
+      rpo: 60   # Recovery Point Objective in seconds (1 minute)
+      
+      backup_strategies:
+        database:
+          type: "continuous"
+          frequency: "30s"
+          retention: "30d"
+          encryption: true
+          compression: true
+          destinations:
+            - aws_s3
+            - azure_blob
+            - gcp_storage
+            
+        blockchain_data:
+          type: "incremental"
+          frequency: "5m"
+          retention: "90d"
+          verification: true
+          destinations:
+            - ipfs_cluster
+            - aws_s3
+            
+        application_state:
+          type: "snapshot"
+          frequency: "1h"
+          retention: "7d"
+          destinations:
+            - kubernetes_volumes
+            - aws_ebs
+            
+        configuration:
+          type: "versioned"
+          frequency: "on_change"
+          retention: "1y"
+          destinations:
+            - git_repository
+            - vault_storage
+            
+      failover_scenarios:
+        primary_datacenter_failure:
+          trigger: "health_check_failure"
+          action: "switch_to_secondary"
+          estimated_downtime: "2m"
+          
+        database_corruption:
+          trigger: "data_integrity_check_failure"
+          action: "restore_from_backup"
+          estimated_downtime: "5m"
+          
+        application_crash:
+          trigger: "pod_crash_loop"
+          action: "restart_with_rollback"
+          estimated_downtime: "30s"
+          
+        network_partition:
+          trigger: "network_connectivity_loss"
+          action: "activate_local_cache"
+          estimated_downtime: "0s"
+          
+      monitoring:
+        health_checks:
+          - database_connectivity
+          - application_responsiveness
+          - blockchain_sync_status
+          - backup_completion
+          - cross_region_replication
+          
+        alerts:
+          backup_failure: "critical"
+          replication_lag: "warning"
+          storage_capacity: "warning"
+          network_latency: "info"
+          
+      testing:
+        schedule: "weekly"
+        scenarios:
+          - database_failover
+          - application_recovery
+          - backup_restoration
+          - network_failure_simulation
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backup-orchestrator
+  namespace: web3-marketplace-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backup-orchestrator
+  template:
+    metadata:
+      labels:
+        app: backup-orchestrator
+    spec:
+      containers:
+      - name: orchestrator
+        image: web3marketplace/backup-orchestrator:latest
+        ports:
+        - containerPort: 8084
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: url
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-secret
+              key: access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-secret
+              key: secret_access_key
+        - name: AZURE_STORAGE_ACCOUNT
+          valueFrom:
+            secretKeyRef:
+              name: azure-secret
+              key: storage_account
+        - name: GCP_SERVICE_ACCOUNT_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gcp-secret
+              key: service_account_key
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        - name: backup-storage
+          mountPath: /backup
+        - name: encryption-keys
+          mountPath: /app/keys
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8084
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: disaster-recovery-config
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: backup-storage-pvc
+      - name: encryption-keys
+        secret:
+          secretName: backup-encryption-keys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backup-orchestrator-service
+  namespace: web3-marketplace-prod
+spec:
+  selector:
+    app: backup-orchestrator
+  ports:
+  - port: 80
+    targetPort: 8084
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: continuous-backup-job
+  namespace: web3-marketplace-prod
+spec:
+  schedule: "*/30 * * * * *"  # Every 30 seconds
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: continuous-backup
+            image: web3marketplace/backup-orchestrator:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting continuous backup..."
+              
+              # Database backup
+              pg_dump $DATABASE_URL | gzip | gpg --encrypt --recipient backup@web3marketplace.com > /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg
+              
+              # Upload to multiple destinations
+              aws s3 cp /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg s3://$S3_BACKUP_BUCKET/database/
+              az storage blob upload --file /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg --container-name backups --name database/
+              gsutil cp /backup/db_$(date +%Y%m%d_%H%M%S).sql.gz.gpg gs://$GCS_BACKUP_BUCKET/database/
+              
+              # Verify backup integrity
+              python3 /app/scripts/verify_backup_integrity.py
+              
+              # Clean up local files older than 1 hour
+              find /backup -type f -mmin +60 -delete
+              
+              echo "Continuous backup completed"
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: url
+            - name: S3_BACKUP_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: backup_bucket
+            - name: GCS_BACKUP_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: gcp-secret
+                  key: backup_bucket
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+            - name: encryption-keys
+              mountPath: /app/keys
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-storage-pvc
+          - name: encryption-keys
+            secret:
+              secretName: backup-encryption-keys
+          restartPolicy: OnFailure
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disaster-recovery-controller
+  namespace: web3-marketplace-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: disaster-recovery-controller
+  template:
+    metadata:
+      labels:
+        app: disaster-recovery-controller
+    spec:
+      containers:
+      - name: controller
+        image: web3marketplace/disaster-recovery-controller:latest
+        ports:
+        - containerPort: 8085
+        env:
+        - name: KUBERNETES_API_URL
+          value: "https://kubernetes.default.svc"
+        - name: PROMETHEUS_URL
+          value: "http://prometheus:9090"
+        - name: ALERTMANAGER_URL
+          value: "http://alertmanager:9093"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        - name: kube-config
+          mountPath: /app/kube
+        - name: recovery-scripts
+          mountPath: /app/scripts
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8085
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: disaster-recovery-config
+      - name: kube-config
+        secret:
+          secretName: kube-config-secret
+      - name: recovery-scripts
+        configMap:
+          name: recovery-scripts-config
+          defaultMode: 0755
+      serviceAccountName: disaster-recovery-controller-sa
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: disaster-recovery-controller-sa
+  namespace: web3-marketplace-prod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: disaster-recovery-controller-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: disaster-recovery-controller-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: disaster-recovery-controller-role
+subjects:
+- kind: ServiceAccount
+  name: disaster-recovery-controller-sa
+  namespace: web3-marketplace-prod
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: disaster-recovery-test
+  namespace: web3-marketplace-prod
+spec:
+  schedule: "0 2 * * 0"  # Weekly on Sunday at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: recovery-test
+            image: web3marketplace/disaster-recovery-controller:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting disaster recovery test..."
+              
+              # Test database failover
+              python3 /app/scripts/test_database_failover.py
+              
+              # Test application recovery
+              python3 /app/scripts/test_application_recovery.py
+              
+              # Test backup restoration
+              python3 /app/scripts/test_backup_restoration.py
+              
+              # Test network failure simulation
+              python3 /app/scripts/test_network_failure.py
+              
+              # Generate test report
+              python3 /app/scripts/generate_test_report.py
+              
+              echo "Disaster recovery test completed"
+            env:
+            - name: KUBERNETES_API_URL
+              value: "https://kubernetes.default.svc"
+            - name: TEST_ENVIRONMENT
+              value: "staging"
+            volumeMounts:
+            - name: recovery-scripts
+              mountPath: /app/scripts
+            - name: test-results
+              mountPath: /app/results
+          volumes:
+          - name: recovery-scripts
+            configMap:
+              name: recovery-scripts-config
+              defaultMode: 0755
+          - name: test-results
+            persistentVolumeClaim:
+              claimName: test-results-pvc
+          restartPolicy: OnFailure

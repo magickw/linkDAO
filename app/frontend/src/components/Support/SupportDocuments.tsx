@@ -47,18 +47,6 @@ const SupportDocuments: React.FC = () => {
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [showScrollProgress, setShowScrollProgress] = useState(false);
 
-  // Document navigation hook
-  const {
-    currentDocument,
-    previousDocument,
-    nextDocument,
-    relatedDocuments,
-    scrollProgress,
-    navigateToDocument,
-    goBack,
-    canGoBack
-  } = useDocumentNavigation(supportDocuments, selectedDocument, selectedCategory);
-
   // Enhanced document structure aligned with spec requirements
   const supportDocuments: SupportDocument[] = [
     {
@@ -178,6 +166,18 @@ const SupportDocuments: React.FC = () => {
       tags: ['bridge', 'cross-chain', 'networks', 'transfer']
     }
   ];
+
+  // Document navigation hook
+  const {
+    currentDocument,
+    previousDocument,
+    nextDocument,
+    relatedDocuments,
+    scrollProgress,
+    navigateToDocument,
+    goBack,
+    canGoBack
+  } = useDocumentNavigation(supportDocuments, selectedDocument, selectedCategory);
 
   // Enhanced categories aligned with spec
   const categories = [

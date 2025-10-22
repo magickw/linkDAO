@@ -139,9 +139,9 @@ export const useMarketplacePerformance = () => {
     
     try {
       const currentMetrics = performanceMonitoringService.getPerformanceSummary();
-      
+
       // Optimize based on Core Web Vitals
-      if (currentMetrics.coreWebVitals.LCP && currentMetrics.coreWebVitals.LCP > 2500) {
+      if (currentMetrics.averageLCP && currentMetrics.averageLCP > 2500) {
         // Poor LCP - enable aggressive preloading
         navigationPreloadService.updateConfig({
           enabled: true,
@@ -149,23 +149,23 @@ export const useMarketplacePerformance = () => {
           maxConcurrentPreloads: 5,
           preloadImages: true
         });
-        
+
         setOptimizations(prev => ({
           ...prev,
           preloadEnabled: true,
           imageOptimizationEnabled: true
         }));
       }
-      
-      if (currentMetrics.coreWebVitals.FID && currentMetrics.coreWebVitals.FID > 100) {
+
+      if (currentMetrics.averageFID && currentMetrics.averageFID > 100) {
         // Poor FID - reduce JavaScript execution
         setOptimizations(prev => ({
           ...prev,
           lazyLoadingEnabled: true
         }));
       }
-      
-      if (currentMetrics.coreWebVitals.CLS && currentMetrics.coreWebVitals.CLS > 0.1) {
+
+      if (currentMetrics.averageCLS && currentMetrics.averageCLS > 0.1) {
         // Poor CLS - optimize image loading
         setOptimizations(prev => ({
           ...prev,

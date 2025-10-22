@@ -4,12 +4,9 @@ export { SkipLinks } from './SkipLinks';
 export { FocusManager } from './FocusManager';
 
 // Accessibility hooks
-export { 
-  useAccessibility, 
-  useKeyboardNavigation, 
-  useFocusManagement,
-  type AccessibilityState,
-  type AccessibilityActions,
+export {
+  useAccessibility,
+  useKeyboardNavigation,
   type UseAccessibilityReturn
 } from '@/hooks/useAccessibility';
 

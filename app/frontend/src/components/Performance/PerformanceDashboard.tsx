@@ -7,11 +7,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { performanceMonitoringService } from '../../services/performanceMonitoringService';
 
 interface CoreWebVitals {
-  LCP: number | null;
-  FID: number | null;
-  CLS: number | null;
-  FCP: number | null;
-  TTFB: number | null;
+  lcp: number | null;
+  fid: number | null;
+  cls: number | null;
+  fcp: number | null;
+  ttfb: number | null;
 }
 
 interface PerformanceAlert {
@@ -36,11 +36,11 @@ interface ABTestResult {
 
 const PerformanceDashboard: React.FC = () => {
   const [coreWebVitals, setCoreWebVitals] = useState<CoreWebVitals>({
-    LCP: null,
-    FID: null,
-    CLS: null,
-    FCP: null,
-    TTFB: null
+    lcp: null,
+    fid: null,
+    cls: null,
+    fcp: null,
+    ttfb: null
   });
 
   const [alerts, setAlerts] = useState<PerformanceAlert[]>([]);
@@ -160,6 +160,9 @@ const PerformanceDashboard: React.FC = () => {
 
   // Create sample A/B test
   const createSampleABTest = () => {
+    // TODO: Implement A/B testing functionality
+    console.log('A/B testing feature coming soon');
+    /*
     performanceMonitoringService.createABTest({
       testId: 'cache-strategy-test',
       name: 'Cache Strategy Optimization',
@@ -187,6 +190,7 @@ const PerformanceDashboard: React.FC = () => {
     // Get results
     const results = performanceMonitoringService.getABTestResults('cache-strategy-test');
     setAbTestResults([{ testId: 'cache-strategy-test', ...results }]);
+    */
   };
 
   if (isLoading) {

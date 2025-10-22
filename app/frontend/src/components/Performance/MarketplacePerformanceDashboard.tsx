@@ -112,24 +112,24 @@ export const MarketplacePerformanceDashboard: React.FC<PerformanceDashboardProps
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Largest Contentful Paint</div>
-                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.LCP || 0, { good: 2500, poor: 4000 })}`}>
-                    {coreWebVitals.LCP ? formatTime(coreWebVitals.LCP) : 'N/A'}
+                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.lcp || 0, { good: 2500, poor: 4000 })}`}>
+                    {coreWebVitals.lcp ? formatTime(coreWebVitals.lcp) : 'N/A'}
                   </div>
                   <div className="text-xs text-gray-500">Good: ≤2.5s</div>
                 </div>
 
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">First Input Delay</div>
-                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.FID || 0, { good: 100, poor: 300 })}`}>
-                    {coreWebVitals.FID ? formatTime(coreWebVitals.FID) : 'N/A'}
+                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.fid || 0, { good: 100, poor: 300 })}`}>
+                    {coreWebVitals.fid ? formatTime(coreWebVitals.fid) : 'N/A'}
                   </div>
                   <div className="text-xs text-gray-500">Good: ≤100ms</div>
                 </div>
 
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Cumulative Layout Shift</div>
-                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.CLS || 0, { good: 0.1, poor: 0.25 })}`}>
-                    {coreWebVitals.CLS ? coreWebVitals.CLS.toFixed(3) : 'N/A'}
+                  <div className={`text-2xl font-bold ${getMetricColor(coreWebVitals.cls || 0, { good: 0.1, poor: 0.25 })}`}>
+                    {coreWebVitals.cls ? coreWebVitals.cls.toFixed(3) : 'N/A'}
                   </div>
                   <div className="text-xs text-gray-500">Good: ≤0.1</div>
                 </div>

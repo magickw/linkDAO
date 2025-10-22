@@ -60,8 +60,17 @@ class APIGatewayManager {
     const allowedOrigins = process.env.ALLOWED_ORIGINS
       ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
       : isProduction
-        ? ['https://yourdomain.com', 'https://www.yourdomain.com']
-        : ['http://localhost:3000', 'http://localhost:3001'];
+        ? [
+            'https://www.linkdao.io',
+            'https://linkdao.io',
+            'https://linkdao.vercel.app',
+            'https://www.linkdao.vercel.app'
+          ]
+        : [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://127.0.0.1:3000'
+          ];
 
     return {
       cors: {

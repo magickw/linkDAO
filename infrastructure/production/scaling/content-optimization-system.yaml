@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: content-optimization-config
+  namespace: web3-marketplace-prod
+data:
+  optimization.yaml: |
+    contentOptimization:
+      images:
+        formats:
+          - webp
+          - avif
+          - jpeg
+        qualities:
+          high: 90
+          medium: 75
+          low: 60
+        sizes:
+          - 320w
+          - 640w
+          - 1024w
+          - 1920w
+        compression:
+          enabled: true
+          algorithm: "mozjpeg"
+          progressive: true
+      
+      videos:
+        formats:
+          - mp4
+          - webm
+        qualities:
+          - 1080p
+          - 720p
+          - 480p
+        compression:
+          enabled: true
+          codec: "h264"
+          bitrate: "adaptive"
+      
+      text:
+        compression:
+          enabled: true
+          algorithm: "gzip"
+          level: 6
+        minification:
+          enabled: true
+          removeComments: true
+          removeWhitespace: true
+      
+      caching:
+        ttl:
+          images: 2592000  # 30 days
+          videos: 604800   # 7 days
+          text: 86400      # 1 day
+        strategy: "adaptive"
+        
+      cdn:
+        enabled: true
+        provider: "cloudflare"
+        zones:
+          - us-east-1
+          - eu-west-1
+          - ap-southeast-1
+        
+      monitoring:
+        metrics:
+          - compression_ratio
+          - load_time
+          - bandwidth_saved
+          - cache_hit_rate
+        alerts:
+          compression_failure_threshold: 5
+          load_time_threshold: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-optimizer
+  namespace: web3-marketplace-prod
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: content-optimizer
+  template:
+    metadata:
+      labels:
+        app: content-optimizer
+    spec:
+      containers:
+      - name: optimizer
+        image: web3marketplace/content-optimizer:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: url
+        - name: S3_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: s3-secret
+              key: bucket
+        - name: CDN_URL
+          valueFrom:
+            secretKeyRef:
+              name: cdn-secret
+              key: url
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+        - name: temp-storage
+          mountPath: /tmp/optimization
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: content-optimization-config
+      - name: temp-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-optimizer-service
+  namespace: web3-marketplace-prod
+spec:
+  selector:
+    app: content-optimizer
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: content-optimization-cleanup
+  namespace: web3-marketplace-prod
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cleanup
+            image: web3marketplace/content-optimizer:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting content optimization cleanup..."
+              # Clean up old optimized files
+              find /tmp/optimization -type f -mtime +7 -delete
+              # Clean up cache entries
+              redis-cli -u $REDIS_URL EVAL "
+                local keys = redis.call('keys', 'optimization:*')
+                for i=1,#keys do
+                  local ttl = redis.call('ttl', keys[i])
+                  if ttl == -1 then
+                    redis.call('expire', keys[i], 86400)
+                  end
+                end
+              " 0
+              echo "Cleanup completed"
+            env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: url
+            volumeMounts:
+            - name: temp-storage
+              mountPath: /tmp/optimization
+          volumes:
+          - name: temp-storage
+            emptyDir: {}
+          restartPolicy: OnFailure

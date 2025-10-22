@@ -131,6 +131,42 @@
           "sizes": "192x192"
         }
       ]
+    },
+    {
+      "name": "Support Docs",
+      "short_name": "Support",
+      "description": "Access support documentation",
+      "url": "/support",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Beginner's Guide",
+      "short_name": "Guide",
+      "description": "Quick access to the beginner's guide",
+      "url": "/support?doc=beginners-guide",
+      "icons": [
+        {
+          "src": "/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Troubleshooting",
+      "short_name": "Help",
+      "description": "Quick access to troubleshooting guide",
+      "url": "/support?doc=troubleshooting-guide",
+      "icons": [
+        {
+          "src": "/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
   ],
   "share_target": {
