@@ -388,10 +388,9 @@ export class WalletService {
             address: token.address,
             abi: ERC20_ABI,
             functionName: 'balanceOf',
-            args: [address],
-            authorizationList: []
-          });
-          
+            args: [address]
+          } as any); // Type assertion to work around viem v2.38.3 type definition bug
+
           const balance = balanceResult as bigint;
 
           if (balance && balance > 0n) {

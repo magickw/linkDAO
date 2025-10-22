@@ -3533,3 +3533,201 @@ export const paymentMethodPreferenceOverrides = pgTable("payment_method_preferen
   expiresAtIdx: index("idx_payment_preference_overrides_expires_at").on(t.expiresAt),
   methodTypeIdx: index("idx_payment_preference_overrides_method_type").on(t.paymentMethodType),
 }));
+// LDAO
+ Token Acquisition System Tables
+
+// Purchase transactions table
+export const purchaseTransactions = pgTable("purchase_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 20 }).notNull(),
+  paymentToken: varchar("payment_token", { length: 20 }).notNull(),
+  pricePerToken: numeric("price_per_token", { precision: 20, scale: 8 }).notNull(),
+  discountApplied: numeric("discount_applied", { precision: 5, scale: 4 }).default("0").notNull(),
+  totalPrice: numeric("total_price", { precision: 20, scale: 8 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  txHash: varchar("tx_hash", { length: 66 }),
+  paymentProcessorId: varchar("payment_processor_id", { length: 255 }),
+  paymentDetails: text("payment_details"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_purchase_transactions_user_id").on(t.userId),
+  statusIdx: index("idx_purchase_transactions_status").on(t.status),
+  createdAtIdx: index("idx_purchase_transactions_created_at").on(t.createdAt),
+  paymentMethodIdx: index("idx_purchase_transactions_payment_method").on(t.paymentMethod),
+}));
+
+// Earning activities table
+export const earningActivities = pgTable("earning_activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  activityId: varchar("activity_id", { length: 255 }).notNull(),
+  tokensEarned: numeric("tokens_earned", { precision: 20, scale: 8 }).notNull(),
+  multiplier: numeric("multiplier", { precision: 5, scale: 4 }).default("1.0").notNull(),
+  isPremiumBonus: boolean("is_premium_bonus").default(false).notNull(),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_earning_activities_user_id").on(t.userId),
+  activityTypeIdx: index("idx_earning_activities_activity_type").on(t.activityType),
+  createdAtIdx: index("idx_earning_activities_created_at").on(t.createdAt),
+}));
+
+// Enhanced staking positions table
+export const stakingPositions = pgTable("staking_positions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  lockPeriod: integer("lock_period").notNull(),
+  aprRate: numeric("apr_rate", { precision: 5, scale: 4 }).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isAutoCompound: boolean("is_auto_compound").default(false).notNull(),
+  rewardsEarned: numeric("rewards_earned", { precision: 20, scale: 8 }).default("0").notNull(),
+  status: varchar("status", { length: 20 }).default("active").notNull(),
+  contractAddress: varchar("contract_address", { length: 66 }),
+  txHash: varchar("tx_hash", { length: 66 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_staking_positions_user_id").on(t.userId),
+  statusIdx: index("idx_staking_positions_status").on(t.status),
+  endDateIdx: index("idx_staking_positions_end_date").on(t.endDate),
+}));
+
+// Price history table for analytics
+export const ldaoPriceHistory = pgTable("ldao_price_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  priceUsd: numeric("price_usd", { precision: 20, scale: 8 }).notNull(),
+  priceEth: numeric("price_eth", { precision: 20, scale: 8 }),
+  volume24h: numeric("volume_24h", { precision: 20, scale: 8 }).default("0"),
+  marketCap: numeric("market_cap", { precision: 20, scale: 8 }),
+  source: varchar("source", { length: 50 }).notNull(),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+}, (t) => ({
+  timestampIdx: index("idx_ldao_price_history_timestamp").on(t.timestamp),
+  sourceIdx: index("idx_ldao_price_history_source").on(t.source),
+}));
+
+// Volume discount tiers configuration
+export const volumeDiscountTiers = pgTable("volume_discount_tiers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  minAmount: numeric("min_amount", { precision: 20, scale: 8 }).notNull(),
+  maxAmount: numeric("max_amount", { precision: 20, scale: 8 }),
+  discountPercentage: numeric("discount_percentage", { precision: 5, scale: 4 }).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  minAmountIdx: index("idx_volume_discount_tiers_min_amount").on(t.minAmount),
+  isActiveIdx: index("idx_volume_discount_tiers_is_active").on(t.isActive),
+}));
+
+// User purchase limits and KYC status
+export const userPurchaseLimits = pgTable("user_purchase_limits", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
+  dailyLimit: numeric("daily_limit", { precision: 20, scale: 8 }).default("1000").notNull(),
+  monthlyLimit: numeric("monthly_limit", { precision: 20, scale: 8 }).default("10000").notNull(),
+  dailySpent: numeric("daily_spent", { precision: 20, scale: 8 }).default("0").notNull(),
+  monthlySpent: numeric("monthly_spent", { precision: 20, scale: 8 }).default("0").notNull(),
+  kycVerified: boolean("kyc_verified").default(false).notNull(),
+  kycLevel: varchar("kyc_level", { length: 20 }).default("none").notNull(),
+  lastResetDate: timestamp("last_reset_date").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Referral program tracking
+export const referralActivities = pgTable("referral_activities", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  referrerId: uuid("referrer_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  refereeId: uuid("referee_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  tokensEarned: numeric("tokens_earned", { precision: 20, scale: 8 }).notNull(),
+  tierLevel: integer("tier_level").default(1).notNull(),
+  bonusPercentage: numeric("bonus_percentage", { precision: 5, scale: 4 }).notNull(),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  referrerIdx: index("idx_referral_activities_referrer_id").on(t.referrerId),
+  refereeIdx: index("idx_referral_activities_referee_id").on(t.refereeId),
+  createdAtIdx: index("idx_referral_activities_created_at").on(t.createdAt),
+}));
+
+// Bridge transactions tracking
+export const bridgeTransactions = pgTable("bridge_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  fromChain: varchar("from_chain", { length: 50 }).notNull(),
+  toChain: varchar("to_chain", { length: 50 }).notNull(),
+  amount: numeric("amount", { precision: 20, scale: 8 }).notNull(),
+  bridgeProvider: varchar("bridge_provider", { length: 50 }).notNull(),
+  sourceTxHash: varchar("source_tx_hash", { length: 66 }),
+  destinationTxHash: varchar("destination_tx_hash", { length: 66 }),
+  bridgeId: varchar("bridge_id", { length: 255 }),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  fees: numeric("fees", { precision: 20, scale: 8 }).default("0"),
+  estimatedTime: integer("estimated_time"),
+  actualTime: integer("actual_time"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_bridge_transactions_user_id").on(t.userId),
+  statusIdx: index("idx_bridge_transactions_status").on(t.status),
+  createdAtIdx: index("idx_bridge_transactions_created_at").on(t.createdAt),
+}));
+
+// DEX swap transactions
+export const dexSwapTransactions = pgTable("dex_swap_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  dexProvider: varchar("dex_provider", { length: 50 }).notNull(),
+  fromToken: varchar("from_token", { length: 20 }).notNull(),
+  toToken: varchar("to_token", { length: 20 }).notNull(),
+  amountIn: numeric("amount_in", { precision: 20, scale: 8 }).notNull(),
+  amountOut: numeric("amount_out", { precision: 20, scale: 8 }),
+  expectedAmountOut: numeric("expected_amount_out", { precision: 20, scale: 8 }),
+  slippageTolerance: numeric("slippage_tolerance", { precision: 5, scale: 4 }).default("0.005"),
+  priceImpact: numeric("price_impact", { precision: 5, scale: 4 }),
+  gasFee: numeric("gas_fee", { precision: 20, scale: 8 }),
+  txHash: varchar("tx_hash", { length: 66 }),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index("idx_dex_swap_transactions_user_id").on(t.userId),
+  statusIdx: index("idx_dex_swap_transactions_status").on(t.status),
+  createdAtIdx: index("idx_dex_swap_transactions_created_at").on(t.createdAt),
+}));
+
+// Fiat payment processing records
+export const fiatPaymentRecords = pgTable("fiat_payment_records", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  purchaseTransactionId: uuid("purchase_transaction_id").references(() => purchaseTransactions.id, { onDelete: 'cascade' }).notNull(),
+  paymentProcessor: varchar("payment_processor", { length: 50 }).notNull(),
+  processorPaymentId: varchar("processor_payment_id", { length: 255 }).notNull(),
+  amountFiat: numeric("amount_fiat", { precision: 20, scale: 8 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull(),
+  exchangeRate: numeric("exchange_rate", { precision: 20, scale: 8 }).notNull(),
+  amountCrypto: numeric("amount_crypto", { precision: 20, scale: 8 }).notNull(),
+  cryptoCurrency: varchar("crypto_currency", { length: 20 }).notNull(),
+  processingFees: numeric("processing_fees", { precision: 20, scale: 8 }).default("0"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  webhookData: text("webhook_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+  purchaseTransactionIdx: index("idx_fiat_payment_records_purchase_transaction_id").on(t.purchaseTransactionId),
+  statusIdx: index("idx_fiat_payment_records_status").on(t.status),
+  processorPaymentIdIdx: index("idx_fiat_payment_records_processor_payment_id").on(t.processorPaymentId),
+}));

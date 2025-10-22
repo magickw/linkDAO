@@ -128,8 +128,12 @@ class AuthService {
       let signature: string | null = null;
       try {
         // Sign message with wallet - this will prompt the user
-        signature = await signMessage(config, { account: address as `0x${string}`, message });
-        
+        // Using wagmi/core signMessage requires account parameter in newer versions
+        signature = await signMessage(config, {
+          account: address as `0x${string}`,
+          message
+        });
+
         if (!signature) {
           return { success: false, error: 'Signature is required for authentication' };
         }

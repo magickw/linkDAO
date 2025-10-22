@@ -55,9 +55,12 @@ class NavigationPreloadService {
     let hoverTimeout: NodeJS.Timeout;
 
     document.addEventListener('mouseenter', (event) => {
+      // Check if event target is a valid Element before using .closest()
+      if (!(event.target instanceof Element)) return;
+
       const target = event.target as HTMLElement;
       const link = target.closest('a[href], [data-preload]') as HTMLElement;
-      
+
       if (!link) return;
 
       const href = link.getAttribute('href') || link.getAttribute('data-preload');

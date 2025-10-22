@@ -123,6 +123,7 @@ export interface ProductFilters {
   sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'oldest' | 'popular' | 'ending_soon';
   limit?: number;
   offset?: number;
+  page?: number;
 }
 
 export interface SearchFilters extends ProductFilters {
@@ -248,12 +249,14 @@ export class UnifiedMarketplaceService {
         });
       }
 
-      const response = await fetch(`${this.baseUrl}/api/products?${params.toString()}`, {
+      // Try marketplace/listings endpoint first
+      const response = await fetch(`${this.baseUrl}/marketplace/listings?${params.toString()}`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch products');
+        console.warn('Marketplace API unavailable, using mock data');
+        return this.getMockProducts(filters);
       }
 
       const result = await response.json();
@@ -263,15 +266,20 @@ export class UnifiedMarketplaceService {
         throw new Error(result.message || 'Failed to fetch products');
       }
     } catch (error) {
-      console.error('Error fetching products:', error);
-      return {
-        products: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        hasMore: false
-      };
+      console.warn('Error fetching products, using mock data:', error);
+      return this.getMockProducts(filters);
     }
+  }
+
+  private getMockProducts(filters?: ProductFilters): ProductPage {
+    // Return empty products for now - can be populated with mock data if needed
+    return {
+      products: [],
+      total: 0,
+      page: filters?.page || 1,
+      limit: filters?.limit || 20,
+      hasMore: false
+    };
   }
 
   async getProductById(id: string): Promise<Product | null> {
@@ -780,12 +788,13 @@ export class UnifiedMarketplaceService {
 
   async getCategories(): Promise<CategoryInfo[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/categories`, {
+      const response = await fetch(`${this.baseUrl}/marketplace/categories`, {
         signal: this.createTimeoutSignal(10000)
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch categories');
+        console.warn('Categories API unavailable, using mock data');
+        return this.getMockCategories();
       }
 
       const result = await response.json();
@@ -795,9 +804,14 @@ export class UnifiedMarketplaceService {
         throw new Error(result.message || 'Failed to fetch categories');
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      return [];
+      console.warn('Error fetching categories, using mock data:', error);
+      return this.getMockCategories();
     }
+  }
+
+  private getMockCategories(): CategoryInfo[] {
+    // Return empty categories for now - can be populated with mock data if needed
+    return [];
   }
 
   // ============================================================================

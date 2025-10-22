@@ -37,9 +37,13 @@ export default function FloatingActionDock({ onCreatePost, className = '' }: Flo
 
   // Close expanded state when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
-      if (isExpanded) {
-        setIsExpanded(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      // Check if the event target is a valid Element before using .closest()
+      if (isExpanded && e.target instanceof Element) {
+        const dockElement = e.target.closest('[data-floating-dock]');
+        if (!dockElement) {
+          setIsExpanded(false);
+        }
       }
     };
 
@@ -96,7 +100,7 @@ export default function FloatingActionDock({ onCreatePost, className = '' }: Flo
   ];
 
   return (
-    <div className={`fixed bottom-20 right-4 z-40 md:hidden ${className}`}>
+    <div className={`fixed bottom-20 right-4 z-40 md:hidden ${className}`} data-floating-dock>
       {/* Action buttons (shown when expanded) */}
       <div className={`flex flex-col space-y-3 mb-3 transition-all duration-300 ${
         isExpanded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
