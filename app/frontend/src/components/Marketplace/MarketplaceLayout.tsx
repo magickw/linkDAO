@@ -14,9 +14,12 @@ const MarketplaceLayout: React.FC<MarketplaceLayoutProps> = ({ children }) => {
       </main>
       <footer className="bg-white border-t border-gray-200 py-8">
         <div className="container mx-auto px-4">
+          <div className="flex items-center gap-2 mb-6">
+            <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
+            <span className="text-2xl font-bold text-blue-600">LinkDAO Marketplace</span>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">LinkDAO Marketplace</h3>
               <p className="text-gray-600 text-sm">
                 The decentralized marketplace built on Web3 principles with familiar e-commerce experience.
               </p>

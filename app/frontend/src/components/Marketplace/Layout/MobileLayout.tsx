@@ -40,8 +40,9 @@ const MobileLayout = ({ children }: { children: React.ReactNode }) => {
             <Menu size={24} className="text-gray-700" />
           </button>
           
-          <Link href="/marketplace" className="text-xl font-bold text-blue-600">
-            LinkDAO
+          <Link href="/marketplace" className="flex items-center gap-2 text-xl font-bold text-blue-600">
+            <img src="/logo.png" alt="LinkDAO Logo" className="h-8 w-8" />
+            <span>LinkDAO</span>
           </Link>
           
           <Link href="/marketplace/search" className="p-2 rounded-lg hover:bg-gray-100">

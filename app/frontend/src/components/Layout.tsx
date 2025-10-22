@@ -149,8 +149,9 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
       <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
-          <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
-            LinkDAO
+          <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
+            <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
+            <span>LinkDAO</span>
           </Link>
 
           {/* Global Search (Desktop) */}
@@ -343,6 +344,10 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
       {!hideFooter && (
         <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 mb-8">
+            <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
+            <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {/* Quick Links */}
             <div className="space-y-4">

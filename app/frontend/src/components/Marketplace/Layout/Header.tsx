@@ -22,8 +22,9 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/marketplace" className="text-2xl font-bold text-blue-600">
-              LinkDAO Marketplace
+            <Link href="/marketplace" className="flex items-center gap-2 text-2xl font-bold text-blue-600">
+              <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
+              <span>LinkDAO Marketplace</span>
             </Link>
           </div>
 
