@@ -518,6 +518,10 @@ app.use('/api/analytics', engagementAnalyticsRoutes);
 // Poll routes
 app.use('/api/polls', pollRoutes);
 
+// Support ticketing routes
+import { supportTicketingRoutes } from './routes/supportTicketingRoutes';
+app.use('/api/support', supportTicketingRoutes);
+
 // Cache management routes
 app.use('/api/cache', cacheRoutes);
 

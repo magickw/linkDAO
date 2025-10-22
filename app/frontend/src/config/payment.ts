@@ -1,5 +1,5 @@
 import { PaymentToken, ChainConfig } from '../types/payment';
-import { mainnet, polygon, arbitrum, sepolia } from 'wagmi/chains';
+import { mainnet, polygon, arbitrum, sepolia, base, baseSepolia } from 'wagmi/chains';
 
 // Native tokens
 export const ETH: PaymentToken = {
@@ -88,6 +88,25 @@ export const USDC_SEPOLIA: PaymentToken = {
   logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
 };
 
+// Base network tokens
+export const USDC_BASE: PaymentToken = {
+  address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  symbol: 'USDC',
+  name: 'USD Coin',
+  decimals: 6,
+  chainId: base.id,
+  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+};
+
+export const USDC_BASE_SEPOLIA: PaymentToken = {
+  address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+  symbol: 'USDC',
+  name: 'USD Coin (Base Sepolia)',
+  decimals: 6,
+  chainId: baseSepolia.id,
+  logoURI: 'https://tokens.1inch.io/0xa0b86a33e6441c8c06dd2b7c94b7e6e8b8b8b8b8.png'
+};
+
 // Chain configurations
 export const SUPPORTED_CHAINS: ChainConfig[] = [
   {
@@ -115,12 +134,28 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     supportedTokens: [USDC_ARBITRUM, { ...ETH, chainId: arbitrum.id }] // Prioritize stablecoins
   },
   {
+    chainId: base.id,
+    name: 'Base',
+    nativeCurrency: { ...ETH, chainId: base.id },
+    rpcUrls: ['https://mainnet.base.org'],
+    blockExplorerUrls: ['https://basescan.org'],
+    supportedTokens: [USDC_BASE, { ...ETH, chainId: base.id }] // Prioritize stablecoins
+  },
+  {
     chainId: sepolia.id,
     name: 'Sepolia Testnet',
     nativeCurrency: ETH_SEPOLIA,
     rpcUrls: ['https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161'],
     blockExplorerUrls: ['https://sepolia.etherscan.io'],
     supportedTokens: [USDC_SEPOLIA, ETH_SEPOLIA] // Prioritize stablecoins
+  },
+  {
+    chainId: baseSepolia.id,
+    name: 'Base Sepolia',
+    nativeCurrency: { ...ETH, chainId: baseSepolia.id },
+    rpcUrls: ['https://sepolia.base.org'],
+    blockExplorerUrls: ['https://sepolia.basescan.org'],
+    supportedTokens: [USDC_BASE_SEPOLIA, { ...ETH, chainId: baseSepolia.id }] // Prioritize stablecoins
   }
 ];
 
@@ -147,7 +182,9 @@ export const PAYMENT_CONFIG = {
     [mainnet.id]: 12,
     [polygon.id]: 20,
     [arbitrum.id]: 1,
-    [sepolia.id]: 3
+    [base.id]: 1,
+    [sepolia.id]: 3,
+    [baseSepolia.id]: 1
   },
   
   // Gas price multipliers for different priority levels

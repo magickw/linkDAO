@@ -18,9 +18,10 @@ import {
   Info
 } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useChainId } from 'wagmi';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
+import { NetworkSwitcher } from '@/components/Web3/NetworkSwitcher';
 import {
   UnifiedCheckoutService,
   CheckoutRecommendation,
@@ -44,6 +45,7 @@ import {
   MarketConditions
 } from '@/types/paymentPrioritization';
 import { toast } from 'react-hot-toast';
+import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -68,6 +70,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { state: cartState, actions } = useCart();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const chainId = useChainId();
 
   // State management
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
@@ -99,7 +102,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   // Load payment prioritization on mount
   useEffect(() => {
     loadPaymentPrioritization();
-  }, [cartState.items, address]);
+  }, [cartState.items, address, chainId]);
 
   const loadPaymentPrioritization = async () => {
     if (cartState.items.length === 0) return;
@@ -112,7 +115,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         transactionCurrency: 'USD',
         userContext: {
           userAddress: address || undefined,
-          chainId: 1, // Ethereum mainnet - should be dynamic
+          chainId: chainId || 1, // Use current chain ID
           walletBalances: [], // Should be fetched from wallet
           preferences: {
             preferredMethods: [],
@@ -159,51 +162,83 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   };
 
   const getAvailablePaymentMethods = async (): Promise<PrioritizedPaymentMethodType[]> => {
-    // Mock implementation - should be replaced with actual service calls
-    return [
-      {
-        id: 'usdc-eth',
-        type: PaymentMethodType.STABLECOIN_USDC,
-        name: 'USDC',
-        description: 'USD Coin on Ethereum',
-        chainId: 1,
-        enabled: true,
-        supportedNetworks: [1],
-        token: {
-          address: '0xA0b86a33E6441E6C7C5c8b0b8c8b0b8c8b0b8c8b',
-          symbol: 'USDC',
-          decimals: 6,
-          name: 'USD Coin',
-          chainId: 1
-        }
-      },
-      {
-        id: 'stripe-fiat',
-        type: PaymentMethodType.FIAT_STRIPE,
-        name: 'Credit/Debit Card',
-        description: 'Traditional payment via Stripe',
-        chainId: 0, // Not applicable for fiat
-        enabled: true,
-        supportedNetworks: []
-      },
-      {
-        id: 'eth-mainnet',
-        type: PaymentMethodType.NATIVE_ETH,
-        name: 'Ethereum',
-        description: 'Native ETH on Ethereum',
-        chainId: 1,
-        enabled: true,
-        supportedNetworks: [1],
-        token: {
-          address: '0x0000000000000000000000000000000000000000',
-          symbol: 'ETH',
-          decimals: 18,
-          name: 'Ethereum',
-          chainId: 1,
-          isNative: true
-        }
-      }
+    // Get current network or default to mainnet
+    const currentChainId = chainId || 1;
+
+    const methods: PrioritizedPaymentMethodType[] = [];
+
+    // Add network-specific USDC options for all supported networks
+    const usdcConfigs = [
+      { token: USDC_MAINNET, name: 'USDC (Ethereum)', chainId: 1, networkName: 'Ethereum' },
+      { token: USDC_POLYGON, name: 'USDC (Polygon)', chainId: 137, networkName: 'Polygon' },
+      { token: USDC_ARBITRUM, name: 'USDC (Arbitrum)', chainId: 42161, networkName: 'Arbitrum' },
+      { token: USDC_BASE, name: 'USDC (Base)', chainId: 8453, networkName: 'Base' },
+      { token: USDC_SEPOLIA, name: 'USDC (Sepolia)', chainId: 11155111, networkName: 'Sepolia Testnet' },
+      { token: USDC_BASE_SEPOLIA, name: 'USDC (Base Sepolia)', chainId: 84532, networkName: 'Base Sepolia' }
     ];
+
+    usdcConfigs.forEach(config => {
+      methods.push({
+        id: `usdc-${config.chainId}`,
+        type: PaymentMethodType.STABLECOIN_USDC,
+        name: config.name,
+        description: `USD Coin on ${config.networkName}`,
+        chainId: config.chainId,
+        enabled: true,
+        supportedNetworks: [config.chainId],
+        token: config.token
+      });
+    });
+
+    // Add Fiat payment option
+    methods.push({
+      id: 'stripe-fiat',
+      type: PaymentMethodType.FIAT_STRIPE,
+      name: 'Credit/Debit Card',
+      description: 'Traditional payment via Stripe',
+      chainId: 0, // Not applicable for fiat
+      enabled: true,
+      supportedNetworks: []
+    });
+
+    // Add native ETH options for supported networks
+    methods.push({
+      id: 'eth-mainnet',
+      type: PaymentMethodType.NATIVE_ETH,
+      name: 'Ethereum (Mainnet)',
+      description: 'Native ETH on Ethereum',
+      chainId: 1,
+      enabled: true,
+      supportedNetworks: [1],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ethereum',
+        chainId: 1,
+        isNative: true
+      }
+    });
+
+    methods.push({
+      id: 'eth-arbitrum',
+      type: PaymentMethodType.NATIVE_ETH,
+      name: 'Ethereum (Arbitrum)',
+      description: 'Native ETH on Arbitrum',
+      chainId: 42161,
+      enabled: true,
+      supportedNetworks: [42161],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ethereum',
+        chainId: 42161,
+        isNative: true
+      }
+    });
+
+    return methods;
   };
 
   const getCurrentMarketConditions = async (): Promise<MarketConditions> => {
@@ -245,6 +280,20 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       ],
       lastUpdated: new Date()
     };
+  };
+
+  const getNetworkName = (chainId: number): string => {
+    switch (chainId) {
+      case 1: return 'Ethereum';
+      case 137: return 'Polygon';
+      case 56: return 'BSC';
+      case 42161: return 'Arbitrum';
+      case 10: return 'Optimism';
+      case 8453: return 'Base';
+      case 11155111: return 'Sepolia';
+      case 84532: return 'Base Sepolia';
+      default: return `Chain ${chainId}`;
+    }
   };
 
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
@@ -433,6 +482,22 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             )}
           </p>
         </div>
+
+        {/* Network Selection Info */}
+        {isConnected && (
+          <GlassPanel variant="secondary" className="p-4">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-white mb-1">Network Selection</h4>
+                <p className="text-white/70 text-sm">
+                  You're currently connected to <span className="font-medium text-white">{getNetworkName(chainId || 1)}</span>.
+                  Payment methods on your current network have lower gas fees. You can switch networks using the selector above.
+                </p>
+              </div>
+            </div>
+          </GlassPanel>
+        )}
 
         {/* Enhanced Payment Method Selector */}
         <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
@@ -696,6 +761,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           <h1 className="text-3xl font-bold text-white">Secure Checkout</h1>
           <p className="text-white/70">Complete your purchase with escrow protection</p>
         </div>
+        {/* Network Switcher */}
+        {isConnected && (
+          <div className="hidden md:block">
+            <NetworkSwitcher variant="compact" />
+          </div>
+        )}
       </div>
 
       {/* Step Indicator */}

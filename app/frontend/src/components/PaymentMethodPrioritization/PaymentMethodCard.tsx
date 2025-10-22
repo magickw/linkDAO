@@ -62,6 +62,36 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
     return 'bg-gray-100 text-gray-800 border-gray-300';
   };
 
+  const getNetworkName = (chainId: number): string => {
+    switch (chainId) {
+      case 1: return 'Ethereum';
+      case 137: return 'Polygon';
+      case 56: return 'BSC';
+      case 42161: return 'Arbitrum';
+      case 10: return 'Optimism';
+      case 8453: return 'Base';
+      case 11155111: return 'Sepolia';
+      case 84532: return 'Base Sepolia';
+      case 0: return 'Fiat'; // For fiat payments
+      default: return `Chain ${chainId}`;
+    }
+  };
+
+  const getNetworkColor = (chainId: number): string => {
+    switch (chainId) {
+      case 1: return 'bg-blue-500'; // Ethereum
+      case 137: return 'bg-purple-600'; // Polygon
+      case 56: return 'bg-yellow-500'; // BSC
+      case 42161: return 'bg-blue-600'; // Arbitrum
+      case 10: return 'bg-red-500'; // Optimism
+      case 8453: return 'bg-blue-400'; // Base
+      case 11155111: return 'bg-purple-500'; // Sepolia
+      case 84532: return 'bg-blue-300'; // Base Sepolia
+      case 0: return 'bg-gray-500'; // Fiat
+      default: return 'bg-gray-400';
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string = 'USD'): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -137,9 +167,20 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             }}
           />
           <div>
-            <h3 className={`font-semibold ${isDisabled ? 'text-gray-500' : 'text-gray-900'}`}>
-              {method.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className={`font-semibold ${isDisabled ? 'text-gray-500' : 'text-gray-900'}`}>
+                {method.name}
+              </h3>
+              {/* Network Badge */}
+              {method.chainId !== undefined && method.chainId !== 0 && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100">
+                  <div className={`w-2 h-2 rounded-full ${getNetworkColor(method.chainId)}`}></div>
+                  <span className="text-xs text-gray-700 font-medium">
+                    {getNetworkName(method.chainId)}
+                  </span>
+                </div>
+              )}
+            </div>
             <p className={`text-sm ${isDisabled ? 'text-gray-400' : 'text-gray-600'}`}>
               {method.description}
             </p>

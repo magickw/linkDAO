@@ -1,790 +1,726 @@
-import { db } from '../db/connection';
-import { users, products, orders } from '../db/schema';
-import { eq, sql, and, gte, lte, desc, asc, count, sum, avg } from 'drizzle-orm';
-import { Redis } from 'ioredis';
+/**
+ * Predictive Analytics Service
+ * Analyzes patterns to predict future content needs and user behavior
+ */
 
-export interface PredictionResult {
-  predictionId: string;
-  modelVersion: string;
-  targetMetric: string;
-  predictedValue: number;
-  confidence: number;
-  predictionHorizon: number; // days into the future
-  factors: PredictionFactor[];
-  timestamp: Date;
-  upperBound?: number;
-  lowerBound?: number;
+export interface ContentDemandPrediction {
+  topic: string;
+  category: string;
+  predictedDemand: number; // 0-100 score
+  confidence: number; // 0-1
+  timeframe: 'week' | 'month' | 'quarter';
+  factors: Array<{
+    factor: string;
+    weight: number;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  }>;
+  recommendations: string[];
 }
 
-export interface PredictionFactor {
-  name: string;
-  importance: number;
-  value: number;
-  impact: 'positive' | 'negative' | 'neutral';
+export interface UserBehaviorPrediction {
+  userId?: string;
+  sessionId: string;
+  predictions: Array<{
+    action: 'view_document' | 'search' | 'contact_support' | 'abandon' | 'convert';
+    probability: number; // 0-1
+    confidence: number; // 0-1
+    timeframe: number; // minutes
+    factors: string[];
+  }>;
+  riskFactors: Array<{
+    factor: string;
+    severity: 'low' | 'medium' | 'high';
+    mitigation: string;
+  }>;
 }
 
-export interface UserGrowthPrediction {
-  period: string;
-  predictedUsers: number;
-  confidence: number;
-  growthRate: number;
-  seasonalAdjustment: number;
-  factors: PredictionFactor[];
+export interface ContentPerformancePrediction {
+  documentPath: string;
+  predictions: Array<{
+    metric: 'views' | 'satisfaction' | 'conversion' | 'support_escalation';
+    predictedValue: number;
+    currentValue: number;
+    trend: 'improving' | 'declining' | 'stable';
+    confidence: number;
+  }>;
+  recommendations: string[];
 }
 
-export interface ContentVolumePrediction {
-  period: string;
-  predictedPosts: number;
-  predictedComments: number;
-  predictedEngagement: number;
-  confidence: number;
-  trendingTopics: string[];
+export interface SeasonalityPattern {
+  pattern: string;
+  category: string;
+  seasonality: Array<{
+    period: string; // 'monday', 'january', 'q1', etc.
+    multiplier: number; // relative to baseline
+    confidence: number;
+  }>;
+  peakPeriods: string[];
+  lowPeriods: string[];
 }
 
-export interface SystemLoadPrediction {
-  period: string;
-  predictedCpuUsage: number;
-  predictedMemoryUsage: number;
-  predictedDiskUsage: number;
-  predictedNetworkTraffic: number;
-  confidence: number;
-  recommendedActions: string[];
-}
-
-export interface BusinessMetricPrediction {
-  metric: string;
-  period: string;
-  predictedValue: number;
-  confidence: number;
-  confidenceInterval: {
-    lower: number;
-    upper: number;
-  };
-  trend: 'increasing' | 'decreasing' | 'stable';
-  seasonality: number;
+export interface PredictiveInsights {
+  contentDemand: ContentDemandPrediction[];
+  userBehavior: UserBehaviorPrediction[];
+  contentPerformance: ContentPerformancePrediction[];
+  seasonality: SeasonalityPattern[];
+  alerts: Array<{
+    type: 'content_gap' | 'performance_decline' | 'demand_spike' | 'user_churn';
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    message: string;
+    action: string;
+    timeframe: string;
+  }>;
+  recommendations: string[];
 }
 
 export class PredictiveAnalyticsService {
-  private redis: Redis;
-  private readonly CACHE_TTL = 3600; // 1 hour
-  private readonly MODEL_VERSION = '1.0.0';
+  private historicalData: Map<string, any[]> = new Map();
+  private models: Map<string, any> = new Map();
+  private patterns: Map<string, any> = new Map();
 
-  constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+  /**
+   * Record data point for analysis
+   */
+  recordDataPoint(
+    category: string,
+    data: {
+      timestamp: Date;
+      value: number;
+      metadata?: Record<string, any>;
+    }
+  ): void {
+    const categoryData = this.historicalData.get(category) || [];
+    categoryData.push(data);
+
+    // Keep only last 10,000 data points per category
+    if (categoryData.length > 10000) {
+      categoryData.splice(0, categoryData.length - 10000);
+    }
+
+    this.historicalData.set(category, categoryData);
+
+    // Update patterns
+    this.updatePatterns(category, categoryData);
   }
 
   /**
-   * Generate comprehensive predictive forecasts for user growth
+   * Predict content demand
    */
-  async predictUserGrowth(horizonDays: number = 30): Promise<UserGrowthPrediction[]> {
-    try {
-      const cacheKey = `predictions:user_growth:${horizonDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
+  predictContentDemand(timeframe: 'week' | 'month' | 'quarter' = 'month'): ContentDemandPrediction[] {
+    const predictions: ContentDemandPrediction[] = [];
+
+    // Analyze search trends
+    const searchData = this.historicalData.get('search_queries') || [];
+    const topicTrends = this.analyzeTopicTrends(searchData, timeframe);
+
+    for (const [topic, trend] of topicTrends.entries()) {
+      const prediction = this.generateContentDemandPrediction(topic, trend, timeframe);
+      if (prediction.confidence > 0.3) {
+        predictions.push(prediction);
       }
-
-      // Get historical user data for the last 90 days
-      const historicalData = await this.getHistoricalUserData(90);
-      
-      // Apply time series forecasting using exponential smoothing
-      const predictions = await this.forecastTimeSeries(
-        historicalData,
-        horizonDays,
-        'user_growth'
-      );
-
-      // Calculate seasonal adjustments
-      const seasonalFactors = await this.calculateSeasonalFactors(historicalData);
-      
-      const results: UserGrowthPrediction[] = [];
-      
-      for (let i = 1; i <= horizonDays; i++) {
-        const baseDate = new Date();
-        baseDate.setDate(baseDate.getDate() + i);
-        
-        const basePrediction = predictions[i - 1] || predictions[predictions.length - 1];
-        const seasonalAdjustment = seasonalFactors[baseDate.getDay()] || 1.0;
-        
-        const predictedUsers = Math.round(basePrediction.value * seasonalAdjustment);
-        const growthRate = this.calculateGrowthRate(historicalData, i);
-        
-        results.push({
-          period: baseDate.toISOString().split('T')[0],
-          predictedUsers,
-          confidence: basePrediction.confidence,
-          growthRate,
-          seasonalAdjustment,
-          factors: await this.identifyGrowthFactors(historicalData, i)
-        });
-      }
-
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(results));
-      return results;
-    } catch (error) {
-      console.error('Error predicting user growth:', error);
-      throw new Error('Failed to generate user growth predictions');
     }
+
+    // Analyze content gaps
+    const gapData = this.historicalData.get('content_gaps') || [];
+    const gapPredictions = this.analyzeContentGaps(gapData, timeframe);
+    predictions.push(...gapPredictions);
+
+    return predictions
+      .sort((a, b) => b.predictedDemand - a.predictedDemand)
+      .slice(0, 20);
   }
 
   /**
-   * Predict content volume and engagement patterns
+   * Predict user behavior
    */
-  async predictContentVolume(horizonDays: number = 30): Promise<ContentVolumePrediction[]> {
-    try {
-      const cacheKey = `predictions:content_volume:${horizonDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
-      }
-
-      // Get historical content data
-      const [postData, commentData, engagementData] = await Promise.all([
-        this.getHistoricalPostData(90),
-        this.getHistoricalCommentData(90),
-        this.getHistoricalEngagementData(90)
-      ]);
-
-      const results: ContentVolumePrediction[] = [];
-      
-      for (let i = 1; i <= horizonDays; i++) {
-        const baseDate = new Date();
-        baseDate.setDate(baseDate.getDate() + i);
-        
-        // Apply ARIMA-like forecasting for each metric
-        const postPrediction = await this.forecastMetric(postData, i);
-        const commentPrediction = await this.forecastMetric(commentData, i);
-        const engagementPrediction = await this.forecastMetric(engagementData, i);
-        
-        // Identify trending topics based on recent patterns
-        const trendingTopics = await this.predictTrendingTopics(baseDate);
-        
-        results.push({
-          period: baseDate.toISOString().split('T')[0],
-          predictedPosts: Math.round(postPrediction.value),
-          predictedComments: Math.round(commentPrediction.value),
-          predictedEngagement: Math.round(engagementPrediction.value),
-          confidence: Math.min(postPrediction.confidence, commentPrediction.confidence, engagementPrediction.confidence),
-          trendingTopics
-        });
-      }
-
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(results));
-      return results;
-    } catch (error) {
-      console.error('Error predicting content volume:', error);
-      throw new Error('Failed to generate content volume predictions');
+  predictUserBehavior(
+    sessionId: string,
+    currentContext: {
+      documentsViewed: string[];
+      searchQueries: string[];
+      timeSpent: number;
+      currentDocument?: string;
     }
-  }
+  ): UserBehaviorPrediction {
+    const predictions = [
+      this.predictDocumentView(sessionId, currentContext),
+      this.predictSearch(sessionId, currentContext),
+      this.predictSupportContact(sessionId, currentContext),
+      this.predictAbandonment(sessionId, currentContext),
+      this.predictConversion(sessionId, currentContext)
+    ].filter(p => p.probability > 0.1);
 
-  /**
-   * Predict system load and capacity requirements
-   */
-  async predictSystemLoad(horizonDays: number = 7): Promise<SystemLoadPrediction[]> {
-    try {
-      const cacheKey = `predictions:system_load:${horizonDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
-      }
-
-      // Get historical system metrics
-      const systemMetrics = await this.getHistoricalSystemMetrics(30);
-      
-      const results: SystemLoadPrediction[] = [];
-      
-      for (let i = 1; i <= horizonDays; i++) {
-        const baseDate = new Date();
-        baseDate.setDate(baseDate.getDate() + i);
-        
-        // Predict each system metric
-        const cpuPrediction = await this.forecastSystemMetric(systemMetrics.cpu, i);
-        const memoryPrediction = await this.forecastSystemMetric(systemMetrics.memory, i);
-        const diskPrediction = await this.forecastSystemMetric(systemMetrics.disk, i);
-        const networkPrediction = await this.forecastSystemMetric(systemMetrics.network, i);
-        
-        // Generate recommendations based on predictions
-        const recommendations = this.generateCapacityRecommendations({
-          cpu: cpuPrediction.value,
-          memory: memoryPrediction.value,
-          disk: diskPrediction.value,
-          network: networkPrediction.value
-        });
-        
-        results.push({
-          period: baseDate.toISOString().split('T')[0],
-          predictedCpuUsage: cpuPrediction.value,
-          predictedMemoryUsage: memoryPrediction.value,
-          predictedDiskUsage: diskPrediction.value,
-          predictedNetworkTraffic: networkPrediction.value,
-          confidence: Math.min(
-            cpuPrediction.confidence,
-            memoryPrediction.confidence,
-            diskPrediction.confidence,
-            networkPrediction.confidence
-          ),
-          recommendedActions: recommendations
-        });
-      }
-
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(results));
-      return results;
-    } catch (error) {
-      console.error('Error predicting system load:', error);
-      throw new Error('Failed to generate system load predictions');
-    }
-  }
-
-  /**
-   * Predict business metrics with confidence intervals
-   */
-  async predictBusinessMetrics(
-    metrics: string[],
-    horizonDays: number = 30
-  ): Promise<BusinessMetricPrediction[]> {
-    try {
-      const cacheKey = `predictions:business_metrics:${metrics.join(',')}:${horizonDays}`;
-      const cached = await this.redis.get(cacheKey);
-      
-      if (cached) {
-        return JSON.parse(cached);
-      }
-
-      const results: BusinessMetricPrediction[] = [];
-      
-      for (const metric of metrics) {
-        // Get historical data for the metric
-        const historicalData = await this.getHistoricalBusinessMetric(metric, 90);
-        
-        if (historicalData.length === 0) {
-          continue;
-        }
-
-        // Apply advanced forecasting with confidence intervals
-        const predictions = await this.forecastWithConfidenceInterval(
-          historicalData,
-          horizonDays
-        );
-
-        for (let i = 0; i < predictions.length; i++) {
-          const baseDate = new Date();
-          baseDate.setDate(baseDate.getDate() + i + 1);
-          
-          const prediction = predictions[i];
-          const trend = this.determineTrend(historicalData, prediction.value);
-          const seasonality = this.calculateSeasonality(historicalData, i + 1);
-          
-          results.push({
-            metric,
-            period: baseDate.toISOString().split('T')[0],
-            predictedValue: prediction.value,
-            confidence: prediction.confidence,
-            confidenceInterval: {
-              lower: prediction.lowerBound,
-              upper: prediction.upperBound
-            },
-            trend,
-            seasonality
-          });
-        }
-      }
-
-      await this.redis.setex(cacheKey, this.CACHE_TTL, JSON.stringify(results));
-      return results;
-    } catch (error) {
-      console.error('Error predicting business metrics:', error);
-      throw new Error('Failed to generate business metric predictions');
-    }
-  }
-
-  /**
-   * Store prediction results for tracking accuracy
-   */
-  async storePrediction(prediction: PredictionResult): Promise<void> {
-    try {
-      await db.execute(sql`
-        INSERT INTO prediction_results (
-          prediction_id, model_version, target_metric, predicted_value,
-          confidence, prediction_horizon, factors, timestamp,
-          upper_bound, lower_bound
-        ) VALUES (
-          ${prediction.predictionId}, ${prediction.modelVersion},
-          ${prediction.targetMetric}, ${prediction.predictedValue},
-          ${prediction.confidence}, ${prediction.predictionHorizon},
-          ${JSON.stringify(prediction.factors)}, ${prediction.timestamp},
-          ${prediction.upperBound}, ${prediction.lowerBound}
-        )
-      `);
-    } catch (error) {
-      console.error('Error storing prediction:', error);
-    }
-  }
-
-  /**
-   * Evaluate prediction accuracy against actual results
-   */
-  async evaluatePredictionAccuracy(
-    predictionId: string,
-    actualValue: number
-  ): Promise<{ accuracy: number; error: number }> {
-    try {
-      const result = await db.execute(sql`
-        SELECT predicted_value, confidence, upper_bound, lower_bound
-        FROM prediction_results
-        WHERE prediction_id = ${predictionId}
-      `);
-
-      if (result.length === 0) {
-        throw new Error('Prediction not found');
-      }
-
-      const prediction = result[0];
-      const predictedValue = Number(prediction.predicted_value);
-      const upperBound = Number(prediction.upper_bound);
-      const lowerBound = Number(prediction.lower_bound);
-
-      // Calculate accuracy metrics
-      const error = Math.abs(actualValue - predictedValue);
-      const relativeError = error / Math.abs(actualValue);
-      const accuracy = Math.max(0, 1 - relativeError);
-
-      // Check if actual value falls within confidence interval
-      const withinInterval = actualValue >= lowerBound && actualValue <= upperBound;
-
-      // Update prediction with actual results
-      await db.execute(sql`
-        UPDATE prediction_results
-        SET actual_value = ${actualValue},
-            accuracy = ${accuracy},
-            error = ${error},
-            within_confidence_interval = ${withinInterval},
-            evaluated_at = NOW()
-        WHERE prediction_id = ${predictionId}
-      `);
-
-      return { accuracy, error };
-    } catch (error) {
-      console.error('Error evaluating prediction accuracy:', error);
-      throw new Error('Failed to evaluate prediction accuracy');
-    }
-  }
-
-  // Private helper methods
-
-  private async getHistoricalUserData(days: number): Promise<Array<{ date: Date; value: number }>> {
-    try {
-      const result = await db.execute(sql`
-        SELECT DATE(created_at) as date, COUNT(*) as value
-        FROM users
-        WHERE created_at >= NOW() - INTERVAL '${days} days'
-        GROUP BY DATE(created_at)
-        ORDER BY DATE(created_at)
-      `);
-
-      return result.map(row => ({
-        date: new Date(String(row.date)),
-        value: Number(row.value)
-      }));
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private async getHistoricalPostData(days: number): Promise<Array<{ date: Date; value: number }>> {
-    try {
-      const result = await db.execute(sql`
-        SELECT DATE(created_at) as date, COUNT(*) as value
-        FROM posts
-        WHERE created_at >= NOW() - INTERVAL '${days} days'
-        GROUP BY DATE(created_at)
-        ORDER BY DATE(created_at)
-      `);
-
-      return result.map(row => ({
-        date: new Date(String(row.date)),
-        value: Number(row.value)
-      }));
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private async getHistoricalCommentData(days: number): Promise<Array<{ date: Date; value: number }>> {
-    try {
-      const result = await db.execute(sql`
-        SELECT DATE(created_at) as date, COUNT(*) as value
-        FROM comments
-        WHERE created_at >= NOW() - INTERVAL '${days} days'
-        GROUP BY DATE(created_at)
-        ORDER BY DATE(created_at)
-      `);
-
-      return result.map(row => ({
-        date: new Date(String(row.date)),
-        value: Number(row.value)
-      }));
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private async getHistoricalEngagementData(days: number): Promise<Array<{ date: Date; value: number }>> {
-    try {
-      const result = await db.execute(sql`
-        SELECT DATE(created_at) as date, COUNT(*) as value
-        FROM user_analytics
-        WHERE created_at >= NOW() - INTERVAL '${days} days'
-        AND event_type IN ('like', 'comment', 'share', 'view')
-        GROUP BY DATE(created_at)
-        ORDER BY DATE(created_at)
-      `);
-
-      return result.map(row => ({
-        date: new Date(String(row.date)),
-        value: Number(row.value)
-      }));
-    } catch (error) {
-      return [];
-    }
-  }
-
-  private async getHistoricalSystemMetrics(days: number): Promise<{
-    cpu: Array<{ date: Date; value: number }>;
-    memory: Array<{ date: Date; value: number }>;
-    disk: Array<{ date: Date; value: number }>;
-    network: Array<{ date: Date; value: number }>;
-  }> {
-    // Mock implementation - would integrate with actual system monitoring
-    const mockData = Array.from({ length: days }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i));
-      return {
-        date,
-        value: Math.random() * 100
-      };
-    });
+    const riskFactors = this.identifyRiskFactors(sessionId, currentContext);
 
     return {
-      cpu: mockData,
-      memory: mockData,
-      disk: mockData,
-      network: mockData
+      sessionId,
+      predictions,
+      riskFactors
     };
   }
 
-  private async getHistoricalBusinessMetric(
-    metric: string,
-    days: number
-  ): Promise<Array<{ date: Date; value: number }>> {
-    try {
-      let query: any;
-      
-      switch (metric) {
-        case 'revenue':
-          query = sql`
-            SELECT DATE(created_at) as date, SUM(total_amount) as value
-            FROM orders
-            WHERE created_at >= NOW() - INTERVAL '${days} days'
-            AND status = 'completed'
-            GROUP BY DATE(created_at)
-            ORDER BY DATE(created_at)
-          `;
-          break;
-        case 'orders':
-          query = sql`
-            SELECT DATE(created_at) as date, COUNT(*) as value
-            FROM orders
-            WHERE created_at >= NOW() - INTERVAL '${days} days'
-            GROUP BY DATE(created_at)
-            ORDER BY DATE(created_at)
-          `;
-          break;
-        case 'active_users':
-          query = sql`
-            SELECT DATE(timestamp) as date, COUNT(DISTINCT user_id) as value
-            FROM user_analytics
-            WHERE timestamp >= NOW() - INTERVAL '${days} days'
-            GROUP BY DATE(timestamp)
-            ORDER BY DATE(timestamp)
-          `;
-          break;
-        default:
-          return [];
-      }
+  /**
+   * Predict content performance
+   */
+  predictContentPerformance(documentPath: string): ContentPerformancePrediction {
+    const performanceData = this.historicalData.get(`performance_${documentPath}`) || [];
+    const viewData = this.historicalData.get(`views_${documentPath}`) || [];
+    const satisfactionData = this.historicalData.get(`satisfaction_${documentPath}`) || [];
 
-      const result = await db.execute(query);
-      return result.map(row => ({
-        date: new Date(String(row.date)),
-        value: Number(row.value)
-      }));
-    } catch (error) {
-      return [];
+    const predictions = [
+      this.predictMetric('views', viewData),
+      this.predictMetric('satisfaction', satisfactionData),
+      this.predictMetric('conversion', performanceData),
+      this.predictMetric('support_escalation', performanceData)
+    ];
+
+    const recommendations = this.generatePerformanceRecommendations(predictions);
+
+    return {
+      documentPath,
+      predictions,
+      recommendations
+    };
+  }
+
+  /**
+   * Analyze seasonality patterns
+   */
+  analyzeSeasonality(): SeasonalityPattern[] {
+    const patterns: SeasonalityPattern[] = [];
+
+    // Analyze different time patterns
+    const timePatterns = ['hourly', 'daily', 'weekly', 'monthly', 'quarterly'];
+
+    for (const pattern of timePatterns) {
+      const seasonalityData = this.calculateSeasonality(pattern);
+      if (seasonalityData.length > 0) {
+        patterns.push(...seasonalityData);
+      }
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Generate comprehensive predictive insights
+   */
+  generatePredictiveInsights(): PredictiveInsights {
+    const contentDemand = this.predictContentDemand();
+    const contentPerformance = this.predictAllContentPerformance();
+    const seasonality = this.analyzeSeasonality();
+    const alerts = this.generatePredictiveAlerts(contentDemand, contentPerformance);
+    const recommendations = this.generatePredictiveRecommendations(
+      contentDemand,
+      contentPerformance,
+      seasonality
+    );
+
+    return {
+      contentDemand,
+      userBehavior: [], // Would be populated with active user sessions
+      contentPerformance,
+      seasonality,
+      alerts,
+      recommendations
+    };
+  }
+
+  /**
+   * Update patterns based on new data
+   */
+  private updatePatterns(category: string, data: any[]): void {
+    if (data.length < 10) return; // Need minimum data for pattern detection
+
+    const pattern = this.detectPattern(data);
+    if (pattern) {
+      this.patterns.set(category, pattern);
     }
   }
 
-  private async forecastTimeSeries(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number,
-    type: string
-  ): Promise<Array<{ value: number; confidence: number }>> {
-    if (data.length < 7) {
-      // Not enough data for reliable forecasting
-      return Array(horizon).fill({ value: 0, confidence: 0.1 });
+  /**
+   * Analyze topic trends from search data
+   */
+  private analyzeTopicTrends(
+    searchData: any[],
+    timeframe: 'week' | 'month' | 'quarter'
+  ): Map<string, any> {
+    const trends = new Map();
+    const timeframeDays = timeframe === 'week' ? 7 : timeframe === 'month' ? 30 : 90;
+    const cutoff = new Date(Date.now() - timeframeDays * 24 * 60 * 60 * 1000);
+
+    const recentSearches = searchData.filter(s => s.timestamp > cutoff);
+    const topicCounts = new Map<string, number>();
+
+    // Count topic occurrences
+    for (const search of recentSearches) {
+      const topics = this.extractTopics(search.metadata?.query || '');
+      for (const topic of topics) {
+        topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
+      }
     }
 
-    // Simple exponential smoothing implementation
-    const alpha = 0.3; // Smoothing parameter
-    const values = data.map(d => d.value);
-    
-    // Calculate initial smoothed value
-    let smoothed = values[0];
-    const smoothedValues = [smoothed];
-    
-    // Apply exponential smoothing
-    for (let i = 1; i < values.length; i++) {
-      smoothed = alpha * values[i] + (1 - alpha) * smoothed;
-      smoothedValues.push(smoothed);
+    // Calculate trends
+    for (const [topic, count] of topicCounts.entries()) {
+      if (count >= 5) { // Minimum threshold
+        const trend = this.calculateTopicTrend(topic, searchData, timeframeDays);
+        trends.set(topic, { count, trend });
+      }
     }
 
-    // Calculate trend
-    const trend = this.calculateLinearTrend(smoothedValues);
-    
-    // Generate forecasts
-    const forecasts = [];
-    let lastSmoothed = smoothedValues[smoothedValues.length - 1];
-    
-    for (let i = 1; i <= horizon; i++) {
-      const forecast = lastSmoothed + (trend * i);
-      const confidence = Math.max(0.1, 0.9 - (i * 0.02)); // Decreasing confidence over time
-      
-      forecasts.push({
-        value: Math.max(0, forecast),
-        confidence
+    return trends;
+  }
+
+  /**
+   * Generate content demand prediction
+   */
+  private generateContentDemandPrediction(
+    topic: string,
+    trendData: any,
+    timeframe: 'week' | 'month' | 'quarter'
+  ): ContentDemandPrediction {
+    const baseScore = Math.min(trendData.count * 2, 100);
+    const trendMultiplier = trendData.trend > 0 ? 1.5 : trendData.trend < 0 ? 0.7 : 1.0;
+    const predictedDemand = Math.min(baseScore * trendMultiplier, 100);
+
+    const confidence = this.calculateConfidence(trendData.count, trendData.trend);
+    const category = this.categorizeContent(topic);
+
+    return {
+      topic,
+      category,
+      predictedDemand: Math.round(predictedDemand),
+      confidence,
+      timeframe,
+      factors: [
+        {
+          factor: 'Search volume',
+          weight: 0.6,
+          trend: trendData.trend > 0 ? 'increasing' : trendData.trend < 0 ? 'decreasing' : 'stable'
+        },
+        {
+          factor: 'Historical demand',
+          weight: 0.3,
+          trend: 'stable'
+        },
+        {
+          factor: 'Seasonality',
+          weight: 0.1,
+          trend: 'stable'
+        }
+      ],
+      recommendations: this.generateContentRecommendations(topic, predictedDemand, confidence)
+    };
+  }
+
+  /**
+   * Analyze content gaps
+   */
+  private analyzeContentGaps(gapData: any[], timeframe: string): ContentDemandPrediction[] {
+    const predictions: ContentDemandPrediction[] = [];
+
+    for (const gap of gapData) {
+      if (gap.metadata?.priority === 'high' || gap.metadata?.priority === 'critical') {
+        predictions.push({
+          topic: gap.metadata?.topic || 'Unknown',
+          category: gap.metadata?.category || 'general',
+          predictedDemand: gap.metadata?.priority === 'critical' ? 90 : 70,
+          confidence: 0.8,
+          timeframe: timeframe as any,
+          factors: [
+            {
+              factor: 'Identified gap',
+              weight: 1.0,
+              trend: 'increasing'
+            }
+          ],
+          recommendations: [`Create content for: ${gap.metadata?.topic}`]
+        });
+      }
+    }
+
+    return predictions;
+  }
+
+  /**
+   * Predict document view probability
+   */
+  private predictDocumentView(sessionId: string, context: any): any {
+    let probability = 0.3; // Base probability
+
+    // Increase probability based on current behavior
+    if (context.documentsViewed.length > 0) {
+      probability += 0.2;
+    }
+
+    if (context.searchQueries.length > 0) {
+      probability += 0.3;
+    }
+
+    // Decrease probability if user has been browsing for a long time
+    if (context.timeSpent > 600000) { // 10 minutes
+      probability -= 0.2;
+    }
+
+    return {
+      action: 'view_document',
+      probability: Math.max(0, Math.min(1, probability)),
+      confidence: 0.7,
+      timeframe: 5,
+      factors: ['browsing_history', 'search_activity', 'session_duration']
+    };
+  }
+
+  /**
+   * Predict search probability
+   */
+  private predictSearch(sessionId: string, context: any): any {
+    let probability = 0.4;
+
+    // Increase if user hasn't found what they're looking for
+    if (context.searchQueries.length > context.documentsViewed.length) {
+      probability += 0.3;
+    }
+
+    // Increase if user viewed documents but spent little time
+    if (context.documentsViewed.length > 0 && context.timeSpent < 120000) {
+      probability += 0.2;
+    }
+
+    return {
+      action: 'search',
+      probability: Math.max(0, Math.min(1, probability)),
+      confidence: 0.6,
+      timeframe: 3,
+      factors: ['search_history', 'document_engagement', 'time_spent']
+    };
+  }
+
+  /**
+   * Predict support contact probability
+   */
+  private predictSupportContact(sessionId: string, context: any): any {
+    let probability = 0.1;
+
+    // Increase if user has searched multiple times without success
+    if (context.searchQueries.length >= 3) {
+      probability += 0.4;
+    }
+
+    // Increase if user has viewed many documents
+    if (context.documentsViewed.length >= 5) {
+      probability += 0.3;
+    }
+
+    return {
+      action: 'contact_support',
+      probability: Math.max(0, Math.min(1, probability)),
+      confidence: 0.8,
+      timeframe: 10,
+      factors: ['search_frustration', 'document_overload', 'help_seeking_behavior']
+    };
+  }
+
+  /**
+   * Predict abandonment probability
+   */
+  private predictAbandonment(sessionId: string, context: any): any {
+    let probability = 0.2;
+
+    // Increase if user has been inactive or searching unsuccessfully
+    if (context.searchQueries.length > 2 && context.documentsViewed.length === 0) {
+      probability += 0.5;
+    }
+
+    if (context.timeSpent > 900000) { // 15 minutes
+      probability += 0.3;
+    }
+
+    return {
+      action: 'abandon',
+      probability: Math.max(0, Math.min(1, probability)),
+      confidence: 0.7,
+      timeframe: 2,
+      factors: ['session_length', 'search_success', 'engagement_level']
+    };
+  }
+
+  /**
+   * Predict conversion probability
+   */
+  private predictConversion(sessionId: string, context: any): any {
+    let probability = 0.15;
+
+    // Increase if user is actively engaging with content
+    if (context.documentsViewed.length >= 2 && context.timeSpent > 300000) {
+      probability += 0.4;
+    }
+
+    // Increase if user found relevant content quickly
+    if (context.documentsViewed.length > 0 && context.searchQueries.length <= 2) {
+      probability += 0.3;
+    }
+
+    return {
+      action: 'convert',
+      probability: Math.max(0, Math.min(1, probability)),
+      confidence: 0.6,
+      timeframe: 15,
+      factors: ['content_engagement', 'search_efficiency', 'time_investment']
+    };
+  }
+
+  /**
+   * Identify risk factors for user experience
+   */
+  private identifyRiskFactors(sessionId: string, context: any): any[] {
+    const risks = [];
+
+    if (context.searchQueries.length >= 3 && context.documentsViewed.length === 0) {
+      risks.push({
+        factor: 'Search frustration',
+        severity: 'high',
+        mitigation: 'Improve search results or suggest alternative content'
       });
     }
 
-    return forecasts;
+    if (context.timeSpent > 600000 && context.documentsViewed.length < 2) {
+      risks.push({
+        factor: 'Low engagement',
+        severity: 'medium',
+        mitigation: 'Provide guided navigation or personalized recommendations'
+      });
+    }
+
+    return risks;
   }
 
-  private async forecastMetric(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): Promise<{ value: number; confidence: number }> {
-    const forecasts = await this.forecastTimeSeries(data, horizon, 'metric');
-    return forecasts[horizon - 1] || { value: 0, confidence: 0.1 };
-  }
+  /**
+   * Predict metric values
+   */
+  private predictMetric(metricName: string, data: any[]): any {
+    if (data.length === 0) {
+      return {
+        metric: metricName,
+        predictedValue: 0,
+        currentValue: 0,
+        trend: 'stable',
+        confidence: 0
+      };
+    }
 
-  private async forecastSystemMetric(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): Promise<{ value: number; confidence: number }> {
-    // Apply more conservative forecasting for system metrics
-    const forecasts = await this.forecastTimeSeries(data, horizon, 'system');
-    const forecast = forecasts[horizon - 1] || { value: 0, confidence: 0.1 };
-    
-    // Cap system metrics at reasonable bounds
+    const recentData = data.slice(-30); // Last 30 data points
+    const currentValue = recentData[recentData.length - 1]?.value || 0;
+    const trend = this.calculateTrend(recentData);
+    const predictedValue = this.extrapolateTrend(currentValue, trend);
+
     return {
-      value: Math.min(100, Math.max(0, forecast.value)),
-      confidence: forecast.confidence
+      metric: metricName,
+      predictedValue: Math.round(predictedValue * 100) / 100,
+      currentValue: Math.round(currentValue * 100) / 100,
+      trend: trend > 0.05 ? 'improving' : trend < -0.05 ? 'declining' : 'stable',
+      confidence: Math.min(recentData.length / 30, 1)
     };
   }
 
-  private async forecastWithConfidenceInterval(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): Promise<Array<{ value: number; confidence: number; lowerBound: number; upperBound: number }>> {
-    const forecasts = await this.forecastTimeSeries(data, horizon, 'business');
-    
-    return forecasts.map((forecast, index) => {
-      // Calculate confidence interval based on historical variance
-      const variance = this.calculateVariance(data.map(d => d.value));
-      const standardError = Math.sqrt(variance) * Math.sqrt(index + 1);
-      const margin = 1.96 * standardError; // 95% confidence interval
-      
-      return {
-        value: forecast.value,
-        confidence: forecast.confidence,
-        lowerBound: Math.max(0, forecast.value - margin),
-        upperBound: forecast.value + margin
-      };
-    });
+  // Helper methods
+  private detectPattern(data: any[]): any {
+    // Simple pattern detection - in a real implementation, this would use more sophisticated algorithms
+    if (data.length < 10) return null;
+
+    const values = data.map(d => d.value);
+    const trend = this.calculateTrend(values);
+    const volatility = this.calculateVolatility(values);
+
+    return {
+      trend,
+      volatility,
+      pattern: trend > 0.1 ? 'increasing' : trend < -0.1 ? 'decreasing' : 'stable'
+    };
   }
 
-  private calculateLinearTrend(values: number[]): number {
-    const n = values.length;
-    const x = Array.from({ length: n }, (_, i) => i);
-    const y = values;
+  private extractTopics(query: string): string[] {
+    // Simple topic extraction - in a real implementation, this would use NLP
+    const words = query.toLowerCase().split(/\s+/);
+    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'how', 'what', 'where', 'when', 'why']);
     
-    const sumX = x.reduce((a, b) => a + b, 0);
-    const sumY = y.reduce((a, b) => a + b, 0);
-    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
-    const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
-    
-    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-    return slope;
+    return words
+      .filter(word => word.length > 2 && !stopWords.has(word))
+      .slice(0, 3); // Take first 3 meaningful words
   }
 
-  private calculateVariance(values: number[]): number {
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
-    return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+  private calculateTopicTrend(topic: string, data: any[], days: number): number {
+    const now = new Date();
+    const halfPeriod = new Date(now.getTime() - (days / 2) * 24 * 60 * 60 * 1000);
+    
+    const recentCount = data.filter(d => 
+      d.timestamp > halfPeriod && 
+      d.metadata?.query?.toLowerCase().includes(topic)
+    ).length;
+    
+    const olderCount = data.filter(d => 
+      d.timestamp <= halfPeriod && 
+      d.timestamp > new Date(now.getTime() - days * 24 * 60 * 60 * 1000) &&
+      d.metadata?.query?.toLowerCase().includes(topic)
+    ).length;
+
+    return olderCount > 0 ? (recentCount - olderCount) / olderCount : 0;
   }
 
-  private calculateSeasonalFactors(
-    data: Array<{ date: Date; value: number }>
-  ): Promise<{ [dayOfWeek: number]: number }> {
-    const dayAverages: { [key: number]: number[] } = {};
-    
-    // Group values by day of week
-    data.forEach(({ date, value }) => {
-      const dayOfWeek = date.getDay();
-      if (!dayAverages[dayOfWeek]) {
-        dayAverages[dayOfWeek] = [];
-      }
-      dayAverages[dayOfWeek].push(value);
-    });
-    
-    // Calculate average for each day
-    const overallAverage = data.reduce((sum, d) => sum + d.value, 0) / data.length;
-    const seasonalFactors: { [dayOfWeek: number]: number } = {};
-    
-    for (let day = 0; day < 7; day++) {
-      if (dayAverages[day] && dayAverages[day].length > 0) {
-        const dayAverage = dayAverages[day].reduce((a, b) => a + b, 0) / dayAverages[day].length;
-        seasonalFactors[day] = dayAverage / overallAverage;
-      } else {
-        seasonalFactors[day] = 1.0;
+  private calculateConfidence(count: number, trend: number): number {
+    const countConfidence = Math.min(count / 20, 1); // More data = higher confidence
+    const trendConfidence = Math.abs(trend) > 0.2 ? 0.8 : 0.5; // Strong trends = higher confidence
+    return (countConfidence + trendConfidence) / 2;
+  }
+
+  private categorizeContent(topic: string): string {
+    const categories = {
+      wallet: ['wallet', 'metamask', 'connect', 'setup'],
+      token: ['token', 'ldao', 'buy', 'purchase', 'acquire'],
+      security: ['security', 'safe', 'protect', 'hack', 'scam'],
+      defi: ['defi', 'yield', 'farming', 'staking', 'liquidity'],
+      nft: ['nft', 'collectible', 'art', 'mint']
+    };
+
+    for (const [category, keywords] of Object.entries(categories)) {
+      if (keywords.some(keyword => topic.toLowerCase().includes(keyword))) {
+        return category;
       }
     }
-    
-    return Promise.resolve(seasonalFactors);
+
+    return 'general';
   }
 
-  private calculateGrowthRate(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): number {
-    if (data.length < 2) return 0;
-    
-    const recent = data.slice(-7); // Last 7 days
-    const older = data.slice(-14, -7); // Previous 7 days
-    
-    const recentAvg = recent.reduce((sum, d) => sum + d.value, 0) / recent.length;
-    const olderAvg = older.reduce((sum, d) => sum + d.value, 0) / older.length;
-    
-    return olderAvg > 0 ? ((recentAvg - olderAvg) / olderAvg) * 100 : 0;
-  }
+  private generateContentRecommendations(topic: string, demand: number, confidence: number): string[] {
+    const recommendations = [];
 
-  private async identifyGrowthFactors(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): Promise<PredictionFactor[]> {
-    // Mock implementation - would analyze various factors affecting growth
-    return [
-      {
-        name: 'Historical Trend',
-        importance: 0.4,
-        value: this.calculateLinearTrend(data.map(d => d.value)),
-        impact: 'positive'
-      },
-      {
-        name: 'Seasonal Pattern',
-        importance: 0.3,
-        value: 1.1,
-        impact: 'positive'
-      },
-      {
-        name: 'Market Conditions',
-        importance: 0.2,
-        value: 0.95,
-        impact: 'neutral'
-      },
-      {
-        name: 'Platform Features',
-        importance: 0.1,
-        value: 1.05,
-        impact: 'positive'
-      }
-    ];
-  }
+    if (demand > 70 && confidence > 0.6) {
+      recommendations.push(`High priority: Create comprehensive guide for "${topic}"`);
+    } else if (demand > 50) {
+      recommendations.push(`Medium priority: Consider creating content for "${topic}"`);
+    }
 
-  private async predictTrendingTopics(date: Date): Promise<string[]> {
-    // Mock implementation - would analyze content patterns and predict trending topics
-    const topics = [
-      'DeFi', 'NFTs', 'Web3', 'Blockchain', 'Cryptocurrency',
-      'DAO', 'Metaverse', 'Smart Contracts', 'Staking', 'Governance'
-    ];
-    
-    // Return random subset for now
-    return topics.slice(0, Math.floor(Math.random() * 5) + 1);
-  }
+    if (confidence < 0.5) {
+      recommendations.push('Monitor trend for more data before creating content');
+    }
 
-  private generateCapacityRecommendations(metrics: {
-    cpu: number;
-    memory: number;
-    disk: number;
-    network: number;
-  }): string[] {
-    const recommendations: string[] = [];
-    
-    if (metrics.cpu > 80) {
-      recommendations.push('Consider scaling CPU resources or optimizing high-CPU processes');
-    }
-    
-    if (metrics.memory > 85) {
-      recommendations.push('Memory usage approaching limits - consider increasing memory allocation');
-    }
-    
-    if (metrics.disk > 90) {
-      recommendations.push('Disk usage critical - implement data archival or increase storage capacity');
-    }
-    
-    if (metrics.network > 75) {
-      recommendations.push('Network traffic high - consider CDN optimization or load balancing');
-    }
-    
-    if (recommendations.length === 0) {
-      recommendations.push('System capacity appears adequate for predicted load');
-    }
-    
     return recommendations;
   }
 
-  private determineTrend(
-    data: Array<{ date: Date; value: number }>,
-    predictedValue: number
-  ): 'increasing' | 'decreasing' | 'stable' {
-    if (data.length === 0) return 'stable';
-    
-    const recentAverage = data.slice(-7).reduce((sum, d) => sum + d.value, 0) / 7;
-    const difference = predictedValue - recentAverage;
-    const threshold = recentAverage * 0.05; // 5% threshold
-    
-    if (difference > threshold) return 'increasing';
-    if (difference < -threshold) return 'decreasing';
-    return 'stable';
+  private calculateTrend(values: number[]): number {
+    if (values.length < 2) return 0;
+
+    // Simple linear regression slope
+    const n = values.length;
+    const sumX = (n * (n - 1)) / 2;
+    const sumY = values.reduce((sum, val) => sum + val, 0);
+    const sumXY = values.reduce((sum, val, index) => sum + val * index, 0);
+    const sumXX = (n * (n - 1) * (2 * n - 1)) / 6;
+
+    return (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
   }
 
-  private calculateSeasonality(
-    data: Array<{ date: Date; value: number }>,
-    horizon: number
-  ): number {
-    // Simple seasonality calculation based on day of week
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + horizon);
-    const dayOfWeek = targetDate.getDay();
-    
-    // Calculate average for this day of week vs overall average
-    const dayValues = data.filter(d => d.date.getDay() === dayOfWeek).map(d => d.value);
-    const overallAverage = data.reduce((sum, d) => sum + d.value, 0) / data.length;
-    
-    if (dayValues.length === 0) return 1.0;
-    
-    const dayAverage = dayValues.reduce((sum, v) => sum + v, 0) / dayValues.length;
-    return overallAverage > 0 ? dayAverage / overallAverage : 1.0;
+  private calculateVolatility(values: number[]): number {
+    if (values.length < 2) return 0;
+
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+    return Math.sqrt(variance);
+  }
+
+  private extrapolateTrend(currentValue: number, trend: number): number {
+    return currentValue + trend * 7; // Predict 7 periods ahead
+  }
+
+  private calculateSeasonality(pattern: string): SeasonalityPattern[] {
+    // Placeholder for seasonality calculation
+    return [];
+  }
+
+  private predictAllContentPerformance(): ContentPerformancePrediction[] {
+    // Get all documents with performance data
+    const documents = Array.from(this.historicalData.keys())
+      .filter(key => key.startsWith('performance_'))
+      .map(key => key.replace('performance_', ''));
+
+    return documents.map(doc => this.predictContentPerformance(doc));
+  }
+
+  private generatePerformanceRecommendations(predictions: any[]): string[] {
+    const recommendations = [];
+
+    const decliningMetrics = predictions.filter(p => p.trend === 'declining');
+    if (decliningMetrics.length > 0) {
+      recommendations.push('Address declining performance metrics');
+    }
+
+    const lowSatisfaction = predictions.find(p => p.metric === 'satisfaction' && p.predictedValue < 3);
+    if (lowSatisfaction) {
+      recommendations.push('Improve content quality to increase satisfaction');
+    }
+
+    return recommendations;
+  }
+
+  private generatePredictiveAlerts(
+    contentDemand: ContentDemandPrediction[],
+    contentPerformance: ContentPerformancePrediction[]
+  ): any[] {
+    const alerts = [];
+
+    // High demand content gaps
+    const highDemandGaps = contentDemand.filter(d => d.predictedDemand > 80 && d.confidence > 0.7);
+    for (const gap of highDemandGaps) {
+      alerts.push({
+        type: 'content_gap',
+        severity: 'high',
+        message: `High demand predicted for "${gap.topic}" content`,
+        action: 'Create content immediately',
+        timeframe: gap.timeframe
+      });
+    }
+
+    // Performance decline alerts
+    const decliningContent = contentPerformance.filter(p => 
+      p.predictions.some(pred => pred.trend === 'declining' && pred.confidence > 0.6)
+    );
+    for (const content of decliningContent) {
+      alerts.push({
+        type: 'performance_decline',
+        severity: 'medium',
+        message: `Performance declining for ${content.documentPath}`,
+        action: 'Review and update content',
+        timeframe: 'week'
+      });
+    }
+
+    return alerts;
+  }
+
+  private generatePredictiveRecommendations(
+    contentDemand: ContentDemandPrediction[],
+    contentPerformance: ContentPerformancePrediction[],
+    seasonality: SeasonalityPattern[]
+  ): string[] {
+    const recommendations = [];
+
+    if (contentDemand.length > 0) {
+      const topDemand = contentDemand[0];
+      recommendations.push(`Prioritize creating content for "${topDemand.topic}" - highest predicted demand`);
+    }
+
+    const criticalPerformance = contentPerformance.filter(p => 
+      p.predictions.some(pred => pred.trend === 'declining')
+    );
+    if (criticalPerformance.length > 0) {
+      recommendations.push(`Review ${criticalPerformance.length} documents with declining performance`);
+    }
+
+    if (seasonality.length > 0) {
+      recommendations.push('Plan content calendar based on seasonal patterns');
+    }
+
+    return recommendations;
   }
 }
 

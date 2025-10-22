@@ -13,9 +13,13 @@ import {
   Clock,
   Star,
   Shield,
-  Zap
+  Zap,
+  X
 } from 'lucide-react';
-import UserGuideCard from './UserGuideCard';
+import useDocumentNavigation from '../../hooks/useDocumentNavigation';
+import ScrollProgressIndicator from './ScrollProgressIndicator';
+import DocumentNavigation from './DocumentNavigation';
+import RelatedDocumentsSuggestions from './RelatedDocumentsSuggestions';
 
 interface SupportDocument {
   id: string;
@@ -41,6 +45,19 @@ const SupportDocuments: React.FC = () => {
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const [documentContent, setDocumentContent] = useState<string>('');
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
+  const [showScrollProgress, setShowScrollProgress] = useState(false);
+
+  // Document navigation hook
+  const {
+    currentDocument,
+    previousDocument,
+    nextDocument,
+    relatedDocuments,
+    scrollProgress,
+    navigateToDocument,
+    goBack,
+    canGoBack
+  } = useDocumentNavigation(supportDocuments, selectedDocument, selectedCategory);
 
   // Enhanced document structure aligned with spec requirements
   const supportDocuments: SupportDocument[] = [
@@ -185,6 +202,37 @@ const SupportDocuments: React.FC = () => {
       console.error('Failed to load document:', error);
       setDocumentContent('Failed to load document content. Please try again later.');
     }
+  };
+
+  // Handle document selection with navigation tracking
+  const handleDocumentSelect = (documentId: string) => {
+    setSelectedDocument(documentId);
+    navigateToDocument(documentId);
+    setShowScrollProgress(true);
+    
+    const doc = supportDocuments.find(d => d.id === documentId);
+    if (doc && doc.path) {
+      loadDocument(doc.path);
+    }
+  };
+
+  // Handle navigation back
+  const handleGoBack = () => {
+    const previousId = goBack();
+    if (previousId) {
+      setSelectedDocument(previousId);
+      const doc = supportDocuments.find(d => d.id === previousId);
+      if (doc && doc.path) {
+        loadDocument(doc.path);
+      }
+    }
+  };
+
+  // Close document viewer
+  const closeDocumentViewer = () => {
+    setSelectedDocument(null);
+    setDocumentContent('');
+    setShowScrollProgress(false);
   };
 
   // Enhanced filtering with popularity weighting (spec requirement 2.1, 2.4)
@@ -394,12 +442,7 @@ const SupportDocuments: React.FC = () => {
             <div
               key={doc.id}
               className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => {
-                setSelectedDocument(doc.id);
-                if (doc.path) {
-                  loadDocument(doc.path);
-                }
-              }}
+              onClick={() => handleDocumentSelect(doc.id)}
             >
               <div className="p-6">
                 {/* Header */}
@@ -472,80 +515,112 @@ const SupportDocuments: React.FC = () => {
         </div>
       )}
 
-      {/* Document Modal - Enhanced viewer (spec requirement 3.1, 3.2) */}
+      {/* Scroll Progress Indicator */}
+      {showScrollProgress && currentDocument && (
+        <ScrollProgressIndicator
+          progress={scrollProgress}
+          readTime={currentDocument.readTime}
+          views={currentDocument.views}
+          popularity={currentDocument.popularity}
+        />
+      )}
+
+      {/* Enhanced Document Modal with Navigation */}
       {selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl h-full max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <div className="flex items-center">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {supportDocuments.find(doc => doc.id === selectedDocument)?.title}
-                </h2>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => {
-                    const doc = supportDocuments.find(d => d.id === selectedDocument);
-                    if (doc) {
-                      const blob = new Blob([documentContent], { type: 'text/markdown' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${doc.title.replace(/\s+/g, '-').toLowerCase()}.md`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }
-                  }}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Download"
-                >
-                  <Download className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setSelectedDocument(null)}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="prose prose-blue max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                  {documentContent}
-                </pre>
-              </div>
-            </div>
-            
-            {/* Modal Footer */}
-            <div className="border-t p-6">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Last updated: {supportDocuments.find(doc => doc.id === selectedDocument)?.lastUpdated}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex z-50">
+          <div className="flex w-full h-full">
+            {/* Main Document Content */}
+            <div className="flex-1 bg-white flex flex-col">
+              {/* Modal Header */}
+              <div className={`flex items-center justify-between p-6 border-b ${showScrollProgress ? 'mt-16' : ''}`}>
+                <div className="flex items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {currentDocument?.title}
+                  </h2>
                 </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setSelectedDocument(null)}
-                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Close
-                  </button>
+                <div className="flex items-center space-x-2">
                   <button
                     onClick={() => {
-                      const doc = supportDocuments.find(d => d.id === selectedDocument);
-                      if (doc && doc.href) {
-                        window.open(doc.href, '_blank');
+                      if (currentDocument) {
+                        const blob = new Blob([documentContent], { type: 'text/markdown' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${currentDocument.title.replace(/\s+/g, '-').toLowerCase()}.md`;
+                        a.click();
+                        URL.revokeObjectURL(url);
                       }
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Download"
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open Full Guide
+                    <Download className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={closeDocumentViewer}
+                    className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
+              </div>
+              
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="prose prose-blue max-w-none">
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                    {documentContent}
+                  </pre>
+                </div>
+              </div>
+              
+              {/* Modal Footer with Navigation */}
+              <div className="border-t p-6">
+                <DocumentNavigation
+                  currentDocument={currentDocument}
+                  previousDocument={previousDocument}
+                  nextDocument={nextDocument}
+                  relatedDocuments={relatedDocuments}
+                  canGoBack={canGoBack}
+                  onNavigate={handleDocumentSelect}
+                  onGoBack={handleGoBack}
+                />
+                
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-500">
+                    Last updated: {currentDocument?.lastUpdated}
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={closeDocumentViewer}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (currentDocument && currentDocument.href) {
+                          window.open(currentDocument.href, '_blank');
+                        }
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open Full Guide
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar with Related Documents */}
+            <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto">
+              <div className="p-6">
+                <RelatedDocumentsSuggestions
+                  currentDocument={currentDocument}
+                  allDocuments={supportDocuments}
+                  onDocumentSelect={handleDocumentSelect}
+                />
               </div>
             </div>
           </div>
