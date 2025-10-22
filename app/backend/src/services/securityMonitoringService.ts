@@ -1,623 +1,666 @@
-/**
- * Security Monitoring Service
- * 
- * Comprehensive security monitoring and alerting system for detecting
- * and responding to security threats in real-time.
- */
-
 import { EventEmitter } from 'events';
-import { securityConfig } from '../config/securityConfig';
-import AuditLoggingService from './auditLoggingService';
+import * as crypto from 'crypto';
+import { logger } from '../utils/logger';
 
-const auditLoggingService = new AuditLoggingService();
-import crypto from 'crypto';
-
-export interface SecurityEvent {
-  id: string;
-  type: SecurityEventType;
-  severity: SecuritySeverity;
-  source: string;
-  timestamp: Date;
-  details: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
-  userId?: string;
-  sessionId?: string;
-}
-
-export enum SecurityEventType {
-  AUTHENTICATION_FAILURE = 'authentication_failure',
-  AUTHORIZATION_VIOLATION = 'authorization_violation',
-  SUSPICIOUS_ACTIVITY = 'suspicious_activity',
-  BRUTE_FORCE_ATTACK = 'brute_force_attack',
-  SQL_INJECTION_ATTEMPT = 'sql_injection_attempt',
-  XSS_ATTEMPT = 'xss_attempt',
-  CSRF_ATTEMPT = 'csrf_attempt',
-  RATE_LIMIT_EXCEEDED = 'rate_limit_exceeded',
-  DDOS_ATTACK = 'ddos_attack',
-  DATA_BREACH_ATTEMPT = 'data_breach_attempt',
-  PRIVILEGE_ESCALATION = 'privilege_escalation',
-  MALICIOUS_FILE_UPLOAD = 'malicious_file_upload',
-  SMART_CONTRACT_EXPLOIT = 'smart_contract_exploit',
-  WALLET_COMPROMISE = 'wallet_compromise',
-  PHISHING_ATTEMPT = 'phishing_attempt',
-  VULNERABILITY_EXPLOIT = 'vulnerability_exploit',
-  COMPLIANCE_VIOLATION = 'compliance_violation',
-  DATA_EXFILTRATION = 'data_exfiltration',
-  SYSTEM_COMPROMISE = 'system_compromise',
-}
-
-export enum SecuritySeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
-}
+/**
+ * Security Monitoring and Alerting Service for LDAO Token Acquisition System
+ * Provides real-time security monitoring, threat detection, and alerting
+ */
 
 export interface SecurityAlert {
   id: string;
-  eventId: string;
+  timestamp: Date;
+  alert_type: 'AUTHENTICATION_ANOMALY' | 'TRANSACTION_ANOMALY' | 'SYSTEM_INTRUSION' | 'DATA_BREACH' | 'COMPLIANCE_VIOLATION';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   title: string;
   description: string;
-  severity: SecuritySeverity;
+  source: string;
+  affected_resources: string[];
+  indicators: SecurityIndicator[];
+  status: 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'FALSE_POSITIVE';
+  assigned_to?: string;
+  resolution_notes?: string;
+  resolved_at?: Date;
+}
+
+export interface SecurityIndicator {
+  indicator_type: string;
+  value: string;
+  confidence: number;
+  first_seen: Date;
+  last_seen: Date;
+  occurrences: number;
+}
+
+export interface SecurityMetric {
+  metric_name: string;
+  value: number;
+  threshold: number;
   timestamp: Date;
-  acknowledged: boolean;
-  resolvedAt?: Date;
-  assignedTo?: string;
-  actions: SecurityAction[];
+  status: 'NORMAL' | 'WARNING' | 'CRITICAL';
 }
 
-export interface SecurityAction {
-  type: 'block_ip' | 'suspend_user' | 'require_mfa' | 'notify_admin' | 'auto_remediate';
-  parameters: Record<string, any>;
-  executedAt?: Date;
-  result?: string;
+export interface ThreatIntelligence {
+  indicator: string;
+  indicator_type: 'IP' | 'DOMAIN' | 'HASH' | 'EMAIL' | 'USER_AGENT';
+  threat_type: string;
+  confidence: number;
+  source: string;
+  first_seen: Date;
+  last_updated: Date;
+  description: string;
 }
 
-export interface SecurityMetrics {
-  totalEvents: number;
-  eventsByType: Record<SecurityEventType, number>;
-  eventsBySeverity: Record<SecuritySeverity, number>;
-  averageResponseTime: number;
-  falsePositiveRate: number;
-  threatDetectionRate: number;
-  incidentResolutionTime: number;
+export interface SecurityDashboard {
+  timestamp: Date;
+  alerts: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    open: number;
+  };
+  metrics: SecurityMetric[];
+  threat_indicators: number;
+  incidents: number;
+  compliance_status: 'COMPLIANT' | 'NON_COMPLIANT' | 'UNDER_REVIEW';
 }
 
-class SecurityMonitoringService extends EventEmitter {
-  private events: Map<string, SecurityEvent> = new Map();
+export class SecurityMonitoringService extends EventEmitter {
   private alerts: Map<string, SecurityAlert> = new Map();
-  private blockedIPs: Set<string> = new Set();
-  private suspiciousActivities: Map<string, number> = new Map();
-  private rateLimitCounters: Map<string, { count: number; resetTime: number }> = new Map();
+  private metrics: Map<string, SecurityMetric[]> = new Map();
+  private threatIntelligence: Map<string, ThreatIntelligence> = new Map();
+  private monitoringRules: Map<string, any> = new Map();
 
   constructor() {
     super();
-    this.initializeMonitoring();
+    this.initializeMonitoringRules();
+    this.startMetricsCollection();
   }
 
   /**
-   * Initialize security monitoring
+   * Initialize security monitoring rules
    */
-  private initializeMonitoring(): void {
-    // Set up periodic cleanup
-    setInterval(() => {
-      this.cleanupOldEvents();
-      this.cleanupRateLimitCounters();
-    }, 60000); // Every minute
-
-    // Set up threat intelligence updates
-    setInterval(() => {
-      this.updateThreatIntelligence();
-    }, 3600000); // Every hour
-
-    console.log('Security monitoring service initialized');
-  }
-
-  /**
-   * Record a security event
-   */
-  async recordSecurityEvent(event: Omit<SecurityEvent, 'id' | 'timestamp'>): Promise<SecurityEvent> {
-    const securityEvent: SecurityEvent = {
-      ...event,
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-    };
-
-    // Store event
-    this.events.set(securityEvent.id, securityEvent);
-
-    // Log to audit system
-    await auditLoggingService.createAuditLog({
-      actionType: 'security_event',
-      actorType: 'system',
-      newState: securityEvent,
-      ipAddress: event.ipAddress,
-      userAgent: event.userAgent,
+  private initializeMonitoringRules(): void {
+    // Failed login monitoring
+    this.monitoringRules.set('FAILED_LOGIN_THRESHOLD', {
+      metric: 'failed_logins_per_minute',
+      threshold: 10,
+      window_minutes: 5,
+      severity: 'HIGH',
+      action: 'CREATE_ALERT'
     });
 
-    // Analyze event for threats
-    await this.analyzeSecurityEvent(securityEvent);
+    // Large transaction monitoring
+    this.monitoringRules.set('LARGE_TRANSACTION_THRESHOLD', {
+      metric: 'transaction_amount',
+      threshold: 50000,
+      severity: 'MEDIUM',
+      action: 'CREATE_ALERT'
+    });
 
-    // Emit event for real-time processing
-    this.emit('securityEvent', securityEvent);
+    // Unusual IP activity
+    this.monitoringRules.set('UNUSUAL_IP_ACTIVITY', {
+      metric: 'unique_ips_per_user',
+      threshold: 5,
+      window_hours: 1,
+      severity: 'MEDIUM',
+      action: 'CREATE_ALERT'
+    });
 
-    return securityEvent;
+    // System resource monitoring
+    this.monitoringRules.set('HIGH_CPU_USAGE', {
+      metric: 'cpu_usage_percent',
+      threshold: 90,
+      severity: 'HIGH',
+      action: 'CREATE_ALERT'
+    });
+
+    // Database connection monitoring
+    this.monitoringRules.set('HIGH_DB_CONNECTIONS', {
+      metric: 'active_db_connections',
+      threshold: 100,
+      severity: 'MEDIUM',
+      action: 'CREATE_ALERT'
+    });
   }
 
   /**
-   * Analyze security event for threats
+   * Start metrics collection
    */
-  private async analyzeSecurityEvent(event: SecurityEvent): Promise<void> {
-    // Check for brute force attacks
-    if (event.type === SecurityEventType.AUTHENTICATION_FAILURE) {
-      await this.detectBruteForceAttack(event);
-    }
+  private startMetricsCollection(): void {
+    // Collect metrics every minute
+    setInterval(() => {
+      this.collectSecurityMetrics();
+    }, 60000);
 
-    // Check for suspicious patterns
-    if (event.ipAddress) {
-      await this.detectSuspiciousActivity(event);
-    }
+    // Evaluate rules every 30 seconds
+    setInterval(() => {
+      this.evaluateMonitoringRules();
+    }, 30000);
+  }
 
-    // Check for DDoS attacks
-    if (event.type === SecurityEventType.RATE_LIMIT_EXCEEDED) {
-      await this.detectDDoSAttack(event);
-    }
+  /**
+   * Collect security metrics
+   */
+  private async collectSecurityMetrics(): Promise<void> {
+    try {
+      const timestamp = new Date();
 
-    // Check for injection attacks
-    if (event.type === SecurityEventType.SQL_INJECTION_ATTEMPT || 
-        event.type === SecurityEventType.XSS_ATTEMPT) {
-      await this.handleInjectionAttack(event);
-    }
+      // Collect various security metrics
+      const metrics = [
+        await this.collectFailedLoginMetrics(),
+        await this.collectTransactionMetrics(),
+        await this.collectSystemMetrics(),
+        await this.collectNetworkMetrics(),
+        await this.collectDatabaseMetrics()
+      ];
 
-    // Auto-escalate critical events
-    if (event.severity === SecuritySeverity.CRITICAL) {
-      await this.createSecurityAlert(event);
+      // Store metrics
+      for (const metric of metrics.flat()) {
+        if (!this.metrics.has(metric.metric_name)) {
+          this.metrics.set(metric.metric_name, []);
+        }
+        
+        const metricHistory = this.metrics.get(metric.metric_name)!;
+        metricHistory.push(metric);
+        
+        // Keep only last 1000 data points
+        if (metricHistory.length > 1000) {
+          metricHistory.shift();
+        }
+      }
+
+    } catch (error) {
+      logger.error('Error collecting security metrics', { error });
     }
   }
 
   /**
-   * Detect brute force attacks
+   * Collect failed login metrics
    */
-  private async detectBruteForceAttack(event: SecurityEvent): Promise<void> {
-    const key = `brute_force_${event.ipAddress || event.userId}`;
-    const current = this.suspiciousActivities.get(key) || 0;
-    const newCount = current + 1;
-
-    this.suspiciousActivities.set(key, newCount);
-
-    if (newCount >= securityConfig.authentication.maxLoginAttempts) {
-      const bruteForceEvent: SecurityEvent = {
-        id: crypto.randomUUID(),
-        type: SecurityEventType.BRUTE_FORCE_ATTACK,
-        severity: SecuritySeverity.HIGH,
-        source: 'security_monitoring',
-        timestamp: new Date(),
-        details: {
-          originalEvent: event.id,
-          attemptCount: newCount,
-          timeWindow: '15 minutes',
-        },
-        ipAddress: event.ipAddress,
-        userAgent: event.userAgent,
-        userId: event.userId,
-      };
-
-      await this.recordSecurityEvent(bruteForceEvent);
-      await this.executeSecurityAction({
-        type: 'block_ip',
-        parameters: { 
-          ipAddress: event.ipAddress,
-          duration: securityConfig.authentication.lockoutDuration,
-        },
-      });
-    }
-  }
-
-  /**
-   * Detect suspicious activity patterns
-   */
-  private async detectSuspiciousActivity(event: SecurityEvent): Promise<void> {
-    const ipKey = `suspicious_${event.ipAddress}`;
-    const current = this.suspiciousActivities.get(ipKey) || 0;
+  private async collectFailedLoginMetrics(): Promise<SecurityMetric[]> {
+    // This would integrate with your authentication system
+    // For now, simulate metrics
+    const failedLogins = Math.floor(Math.random() * 20);
     
-    // Increment suspicion score based on event type
-    let suspicionIncrease = 1;
-    switch (event.type) {
-      case SecurityEventType.SQL_INJECTION_ATTEMPT:
-      case SecurityEventType.XSS_ATTEMPT:
-        suspicionIncrease = 5;
-        break;
-      case SecurityEventType.AUTHORIZATION_VIOLATION:
-        suspicionIncrease = 3;
-        break;
-      case SecurityEventType.RATE_LIMIT_EXCEEDED:
-        suspicionIncrease = 2;
-        break;
-    }
+    return [{
+      metric_name: 'failed_logins_per_minute',
+      value: failedLogins,
+      threshold: 10,
+      timestamp: new Date(),
+      status: failedLogins > 10 ? 'CRITICAL' : failedLogins > 5 ? 'WARNING' : 'NORMAL'
+    }];
+  }
 
-    const newScore = current + suspicionIncrease;
-    this.suspiciousActivities.set(ipKey, newScore);
-
-    // Threshold for suspicious activity
-    if (newScore >= 10) {
-      const suspiciousEvent: SecurityEvent = {
-        id: crypto.randomUUID(),
-        type: SecurityEventType.SUSPICIOUS_ACTIVITY,
-        severity: SecuritySeverity.MEDIUM,
-        source: 'security_monitoring',
+  /**
+   * Collect transaction metrics
+   */
+  private async collectTransactionMetrics(): Promise<SecurityMetric[]> {
+    // This would integrate with your transaction system
+    const transactionCount = Math.floor(Math.random() * 100);
+    const avgTransactionAmount = Math.random() * 10000;
+    
+    return [
+      {
+        metric_name: 'transactions_per_minute',
+        value: transactionCount,
+        threshold: 50,
         timestamp: new Date(),
-        details: {
-          suspicionScore: newScore,
-          recentEvents: Array.from(this.events.values())
-            .filter(e => e.ipAddress === event.ipAddress)
-            .slice(-10),
-        },
-        ipAddress: event.ipAddress,
-      };
+        status: transactionCount > 50 ? 'WARNING' : 'NORMAL'
+      },
+      {
+        metric_name: 'average_transaction_amount',
+        value: avgTransactionAmount,
+        threshold: 5000,
+        timestamp: new Date(),
+        status: avgTransactionAmount > 5000 ? 'WARNING' : 'NORMAL'
+      }
+    ];
+  }
 
-      await this.recordSecurityEvent(suspiciousEvent);
+  /**
+   * Collect system metrics
+   */
+  private async collectSystemMetrics(): Promise<SecurityMetric[]> {
+    // This would integrate with system monitoring
+    const cpuUsage = Math.random() * 100;
+    const memoryUsage = Math.random() * 100;
+    
+    return [
+      {
+        metric_name: 'cpu_usage_percent',
+        value: cpuUsage,
+        threshold: 80,
+        timestamp: new Date(),
+        status: cpuUsage > 90 ? 'CRITICAL' : cpuUsage > 80 ? 'WARNING' : 'NORMAL'
+      },
+      {
+        metric_name: 'memory_usage_percent',
+        value: memoryUsage,
+        threshold: 85,
+        timestamp: new Date(),
+        status: memoryUsage > 95 ? 'CRITICAL' : memoryUsage > 85 ? 'WARNING' : 'NORMAL'
+      }
+    ];
+  }
+
+  /**
+   * Collect network metrics
+   */
+  private async collectNetworkMetrics(): Promise<SecurityMetric[]> {
+    const uniqueIPs = Math.floor(Math.random() * 1000);
+    const suspiciousRequests = Math.floor(Math.random() * 10);
+    
+    return [
+      {
+        metric_name: 'unique_ips_per_minute',
+        value: uniqueIPs,
+        threshold: 500,
+        timestamp: new Date(),
+        status: uniqueIPs > 800 ? 'WARNING' : 'NORMAL'
+      },
+      {
+        metric_name: 'suspicious_requests_per_minute',
+        value: suspiciousRequests,
+        threshold: 5,
+        timestamp: new Date(),
+        status: suspiciousRequests > 10 ? 'CRITICAL' : suspiciousRequests > 5 ? 'WARNING' : 'NORMAL'
+      }
+    ];
+  }
+
+  /**
+   * Collect database metrics
+   */
+  private async collectDatabaseMetrics(): Promise<SecurityMetric[]> {
+    const activeConnections = Math.floor(Math.random() * 150);
+    const queryTime = Math.random() * 1000;
+    
+    return [
+      {
+        metric_name: 'active_db_connections',
+        value: activeConnections,
+        threshold: 100,
+        timestamp: new Date(),
+        status: activeConnections > 120 ? 'CRITICAL' : activeConnections > 100 ? 'WARNING' : 'NORMAL'
+      },
+      {
+        metric_name: 'average_query_time_ms',
+        value: queryTime,
+        threshold: 500,
+        timestamp: new Date(),
+        status: queryTime > 1000 ? 'WARNING' : 'NORMAL'
+      }
+    ];
+  }
+
+  /**
+   * Evaluate monitoring rules
+   */
+  private async evaluateMonitoringRules(): Promise<void> {
+    for (const [ruleId, rule] of this.monitoringRules) {
+      try {
+        const metricHistory = this.metrics.get(rule.metric);
+        if (!metricHistory || metricHistory.length === 0) continue;
+
+        const latestMetric = metricHistory[metricHistory.length - 1];
+        
+        if (this.shouldTriggerAlert(rule, latestMetric, metricHistory)) {
+          await this.createAlert(ruleId, rule, latestMetric);
+        }
+      } catch (error) {
+        logger.error('Error evaluating monitoring rule', { ruleId, error });
+      }
     }
   }
 
   /**
-   * Detect DDoS attacks
+   * Check if alert should be triggered
    */
-  private async detectDDoSAttack(event: SecurityEvent): Promise<void> {
-    if (!securityConfig.ddosProtection.enabled) return;
+  private shouldTriggerAlert(rule: any, latestMetric: SecurityMetric, history: SecurityMetric[]): boolean {
+    // Basic threshold check
+    if (latestMetric.value <= rule.threshold) {
+      return false;
+    }
 
-    const now = Date.now();
-    const windowStart = now - 60000; // 1 minute window
-
-    // Count recent rate limit events
-    const recentEvents = Array.from(this.events.values())
-      .filter(e => 
-        e.type === SecurityEventType.RATE_LIMIT_EXCEEDED &&
-        e.timestamp.getTime() > windowStart
+    // Check if we already have a recent alert for this rule
+    const recentAlerts = Array.from(this.alerts.values())
+      .filter(alert => 
+        alert.source === rule.metric &&
+        alert.status === 'OPEN' &&
+        Date.now() - alert.timestamp.getTime() < 5 * 60 * 1000 // 5 minutes
       );
 
-    if (recentEvents.length >= securityConfig.ddosProtection.threshold) {
-      const ddosEvent: SecurityEvent = {
-        id: crypto.randomUUID(),
-        type: SecurityEventType.DDOS_ATTACK,
-        severity: SecuritySeverity.CRITICAL,
-        source: 'security_monitoring',
-        timestamp: new Date(),
-        details: {
-          eventCount: recentEvents.length,
-          timeWindow: '1 minute',
-          affectedIPs: [...new Set(recentEvents.map(e => e.ipAddress))],
-        },
-      };
-
-      await this.recordSecurityEvent(ddosEvent);
-      await this.createSecurityAlert(ddosEvent);
-    }
-  }
-
-  /**
-   * Handle injection attacks
-   */
-  private async handleInjectionAttack(event: SecurityEvent): Promise<void> {
-    // Immediately block IP for injection attempts
-    if (event.ipAddress) {
-      await this.executeSecurityAction({
-        type: 'block_ip',
-        parameters: {
-          ipAddress: event.ipAddress,
-          duration: 3600000, // 1 hour
-          reason: 'Injection attack attempt',
-        },
-      });
+    if (recentAlerts.length > 0) {
+      return false; // Don't spam alerts
     }
 
-    // Create high-priority alert
-    await this.createSecurityAlert(event);
+    // Additional rule-specific logic
+    if (rule.window_minutes) {
+      const windowStart = new Date(Date.now() - rule.window_minutes * 60 * 1000);
+      const windowMetrics = history.filter(m => m.timestamp >= windowStart);
+      const avgValue = windowMetrics.reduce((sum, m) => sum + m.value, 0) / windowMetrics.length;
+      return avgValue > rule.threshold;
+    }
+
+    return true;
   }
 
   /**
    * Create security alert
    */
-  private async createSecurityAlert(event: SecurityEvent): Promise<SecurityAlert> {
+  private async createAlert(ruleId: string, rule: any, metric: SecurityMetric): Promise<void> {
+    const alertId = crypto.randomUUID();
+    
     const alert: SecurityAlert = {
-      id: crypto.randomUUID(),
-      eventId: event.id,
-      title: this.getAlertTitle(event),
-      description: this.getAlertDescription(event),
-      severity: event.severity,
+      id: alertId,
       timestamp: new Date(),
-      acknowledged: false,
-      actions: this.getRecommendedActions(event),
+      alert_type: this.getAlertType(rule.metric),
+      severity: rule.severity,
+      title: `${rule.metric} threshold exceeded`,
+      description: `${rule.metric} value ${metric.value} exceeds threshold ${rule.threshold}`,
+      source: rule.metric,
+      affected_resources: [rule.metric],
+      indicators: [{
+        indicator_type: rule.metric,
+        value: metric.value.toString(),
+        confidence: 0.9,
+        first_seen: metric.timestamp,
+        last_seen: metric.timestamp,
+        occurrences: 1
+      }],
+      status: 'OPEN'
     };
 
-    this.alerts.set(alert.id, alert);
+    this.alerts.set(alertId, alert);
 
-    // Send notifications
-    await this.sendSecurityNotification(alert);
-
-    // Auto-execute critical actions
-    if (event.severity === SecuritySeverity.CRITICAL) {
-      for (const action of alert.actions) {
-        if (action.type !== 'notify_admin') {
-          await this.executeSecurityAction(action);
-        }
-      }
-    }
+    logger.warn('Security alert created', {
+      alertId,
+      alertType: alert.alert_type,
+      severity: alert.severity,
+      metric: rule.metric,
+      value: metric.value,
+      threshold: rule.threshold
+    });
 
     this.emit('securityAlert', alert);
-    return alert;
+
+    // Trigger automated response if configured
+    await this.triggerAutomatedResponse(alert);
   }
 
   /**
-   * Execute security action
+   * Get alert type based on metric
    */
-  private async executeSecurityAction(action: SecurityAction): Promise<void> {
+  private getAlertType(metric: string): SecurityAlert['alert_type'] {
+    if (metric.includes('login')) return 'AUTHENTICATION_ANOMALY';
+    if (metric.includes('transaction')) return 'TRANSACTION_ANOMALY';
+    if (metric.includes('ip') || metric.includes('request')) return 'SYSTEM_INTRUSION';
+    return 'SYSTEM_INTRUSION';
+  }
+
+  /**
+   * Trigger automated response
+   */
+  private async triggerAutomatedResponse(alert: SecurityAlert): Promise<void> {
     try {
-      switch (action.type) {
-        case 'block_ip':
-          await this.blockIP(action.parameters.ipAddress, action.parameters.duration);
+      switch (alert.severity) {
+        case 'CRITICAL':
+          await this.handleCriticalAlert(alert);
           break;
-        case 'suspend_user':
-          await this.suspendUser(action.parameters.userId, action.parameters.reason);
+        case 'HIGH':
+          await this.handleHighAlert(alert);
           break;
-        case 'require_mfa':
-          await this.requireMFA(action.parameters.userId);
+        case 'MEDIUM':
+          await this.handleMediumAlert(alert);
           break;
-        case 'notify_admin':
-          await this.notifyAdministrators(action.parameters);
-          break;
-        case 'auto_remediate':
-          await this.autoRemediate(action.parameters);
+        case 'LOW':
+          await this.handleLowAlert(alert);
           break;
       }
-
-      action.executedAt = new Date();
-      action.result = 'success';
     } catch (error) {
-      action.executedAt = new Date();
-      action.result = `failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error('Failed to execute security action:', error);
+      logger.error('Error in automated response', { alertId: alert.id, error });
     }
   }
 
   /**
-   * Block IP address
+   * Handle critical alerts
    */
-  private async blockIP(ipAddress: string, duration: number): Promise<void> {
-    this.blockedIPs.add(ipAddress);
+  private async handleCriticalAlert(alert: SecurityAlert): Promise<void> {
+    logger.error('CRITICAL SECURITY ALERT', { alert });
     
-    // Remove from blocked list after duration
-    setTimeout(() => {
-      this.blockedIPs.delete(ipAddress);
-    }, duration);
+    // Immediate actions for critical alerts
+    switch (alert.alert_type) {
+      case 'SYSTEM_INTRUSION':
+        // Block suspicious IPs, enable additional monitoring
+        break;
+      case 'DATA_BREACH':
+        // Isolate affected systems, preserve evidence
+        break;
+      case 'AUTHENTICATION_ANOMALY':
+        // Temporarily lock affected accounts
+        break;
+    }
 
-    console.log(`Blocked IP ${ipAddress} for ${duration}ms`);
+    // Notify security team immediately
+    await this.notifySecurityTeam(alert, 'IMMEDIATE');
   }
 
   /**
-   * Check if IP is blocked
+   * Handle high alerts
    */
-  public isIPBlocked(ipAddress: string): boolean {
-    return this.blockedIPs.has(ipAddress);
+  private async handleHighAlert(alert: SecurityAlert): Promise<void> {
+    logger.warn('HIGH SECURITY ALERT', { alert });
+    
+    // Enhanced monitoring and notification
+    await this.notifySecurityTeam(alert, 'URGENT');
   }
 
   /**
-   * Suspend user account
+   * Handle medium alerts
    */
-  private async suspendUser(userId: string, reason: string): Promise<void> {
-    // Implementation would integrate with user management system
-    console.log(`Suspended user ${userId} for reason: ${reason}`);
+  private async handleMediumAlert(alert: SecurityAlert): Promise<void> {
+    logger.warn('MEDIUM SECURITY ALERT', { alert });
+    
+    // Standard notification
+    await this.notifySecurityTeam(alert, 'NORMAL');
   }
 
   /**
-   * Require MFA for user
+   * Handle low alerts
    */
-  private async requireMFA(userId: string): Promise<void> {
-    // Implementation would integrate with authentication system
-    console.log(`Required MFA for user ${userId}`);
+  private async handleLowAlert(alert: SecurityAlert): Promise<void> {
+    logger.info('LOW SECURITY ALERT', { alert });
+    
+    // Log for review
   }
 
   /**
-   * Notify administrators
+   * Notify security team
    */
-  private async notifyAdministrators(parameters: Record<string, any>): Promise<void> {
-    // Implementation would integrate with notification system
-    console.log('Notified administrators:', parameters);
+  private async notifySecurityTeam(alert: SecurityAlert, priority: 'IMMEDIATE' | 'URGENT' | 'NORMAL'): Promise<void> {
+    // This would integrate with your notification system (email, Slack, PagerDuty, etc.)
+    logger.info('Notifying security team', {
+      alertId: alert.id,
+      priority,
+      severity: alert.severity,
+      alertType: alert.alert_type
+    });
+
+    // Simulate notification
+    this.emit('securityTeamNotified', { alert, priority });
   }
 
   /**
-   * Auto-remediate security issue
+   * Add threat intelligence indicator
    */
-  private async autoRemediate(parameters: Record<string, any>): Promise<void> {
-    // Implementation would include automated remediation actions
-    console.log('Auto-remediated security issue:', parameters);
+  async addThreatIndicator(
+    indicator: string,
+    indicatorType: ThreatIntelligence['indicator_type'],
+    threatType: string,
+    confidence: number,
+    source: string,
+    description: string
+  ): Promise<void> {
+    const threatIntel: ThreatIntelligence = {
+      indicator,
+      indicator_type: indicatorType,
+      threat_type: threatType,
+      confidence,
+      source,
+      first_seen: new Date(),
+      last_updated: new Date(),
+      description
+    };
+
+    this.threatIntelligence.set(indicator, threatIntel);
+
+    logger.info('Threat intelligence indicator added', {
+      indicator,
+      indicatorType,
+      threatType,
+      confidence,
+      source
+    });
+
+    this.emit('threatIndicatorAdded', threatIntel);
   }
 
   /**
-   * Get security metrics
+   * Check if indicator is known threat
    */
-  public getSecurityMetrics(): SecurityMetrics {
-    const events = Array.from(this.events.values());
+  isKnownThreat(indicator: string): ThreatIntelligence | null {
+    return this.threatIntelligence.get(indicator) || null;
+  }
+
+  /**
+   * Update alert status
+   */
+  async updateAlertStatus(
+    alertId: string,
+    status: SecurityAlert['status'],
+    assignedTo?: string,
+    resolutionNotes?: string
+  ): Promise<void> {
+    const alert = this.alerts.get(alertId);
+    if (!alert) {
+      throw new Error(`Alert not found: ${alertId}`);
+    }
+
+    alert.status = status;
+    if (assignedTo) alert.assigned_to = assignedTo;
+    if (resolutionNotes) alert.resolution_notes = resolutionNotes;
+    if (status === 'RESOLVED' || status === 'FALSE_POSITIVE') {
+      alert.resolved_at = new Date();
+    }
+
+    logger.info('Alert status updated', {
+      alertId,
+      status,
+      assignedTo,
+      resolutionNotes
+    });
+
+    this.emit('alertStatusUpdated', alert);
+  }
+
+  /**
+   * Get security dashboard
+   */
+  getSecurityDashboard(): SecurityDashboard {
     const alerts = Array.from(this.alerts.values());
-
-    const eventsByType = events.reduce((acc, event) => {
-      acc[event.type] = (acc[event.type] || 0) + 1;
-      return acc;
-    }, {} as Record<SecurityEventType, number>);
-
-    const eventsBySeverity = events.reduce((acc, event) => {
-      acc[event.severity] = (acc[event.severity] || 0) + 1;
-      return acc;
-    }, {} as Record<SecuritySeverity, number>);
-
-    const resolvedAlerts = alerts.filter(a => a.resolvedAt);
-    const averageResponseTime = resolvedAlerts.length > 0
-      ? resolvedAlerts.reduce((sum, alert) => {
-          return sum + (alert.resolvedAt!.getTime() - alert.timestamp.getTime());
-        }, 0) / resolvedAlerts.length
-      : 0;
+    const recentMetrics = this.getRecentMetrics();
 
     return {
-      totalEvents: events.length,
-      eventsByType,
-      eventsBySeverity,
-      averageResponseTime,
-      falsePositiveRate: 0.05, // Would be calculated based on historical data
-      threatDetectionRate: 0.95, // Would be calculated based on historical data
-      incidentResolutionTime: averageResponseTime,
+      timestamp: new Date(),
+      alerts: {
+        total: alerts.length,
+        critical: alerts.filter(a => a.severity === 'CRITICAL').length,
+        high: alerts.filter(a => a.severity === 'HIGH').length,
+        medium: alerts.filter(a => a.severity === 'MEDIUM').length,
+        low: alerts.filter(a => a.severity === 'LOW').length,
+        open: alerts.filter(a => a.status === 'OPEN').length
+      },
+      metrics: recentMetrics,
+      threat_indicators: this.threatIntelligence.size,
+      incidents: alerts.filter(a => a.severity === 'CRITICAL' || a.severity === 'HIGH').length,
+      compliance_status: this.getComplianceStatus()
     };
   }
 
   /**
-   * Get recent security events
+   * Get recent metrics
    */
-  public getRecentEvents(limit: number = 100): SecurityEvent[] {
-    return Array.from(this.events.values())
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, limit);
-  }
+  private getRecentMetrics(): SecurityMetric[] {
+    const recentMetrics: SecurityMetric[] = [];
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-  /**
-   * Get active alerts
-   */
-  public getActiveAlerts(): SecurityAlert[] {
-    return Array.from(this.alerts.values())
-      .filter(alert => !alert.resolvedAt)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-  }
+    for (const [metricName, metricHistory] of this.metrics) {
+      const recentMetric = metricHistory
+        .filter(m => m.timestamp >= oneHourAgo)
+        .pop(); // Get most recent
 
-  /**
-   * Acknowledge alert
-   */
-  public async acknowledgeAlert(alertId: string, userId: string): Promise<void> {
-    const alert = this.alerts.get(alertId);
-    if (alert) {
-      alert.acknowledged = true;
-      alert.assignedTo = userId;
-      
-      await auditLoggingService.createAuditLog({
-        actionType: 'alert_acknowledged',
-        actorId: userId,
-        actorType: 'user',
-        newState: { alertId, acknowledged: true },
-      });
-    }
-  }
-
-  /**
-   * Resolve alert
-   */
-  public async resolveAlert(alertId: string, userId: string, resolution: string): Promise<void> {
-    const alert = this.alerts.get(alertId);
-    if (alert) {
-      alert.resolvedAt = new Date();
-      alert.assignedTo = userId;
-      
-      await auditLoggingService.createAuditLog({
-        actionType: 'alert_resolved',
-        actorId: userId,
-        actorType: 'user',
-        newState: { alertId, resolved: true, resolution },
-      });
-    }
-  }
-
-  // Helper methods
-  private getAlertTitle(event: SecurityEvent): string {
-    const titles = {
-      [SecurityEventType.BRUTE_FORCE_ATTACK]: 'Brute Force Attack Detected',
-      [SecurityEventType.SQL_INJECTION_ATTEMPT]: 'SQL Injection Attempt',
-      [SecurityEventType.XSS_ATTEMPT]: 'Cross-Site Scripting Attempt',
-      [SecurityEventType.DDOS_ATTACK]: 'DDoS Attack in Progress',
-      [SecurityEventType.SUSPICIOUS_ACTIVITY]: 'Suspicious Activity Detected',
-      [SecurityEventType.SMART_CONTRACT_EXPLOIT]: 'Smart Contract Exploit Attempt',
-      [SecurityEventType.DATA_BREACH_ATTEMPT]: 'Data Breach Attempt',
-      [SecurityEventType.PRIVILEGE_ESCALATION]: 'Privilege Escalation Attempt',
-    };
-
-    return titles[event.type] || `Security Event: ${event.type}`;
-  }
-
-  private getAlertDescription(event: SecurityEvent): string {
-    return `Security event detected: ${event.type} with severity ${event.severity}. Source: ${event.source}. Details: ${JSON.stringify(event.details)}`;
-  }
-
-  private getRecommendedActions(event: SecurityEvent): SecurityAction[] {
-    const actions: SecurityAction[] = [];
-
-    // Always notify admin for high/critical events
-    if (event.severity === SecuritySeverity.HIGH || event.severity === SecuritySeverity.CRITICAL) {
-      actions.push({
-        type: 'notify_admin',
-        parameters: { event: event.id, severity: event.severity },
-      });
-    }
-
-    // Specific actions based on event type
-    switch (event.type) {
-      case SecurityEventType.BRUTE_FORCE_ATTACK:
-      case SecurityEventType.SQL_INJECTION_ATTEMPT:
-      case SecurityEventType.XSS_ATTEMPT:
-        if (event.ipAddress) {
-          actions.push({
-            type: 'block_ip',
-            parameters: { ipAddress: event.ipAddress, duration: 3600000 },
-          });
-        }
-        break;
-      
-      case SecurityEventType.PRIVILEGE_ESCALATION:
-        if (event.userId) {
-          actions.push({
-            type: 'suspend_user',
-            parameters: { userId: event.userId, reason: 'Privilege escalation attempt' },
-          });
-        }
-        break;
-      
-      case SecurityEventType.SUSPICIOUS_ACTIVITY:
-        if (event.userId) {
-          actions.push({
-            type: 'require_mfa',
-            parameters: { userId: event.userId },
-          });
-        }
-        break;
-    }
-
-    return actions;
-  }
-
-  private async sendSecurityNotification(alert: SecurityAlert): Promise<void> {
-    // Implementation would integrate with notification channels
-    console.log(`Security notification sent for alert: ${alert.title}`);
-  }
-
-  private cleanupOldEvents(): void {
-    const cutoff = Date.now() - (24 * 60 * 60 * 1000); // 24 hours
-    
-    for (const [id, event] of this.events.entries()) {
-      if (event.timestamp.getTime() < cutoff) {
-        this.events.delete(id);
+      if (recentMetric) {
+        recentMetrics.push(recentMetric);
       }
     }
+
+    return recentMetrics;
   }
 
-  private cleanupRateLimitCounters(): void {
-    const now = Date.now();
-    
-    for (const [key, counter] of this.rateLimitCounters.entries()) {
-      if (now > counter.resetTime) {
-        this.rateLimitCounters.delete(key);
-      }
+  /**
+   * Get compliance status
+   */
+  private getComplianceStatus(): SecurityDashboard['compliance_status'] {
+    const criticalAlerts = Array.from(this.alerts.values())
+      .filter(a => a.severity === 'CRITICAL' && a.status === 'OPEN');
+
+    if (criticalAlerts.length > 0) {
+      return 'NON_COMPLIANT';
     }
+
+    const highAlerts = Array.from(this.alerts.values())
+      .filter(a => a.severity === 'HIGH' && a.status === 'OPEN');
+
+    if (highAlerts.length > 0) {
+      return 'UNDER_REVIEW';
+    }
+
+    return 'COMPLIANT';
   }
 
-  private async updateThreatIntelligence(): Promise<void> {
-    // Implementation would fetch latest threat intelligence
-    console.log('Updated threat intelligence');
+  /**
+   * Get alerts by status
+   */
+  getAlerts(status?: SecurityAlert['status']): SecurityAlert[] {
+    const alerts = Array.from(this.alerts.values());
+    
+    if (status) {
+      return alerts.filter(a => a.status === status);
+    }
+    
+    return alerts;
+  }
+
+  /**
+   * Get metrics for a specific metric name
+   */
+  getMetrics(metricName: string, hours: number = 24): SecurityMetric[] {
+    const metricHistory = this.metrics.get(metricName);
+    if (!metricHistory) return [];
+
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
+    return metricHistory.filter(m => m.timestamp >= cutoff);
+  }
+
+  /**
+   * Get threat intelligence indicators
+   */
+  getThreatIntelligence(): ThreatIntelligence[] {
+    return Array.from(this.threatIntelligence.values());
   }
 }
 
 export const securityMonitoringService = new SecurityMonitoringService();
-export default securityMonitoringService;

@@ -14,7 +14,7 @@ export class LDAOAcquisitionConfigManager {
     return {
       treasuryContract: process.env.LDAO_TREASURY_CONTRACT || '',
       supportedTokens: (process.env.LDAO_SUPPORTED_TOKENS || 'ETH,USDC,USDT').split(','),
-      supportedNetworks: (process.env.LDAO_SUPPORTED_NETWORKS || 'ethereum,polygon,arbitrum').split(','),
+      supportedNetworks: (process.env.LDAO_SUPPORTED_NETWORKS || 'ethereum,polygon,arbitrum,base').split(','),
       fiatPaymentEnabled: process.env.LDAO_FIAT_PAYMENT_ENABLED === 'true',
       dexIntegrationEnabled: process.env.LDAO_DEX_INTEGRATION_ENABLED === 'true',
       earnToOwnEnabled: process.env.LDAO_EARN_TO_OWN_ENABLED === 'true',
@@ -126,7 +126,7 @@ export class LDAOAcquisitionConfigManager {
     }
 
     // Validate integrations
-    for (const [name, integration] of this.integrations) {
+    for (const [name, integration] of Array.from(this.integrations.entries())) {
       if (integration.enabled) {
         switch (integration.type) {
           case 'payment':

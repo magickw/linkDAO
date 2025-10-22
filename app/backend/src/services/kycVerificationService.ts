@@ -105,7 +105,7 @@ export class KYCVerificationService {
       const providerResult = await this.submitToProvider(request, verificationId);
       
       if (providerResult) {
-        verification.status = providerResult.status;
+        verification.status = providerResult.status as 'pending' | 'approved' | 'rejected' | 'requires_review';
         verification.riskScore = providerResult.riskScore;
         verification.reasons = providerResult.reasons;
         verification.updatedAt = new Date();
@@ -316,7 +316,7 @@ export class KYCVerificationService {
 
   public async updateVerificationStatus(
     verificationId: string,
-    status: 'approved' | 'rejected' | 'requires_review',
+    status: 'pending' | 'approved' | 'rejected' | 'requires_review',
     reasons?: string[],
     riskScore?: number
   ): Promise<boolean> {

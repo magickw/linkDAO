@@ -10,7 +10,7 @@ const mockStripeConfig = {
   secretKey: 'sk_test_mock',
   webhookSecret: 'whsec_mock',
   publishableKey: 'pk_test_mock',
-  apiVersion: '2023-10-16' as const,
+  apiVersion: '2025-09-30.clover' as const,
 };
 
 const mockMoonPayConfig = {
