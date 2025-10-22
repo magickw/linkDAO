@@ -182,11 +182,11 @@ export const PerformanceOptimizer = memo(function PerformanceOptimizer({
   const monitorNetworkPerformance = () => {
     // Monitor network requests
     const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       networkRequestsRef.current++;
       
       try {
-        const response = await originalFetch(...args);
+        const response = await originalFetch(input, init);
         
         // Check if response came from cache
         if (response.headers.get('X-Served-From') === 'cache') {

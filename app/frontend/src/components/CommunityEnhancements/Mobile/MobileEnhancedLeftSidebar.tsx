@@ -90,7 +90,7 @@ export const MobileEnhancedLeftSidebar: React.FC<MobileEnhancedLeftSidebarProps>
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={{ type: 'spring' as any, damping: 25, stiffness: 200 }}
             className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-900 z-50 shadow-xl overflow-hidden"
           >
             {/* Header */}

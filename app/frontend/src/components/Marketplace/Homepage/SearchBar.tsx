@@ -379,7 +379,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             {isLoading ? (
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' as any }}
                 className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full"
               />
             ) : query && (
@@ -406,7 +406,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.2, ease: 'easeOut' as any }}
             className="absolute top-full left-0 right-0 mt-3 z-50"
           >
             <GlassPanel
@@ -418,7 +418,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                   <div className="flex items-center justify-center space-x-3">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' as any }}
                       className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full"
                     />
                     <span>Searching across marketplace...</span>

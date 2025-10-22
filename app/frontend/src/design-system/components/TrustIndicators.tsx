@@ -183,7 +183,7 @@ export const TrustIndicators: React.FC<TrustIndicatorsProps> = ({
     visible: {
       opacity: 1,
       scale: 1,
-      transition: { duration: 0.3, ease: 'easeOut' },
+      transition: { duration: 0.3, ease: 'easeOut' as const },
     },
   };
 

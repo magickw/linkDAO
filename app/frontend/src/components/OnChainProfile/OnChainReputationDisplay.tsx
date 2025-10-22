@@ -212,7 +212,7 @@ export const OnChainReputationDisplay: React.FC<OnChainReputationDisplayProps> =
             className={`h-full bg-gradient-to-r ${levelConfig.color}`}
             initial={{ width: 0 }}
             animate={{ width: `${reputationPercentage}%` }}
-            transition={{ duration: 2, ease: 'easeOut' }}
+            transition={{ duration: 2, ease: 'easeOut' as any }}
           />
           
           {/* Level Markers */}
@@ -241,7 +241,7 @@ export const OnChainReputationDisplay: React.FC<OnChainReputationDisplayProps> =
               className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
               initial={{ width: 0 }}
               animate={{ width: `${trustPercentage}%` }}
-              transition={{ duration: 2, ease: 'easeOut' }}
+              transition={{ duration: 2, ease: 'easeOut' as any }}
             />
           </div>
         </div>
@@ -258,7 +258,7 @@ export const OnChainReputationDisplay: React.FC<OnChainReputationDisplayProps> =
               className={`h-full bg-gradient-to-r ${getNextLevel()?.color || levelConfig.color}`}
               initial={{ width: 0 }}
               animate={{ width: `${getProgressToNextLevel()}%` }}
-              transition={{ duration: 2, ease: 'easeOut' }}
+              transition={{ duration: 2, ease: 'easeOut' as any }}
             />
           </div>
         </div>

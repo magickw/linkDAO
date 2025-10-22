@@ -123,8 +123,8 @@ export function UserResultCard({
             <span>Level {typeof user.reputation.level === 'string'
               ? user.reputation.level
               : (typeof user.reputation.level === 'object' && user.reputation.level !== null && 'name' in user.reputation.level
-                ? user.reputation.level.name
-                : user.reputation.level)}</span>
+                ? String(user.reputation.level.name)
+                : String(user.reputation.level))}</span>
             <span>•</span>
             <span>Last active {formatTimeAgo(user.lastActive)}</span>
           </div>

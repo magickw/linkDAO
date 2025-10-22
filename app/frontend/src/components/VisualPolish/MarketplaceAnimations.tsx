@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 // Enhanced product card animations
 export const productCardAnimations = {
@@ -7,13 +7,13 @@ export const productCardAnimations = {
     initial: { opacity: 0, y: 20, scale: 0.95 },
     animate: { opacity: 1, y: 0, scale: 1 },
     exit: { opacity: 0, y: -20, scale: 0.95 },
-    transition: { duration: 0.3, ease: 'easeOut' }
+    transition: { duration: 0.3, ease: 'easeOut' as any }
   },
   hover: {
     whileHover: {
       y: -8,
       scale: 1.02,
-      transition: { duration: 0.2, ease: 'easeOut' }
+      transition: { duration: 0.2, ease: 'easeOut' as any }
     }
   },
   tap: {
@@ -43,13 +43,13 @@ export const filterPanelAnimations = {
     initial: { opacity: 0, height: 0 },
     animate: { opacity: 1, height: 'auto' },
     exit: { opacity: 0, height: 0 },
-    transition: { duration: 0.3, ease: 'easeInOut' }
+    transition: { duration: 0.3, ease: 'easeInOut' as any }
   },
   collapse: {
     initial: { opacity: 1, height: 'auto' },
     animate: { opacity: 0, height: 0 },
     exit: { opacity: 0, height: 0 },
-    transition: { duration: 0.3, ease: 'easeInOut' }
+    transition: { duration: 0.3, ease: 'easeInOut' as any }
   }
 };
 
@@ -61,7 +61,7 @@ export const badgeAnimations = {
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: 'easeInOut'
+        ease: 'easeInOut' as any
       }
     }
   },
@@ -79,13 +79,13 @@ export const notificationAnimations = {
     initial: { opacity: 0, x: 300, scale: 0.8 },
     animate: { opacity: 1, x: 0, scale: 1 },
     exit: { opacity: 0, x: 300, scale: 0.8 },
-    transition: { duration: 0.3, ease: 'easeOut' }
+    transition: { duration: 0.3, ease: 'easeOut' as any }
   },
   banner: {
     initial: { opacity: 0, y: -50 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -50 },
-    transition: { duration: 0.3, ease: 'easeOut' }
+    transition: { duration: 0.3, ease: 'easeOut' as any }
   }
 };
 
@@ -129,8 +129,9 @@ export function AnimatedProductBadge({
       whileTap={animated ? { scale: 0.95 } : {}}
       animate={animated ? { 
         scale: [1, 1.05, 1],
-        transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+        transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' as any }
       } : {}}
+
     >
       {children}
     </motion.div>
@@ -183,8 +184,9 @@ export function AnimatedSellerBadge({
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: 'easeInOut'
+              ease: 'easeInOut' as any
             }}
+
           />
         )}
       </div>
@@ -510,15 +512,17 @@ export function AnimatedSearchResultItem({
       <div className="flex-1 min-w-0">
         <motion.h3 
           className="font-semibold text-white truncate"
+          style={{
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent'
+          }}
           animate={{ 
             background: [
               'linear-gradient(90deg, #ffffff, #e5e7eb)',
               'linear-gradient(90deg, #e5e7eb, #ffffff)',
               'linear-gradient(90deg, #ffffff, #e5e7eb)'
-            ],
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            color: 'transparent'
+            ]
           }}
           transition={{ duration: 3, repeat: Infinity }}
         >
@@ -572,7 +576,7 @@ export function AnimatedFilterToggle({
           '0 0 4px rgba(102, 126, 234, 0.3)',
           '0 0 16px rgba(102, 126, 234, 0.6)',
           '0 0 4px rgba(102, 126, 234, 0.3)'
-        ]
+        ] as any
       } : {}}
       transition={{
         boxShadow: {
@@ -588,7 +592,7 @@ export function AnimatedFilterToggle({
           className="px-2 py-0.5 rounded-full text-xs bg-white/20"
           animate={active ? { 
             scale: [1, 1.2, 1],
-            backgroundColor: ['#ffffff33', '#ffffff66', '#ffffff33']
+            backgroundColor: ['#ffffff33', '#ffffff66', '#ffffff33'] as any
           } : {}}
           transition={{ 
             scale: { duration: 1, repeat: Infinity },
@@ -618,6 +622,62 @@ export function AnimatedCategoryCard({
   onClick,
   className = ''
 }: AnimatedCategoryCardProps) {
+  const hoverVariants: Variants = {
+    rest: {
+      scale: 1,
+      transition: {
+        duration: 0.3,
+        ease: 'easeOut' as any,
+      },
+    },
+    hover: {
+      scale: 1.05,
+      transition: {
+        duration: 0.2,
+        ease: 'easeOut' as any,
+      },
+    },
+  };
+
+  const tapVariants: Variants = {
+    rest: {
+      scale: 1,
+      transition: {
+        duration: 0.2,
+      },
+    },
+    tap: {
+      scale: 0.95,
+      transition: {
+        duration: 0.2,
+      },
+    },
+  };
+
+  const staggerAnimations = {
+    container: {
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          staggerChildren: 0.1,
+          ease: 'easeInOut' as any,
+        },
+      },
+    },
+    item: {
+      hidden: { opacity: 0, y: 20 },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          duration: 0.3,
+          ease: 'easeInOut' as any,
+        },
+      },
+    },
+  };
+
   return (
     <motion.div
       className={`

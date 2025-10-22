@@ -127,7 +127,7 @@ export const DataConsistencyMonitor: React.FC<DataConsistencyMonitorProps> = ({
             {isValidating && (
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' as any }}
                 className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
               />
             )}

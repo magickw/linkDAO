@@ -61,7 +61,7 @@ export const GlassPanel: React.FC<GlassPanelProps> = ({
             return `rgba(${values[0]},${values[1]},${values[2]},${Math.min(alpha, 1)})`;
           })}`
         : '0 12px 48px 0 rgba(31, 38, 135, 0.5)',
-      transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
+      transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const },
     },
   } : undefined;
 

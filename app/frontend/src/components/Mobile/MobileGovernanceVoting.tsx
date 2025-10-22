@@ -241,7 +241,7 @@ export const MobileGovernanceVoting: React.FC<MobileGovernanceVotingProps> = ({
                 className="bg-green-500 h-2 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${forPercentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                transition={{ duration: 0.5, ease: 'easeOut' as any }}
               />
             </div>
           </div>
@@ -262,7 +262,7 @@ export const MobileGovernanceVoting: React.FC<MobileGovernanceVotingProps> = ({
                 className="bg-red-500 h-2 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${againstPercentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
+                transition={{ duration: 0.5, ease: 'easeOut' as any, delay: 0.1 }}
               />
             </div>
           </div>
@@ -283,7 +283,7 @@ export const MobileGovernanceVoting: React.FC<MobileGovernanceVotingProps> = ({
                 className="bg-gray-500 h-2 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${abstainPercentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
+                transition={{ duration: 0.5, ease: 'easeOut' as any, delay: 0.2 }}
               />
             </div>
           </div>
@@ -414,7 +414,7 @@ export const MobileGovernanceVoting: React.FC<MobileGovernanceVotingProps> = ({
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              transition={{ type: 'spring' as any, stiffness: 300, damping: 30 }}
             >
               <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">

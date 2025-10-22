@@ -11,6 +11,7 @@ import {
   RecentPaymentMethod
 } from '../types/paymentPrioritization';
 import { IUserPreferenceManager } from './paymentMethodPrioritizationService';
+import { intelligentCacheService } from './intelligentCacheService';
 
 export class UserPreferenceManager implements IUserPreferenceManager {
   private readonly PREFERENCE_DECAY_DAYS = 30; // Preferences decay after 30 days
@@ -19,7 +20,13 @@ export class UserPreferenceManager implements IUserPreferenceManager {
 
   async getUserPaymentPreferences(userId: string): Promise<UserPreferences> {
     try {
-      // In production, this would fetch from a database or API
+      // Try intelligent cache first
+      const cached = await intelligentCacheService.getCachedUserPreferences(userId);
+      if (cached) {
+        return this.applyPreferenceDecay(cached);
+      }
+
+      // Fallback to localStorage
       const stored = localStorage.getItem(`payment_preferences_${userId}`);
       
       if (stored) {
@@ -34,7 +41,12 @@ export class UserPreferenceManager implements IUserPreferenceManager {
           usedAt: new Date(method.usedAt)
         }));
         
-        return this.applyPreferenceDecay(preferences);
+        const processedPreferences = this.applyPreferenceDecay(preferences);
+        
+        // Cache in intelligent cache for faster future access
+        await intelligentCacheService.cacheUserPreferences(userId, processedPreferences);
+        
+        return processedPreferences;
       }
     } catch (error) {
       console.warn('Failed to load user preferences:', error);
@@ -245,6 +257,9 @@ export class UserPreferenceManager implements IUserPreferenceManager {
 
   private async saveUserPreferences(userId: string, preferences: UserPreferences): Promise<void> {
     try {
+      // Save to both intelligent cache and localStorage
+      await intelligentCacheService.cacheUserPreferences(userId, preferences);
+      
       // In production, this would save to a database or API
       localStorage.setItem(`payment_preferences_${userId}`, JSON.stringify(preferences));
     } catch (error) {

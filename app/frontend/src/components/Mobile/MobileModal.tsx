@@ -170,7 +170,7 @@ export const MobileModal: React.FC<MobileModalProps> = ({
         <motion.div
           ref={modalRef}
           {...getAnimationProps()}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
           className={`
             relative bg-white dark:bg-gray-900 shadow-2xl
             ${position === 'center' ? 'rounded-2xl' : ''}

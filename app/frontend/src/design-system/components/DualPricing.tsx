@@ -276,14 +276,14 @@ export const DualPricing: React.FC<DualPricingProps> = ({
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3, ease: 'easeOut' },
+      transition: { duration: 0.3, ease: 'easeOut' as const },
     },
   };
 
   const updateVariants = {
     updating: {
       scale: [1, 1.05, 1],
-      transition: { duration: 0.6, ease: 'easeInOut' },
+      transition: { duration: 0.6, ease: 'easeInOut' as const },
     },
   };
 

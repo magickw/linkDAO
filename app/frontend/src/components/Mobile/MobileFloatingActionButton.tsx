@@ -152,7 +152,7 @@ export const MobileFloatingActionButton: React.FC<MobileFloatingActionButtonProp
           style={{ backgroundColor: primaryAction.color }}
           whileTap={{ scale: 0.95 }}
           animate={{ rotate: isExpanded ? 45 : 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+          transition={{ type: 'spring' as any, stiffness: 300, damping: 20 }}
           aria-label={
             secondaryActions.length > 0
               ? `${primaryAction.label}. ${isExpanded ? 'Collapse' : 'Expand'} menu`

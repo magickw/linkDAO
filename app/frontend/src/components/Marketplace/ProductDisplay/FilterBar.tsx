@@ -183,7 +183,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               initial={{ x: -320 }}
               animate={{ x: 0 }}
               exit={{ x: -320 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              transition={{ type: 'spring' as any, damping: 25, stiffness: 200 }}
               className="fixed left-0 top-0 h-full w-80 z-50 overflow-y-auto"
             >
               <GlassPanel variant="primary" className="h-full p-6">

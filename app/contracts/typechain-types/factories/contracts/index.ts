@@ -13,6 +13,7 @@ export { EnhancedRewardPool__factory } from "./EnhancedRewardPool__factory";
 export { FollowModule__factory } from "./FollowModule__factory";
 export { Governance__factory } from "./Governance__factory";
 export { LDAOToken__factory } from "./LDAOToken__factory";
+export { LDAOTreasury__factory } from "./LDAOTreasury__factory";
 export { Marketplace__factory } from "./Marketplace__factory";
 export { MockERC20__factory } from "./MockERC20__factory";
 export { NFTMarketplace__factory } from "./NFTMarketplace__factory";

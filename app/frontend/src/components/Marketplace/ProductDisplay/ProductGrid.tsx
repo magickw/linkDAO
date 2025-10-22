@@ -3,8 +3,8 @@
  * Supports filtering, sorting, and pagination with glassmorphic styling
  */
 
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ProductCard } from './ProductCard';
 import { LoadingSkeleton, ProductCardSkeleton } from '@/design-system/components/LoadingSkeleton';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
@@ -836,14 +836,14 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     onSortChange?.(newSort);
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-      },
-    },
+        staggerChildren: 0.1
+      }
+    }
   };
 
   if (error) {

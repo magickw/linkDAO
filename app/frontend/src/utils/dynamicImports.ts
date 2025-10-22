@@ -113,10 +113,8 @@ export const withSuspense = <T extends React.ComponentType<any>>(
 // Preload function for critical components
 export const preloadComponent = (componentName: keyof typeof DynamicComponents) => {
   const component = DynamicComponents[componentName];
-  if (component && typeof component === 'object' && 'preload' in component) {
-    // Trigger the dynamic import preload
-    (component as any).preload?.();
-  }
+  // Use optional chaining to safely access preload method
+  (component as any)?.preload?.();
 };
 
 // Preload critical components on app initialization

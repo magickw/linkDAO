@@ -5,8 +5,8 @@
 
 // Intelligent Caching and Preloading
 export { 
-  IntelligentCacheManager,
-  intelligentCacheManager 
+  IntelligentCacheService as IntelligentCacheManager,
+  intelligentCacheService as intelligentCacheManager 
 } from '../../../services/intelligentCacheService';
 
 export { 

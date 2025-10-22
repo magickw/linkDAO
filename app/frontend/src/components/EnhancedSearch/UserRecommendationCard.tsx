@@ -109,8 +109,8 @@ export function UserRecommendationCard({
         
         <div className="text-xs text-gray-500 dark:text-gray-400">
           Level {typeof user.reputation.level === 'object' && user.reputation.level !== null && 'name' in user.reputation.level
-            ? user.reputation.level.name
-            : user.reputation.level} • Active {formatTimeAgo(user.lastActive)}
+            ? String(user.reputation.level.name)
+            : String(user.reputation.level)} • Active {formatTimeAgo(user.lastActive)}
         </div>
       </div>
 

@@ -224,7 +224,7 @@ export const MobileWeb3ErrorHandler: React.FC<MobileWeb3ErrorHandlerProps> = ({
           initial={{ y: '100%' }}
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={{ type: 'spring' as any, stiffness: 300, damping: 30 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

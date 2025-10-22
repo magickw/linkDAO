@@ -223,7 +223,7 @@ export const MobileSlideOutMenu: React.FC<MobileSlideOutMenuProps> = ({
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            transition={{ type: 'spring' as any, stiffness: 300, damping: 30 }}
             {...swipeHandler}
             role="dialog"
             aria-modal="true"
@@ -316,7 +316,7 @@ export const MobileSlideOutMenu: React.FC<MobileSlideOutMenuProps> = ({
                         className="bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center px-1"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        transition={{ type: 'spring' as any, stiffness: 500, damping: 30 }}
                         aria-label={`${item.badge} notifications`}
                       >
                         {item.badge > 99 ? '99+' : item.badge}

@@ -5,6 +5,7 @@
  */
 
 import { ExchangeRate } from '../types/paymentPrioritization';
+import { intelligentCacheService } from './intelligentCacheService';
 
 // Exchange rate API endpoints
 const EXCHANGE_RATE_APIS = {
@@ -86,18 +87,27 @@ export class ExchangeRateService {
     toCurrency: string,
     forceRefresh: boolean = false
   ): Promise<ExchangeRate | null> {
-    const cacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
-    
     if (!forceRefresh) {
-      const cached = this.getCachedRate(cacheKey, fromCurrency, toCurrency);
+      // Try intelligent cache first
+      const cached = await intelligentCacheService.getCachedExchangeRate(fromCurrency, toCurrency);
       if (cached) {
         return cached;
+      }
+
+      // Fallback to local cache
+      const cacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
+      const localCached = this.getCachedRate(cacheKey, fromCurrency, toCurrency);
+      if (localCached) {
+        return localCached;
       }
     }
 
     try {
       const rate = await this.fetchExchangeRate(fromCurrency, toCurrency);
       if (rate) {
+        // Cache in both intelligent cache and local cache
+        await intelligentCacheService.cacheExchangeRate(fromCurrency, toCurrency, rate);
+        const cacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
         this.cacheRate(cacheKey, rate, fromCurrency, toCurrency);
       }
       return rate;

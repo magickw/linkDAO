@@ -57,7 +57,7 @@ export const CartBadge: React.FC<CartBadgeProps> = ({
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={{ type: 'spring' as any, stiffness: 500, damping: 30 }}
               className={`absolute -top-1 -right-1 ${classes.badge} bg-red-500 text-white rounded-full flex items-center justify-center font-medium shadow-lg`}
             >
               {itemCount > 99 ? '99+' : itemCount}

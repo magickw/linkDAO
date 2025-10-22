@@ -76,7 +76,7 @@ export default function ViewModeToggle({
             left: viewMode === 'card' ? '4px' : '50%',
             right: viewMode === 'card' ? '50%' : '4px'
           }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={{ type: 'spring' as any, stiffness: 300, damping: 30 }}
         />
 
         {/* Card View Button */}

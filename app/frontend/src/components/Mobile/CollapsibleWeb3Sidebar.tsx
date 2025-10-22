@@ -89,15 +89,15 @@ export const CollapsibleWeb3Sidebar: React.FC<CollapsibleWeb3SidebarProps> = ({
   const sidebarVariants = {
     collapsed: {
       width: '60px',
-      transition: { type: 'spring', stiffness: 300, damping: 30 }
+      transition: { type: 'spring' as any, stiffness: 300, damping: 30 }
     },
     expanded: {
       width: '280px',
-      transition: { type: 'spring', stiffness: 300, damping: 30 }
+      transition: { type: 'spring' as any, stiffness: 300, damping: 30 }
     },
     hidden: {
       x: '-100%',
-      transition: { type: 'spring', stiffness: 300, damping: 30 }
+      transition: { type: 'spring' as any, stiffness: 300, damping: 30 }
     }
   };
 

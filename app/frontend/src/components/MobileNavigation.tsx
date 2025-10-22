@@ -227,7 +227,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
               className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={{ type: 'spring' as any, stiffness: 500, damping: 30 }}
             >
               {item.badge > 99 ? '99+' : item.badge}
             </motion.div>
@@ -254,12 +254,12 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
             <motion.div
               className="absolute -top-1 left-1/2 w-1 h-1 bg-indigo-600 rounded-full"
               layoutId="activeIndicatorDot"
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={{ type: 'spring' as any, stiffness: 500, damping: 30 }}
             />
             <motion.div
               className="absolute -bottom-1 left-3 right-3 h-0.5 bg-indigo-500/80 rounded-full"
               layoutId="activeIndicatorBar"
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              transition={{ type: 'spring' as any, stiffness: 500, damping: 30 }}
             />
           </>
         )}
@@ -280,7 +280,7 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+          transition={{ type: 'spring' as any, stiffness: 500, damping: 40 }}
           role="tablist"
           aria-label="Main navigation"
         >

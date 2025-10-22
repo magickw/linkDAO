@@ -139,7 +139,7 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
       <div className="flex items-center space-x-3">
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" as any }}
           className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
         />
         <span className="text-gray-600 dark:text-gray-400">Loading posts...</span>
@@ -233,7 +233,7 @@ export const MobileEnhancedFeed: React.FC<MobileEnhancedFeedProps> = ({
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
               className="fixed inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-900 rounded-t-3xl p-6"
               style={{ paddingBottom: safeAreaInsets.bottom + 24 }}
             >

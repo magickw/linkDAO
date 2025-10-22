@@ -88,7 +88,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
             className={`
               fixed left-0 top-0 bottom-0 z-50 w-80 max-w-[85vw]
               bg-white dark:bg-gray-900 shadow-2xl overflow-hidden

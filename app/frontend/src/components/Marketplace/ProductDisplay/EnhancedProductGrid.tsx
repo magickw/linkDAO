@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   Grid, List, Filter, ChevronDown, Star, Shield, CheckCircle, Vote,
   Eye, Heart, ShoppingCart, Search, X
@@ -535,7 +535,7 @@ export const EnhancedProductGrid: React.FC<EnhancedProductGridProps> = ({
   const paginatedProducts = filteredAndSortedProducts.slice(startIndex, startIndex + itemsPerPage);
 
   // Animation variants
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,

@@ -175,7 +175,7 @@ export const MobileEnhancedPostComposer: React.FC<MobileEnhancedPostComposerProp
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={{ type: 'spring' as any, damping: 25, stiffness: 300 }}
             className={`
               fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-gray-900
               rounded-t-3xl shadow-2xl max-h-[90vh] overflow-hidden

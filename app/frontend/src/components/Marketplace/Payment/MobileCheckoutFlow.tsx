@@ -309,7 +309,7 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
       `}
       initial={{ y: 100 }}
       animate={{ y: isKeyboardVisible ? 100 : 0 }}
-      transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      transition={{ type: 'spring' as any, damping: 30, stiffness: 300 }}
     >
       {/* Expandable summary header */}
       <motion.div

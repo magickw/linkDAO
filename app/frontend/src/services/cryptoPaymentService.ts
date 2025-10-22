@@ -3,7 +3,7 @@ import {
   WalletClient, 
   parseUnits, 
   formatUnits, 
-  getContract,
+  
   erc20Abi,
   Hash
 } from 'viem';
@@ -106,12 +106,7 @@ export class CryptoPaymentService {
         throw new Error('Wallet client not initialized');
       }
 
-      const contract = getContract({
-        address: token.address as `0x${string}`,
-        abi: erc20Abi,
-        client: this.walletClient
-      });
-
+      // Use writeContract directly instead of getContract
       const contractParams: any = {
         gas: gasEstimate.gasLimit,
       };
@@ -124,10 +119,16 @@ export class CryptoPaymentService {
         contractParams.gasPrice = gasEstimate.gasPrice;
       }
 
-      return await contract.write.transfer([
-        recipient as `0x${string}`,
-        amount
-      ], contractParams);
+      return await this.walletClient.writeContract({
+        address: token.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [
+          recipient as `0x${string}`,
+          amount
+        ],
+        ...contractParams
+      });
     }
   }
 
@@ -340,13 +341,14 @@ export class CryptoPaymentService {
     if (token.isNative) {
       balance = await this.publicClient.getBalance({ address: userAddress });
     } else {
-      const contract = getContract({
+      // Use readContract directly instead of getContract
+      balance = await this.publicClient.readContract({
         address: token.address as `0x${string}`,
         abi: erc20Abi,
-        client: this.publicClient
+        functionName: "balanceOf",
+        args: [userAddress],
+        authorizationList: []
       });
-      
-      balance = await contract.read.balanceOf([userAddress]);
     }
 
     if (balance < amount) {

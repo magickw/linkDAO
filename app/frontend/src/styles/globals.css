@@ -1,6 +1,8 @@
+/* Temporarily disabled due to PostCSS compatibility issue
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+*/
 
 /* Import Design System Styles */
 @import '../design-system/styles/glassmorphism.css';

@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { DualPricing } from '../../../design-system/components/DualPricing';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
@@ -359,16 +359,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     onAddToWishlist?.(normalizedProductId);
   };
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.4, ease: 'easeOut' },
+      transition: { duration: 0.4, ease: "easeOut" as any },
     },
     hover: {
       y: -8,
-      transition: { duration: 0.2, ease: 'easeOut' },
+      transition: { duration: 0.2, ease: "easeOut" as any },
     },
   };
 

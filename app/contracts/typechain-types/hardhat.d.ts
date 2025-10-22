@@ -185,6 +185,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.LDAOToken__factory>;
     getContractFactory(
+      name: "LDAOTreasury",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.LDAOTreasury__factory>;
+    getContractFactory(
       name: "Marketplace",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Marketplace__factory>;
@@ -472,6 +476,11 @@ declare module "hardhat/types/runtime" {
       address: string,
       signer?: ethers.Signer
     ): Promise<Contracts.LDAOToken>;
+    getContractAt(
+      name: "LDAOTreasury",
+      address: string,
+      signer?: ethers.Signer
+    ): Promise<Contracts.LDAOTreasury>;
     getContractAt(
       name: "Marketplace",
       address: string,

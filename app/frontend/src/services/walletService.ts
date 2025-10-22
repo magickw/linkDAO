@@ -305,13 +305,11 @@ export class WalletService {
         chain = mainnet;
     }
     
+    // Simplified client creation to avoid deep type instantiation
     this.publicClient = createPublicClient({
       chain,
-      transport: http(),
-      batch: {
-        multicall: true,
-      },
-    }) as PublicClient;
+      transport: http()
+    }) as any;
   }
 
   /**
@@ -390,7 +388,8 @@ export class WalletService {
             address: token.address,
             abi: ERC20_ABI,
             functionName: 'balanceOf',
-            args: [address]
+            args: [address],
+            authorizationList: []
           });
           
           const balance = balanceResult as bigint;

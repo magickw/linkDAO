@@ -148,7 +148,7 @@ function DefaultSkeleton({ progress }: { progress: number }) {
           className="bg-blue-500 h-1 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
+          transition={{ duration: 0.3, ease: "easeOut" as any }}
         />
       </div>
       

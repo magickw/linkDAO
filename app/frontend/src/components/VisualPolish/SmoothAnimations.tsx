@@ -6,26 +6,26 @@ export const smoothHoverAnimations = {
   lift: {
     whileHover: {
       y: -4,
-      transition: { duration: 0.2, ease: 'easeOut' }
+      transition: { duration: 0.2, ease: 'easeOut' as const }
     }
   },
   scale: {
     whileHover: {
       scale: 1.05,
-      transition: { duration: 0.2, ease: 'easeOut' }
+      transition: { duration: 0.2, ease: 'easeOut' as const }
     }
   },
   glow: {
     whileHover: {
       boxShadow: '0 0 20px rgba(102, 126, 234, 0.4)',
-      transition: { duration: 0.2, ease: 'easeOut' }
+      transition: { duration: 0.2, ease: 'easeOut' as const }
     }
   },
   subtle: {
     whileHover: {
       y: -2,
       scale: 1.02,
-      transition: { duration: 0.15, ease: 'easeOut' }
+      transition: { duration: 0.15, ease: 'easeOut' as const }
     }
   }
 };
@@ -80,7 +80,7 @@ export const staggerAnimations = {
     animate: { 
       opacity: 1, 
       y: 0,
-      transition: { duration: 0.3, ease: 'easeOut' }
+      transition: { duration: 0.3, ease: 'easeOut' as const }
     }
   }
 };

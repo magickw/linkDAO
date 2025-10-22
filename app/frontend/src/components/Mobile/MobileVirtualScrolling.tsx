@@ -234,7 +234,7 @@ export const MobileVirtualScrolling = <T,>({
                 <>
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" as any }}
                     className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400">Refreshing...</span>
@@ -302,7 +302,7 @@ export const MobileVirtualScrolling = <T,>({
               <div className="flex items-center space-x-2">
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" as any }}
                   className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full"
                 />
                 <span className="text-sm text-gray-600 dark:text-gray-400">Loading...</span>

@@ -18,6 +18,7 @@ export type { EnhancedRewardPool } from "./EnhancedRewardPool";
 export type { FollowModule } from "./FollowModule";
 export type { Governance } from "./Governance";
 export type { LDAOToken } from "./LDAOToken";
+export type { LDAOTreasury } from "./LDAOTreasury";
 export type { Marketplace } from "./Marketplace";
 export type { MockERC20 } from "./MockERC20";
 export type { NFTMarketplace } from "./NFTMarketplace";

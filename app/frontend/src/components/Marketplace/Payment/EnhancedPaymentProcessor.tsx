@@ -280,7 +280,7 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
         ? ethers.constants.AddressZero 
         : getTokenAddress(selectedToken);
 
-      await createEscrow({
+      createEscrow({
         address: contractAddress as `0x${string}`,
         abi: ENHANCED_ESCROW_ABI,
         functionName: 'createEscrow',
@@ -290,7 +290,9 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
           paymentRequest.sellerId as `0x${string}`,
           tokenAddress as `0x${string}`,
           amountWei.toBigInt()
-        ]
+        ],
+        chain,
+        account: address
       });
 
     } catch (error) {
@@ -318,12 +320,14 @@ export const EnhancedPaymentProcessor: React.FC<PaymentProcessorProps> = ({
       }
 
       const amountWei = ethers.utils.parseEther(paymentRequest.totalAmount);
-      await lockFunds({
+      lockFunds({
         address: contractAddress as `0x${string}`,
         abi: ENHANCED_ESCROW_ABI,
         functionName: 'lockFunds',
         args: [BigInt(escrowId)],
-        value: selectedToken === 'ETH' ? amountWei.toBigInt() : undefined
+        value: selectedToken === 'ETH' ? amountWei.toBigInt() : undefined,
+        chain,
+        account: address
       });
 
     } catch (error) {

@@ -54,7 +54,7 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
       transition: {
         duration: animationDuration,
         repeat: Infinity,
-        ease: 'linear',
+        ease: 'linear' as const,
       },
     },
   };

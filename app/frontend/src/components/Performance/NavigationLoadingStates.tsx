@@ -123,7 +123,7 @@ export const NavigationLoadingStates: React.FC<NavigationLoadingStatesProps> = (
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                 initial={{ width: 0 }}
                 animate={{ width: `${loadingState.progress}%` }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
+                transition={{ duration: 0.3, ease: 'easeOut' as any }}
               />
             </div>
           </motion.div>

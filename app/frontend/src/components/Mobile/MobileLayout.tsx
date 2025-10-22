@@ -99,7 +99,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
           }}
           initial={{ y: -headerHeight }}
           animate={{ y: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={{ type: 'spring' as any, stiffness: 300, damping: 30 }}
         >
           <div className="flex items-center justify-between h-[60px] px-4">
             {/* Left side - Menu button */}

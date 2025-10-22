@@ -291,20 +291,22 @@ export class PerformanceMonitoringService {
 
     // Intercept fetch requests
     const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const startTime = performance.now();
       // Properly extract URL from fetch arguments
       let url: string;
-      if (typeof args[0] === 'string') {
-        url = args[0];
-      } else if (args[0] instanceof Request) {
-        url = args[0].url;
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input instanceof Request) {
+        url = input.url;
+      } else if (input instanceof URL) {
+        url = input.toString();
       } else {
-        url = String(args[0]);
+        url = String(input);
       }
       
       try {
-        const response = await originalFetch(...args);
+        const response = await originalFetch(input, init);
         const endTime = performance.now();
         const responseTime = endTime - startTime;
         

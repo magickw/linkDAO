@@ -24,6 +24,8 @@ import {
 import PaymentMethodScoringSystem from './paymentMethodScoringSystem';
 import DynamicPrioritizationEngine from './dynamicPrioritizationEngine';
 import StablecoinPrioritizationRules from './stablecoinPrioritizationRules';
+import { prioritizationPerformanceOptimizer } from './prioritizationPerformanceOptimizer';
+import { intelligentCacheService } from './intelligentCacheService';
 
 export interface IPaymentMethodPrioritizationService {
   prioritizePaymentMethods(context: PrioritizationContext): Promise<PrioritizationResult>;
@@ -110,7 +112,23 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     const startTime = Date.now();
     
     try {
-      // Use the new dynamic prioritization engine
+      // Generate cache key for this prioritization context
+      const contextKey = this.generatePrioritizationCacheKey(context);
+      
+      // Check intelligent cache first
+      const cached = await intelligentCacheService.getCachedPrioritizationResult(contextKey);
+      if (cached && this.isCacheValid(cached, context)) {
+        return cached;
+      }
+
+      // Use performance optimizer for parallel cost calculations
+      const costResults = await prioritizationPerformanceOptimizer.parallelCostCalculation(
+        context.availablePaymentMethods,
+        context.userContext,
+        context.transactionAmount
+      );
+
+      // Use the new dynamic prioritization engine with optimized cost data
       const dynamicResult = await this.dynamicEngine.performDynamicPrioritization(context);
       
       // Apply stablecoin prioritization rules
@@ -141,7 +159,7 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
 
       const processingTime = Date.now() - startTime;
 
-      return {
+      const result: PrioritizationResult = {
         prioritizedMethods,
         defaultMethod,
         recommendations,
@@ -153,6 +171,15 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
           processingTimeMs: processingTime
         }
       };
+
+      // Cache the result for future use
+      await prioritizationPerformanceOptimizer.cachePrioritizationResults(
+        contextKey,
+        prioritizedMethods,
+        context.userContext
+      );
+
+      return result;
     } catch (error) {
       console.error('Error in payment method prioritization:', error);
       throw new Error('Failed to prioritize payment methods');
@@ -580,6 +607,59 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
 
   getStablecoinRules(): StablecoinPrioritizationRules {
     return this.stablecoinRules;
+  }
+
+  // Performance optimization helper methods
+  private generatePrioritizationCacheKey(context: PrioritizationContext): string {
+    const methodIds = context.availablePaymentMethods
+      .map(m => m.type)
+      .sort()
+      .join(',');
+    
+    const userContextHash = this.hashUserContext(context.userContext);
+    const amount = Math.round(context.transactionAmount);
+    
+    return `prioritization_${methodIds}_${userContextHash}_${amount}`;
+  }
+
+  private hashUserContext(userContext: UserContext): string {
+    // Create a simple hash of relevant user context data
+    const contextString = `${userContext.chainId}_${userContext.userAddress || 'anonymous'}`;
+    return btoa(contextString).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
+  }
+
+  private isCacheValid(cached: any, context: PrioritizationContext): boolean {
+    // Check if cached result is still valid based on context
+    if (!cached.timestamp || Date.now() - cached.timestamp > 60000) { // 1 minute
+      return false;
+    }
+
+    // Check if market conditions have changed significantly
+    if (cached.userContext?.chainId !== context.userContext.chainId) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // Performance monitoring methods
+  async getPerformanceMetrics(): Promise<any> {
+    return {
+      prioritizationMetrics: prioritizationPerformanceOptimizer.getPerformanceMetrics(),
+      cacheMetrics: intelligentCacheService.getCacheMetrics()
+    };
+  }
+
+  async optimizePerformance(): Promise<void> {
+    // Optimize both performance optimizer and cache service
+    await prioritizationPerformanceOptimizer.optimizeMemoryUsage();
+    await intelligentCacheService.optimizeCache();
+  }
+
+  async preloadCommonScenarios(): Promise<void> {
+    // Preload common prioritization scenarios
+    await prioritizationPerformanceOptimizer.preloadCommonScenarios();
+    await intelligentCacheService.preloadCommonEntries();
   }
 }
 

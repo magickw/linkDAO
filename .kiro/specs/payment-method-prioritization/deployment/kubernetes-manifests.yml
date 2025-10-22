@@ -1,0 +1,491 @@
+# Kubernetes Deployment Manifests for Payment Method Prioritization
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payment-prioritization
+  labels:
+    name: payment-prioritization
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-prioritization-config
+  namespace: payment-prioritization
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  WEBSOCKET_PORT: "8080"
+  METRICS_PORT: "9090"
+  
+  # Feature Flags
+  PAYMENT_PRIORITIZATION_ENABLED: "true"
+  REAL_TIME_UPDATES_ENABLED: "true"
+  USER_PREFERENCE_LEARNING_ENABLED: "true"
+  COST_BASED_REORDERING_ENABLED: "true"
+  
+  # Gas Fee Configuration
+  GAS_FEE_CACHE_TTL_SECONDS: "30"
+  GAS_FEE_THRESHOLD_USD: "50"
+  GAS_FEE_API_TIMEOUT_MS: "5000"
+  
+  # Performance Settings
+  MAX_CONCURRENT_PRIORITIZATIONS: "50"
+  PRIORITIZATION_TIMEOUT_MS: "2000"
+  
+  # Monitoring
+  LOG_LEVEL: "info"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_ENABLED: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-prioritization-secrets
+  namespace: payment-prioritization
+type: Opaque
+data:
+  # Base64 encoded secrets
+  DATABASE_URL: cG9zdGdyZXNxbDovL3VzZXI6cGFzc0Bwb3N0Z3JlczozNDMyL3BheW1lbnRfcHJpb3JpdGl6YXRpb24=
+  JWT_SECRET: eW91cl9qd3Rfc2VjcmV0X2tleQ==
+  ETHERSCAN_API_KEY: eW91cl9ldGhlcnNjYW5fYXBpX2tleQ==
+  ALCHEMY_API_KEY: eW91cl9hbGNoZW15X2FwaV9rZXk=
+  INFURA_API_KEY: eW91cl9pbmZ1cmFfYXBpX2tleQ==
+  COINGECKO_API_KEY: eW91cl9jb2luZ2Vja29fYXBpX2tleQ==
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-prioritization
+  namespace: payment-prioritization
+  labels:
+    app: payment-prioritization
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-prioritization
+  template:
+    metadata:
+      labels:
+        app: payment-prioritization
+    spec:
+      containers:
+      - name: payment-prioritization
+        image: linkdao/payment-prioritization:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 8080
+          name: websocket
+        - containerPort: 9090
+          name: metrics
+        envFrom:
+        - configMapRef:
+            name: payment-prioritization-config
+        - secretRef:
+            name: payment-prioritization-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: config
+        configMap:
+          name: payment-prioritization-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-prioritization-service
+  namespace: payment-prioritization
+  labels:
+    app: payment-prioritization
+spec:
+  selector:
+    app: payment-prioritization
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  - name: websocket
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-prioritization-ingress
+  namespace: payment-prioritization
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "10"
+spec:
+  tls:
+  - hosts:
+    - api.linkdao.io
+    secretName: payment-prioritization-tls
+  rules:
+  - host: api.linkdao.io
+    http:
+      paths:
+      - path: /v1/payment-prioritization
+        pathType: Prefix
+        backend:
+          service:
+            name: payment-prioritization-service
+            port:
+              number: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-prioritization-hpa
+  namespace: payment-prioritization
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-prioritization
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: payment-prioritization
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --maxmemory
+        - "512mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: payment-prioritization
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: payment-prioritization
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: payment-prioritization
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: payment_prioritization
+        - name: POSTGRES_USER
+          value: payment_user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - payment_user
+            - -d
+            - payment_prioritization
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - payment_user
+            - -d
+            - payment_prioritization
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: postgres-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: payment-prioritization
+  labels:
+    app: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: payment-prioritization
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: payment-prioritization
+type: Opaque
+data:
+  password: cGF5bWVudF9kYl9wYXNzd29yZA== # payment_db_password
+
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: payment-prioritization-metrics
+  namespace: payment-prioritization
+  labels:
+    app: payment-prioritization
+spec:
+  selector:
+    matchLabels:
+      app: payment-prioritization
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-prioritization-network-policy
+  namespace: payment-prioritization
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-prioritization
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 8080
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

@@ -100,7 +100,7 @@ export const CurrencyToggle: React.FC<CurrencyToggleProps> = ({
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: 'easeOut' as any }}
               className="absolute top-full right-0 mt-2 w-64 z-50"
             >
               <GlassPanel

@@ -172,7 +172,7 @@ export const MobileTokenReactionSystem: React.FC<MobileTokenReactionSystemProps>
               {isReacting && (
                 <motion.div
                   animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" as any }}
                   className="absolute inset-0 border-2 border-blue-500 border-t-transparent rounded-full"
                 />
               )}

@@ -201,7 +201,7 @@ export const RealTimeMetrics: React.FC<RealTimeMetricsProps> = ({
                 systemHealth.status === 'Warning' ? '60%' : '30%'
                 : '0%'
             }}
-            transition={{ duration: 1, ease: 'easeOut' }}
+            transition={{ duration: 1, ease: 'easeOut' as any }}
           />
         </div>
       </div>

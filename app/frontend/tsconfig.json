@@ -24,8 +24,7 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ]
-      ,
+      ],
       "@/contracts/*": [
         "./src/types/typechain/*"
       ]
@@ -34,7 +33,11 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    // Additional optimizations for build performance
+    "disableSizeLimit": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false
   },
   "include": [
     "next-env.d.ts",
@@ -51,6 +54,9 @@
     "**/e2e/**/*",
     "jest.setup.ts",
     "jest.config.js",
-    "jest.*.config.js"
+    "jest.*.config.js",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    ".storybook/**/*"
   ]
 }

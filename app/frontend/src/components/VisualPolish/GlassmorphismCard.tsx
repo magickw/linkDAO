@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { designTokens } from '@/design-system';
 
 interface GlassmorphismCardProps {
@@ -39,17 +39,27 @@ export default function GlassmorphismCard({
     xl: 'shadow-xl'
   };
 
-  const hoverAnimation = hover ? {
-    whileHover: {
-      y: -4,
-      scale: 1.02,
-      transition: { duration: 0.2, ease: 'easeOut' }
+  const cardVariants: Variants = {
+    rest: {
+      scale: 1,
+      transition: {
+        duration: 0.2,
+        ease: 'easeOut' as any,
+      },
     },
-    whileTap: onClick ? {
+    hover: {
+      scale: 1.02,
+      transition: {
+        duration: 0.1,
+      },
+    },
+    tap: {
       scale: 0.98,
-      transition: { duration: 0.1 }
-    } : undefined
-  } : {};
+      transition: {
+        duration: 0.1,
+      },
+    },
+  };
 
   return (
     <motion.div
@@ -72,7 +82,7 @@ export default function GlassmorphismCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      {...hoverAnimation}
+      variants={hover ? cardVariants : undefined}
     >
       {/* Subtle gradient overlay for depth */}
       <div 

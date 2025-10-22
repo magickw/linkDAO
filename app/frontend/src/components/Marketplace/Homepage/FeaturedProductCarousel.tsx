@@ -258,7 +258,7 @@ export const FeaturedProductCarousel: React.FC<FeaturedProductCarouselProps> = (
             initial={{ opacity: 0, x: 100 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            transition={{ duration: 0.5, ease: 'easeInOut' as any }}
           >
             <CardComponent className="overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

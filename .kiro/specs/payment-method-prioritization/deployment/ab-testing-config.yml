@@ -1,0 +1,397 @@
+# A/B Testing Configuration for Payment Method Prioritization
+
+# Feature Flag Configuration
+feature_flags:
+  payment_method_prioritization:
+    enabled: true
+    rollout_strategy: "gradual"
+    rollout_percentage: 10  # Start with 10% of users
+    target_percentage: 100  # Eventually roll out to 100%
+    rollout_increment: 10   # Increase by 10% each phase
+    rollout_interval_hours: 24  # Wait 24 hours between increments
+    
+    # A/B Test Configuration
+    ab_test:
+      enabled: true
+      test_name: "payment_prioritization_v1"
+      control_group_percentage: 50
+      treatment_group_percentage: 50
+      minimum_sample_size: 1000
+      statistical_significance_threshold: 0.95
+      
+    # User Segmentation
+    user_segments:
+      - name: "new_users"
+        criteria: "account_age < 30 days"
+        rollout_percentage: 25
+      - name: "power_users"
+        criteria: "transaction_count > 100"
+        rollout_percentage: 50
+      - name: "high_value_users"
+        criteria: "total_transaction_value > 10000"
+        rollout_percentage: 75
+      - name: "default"
+        criteria: "default"
+        rollout_percentage: 10
+
+# Experiment Definitions
+experiments:
+  - name: "stablecoin_first_prioritization"
+    description: "Test impact of prioritizing stablecoins over ETH"
+    feature_flag: "payment_method_prioritization"
+    
+    variants:
+      control:
+        name: "current_prioritization"
+        description: "Current payment method ordering"
+        percentage: 50
+        config:
+          prioritization_enabled: false
+          use_legacy_ordering: true
+          
+      treatment:
+        name: "stablecoin_first"
+        description: "Stablecoin-first prioritization"
+        percentage: 50
+        config:
+          prioritization_enabled: true
+          stablecoin_priority: 1
+          fiat_priority: 2
+          eth_priority: 3
+          cost_based_reordering: true
+    
+    # Success Metrics
+    success_metrics:
+      primary:
+        - name: "conversion_rate"
+          description: "Percentage of users who complete checkout"
+          target_improvement: 5.0  # 5% improvement
+          
+      secondary:
+        - name: "average_transaction_cost"
+          description: "Average cost per transaction including fees"
+          target_improvement: -10.0  # 10% cost reduction
+          
+        - name: "user_satisfaction_score"
+          description: "User satisfaction rating (1-5 scale)"
+          target_improvement: 0.2  # 0.2 point improvement
+          
+        - name: "time_to_complete_checkout"
+          description: "Average time from cart to payment completion"
+          target_improvement: -15.0  # 15% faster checkout
+    
+    # Guardrail Metrics (must not degrade)
+    guardrail_metrics:
+      - name: "payment_failure_rate"
+        description: "Percentage of failed payment attempts"
+        threshold: 2.0  # Must stay below 2%
+        
+      - name: "user_abandonment_rate"
+        description: "Percentage of users who abandon checkout"
+        threshold: 25.0  # Must stay below 25%
+        
+      - name: "support_ticket_rate"
+        description: "Support tickets per 1000 transactions"
+        threshold: 5.0  # Must stay below 5 per 1000
+    
+    # Duration and Sample Size
+    duration_days: 14
+    minimum_sample_size_per_variant: 500
+    maximum_duration_days: 30
+    
+    # Statistical Configuration
+    statistical_power: 0.8
+    significance_level: 0.05
+    minimum_detectable_effect: 2.0  # 2% minimum effect size
+
+  - name: "real_time_cost_updates"
+    description: "Test impact of real-time cost updates during checkout"
+    feature_flag: "real_time_updates_enabled"
+    
+    variants:
+      control:
+        name: "static_costs"
+        description: "Static cost display at checkout start"
+        percentage: 50
+        config:
+          real_time_updates: false
+          cost_refresh_interval: 0
+          
+      treatment:
+        name: "dynamic_costs"
+        description: "Real-time cost updates every 30 seconds"
+        percentage: 50
+        config:
+          real_time_updates: true
+          cost_refresh_interval: 30
+          websocket_enabled: true
+    
+    success_metrics:
+      primary:
+        - name: "cost_accuracy_satisfaction"
+          description: "User satisfaction with cost accuracy"
+          target_improvement: 15.0
+          
+      secondary:
+        - name: "checkout_completion_rate"
+          description: "Percentage of checkouts completed"
+          target_improvement: 3.0
+    
+    duration_days: 10
+    minimum_sample_size_per_variant: 300
+
+# Rollout Strategy
+rollout_strategy:
+  phases:
+    - phase: 1
+      name: "Internal Testing"
+      duration_days: 3
+      user_percentage: 0
+      criteria:
+        - internal_users: true
+        - beta_testers: true
+      success_criteria:
+        - zero_critical_errors: true
+        - performance_within_sla: true
+        
+    - phase: 2
+      name: "Canary Release"
+      duration_days: 2
+      user_percentage: 1
+      criteria:
+        - random_sampling: true
+      success_criteria:
+        - error_rate_below: 0.1
+        - response_time_p95_below: 1000
+        - user_satisfaction_above: 4.0
+        
+    - phase: 3
+      name: "Limited Rollout"
+      duration_days: 7
+      user_percentage: 10
+      criteria:
+        - exclude_high_value_users: true
+      success_criteria:
+        - conversion_rate_improvement: 2.0
+        - cost_savings_above: 5.0
+        - support_tickets_below: 3.0
+        
+    - phase: 4
+      name: "Expanded Rollout"
+      duration_days: 7
+      user_percentage: 25
+      criteria:
+        - include_all_segments: true
+      success_criteria:
+        - statistical_significance: 0.95
+        - all_guardrails_met: true
+        
+    - phase: 5
+      name: "Majority Rollout"
+      duration_days: 7
+      user_percentage: 75
+      criteria:
+        - include_high_value_users: true
+      success_criteria:
+        - business_metrics_positive: true
+        - technical_metrics_stable: true
+        
+    - phase: 6
+      name: "Full Rollout"
+      duration_days: 0
+      user_percentage: 100
+      criteria:
+        - all_users: true
+
+# Monitoring and Alerting for A/B Tests
+monitoring:
+  dashboards:
+    - name: "A/B Test Performance"
+      panels:
+        - title: "Conversion Rate by Variant"
+          type: "graph"
+          metrics:
+            - "conversion_rate_control"
+            - "conversion_rate_treatment"
+            
+        - title: "Statistical Significance"
+          type: "stat"
+          metrics:
+            - "statistical_significance"
+            - "confidence_interval"
+            
+        - title: "Sample Size Progress"
+          type: "bar"
+          metrics:
+            - "sample_size_control"
+            - "sample_size_treatment"
+            - "target_sample_size"
+            
+        - title: "Guardrail Metrics"
+          type: "table"
+          metrics:
+            - "payment_failure_rate"
+            - "user_abandonment_rate"
+            - "support_ticket_rate"
+  
+  alerts:
+    - name: "GuardrailViolation"
+      condition: "guardrail_metric > threshold"
+      severity: "critical"
+      action: "pause_experiment"
+      
+    - name: "StatisticalSignificanceAchieved"
+      condition: "statistical_significance > 0.95 AND sample_size > minimum"
+      severity: "info"
+      action: "notify_team"
+      
+    - name: "ExperimentDurationExceeded"
+      condition: "experiment_duration > maximum_duration"
+      severity: "warning"
+      action: "force_conclusion"
+
+# Data Collection Configuration
+data_collection:
+  events:
+    - name: "payment_method_displayed"
+      properties:
+        - user_id
+        - session_id
+        - experiment_variant
+        - payment_methods_shown
+        - prioritization_order
+        - timestamp
+        
+    - name: "payment_method_selected"
+      properties:
+        - user_id
+        - session_id
+        - experiment_variant
+        - selected_method
+        - method_priority
+        - cost_estimate
+        - timestamp
+        
+    - name: "checkout_completed"
+      properties:
+        - user_id
+        - session_id
+        - experiment_variant
+        - payment_method
+        - actual_cost
+        - completion_time
+        - timestamp
+        
+    - name: "checkout_abandoned"
+      properties:
+        - user_id
+        - session_id
+        - experiment_variant
+        - abandonment_stage
+        - last_payment_method_viewed
+        - timestamp
+        
+    - name: "user_feedback"
+      properties:
+        - user_id
+        - session_id
+        - experiment_variant
+        - satisfaction_score
+        - feedback_text
+        - timestamp
+  
+  # Data Retention
+  retention:
+    raw_events: 90  # days
+    aggregated_metrics: 365  # days
+    experiment_results: 1095  # 3 years
+
+# Analysis Configuration
+analysis:
+  statistical_tests:
+    - name: "two_sample_t_test"
+      use_for: ["conversion_rate", "average_transaction_cost"]
+      
+    - name: "chi_square_test"
+      use_for: ["payment_method_distribution"]
+      
+    - name: "mann_whitney_u_test"
+      use_for: ["user_satisfaction_score", "time_to_complete_checkout"]
+  
+  # Automated Analysis Schedule
+  analysis_schedule:
+    - frequency: "hourly"
+      metrics: ["sample_size", "conversion_rate"]
+      
+    - frequency: "daily"
+      metrics: ["all_success_metrics", "all_guardrail_metrics"]
+      
+    - frequency: "weekly"
+      metrics: ["statistical_significance", "confidence_intervals"]
+  
+  # Report Generation
+  reports:
+    - name: "daily_experiment_summary"
+      frequency: "daily"
+      recipients: ["product@linkdao.io", "data@linkdao.io"]
+      
+    - name: "weekly_detailed_analysis"
+      frequency: "weekly"
+      recipients: ["leadership@linkdao.io", "product@linkdao.io"]
+      
+    - name: "experiment_conclusion_report"
+      frequency: "on_completion"
+      recipients: ["all_stakeholders"]
+
+# Rollback Configuration
+rollback:
+  triggers:
+    - name: "critical_error_rate"
+      condition: "error_rate > 5%"
+      action: "immediate_rollback"
+      
+    - name: "conversion_rate_drop"
+      condition: "conversion_rate < baseline - 10%"
+      action: "gradual_rollback"
+      
+    - name: "user_satisfaction_drop"
+      condition: "satisfaction_score < 3.0"
+      action: "pause_and_investigate"
+  
+  procedures:
+    immediate_rollback:
+      - disable_feature_flag
+      - notify_on_call_team
+      - create_incident_ticket
+      - revert_to_previous_version
+      
+    gradual_rollback:
+      - reduce_rollout_percentage: 50
+      - monitor_for: "1 hour"
+      - if_no_improvement: "immediate_rollback"
+      
+    pause_and_investigate:
+      - pause_new_user_enrollment
+      - maintain_current_users
+      - investigate_root_cause
+      - decide_within: "24 hours"
+
+# Success Criteria for Full Rollout
+full_rollout_criteria:
+  required:
+    - statistical_significance: ">= 0.95"
+    - conversion_rate_improvement: ">= 3%"
+    - no_guardrail_violations: true
+    - technical_stability: true
+    
+  optional:
+    - cost_savings: ">= 5%"
+    - user_satisfaction_improvement: ">= 0.1"
+    - support_ticket_reduction: ">= 10%"
+    
+  business_approval:
+    required_approvers:
+      - product_manager
+      - engineering_lead
+      - data_scientist
+    approval_threshold: "unanimous"

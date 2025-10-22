@@ -92,6 +92,8 @@ export type { Governance } from "./contracts/Governance";
 export { Governance__factory } from "./factories/contracts/Governance__factory";
 export type { LDAOToken } from "./contracts/LDAOToken";
 export { LDAOToken__factory } from "./factories/contracts/LDAOToken__factory";
+export type { LDAOTreasury } from "./contracts/LDAOTreasury";
+export { LDAOTreasury__factory } from "./factories/contracts/LDAOTreasury__factory";
 export type { Marketplace } from "./contracts/Marketplace";
 export { Marketplace__factory } from "./factories/contracts/Marketplace__factory";
 export type { MockERC20 } from "./contracts/MockERC20";

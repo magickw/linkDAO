@@ -188,7 +188,7 @@ interface UseMarketplaceReturn {
 }
 
 export const useMarketplace = (): UseMarketplaceReturn => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const queryClient = useQueryClient();
 
   // Contract read functions
@@ -231,6 +231,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         abi: marketplaceABI.abi,
         functionName,
         args,
+        chain,
+        account: address,
       });
       
       return result;
@@ -293,6 +295,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: marketplaceABI.abi,
       functionName: 'createProduct',
+      chain,
+      account: address,
       args: [
         productData.name,
         productData.description,
@@ -340,6 +344,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: marketplaceABI.abi,
       functionName: 'updateProduct',
+      chain,
+      account: address,
       args: [
         productId,
         updates.name || '',
@@ -371,6 +377,8 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       address: MARKETPLACE_ADDRESS as `0x${string}`,
       abi: marketplaceABI.abi,
       functionName: 'deleteProduct',
+      chain,
+      account: address,
       args: [productId],
     });
     

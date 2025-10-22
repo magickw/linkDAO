@@ -1,0 +1,227 @@
+version: '3.8'
+
+services:
+  # Payment Method Prioritization Service
+  payment-prioritization:
+    image: linkdao/payment-prioritization:${VERSION:-latest}
+    container_name: payment-prioritization-prod
+    restart: always
+    ports:
+      - "3000:3000"
+      - "8080:8080"  # WebSocket port
+      - "9090:9090"  # Metrics port
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - WEBSOCKET_PORT=8080
+      - METRICS_PORT=9090
+      
+      # Feature Flags
+      - PAYMENT_PRIORITIZATION_ENABLED=true
+      - REAL_TIME_UPDATES_ENABLED=true
+      - USER_PREFERENCE_LEARNING_ENABLED=true
+      - COST_BASED_REORDERING_ENABLED=true
+      
+      # Database
+      - DATABASE_URL=postgresql://payment_user:${DB_PASSWORD}@postgres:5432/payment_prioritization
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_CONNECTION_TIMEOUT_MS=5000
+      
+      # Redis Cache
+      - REDIS_URL=redis://redis:6379
+      - CACHE_DEFAULT_TTL_SECONDS=300
+      
+      # External APIs
+      - ETHERSCAN_API_KEY=${ETHERSCAN_API_KEY}
+      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
+      - INFURA_API_KEY=${INFURA_API_KEY}
+      - COINGECKO_API_KEY=${COINGECKO_API_KEY}
+      
+      # Gas Fee Configuration
+      - GAS_FEE_CACHE_TTL_SECONDS=30
+      - GAS_FEE_THRESHOLD_USD=50
+      - GAS_FEE_API_TIMEOUT_MS=5000
+      
+      # Performance
+      - MAX_CONCURRENT_PRIORITIZATIONS=50
+      - PRIORITIZATION_TIMEOUT_MS=2000
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET}
+      - API_RATE_LIMIT_REQUESTS_PER_MINUTE=1000
+      - CORS_ALLOWED_ORIGINS=https://linkdao.io,https://app.linkdao.io
+      
+      # Monitoring
+      - LOG_LEVEL=info
+      - METRICS_ENABLED=true
+      - HEALTH_CHECK_ENABLED=true
+      
+    volumes:
+      - ./logs:/app/logs
+      - ./config:/app/config:ro
+    networks:
+      - payment-network
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: payment-prioritization-db-prod
+    restart: always
+    environment:
+      - POSTGRES_DB=payment_prioritization
+      - POSTGRES_USER=payment_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    networks:
+      - payment-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment_user -d payment_prioritization"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: payment-prioritization-redis-prod
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - payment-network
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: payment-prioritization-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    networks:
+      - payment-network
+    depends_on:
+      - payment-prioritization
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: payment-prioritization-prometheus-prod
+    restart: always
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - payment-network
+    depends_on:
+      - payment-prioritization
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: payment-prioritization-grafana-prod
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - payment-network
+    depends_on:
+      - prometheus
+
+  # Log Aggregation
+  fluentd:
+    image: fluent/fluentd:v1.16-debian-1
+    container_name: payment-prioritization-fluentd-prod
+    restart: always
+    volumes:
+      - ./logging/fluentd.conf:/fluentd/etc/fluent.conf:ro
+      - ./logs:/var/log/app:ro
+    networks:
+      - payment-network
+    depends_on:
+      - payment-prioritization
+
+networks:
+  payment-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

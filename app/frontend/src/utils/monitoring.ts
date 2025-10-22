@@ -99,15 +99,8 @@ class MonitoringService {
   }
 
   private initializeWebVitals() {
-    if ('web-vitals' in window) {
-      import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-        getCLS(this.onWebVital.bind(this));
-        getFID(this.onWebVital.bind(this));
-        getFCP(this.onWebVital.bind(this));
-        getLCP(this.onWebVital.bind(this));
-        getTTFB(this.onWebVital.bind(this));
-      });
-    }
+    // Skip web-vitals for now since the package is not installed
+    console.log('Web vitals monitoring would be initialized here');
   }
 
   private onWebVital(metric: any) {

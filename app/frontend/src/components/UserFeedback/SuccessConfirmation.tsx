@@ -48,14 +48,14 @@ export const SuccessConfirmation: React.FC<SuccessConfirmationProps> = ({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: -20 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.3, ease: 'easeOut' as any }}
           className={`bg-white rounded-lg shadow-lg border border-green-200 p-6 ${className}`}
         >
           <div className="flex items-start space-x-4">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.3, ease: 'easeOut' }}
+              transition={{ delay: 0.2, duration: 0.3, ease: 'easeOut' as any }}
               className="flex-shrink-0"
             >
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">

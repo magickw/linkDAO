@@ -1,0 +1,409 @@
+# Monitoring and Alerting Configuration for Payment Method Prioritization
+
+# Prometheus Configuration
+prometheus:
+  global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+  
+  rule_files:
+    - "payment_prioritization_rules.yml"
+  
+  scrape_configs:
+    - job_name: 'payment-prioritization'
+      static_configs:
+        - targets: ['payment-prioritization:9090']
+      scrape_interval: 30s
+      metrics_path: /metrics
+      
+    - job_name: 'payment-prioritization-websocket'
+      static_configs:
+        - targets: ['payment-prioritization:8080']
+      scrape_interval: 30s
+      metrics_path: /ws/metrics
+
+# Alert Rules
+alerting_rules:
+  groups:
+    - name: payment_prioritization_alerts
+      rules:
+        # Response Time Alerts
+        - alert: HighPrioritizationResponseTime
+          expr: histogram_quantile(0.95, payment_prioritization_duration_seconds) > 1.0
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High payment method prioritization response time"
+            description: "95th percentile response time is {{ $value }}s, above 1s threshold"
+            
+        - alert: CriticalPrioritizationResponseTime
+          expr: histogram_quantile(0.95, payment_prioritization_duration_seconds) > 2.0
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "Critical payment method prioritization response time"
+            description: "95th percentile response time is {{ $value }}s, above 2s threshold"
+        
+        # Error Rate Alerts
+        - alert: HighPrioritizationErrorRate
+          expr: rate(payment_prioritization_errors_total[5m]) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High payment method prioritization error rate"
+            description: "Error rate is {{ $value | humanizePercentage }}, above 5% threshold"
+            
+        - alert: CriticalPrioritizationErrorRate
+          expr: rate(payment_prioritization_errors_total[5m]) > 0.10
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "Critical payment method prioritization error rate"
+            description: "Error rate is {{ $value | humanizePercentage }}, above 10% threshold"
+        
+        # Gas Fee API Alerts
+        - alert: GasFeeAPIFailures
+          expr: rate(gas_fee_api_failures_total[5m]) > 0.10
+          for: 3m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High gas fee API failure rate"
+            description: "Gas fee API failure rate is {{ $value | humanizePercentage }}, above 10% threshold"
+            
+        - alert: GasFeeAPIDown
+          expr: up{job="gas-fee-apis"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "Gas fee API is down"
+            description: "Gas fee API {{ $labels.instance }} is not responding"
+        
+        # WebSocket Connection Alerts
+        - alert: HighWebSocketConnectionDrops
+          expr: rate(websocket_connection_drops_total[5m]) > 0.20
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High WebSocket connection drop rate"
+            description: "WebSocket connection drop rate is {{ $value | humanizePercentage }}, above 20% threshold"
+            
+        - alert: WebSocketServiceDown
+          expr: up{job="payment-prioritization-websocket"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "WebSocket service is down"
+            description: "Payment prioritization WebSocket service is not responding"
+        
+        # Cache Performance Alerts
+        - alert: LowCacheHitRate
+          expr: cache_hit_rate{service="payment-prioritization"} < 0.80
+          for: 5m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "Low cache hit rate"
+            description: "Cache hit rate is {{ $value | humanizePercentage }}, below 80% threshold"
+            
+        - alert: CacheServiceDown
+          expr: up{job="redis"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "Cache service is down"
+            description: "Redis cache service is not responding"
+        
+        # Database Alerts
+        - alert: DatabaseConnectionIssues
+          expr: database_connection_errors_total > 10
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "Database connection issues"
+            description: "{{ $value }} database connection errors in the last 5 minutes"
+            
+        - alert: DatabaseDown
+          expr: up{job="postgres"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            service: payment-prioritization
+          annotations:
+            summary: "Database is down"
+            description: "PostgreSQL database is not responding"
+        
+        # Resource Usage Alerts
+        - alert: HighMemoryUsage
+          expr: container_memory_usage_bytes{container="payment-prioritization"} / container_spec_memory_limit_bytes > 0.90
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High memory usage"
+            description: "Memory usage is {{ $value | humanizePercentage }}, above 90% threshold"
+            
+        - alert: HighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{container="payment-prioritization"}[5m]) > 0.80
+          for: 2m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High CPU usage"
+            description: "CPU usage is {{ $value | humanizePercentage }}, above 80% threshold"
+        
+        # Business Logic Alerts
+        - alert: UnusualPrioritizationPatterns
+          expr: increase(prioritization_method_changes_total[1h]) > 1000
+          for: 5m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "Unusual prioritization pattern changes"
+            description: "{{ $value }} prioritization method changes in the last hour, indicating potential issues"
+            
+        - alert: PreferenceLearningFailures
+          expr: rate(preference_learning_failures_total[5m]) > 0.05
+          for: 3m
+          labels:
+            severity: warning
+            service: payment-prioritization
+          annotations:
+            summary: "High preference learning failure rate"
+            description: "Preference learning failure rate is {{ $value | humanizePercentage }}, above 5% threshold"
+
+# Grafana Dashboard Configuration
+grafana_dashboards:
+  - name: "Payment Method Prioritization Overview"
+    panels:
+      - title: "Request Rate"
+        type: "graph"
+        targets:
+          - expr: "rate(payment_prioritization_requests_total[5m])"
+            legendFormat: "Requests/sec"
+            
+      - title: "Response Time"
+        type: "graph"
+        targets:
+          - expr: "histogram_quantile(0.50, payment_prioritization_duration_seconds)"
+            legendFormat: "50th percentile"
+          - expr: "histogram_quantile(0.95, payment_prioritization_duration_seconds)"
+            legendFormat: "95th percentile"
+          - expr: "histogram_quantile(0.99, payment_prioritization_duration_seconds)"
+            legendFormat: "99th percentile"
+            
+      - title: "Error Rate"
+        type: "graph"
+        targets:
+          - expr: "rate(payment_prioritization_errors_total[5m])"
+            legendFormat: "Errors/sec"
+            
+      - title: "Payment Method Distribution"
+        type: "pie"
+        targets:
+          - expr: "increase(payment_method_selected_total[1h])"
+            legendFormat: "{{ method }}"
+            
+      - title: "Gas Fee Trends"
+        type: "graph"
+        targets:
+          - expr: "gas_fee_estimate_usd"
+            legendFormat: "{{ network }}"
+            
+      - title: "Cache Hit Rate"
+        type: "stat"
+        targets:
+          - expr: "cache_hit_rate{service='payment-prioritization'}"
+            legendFormat: "Hit Rate"
+            
+      - title: "WebSocket Connections"
+        type: "graph"
+        targets:
+          - expr: "websocket_active_connections"
+            legendFormat: "Active Connections"
+          - expr: "rate(websocket_connection_drops_total[5m])"
+            legendFormat: "Connection Drops/sec"
+            
+      - title: "User Preference Learning"
+        type: "graph"
+        targets:
+          - expr: "preference_learning_accuracy"
+            legendFormat: "Learning Accuracy"
+          - expr: "rate(preference_updates_total[5m])"
+            legendFormat: "Preference Updates/sec"
+
+# Alertmanager Configuration
+alertmanager:
+  global:
+    smtp_smarthost: 'smtp.gmail.com:587'
+    smtp_from: 'alerts@linkdao.io'
+    
+  route:
+    group_by: ['alertname', 'service']
+    group_wait: 10s
+    group_interval: 10s
+    repeat_interval: 1h
+    receiver: 'default'
+    routes:
+      - match:
+          severity: critical
+        receiver: 'critical-alerts'
+        group_wait: 0s
+        repeat_interval: 5m
+      - match:
+          severity: warning
+        receiver: 'warning-alerts'
+        repeat_interval: 30m
+        
+  receivers:
+    - name: 'default'
+      slack_configs:
+        - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+          channel: '#payment-prioritization-alerts'
+          title: 'Payment Prioritization Alert'
+          text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+          
+    - name: 'critical-alerts'
+      slack_configs:
+        - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+          channel: '#critical-alerts'
+          title: '🚨 CRITICAL: Payment Prioritization Alert'
+          text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+      email_configs:
+        - to: 'devops@linkdao.io'
+          subject: 'CRITICAL: Payment Prioritization Alert'
+          body: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+      pagerduty_configs:
+        - routing_key: 'YOUR_PAGERDUTY_INTEGRATION_KEY'
+          description: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          
+    - name: 'warning-alerts'
+      slack_configs:
+        - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+          channel: '#payment-prioritization-alerts'
+          title: '⚠️ WARNING: Payment Prioritization Alert'
+          text: '{{ range .Alerts }}{{ .Annotations.summary }}: {{ .Annotations.description }}{{ end }}'
+
+# Health Check Endpoints
+health_checks:
+  endpoints:
+    - name: "Payment Prioritization API"
+      url: "http://payment-prioritization:3000/health"
+      interval: 30s
+      timeout: 10s
+      expected_status: 200
+      
+    - name: "WebSocket Service"
+      url: "ws://payment-prioritization:8080/health"
+      interval: 30s
+      timeout: 10s
+      
+    - name: "Database Connection"
+      url: "http://payment-prioritization:3000/health/db"
+      interval: 60s
+      timeout: 15s
+      expected_status: 200
+      
+    - name: "Cache Connection"
+      url: "http://payment-prioritization:3000/health/cache"
+      interval: 60s
+      timeout: 10s
+      expected_status: 200
+      
+    - name: "External APIs"
+      url: "http://payment-prioritization:3000/health/external"
+      interval: 120s
+      timeout: 30s
+      expected_status: 200
+
+# Log Aggregation
+logging:
+  fluentd:
+    config: |
+      <source>
+        @type tail
+        path /var/log/app/payment-prioritization.log
+        pos_file /var/log/fluentd-payment-prioritization.log.pos
+        tag payment-prioritization.app
+        format json
+        time_key timestamp
+        time_format %Y-%m-%dT%H:%M:%S.%LZ
+      </source>
+      
+      <filter payment-prioritization.**>
+        @type record_transformer
+        <record>
+          service payment-prioritization
+          environment ${ENV}
+        </record>
+      </filter>
+      
+      <match payment-prioritization.**>
+        @type elasticsearch
+        host elasticsearch
+        port 9200
+        index_name payment-prioritization-logs
+        type_name _doc
+        include_tag_key true
+        tag_key @log_name
+        flush_interval 10s
+      </match>
+
+# Performance Monitoring
+performance_monitoring:
+  metrics:
+    - name: "payment_prioritization_requests_total"
+      type: "counter"
+      help: "Total number of payment prioritization requests"
+      labels: ["method", "status"]
+      
+    - name: "payment_prioritization_duration_seconds"
+      type: "histogram"
+      help: "Payment prioritization request duration"
+      buckets: [0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+      
+    - name: "payment_prioritization_errors_total"
+      type: "counter"
+      help: "Total number of payment prioritization errors"
+      labels: ["error_type"]
+      
+    - name: "gas_fee_estimate_usd"
+      type: "gauge"
+      help: "Current gas fee estimate in USD"
+      labels: ["network"]
+      
+    - name: "cache_hit_rate"
+      type: "gauge"
+      help: "Cache hit rate percentage"
+      labels: ["cache_type"]
+      
+    - name: "websocket_active_connections"
+      type: "gauge"
+      help: "Number of active WebSocket connections"
+      
+    - name: "preference_learning_accuracy"
+      type: "gauge"
+      help: "User preference learning accuracy"

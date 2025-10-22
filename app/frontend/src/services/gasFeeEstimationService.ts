@@ -9,6 +9,7 @@ import {
   NetworkConditions,
   PaymentMethodType 
 } from '../types/paymentPrioritization';
+import { intelligentCacheService } from './intelligentCacheService';
 
 // Gas price API endpoints
 const GAS_PRICE_APIS = {
@@ -82,6 +83,14 @@ export class GasFeeEstimationService {
     transactionType: 'erc20Transfer' | 'ethTransfer' | 'uniswapSwap' | 'contractInteraction' | 'complexContract' = 'erc20Transfer',
     customGasLimit?: bigint
   ): Promise<GasEstimate> {
+    const cacheKey = `${chainId}_${transactionType}_${customGasLimit?.toString() || 'default'}`;
+    
+    // Try to get from intelligent cache first
+    const cached = await intelligentCacheService.getCachedGasEstimate(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
       const gasPrices = await this.getGasPrices(chainId);
       const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
@@ -94,7 +103,7 @@ export class GasFeeEstimationService {
       const totalCost = gasLimit * bestGasPrice.gasPrice;
       const totalCostUSD = await this.convertToUSD(totalCost, chainId);
 
-      return {
+      const estimate: GasEstimate = {
         gasLimit,
         gasPrice: bestGasPrice.gasPrice,
         maxFeePerGas: bestGasPrice.maxFeePerGas,
@@ -103,6 +112,11 @@ export class GasFeeEstimationService {
         totalCostUSD,
         confidence: bestGasPrice.confidence
       };
+
+      // Cache the result with intelligent caching
+      await intelligentCacheService.cacheGasEstimate(cacheKey, estimate);
+      
+      return estimate;
     } catch (error) {
       console.error('Gas estimation failed:', error);
       return this.getFallbackGasEstimate(chainId, transactionType, customGasLimit);
@@ -162,6 +176,12 @@ export class GasFeeEstimationService {
    * Get real-time network conditions
    */
   async getNetworkConditions(chainId: number): Promise<NetworkConditions> {
+    // Try to get from intelligent cache first
+    const cached = await intelligentCacheService.getCachedNetworkConditions(chainId);
+    if (cached) {
+      return cached;
+    }
+
     try {
       const gasPrices = await this.getGasPrices(chainId);
       const averageGasPrice = gasPrices.reduce((sum, price) => sum + Number(price.gasPrice), 0) / gasPrices.length;
@@ -173,7 +193,7 @@ export class GasFeeEstimationService {
       else if (gasPriceUSD < 50) networkCongestion = 'medium';
       else networkCongestion = 'high';
 
-      return {
+      const conditions: NetworkConditions = {
         chainId,
         gasPrice: BigInt(Math.round(averageGasPrice)),
         gasPriceUSD,
@@ -181,6 +201,11 @@ export class GasFeeEstimationService {
         blockTime: this.getAverageBlockTime(chainId),
         lastUpdated: new Date()
       };
+
+      // Cache the network conditions with intelligent caching
+      await intelligentCacheService.cacheNetworkConditions(chainId, conditions);
+
+      return conditions;
     } catch (error) {
       console.error('Failed to get network conditions:', error);
       return this.getFallbackNetworkConditions(chainId);

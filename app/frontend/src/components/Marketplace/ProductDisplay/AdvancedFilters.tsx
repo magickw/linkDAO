@@ -206,7 +206,7 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: 'easeOut' as any }}
             className="fixed left-0 top-0 h-full w-80 z-50 lg:absolute lg:left-0 lg:top-full lg:mt-2 lg:h-auto lg:max-h-[80vh]"
           >
             <GlassPanel variant="modal" className="h-full lg:h-auto overflow-hidden border border-white/10">

@@ -2,7 +2,7 @@
   "network": "sepolia",
   "chainId": 11155111,
   "deployer": "0xEe034b53D4cCb101b2a4faec27708be507197350",
-  "deployedAt": "2025-10-20T22:02:44.098Z",
+  "deployedAt": "2025-10-22T00:48:05.128Z",
   "multiSigAddress": "",
   "contracts": {
     "LDAOToken": {
@@ -84,6 +84,16 @@
       "address": "0x624Fe32F9b61c612ADD2b2Ef505bb99e4A7f6439",
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
       "deploymentTx": "0xdea058a96113c2fa8bfde847d76c332d84424c41ac324ad4d0ad5c986362f48e"
+    },
+    "MultiSigWallet": {
+      "address": "0xA0bD2057F45Deb2553745B5ddbB6e2AB80cFCE98",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "0x664bbd6b9e795c794df023333f689ac7b8e8eb6798ba0fbe1ff377663e3fc123"
+    },
+    "LDAOTreasury": {
+      "address": "0xeF85C8CcC03320dA32371940b315D563be2585e5",
+      "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
+      "deploymentTx": "0x57c6090b2760861c2f5efcedc6c669541edbdd8874e5c72adc890832cbec67be"
     }
   }
 }
