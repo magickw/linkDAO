@@ -230,7 +230,7 @@ This FAQ covers the most common questions and issues encountered by LinkDAO admi
 **A:** Check:
 - System status dashboard
 - Notification center
-- Status page (status.linkdao.com)
+- Status page (status.linkdao.io)
 - Admin communication channels
 
 ### Q: What should I do during maintenance windows?
@@ -245,23 +245,23 @@ This FAQ covers the most common questions and issues encountered by LinkDAO admi
 ### Q: Who should I contact for different types of issues?
 
 **Technical Issues:**
-- Email: tech-support@linkdao.com
+- Email: tech-support@linkdao.io
 - Slack: #admin-tech-support
 - Emergency: +1-XXX-XXX-XXXX
 
 **Policy Questions:**
-- Email: policy@linkdao.com
+- Email: policy@linkdao.io
 - Slack: #admin-policy
 - Escalation: Senior Moderator on duty
 
 **User Relations:**
-- Email: community@linkdao.com
+- Email: community@linkdao.io
 - Slack: #admin-community
 - Urgent: Community Manager
 
 **Security Concerns:**
-- Email: security@linkdao.com
-- Emergency: security-emergency@linkdao.com
+- Email: security@linkdao.io
+- Emergency: security-emergency@linkdao.io
 - Phone: +1-XXX-XXX-XXXX (24/7)
 
 ### Q: How do I submit feedback or feature requests?

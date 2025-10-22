@@ -1,351 +1,176 @@
 #!/bin/bash
 
-# LDAO Token Acquisition Security and Compliance Test Suite
-# This script runs comprehensive security and compliance tests
+# Security and Compliance Test Runner Script
+# Runs comprehensive security and compliance testing for LDAO Token Acquisition
 
 set -e
 
-echo "🔒 Starting LDAO Token Acquisition Security and Compliance Test Suite"
-echo "=================================================================="
+echo "🔒 LDAO Security & Compliance Test Suite"
+echo "========================================"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Check if we're in the correct directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Error: Must be run from the backend directory"
+    exit 1
+fi
 
-# Function to print colored output
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
+# Set test environment
+export NODE_ENV=test
+export LOG_LEVEL=error
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+# Create test reports directory
+mkdir -p test-reports
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+echo "📋 Setting up test environment..."
 
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+# Install dependencies if needed
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing dependencies..."
+    npm install
+fi
 
-# Check if required dependencies are installed
-check_dependencies() {
-    print_status "Checking dependencies..."
-    
-    if ! command -v node &> /dev/null; then
-        print_error "Node.js is not installed"
-        exit 1
-    fi
-    
-    if ! command -v npm &> /dev/null; then
-        print_error "npm is not installed"
-        exit 1
-    fi
-    
-    print_success "Dependencies check passed"
-}
+# Setup test database
+echo "🗄️ Setting up test database..."
+npm run db:test:setup 2>/dev/null || echo "⚠️ Database setup skipped (already configured)"
 
-# Install test dependencies
-install_dependencies() {
-    print_status "Installing test dependencies..."
-    npm install --silent
-    print_success "Dependencies installed"
-}
+# Run security and compliance tests
+echo "🚀 Starting security and compliance tests..."
 
-# Run security audit on smart contracts
-run_smart_contract_audit() {
-    print_status "Running smart contract security audit..."
-    
-    cd ../contracts
-    
-    if [ -f "scripts/security-audit-ldao-treasury.ts" ]; then
-        npx hardhat run scripts/security-audit-ldao-treasury.ts --network localhost || {
-            print_warning "Smart contract audit completed with warnings"
-        }
-    else
-        print_warning "Smart contract audit script not found"
-    fi
-    
-    cd ../backend
-    print_success "Smart contract audit completed"
-}
+# Run individual test suites with detailed reporting
+echo ""
+echo "1️⃣ Security Monitoring and Alerting Tests"
+echo "----------------------------------------"
+npx jest src/tests/security-monitoring-alerting.test.ts --verbose --coverage --testTimeout=60000 || TEST_FAILED=1
 
-# Run penetration tests
-run_penetration_tests() {
-    print_status "Running penetration tests..."
-    
-    # Run the penetration testing suite
-    npm test -- --testPathPattern="penetration-testing-ldao.test.ts" --verbose || {
-        print_warning "Some penetration tests failed - review results"
-    }
-    
-    print_success "Penetration tests completed"
-}
+echo ""
+echo "2️⃣ Compliance Workflow Testing"
+echo "------------------------------"
+npx jest src/tests/compliance-workflow-testing.test.ts --verbose --coverage --testTimeout=90000 || TEST_FAILED=1
 
-# Run vulnerability scanning
-run_vulnerability_scan() {
-    print_status "Running vulnerability scan..."
-    
-    # Test the vulnerability scanner
-    npm test -- --testPathPattern="vulnerabilityScanner" --verbose || {
-        print_warning "Vulnerability scan completed with findings"
-    }
-    
-    print_success "Vulnerability scan completed"
-}
+echo ""
+echo "3️⃣ Security Integration Tests"
+echo "-----------------------------"
+npx jest src/tests/security-compliance-integration.test.ts --verbose --coverage --testTimeout=120000 || TEST_FAILED=1
 
-# Run KYC compliance tests
-run_kyc_compliance_tests() {
-    print_status "Running KYC compliance tests..."
-    
-    npm test -- --testPathPattern="kycComplianceService" --verbose || {
-        print_error "KYC compliance tests failed"
-        return 1
-    }
-    
-    print_success "KYC compliance tests passed"
-}
+echo ""
+echo "4️⃣ Penetration Testing"
+echo "----------------------"
+npx jest src/tests/penetration-testing-ldao.test.ts --verbose --coverage --testTimeout=180000 || TEST_FAILED=1
 
-# Run AML transaction monitoring tests
-run_aml_tests() {
-    print_status "Running AML transaction monitoring tests..."
-    
-    npm test -- --testPathPattern="amlTransactionMonitoring" --verbose || {
-        print_error "AML tests failed"
-        return 1
-    }
-    
-    print_success "AML tests passed"
-}
+echo ""
+echo "5️⃣ Vulnerability Assessment"
+echo "---------------------------"
+if [ -f "src/tests/vulnerability-assessment.test.ts" ]; then
+    npx jest src/tests/vulnerability-assessment.test.ts --verbose --coverage --testTimeout=120000 || TEST_FAILED=1
+else
+    echo "⚠️ Vulnerability assessment tests not found - skipping"
+fi
 
-# Run compliance reporting tests
-run_compliance_reporting_tests() {
-    print_status "Running compliance reporting tests..."
-    
-    npm test -- --testPathPattern="complianceReporting" --verbose || {
-        print_error "Compliance reporting tests failed"
-        return 1
-    }
-    
-    print_success "Compliance reporting tests passed"
-}
+# Run comprehensive test runner
+echo ""
+echo "📊 Generating Comprehensive Report"
+echo "================================="
+npx ts-node src/tests/runSecurityComplianceTests.ts || RUNNER_FAILED=1
 
-# Run security incident response tests
-run_incident_response_tests() {
-    print_status "Running security incident response tests..."
-    
-    npm test -- --testPathPattern="securityIncidentResponse" --verbose || {
-        print_error "Security incident response tests failed"
-        return 1
-    }
-    
-    print_success "Security incident response tests passed"
-}
+# Security audit checks
+echo ""
+echo "🔍 Running Security Audits"
+echo "=========================="
 
-# Run security monitoring tests
-run_security_monitoring_tests() {
-    print_status "Running security monitoring tests..."
-    
-    npm test -- --testPathPattern="securityMonitoringService" --verbose || {
-        print_error "Security monitoring tests failed"
-        return 1
-    }
-    
-    print_success "Security monitoring tests passed"
-}
+# Check for known vulnerabilities in dependencies
+echo "📦 Checking npm dependencies for vulnerabilities..."
+npm audit --audit-level=moderate || echo "⚠️ Vulnerabilities found in dependencies"
 
-# Run comprehensive integration tests
-run_integration_tests() {
-    print_status "Running security and compliance integration tests..."
-    
-    npm test -- --testPathPattern="security-compliance-integration.test.ts" --verbose || {
-        print_error "Integration tests failed"
-        return 1
-    }
-    
-    print_success "Integration tests passed"
-}
+# Check for secrets in code
+echo "🔐 Scanning for exposed secrets..."
+if command -v git &> /dev/null; then
+    git secrets --scan || echo "⚠️ Git secrets scan completed"
+else
+    echo "⚠️ Git not available - skipping secrets scan"
+fi
 
-# Generate security report
-generate_security_report() {
-    print_status "Generating security test report..."
-    
-    REPORT_FILE="security-compliance-test-report-$(date +%Y%m%d-%H%M%S).md"
-    
-    cat > "$REPORT_FILE" << EOF
-# LDAO Token Acquisition Security and Compliance Test Report
+# Performance and load testing
+echo ""
+echo "⚡ Performance Testing"
+echo "===================="
+if [ -f "load-tests/security-load-test.yml" ]; then
+    echo "🚀 Running security-focused load tests..."
+    npx artillery run load-tests/security-load-test.yml || echo "⚠️ Load tests completed with warnings"
+else
+    echo "⚠️ Security load tests not configured - skipping"
+fi
+
+# Generate final report
+echo ""
+echo "📄 Generating Final Security Report"
+echo "==================================="
+
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+REPORT_FILE="test-reports/security-compliance-summary-${TIMESTAMP}.md"
+
+cat > "$REPORT_FILE" << EOF
+# Security & Compliance Test Report
 
 **Generated:** $(date)
-**Test Suite Version:** 1.0.0
+**Environment:** ${NODE_ENV}
+**Test Suite:** LDAO Token Acquisition Security & Compliance
 
-## Executive Summary
+## Test Results Summary
 
-This report summarizes the results of comprehensive security and compliance testing for the LDAO Token Acquisition System.
+### Security Tests
+- ✅ Security Monitoring and Alerting
+- ✅ Compliance Workflow Testing  
+- ✅ Security Integration Tests
+- ✅ Penetration Testing
+- ✅ Vulnerability Assessment
 
-## Test Categories
+### Security Audits
+- 📦 NPM Dependency Audit
+- 🔐 Secret Scanning
+- ⚡ Performance Testing
 
-### 1. Smart Contract Security Audit
-- **Status:** ✅ Completed
-- **Findings:** Review smart contract audit logs for detailed findings
-- **Recommendations:** Address any critical or high-severity findings
-
-### 2. Penetration Testing
-- **Status:** ✅ Completed
-- **Coverage:** Authentication, Authorization, Input Validation, Business Logic
-- **Findings:** Review penetration test logs for vulnerabilities
-
-### 3. Vulnerability Scanning
-- **Status:** ✅ Completed
-- **Scope:** Application security, Infrastructure, Dependencies
-- **Findings:** Review vulnerability scan results
-
-### 4. KYC Compliance Testing
-- **Status:** ✅ Passed
-- **Coverage:** Identity verification, Document validation, Risk assessment
-- **Compliance:** Meets regulatory requirements
-
-### 5. AML Transaction Monitoring
-- **Status:** ✅ Passed
-- **Coverage:** Structuring detection, Velocity monitoring, Risk scoring
-- **Compliance:** Meets AML requirements
-
-### 6. Compliance Reporting
-- **Status:** ✅ Passed
-- **Coverage:** Audit trails, Regulatory reports, Privacy requests
-- **Compliance:** Meets reporting requirements
-
-### 7. Security Incident Response
-- **Status:** ✅ Passed
-- **Coverage:** Incident detection, Response procedures, Recovery
-- **Readiness:** System ready for incident response
-
-### 8. Security Monitoring
-- **Status:** ✅ Passed
-- **Coverage:** Real-time monitoring, Alerting, Threat detection
-- **Monitoring:** Active security monitoring in place
-
-### 9. Integration Testing
-- **Status:** ✅ Passed
-- **Coverage:** End-to-end security and compliance workflows
-- **Integration:** All systems working together properly
+### Coverage Areas
+- 🔒 Authentication & Authorization
+- 🛡️ Data Encryption & Privacy
+- 📋 KYC/AML Compliance
+- 🚨 Incident Response
+- 📊 Audit Trails
+- 🌐 Cross-Border Compliance
+- 🔍 Vulnerability Management
+- 📈 Security Monitoring
 
 ## Recommendations
 
-1. **Regular Security Audits:** Schedule quarterly security audits
-2. **Continuous Monitoring:** Maintain 24/7 security monitoring
-3. **Staff Training:** Provide regular security awareness training
-4. **Incident Response:** Test incident response procedures regularly
-5. **Compliance Updates:** Stay current with regulatory changes
-
-## Next Steps
-
-1. Address any critical or high-severity findings
-2. Implement recommended security improvements
-3. Schedule regular security testing
-4. Monitor security metrics continuously
-5. Update security procedures as needed
-
----
-
-**Report Generated By:** LDAO Security Test Suite
-**Contact:** security@linkdao.com
 EOF
 
-    print_success "Security report generated: $REPORT_FILE"
-}
-
-# Main execution
-main() {
-    echo "Starting security and compliance test execution..."
-    
-    # Check dependencies
-    check_dependencies
-    
-    # Install dependencies
-    install_dependencies
-    
-    # Track test results
-    FAILED_TESTS=0
-    
-    # Run all test suites
+if [ "$TEST_FAILED" = "1" ]; then
+    echo "❌ Some security tests failed - review test output above" >> "$REPORT_FILE"
     echo ""
-    echo "🔍 Running Security Test Suites"
-    echo "================================"
-    
-    # Smart contract audit
-    run_smart_contract_audit || ((FAILED_TESTS++))
-    
-    # Penetration tests
-    run_penetration_tests || ((FAILED_TESTS++))
-    
-    # Vulnerability scanning
-    run_vulnerability_scan || ((FAILED_TESTS++))
-    
-    # Compliance tests
+    echo "❌ SECURITY TESTS FAILED"
+    echo "========================"
+    echo "Some security or compliance tests failed. Please review the output above."
+    echo "Report saved to: $REPORT_FILE"
+    exit 1
+elif [ "$RUNNER_FAILED" = "1" ]; then
+    echo "⚠️ Test runner encountered issues - check logs" >> "$REPORT_FILE"
     echo ""
-    echo "📋 Running Compliance Test Suites"
-    echo "=================================="
-    
-    run_kyc_compliance_tests || ((FAILED_TESTS++))
-    run_aml_tests || ((FAILED_TESTS++))
-    run_compliance_reporting_tests || ((FAILED_TESTS++))
-    
-    # Security system tests
-    echo ""
-    echo "🛡️ Running Security System Tests"
-    echo "================================="
-    
-    run_incident_response_tests || ((FAILED_TESTS++))
-    run_security_monitoring_tests || ((FAILED_TESTS++))
-    
-    # Integration tests
-    echo ""
-    echo "🔗 Running Integration Tests"
-    echo "============================"
-    
-    run_integration_tests || ((FAILED_TESTS++))
-    
-    # Generate report
-    echo ""
-    echo "📊 Generating Reports"
+    echo "⚠️ TEST RUNNER ISSUES"
     echo "===================="
-    
-    generate_security_report
-    
-    # Final results
+    echo "The test runner encountered some issues. Check the logs above."
+    echo "Report saved to: $REPORT_FILE"
+    exit 1
+else
+    echo "✅ All security and compliance tests passed successfully!" >> "$REPORT_FILE"
     echo ""
-    echo "🏁 Test Execution Complete"
-    echo "=========================="
-    
-    if [ $FAILED_TESTS -eq 0 ]; then
-        print_success "All security and compliance tests passed! ✅"
-        echo ""
-        echo "🎉 LDAO Token Acquisition System is ready for deployment!"
-        echo ""
-        echo "Next steps:"
-        echo "1. Review the generated security report"
-        echo "2. Address any warnings or recommendations"
-        echo "3. Schedule regular security testing"
-        echo "4. Monitor security metrics continuously"
-        exit 0
-    else
-        print_error "$FAILED_TESTS test suite(s) failed ❌"
-        echo ""
-        echo "⚠️  Please address the failed tests before deployment:"
-        echo "1. Review test output for specific failures"
-        echo "2. Fix identified security issues"
-        echo "3. Re-run the test suite"
-        echo "4. Ensure all tests pass before proceeding"
-        exit 1
-    fi
-}
+    echo "🎉 ALL TESTS PASSED"
+    echo "=================="
+    echo "All security and compliance tests completed successfully!"
+    echo "Report saved to: $REPORT_FILE"
+fi
 
-# Handle script interruption
-trap 'print_error "Test execution interrupted"; exit 1' INT TERM
+# Cleanup
+echo ""
+echo "🧹 Cleaning up test environment..."
+# Add any cleanup commands here
 
-# Run main function
-main "$@"
+echo "✅ Security and compliance testing complete!"

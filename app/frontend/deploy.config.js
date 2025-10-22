@@ -18,8 +18,8 @@ const deployConfig = {
     },
     
     staging: {
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api-staging.linkdao.com',
-      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'wss://ws-staging.linkdao.com',
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api-staging.linkdao.io',
+      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'wss://ws-staging.linkdao.io',
       chainId: 11155111, // Sepolia testnet
       enableAnalytics: true,
       enableServiceWorker: true,
@@ -27,8 +27,8 @@ const deployConfig = {
     },
     
     production: {
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.com',
-      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'wss://ws.linkdao.com',
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api.linkdao.io',
+      wsUrl: process.env.NEXT_PUBLIC_WS_URL || 'wss://ws.linkdao.io',
       chainId: 1, // Ethereum mainnet
       enableAnalytics: true,
       enableServiceWorker: true,

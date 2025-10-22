@@ -99,7 +99,7 @@ Already existed and properly configured:
 ### For Email Notifications
 ```env
 RESEND_API_KEY=re_xxxxxxxxxxxxx
-FROM_EMAIL=noreply@linkdao.app
+FROM_EMAIL=noreply@linkdao.io
 ```
 
 ### For Push Notifications

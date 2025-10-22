@@ -181,15 +181,15 @@ export class SecurityIncidentResponseSystem extends EventEmitter {
    * Initialize response team contacts
    */
   private initializeResponseTeam(): void {
-    this.responseTeam.set('security_lead', 'security@linkdao.com');
-    this.responseTeam.set('cto', 'cto@linkdao.com');
-    this.responseTeam.set('ceo', 'ceo@linkdao.com');
-    this.responseTeam.set('smart_contract_dev', 'contracts@linkdao.com');
-    this.responseTeam.set('privacy_officer', 'privacy@linkdao.com');
-    this.responseTeam.set('legal', 'legal@linkdao.com');
-    this.responseTeam.set('infrastructure_team', 'infrastructure@linkdao.com');
-    this.responseTeam.set('fraud_analyst', 'fraud@linkdao.com');
-    this.responseTeam.set('compliance', 'compliance@linkdao.com');
+    this.responseTeam.set('security_lead', 'security@linkdao.io');
+    this.responseTeam.set('cto', 'cto@linkdao.io');
+    this.responseTeam.set('ceo', 'ceo@linkdao.io');
+    this.responseTeam.set('smart_contract_dev', 'contracts@linkdao.io');
+    this.responseTeam.set('privacy_officer', 'privacy@linkdao.io');
+    this.responseTeam.set('legal', 'legal@linkdao.io');
+    this.responseTeam.set('infrastructure_team', 'infrastructure@linkdao.io');
+    this.responseTeam.set('fraud_analyst', 'fraud@linkdao.io');
+    this.responseTeam.set('compliance', 'compliance@linkdao.io');
   }
 
   /**

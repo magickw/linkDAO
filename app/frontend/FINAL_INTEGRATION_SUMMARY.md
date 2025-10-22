@@ -206,8 +206,8 @@ npm run deploy:production
 1. **Environment Setup**
    ```bash
    # Set environment variables
-   export NEXT_PUBLIC_API_URL=https://api.linkdao.com
-   export NEXT_PUBLIC_WS_URL=wss://ws.linkdao.com
+   export NEXT_PUBLIC_API_URL=https://api.linkdao.io
+   export NEXT_PUBLIC_WS_URL=wss://ws.linkdao.io
    export NEXT_PUBLIC_CHAIN_ID=1
    ```
 

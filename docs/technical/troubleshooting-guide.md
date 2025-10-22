@@ -8,8 +8,8 @@ This comprehensive guide helps developers and system administrators diagnose and
 
 1. **Check System Status**
    ```bash
-   curl -f https://api.linkdao.com/health || echo "API is down"
-   curl -f https://admin.linkdao.com/health || echo "Admin UI is down"
+   curl -f https://api.linkdao.io/health || echo "API is down"
+   curl -f https://admin.linkdao.io/health || echo "Admin UI is down"
    ```
 
 2. **Verify Infrastructure**
@@ -277,7 +277,7 @@ async function queryWithProperCleanup() {
 **Diagnosis:**
 ```javascript
 // Client-side debugging
-const socket = io('wss://admin.linkdao.com', {
+const socket = io('wss://admin.linkdao.io', {
   transports: ['websocket'],
   upgrade: true,
   rememberUpgrade: true
@@ -828,27 +828,27 @@ export class CircuitBreaker {
 primary_oncall:
   - name: "John Doe"
     phone: "+1-555-0101"
-    email: "john.doe@linkdao.com"
+    email: "john.doe@linkdao.io"
     slack: "@johndoe"
 
 secondary_oncall:
   - name: "Jane Smith"
     phone: "+1-555-0102"
-    email: "jane.smith@linkdao.com"
+    email: "jane.smith@linkdao.io"
     slack: "@janesmith"
 
 escalation:
   team_lead:
     name: "Alex Johnson"
     phone: "+1-555-0103"
-    email: "alex.johnson@linkdao.com"
+    email: "alex.johnson@linkdao.io"
   
   engineering_manager:
     name: "Sarah Wilson"
     phone: "+1-555-0104"
-    email: "sarah.wilson@linkdao.com"
+    email: "sarah.wilson@linkdao.io"
 ```
 
 ---
 
-*This troubleshooting guide is maintained by the LinkDAO engineering team. For updates or additions, please submit a pull request or contact [dev-team@linkdao.com](mailto:dev-team@linkdao.com).*
+*This troubleshooting guide is maintained by the LinkDAO engineering team. For updates or additions, please submit a pull request or contact [dev-team@linkdao.io](mailto:dev-team@linkdao.io).*

@@ -155,7 +155,7 @@ export class IntelligentAlertingService extends EventEmitter {
             {
               delay: 15,
               channels: ['email'],
-              recipients: ['ops-team@linkdao.com']
+              recipients: ['ops-team@linkdao.io']
             },
             {
               delay: 30,
@@ -231,7 +231,7 @@ export class IntelligentAlertingService extends EventEmitter {
             {
               delay: 20,
               channels: ['email'],
-              recipients: ['performance-team@linkdao.com']
+              recipients: ['performance-team@linkdao.io']
             }
           ]
         },

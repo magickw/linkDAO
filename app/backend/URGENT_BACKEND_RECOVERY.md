@@ -46,8 +46,8 @@ Since your current backend is broken, deploy the fixed version immediately:
    ```
    NODE_ENV=production
    PORT=10000
-   FRONTEND_URL=https://linkdao.vercel.app
-   CORS_ORIGIN=https://linkdao.vercel.app,https://linkdao-git-main.vercel.app
+   FRONTEND_URL=https://linkdao.io
+   CORS_ORIGIN=https://linkdao.io,https://linkdao-git-main.vercel.app
    ```
 
 3. **Deploy Fixed Backend**:
@@ -98,7 +98,7 @@ Since your current backend is broken, deploy the fixed version immediately:
 curl https://linkdao-backend.onrender.com/health
 
 # Test CORS headers
-curl -H "Origin: https://linkdao.vercel.app" \
+curl -H "Origin: https://linkdao.io" \
      -H "Access-Control-Request-Method: GET" \
      -H "Access-Control-Request-Headers: Content-Type" \
      -X OPTIONS \

@@ -98,7 +98,7 @@ cat > .env.example << EOF
 # Render Environment Variables
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://linkdao.vercel.app
+FRONTEND_URL=https://linkdao.io
 
 # Optional: Add your specific environment variables here
 # DATABASE_URL=your_database_url

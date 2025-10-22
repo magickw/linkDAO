@@ -92,7 +92,7 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
-      'https://linkdao.vercel.app',
+      'https://linkdao.io',
       'https://linkdao-frontend.vercel.app',
       'https://linkdao-git-main.vercel.app',
       'http://localhost:3000',

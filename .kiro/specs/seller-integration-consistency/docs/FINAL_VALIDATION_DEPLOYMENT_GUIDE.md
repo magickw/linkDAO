@@ -21,9 +21,9 @@ The final validation and deployment process ensures that all seller integration 
 ```bash
 # Required for production deployment
 DEPLOYMENT_ENV=production
-BACKEND_URL=https://api.linkdao.com
-FRONTEND_URL=https://app.linkdao.com
-WS_URL=wss://ws.linkdao.com
+BACKEND_URL=https://api.linkdao.io
+FRONTEND_URL=https://app.linkdao.io
+WS_URL=wss://ws.linkdao.io
 
 # Optional configuration
 ROLLBACK_ENABLED=true
@@ -335,8 +335,8 @@ npm run monitor:rollback-recovery
 # Set environment variables
 export DEPLOYMENT_ENV=production
 export ROLLBACK_ENABLED=true
-export BACKEND_URL=https://api.linkdao.com
-export FRONTEND_URL=https://app.linkdao.com
+export BACKEND_URL=https://api.linkdao.io
+export FRONTEND_URL=https://app.linkdao.io
 
 # Run validation and deployment
 cd app/backend
@@ -410,10 +410,10 @@ npx ts-node src/scripts/finalValidationAndDeployment.ts
 
 ### Emergency Contacts
 
-- **Development Team**: dev-team@linkdao.com
-- **DevOps Team**: devops@linkdao.com
+- **Development Team**: dev-team@linkdao.io
+- **DevOps Team**: devops@linkdao.io
 - **On-call Engineer**: +1-555-0123
-- **System Administrator**: admin@linkdao.com
+- **System Administrator**: admin@linkdao.io
 
 ## Success Criteria
 

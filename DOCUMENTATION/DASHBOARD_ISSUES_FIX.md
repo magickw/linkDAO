@@ -29,7 +29,7 @@ WebSocket connection to 'wss://linkdao-backend.onrender.com/socket.io/?EIO=4&tra
 ### 1. CORS Configuration Fix
 
 #### Problem
-The backend was only configured to allow requests from the production frontend URL (`https://linkdao.vercel.app`) but not from localhost development URLs (`http://localhost:3000`).
+The backend was only configured to allow requests from the production frontend URL (`https://linkdao.io`) but not from localhost development URLs (`http://localhost:3000`).
 
 #### Solution
 Updated the CORS configuration in the backend to allow multiple origins:
@@ -46,7 +46,7 @@ const allowedOrigins = [
   ...frontendUrls,
   "http://localhost:3000",
   "http://localhost:3001",
-  "https://linkdao.vercel.app"
+  "https://linkdao.io"
 ];
 
 const corsOptions = {
@@ -102,7 +102,7 @@ Updated [app/backend/.env](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app
 
 ```
 # Frontend URL for CORS - allowing multiple origins
-FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.vercel.app
+FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.io
 ```
 
 ## Testing the Fixes

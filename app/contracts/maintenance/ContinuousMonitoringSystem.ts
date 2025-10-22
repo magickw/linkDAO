@@ -460,14 +460,14 @@ export const DEFAULT_MONITORING_CONFIG: MonitoringConfig = {
     schedule: [
       {
         name: 'Primary Engineer',
-        contact: 'primary@linkdao.com',
+        contact: 'primary@linkdao.io',
         startTime: '09:00:00',
         endTime: '17:00:00',
         timezone: 'UTC'
       },
       {
         name: 'Secondary Engineer',
-        contact: 'secondary@linkdao.com',
+        contact: 'secondary@linkdao.io',
         startTime: '17:00:00',
         endTime: '09:00:00',
         timezone: 'UTC'

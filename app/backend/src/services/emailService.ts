@@ -26,7 +26,7 @@ export class EmailService {
   private constructor() {
     // Initialize Resend only if API key is provided
     const apiKey = process.env.RESEND_API_KEY;
-    this.fromEmail = process.env.FROM_EMAIL || 'noreply@linkdao.app';
+    this.fromEmail = process.env.FROM_EMAIL || 'noreply@linkdao.io';
     this.enabled = !!apiKey;
 
     if (this.enabled) {

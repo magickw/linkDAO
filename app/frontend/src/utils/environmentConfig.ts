@@ -36,9 +36,9 @@ class EnvironmentManager {
       if (isProduction) {
         // In production, we should have a proper API URL
         console.warn('⚠️ No API URL configured for production environment');
-        apiUrl = 'https://api.linkdao.com'; // Replace with your actual production API
+        apiUrl = 'https://api.linkdao.io'; // Replace with your actual production API
       } else if (isStaging) {
-        apiUrl = 'https://staging-api.linkdao.com'; // Replace with your staging API
+        apiUrl = 'https://staging-api.linkdao.io'; // Replace with your staging API
       } else {
         // Development fallback
         apiUrl = 'http://localhost:10000';

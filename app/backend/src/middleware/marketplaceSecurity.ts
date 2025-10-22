@@ -14,7 +14,7 @@ const marketplaceCorsOptions: cors.CorsOptions = {
     const allowedOrigins: string[] = [
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://linkdao.vercel.app',
+      'https://linkdao.io',
       'https://linkdao-frontend.vercel.app',
       'https://web3-marketplace-frontend.vercel.app',
       process.env.FRONTEND_URL,

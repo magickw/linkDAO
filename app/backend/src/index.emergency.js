@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 10000;
 // CORS Configuration - Critical for frontend connectivity
 const corsOptions = {
   origin: [
-    'https://linkdao.vercel.app',
+    'https://linkdao.io',
     'https://linkdao-git-main.vercel.app',
     'https://linkdao-frontend.vercel.app',
     'http://localhost:3000',

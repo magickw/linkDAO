@@ -26,7 +26,7 @@ POST /api/auth/admin/login
 Content-Type: application/json
 
 {
-  "email": "admin@linkdao.com",
+  "email": "admin@linkdao.io",
   "password": "your-password",
   "mfaCode": "123456"
 }
@@ -42,7 +42,7 @@ Content-Type: application/json
     "expiresIn": 3600,
     "user": {
       "id": "admin-123",
-      "email": "admin@linkdao.com",
+      "email": "admin@linkdao.io",
       "role": "admin",
       "permissions": ["read", "write", "delete", "moderate"]
     }
@@ -113,7 +113,7 @@ GET /api/admin/dashboard/realtime
 
 WebSocket endpoint for real-time dashboard updates:
 ```javascript
-const ws = new WebSocket('wss://api.linkdao.com/admin/realtime');
+const ws = new WebSocket('wss://api.linkdao.io/admin/realtime');
 ws.onmessage = (event) => {
   const update = JSON.parse(event.data);
   // Handle real-time update
@@ -181,7 +181,7 @@ GET /api/admin/users/{userId}
       "profile": {
         "displayName": "John Doe",
         "bio": "Web3 enthusiast",
-        "avatar": "https://cdn.linkdao.com/avatars/user-123.jpg"
+        "avatar": "https://cdn.linkdao.io/avatars/user-123.jpg"
       },
       "stats": {
         "postsCount": 45,
@@ -342,7 +342,7 @@ Content-Type: application/json
   "format": "pdf",
   "schedule": {
     "frequency": "monthly",
-    "recipients": ["admin@linkdao.com"]
+    "recipients": ["admin@linkdao.io"]
   }
 }
 ```
@@ -529,7 +529,7 @@ import { LinkDAOAdmin } from '@linkdao/admin-sdk';
 
 const admin = new LinkDAOAdmin({
   apiKey: 'your-api-key',
-  baseURL: 'https://api.linkdao.com'
+  baseURL: 'https://api.linkdao.io'
 });
 
 // Get dashboard metrics
@@ -561,7 +561,7 @@ from linkdao_admin import LinkDAOAdmin
 
 admin = LinkDAOAdmin(
     api_key='your-api-key',
-    base_url='https://api.linkdao.com'
+    base_url='https://api.linkdao.io'
 )
 
 # Get system health
@@ -580,7 +580,7 @@ report = admin.reports.generate({
 ### Real-Time Dashboard Updates
 ```javascript
 // Connect to real-time updates
-const ws = new WebSocket('wss://api.linkdao.com/admin/realtime');
+const ws = new WebSocket('wss://api.linkdao.io/admin/realtime');
 
 ws.onopen = () => {
   // Subscribe to specific metrics
@@ -718,4 +718,4 @@ const admin = new LinkDAOAdmin({
 
 ---
 
-*For more information, visit our [Developer Portal](https://developers.linkdao.com) or contact our [Developer Support](mailto:dev-support@linkdao.com).*
+*For more information, visit our [Developer Portal](https://developers.linkdao.io) or contact our [Developer Support](mailto:dev-support@linkdao.io).*

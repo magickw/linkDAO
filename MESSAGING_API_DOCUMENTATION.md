@@ -1285,7 +1285,7 @@ interface ConversationAnalytics {
 ### Connection
 
 ```javascript
-const socket = io('wss://api.linkdao.com', {
+const socket = io('wss://api.linkdao.io', {
   auth: {
     token: 'JWT_TOKEN_HERE'
   }
@@ -1370,8 +1370,8 @@ socket.on('message:read', (data) => {
 
 For issues or questions:
 - GitHub: https://github.com/linkdao/linkdao
-- Documentation: https://docs.linkdao.com
-- Support Email: support@linkdao.com
+- Documentation: https://docs.linkdao.io
+- Support Email: support@linkdao.io
 
 ---
 

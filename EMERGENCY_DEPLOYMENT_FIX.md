@@ -40,7 +40,7 @@ ANY  /api/*                     - Generic API response
 ```
 
 ### ✅ CORS Configuration
-- Allows requests from `https://linkdao.vercel.app`
+- Allows requests from `https://linkdao.io`
 - Supports all HTTP methods
 - Proper preflight handling
 

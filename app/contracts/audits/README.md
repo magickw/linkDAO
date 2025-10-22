@@ -107,9 +107,9 @@ audits/
 ## Contact
 
 For audit-related questions:
-- Security Lead: security@linkdao.com
-- Bug Bounty: bugbounty@linkdao.com
-- Emergency: emergency@linkdao.com
+- Security Lead: security@linkdao.io
+- Bug Bounty: bugbounty@linkdao.io
+- Emergency: emergency@linkdao.io
 
 ## License
 

@@ -82,7 +82,7 @@ Phase 4 has been completed successfully with all new TypeScript routes from Phas
 - **File:** src/index.production.optimized.js
 - **Environment:** development (with production optimizations)
 - **Redis Cache:** ✅ Connected
-- **CORS Origins:** https://linkdao.vercel.app, http://localhost:3000
+- **CORS Origins:** https://linkdao.io, http://localhost:3000
 
 ### Memory Usage
 - **RSS:** 64.98 MB

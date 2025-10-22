@@ -5,7 +5,7 @@ This document explains how to fix the CORS issues in the LinkDAO application.
 ## Problem Summary
 
 The application was experiencing CORS (Cross-Origin Resource Sharing) errors when:
-1. The frontend on `https://linkdao.vercel.app` tried to access external RPC providers like Alchemy
+1. The frontend on `https://linkdao.io` tried to access external RPC providers like Alchemy
 2. The frontend tried to access the backend API on `https://linkdao-backend.onrender.com`
 3. Various external services were being accessed directly from the browser
 
@@ -57,7 +57,7 @@ NEXT_PUBLIC_BACKEND_URL=https://linkdao-backend.onrender.com
 **Backend (.env file):**
 ```
 # Add your frontend domain to allowed origins
-ALLOWED_ORIGINS=http://localhost:3000,https://linkdao.vercel.app,https://linkdao.io
+ALLOWED_ORIGINS=http://localhost:3000,https://linkdao.io,https://linkdao.io
 ```
 
 ### 2. Deploy Changes

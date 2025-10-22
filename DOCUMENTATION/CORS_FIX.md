@@ -11,7 +11,7 @@ When running the LinkDAO application locally, users encountered CORS (Cross-Orig
 
 The issue was caused by two main factors:
 
-1. The backend CORS configuration was only allowing requests from `https://linkdao.vercel.app` (the production frontend URL) but not from `http://localhost:3000` (the local development URL).
+1. The backend CORS configuration was only allowing requests from `https://linkdao.io` (the production frontend URL) but not from `http://localhost:3000` (the local development URL).
 2. The `FRONTEND_URL` environment variable in the backend was not properly configured to handle multiple origins.
 
 ## Solution Implemented
@@ -22,14 +22,14 @@ Modified the CORS configuration in [app/backend/src/index.ts](file:///Users/bfgu
 
 - Parse the `FRONTEND_URL` environment variable as a comma-separated list of allowed origins
 - Explicitly include `http://localhost:3000` and `http://localhost:3001` for local development
-- Maintain the production URL `https://linkdao.vercel.app` for deployed environments
+- Maintain the production URL `https://linkdao.io` for deployed environments
 
 ### 2. Updated Environment Variables
 
 Updated the backend [.env](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/.env) file to include multiple origins in the `FRONTEND_URL` variable:
 
 ```
-FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.vercel.app
+FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.io
 ```
 
 ### 3. Enhanced CORS Options
@@ -51,7 +51,7 @@ const allowedOrigins = [
   ...frontendUrls,
   "http://localhost:3000",
   "http://localhost:3001",
-  "https://linkdao.vercel.app"
+  "https://linkdao.io"
 ];
 
 const corsOptions = {
@@ -74,7 +74,7 @@ const corsOptions = {
 
 ```
 # Frontend URL for CORS - allowing multiple origins
-FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.vercel.app
+FRONTEND_URL=http://localhost:3000,http://localhost:3001,https://linkdao.io
 ```
 
 ## Testing the Fix

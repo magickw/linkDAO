@@ -168,7 +168,7 @@ All changes are backward compatible and don't require additional dependencies.
 1. **Deploy the changes** to both frontend and backend
 2. **Monitor the health endpoint**: `curl https://linkdao-backend.onrender.com/health`
 3. **Check browser console** for request patterns using the debug script
-4. **Verify CORS**: Ensure requests from `https://linkdao.vercel.app` work properly
+4. **Verify CORS**: Ensure requests from `https://linkdao.io` work properly
 5. **Test rate limiting**: Try making many requests quickly to verify limits work
 
 The combination of these changes should resolve both the excessive request issue and the CORS problems, providing a much more stable and performant application.

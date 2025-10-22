@@ -98,7 +98,7 @@ export const securityConfig: SecurityConfig = {
     lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900000'), // 15 minutes
     sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '3600000'), // 1 hour
     requireMFA: process.env.REQUIRE_MFA === 'true',
-    allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://linkdao.vercel.app,https://linkdao.io').split(','),
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://linkdao.io,https://linkdao.io').split(','),
   },
   
   encryption: {

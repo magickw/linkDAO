@@ -25,7 +25,7 @@ const getFrontendUrl = () => {
     return window.location.origin
   }
   // Default URL for SSR or non-browser environments
-  return 'https://linkdao.vercel.app'
+  return 'https://linkdao.io'
 }
 
 // For production deployment, use the backend as a proxy for RPC requests to avoid CORS issues

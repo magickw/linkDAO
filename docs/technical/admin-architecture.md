@@ -791,4 +791,4 @@ export const errorHandler = (
 
 ---
 
-*This architecture documentation is maintained by the LinkDAO development team. For questions or contributions, please contact [dev-team@linkdao.com](mailto:dev-team@linkdao.com).*
+*This architecture documentation is maintained by the LinkDAO development team. For questions or contributions, please contact [dev-team@linkdao.io](mailto:dev-team@linkdao.io).*

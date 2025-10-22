@@ -199,7 +199,7 @@ class ProductionInfrastructureManager {
     // Check monitoring settings
     if (this.config.monitoring.enabled && !this.config.monitoring.notifications.slack && !this.config.monitoring.notifications.email) {
       warnings.push("Monitoring enabled but no notification channels configured - using placeholder");
-      this.config.monitoring.notifications.email = ["admin@linkdao.com"];
+      this.config.monitoring.notifications.email = ["admin@linkdao.io"];
     }
 
     if (warnings.length > 0) {

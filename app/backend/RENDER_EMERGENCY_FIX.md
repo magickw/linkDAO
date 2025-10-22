@@ -39,7 +39,7 @@ Since your current backend has issues, deploy the fixed version immediately:
    ```
    NODE_ENV=production
    PORT=10000
-   FRONTEND_URL=https://linkdao.vercel.app
+   FRONTEND_URL=https://linkdao.io
    ```
 3. Save and redeploy
 
@@ -56,7 +56,7 @@ If the above doesn't work, create a new service:
      ```
      NODE_ENV=production
      PORT=10000
-     FRONTEND_URL=https://linkdao.vercel.app
+     FRONTEND_URL=https://linkdao.io
      ```
 
 ### Step 4: Update Frontend Configuration
@@ -80,7 +80,7 @@ Should return:
 ```
 
 ### Test 2: Frontend Diagnostic
-1. Visit: `https://linkdao.vercel.app/backend-debug`
+1. Visit: `https://linkdao.io/backend-debug`
 2. Click **"Run Full Diagnostics"**
 3. All tests should pass
 

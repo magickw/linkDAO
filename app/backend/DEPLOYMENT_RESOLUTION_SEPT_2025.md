@@ -79,7 +79,7 @@ Error: Cannot find module 'ioredis'
 ```env
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://linkdao.vercel.app
+FRONTEND_URL=https://linkdao.io
 NODE_OPTIONS=--max-old-space-size=512
 ```
 

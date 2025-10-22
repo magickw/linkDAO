@@ -134,6 +134,6 @@ The backend now provides these endpoints:
 
 The production environment is configured to use:
 - Backend: `https://linkdao-backend.onrender.com`
-- Frontend: `https://linkdao.vercel.app`
+- Frontend: `https://linkdao.io`
 
 Make sure the deployed backend includes all the fixes from `index.fixed.js`.

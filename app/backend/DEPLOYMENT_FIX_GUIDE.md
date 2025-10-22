@@ -45,7 +45,7 @@ services:
       - key: PORT
         value: 10000
       - key: FRONTEND_URL
-        value: https://linkdao.vercel.app
+        value: https://linkdao.io
     healthCheckPath: /health
 ```
 
@@ -59,8 +59,8 @@ services:
    ```
    NODE_ENV=production
    PORT=10000
-   FRONTEND_URL=https://linkdao.vercel.app
-   CORS_ORIGIN=https://linkdao.vercel.app,https://linkdao-git-main.vercel.app
+   FRONTEND_URL=https://linkdao.io
+   CORS_ORIGIN=https://linkdao.io,https://linkdao-git-main.vercel.app
    ```
 
 ### Step 2: Update Build Settings
@@ -87,7 +87,7 @@ services:
    ```
 
 ### Step 5: Test Frontend Connection
-1. Visit: `https://linkdao.vercel.app/backend-test`
+1. Visit: `https://linkdao.io/backend-test`
 2. Click "Run All Tests"
 3. All tests should pass
 
@@ -120,7 +120,7 @@ The fixed backend provides these endpoints:
 ## CORS Configuration
 
 The backend is configured to allow requests from:
-- `https://linkdao.vercel.app`
+- `https://linkdao.io`
 - `https://linkdao-frontend.vercel.app`
 - `https://linkdao-git-main.vercel.app`
 - Any `*.vercel.app` domain (for preview deployments)
@@ -159,7 +159,7 @@ The backend is configured to allow requests from:
    - Trigger a new deployment in Vercel
 
 3. **Test with Backend Test Page**:
-   - Visit: `https://linkdao.vercel.app/backend-test`
+   - Visit: `https://linkdao.io/backend-test`
    - Run connectivity tests
 
 ## Next Steps

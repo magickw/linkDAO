@@ -40,7 +40,7 @@ DEPLOYER_ADDRESS=0x...
 # Alert Channels
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_URL
-ALERT_EMAIL=devops@linkdao.com
+ALERT_EMAIL=devops@linkdao.io
 ```
 
 ### 3. Set Up Alert Channels
@@ -294,7 +294,7 @@ await Event.create(eventData);
 ## Support
 
 For issues or questions:
-- **Email**: devops@linkdao.com
+- **Email**: devops@linkdao.io
 - **Discord**: LinkDAO Development
 - **GitHub**: Open an issue
 

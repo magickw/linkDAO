@@ -378,7 +378,7 @@ const estimatedGasUnits = 50_000_000; // Adjust gas estimate
 For issues or questions:
 - GitHub Issues: https://github.com/linkdao/linkdao/issues
 - Discord: https://discord.gg/linkdao
-- Email: devops@linkdao.com
+- Email: devops@linkdao.io
 
 ## License
 

@@ -37,8 +37,8 @@ NEXT_PUBLIC_LOG_LEVEL=debug
 
 #### `.env.staging` (Staging)
 ```bash
-NEXT_PUBLIC_BACKEND_URL=https://api-staging.linkdao.com
-NEXT_PUBLIC_WS_URL=wss://ws-staging.linkdao.com
+NEXT_PUBLIC_BACKEND_URL=https://api-staging.linkdao.io
+NEXT_PUBLIC_WS_URL=wss://ws-staging.linkdao.io
 NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_ENABLE_ANALYTICS=true
 NEXT_PUBLIC_ENABLE_SERVICE_WORKER=true
@@ -47,8 +47,8 @@ NEXT_PUBLIC_LOG_LEVEL=info
 
 #### `.env.production` (Production)
 ```bash
-NEXT_PUBLIC_BACKEND_URL=https://api.linkdao.com
-NEXT_PUBLIC_WS_URL=wss://ws.linkdao.com
+NEXT_PUBLIC_BACKEND_URL=https://api.linkdao.io
+NEXT_PUBLIC_WS_URL=wss://ws.linkdao.io
 NEXT_PUBLIC_CHAIN_ID=1
 NEXT_PUBLIC_ENABLE_ANALYTICS=true
 NEXT_PUBLIC_ENABLE_SERVICE_WORKER=true

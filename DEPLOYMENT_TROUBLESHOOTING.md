@@ -41,7 +41,7 @@ DATABASE_URL=your_database_connection_string
 
 ### 2. CORS Policy Violations
 **Symptoms:**
-- "Access to fetch at 'https://linkdao-backend.onrender.com/api/posts/feed' from origin 'https://linkdao.vercel.app' has been blocked by CORS policy"
+- "Access to fetch at 'https://linkdao-backend.onrender.com/api/posts/feed' from origin 'https://linkdao.io' has been blocked by CORS policy"
 
 **Current Fix Applied:**
 The CORS configuration in your backend should allow your frontend domain. If still failing, the minimal version uses permissive CORS settings.
@@ -195,7 +195,7 @@ app.get('/health', async (req, res) => {
 curl -I https://linkdao-backend.onrender.com/health
 
 # Test CORS
-curl -H "Origin: https://linkdao.vercel.app" \
+curl -H "Origin: https://linkdao.io" \
      -H "Access-Control-Request-Method: GET" \
      -H "Access-Control-Request-Headers: Content-Type" \
      -X OPTIONS \
