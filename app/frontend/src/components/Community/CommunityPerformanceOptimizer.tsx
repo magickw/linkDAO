@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { communityCacheService } from '../../services/communityCacheService';
+import { imageOptimizationService } from '../../services/imageOptimizationService';
 
 interface CommunityPerformanceOptimizerProps {
   communityId: string;
@@ -253,8 +254,13 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
       const targetWidth = Math.ceil(width * devicePixelRatio);
       const targetHeight = Math.ceil(height * devicePixelRatio);
       
-      // Use image optimization service (placeholder implementation)
-      const optimizedUrl = `${originalSrc}?w=${targetWidth}&h=${targetHeight}&q=80&f=webp`;
+      // Use proper image optimization service
+      const optimizedUrl = await imageOptimizationService.optimizeImage(originalSrc, {
+        width: targetWidth,
+        height: targetHeight,
+        quality: 80,
+        format: 'webp'
+      });
       
       // Cache the optimization metadata
       communityCacheService.cacheImageMetadata(originalSrc, {

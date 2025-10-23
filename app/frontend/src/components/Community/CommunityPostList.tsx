@@ -211,33 +211,34 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           ) : (
             <PostComposer
               onPost={async (postData) => {
-                // Create a mock post for now (include all required EnhancedPost fields)
-                const newPost: EnhancedPost = {
-                  id: Date.now().toString(),
-                  author: 'current-user',
-                  parentId: null,
-                  title: postData.title || '',
-                  contentCid: postData.content,
-                  mediaCids: postData.media || [],
-                  tags: postData.tags || [],
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                  onchainRef: '',
-                  stakedValue: 0,
-                  reputationScore: 0,
-                  dao: '',
+                // Create post via API
+                try {
+                  const response = await fetch(`/api/communities/${communityId}/posts`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${localStorage.getItem('authToken')}` // Adjust based on your auth implementation
+                    },
+                    body: JSON.stringify({
+                      content: postData.content,
+                      title: postData.title,
+                      mediaUrls: postData.media || [],
+                      tags: postData.tags || []
+                    })
+                  });
 
-                  // Engagement data
-                  reactions: [],
-                  tips: [],
-                  comments: 0,
-                  shares: 0,
-                  views: 0,
-                  engagementScore: 0,
-
-                  // Enhanced features
-                  previews: [],
-                  socialProof: {
+                  if (response.ok) {
+                    const newPost = await response.json();
+                    // Add the new post to the list
+                    setPosts(prevPosts => [newPost.data, ...prevPosts]);
+                    setShowComposer(false);
+                  } else {
+                    console.error('Failed to create post:', response.statusText);
+                  }
+                } catch (error) {
+                  console.error('Error creating post:', error);
+                }
+                return; // Exit early since we're handling the API call
                     followedUsersWhoEngaged: [],
                     totalEngagementFromFollowed: 0,
                     communityLeadersWhoEngaged: [],

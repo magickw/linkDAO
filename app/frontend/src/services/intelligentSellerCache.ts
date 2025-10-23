@@ -680,18 +680,28 @@ export class IntelligentSellerCache {
   }
 
   private async fetchSellerData(dataType: string, walletAddress: string): Promise<any> {
-    // This would be implemented with actual API calls
-    // For now, return mock data based on type
-    const mockData: Record<string, any> = {
-      profile: { walletAddress, displayName: 'Mock Seller', tier: 'bronze' },
-      dashboard: { totalSales: 0, activeListings: 0, pendingOrders: 0 },
-      listings: [],
-      analytics: { views: 0, clicks: 0, conversions: 0 },
-      notifications: [],
-      tier: { current: 'bronze', progress: 0 }
-    };
+    try {
+      // Make real API call to backend
+      const response = await fetch(`/api/seller/${walletAddress}/${dataType}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-    return mockData[dataType] || null;
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null; // Seller data not found
+        }
+        throw new Error(`Failed to fetch seller ${dataType}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching seller ${dataType}:`, error);
+      // Return null instead of mock data on error
+      return null;
+    }
   }
 
   /**

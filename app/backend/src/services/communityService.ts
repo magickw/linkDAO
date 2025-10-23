@@ -2848,6 +2848,49 @@ export class CommunityService {
         return {};
     }
   }
+  /**
+   * Search for authors within communities
+   */
+  async searchAuthors(query: string): Promise<any[]> {
+    try {
+      const authors = await db
+        .select({
+          id: users.id,
+          username: users.handle,
+          displayName: users.ensName,
+          address: users.walletAddress,
+          avatar: users.avatar,
+          reputation: users.reputation,
+          isVerified: users.isVerified
+        })
+        .from(users)
+        .leftJoin(posts, eq(posts.authorId, users.id))
+        .where(
+          or(
+            like(users.handle, `%${query}%`),
+            like(users.ensName, `%${query}%`),
+            like(users.walletAddress, `%${query}%`)
+          )
+        )
+        .groupBy(users.id, users.handle, users.ensName, users.walletAddress, users.avatar, users.reputation, users.isVerified)
+        .having(gt(count(posts.id), 0)) // Only users who have posted
+        .limit(10);
+
+      return authors.map(author => ({
+        id: author.id,
+        username: author.username || author.address,
+        displayName: author.displayName || author.username || author.address,
+        address: author.address,
+        avatar: author.avatar,
+        reputation: author.reputation || 0,
+        isVerified: author.isVerified || false,
+        postCount: 0 // Could be calculated if needed
+      }));
+    } catch (error) {
+      console.error('Error searching authors:', error);
+      throw new Error('Failed to search authors');
+    }
+  }
 }
 
 export const communityService = new CommunityService();

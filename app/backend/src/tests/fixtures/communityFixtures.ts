@@ -1,6 +1,9 @@
 /**
  * Community Test Fixtures
  * Provides realistic test data for community-related functionality
+ * 
+ * WARNING: This file contains mock data for testing purposes only.
+ * Do not use this data in production environments.
  */
 
 import { TestDataFactory, TestDataOptions } from './testDataFactory';

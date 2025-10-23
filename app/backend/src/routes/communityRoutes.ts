@@ -538,4 +538,14 @@ router.get('/:communityId/subscriptions',
   communityController.getUserSubscriptions
 );
 
+// Search authors within communities
+router.get('/search-authors',
+  validateRequest({
+    query: {
+      q: { type: 'string', required: true, minLength: 2 }
+    }
+  }),
+  communityController.searchAuthors
+);
+
 export default router;

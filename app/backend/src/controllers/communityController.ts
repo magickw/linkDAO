@@ -982,6 +982,24 @@ export class CommunityController {
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to get user subscriptions'));
     }
   }
+
+  // Search authors within communities
+  async searchAuthors(req: Request, res: Response): Promise<void> {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        res.json(createSuccessResponse([], {}));
+        return;
+      }
+
+      const authors = await communityService.searchAuthors(q.trim());
+      res.json(createSuccessResponse(authors, {}));
+    } catch (error) {
+      console.error('Error searching authors:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to search authors'));
+    }
+  }
 }
 
 export const communityController = new CommunityController();

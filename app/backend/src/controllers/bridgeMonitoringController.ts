@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { BridgeMonitoringService } from '../services/bridgeMonitoringService';
 import { logger } from '../utils/logger';
+import { stringifyWithBigInt } from '../utils/bigIntSerializer';
 
 export class BridgeMonitoringController {
   constructor(private bridgeMonitoringService: BridgeMonitoringService) {}
@@ -120,10 +121,11 @@ export class BridgeMonitoringController {
         return;
       }
 
-      res.json({
+      res.setHeader('Content-Type', 'application/json');
+      res.send(stringifyWithBigInt({
         success: true,
         data: metrics
-      });
+      }));
     } catch (error) {
       logger.error('Error getting bridge metrics:', error);
       res.status(500).json({
@@ -225,7 +227,8 @@ export class BridgeMonitoringController {
       // For now, we'll return the latest metrics
       const metrics = await this.bridgeMonitoringService.getLatestMetrics();
 
-      res.json({
+      res.setHeader('Content-Type', 'application/json');
+      res.send(stringifyWithBigInt({
         success: true,
         data: {
           timeframe,
@@ -239,7 +242,7 @@ export class BridgeMonitoringController {
             chainMetrics: {}
           }
         }
-      });
+      }));
     } catch (error) {
       logger.error('Error getting bridge statistics:', error);
       res.status(500).json({

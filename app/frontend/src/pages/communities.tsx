@@ -129,62 +129,13 @@ const mockCommunities = [
   }
 ];
 
-const mockPosts = [
-  {
-    id: '1',
-    communityId: 'ethereum-builders',
-    title: 'New EIP-4844 Implementation Guide',
-    author: '0x1234567890123456789012345678901234567890',
-    authorName: 'vitalik.eth',
-    content: 'Just published a comprehensive guide on implementing EIP-4844 proto-danksharding...',
-    type: 'discussion',
-    upvotes: 245,
-    downvotes: 12,
-    commentCount: 67,
-    createdAt: new Date(Date.now() - 3600000),
-    tags: ['eip-4844', 'scaling', 'ethereum'],
-    stakedTokens: 150,
-    isStaked: true
-  },
-  {
-    id: '2',
-    communityId: 'defi-traders',
-    title: 'Arbitrum Yield Farming Strategy - 15% APY',
-    author: '0x2345678901234567890123456789012345678901',
-    authorName: 'defi_alpha',
-    content: 'Found a new yield farming opportunity on Arbitrum with sustainable 15% APY...',
-    type: 'analysis',
-    upvotes: 189,
-    downvotes: 23,
-    commentCount: 45,
-    createdAt: new Date(Date.now() - 7200000),
-    tags: ['arbitrum', 'yield-farming', 'strategy'],
-    stakedTokens: 89,
-    isStaked: false
-  },
-  {
-    id: '3',
-    communityId: 'nft-collectors',
-    title: 'My Latest NFT Collection Drop',
-    author: '0x3456789012345678901234567890123456789012',
-    authorName: 'cryptoartist',
-    content: 'Excited to share my latest NFT collection representing different DeFi protocols...',
-    type: 'showcase',
-    upvotes: 156,
-    downvotes: 8,
-    commentCount: 34,
-    createdAt: new Date(Date.now() - 10800000),
-    tags: ['nft', 'art', 'defi'],
-    stakedTokens: 67,
-    isStaked: true
-  }
-];
+// Mock posts removed - now fetching from backend API
 
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const [communities, setCommunities] = useState<Community[]>([]);
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
@@ -252,6 +203,30 @@ const CommunitiesPage: React.FC = () => {
 
     loadEnhancedCommunities();
   }, []);
+
+  // Load posts from backend API
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        // Import FeedService dynamically to avoid circular dependencies
+        const { FeedService } = await import('../services/feedService');
+        
+        const response = await FeedService.getEnhancedFeed({
+          sortBy: sortBy,
+          timeRange: timeFilter,
+          feedSource: 'all'
+        }, 1, 20);
+        
+        setPosts(response.posts || []);
+      } catch (error) {
+        console.error('Failed to fetch posts:', error);
+        // On error, show empty array instead of mock data
+        setPosts([]);
+      }
+    };
+    
+    fetchPosts();
+  }, [sortBy, timeFilter]);
 
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {

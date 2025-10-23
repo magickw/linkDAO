@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 import { db } from '../db/connection';
 import { bridgeTransactions, bridgeEvents, bridgeMetrics } from '../db/schema';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { convertBigIntToStrings, stringifyWithBigInt, jsonToBigInt } from '../utils/bigIntSerializer';
 
 export interface BridgeTransaction {
   id: string;
@@ -561,7 +562,7 @@ export class BridgeMonitoringService extends EventEmitter {
         successRate: metrics.successRate,
         averageCompletionTime: metrics.averageCompletionTime,
         activeValidators: metrics.activeValidators,
-        chainMetrics: JSON.stringify(metrics.chainMetrics)
+        chainMetrics: stringifyWithBigInt(metrics.chainMetrics)
       });
 
       this.emit('metrics_collected', metrics);
@@ -742,7 +743,7 @@ export class BridgeMonitoringService extends EventEmitter {
         successRate: metrics.successRate,
         averageCompletionTime: metrics.averageCompletionTime,
         activeValidators: metrics.activeValidators,
-        chainMetrics: JSON.parse(metrics.chainMetrics)
+        chainMetrics: JSON.parse(metrics.chainMetrics, jsonToBigInt)
       };
     } catch (error) {
       logger.error('Error getting latest metrics:', error);

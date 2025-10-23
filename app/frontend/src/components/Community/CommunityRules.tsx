@@ -38,7 +38,7 @@ export const CommunityRules: React.FC<CommunityRulesProps> = ({
     description: rule,
     severity: 'medium' as const,
     enforced: true,
-    violationCount: Math.floor(Math.random() * 10) // Mock data
+    violationCount: 0 // Will be populated from real moderation data when available
   }));
 
   const handleSaveRules = async () => {

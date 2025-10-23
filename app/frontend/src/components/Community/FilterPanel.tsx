@@ -72,22 +72,19 @@ export default function FilterPanel({
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (authorSearch.trim()) {
-        // Mock author suggestions - in real app, this would be an API call
-        const mockSuggestions: AuthorSuggestion[] = [
-          {
-            id: '1',
-            username: `${authorSearch}user1`,
-            displayName: `${authorSearch} User One`,
-            postCount: 42
-          },
-          {
-            id: '2',
-            username: `${authorSearch}user2`,
-            displayName: `${authorSearch} User Two`,
-            postCount: 28
+        // Fetch real author suggestions from API
+        try {
+          const response = await fetch(`/api/communities/search-authors?q=${encodeURIComponent(authorSearch.trim())}`);
+          if (response.ok) {
+            const suggestions = await response.json();
+            setAuthorSuggestions(suggestions);
+          } else {
+            setAuthorSuggestions([]);
           }
-        ];
-        setAuthorSuggestions(mockSuggestions);
+        } catch (error) {
+          console.error('Error fetching author suggestions:', error);
+          setAuthorSuggestions([]);
+        }
         setShowAuthorSuggestions(true);
       } else {
         setAuthorSuggestions([]);

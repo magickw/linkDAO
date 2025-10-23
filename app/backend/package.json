@@ -13,6 +13,8 @@
     "migrate": "ts-node src/scripts/migrate.ts",
     "migrate:production": "ts-node src/scripts/production-migrate.ts",
     "seed:production": "ts-node src/scripts/seed-production-data.ts",
+    "validate:communities": "ts-node scripts/validate-community-data.ts",
+    "cleanup:communities": "ts-node scripts/validate-community-data.ts --cleanup",
     "backup": "ts-node src/scripts/database-backup.ts",
     "backup:schema": "ts-node src/scripts/database-backup.ts schema",
     "backup:full": "ts-node src/scripts/database-backup.ts full",
