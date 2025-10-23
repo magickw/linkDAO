@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MessageCircle, Book, Video, Mail, Phone, Clock, CheckCircle } from 'lucide-react';
+import { Search, MessageCircle, Book, Video, Mail, Phone, Clock, CheckCircle, Bot, Star, Bookmark } from 'lucide-react';
 
 interface SupportTicket {
   id: string;
@@ -175,28 +175,81 @@ const LDAOSupportCenter: React.FC = () => {
             />
           </div>
 
-          {/* Popular Topics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            {[
-              { title: 'Getting Started', count: 12, color: 'blue' },
-              { title: 'Direct Purchase', count: 8, color: 'green' },
-              { title: 'DEX Trading', count: 6, color: 'purple' },
-              { title: 'Staking Guide', count: 10, color: 'orange' },
-              { title: 'Earn-to-Own', count: 7, color: 'pink' },
-              { title: 'Troubleshooting', count: 15, color: 'red' }
-            ].map((topic) => (
-              <div
-                key={topic.title}
-                className={`p-4 bg-${topic.color}-50 border border-${topic.color}-200 rounded-lg hover:bg-${topic.color}-100 cursor-pointer transition-colors`}
-              >
-                <h3 className={`font-semibold text-${topic.color}-900 mb-1`}>
-                  {topic.title}
-                </h3>
-                <p className={`text-sm text-${topic.color}-600`}>
-                  {topic.count} articles
-                </p>
+          {/* AI Support Assistant */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mb-8">
+            <div className="flex items-start">
+              <div className="p-3 bg-blue-100 rounded-lg mr-4">
+                <Bot className="w-6 h-6 text-blue-600" />
               </div>
-            ))}
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">AI Support Assistant</h3>
+                <p className="text-gray-600 mb-4">Get instant help with LDAO tokens, staking, and trading from our AI-powered assistant.</p>
+                <button 
+                  onClick={() => alert('AI Chat would open here')}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Bot className="w-4 h-4 mr-2" />
+                  Chat with Assistant
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Popular LDAO Topics */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Popular LDAO Topics</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { title: 'Token Acquisition', articles: 15, color: 'blue' },
+                { title: 'Staking Rewards', articles: 12, color: 'green' },
+                { title: 'DEX Trading', articles: 8, color: 'purple' },
+                { title: 'Governance Voting', articles: 10, color: 'orange' },
+                { title: 'Security Best Practices', articles: 7, color: 'red' },
+                { title: 'Wallet Setup', articles: 9, color: 'indigo' }
+              ].map((topic) => (
+                <div
+                  key={topic.title}
+                  className={`p-4 bg-${topic.color}-50 border border-${topic.color}-200 rounded-lg hover:bg-${topic.color}-100 cursor-pointer transition-colors`}
+                >
+                  <h3 className={`font-semibold text-${topic.color}-900 mb-1`}>
+                    {topic.title}
+                  </h3>
+                  <p className={`text-sm text-${topic.color}-600`}>
+                    {topic.articles} articles
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Saved Resources */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Saved Resources</h2>
+              <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                View All
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer">
+                <div className="p-2 bg-yellow-100 rounded-lg mr-3">
+                  <Bookmark className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Staking Guide</h3>
+                  <p className="text-sm text-gray-600">Bookmarked 2 days ago</p>
+                </div>
+              </div>
+              <div className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer">
+                <div className="p-2 bg-green-100 rounded-lg mr-3">
+                  <Star className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">Top FAQ: Wallet Connection</h3>
+                  <p className="text-sm text-gray-600">Recommended for you</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* FAQ Items */}

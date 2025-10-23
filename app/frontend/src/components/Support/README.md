@@ -1,225 +1,144 @@
-# Network Failure Handler
+# LinkDAO Support Components
 
-The `NetworkFailureHandler` is a comprehensive React component that provides robust network failure handling with graceful degradation, offline support, and intelligent retry mechanisms.
+This directory contains all the React components that make up the LinkDAO support system. These components provide a comprehensive support experience for users of the LinkDAO platform.
 
-## Features
+## Component Overview
 
-### 🔄 Intelligent Retry System
-- **Exponential Backoff**: Automatically retries failed connections with increasing intervals
-- **Connection Testing**: Tests multiple endpoints to verify connectivity
-- **Adaptive Retry Logic**: Adjusts retry behavior based on network conditions
-- **Maximum Retry Limits**: Prevents infinite retry loops
+### Core Support Components
 
-### 📱 Offline Mode Support
-- **Cached Content Access**: Provides access to previously cached documents
-- **Client-side Search**: Enables search functionality even when offline
-- **Multi-language Support**: Maintains translated content availability
-- **Emergency Caching**: Automatically caches critical content during failures
+#### `LDAOSupportCenter.tsx`
+The main support center component for LDAO token-related support. Includes tabs for help center, tickets, and contact information.
 
-### 📊 Performance Monitoring
-- **Connection Quality Assessment**: Real-time monitoring of connection speed and stability
-- **Network Condition Detection**: Identifies slow, unstable, or failed connections
-- **Performance Alerts**: Displays warnings for poor network conditions
-- **Bandwidth Optimization**: Adapts loading strategies based on connection quality
+#### `SupportDocuments.tsx`
+The documentation library component with search, filtering, and document viewing capabilities.
 
-### 🛡️ Emergency Mode
-- **Failure Detection**: Activates when multiple connection failures occur
-- **Critical Path Protection**: Prioritizes caching of essential content
-- **Graceful Degradation**: Provides fallback functionality during emergencies
-- **User Guidance**: Clear instructions for offline operation
+#### `SupportTicketDashboard.tsx`
+The ticket management dashboard for viewing and managing support tickets.
 
-## Usage
+#### `SupportTicketForm.tsx`
+The form component for creating new support tickets.
 
-### Basic Implementation
+### New Enhanced Components
+
+#### `AIChatSupport.tsx`
+An AI-powered chat support component that provides instant assistance to users. Features include:
+- Real-time chat interface
+- Message history
+- Feedback collection (thumbs up/down)
+- Text-to-speech options
+- Conversation restart functionality
+
+#### `SupportWidget.tsx`
+A floating support widget that provides quick access to all support channels. Features include:
+- Collapsible interface
+- Multiple support channels (AI chat, docs, community, contact)
+- Always visible floating button
+
+#### `PersonalizedSupportDashboard.tsx`
+A personalized dashboard that shows user-specific support information. Features include:
+- Recently viewed documents
+- Saved documents
+- Open tickets
+- Suggested articles
+- Quick action buttons
+
+#### `MultiLanguageSupport.tsx`
+A multi-language support component that allows users to access documentation in their preferred language. Features include:
+- Language selector with flag icons
+- Text-to-speech functionality
+- Translation request system
+
+#### `SupportAnalyticsDashboard.tsx`
+A comprehensive analytics dashboard for support metrics. Features include:
+- Ticket volume tracking
+- Category distribution visualization
+- Resolution rate monitoring
+- Agent performance metrics
+- Time-based filtering
+
+#### `CommunitySupportForum.tsx`
+A community forum component for peer-to-peer support. Features include:
+- Post creation and viewing
+- Voting system
+- Category filtering
+- Search functionality
+- Bookmarking posts
+
+## Integration Guide
+
+### Using Support Components in Pages
+
+To use these components in your pages, import them from the index file:
 
 ```tsx
-import { NetworkFailureHandler } from './components/Support/NetworkFailureHandler';
-
-function App() {
-  return (
-    <NetworkFailureHandler>
-      <YourAppContent />
-    </NetworkFailureHandler>
-  );
-}
+import {
+  SupportWidget,
+  PersonalizedSupportDashboard,
+  MultiLanguageSupport
+} from '@/components/Support';
 ```
 
-### Advanced Configuration
+### Adding New Support Channels
 
-```tsx
-<NetworkFailureHandler
-  showRetryButton={true}
-  autoRetry={true}
-  retryInterval={30000}
-  maxRetries={5}
-  enableOfflineMode={true}
-  enablePerformanceMonitoring={true}
-  criticalPaths={[
-    '/api/support/documents/critical',
-    '/api/support/search',
-    '/api/support/translations'
-  ]}
-  onNetworkStatusChange={(isOnline) => {
-    console.log('Network status:', isOnline ? 'Online' : 'Offline');
-  }}
-  onRetryAttempt={(attempt) => {
-    console.log(`Retry attempt #${attempt}`);
-  }}
-  onOfflineModeActivated={() => {
-    console.log('Offline mode activated');
-  }}
-  fallbackContent={<OfflineFallbackComponent />}
->
-  <YourAppContent />
-</NetworkFailureHandler>
+To add a new support channel to the widget:
+
+1. Add a new option to the `supportOptions` array in `SupportWidget.tsx`
+2. Implement the action handler for the new channel
+3. Add appropriate styling and icons
+
+### Customizing Analytics
+
+To customize the analytics dashboard:
+
+1. Modify the mock data in `SupportAnalyticsDashboard.tsx` to connect to real APIs
+2. Adjust the time range filters as needed
+3. Add new metrics or visualizations as required
+
+## Testing
+
+Each component has corresponding test files in the `__tests__` directory. To run tests:
+
+```bash
+npm test
 ```
 
-## Props
+## Styling
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `ReactNode` | - | Content to be protected by the handler |
-| `fallbackContent` | `ReactNode` | - | Content to show when network issues occur |
-| `showRetryButton` | `boolean` | `true` | Whether to show retry button in error states |
-| `autoRetry` | `boolean` | `true` | Enable automatic retry with exponential backoff |
-| `retryInterval` | `number` | `30000` | Base retry interval in milliseconds |
-| `maxRetries` | `number` | `5` | Maximum number of retry attempts |
-| `enableOfflineMode` | `boolean` | `true` | Enable offline functionality |
-| `enablePerformanceMonitoring` | `boolean` | `true` | Enable connection quality monitoring |
-| `criticalPaths` | `string[]` | `[]` | Critical API endpoints to prioritize for caching |
-| `onNetworkStatusChange` | `(isOnline: boolean) => void` | - | Callback for network status changes |
-| `onRetryAttempt` | `(attempt: number) => void` | - | Callback for retry attempts |
-| `onOfflineModeActivated` | `() => void` | - | Callback when offline mode is activated |
-
-## Network States
-
-### 🟢 Online - Excellent Connection
-- Fast response times (< 100ms latency)
-- High reliability (> 90% success rate)
-- Full functionality available
-- Real-time updates enabled
-
-### 🟡 Online - Poor Connection
-- Slow response times (> 1000ms latency)
-- Reduced reliability (< 60% success rate)
-- Performance warnings displayed
-- Adaptive loading strategies applied
-
-### 🔴 Offline
-- No network connectivity detected
-- Offline mode automatically activated
-- Cached content made available
-- Retry mechanisms initiated
-
-### ⚠️ Emergency Mode
-- Multiple connection failures detected
-- Critical content caching prioritized
-- Enhanced error reporting
-- Manual intervention options provided
-
-## Offline Capabilities
-
-When offline, users can still access:
-
-- **Cached Documents**: Previously viewed support documentation
-- **Search Functionality**: Client-side search through cached content
-- **Multi-language Content**: Translated versions of cached documents
-- **Navigation**: Browse through available offline content
-- **Bookmarks**: Access saved documentation links
-
-## Connection Quality Indicators
-
-The handler provides visual indicators for connection quality:
-
-- **Excellent** 🟢: Fast, stable connection
-- **Good** 🔵: Reliable connection with minor delays
-- **Fair** 🟡: Usable but slow connection
-- **Poor** 🟠: Unstable connection with frequent issues
-- **None** 🔴: No connection detected
-
-## Error Handling
-
-The component handles various network error scenarios:
-
-### Network Errors
-- Connection timeouts
-- DNS resolution failures
-- Server unavailability
-- Request cancellations
-
-### Recovery Strategies
-- Automatic retry with exponential backoff
-- Connection quality testing
-- Fallback to cached content
-- Emergency mode activation
-
-### User Communication
-- Clear error messages
-- Progress indicators during retries
-- Offline capability information
-- Recovery instructions
-
-## Performance Optimization
-
-### Adaptive Loading
-- Adjusts content loading based on connection speed
-- Prioritizes critical content during slow connections
-- Implements intelligent preloading strategies
-
-### Caching Strategy
-- Automatically caches frequently accessed content
-- Prioritizes critical documentation for offline access
-- Manages storage quota efficiently
-
-### Monitoring Integration
-- Real-time performance metrics collection
-- Connection quality assessment
-- User experience tracking
-
-## Integration with Support Services
-
-The NetworkFailureHandler integrates with:
-
-- **Offline Support Service**: Document caching and synchronization
-- **Performance Monitoring Service**: Connection quality assessment
-- **Intelligent Preloading Service**: Predictive content caching
-
-## Best Practices
-
-### Implementation
-1. Wrap your entire application or critical sections
-2. Define critical paths for priority caching
-3. Implement proper error boundaries
-4. Provide meaningful fallback content
-
-### Configuration
-1. Set appropriate retry intervals based on your use case
-2. Configure maximum retries to prevent resource exhaustion
-3. Enable performance monitoring for better user experience
-4. Customize error messages for your audience
-
-### Monitoring
-1. Track network status changes for analytics
-2. Monitor retry patterns to identify issues
-3. Analyze offline usage patterns
-4. Collect user feedback on network experiences
+All components use Tailwind CSS for styling and follow the LinkDAO design system. Color classes are used consistently:
+- Blue: Primary actions and links
+- Green: Success states and positive actions
+- Red: Error states and destructive actions
+- Yellow: Warnings and neutral actions
+- Purple: Special features and highlights
 
 ## Accessibility
 
-The component includes accessibility features:
+Components are designed with accessibility in mind:
+- Proper ARIA labels
+- Keyboard navigation support
+- Sufficient color contrast
+- Semantic HTML structure
 
-- **Screen Reader Support**: Proper ARIA labels and descriptions
-- **Keyboard Navigation**: Full keyboard accessibility
-- **High Contrast**: Supports high contrast mode
-- **Focus Management**: Proper focus handling during state changes
+## Future Enhancements
 
-## Browser Support
+Planned improvements include:
+- Integration with real AI chat APIs
+- Live chat functionality with human agents
+- Advanced analytics with real-time data
+- User feedback collection and analysis
+- Personalization based on user behavior
+- Mobile-specific optimizations
 
-- **Modern Browsers**: Full feature support
-- **Service Workers**: Required for offline functionality
-- **Cache API**: Required for document caching
-- **Network Information API**: Optional for enhanced monitoring
+## Contributing
 
-## Demo
+To contribute to the support components:
 
-See `NetworkFailureHandlerDemo.tsx` for a comprehensive demonstration of all features and capabilities.
+1. Create a new branch for your feature
+2. Add or modify components as needed
+3. Write corresponding tests
+4. Update this documentation
+5. Submit a pull request for review
+
+## Support
+
+For issues with these components, please create a ticket in the support system or contact the development team.

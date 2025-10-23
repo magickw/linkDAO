@@ -6,6 +6,7 @@ import {
   PaymentMethodType,
   AvailabilityStatus
 } from '../types/paymentPrioritization';
+import { convertBigIntToStrings, stringifyWithBigInt } from '../utils/bigIntSerializer';
 
 export interface UnifiedCheckoutRequest {
   orderId: string;
@@ -92,12 +93,15 @@ export class UnifiedCheckoutService {
    */
   async getCheckoutRecommendation(request: UnifiedCheckoutRequest): Promise<CheckoutRecommendation> {
     try {
+      // Convert BigInt values to strings before serialization
+      const serializedRequest = convertBigIntToStrings(request);
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/recommend-path`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(serializedRequest)
       });
 
       if (!response.ok) {
@@ -214,12 +218,15 @@ export class UnifiedCheckoutService {
    */
   async processCheckout(request: UnifiedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     try {
+      // Convert BigInt values to strings before serialization
+      const serializedRequest = convertBigIntToStrings(request);
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify(serializedRequest)
       });
 
       if (!response.ok) {
@@ -310,15 +317,18 @@ export class UnifiedCheckoutService {
    */
   async confirmDelivery(orderId: string, deliveryInfo: any): Promise<void> {
     try {
+      // Convert BigInt values to strings before serialization
+      const serializedBody = convertBigIntToStrings({
+        action: 'confirm_delivery',
+        metadata: deliveryInfo
+      });
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/fulfill`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'confirm_delivery',
-          metadata: deliveryInfo
-        })
+        body: JSON.stringify(serializedBody)
       });
 
       if (!response.ok) {
@@ -361,19 +371,22 @@ export class UnifiedCheckoutService {
    */
   async openDispute(orderId: string, reason: string, evidence?: string[]): Promise<void> {
     try {
+      // Convert BigInt values to strings before serialization
+      const serializedBody = convertBigIntToStrings({
+        action: 'dispute',
+        metadata: {
+          reason,
+          evidence,
+          initiatorAddress: this.cryptoPaymentService ? await this.getConnectedAddress() : null
+        }
+      });
+
       const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/orders/${orderId}/fulfill`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'dispute',
-          metadata: {
-            reason,
-            evidence,
-            initiatorAddress: this.cryptoPaymentService ? await this.getConnectedAddress() : null
-          }
-        })
+        body: JSON.stringify(serializedBody)
       });
 
       if (!response.ok) {
@@ -454,7 +467,7 @@ export class UnifiedCheckoutService {
 
   private async processCryptoPayment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     const { selectedPaymentMethod, paymentDetails } = request;
-    
+
     // Prepare crypto payment request
     const cryptoRequest = {
       ...request,
@@ -463,21 +476,27 @@ export class UnifiedCheckoutService {
       walletAddress: paymentDetails?.walletAddress || request.buyerAddress
     };
 
+    // Prepare the request body and convert BigInt values to strings
+    const requestBody = {
+      ...cryptoRequest,
+      preferredMethod: 'crypto',
+      paymentMethodDetails: {
+        type: selectedPaymentMethod.method.type,
+        tokenAddress: selectedPaymentMethod.method.token?.address,
+        chainId: selectedPaymentMethod.method.chainId
+      }
+    };
+
+    // Convert BigInt values to strings before serialization
+    const serializedBody = convertBigIntToStrings(requestBody);
+
     // Call existing crypto payment processing
     const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...cryptoRequest,
-        preferredMethod: 'crypto',
-        paymentMethodDetails: {
-          type: selectedPaymentMethod.method.type,
-          tokenAddress: selectedPaymentMethod.method.token?.address,
-          chainId: selectedPaymentMethod.method.chainId
-        }
-      })
+      body: JSON.stringify(serializedBody)
     });
 
     if (!response.ok) {
@@ -491,7 +510,7 @@ export class UnifiedCheckoutService {
 
   private async processFiatPayment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
     const { selectedPaymentMethod, paymentDetails } = request;
-    
+
     // Prepare fiat payment request
     const fiatRequest = {
       ...request,
@@ -500,20 +519,26 @@ export class UnifiedCheckoutService {
       saveCard: paymentDetails?.saveCard || false
     };
 
+    // Prepare the request body and convert BigInt values to strings
+    const requestBody = {
+      ...fiatRequest,
+      preferredMethod: 'fiat',
+      paymentMethodDetails: {
+        type: selectedPaymentMethod.method.type,
+        provider: 'stripe'
+      }
+    };
+
+    // Convert BigInt values to strings before serialization
+    const serializedBody = convertBigIntToStrings(requestBody);
+
     // Call existing fiat payment processing
     const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...fiatRequest,
-        preferredMethod: 'fiat',
-        paymentMethodDetails: {
-          type: selectedPaymentMethod.method.type,
-          provider: 'stripe'
-        }
-      })
+      body: JSON.stringify(serializedBody)
     });
 
     if (!response.ok) {

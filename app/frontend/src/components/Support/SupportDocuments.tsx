@@ -14,7 +14,9 @@ import {
   Star,
   Shield,
   Zap,
-  X
+  X,
+  Bookmark,
+  BookmarkCheck
 } from 'lucide-react';
 import useDocumentNavigation from '../../hooks/useDocumentNavigation';
 import ScrollProgressIndicator from './ScrollProgressIndicator';
@@ -46,6 +48,7 @@ const SupportDocuments: React.FC = () => {
   const [documentContent, setDocumentContent] = useState<string>('');
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
   const [showScrollProgress, setShowScrollProgress] = useState(false);
+  const [savedDocuments, setSavedDocuments] = useState<string[]>([]);
 
   // Enhanced document structure aligned with spec requirements
   const supportDocuments: SupportDocument[] = [
@@ -307,6 +310,17 @@ const SupportDocuments: React.FC = () => {
     }
   };
 
+  // Toggle saved document
+  const toggleSavedDocument = (documentId: string) => {
+    setSavedDocuments(prev => {
+      if (prev.includes(documentId)) {
+        return prev.filter(id => id !== documentId);
+      } else {
+        return [...prev, documentId];
+      }
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
@@ -465,6 +479,19 @@ const SupportDocuments: React.FC = () => {
                       </div>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSavedDocument(doc.id);
+                    }}
+                    className="text-gray-400 hover:text-blue-600 transition-colors"
+                  >
+                    {savedDocuments.includes(doc.id) ? (
+                      <BookmarkCheck className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <Bookmark className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
                 
                 {/* Description */}

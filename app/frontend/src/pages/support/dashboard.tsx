@@ -30,6 +30,8 @@ import {
 import SupportDocuments from '@/components/Support/SupportDocuments';
 import { SupportTicketDashboard } from '@/components/Support/SupportTicketDashboard';
 import LDAOSupportCenter from '@/components/Support/LDAOSupportCenter';
+import PersonalizedSupportDashboard from '@/components/Support/PersonalizedSupportDashboard';
+import SupportAnalyticsDashboard from '@/components/Support/SupportAnalyticsDashboard';
 
 const SupportDashboard: NextPage = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'tickets' | 'analytics'>('overview');
@@ -119,6 +121,9 @@ const SupportDashboard: NextPage = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
+              {/* Personalized Dashboard */}
+              <PersonalizedSupportDashboard />
+                            
               {/* Support Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {supportMetrics.map((metric, index) => {
@@ -223,10 +228,9 @@ const SupportDashboard: NextPage = () => {
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Support Analytics</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Ticket Volume by Category</h3>
+              <SupportAnalyticsDashboard />
+            </div>
+          )}
                   <div className="space-y-4">
                     {[
                       { category: 'Technical Issues', count: 42, percentage: 35 },
