@@ -614,14 +614,98 @@ app.use(globalErrorHandler); // Keep as fallback
 app.use(notFoundHandler);
 
 // Start server
-httpServer.listen(PORT, async () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
   
   // Initialize services
-  const { cacheService, cacheWarmingService } = await initializeServices();
+  initializeServices().then(({ cacheService, cacheWarmingService }) => {
+    // Initialize WebSocket service
+    try {
+      const webSocketService = initializeWebSocket(httpServer);
+      console.log('✅ WebSocket service initialized');
+      console.log(`🔌 WebSocket ready for real-time updates`);
+    } catch (error) {
+      console.warn('⚠️ WebSocket service initialization failed:', error);
+    }
+
+    // Initialize Admin WebSocket service
+    try {
+      const adminWebSocketService = initializeAdminWebSocket(httpServer);
+      console.log('✅ Admin WebSocket service initialized');
+      console.log(`🔧 Admin real-time dashboard ready`);
+    } catch (error) {
+      console.warn('⚠️ Admin WebSocket service initialization failed:', error);
+    }
+
+    // Initialize Seller WebSocket service
+    try {
+      const sellerWebSocketService = initializeSellerWebSocket();
+      console.log('✅ Seller WebSocket service initialized');
+      console.log(`🛒 Seller real-time updates ready`);
+    } catch (error) {
+      console.warn('⚠️ Seller WebSocket service initialization failed:', error);
+    }
+    
+    // Initialize cache service
+    try {
+      // Check if cacheService has connect method or if it's already connected
+      if (cacheService) {
+        if (typeof cacheService.connect === 'function') {
+          cacheService.connect().then(() => {
+            console.log('✅ Cache service initialized via connect method');
+          }).catch((error: any) => {
+            console.warn('⚠️ Cache service connection failed:', error);
+          });
+        } else if (cacheService.isConnected) {
+          console.log('✅ Cache service already connected');
+        } else {
+          console.log('⚠️ Cache service available but not connected');
+        }
+      } else {
+        console.log('⚠️ Cache service not available');
+      }
+      
+      // Trigger initial cache warming
+      setTimeout(() => {
+        try {
+          cacheWarmingService.performQuickWarmup().then(() => {
+            console.log('✅ Initial cache warming completed');
+          }).catch((error: any) => {
+            console.warn('⚠️ Initial cache warming failed:', error);
+          });
+        } catch (error) {
+          console.warn('⚠️ Initial cache warming failed:', error);
+        }
+      }, 5000); // Wait 5 seconds after server start
+      
+    } catch (error) {
+      console.warn('⚠️ Cache service initialization failed:', error);
+      console.log('📝 Server will continue without caching');
+    }
+
+    // Start comprehensive monitoring
+    try {
+      comprehensiveMonitoringService.startMonitoring(60000); // Monitor every minute
+      console.log('✅ Comprehensive monitoring service started');
+      console.log('📊 System health monitoring active');
+    } catch (error) {
+      console.warn('⚠️ Monitoring service initialization failed:', error);
+    }
+
+    // Start order event listener
+    try {
+      orderEventListenerService.startListening();
+      console.log('✅ Order event listener started');
+      console.log('🔄 Listening for order events to trigger messaging automation');
+    } catch (error) {
+      console.warn('⚠️ Order event listener failed to start:', error);
+    }
+  }).catch((error) => {
+    console.error('Failed to initialize services:', error);
+  });
   
   // Initialize WebSocket service
   try {
@@ -655,8 +739,11 @@ httpServer.listen(PORT, async () => {
     // Check if cacheService has connect method or if it's already connected
     if (cacheService) {
       if (typeof cacheService.connect === 'function') {
-        await cacheService.connect();
-        console.log('✅ Cache service initialized via connect method');
+        cacheService.connect().then(() => {
+          console.log('✅ Cache service initialized via connect method');
+        }).catch((error: any) => {
+          console.warn('⚠️ Cache service connection failed:', error);
+        });
       } else if (cacheService.isConnected) {
         console.log('✅ Cache service already connected');
       } else {

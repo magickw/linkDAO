@@ -222,7 +222,8 @@ export interface MarketplaceListing {
 }
 
 export class UnifiedMarketplaceService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  // Use port 3002 based on the start-services.sh script
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
 
   private createTimeoutSignal(timeoutMs: number): AbortSignal {
     const controller = new AbortController();
@@ -308,7 +309,7 @@ export class UnifiedMarketplaceService {
   async getListingById(id: string): Promise<Product | null> {
     try {
       const response = await fetch(`${this.baseUrl}/api/listings/${id}`, {
-        signal: this.createTimeoutSignal(10000),
+        signal: this.createTimeoutSignal(15000), // Increase timeout to 15 seconds
         headers: {
           'Content-Type': 'application/json',
         }
@@ -317,7 +318,8 @@ export class UnifiedMarketplaceService {
       if (!response.ok) {
         if (response.status === 404) return null;
         if (response.status >= 500) {
-          throw new Error(`Server error: ${response.status}. Please try again later.`);
+          console.warn(`Server error: ${response.status}. Using fallback data.`);
+          return this.createFallbackProduct(id);
         }
         if (response.status === 429) {
           throw new Error('Too many requests. Please wait a moment and try again.');
@@ -355,18 +357,64 @@ export class UnifiedMarketplaceService {
           trust: listing.trust
         } as Product;
       } else {
-        throw new Error(result.message || 'Failed to fetch listing');
+        console.warn('Listing API returned unexpected format, using fallback data.');
+        return this.createFallbackProduct(id);
       }
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Network error. Please check your connection and try again.');
+        console.warn('Network error fetching listing, using fallback data:', error.message);
+        return this.createFallbackProduct(id);
       }
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Request timed out. Please try again.');
+        console.warn('Request timed out fetching listing, using fallback data.');
+        return this.createFallbackProduct(id);
       }
       console.error('Error fetching listing:', error);
-      throw error;
+      return this.createFallbackProduct(id);
     }
+  }
+
+  // Create a fallback product when API calls fail
+  private createFallbackProduct(id: string): Product {
+    return {
+      id: id,
+      sellerId: 'unknown',
+      title: 'Product Unavailable',
+      description: 'This product information is temporarily unavailable. Please try again later.',
+      priceAmount: 0,
+      priceCurrency: 'USD',
+      categoryId: 'unknown',
+      images: [],
+      metadata: {},
+      inventory: 0,
+      status: 'inactive',
+      tags: [],
+      views: 0,
+      favorites: 0,
+      listingStatus: 'inactive',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      seller: {
+        id: 'unknown',
+        walletAddress: '',
+        rating: 0,
+        reputation: 0,
+        verified: false,
+        daoApproved: false,
+        isOnline: false
+      },
+      category: {
+        id: 'unknown',
+        name: 'Unknown Category',
+        slug: 'unknown'
+      },
+      trust: {
+        verified: false,
+        escrowProtected: false,
+        onChainCertified: false,
+        safetyScore: 0
+      }
+    };
   }
 
   async getProductsByCategory(category: string, limit: number = 20): Promise<Product[]> {

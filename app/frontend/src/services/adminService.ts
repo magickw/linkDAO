@@ -129,8 +129,8 @@ class AdminService {
   private baseUrl: string;
 
   constructor() {
-    // Use the same port as the backend (10000) instead of 10001
-    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+    // Use port 3002 based on the start-services.sh script
+    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
   }
 
   private getHeaders() {

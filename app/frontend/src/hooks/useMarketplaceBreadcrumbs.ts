@@ -31,9 +31,22 @@ export const useMarketplaceBreadcrumbs = () => {
                 productTitle: product.title || 'Product Details',
                 categoryName: product.category?.name || undefined
               }));
+            } else {
+              // Fallback when product is not found
+              setBreadcrumbData(prev => ({
+                ...prev,
+                productTitle: 'Product Details',
+                categoryName: undefined
+              }));
             }
           } catch (error) {
-            console.error('Error fetching product for breadcrumbs:', error);
+            console.warn('Error fetching product for breadcrumbs, using fallback:', error);
+            // Fallback when there's an error
+            setBreadcrumbData(prev => ({
+              ...prev,
+              productTitle: 'Product Details',
+              categoryName: undefined
+            }));
           } finally {
             setLoading(false);
           }
@@ -50,10 +63,16 @@ export const useMarketplaceBreadcrumbs = () => {
                 ...prev,
                 sellerName: seller.displayName || seller.storeName || formatAddress(sellerId)
               }));
+            } else {
+              // Fallback when seller is not found
+              setBreadcrumbData(prev => ({
+                ...prev,
+                sellerName: formatAddress(sellerId)
+              }));
             }
           } catch (error) {
-            console.error('Error fetching seller for breadcrumbs:', error);
-            // Fallback to formatted address
+            console.warn('Error fetching seller for breadcrumbs, using fallback:', error);
+            // Fallback when there's an error
             setBreadcrumbData(prev => ({
               ...prev,
               sellerName: formatAddress(sellerId)

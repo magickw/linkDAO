@@ -90,6 +90,11 @@ export interface RealTimeStats {
 class AnalyticsService {
   private baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
 
+  constructor() {
+    // Use port 3002 based on the start-services.sh script
+    this.baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api/analytics`;
+  }
+
   /**
    * Get overview metrics including GMV, user acquisition, and transaction success rates
    */

@@ -106,7 +106,7 @@
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^8.5.9",
     "@types/marked": "^6.0.0",
-    "@types/node": "^20.8.9",
+    "@types/node": "^20.19.23",
     "@types/pg": "^8.15.5",
     "@types/stripe": "^8.0.417",
     "@types/supertest": "^6.0.3",
