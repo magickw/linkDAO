@@ -9,9 +9,8 @@ interface AuditAnalyticsProps {
   timeframe: '24h' | '7d' | '30d' | '90d';
 }
 
-interface ActionCount {
-  name: string;
-  value: number;
+interface ChartDataInput {
+  [key: string]: any;
 }
 
 interface AdminActivity {
@@ -20,12 +19,18 @@ interface AdminActivity {
   actionCount: number;
 }
 
+interface ActionCount {
+  name: string;
+  value: number;
+  [key: string]: any; // Add index signature
+}
+
 interface TimeSeriesData {
   date: string;
   count: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export const AuditAnalytics: React.FC<AuditAnalyticsProps> = ({ auditActions, loading, timeframe }) => {
   const [actionDistribution, setActionDistribution] = useState<ActionCount[]>([]);
@@ -42,9 +47,8 @@ export const AuditAnalytics: React.FC<AuditAnalyticsProps> = ({ auditActions, lo
       });
       setActionDistribution(
         Object.entries(actionCounts)
-          .map(([name, value]) => ({ name, value }))
+          .map(([action, count]) => ({ name: action, value: count }))
           .sort((a, b) => b.value - a.value)
-          .slice(0, 10)
       );
 
       // Calculate target type distribution
@@ -54,7 +58,7 @@ export const AuditAnalytics: React.FC<AuditAnalyticsProps> = ({ auditActions, lo
       });
       setTargetTypeDistribution(
         Object.entries(targetTypeCounts)
-          .map(([name, value]) => ({ name, value }))
+          .map(([targetType, count]) => ({ name: targetType, value: count }))
           .sort((a, b) => b.value - a.value)
       );
 
@@ -73,7 +77,12 @@ export const AuditAnalytics: React.FC<AuditAnalyticsProps> = ({ auditActions, lo
       });
       setTopAdmins(
         Object.values(adminActivity)
-          .sort((a, b) => b.count - a.count)
+          .map((admin: { adminId: string; adminHandle: string; count: number }) => ({
+            adminId: admin.adminId,
+            adminHandle: admin.adminHandle,
+            actionCount: admin.count
+          }))
+          .sort((a, b) => b.actionCount - a.actionCount)
           .slice(0, 10)
       );
 
@@ -202,7 +211,6 @@ export const AuditAnalytics: React.FC<AuditAnalyticsProps> = ({ auditActions, lo
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
                     {targetTypeDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

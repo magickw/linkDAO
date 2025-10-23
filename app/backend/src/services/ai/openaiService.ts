@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import crypto from 'crypto';
+import { aiCacheService } from './aiCacheService';
 
 /**
  * OpenAI Service for LinkDAO Admin AI Features

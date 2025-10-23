@@ -2,6 +2,8 @@ import express from 'express';
 import { openaiService } from '../services/ai/openaiService';
 import { contentModerationAI } from '../services/ai/contentModerationAI';
 import { predictiveAnalyticsService } from '../services/ai/predictiveAnalyticsService';
+import { aiCacheService } from '../services/ai/aiCacheService';
+import { aiUsageMonitor } from '../services/ai/aiUsageMonitorService';
 
 const router = express.Router();
 
@@ -360,6 +362,148 @@ router.get('/health', async (req, res) => {
         : 'OpenAI API key not configured'
     }
   });
+});
+
+/**
+ * GET /api/admin/ai/usage/report
+ * Get detailed usage report with budget tracking
+ */
+router.get('/usage/report', async (req, res) => {
+  try {
+    const { period } = req.query;
+    const report = await aiUsageMonitor.getUsageReport(period as any || 'monthly');
+
+    res.json({
+      success: true,
+      data: report
+    });
+  } catch (error: any) {
+    console.error('Usage report error:', error);
+    res.status(500).json({
+      error: 'Failed to generate usage report',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/ai/usage/check-budget
+ * Check if current usage is within budget
+ */
+router.get('/usage/check-budget', async (req, res) => {
+  try {
+    const { period } = req.query;
+    const status = await aiUsageMonitor.checkBudget(period as any || 'daily');
+
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error: any) {
+    console.error('Budget check error:', error);
+    res.status(500).json({
+      error: 'Failed to check budget',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/ai/cache/stats
+ * Get cache statistics and savings
+ */
+router.get('/cache/stats', async (req, res) => {
+  try {
+    const [stats, savings] = await Promise.all([
+      aiCacheService.getStats(),
+      aiUsageMonitor.getCacheSavings()
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        savings
+      }
+    });
+  } catch (error: any) {
+    console.error('Cache stats error:', error);
+    res.status(500).json({
+      error: 'Failed to get cache statistics',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/ai/cache/clear
+ * Clear all AI caches
+ */
+router.post('/cache/clear', async (req, res) => {
+  try {
+    await aiCacheService.clearAll();
+
+    res.json({
+      success: true,
+      message: 'AI cache cleared successfully'
+    });
+  } catch (error: any) {
+    console.error('Cache clear error:', error);
+    res.status(500).json({
+      error: 'Failed to clear cache',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/admin/ai/recommendations
+ * Get optimization recommendations
+ */
+router.get('/recommendations', async (req, res) => {
+  try {
+    const recommendations = await aiUsageMonitor.getOptimizationRecommendations();
+
+    res.json({
+      success: true,
+      data: { recommendations }
+    });
+  } catch (error: any) {
+    console.error('Recommendations error:', error);
+    res.status(500).json({
+      error: 'Failed to get recommendations',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/admin/ai/estimate-cost
+ * Estimate cost for an operation before running it
+ */
+router.post('/estimate-cost', async (req, res) => {
+  try {
+    const { operation } = req.body;
+
+    if (!operation || !operation.type) {
+      return res.status(400).json({
+        error: 'Missing required field: operation.type'
+      });
+    }
+
+    const estimate = aiUsageMonitor.estimateCost(operation);
+
+    res.json({
+      success: true,
+      data: { estimatedCost: estimate }
+    });
+  } catch (error: any) {
+    console.error('Cost estimation error:', error);
+    res.status(500).json({
+      error: 'Failed to estimate cost',
+      message: error.message
+    });
+  }
 });
 
 export default router;

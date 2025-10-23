@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { adminController } from '../controllers/adminController';
+import * as adminNotificationController from '../controllers/adminNotificationController';
 import moderationRoutes from './moderationRoutes';
 import sellerRoutes from './sellerRoutes';
 import disputeRoutes from './disputeRoutes';
@@ -44,6 +45,17 @@ router.patch('/vendors/:id/health', requirePermission('system.settings'), adminC
 router.post('/alerts', requirePermission('system.settings'), adminController.createAlertConfiguration.bind(adminController));
 router.put('/alerts/:id', requirePermission('system.settings'), adminController.updateAlertConfiguration.bind(adminController));
 router.get('/alerts', requirePermission('system.settings'), adminController.getAlertConfigurations.bind(adminController));
+
+// Admin Notification Routes
+router.get('/notifications', adminNotificationController.getAdminNotifications);
+router.get('/notifications/unread-count', adminNotificationController.getUnreadNotificationCount);
+router.get('/notifications/stats', adminNotificationController.getNotificationStats);
+router.patch('/notifications/:notificationId/read', adminNotificationController.markNotificationAsRead);
+router.patch('/notifications/read-all', adminNotificationController.markAllNotificationsAsRead);
+
+// Mobile Push Notification Routes
+router.post('/mobile/push/register', adminNotificationController.registerMobilePushToken);
+router.delete('/mobile/push/unregister', adminNotificationController.unregisterMobilePushToken);
 
 // System Status Dashboard Routes (all authenticated admins can view)
 router.get('/dashboard/metrics', adminController.getDashboardMetrics.bind(adminController));

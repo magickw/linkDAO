@@ -21,6 +21,7 @@
     "jsxImportSource": "react",
     "incremental": true,
     "downlevelIteration": true,
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [
         "./src/*"

@@ -217,7 +217,12 @@ export const ComplianceReports: React.FC<ComplianceReportsProps> = ({ auditActio
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-              <Select value={dateRange} onValueChange={(value: '7d' | '30d' | '90d') => setDateRange(value)}>
+              <Select value={dateRange} onValueChange={(value) => {
+                const validValues = ['7d', '30d', '90d'] as const;
+                if (validValues.includes(value as any)) {
+                  setDateRange(value as '7d' | '30d' | '90d');
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select date range" />
                 </SelectTrigger>
@@ -228,7 +233,7 @@ export const ComplianceReports: React.FC<ComplianceReportsProps> = ({ auditActio
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="flex items-end">
               <Button onClick={generateReport} className="w-full">
                 Generate Report

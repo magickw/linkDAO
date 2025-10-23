@@ -1,4 +1,5 @@
 import { openaiService } from './openaiService';
+import { aiCacheService } from './aiCacheService';
 
 /**
  * Predictive Analytics Service
@@ -16,6 +17,13 @@ export class PredictiveAnalyticsService {
     recommendations: string[];
     predictedChurnDate?: string;
   }> {
+    // Check cache first
+    const cached = await aiCacheService.getChurnPrediction(userId);
+    if (cached) {
+      console.log('✅ Cache hit: User churn prediction for', userId);
+      return cached;
+    }
+
     try {
       // Get user behavior data
       const userData = await this.getUserBehaviorData(userId);
@@ -34,7 +42,7 @@ export class PredictiveAnalyticsService {
       const churnProbability = this.calculateChurnProbability(userData);
       const churnRisk = this.categorizeRisk(churnProbability);
 
-      return {
+      const result = {
         userId,
         churnProbability,
         churnRisk,
@@ -44,6 +52,11 @@ export class PredictiveAnalyticsService {
           ? this.estimateChurnDate(userData)
           : undefined,
       };
+
+      // Cache the result
+      await aiCacheService.cacheChurnPrediction(userId, result);
+
+      return result;
     } catch (error) {
       console.error('Churn prediction error:', error);
       throw new Error('Failed to predict user churn');

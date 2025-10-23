@@ -104,6 +104,27 @@ interface EngineStatus {
   };
 }
 
+interface AdminNotification {
+  id: string;
+  adminId: string;
+  type: string;
+  title: string;
+  message: string;
+  actionUrl?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  category: 'moderation' | 'system' | 'security' | 'user' | 'seller' | 'dispute';
+  metadata?: Record<string, any>;
+  read: boolean;
+  createdAt: string;
+}
+
+interface NotificationStats {
+  total: number;
+  unread: number;
+  byType: Record<string, number>;
+  byCategory: Record<string, number>;
+}
+
 class AdminService {
   private baseUrl: string;
 
@@ -825,6 +846,107 @@ class AdminService {
 
     if (!response.ok) {
       throw new Error('Failed to fetch trend analysis');
+    }
+
+    return response.json();
+  }
+
+  // Admin Notification Management
+  async getAdminNotifications(filters?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<{ notifications: AdminNotification[]; total: number; page: number; totalPages: number }> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined) params.append(key, value.toString());
+      });
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/admin/notifications?${params}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch admin notifications');
+    }
+
+    return response.json();
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to mark notification as read');
+    }
+
+    return response.json();
+  }
+
+  async markAllNotificationsAsRead(): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/notifications/read-all`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to mark all notifications as read');
+    }
+
+    return response.json();
+  }
+
+  async getUnreadNotificationCount(): Promise<{ count: number }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/notifications/unread-count`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch unread notification count');
+    }
+
+    return response.json();
+  }
+
+  async getNotificationStats(): Promise<NotificationStats> {
+    const response = await fetch(`${this.baseUrl}/api/admin/notifications/stats`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch notification stats');
+    }
+
+    return response.json();
+  }
+
+  async registerMobilePushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/register`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ token, platform }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to register mobile push token');
+    }
+
+    return response.json();
+  }
+
+  async unregisterMobilePushToken(token: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/unregister`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ token }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to unregister mobile push token');
     }
 
     return response.json();

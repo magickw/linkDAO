@@ -543,7 +543,7 @@ export const sellerTransactions = pgTable("seller_transactions", {
     columns: [t.sellerWalletAddress],
     foreignColumns: [sellers.walletAddress]
   })
-}));
+});
 
 // Chat: conversations and messages
 
@@ -579,7 +579,7 @@ export const listings = pgTable("listings", {
     columns: [t.productId],
     foreignColumns: [products.id]
   })
-}));
+});
 
 export const bids = pgTable("bids", {
   id: serial("id").primaryKey(),
@@ -704,6 +704,55 @@ export const trackingRecords = pgTable("tracking_records", {
   events: text("events"),
   createdAt: timestamp("created_at").defaultNow(),
   lastUpdated: timestamp("last_updated").defaultNow(),
+});
+
+// System alerts configuration
+export const alert_configurations = pgTable("alert_configurations", {
+  id: serial("id").primaryKey(),
+  alertName: varchar("alert_name", { length: 64 }).notNull(),
+  metricName: varchar("metric_name", { length: 64 }).notNull(),
+  conditionType: varchar("condition_type", { length: 24 }).notNull(),
+  thresholdValue: numeric("threshold_value").notNull(),
+  severity: varchar("severity", { length: 24 }).notNull(),
+  notificationChannels: text("notification_channels"), // JSON string array
+  isActive: boolean("is_active").default(true),
+  cooldownMinutes: integer("cooldown_minutes").default(60),
+  createdBy: varchar("created_by", { length: 64 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Admin Notifications
+export const admin_notifications = pgTable("admin_notifications", {
+  id: serial("id").primaryKey(),
+  adminId: varchar("admin_id", { length: 66 }).notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  actionUrl: text("action_url"),
+  priority: varchar("priority", { length: 20 }).default('medium').notNull(),
+  category: varchar("category", { length: 20 }).default('system').notNull(),
+  metadata: text("metadata"),
+  read: boolean("read").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Admin Notification Preferences
+export const admin_notification_preferences = pgTable("admin_notification_preferences", {
+  id: serial("id").primaryKey(),
+  adminId: varchar("admin_id", { length: 66 }).notNull().unique(),
+  preferences: text("preferences").notNull(), // JSON string
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Image Storage Infrastructure
+export const images = pgTable("images", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ipfsHash: varchar("ipfs_hash", { length: 66 }).notNull(),
+  cid: varchar("cid", { length: 66 }).notNull(),
+  url: varchar("url", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Notifications
@@ -3533,8 +3582,8 @@ export const paymentMethodPreferenceOverrides = pgTable("payment_method_preferen
   expiresAtIdx: index("idx_payment_preference_overrides_expires_at").on(t.expiresAt),
   methodTypeIdx: index("idx_payment_preference_overrides_method_type").on(t.paymentMethodType),
 }));
-// LDAO
- Token Acquisition System Tables
+
+// LDAO Token Acquisition System Tables
 
 // Purchase transactions table
 export const purchaseTransactions = pgTable("purchase_transactions", {
@@ -3730,8 +3779,9 @@ export const fiatPaymentRecords = pgTable("fiat_payment_records", {
   purchaseTransactionIdx: index("idx_fiat_payment_records_purchase_transaction_id").on(t.purchaseTransactionId),
   statusIdx: index("idx_fiat_payment_records_status").on(t.status),
   processorPaymentIdIdx: index("idx_fiat_payment_records_processor_payment_id").on(t.processorPaymentId),
-}));// LDAO E
-arn-to-Own System Tables
+}));
+
+// LDAO Earn-to-Own System Tables
 
 // Earning activities table to track all earning events
 export const earningActivities = pgTable("earning_activities", {
@@ -3962,8 +4012,9 @@ export const earningAbusePrevention = pgTable("earning_abuse_prevention", {
   isFlaggedIdx: index("idx_earning_abuse_prevention_is_flagged").on(t.isFlagged),
   statusIdx: index("idx_earning_abuse_prevention_status").on(t.status),
   uniqueUserActivity: unique("idx_earning_abuse_prevention_unique").on(t.userId, t.activityType),
-}));// En
-hanced Staking System Tables
+}));
+
+// Enhanced Staking System Tables
 
 // Staking tiers configuration
 export const stakingTiers = pgTable("staking_tiers", {

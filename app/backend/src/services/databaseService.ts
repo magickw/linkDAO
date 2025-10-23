@@ -1712,6 +1712,232 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  async createAdminNotification(notification: any) {
+    try {
+      const [created] = await this.db.insert(schema.admin_notifications).values({
+        adminId: notification.adminId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        actionUrl: notification.actionUrl || null,
+        priority: notification.priority,
+        category: notification.category,
+        metadata: notification.metadata ? JSON.stringify(notification.metadata) : null,
+        read: notification.read
+      }).returning();
+      
+      return created;
+    } catch (error) {
+      console.error("Error creating admin notification:", error);
+      throw error;
+    }
+  }
+
+  async getAdminNotifications(adminId: string, limit: number = 50, offset: number = 0) {
+    try {
+      return await this.db
+        .select()
+        .from(schema.admin_notifications)
+        .where(eq(schema.admin_notifications.adminId, adminId))
+        .orderBy(desc(schema.admin_notifications.createdAt))
+        .limit(limit)
+        .offset(offset);
+    } catch (error) {
+      console.error("Error getting admin notifications:", error);
+      throw error;
+    }
+  }
+
+  async markAdminNotificationAsRead(notificationId: string) {
+    try {
+      const [updated] = await this.db.update(schema.admin_notifications)
+        .set({ read: true })
+        .where(eq(schema.admin_notifications.id, parseInt(notificationId)))
+        .returning();
+      
+      return !!updated;
+    } catch (error) {
+      console.error("Error marking admin notification as read:", error);
+      throw error;
+    }
+  }
+
+  async markAllAdminNotificationsAsRead(adminId: string) {
+    try {
+      const updated = await this.db.update(schema.admin_notifications)
+        .set({ read: true })
+        .where(
+          and(
+            eq(schema.admin_notifications.adminId, adminId),
+            eq(schema.admin_notifications.read, false)
+          )
+        );
+      
+      return true;
+    } catch (error) {
+      console.error("Error marking all admin notifications as read:", error);
+      throw error;
+    }
+  }
+
+  async getAdminUnreadNotificationCount(adminId: string) {
+    try {
+      const result = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.admin_notifications)
+        .where(
+          and(
+            eq(schema.admin_notifications.adminId, adminId),
+            eq(schema.admin_notifications.read, false)
+          )
+        );
+      
+      return parseInt(result[0].count.toString()) || 0;
+    } catch (error) {
+      console.error("Error getting admin unread notification count:", error);
+      return 0;
+    }
+  }
+
+  async getAdminsWithRole(role: string) {
+    try {
+      // This would need to be implemented based on your admin user structure
+      // For now, returning an empty array
+      return [];
+    } catch (error) {
+      console.error("Error getting admins with role:", error);
+      return [];
+    }
+  }
+
+  async getAdminsWithPermission(permission: string) {
+    try {
+      // This would need to be implemented based on your admin user structure
+      // For now, returning an empty array
+      return [];
+    } catch (error) {
+      console.error("Error getting admins with permission:", error);
+      return [];
+    }
+  }
+
+  async getAdminNotificationPreferences(adminId: string) {
+    try {
+      const result = await this.db
+        .select()
+        .from(schema.admin_notification_preferences)
+        .where(eq(schema.admin_notification_preferences.adminId, adminId));
+      
+      if (result.length > 0) {
+        return JSON.parse(result[0].preferences);
+      }
+      
+      // Return default preferences
+      return {
+        email: true,
+        push: true,
+        inApp: true,
+        types: ['MODERATION_REQUIRED', 'SYSTEM_ALERT', 'SECURITY_ALERT', 'USER_FLAGGED', 'SELLER_APPLICATION', 'DISPUTE_ESCALATED']
+      };
+    } catch (error) {
+      console.error("Error getting admin notification preferences:", error);
+      // Return default preferences
+      return {
+        email: true,
+        push: true,
+        inApp: true,
+        types: ['MODERATION_REQUIRED', 'SYSTEM_ALERT', 'SECURITY_ALERT', 'USER_FLAGGED', 'SELLER_APPLICATION', 'DISPUTE_ESCALATED']
+      };
+    }
+  }
+
+  async getAdminPushTokens(adminId: string) {
+    try {
+      const tokens = await this.db
+        .select({ token: schema.pushTokens.token })
+        .from(schema.pushTokens)
+        .where(eq(schema.pushTokens.userAddress, adminId));
+
+      return tokens.map((t) => t.token);
+    } catch (error) {
+      console.error("Error getting admin push tokens:", error);
+      return [];
+    }
+  }
+
+  async deleteOldAdminNotifications(cutoffDate: Date) {
+    try {
+      const deleted = await this.db.delete(schema.admin_notifications)
+        .where(lt(schema.admin_notifications.createdAt, cutoffDate));
+      
+      return deleted;
+    } catch (error) {
+      console.error("Error deleting old admin notifications:", error);
+      throw error;
+    }
+  }
+
+  async getAdminNotificationStats(adminId: string) {
+    try {
+      // Get total count
+      const totalCountResult = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.admin_notifications)
+        .where(eq(schema.admin_notifications.adminId, adminId));
+      
+      const total = parseInt(totalCountResult[0].count.toString()) || 0;
+
+      // Get unread count
+      const unreadCountResult = await this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(schema.admin_notifications)
+        .where(
+          and(
+            eq(schema.admin_notifications.adminId, adminId),
+            eq(schema.admin_notifications.read, false)
+          )
+        );
+      
+      const unread = parseInt(unreadCountResult[0].count.toString()) || 0;
+
+      // Get count by type
+      const typeResults = await this.db
+        .select({ 
+          type: schema.admin_notifications.type,
+          count: sql<number>`count(*)` 
+        })
+        .from(schema.admin_notifications)
+        .where(eq(schema.admin_notifications.adminId, adminId))
+        .groupBy(schema.admin_notifications.type);
+      
+      const byType: Record<string, number> = {};
+      typeResults.forEach(row => {
+        byType[row.type] = parseInt(row.count.toString());
+      });
+
+      // Get count by category
+      const categoryResults = await this.db
+        .select({ 
+          category: schema.admin_notifications.category,
+          count: sql<number>`count(*)` 
+        })
+        .from(schema.admin_notifications)
+        .where(eq(schema.admin_notifications.adminId, adminId))
+        .groupBy(schema.admin_notifications.category);
+      
+      const byCategory: Record<string, number> = {};
+      categoryResults.forEach(row => {
+        byCategory[row.category] = parseInt(row.count.toString());
+      });
+
+      return { total, unread, byType, byCategory };
+    } catch (error) {
+      console.error("Error getting admin notification stats:", error);
+      return { total: 0, unread: 0, byType: {}, byCategory: {} };
+    }
+  }
+
 }
 
 // Singleton instance

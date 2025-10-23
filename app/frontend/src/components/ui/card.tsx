@@ -25,6 +25,16 @@ interface CardContentProps {
   children: React.ReactNode;
 }
 
+interface CardDescriptionProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
+interface CardFooterProps {
+  className?: string;
+  children: React.ReactNode;
+}
+
 const Card: React.FC<CardProps> = ({ className = '', children }) => {
   return (
     <div className={`rounded-lg border bg-card text-card-foreground shadow-sm ${className}`}>
@@ -57,4 +67,20 @@ const CardContent: React.FC<CardContentProps> = ({ className = '', children }) =
   );
 };
 
-export { Card, CardHeader, CardTitle, CardContent };
+const CardDescription: React.FC<CardDescriptionProps> = ({ className = '', children }) => {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`}>
+      {children}
+    </p>
+  );
+};
+
+const CardFooter: React.FC<CardFooterProps> = ({ className = '', children }) => {
+  return (
+    <div className={`flex items-center p-6 pt-0 ${className}`}>
+      {children}
+    </div>
+  );
+};
+
+export { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter };

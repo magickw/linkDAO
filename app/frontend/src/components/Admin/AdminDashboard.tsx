@@ -12,7 +12,9 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
-  History
+  History,
+  Bell,
+  Phone
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -24,6 +26,9 @@ import { SellerPerformance } from './SellerPerformance';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
 import { AdminAnalytics } from './AdminAnalytics';
+import { AuditDashboard } from './AuditSystem';
+import { NotificationCenter } from './Notifications/NotificationCenter';
+import { MobilePushSetup } from './Notifications/MobilePushSetup';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
@@ -76,10 +81,24 @@ export function AdminDashboard() {
     
     try {
       // Create admin user object for WebSocket service
-      const adminUser = {
+      // Map user role to valid admin roles for WebSocket service
+      const roleMap: Record<string, 'super_admin' | 'admin' | 'moderator' | 'analyst'> = {
+        'super_admin': 'super_admin',
+        'admin': 'admin',
+        'moderator': 'moderator',
+        'analyst': 'analyst',
+        'user': 'admin' // Default to admin for regular users with admin access
+      };
+      
+      const adminUser: {
+        adminId: string;
+        email: string;
+        role: 'super_admin' | 'admin' | 'moderator' | 'analyst';
+        permissions: string[];
+      } = {
         adminId: user.id,
         email: user.email || '',
-        role: user.role,
+        role: roleMap[user.role] || 'admin',
         permissions: user.permissions || []
       };
       
@@ -139,6 +158,9 @@ export function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: BarChart3, permission: null },
     { id: 'moderation', label: 'Moderation', icon: Shield, permission: 'content.moderate' },
     { id: 'history', label: 'Mod History', icon: History, permission: 'system.audit' },
+    { id: 'audit', label: 'Audit System', icon: FileText, permission: 'system.audit' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, permission: null },
+    { id: 'push-setup', label: 'Push Setup', icon: Phone, permission: null },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review' },
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
@@ -293,7 +315,7 @@ export function AdminDashboard() {
                     variant="outline"
                     className="flex items-center gap-2 justify-center text-sm"
                   >
-                    <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Shield className="w-33 h-3 sm:w-4 sm:h-4" />
                     Review Content
                   </Button>
                 )}
@@ -328,6 +350,18 @@ export function AdminDashboard() {
 
         {activeTab === 'history' && hasPermission('system.audit') && (
           <ModerationHistory />
+        )}
+
+        {activeTab === 'audit' && hasPermission('system.audit') && (
+          <AuditDashboard />
+        )}
+
+        {activeTab === 'notifications' && (
+          <NotificationCenter />
+        )}
+        
+        {activeTab === 'push-setup' && (
+          <MobilePushSetup />
         )}
 
         {activeTab === 'sellers' && hasPermission('marketplace.seller_review') && (
