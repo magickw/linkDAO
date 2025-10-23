@@ -58,6 +58,7 @@ export const usePermissions = () => {
   };
   
   return {
+    user,
     hasPermission,
     hasRole,
     hasAnyRole,

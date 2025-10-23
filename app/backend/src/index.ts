@@ -333,6 +333,7 @@ import linkSafetyRoutes from './routes/linkSafetyRoutes';
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
+import adminAIRoutes from './routes/admin/ai';
 import { systemHealthMonitoringRoutes } from './routes/systemHealthMonitoringRoutes';
 // Import analytics routes
 import analyticsRoutes from './routes/analyticsRoutes';
@@ -437,6 +438,9 @@ app.use('/api/admin', adminRoutes);
 
 // Admin dashboard routes
 app.use('/api/admin/dashboard', adminDashboardRoutes);
+
+// Admin AI routes
+app.use('/api/admin/ai', adminAIRoutes);
 
 // System health monitoring routes
 app.use('/api/admin/system-health', systemHealthMonitoringRoutes);
