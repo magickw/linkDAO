@@ -298,6 +298,34 @@ export const ipWhitelist = (allowedIPs: string[]) => {
   };
 };
 
+// Custom rate limit factory function
+export const createCustomRateLimit = (options: {
+  windowMs: number;
+  max: number;
+  message: string;
+}) => {
+  return rateLimit({
+    windowMs: options.windowMs,
+    max: options.max,
+    message: {
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: options.message,
+        retryAfter: Math.ceil(options.windowMs / 1000)
+      },
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: Request) => {
+      return ipKeyGenerator(req.ip || req.connection.remoteAddress || 'unknown');
+    }
+  });
+};
+
 // Combined marketplace security middleware
 export const marketplaceSecurity = [
   securityHeaders,

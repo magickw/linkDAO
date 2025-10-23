@@ -543,7 +543,7 @@ export const sellerTransactions = pgTable("seller_transactions", {
     columns: [t.sellerWalletAddress],
     foreignColumns: [sellers.walletAddress]
   })
-});
+}));
 
 // Chat: conversations and messages
 
@@ -579,7 +579,7 @@ export const listings = pgTable("listings", {
     columns: [t.productId],
     foreignColumns: [products.id]
   })
-});
+}));
 
 export const bids = pgTable("bids", {
   id: serial("id").primaryKey(),

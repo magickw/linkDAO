@@ -1,4 +1,9 @@
-import { create } from 'ipfs-http-client';
+// import { create } from 'ipfs-http-client';
+// const { create } = require('ipfs-http-client');
+// Temporarily disabled IPFS due to package export issues
+const create = () => ({
+  add: async () => ({ path: 'mock-ipfs-hash' })
+});
 import { db } from '../db';
 import { imageStorage } from '../db/schema';
 import crypto from 'crypto';

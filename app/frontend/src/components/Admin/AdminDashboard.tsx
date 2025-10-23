@@ -14,7 +14,8 @@ import {
   TrendingUp,
   History,
   Bell,
-  Phone
+  Phone,
+  HelpCircle
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -29,6 +30,8 @@ import { AdminAnalytics } from './AdminAnalytics';
 import { AuditDashboard } from './AuditSystem';
 import { NotificationCenter } from './Notifications/NotificationCenter';
 import { MobilePushSetup } from './Notifications/MobilePushSetup';
+import { WorkflowAutomationDashboard } from './WorkflowAutomation/WorkflowAutomationDashboard';
+import { AdminOnboarding } from './Onboarding/AdminOnboarding';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
@@ -161,6 +164,8 @@ export function AdminDashboard() {
     { id: 'audit', label: 'Audit System', icon: FileText, permission: 'system.audit' },
     { id: 'notifications', label: 'Notifications', icon: Bell, permission: null },
     { id: 'push-setup', label: 'Push Setup', icon: Phone, permission: null },
+    { id: 'workflows', label: 'Workflows', icon: Settings, permission: null },
+    { id: 'onboarding', label: 'Onboarding', icon: HelpCircle, permission: null },
     { id: 'sellers', label: 'Seller Applications', icon: ShoppingBag, permission: 'marketplace.seller_review' },
     { id: 'performance', label: 'Seller Performance', icon: TrendingUp, permission: 'marketplace.seller_view' },
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
@@ -382,6 +387,14 @@ export function AdminDashboard() {
 
         {activeTab === 'analytics' && hasPermission('system.analytics') && (
           <AdminAnalytics />
+        )}
+        
+        {activeTab === 'workflows' && (
+          <WorkflowAutomationDashboard />
+        )}
+        
+        {activeTab === 'onboarding' && (
+          <AdminOnboarding />
         )}
       </div>
     </div>

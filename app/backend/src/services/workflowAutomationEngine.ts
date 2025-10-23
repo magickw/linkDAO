@@ -119,6 +119,36 @@ export class WorkflowAutomationEngine extends EventEmitter {
     }
   }
 
+  async updateTemplate(templateId: string, updates: Partial<WorkflowTemplate>, updatedBy?: string): Promise<WorkflowTemplate> {
+    try {
+      const template = await db.transaction(async (tx) => {
+        // Update template
+        const [updatedTemplate] = await tx.update(workflowTemplates)
+          .set({
+            ...updates,
+            updatedBy,
+            updatedAt: new Date()
+          })
+          .where(eq(workflowTemplates.id, templateId))
+          .returning();
+
+        if (!updatedTemplate) {
+          throw new Error(`Workflow template not found: ${templateId}`);
+        }
+
+        return updatedTemplate;
+      });
+
+      logger.info(`Workflow template updated: ${template.id}`, { templateId: template.id, name: template.name });
+      this.emit('templateUpdated', template);
+      
+      return template;
+    } catch (error) {
+      logger.error('Failed to update workflow template', { error, templateId, updates });
+      throw new Error(`Failed to update workflow template: ${error.message}`);
+    }
+  }
+
   // Workflow Execution
   async executeWorkflow(request: ExecuteWorkflowRequest): Promise<WorkflowInstance> {
     try {

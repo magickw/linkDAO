@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { automatedTierUpgradeService } from '../services/automatedTierUpgradeService';
+import { getAutomatedTierUpgradeService } from '../services/automatedTierUpgradeService';
 
 // Mock dependencies
 jest.mock('../db/connection');

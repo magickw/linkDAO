@@ -335,6 +335,8 @@ import adminRoutes from './routes/adminRoutes';
 import adminDashboardRoutes from './routes/adminDashboardRoutes';
 import adminAIRoutes from './routes/admin/ai';
 import { systemHealthMonitoringRoutes } from './routes/systemHealthMonitoringRoutes';
+// Import workflow automation routes
+import workflowAutomationRoutes from './routes/workflowAutomationRoutes';
 // Import analytics routes
 import analyticsRoutes from './routes/analyticsRoutes';
 // Import marketplace registration routes
@@ -409,9 +411,6 @@ import transactionRoutes from './routes/transactionRoutes';
 // Import order management routes
 import orderManagementRoutes from './routes/orderManagementRoutes';
 
-// Import seller performance routes
-import sellerPerformanceRoutes from './routes/sellerPerformanceRoutes';
-
 // Import seller analytics routes
 import sellerAnalyticsRoutes from './routes/sellerAnalyticsRoutes';
 
@@ -444,6 +443,9 @@ app.use('/api/admin/ai', adminAIRoutes);
 
 // System health monitoring routes
 app.use('/api/admin/system-health', systemHealthMonitoringRoutes);
+
+// Workflow automation routes
+app.use('/api/admin/workflows', workflowAutomationRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);

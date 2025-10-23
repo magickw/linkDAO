@@ -7,7 +7,7 @@ import { db } from '../db/connection';
 import { sellers, orders, products, reviews } from '../db/schema';
 import { eq, sql, and, gte, desc, count, sum, avg } from 'drizzle-orm';
 import { Redis } from 'ioredis';
-import { SellerWebSocketService } from './sellerWebSocketService';
+import { SellerWebSocketService, getSellerWebSocketService } from './sellerWebSocketService';
 import { NotificationService } from './notificationService';
 
 export interface TierEvaluationCriteria {
@@ -63,7 +63,7 @@ class AutomatedTierUpgradeService {
   private redis: Redis;
   private readonly EVALUATION_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
   private readonly CACHE_TTL = 3600; // 1 hour
-  private sellerWebSocketService: SellerWebSocketService;
+  private sellerWebSocketService: SellerWebSocketService | null;
   private notificationService: NotificationService;
 
   // Tier definitions with upgrade criteria
@@ -157,13 +157,24 @@ class AutomatedTierUpgradeService {
 
   constructor() {
     this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-    this.sellerWebSocketService = new SellerWebSocketService();
+    // Initialize WebSocket service lazily to avoid initialization order issues
+    this.sellerWebSocketService = null;
     this.notificationService = new NotificationService();
     
     // Only start automated evaluation in production
     if (process.env.NODE_ENV !== 'test') {
       this.startAutomatedEvaluation();
     }
+  }
+
+  /**
+   * Get seller WebSocket service lazily
+   */
+  private getSellerWebSocketService(): SellerWebSocketService | null {
+    if (!this.sellerWebSocketService) {
+      this.sellerWebSocketService = getSellerWebSocketService();
+    }
+    return this.sellerWebSocketService;
   }
 
   /**
@@ -480,13 +491,16 @@ class AutomatedTierUpgradeService {
       });
 
       // Send real-time WebSocket notification
-      await this.sellerWebSocketService.sendTierUpgradeNotification(walletAddress, {
-        type: 'tier_upgraded',
-        fromTier,
-        toTier: toTier.tierId,
-        newBenefits: toTier.benefits,
-        upgradeDate: new Date(),
-      });
+      const webSocketService = this.getSellerWebSocketService();
+      if (webSocketService) {
+        await webSocketService.sendTierUpgradeNotification(walletAddress, {
+          type: 'tier_upgraded',
+          fromTier,
+          toTier: toTier.tierId,
+          newBenefits: toTier.benefits,
+          upgradeDate: new Date(),
+        });
+      }
 
       // Clear tier cache
       await this.redis.del(`tier:evaluation:${walletAddress}`);
@@ -671,5 +685,21 @@ class AutomatedTierUpgradeService {
   }
 }
 
-export const automatedTierUpgradeService = new AutomatedTierUpgradeService();
-export default automatedTierUpgradeService;
+// Lazy initialization to avoid circular dependencies and initialization order issues
+let automatedTierUpgradeServiceInstance: AutomatedTierUpgradeService | null = null;
+
+export const getAutomatedTierUpgradeService = (): AutomatedTierUpgradeService => {
+  if (!automatedTierUpgradeServiceInstance) {
+    automatedTierUpgradeServiceInstance = new AutomatedTierUpgradeService();
+  }
+  return automatedTierUpgradeServiceInstance;
+};
+
+// For backward compatibility, but this will only be instantiated when accessed
+export const automatedTierUpgradeService = {
+  get instance() {
+    return getAutomatedTierUpgradeService();
+  }
+};
+
+export default getAutomatedTierUpgradeService;

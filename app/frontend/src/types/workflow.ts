@@ -119,99 +119,99 @@ export interface WorkflowNotification {
 }
 
 // Enums and Union Types
-export type WorkflowCategory = 
-  | 'moderation' 
-  | 'seller_management' 
-  | 'dispute_resolution' 
-  | 'user_onboarding' 
-  | 'content_review' 
+export type WorkflowCategory =
+  | 'moderation'
+  | 'seller_management'
+  | 'dispute_resolution'
+  | 'user_onboarding'
+  | 'content_review'
   | 'system_maintenance'
   | 'compliance'
   | 'security';
 
-export type TriggerType = 
-  | 'event' 
-  | 'schedule' 
-  | 'manual' 
+export type TriggerType =
+  | 'event'
+  | 'schedule'
+  | 'manual'
   | 'condition'
   | 'webhook'
   | 'api_call';
 
-export type WorkflowStatus = 
-  | 'pending' 
-  | 'running' 
-  | 'completed' 
-  | 'failed' 
+export type WorkflowStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
   | 'cancelled'
   | 'paused';
 
-export type StepType = 
-  | 'action' 
-  | 'condition' 
-  | 'assignment' 
-  | 'notification' 
+export type StepType =
+  | 'action'
+  | 'condition'
+  | 'assignment'
+  | 'notification'
   | 'escalation'
   | 'approval'
   | 'data_processing'
   | 'external_api'
   | 'delay';
 
-export type StepExecutionStatus = 
-  | 'pending' 
-  | 'running' 
-  | 'completed' 
-  | 'failed' 
+export type StepExecutionStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
   | 'skipped'
   | 'timeout';
 
-export type TaskType = 
-  | 'review' 
-  | 'approve' 
-  | 'investigate' 
-  | 'moderate' 
+export type TaskType =
+  | 'review'
+  | 'approve'
+  | 'investigate'
+  | 'moderate'
   | 'verify'
   | 'escalate'
   | 'resolve'
   | 'validate'
   | 'process';
 
-export type TaskStatus = 
-  | 'assigned' 
-  | 'in_progress' 
-  | 'completed' 
+export type TaskStatus =
+  | 'assigned'
+  | 'in_progress'
+  | 'completed'
   | 'escalated'
   | 'cancelled'
   | 'overdue';
 
-export type RuleType = 
-  | 'trigger' 
-  | 'condition' 
+export type RuleType =
+  | 'trigger'
+  | 'condition'
   | 'action'
   | 'validation'
   | 'transformation';
 
-export type MetricType = 
-  | 'execution_time' 
-  | 'success_rate' 
-  | 'bottleneck' 
+export type MetricType =
+  | 'execution_time'
+  | 'success_rate'
+  | 'bottleneck'
   | 'sla_breach'
   | 'throughput'
   | 'error_rate'
   | 'user_satisfaction'
   | 'cost_per_execution';
 
-export type NotificationType = 
-  | 'assignment' 
-  | 'escalation' 
-  | 'completion' 
+export type NotificationType =
+  | 'assignment'
+  | 'escalation'
+  | 'completion'
   | 'failure'
   | 'reminder'
   | 'approval_required'
   | 'deadline_approaching';
 
-export type NotificationStatus = 
-  | 'pending' 
-  | 'sent' 
+export type NotificationStatus =
+  | 'pending'
+  | 'sent'
   | 'failed'
   | 'read';
 

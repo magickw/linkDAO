@@ -106,11 +106,13 @@ export class WorkflowAutomationController {
     try {
       const { templateId } = req.params;
       const updates = req.body;
+      const updatedBy = req.user?.id;
 
-      // TODO: Implement template update logic
-      res.status(501).json({
-        success: false,
-        error: 'Template update not yet implemented'
+      const template = await this.workflowEngine.updateTemplate(templateId, updates, updatedBy);
+
+      res.json({
+        success: true,
+        data: template
       });
     } catch (error) {
       logger.error('Failed to update workflow template', { error, templateId: req.params.templateId });

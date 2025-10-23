@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import { automatedTierUpgradeService } from '../services/automatedTierUpgradeService';
+import { getAutomatedTierUpgradeService } from '../services/automatedTierUpgradeService';
 import { z } from 'zod';
 
 // Validation schemas
@@ -25,7 +25,7 @@ class AutomatedTierUpgradeController {
     try {
       const { walletAddress } = walletAddressSchema.parse(req.params);
 
-      const progression = await automatedTierUpgradeService.getTierProgressionTracking(walletAddress);
+      const progression = await getAutomatedTierUpgradeService().getTierProgressionTracking(walletAddress);
 
       res.json({
         success: true,
@@ -59,7 +59,7 @@ class AutomatedTierUpgradeController {
     try {
       const { walletAddress, force } = evaluationRequestSchema.parse(req.body);
 
-      const evaluation = await automatedTierUpgradeService.triggerManualEvaluation(walletAddress);
+      const evaluation = await getAutomatedTierUpgradeService().triggerManualEvaluation(walletAddress);
 
       res.json({
         success: true,
@@ -94,7 +94,7 @@ class AutomatedTierUpgradeController {
    */
   async getTierCriteria(req: Request, res: Response): Promise<void> {
     try {
-      const criteria = automatedTierUpgradeService.getTierCriteria();
+      const criteria = getAutomatedTierUpgradeService().getTierCriteria();
 
       res.json({
         success: true,
@@ -117,7 +117,7 @@ class AutomatedTierUpgradeController {
    */
   async getEvaluationStatistics(req: Request, res: Response): Promise<void> {
     try {
-      const stats = await automatedTierUpgradeService.getEvaluationStatistics();
+      const stats = await getAutomatedTierUpgradeService().getEvaluationStatistics();
 
       res.json({
         success: true,
@@ -146,7 +146,7 @@ class AutomatedTierUpgradeController {
       // For now, we'll just trigger the batch evaluation
       
       // Run batch evaluation asynchronously
-      automatedTierUpgradeService.runBatchTierEvaluation()
+      getAutomatedTierUpgradeService().runBatchTierEvaluation()
         .catch(error => console.error('Batch evaluation error:', error));
 
       res.json({
@@ -260,7 +260,7 @@ class AutomatedTierUpgradeController {
    */
   async healthCheck(req: Request, res: Response): Promise<void> {
     try {
-      const stats = await automatedTierUpgradeService.getEvaluationStatistics();
+      const stats = await getAutomatedTierUpgradeService().getEvaluationStatistics();
       
       res.json({
         success: true,

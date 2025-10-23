@@ -22,9 +22,9 @@ const upload = multer({
 
 // Marketplace Seller Profile Routes
 // These routes are mapped to match the frontend expectations at /api/marketplace/seller/...
-router.get('/seller/:walletAddress', sellerController.getProfile.bind(sellerController));
-router.post('/seller/profile', sellerController.createProfile.bind(sellerController));
-router.put('/seller/:walletAddress', sellerController.updateProfile.bind(sellerController));
+// router.get('/seller/:walletAddress', sellerController.getProfile.bind(sellerController));
+// router.post('/seller/profile', sellerController.createProfile.bind(sellerController));
+// router.put('/seller/:walletAddress', sellerController.updateProfile.bind(sellerController));
 
 // Enhanced profile update with image support
 router.put(

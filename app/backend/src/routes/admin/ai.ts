@@ -1,9 +1,9 @@
 import express from 'express';
-import { openaiService } from '../services/ai/openaiService';
-import { contentModerationAI } from '../services/ai/contentModerationAI';
-import { predictiveAnalyticsService } from '../services/ai/predictiveAnalyticsService';
-import { aiCacheService } from '../services/ai/aiCacheService';
-import { aiUsageMonitor } from '../services/ai/aiUsageMonitorService';
+import { openaiService } from '../../services/ai/openaiService';
+import { contentModerationAI } from '../../services/ai/contentModerationAI';
+import { predictiveAnalyticsService } from '../../services/ai/predictiveAnalyticsService';
+import { aiCacheService } from '../../services/ai/aiCacheService';
+import { aiUsageMonitor } from '../../services/ai/aiUsageMonitorService';
 
 const router = express.Router();
 
