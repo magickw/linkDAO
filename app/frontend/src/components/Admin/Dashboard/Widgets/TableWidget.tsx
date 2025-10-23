@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutConfig } from '../../../../stores/adminDashboardStore';
+import { adminService } from '@/services/adminService';
+import { AuthUser } from '@/types/auth';
 
 interface TableWidgetProps {
   widget: LayoutConfig;
@@ -12,21 +14,69 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
   isEditMode,
   onAction
 }) => {
-  // Mock table data
-  const mockData = [
-    { id: 1, user: 'john.doe@example.com', status: 'Active', lastLogin: '2 hours ago', role: 'Admin' },
-    { id: 2, user: 'jane.smith@example.com', status: 'Active', lastLogin: '5 minutes ago', role: 'Moderator' },
-    { id: 3, user: 'bob.wilson@example.com', status: 'Inactive', lastLogin: '2 days ago', role: 'Analyst' },
-    { id: 4, user: 'alice.brown@example.com', status: 'Active', lastLogin: '1 hour ago', role: 'Admin' },
-    { id: 5, user: 'charlie.davis@example.com', status: 'Pending', lastLogin: 'Never', role: 'Moderator' }
-  ];
+  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getUsers({ limit: 5 });
+      setUsers(response.users);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (widget.minimized) {
     return (
       <div className="table-widget minimized">
         <div className="minimized-content">
           <span className="widget-title">{widget.config.title || 'Data Table'}</span>
-          <span className="row-count">{mockData.length} rows</span>
+          <span className="row-count">{users.length} rows</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="table-widget">
+        <div className="widget-header">
+          <div className="h-6 bg-gray-200 rounded animate-pulse w-1/3"></div>
+          <div className="flex space-x-2">
+            <div className="h-8 bg-gray-200 rounded animate-pulse w-24"></div>
+            <div className="h-8 bg-gray-200 rounded animate-pulse w-8"></div>
+          </div>
+        </div>
+        <div className="widget-content p-4 space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="table-widget">
+        <div className="widget-content p-4 text-center">
+          <p className="text-red-500">Error: {error}</p>
+          <button 
+            onClick={loadUsers}
+            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -63,24 +113,28 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
               </tr>
             </thead>
             <tbody>
-              {mockData.map((row) => (
-                <tr key={row.id}>
+              {users.map((user) => (
+                <tr key={user.id}>
                   <td>
                     <div className="user-cell">
                       <div className="user-avatar">
-                        {row.user.charAt(0).toUpperCase()}
+                        {user.handle.charAt(0).toUpperCase()}
                       </div>
-                      <span className="user-email">{row.user}</span>
+                      <span className="user-email">{user.handle}</span>
                     </div>
                   </td>
                   <td>
-                    <span className={`status-badge ${row.status.toLowerCase()}`}>
-                      {row.status}
+                    <span className={`status-badge ${user.isSuspended ? 'inactive' : 'active'}`}>
+                      {user.isSuspended ? 'Suspended' : 'Active'}
                     </span>
                   </td>
-                  <td className="last-login">{row.lastLogin}</td>
+                  <td className="last-login">
+                    {user.lastLogin 
+                      ? new Date(user.lastLogin).toLocaleDateString() 
+                      : 'Never'}
+                  </td>
                   <td>
-                    <span className="role-badge">{row.role}</span>
+                    <span className="role-badge">{user.role}</span>
                   </td>
                   <td>
                     <div className="action-buttons">
@@ -104,7 +158,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
 
         <div className="table-footer">
           <div className="pagination-info">
-            Showing 1-{mockData.length} of {mockData.length} entries
+            Showing 1-{users.length} of {users.length} entries
           </div>
           <div className="pagination-controls">
             <button className="pagination-btn" disabled>

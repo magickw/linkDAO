@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Shield, Eye, Check, X, Flag, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Eye, Check, X, Flag, MoreVertical, AlertTriangle } from 'lucide-react';
 import { SwipeableCard, PullToRefresh, TouchOptimizedButton } from './TouchInteractions';
+import { adminService } from '@/services/adminService';
+import { ModerationQueue } from '@/types/auth';
 
 interface MobileModerationQueueProps {
   onRefresh?: () => void;
@@ -11,41 +13,82 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
 }) => {
   const [filter, setFilter] = useState('all');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [moderationItems, setModerationItems] = useState<ModerationQueue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - replace with actual API call
-  const moderationItems = [
-    {
-      id: '1',
-      type: 'post',
-      content: 'This is a sample post that needs moderation review...',
-      author: 'user123',
-      reportReason: 'Spam',
-      priority: 'high',
-      timestamp: new Date(),
-      status: 'pending'
-    },
-    {
-      id: '2',
-      type: 'comment',
-      content: 'Sample comment content here',
-      author: 'user456',
-      reportReason: 'Inappropriate content',
-      priority: 'medium',
-      timestamp: new Date(),
-      status: 'pending'
+  useEffect(() => {
+    loadModerationItems();
+  }, []);
+
+  const loadModerationItems = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getModerationQueue({});
+      setModerationItems(response.items);
+    } catch (err) {
+      console.error('Failed to load moderation items:', err);
+      setError('Failed to load moderation items. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleRefresh = async () => {
+    try {
+      const response = await adminService.getModerationQueue({});
+      setModerationItems(response.items);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error('Failed to refresh moderation items:', err);
+      setError('Failed to refresh moderation items.');
+    }
+  };
 
   const filters = [
     { id: 'all', label: 'All', count: moderationItems.length },
-    { id: 'high', label: 'High Priority', count: 1 },
-    { id: 'medium', label: 'Medium', count: 1 },
-    { id: 'low', label: 'Low', count: 0 }
+    { id: 'high', label: 'High Priority', count: moderationItems.filter(item => item.priority === 'high').length },
+    { id: 'medium', label: 'Medium', count: moderationItems.filter(item => item.priority === 'medium').length },
+    { id: 'low', label: 'Low', count: moderationItems.filter(item => item.priority === 'low').length }
   ];
 
-  const handleAction = (itemId: string, action: 'approve' | 'reject' | 'escalate' | 'view') => {
-    console.log(`Action ${action} on item ${itemId}`);
-    // TODO: Implement actual moderation actions
+  const handleAction = async (itemId: string, action: 'approve' | 'reject' | 'escalate' | 'view') => {
+    try {
+      switch (action) {
+        case 'approve':
+          await adminService.resolveModerationItem(itemId, {
+            action: 'approve',
+            reason: 'Approved by admin'
+          });
+          // Remove item from list after approval
+          setModerationItems(prev => prev.filter(item => item.id !== itemId));
+          break;
+        case 'reject':
+          await adminService.resolveModerationItem(itemId, {
+            action: 'reject',
+            reason: 'Rejected by admin'
+          });
+          // Remove item from list after rejection
+          setModerationItems(prev => prev.filter(item => item.id !== itemId));
+          break;
+        case 'escalate':
+          await adminService.resolveModerationItem(itemId, {
+            action: 'escalate',
+            reason: 'Escalated by admin'
+          });
+          // Remove item from list after escalation
+          setModerationItems(prev => prev.filter(item => item.id !== itemId));
+          break;
+        case 'view':
+          console.log(`Viewing details for item ${itemId}`);
+          break;
+        default:
+          console.log(`Unknown action ${action} on item ${itemId}`);
+      }
+    } catch (err) {
+      console.error(`Failed to perform action ${action} on item ${itemId}:`, err);
+    }
   };
 
   const toggleSelection = (itemId: string) => {
@@ -56,8 +99,43 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
     );
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {/* Filter Tabs */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="px-3 py-1.5 rounded-full bg-white/10 animate-pulse"></div>
+          ))}
+        </div>
+
+        {/* Moderation Items */}
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+              <div className="h-24 bg-white/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">Error Loading Items</h3>
+        <p className="text-white/70 text-sm mb-4">{error}</p>
+        <TouchOptimizedButton onClick={loadModerationItems} variant="primary">
+          Try Again
+        </TouchOptimizedButton>
+      </div>
+    );
+  }
+
   return (
-    <PullToRefresh onRefresh={onRefresh || (() => Promise.resolve())}>
+    <PullToRefresh onRefresh={handleRefresh}>
       <div className="space-y-4">
         {/* Filter Tabs */}
         <div className="flex space-x-2 overflow-x-auto pb-2">
@@ -162,7 +240,7 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                   <div className="flex items-center space-x-4 text-xs text-white/70">
                     <span>By: {item.author}</span>
                     <span>Reason: {item.reportReason}</span>
-                    <span>{item.timestamp.toLocaleTimeString()}</span>
+                    <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
                   </div>
                 </div>
 

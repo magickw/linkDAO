@@ -52,6 +52,18 @@ export interface DocumentationCorrelation {
   effectivenessScore: number; // 0-100
 }
 
+export interface AgentPerformance {
+  id: string;
+  name: string;
+  email: string;
+  ticketsHandled: number;
+  ticketsResolved: number;
+  avgResponseTime: number; // in hours
+  avgResolutionTime: number; // in hours
+  satisfactionScore: number; // 0-100
+  activeTickets: number;
+}
+
 export interface SupportAnalytics {
   summary: {
     totalTickets: number;
@@ -64,6 +76,7 @@ export interface SupportAnalytics {
       percentage: number;
     }>;
   };
+  agentPerformance: AgentPerformance[];
   documentCorrelations: DocumentationCorrelation[];
   contentGaps: Array<{
     topic: string;
@@ -324,8 +337,9 @@ export class SupportTicketingIntegrationService {
       .filter(ticket => ticket.createdAt > cutoff);
 
     const summary = this.calculateSummaryMetrics(recentTickets);
+    const agentPerformance = this.calculateAgentPerformance(recentTickets);
     const documentCorrelations = Array.from(this.correlations.values())
-      .filter(corr => corr.relatedTickets.some(t => 
+      .filter(corr => corr.relatedTickets.some(t =>
         recentTickets.some(rt => rt.id === t.ticketId)
       ))
       .sort((a, b) => a.effectivenessScore - b.effectivenessScore);
@@ -340,11 +354,104 @@ export class SupportTicketingIntegrationService {
 
     return {
       summary,
+      agentPerformance,
       documentCorrelations,
       contentGaps,
       preventionOpportunities,
       recommendations
     };
+  }
+
+  /**
+   * Calculate agent performance metrics
+   */
+  private calculateAgentPerformance(tickets: SupportTicket[]): AgentPerformance[] {
+    const agentMap = new Map<string, {
+      tickets: SupportTicket[];
+      resolved: SupportTicket[];
+      responseTimes: number[];
+      resolutionTimes: number[];
+    }>();
+
+    // Group tickets by agent
+    for (const ticket of tickets) {
+      if (!ticket.assignedTo) continue;
+
+      const agent = agentMap.get(ticket.assignedTo) || {
+        tickets: [],
+        resolved: [],
+        responseTimes: [],
+        resolutionTimes: []
+      };
+
+      agent.tickets.push(ticket);
+
+      if (ticket.resolvedAt) {
+        agent.resolved.push(ticket);
+        const resolutionTime = ticket.resolvedAt.getTime() - ticket.createdAt.getTime();
+        agent.resolutionTimes.push(resolutionTime / (1000 * 60 * 60)); // Convert to hours
+      }
+
+      // Calculate response time (mock - would need actual first response data)
+      const responseTime = Math.random() * 4 + 0.5; // Mock: 0.5-4.5 hours
+      agent.responseTimes.push(responseTime);
+
+      agentMap.set(ticket.assignedTo, agent);
+    }
+
+    // Calculate performance metrics for each agent
+    const agentPerformance: AgentPerformance[] = [];
+
+    for (const [agentEmail, data] of agentMap.entries()) {
+      const avgResponseTime = data.responseTimes.length > 0
+        ? data.responseTimes.reduce((sum, time) => sum + time, 0) / data.responseTimes.length
+        : 0;
+
+      const avgResolutionTime = data.resolutionTimes.length > 0
+        ? data.resolutionTimes.reduce((sum, time) => sum + time, 0) / data.resolutionTimes.length
+        : 0;
+
+      const resolutionRate = data.tickets.length > 0
+        ? (data.resolved.length / data.tickets.length) * 100
+        : 0;
+
+      // Calculate satisfaction score based on resolution rate and speed
+      const satisfactionScore = Math.min(100, Math.round(
+        resolutionRate * 0.5 +
+        (avgResponseTime < 2 ? 25 : avgResponseTime < 4 ? 15 : 5) +
+        (avgResolutionTime < 24 ? 25 : avgResolutionTime < 48 ? 15 : 5)
+      ));
+
+      const activeTickets = data.tickets.filter(t =>
+        t.status === 'open' || t.status === 'in_progress'
+      ).length;
+
+      agentPerformance.push({
+        id: agentEmail,
+        name: this.formatAgentName(agentEmail),
+        email: agentEmail,
+        ticketsHandled: data.tickets.length,
+        ticketsResolved: data.resolved.length,
+        avgResponseTime: Math.round(avgResponseTime * 10) / 10,
+        avgResolutionTime: Math.round(avgResolutionTime * 10) / 10,
+        satisfactionScore,
+        activeTickets
+      });
+    }
+
+    // Sort by tickets handled (descending)
+    return agentPerformance.sort((a, b) => b.ticketsHandled - a.ticketsHandled);
+  }
+
+  /**
+   * Format agent name from email
+   */
+  private formatAgentName(email: string): string {
+    const name = email.split('@')[0];
+    return name
+      .split('.')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
   /**

@@ -1,45 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Search, Filter, MoreVertical, Ban, CheckCircle, AlertTriangle } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { AuthUser, UserRole } from '@/types/auth';
 
 export const MobileUserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - replace with actual API call
-  const users = [
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      status: 'active',
-      joinDate: new Date('2024-01-15'),
-      lastActive: new Date(),
-      role: 'user',
-      reputation: 85
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      status: 'suspended',
-      joinDate: new Date('2024-02-20'),
-      lastActive: new Date('2024-10-10'),
-      role: 'seller',
-      reputation: 42
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getUsers({});
+      setUsers(response.users);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const filters = [
     { id: 'all', label: 'All Users', count: users.length },
-    { id: 'active', label: 'Active', count: 1 },
-    { id: 'suspended', label: 'Suspended', count: 1 },
-    { id: 'sellers', label: 'Sellers', count: 1 }
+    { id: 'active', label: 'Active', count: users.filter(u => !u.isSuspended).length },
+    { id: 'suspended', label: 'Suspended', count: users.filter(u => u.isSuspended).length },
+    { id: 'sellers', label: 'Sellers', count: users.filter(u => u.role === 'seller' as UserRole).length }
   ];
 
-  const handleUserAction = (userId: string, action: string) => {
-    console.log(`Action ${action} on user ${userId}`);
-    // TODO: Implement actual user management actions
+  const handleUserAction = async (userId: string, action: string) => {
+    try {
+      switch (action) {
+        case 'suspend':
+          // Implement suspension logic
+          console.log(`Suspending user ${userId}`);
+          break;
+        case 'activate':
+          // Implement activation logic
+          console.log(`Activating user ${userId}`);
+          break;
+        case 'view':
+          // Implement view profile logic
+          console.log(`Viewing profile for user ${userId}`);
+          break;
+        default:
+          console.log(`Action ${action} on user ${userId}`);
+      }
+    } catch (err) {
+      console.error(`Failed to perform action ${action} on user ${userId}:`, err);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -59,6 +76,55 @@ export const MobileUserManagement: React.FC = () => {
       default: return Users;
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {/* Search and Filter */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+            <div className="w-full pl-10 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg animate-pulse"></div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-2 overflow-x-auto pb-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="px-3 py-1.5 rounded-full bg-white/10 animate-pulse"></div>
+              ))}
+            </div>
+
+            <div className="p-2 bg-white/10 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* User List */}
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+              <div className="h-20 bg-white/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">Error Loading Users</h3>
+        <p className="text-white/70 text-sm mb-4">{error}</p>
+        <button
+          onClick={loadUsers}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -125,7 +191,8 @@ export const MobileUserManagement: React.FC = () => {
       {/* User List */}
       <div className="space-y-3">
         {users.map((user) => {
-          const StatusIcon = getStatusIcon(user.status);
+          const StatusIcon = getStatusIcon(user.isSuspended ? 'suspended' : 'active');
+          const status = user.isSuspended ? 'suspended' : 'active';
           
           return (
             <div key={user.id} className="bg-white/10 backdrop-blur-md rounded-lg p-4">
@@ -134,11 +201,11 @@ export const MobileUserManagement: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
                     <span className="text-white font-medium text-sm">
-                      {user.name.split(' ').map(n => n[0]).join('')}
+                      {user.handle.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-white font-medium">{user.name}</h3>
+                    <h3 className="text-white font-medium">{user.handle}</h3>
                     <p className="text-white/70 text-sm">{user.email}</p>
                   </div>
                 </div>
@@ -151,9 +218,9 @@ export const MobileUserManagement: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-white/50 text-xs">Status</p>
-                  <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                  <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
                     <StatusIcon className="w-3 h-3" />
-                    <span>{user.status}</span>
+                    <span>{status}</span>
                   </div>
                 </div>
                 <div>
@@ -162,11 +229,11 @@ export const MobileUserManagement: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-white/50 text-xs">Reputation</p>
-                  <p className="text-white text-sm">{user.reputation}/100</p>
+                  <p className="text-white text-sm">N/A</p>
                 </div>
                 <div>
                   <p className="text-white/50 text-xs">Joined</p>
-                  <p className="text-white text-sm">{user.joinDate.toLocaleDateString()}</p>
+                  <p className="text-white text-sm">{new Date(user.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
@@ -178,7 +245,7 @@ export const MobileUserManagement: React.FC = () => {
                 >
                   View Profile
                 </button>
-                {user.status === 'active' ? (
+                {status === 'active' ? (
                   <button
                     onClick={() => handleUserAction(user.id, 'suspend')}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"

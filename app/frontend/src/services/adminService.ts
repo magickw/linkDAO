@@ -129,7 +129,8 @@ class AdminService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10001';
+    // Use the same port as the backend (10000) instead of 10001
+    this.baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
   }
 
   private getHeaders() {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createSellerCacheManager, SellerCacheManager } from '../services/sellerCacheManager';
 
@@ -6,7 +6,12 @@ import { createSellerCacheManager, SellerCacheManager } from '../services/seller
 let ReactQueryDevtools: any = null;
 if (process.env.NODE_ENV === 'development') {
   try {
-    ReactQueryDevtools = require('@tanstack/react-query-devtools').ReactQueryDevtools;
+    // Use dynamic import for devtools to avoid including them in production bundle
+    import('@tanstack/react-query-devtools').then((devtools) => {
+      ReactQueryDevtools = devtools.ReactQueryDevtools;
+    }).catch((error) => {
+      console.warn('React Query Devtools failed to load:', error);
+    });
   } catch (error) {
     console.warn('React Query Devtools not available');
   }
@@ -69,6 +74,9 @@ export const SellerQueryProvider: React.FC<SellerQueryProviderProps> = ({
   
   // Create seller cache manager
   const sellerCacheManager = createSellerCacheManager(queryClient);
+  
+  // State for React Query Devtools component
+  const [DevtoolsComponent, setDevtoolsComponent] = useState<any>(null);
 
   useEffect(() => {
     // Setup global error handling for seller queries
@@ -149,14 +157,27 @@ export const SellerQueryProvider: React.FC<SellerQueryProviderProps> = ({
 
     warmCommonCache();
   }, [sellerCacheManager]);
+  
+  // Load devtools in development mode
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      import('@tanstack/react-query-devtools')
+        .then((devtools) => {
+          setDevtoolsComponent(() => devtools.ReactQueryDevtools);
+        })
+        .catch((error) => {
+          console.warn('React Query Devtools failed to load:', error);
+        });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       <SellerCacheContext.Provider value={sellerCacheManager}>
         {children}
         {/* Show React Query DevTools in development */}
-        {process.env.NODE_ENV === 'development' && ReactQueryDevtools && (
-          <ReactQueryDevtools 
+        {process.env.NODE_ENV === 'development' && DevtoolsComponent && (
+          <DevtoolsComponent 
             initialIsOpen={false}
             position="bottom-right"
             toggleButtonProps={{

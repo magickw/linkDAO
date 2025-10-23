@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import {
   Shield,
@@ -18,6 +18,8 @@ import { SellerPerformance } from '@/components/Admin/SellerPerformance';
 import { DisputeResolution } from '@/components/Admin/DisputeResolution';
 import { UserManagement } from '@/components/Admin/UserManagement';
 import { ModerationQueue } from '@/components/Admin/ModerationQueue';
+import { adminService } from '@/services/adminService';
+import { analyticsService } from '@/services/analyticsService';
 
 type AdminSection = 'dashboard' | 'users' | 'moderation' | 'sellers' | 'seller-performance' | 'disputes' | 'analytics' | 'visitor-analytics' | 'settings';
 
@@ -108,6 +110,65 @@ const AdminPage: NextPage = () => {
 
 // Dashboard Overview Component
 const DashboardOverview: React.FC = () => {
+  const [dashboardData, setDashboardData] = useState({
+    totalUsers: 0,
+    totalVisitors: 0,
+    totalSales: 0,
+    uptime: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch real data from services
+      const [usersResponse, analyticsOverview, realTimeStats] = await Promise.all([
+        adminService.getUsers({ limit: 1 }),
+        analyticsService.getOverviewMetrics(),
+        analyticsService.getRealTimeStats()
+      ]);
+
+      setDashboardData({
+        totalUsers: usersResponse.total,
+        totalVisitors: analyticsOverview.activeUsers.weekly,
+        totalSales: analyticsOverview.totalRevenue,
+        uptime: 99.9 // This would come from a health check service
+      });
+
+      // Mock recent activity - in a real app, this would come from an API
+      setRecentActivity([
+        { id: 1, type: 'user', message: 'New user registered: alice.eth', time: '2 minutes ago' },
+        { id: 2, type: 'seller', message: 'Seller application approved: NFT Store', time: '15 minutes ago' },
+        { id: 3, type: 'dispute', message: 'Dispute resolved: Order #1234', time: '1 hour ago' },
+        { id: 4, type: 'analytics', message: 'Visitor analytics updated: 142 active users', time: '5 minutes ago' }
+      ]);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4 sm:space-y-6 animate-pulse">
+        <div className="h-8 bg-gray-300 rounded w-1/3"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-300 rounded"></div>
+          ))}
+        </div>
+        <div className="h-64 bg-gray-300 rounded"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -124,7 +185,7 @@ const DashboardOverview: React.FC = () => {
             <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400 flex-shrink-0" />
             <h3 className="text-lg sm:text-xl font-bold text-white">Users</h3>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-white">1,234</div>
+          <div className="text-xl sm:text-2xl font-bold text-white">{dashboardData.totalUsers.toLocaleString()}</div>
           <p className="text-xs sm:text-sm text-gray-400">Total users</p>
           <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
             <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -137,7 +198,7 @@ const DashboardOverview: React.FC = () => {
             <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-green-400 flex-shrink-0" />
             <h3 className="text-lg sm:text-xl font-bold text-white">Visitors</h3>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-white">8,923</div>
+          <div className="text-xl sm:text-2xl font-bold text-white">{dashboardData.totalVisitors.toLocaleString()}</div>
           <p className="text-xs sm:text-sm text-gray-400">This week</p>
           <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
             <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -150,7 +211,7 @@ const DashboardOverview: React.FC = () => {
             <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400 flex-shrink-0" />
             <h3 className="text-lg sm:text-xl font-bold text-white">Sales</h3>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-white">$45.2k</div>
+          <div className="text-xl sm:text-2xl font-bold text-white">${(dashboardData.totalSales / 1000).toFixed(1)}k</div>
           <p className="text-xs sm:text-sm text-gray-400">This month</p>
           <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
             <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -163,7 +224,7 @@ const DashboardOverview: React.FC = () => {
             <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400 flex-shrink-0" />
             <h3 className="text-lg sm:text-xl font-bold text-white">Uptime</h3>
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-white">99.9%</div>
+          <div className="text-xl sm:text-2xl font-bold text-white">{dashboardData.uptime}%</div>
           <p className="text-xs sm:text-sm text-gray-400">Last 30 days</p>
           <div className="flex items-center gap-1 mt-2 text-green-400 text-xs sm:text-sm">
             <Globe className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -176,34 +237,18 @@ const DashboardOverview: React.FC = () => {
       <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/20">
         <h3 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Recent Activity</h3>
         <div className="space-y-2 sm:space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-gray-300 truncate">New user registered: alice.eth</span>
+          {recentActivity.map((activity) => (
+            <div key={activity.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                {activity.type === 'user' && <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />}
+                {activity.type === 'seller' && <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />}
+                {activity.type === 'dispute' && <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />}
+                {activity.type === 'analytics' && <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />}
+                <span className="text-xs sm:text-sm text-gray-300 truncate">{activity.message}</span>
+              </div>
+              <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">{activity.time}</span>
             </div>
-            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">2 minutes ago</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-gray-300 truncate">Seller application approved: NFT Store</span>
-            </div>
-            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">15 minutes ago</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-gray-300 truncate">Dispute resolved: Order #1234</span>
-            </div>
-            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">1 hour ago</span>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-white/5 rounded-lg">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
-              <span className="text-xs sm:text-sm text-gray-300 truncate">Visitor analytics updated: 142 active users</span>
-            </div>
-            <span className="text-[10px] sm:text-sm text-gray-400 ml-6 sm:ml-auto flex-shrink-0">5 minutes ago</span>
-          </div>
+          ))}
         </div>
       </div>
     </div>

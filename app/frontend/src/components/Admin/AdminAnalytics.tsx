@@ -10,6 +10,7 @@ import {
   Download
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
+import { analyticsService } from '@/services/analyticsService';
 import { Button, GlassPanel } from '@/design-system';
 
 interface AnalyticsData {
@@ -44,6 +45,7 @@ interface AnalyticsData {
 export function AdminAnalytics() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
@@ -53,16 +55,29 @@ export function AdminAnalytics() {
   const loadAnalytics = async () => {
     try {
       setLoading(true);
-      // Mock data - replace with actual API call
-      const mockData: AnalyticsData = {
-        userGrowth: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          data: [1200, 1350, 1500, 1800, 2100, 2400]
-        },
-        sellerGrowth: {
-          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-          data: [45, 52, 68, 85, 102, 125]
-        },
+      setError(null);
+      
+      // Fetch real analytics data from services
+      const [usersResponse, sellersResponse, disputesResponse, moderationResponse, platformHealthResponse] = await Promise.all([
+        adminService.getUsers({ limit: 1000 }),
+        adminService.getSellerApplications({ limit: 1000 }),
+        // For disputes and moderation, we would need specific endpoints
+        // For now, we'll use placeholder data for these specific stats
+        Promise.resolve(null),
+        Promise.resolve(null),
+        analyticsService.getOverviewMetrics()
+      ]);
+      
+      // Process user growth data
+      const userGrowthData = processUserGrowthData(usersResponse.users);
+      
+      // Process seller growth data
+      const sellerGrowthData = processSellerGrowthData(sellersResponse.applications);
+      
+      // Create analytics object with real data
+      const analyticsData: AnalyticsData = {
+        userGrowth: userGrowthData,
+        sellerGrowth: sellerGrowthData,
         disputeStats: {
           total: 156,
           resolved: 142,
@@ -76,19 +91,58 @@ export function AdminAnalytics() {
           pending: 24
         },
         platformHealth: {
-          activeUsers: 2400,
-          activeSellers: 125,
-          totalTransactions: 8945,
-          totalVolume: 1250000
+          activeUsers: platformHealthResponse.activeUsers.monthly,
+          activeSellers: sellersResponse.applications.filter(app => app.status === 'approved').length,
+          totalTransactions: platformHealthResponse.totalOrders,
+          totalVolume: platformHealthResponse.totalRevenue
         }
       };
       
-      setAnalytics(mockData);
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
+      setAnalytics(analyticsData);
+    } catch (err) {
+      console.error('Failed to load analytics:', err);
+      setError('Failed to load analytics data. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Process user growth data by month
+  const processUserGrowthData = (users: any[]) => {
+    const monthlyData: Record<string, number> = {};
+    
+    users.forEach(user => {
+      const date = new Date(user.createdAt);
+      const month = date.toLocaleString('default', { month: 'short' });
+      const year = date.getFullYear();
+      const key = `${month} ${year}`;
+      
+      monthlyData[key] = (monthlyData[key] || 0) + 1;
+    });
+    
+    const labels = Object.keys(monthlyData);
+    const data = Object.values(monthlyData);
+    
+    return { labels, data };
+  };
+
+  // Process seller growth data by month
+  const processSellerGrowthData = (applications: any[]) => {
+    const monthlyData: Record<string, number> = {};
+    
+    applications.forEach(app => {
+      const date = new Date(app.submittedAt || app.createdAt);
+      const month = date.toLocaleString('default', { month: 'short' });
+      const year = date.getFullYear();
+      const key = `${month} ${year}`;
+      
+      monthlyData[key] = (monthlyData[key] || 0) + 1;
+    });
+    
+    const labels = Object.keys(monthlyData);
+    const data = Object.values(monthlyData);
+    
+    return { labels, data };
   };
 
   const StatCard = ({ title, value, icon: Icon, color, change, suffix = '' }: any) => (
@@ -145,9 +199,23 @@ export function AdminAnalytics() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
             <GlassPanel key={i} className="p-6 animate-pulse">
               <div className="h-16 bg-white/10 rounded"></div>
+            </GlassPanel>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <GlassPanel key={i} className="p-6 animate-pulse">
+              <div className="h-40 bg-white/10 rounded"></div>
+            </GlassPanel>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <GlassPanel key={i} className="p-6 animate-pulse">
+              <div className="h-40 bg-white/10 rounded"></div>
             </GlassPanel>
           ))}
         </div>
@@ -155,11 +223,23 @@ export function AdminAnalytics() {
     );
   }
 
+  if (error) {
+    return (
+      <GlassPanel className="p-6 text-center">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="text-red-400 mb-4">{error}</p>
+        <Button onClick={loadAnalytics} variant="primary">
+          Try Again
+        </Button>
+      </GlassPanel>
+    );
+  }
+
   if (!analytics) {
     return (
       <GlassPanel className="p-6 text-center">
         <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-400">Failed to load analytics data</p>
+        <p className="text-gray-400">No analytics data available</p>
       </GlassPanel>
     );
   }

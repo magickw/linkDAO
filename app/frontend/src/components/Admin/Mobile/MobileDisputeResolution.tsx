@@ -1,46 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertTriangle, MessageSquare, FileText, Clock, CheckCircle } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { DisputeCase } from '@/types/auth';
 
 export const MobileDisputeResolution: React.FC = () => {
   const [filter, setFilter] = useState('open');
+  const [disputes, setDisputes] = useState<DisputeCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const disputes = [
-    {
-      id: '1',
-      title: 'Product not as described',
-      buyer: 'john_doe',
-      seller: 'tech_store',
-      amount: '$299.99',
-      status: 'open',
-      priority: 'high',
-      createdAt: new Date('2024-10-15'),
-      lastUpdate: new Date('2024-10-16'),
-      messages: 5
-    },
-    {
-      id: '2',
-      title: 'Item never received',
-      buyer: 'jane_smith',
-      seller: 'fashion_hub',
-      amount: '$89.50',
-      status: 'investigating',
-      priority: 'medium',
-      createdAt: new Date('2024-10-14'),
-      lastUpdate: new Date('2024-10-15'),
-      messages: 3
+  useEffect(() => {
+    loadDisputes();
+  }, []);
+
+  const loadDisputes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getDisputes({});
+      setDisputes(response.disputes);
+    } catch (err) {
+      console.error('Failed to load disputes:', err);
+      setError('Failed to load disputes. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const filters = [
-    { id: 'open', label: 'Open', count: 1 },
-    { id: 'investigating', label: 'Investigating', count: 1 },
-    { id: 'resolved', label: 'Resolved', count: 0 },
-    { id: 'escalated', label: 'Escalated', count: 0 }
+    { id: 'open', label: 'Open', count: disputes.filter(d => d.status === 'open').length },
+    { id: 'investigating', label: 'Investigating', count: disputes.filter(d => d.status === 'investigating').length },
+    { id: 'resolved', label: 'Resolved', count: disputes.filter(d => d.status === 'resolved').length },
+    { id: 'escalated', label: 'Escalated', count: disputes.filter(d => d.status === 'escalated').length }
   ];
 
-  const handleAction = (disputeId: string, action: string) => {
-    console.log(`Action ${action} on dispute ${disputeId}`);
+  const handleAction = async (disputeId: string, action: string) => {
+    try {
+      switch (action) {
+        case 'view':
+          console.log(`Viewing details for dispute ${disputeId}`);
+          break;
+        case 'resolve':
+          // In a real implementation, you would call the resolve API
+          console.log(`Resolving dispute ${disputeId}`);
+          break;
+        default:
+          console.log(`Action ${action} on dispute ${disputeId}`);
+      }
+    } catch (err) {
+      console.error(`Failed to perform action ${action} on dispute ${disputeId}:`, err);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -61,6 +70,43 @@ export const MobileDisputeResolution: React.FC = () => {
       default: return 'bg-gray-500';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {/* Filter Tabs */}
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="px-3 py-1.5 rounded-full bg-white/10 animate-pulse"></div>
+          ))}
+        </div>
+
+        {/* Disputes List */}
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+              <div className="h-32 bg-white/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={loadDisputes}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -89,7 +135,7 @@ export const MobileDisputeResolution: React.FC = () => {
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${getPriorityColor(dispute.priority)}`}></div>
+                  <div className={`w-2 h-2 rounded-full ${getPriorityColor(dispute.priority || 'medium')}`}></div>
                   <h3 className="text-white font-medium truncate">{dispute.title}</h3>
                 </div>
                 <p className="text-white/70 text-sm">
@@ -105,27 +151,27 @@ export const MobileDisputeResolution: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div>
                 <p className="text-white/50 text-xs">Amount</p>
-                <p className="text-white text-sm font-medium">{dispute.amount}</p>
+                <p className="text-white text-sm font-medium">${dispute.amount}</p>
               </div>
               <div>
                 <p className="text-white/50 text-xs">Priority</p>
-                <p className="text-white text-sm capitalize">{dispute.priority}</p>
+                <p className="text-white text-sm capitalize">{dispute.priority || 'medium'}</p>
               </div>
               <div>
                 <p className="text-white/50 text-xs">Created</p>
-                <p className="text-white text-sm">{dispute.createdAt.toLocaleDateString()}</p>
+                <p className="text-white text-sm">{new Date(dispute.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
                 <p className="text-white/50 text-xs">Last Update</p>
-                <p className="text-white text-sm">{dispute.lastUpdate.toLocaleDateString()}</p>
+                <p className="text-white text-sm">{new Date(dispute.updatedAt).toLocaleDateString()}</p>
               </div>
             </div>
 
             {/* Messages Indicator */}
             <div className="flex items-center space-x-2 mb-3">
               <MessageSquare className="w-4 h-4 text-white/50" />
-              <span className="text-white/70 text-sm">{dispute.messages} messages</span>
-              {dispute.messages > 0 && (
+              <span className="text-white/70 text-sm">{dispute.messageCount || 0} messages</span>
+              {dispute.messageCount && dispute.messageCount > 0 && (
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
             </div>

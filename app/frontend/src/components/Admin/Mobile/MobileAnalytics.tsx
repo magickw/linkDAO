@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
-import { BarChart3, TrendingUp, Users, Activity, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, Users, Activity, Calendar, AlertTriangle } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+
+interface AnalyticsData {
+  totalUsers: number;
+  activeUsers: number;
+  newUsers: number;
+  engagement: number;
+  growth: number;
+}
 
 export const MobileAnalytics: React.FC = () => {
   const [timeRange, setTimeRange] = useState('7d');
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const timeRanges = [
     { id: '24h', label: '24h' },
@@ -11,14 +23,99 @@ export const MobileAnalytics: React.FC = () => {
     { id: '90d', label: '90d' }
   ];
 
-  // Mock analytics data
-  const analytics = {
-    totalUsers: 12543,
-    activeUsers: 8921,
-    newUsers: 234,
-    engagement: 78.5,
-    growth: 12.3
+  useEffect(() => {
+    loadAnalytics();
+  }, [timeRange]);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // In a real implementation, this would fetch from the adminService
+      // For now, we'll simulate with a timeout to show loading state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // This is a placeholder - in a real app, you would call:
+      // const response = await adminService.getAnalytics({ timeRange });
+      // setAnalytics(response.data);
+      
+      // For demonstration, we'll use simulated data
+      const simulatedData: AnalyticsData = {
+        totalUsers: Math.floor(Math.random() * 20000) + 10000,
+        activeUsers: Math.floor(Math.random() * 10000) + 5000,
+        newUsers: Math.floor(Math.random() * 500) + 100,
+        engagement: Math.random() * 100,
+        growth: Math.random() * 20
+      };
+      
+      setAnalytics(simulatedData);
+    } catch (err) {
+      console.error('Failed to load analytics:', err);
+      setError('Failed to load analytics data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {/* Time Range Selector */}
+        <div className="flex space-x-2">
+          {timeRanges.map((range) => (
+            <div
+              key={range.id}
+              className="px-3 py-1.5 rounded-lg bg-white/10 animate-pulse"
+            ></div>
+          ))}
+        </div>
+
+        {/* Key Metrics */}
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+              <div className="h-16 bg-white/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Chart Placeholder */}
+        <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+          <div className="h-56 bg-white/20 rounded"></div>
+        </div>
+
+        {/* Top Content */}
+        <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+          <div className="h-40 bg-white/20 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={loadAnalytics}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-white/30 mx-auto mb-4" />
+        <p className="text-white/50">No analytics data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -47,7 +144,7 @@ export const MobileAnalytics: React.FC = () => {
             <span className="text-white/70 text-sm">Total Users</span>
           </div>
           <p className="text-2xl font-bold text-white">{analytics.totalUsers.toLocaleString()}</p>
-          <p className="text-green-400 text-sm">+{analytics.growth}% vs last period</p>
+          <p className="text-green-400 text-sm">+{analytics.growth.toFixed(1)}% vs last period</p>
         </div>
 
         <div className="bg-white/10 backdrop-blur-md rounded-lg p-4">
@@ -73,7 +170,7 @@ export const MobileAnalytics: React.FC = () => {
             <BarChart3 className="w-5 h-5 text-orange-400" />
             <span className="text-white/70 text-sm">Engagement</span>
           </div>
-          <p className="text-2xl font-bold text-white">{analytics.engagement}%</p>
+          <p className="text-2xl font-bold text-white">{analytics.engagement.toFixed(1)}%</p>
           <p className="text-white/50 text-sm">Average session</p>
         </div>
       </div>

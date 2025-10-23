@@ -1,41 +1,15 @@
-import React, { useState } from 'react';
-import { History, Filter, Search, Eye, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { History, Filter, Search, Eye, Calendar, AlertTriangle } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { AdminAction } from '@/types/auth';
 
 export const MobileModerationHistory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('7d');
   const [actionFilter, setActionFilter] = useState('all');
-
-  // Mock data
-  const historyItems = [
-    {
-      id: '1',
-      action: 'Approved post',
-      moderator: 'admin_user',
-      target: 'Post by user123',
-      reason: 'Content meets community guidelines',
-      timestamp: new Date('2024-10-16T10:30:00'),
-      type: 'approve'
-    },
-    {
-      id: '2',
-      action: 'Rejected comment',
-      moderator: 'mod_jane',
-      target: 'Comment by user456',
-      reason: 'Inappropriate language',
-      timestamp: new Date('2024-10-16T09:15:00'),
-      type: 'reject'
-    },
-    {
-      id: '3',
-      action: 'Suspended user',
-      moderator: 'admin_user',
-      target: 'user789',
-      reason: 'Repeated policy violations',
-      timestamp: new Date('2024-10-15T16:45:00'),
-      type: 'suspend'
-    }
-  ];
+  const [historyItems, setHistoryItems] = useState<AdminAction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const dateFilters = [
     { id: '24h', label: '24h' },
@@ -50,6 +24,24 @@ export const MobileModerationHistory: React.FC = () => {
     { id: 'reject', label: 'Rejected' },
     { id: 'suspend', label: 'Suspended' }
   ];
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getAuditLog({});
+      setHistoryItems(response.actions);
+    } catch (err) {
+      console.error('Failed to load history:', err);
+      setError('Failed to load moderation history. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getActionColor = (type: string) => {
     switch (type) {
@@ -68,6 +60,63 @@ export const MobileModerationHistory: React.FC = () => {
       default: return '•';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+          <div className="w-full pl-10 pr-4 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg animate-pulse"></div>
+        </div>
+
+        {/* Filters */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-white/70 text-sm mb-2">Time Period</p>
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="px-3 py-1.5 rounded-lg bg-white/10 animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-white/70 text-sm mb-2">Action Type</p>
+            <div className="flex space-x-2 overflow-x-auto pb-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="px-3 py-1.5 rounded-lg bg-white/10 animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* History Items */}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-md rounded-lg p-4 animate-pulse">
+              <div className="h-24 bg-white/20 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+        <p className="text-red-400 mb-4">{error}</p>
+        <button
+          onClick={loadHistory}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -131,12 +180,12 @@ export const MobileModerationHistory: React.FC = () => {
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-start space-x-3 flex-1 min-w-0">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${getActionColor(item.type)}`}>
-                  {getActionIcon(item.type)}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${getActionColor(item.action)}`}>
+                  {getActionIcon(item.action)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-medium">{item.action}</h3>
-                  <p className="text-white/70 text-sm">by {item.moderator}</p>
+                  <h3 className="text-white font-medium">{item.description}</h3>
+                  <p className="text-white/70 text-sm">by {item.adminId}</p>
                 </div>
               </div>
               <button className="p-1 text-white/70 hover:text-white">
@@ -147,18 +196,18 @@ export const MobileModerationHistory: React.FC = () => {
             {/* Details */}
             <div className="mb-3">
               <p className="text-white/50 text-xs mb-1">Target</p>
-              <p className="text-white text-sm">{item.target}</p>
+              <p className="text-white text-sm">{item.targetType}: {item.targetId}</p>
             </div>
 
             <div className="mb-3">
               <p className="text-white/50 text-xs mb-1">Reason</p>
-              <p className="text-white text-sm">{item.reason}</p>
+              <p className="text-white text-sm">{item.metadata?.reason || 'No reason provided'}</p>
             </div>
 
             {/* Timestamp */}
             <div className="flex items-center space-x-2 text-white/50 text-xs">
               <Calendar className="w-3 h-3" />
-              <span>{item.timestamp.toLocaleString()}</span>
+              <span>{new Date(item.timestamp).toLocaleString()}</span>
             </div>
           </div>
         ))}

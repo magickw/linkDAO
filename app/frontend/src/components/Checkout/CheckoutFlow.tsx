@@ -135,10 +135,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       const result = await prioritizationService.prioritizePaymentMethods(context);
       setPrioritizationResult(result);
 
-      // Auto-select default method
+      // Pre-select default method (but don't auto-advance)
       if (result.defaultMethod) {
         setSelectedPaymentMethod(result.defaultMethod);
       }
+
+      // Keep user on payment method selection screen to allow choice
+      setCurrentStep('payment-method');
 
       // Also get legacy recommendation for backward compatibility
       const request: UnifiedCheckoutRequest = {
@@ -298,7 +301,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
-    setCurrentStep('payment-details');
+    // Don't auto-advance - let user confirm their choice with Continue button
 
     // Track user preference for future prioritization
     // Note: User preference tracking will be handled through order analytics
@@ -502,17 +505,33 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         {/* Enhanced Payment Method Selector */}
         <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6">
           {prioritizationResult && prioritizationResult.prioritizedMethods.length > 0 ? (
-            <PaymentMethodSelector
-              prioritizationResult={prioritizationResult}
-              selectedMethodId={selectedPaymentMethod?.method.id}
-              onMethodSelect={handlePaymentMethodSelect}
-              showCostBreakdown={true}
-              showRecommendations={true}
-              showWarnings={true}
-              layout="grid"
-              responsive={true}
-              className="text-white"
-            />
+            <>
+              <PaymentMethodSelector
+                prioritizationResult={prioritizationResult}
+                selectedMethodId={selectedPaymentMethod?.method.id}
+                onMethodSelect={handlePaymentMethodSelect}
+                showCostBreakdown={true}
+                showRecommendations={true}
+                showWarnings={true}
+                layout="grid"
+                responsive={true}
+                className="text-white"
+              />
+
+              {/* Continue Button */}
+              {selectedPaymentMethod && (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={() => setCurrentStep('payment-details')}
+                    className="px-8"
+                  >
+                    Continue with {selectedPaymentMethod.method.name}
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-orange-400 mx-auto mb-4" />
@@ -569,19 +588,29 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
         {/* Selected Method Summary */}
         <GlassPanel variant="secondary" className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`p-2 rounded-lg ${isCrypto ? 'bg-orange-500/20' : 'bg-blue-500/20'
-              }`}>
-              {isCrypto ? (
-                <Wallet className="w-5 h-5 text-orange-400" />
-              ) : (
-                <CreditCard className="w-5 h-5 text-blue-400" />
-              )}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${isCrypto ? 'bg-orange-500/20' : 'bg-blue-500/20'
+                }`}>
+                {isCrypto ? (
+                  <Wallet className="w-5 h-5 text-orange-400" />
+                ) : (
+                  <CreditCard className="w-5 h-5 text-blue-400" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">{selectedPaymentMethod.method.name}</h3>
+                <p className="text-white/70 text-sm">{selectedPaymentMethod.method.description}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-white">{selectedPaymentMethod.method.name}</h3>
-              <p className="text-white/70 text-sm">{selectedPaymentMethod.method.description}</p>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentStep('payment-method')}
+              className="text-white border-white/30 hover:bg-white/10"
+            >
+              Change
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
