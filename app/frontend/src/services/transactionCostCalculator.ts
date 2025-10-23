@@ -289,10 +289,22 @@ export class TransactionCostCalculator {
       ? 'ethTransfer' 
       : 'erc20Transfer';
 
-    return gasFeeEstimationService.getGasEstimate(
-      paymentMethod.chainId,
-      transactionType
-    );
+    try {
+      return await gasFeeEstimationService.getGasEstimate(
+        paymentMethod.chainId,
+        transactionType
+      );
+    } catch (error) {
+      console.warn('Gas estimation failed, using fallback estimate:', error);
+      // Return a fallback gas estimate when API fails
+      return {
+        gasLimit: BigInt(21000),
+        gasPrice: BigInt(20e9), // 20 gwei
+        totalCost: BigInt(21000 * 20e9),
+        totalCostUSD: 25, // $25 fallback
+        confidence: 0.3 // Low confidence for fallback
+      };
+    }
   }
 
   /**

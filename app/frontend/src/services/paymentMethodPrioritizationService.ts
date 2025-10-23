@@ -249,17 +249,37 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
   ): Promise<Array<{ method: PaymentMethod; costEstimate: CostEstimate }>> {
     return Promise.all(
       methods.map(async (method) => {
-        const networkCondition = marketConditions.gasConditions.find(
-          gc => gc.chainId === method.chainId
-        ) || marketConditions.gasConditions[0]; // Fallback to first available
+        try {
+          const networkCondition = marketConditions.gasConditions.find(
+            gc => gc.chainId === method.chainId
+          ) || marketConditions.gasConditions[0]; // Fallback to first available
 
-        const costEstimate = await this.costCalculator.calculateTransactionCost(
-          method,
-          amount,
-          networkCondition
-        );
+          const costEstimate = await this.costCalculator.calculateTransactionCost(
+            method,
+            amount,
+            networkCondition
+          );
 
-        return { method, costEstimate };
+          return { method, costEstimate };
+        } catch (error) {
+          console.warn(`Failed to calculate cost for ${method.type}, using fallback:`, error);
+          // Return fallback cost estimate
+          const fallbackCostEstimate: CostEstimate = {
+            totalCost: amount + 5, // Base amount + $5 fallback
+            baseCost: amount,
+            gasFee: 5,
+            exchangeRate: 1,
+            estimatedTime: 5,
+            confidence: 0.3, // Low confidence
+            currency: 'USD',
+            breakdown: {
+              amount,
+              networkFee: 5,
+              platformFee: amount * 0.025 // 2.5% platform fee
+            }
+          };
+          return { method, costEstimate: fallbackCostEstimate };
+        }
       })
     );
   }

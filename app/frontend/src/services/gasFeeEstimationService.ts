@@ -66,6 +66,7 @@ export class GasFeeEstimationService {
     alchemy?: string;
     infura?: string;
   };
+  private isDevelopment: boolean;
 
   constructor(apiKeys: { etherscan?: string; alchemy?: string; infura?: string } = {}) {
     this.apiKeys = {
@@ -73,6 +74,7 @@ export class GasFeeEstimationService {
       alchemy: apiKeys.alchemy || process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
       infura: apiKeys.infura || process.env.NEXT_PUBLIC_INFURA_API_KEY
     };
+    this.isDevelopment = process.env.NODE_ENV === 'development';
   }
 
   /**
@@ -243,6 +245,12 @@ export class GasFeeEstimationService {
       return cached.data;
     }
 
+    // In development mode or when no API keys are configured, use fallback immediately
+    if (this.isDevelopment || (!this.apiKeys.etherscan && !this.apiKeys.alchemy && !this.apiKeys.infura)) {
+      console.warn('No gas price API keys configured, using fallback gas prices');
+      return this.getFallbackGasPrices(chainId);
+    }
+
     const promises: Promise<GasPriceResponse | null>[] = [];
 
     // Etherscan API
@@ -268,7 +276,8 @@ export class GasFeeEstimationService {
       .map(result => result.value);
 
     if (gasPrices.length === 0) {
-      throw new Error('No gas price APIs available');
+      console.warn('No gas price APIs available, using fallback gas prices');
+      return this.getFallbackGasPrices(chainId);
     }
 
     // Cache the results
@@ -279,6 +288,28 @@ export class GasFeeEstimationService {
     });
 
     return gasPrices;
+  }
+
+  /**
+   * Get fallback gas prices for when APIs are unavailable
+   */
+  private getFallbackGasPrices(chainId: number): GasPriceResponse[] {
+    // Fallback gas prices (in gwei)
+    const fallbackGasPrices: Record<number, bigint> = {
+      1: 30n * 1000000000n, // 30 gwei for mainnet
+      137: 30n * 1000000000n, // 30 gwei for polygon
+      42161: 1n * 1000000000n, // 1 gwei for arbitrum
+      11155111: 10n * 1000000000n // 10 gwei for sepolia
+    };
+
+    const gasPrice = fallbackGasPrices[chainId] || fallbackGasPrices[1];
+
+    return [{
+      source: 'fallback',
+      gasPrice,
+      confidence: 0.5, // Low confidence for fallback
+      timestamp: new Date()
+    }];
   }
 
   /**

@@ -120,11 +120,18 @@ export class DynamicPrioritizationEngine {
         }
 
         // Recalculate cost estimate with new conditions
-        const updatedCostEstimate = await this.costCalculator.calculateTransactionCost(
-          prioritizedMethod.method,
-          prioritizedMethod.costEstimate.baseCost,
-          networkCondition
-        );
+        let updatedCostEstimate: CostEstimate;
+        try {
+          updatedCostEstimate = await this.costCalculator.calculateTransactionCost(
+            prioritizedMethod.method,
+            prioritizedMethod.costEstimate.baseCost,
+            networkCondition
+          );
+        } catch (error) {
+          console.warn(`Failed to update cost for ${prioritizedMethod.method.type}, using previous estimate:`, error);
+          // Use previous cost estimate if update fails
+          updatedCostEstimate = prioritizedMethod.costEstimate;
+        }
 
         // Recalculate scoring components
         const context: PrioritizationContext = {
@@ -185,11 +192,31 @@ export class DynamicPrioritizationEngine {
         ) || context.marketConditions.gasConditions[0]; // Fallback
 
         // Calculate cost estimate
-        const costEstimate = await this.costCalculator.calculateTransactionCost(
-          method,
-          context.transactionAmount,
-          networkCondition
-        );
+        let costEstimate: CostEstimate;
+        try {
+          costEstimate = await this.costCalculator.calculateTransactionCost(
+            method,
+            context.transactionAmount,
+            networkCondition
+          );
+        } catch (error) {
+          console.warn(`Failed to calculate cost for ${method.type}, using fallback:`, error);
+          // Fallback cost estimate
+          costEstimate = {
+            totalCost: context.transactionAmount + 5, // Base amount + $5 fallback
+            baseCost: context.transactionAmount,
+            gasFee: 5,
+            exchangeRate: 1,
+            estimatedTime: 5,
+            confidence: 0.3, // Low confidence
+            currency: 'USD',
+            breakdown: {
+              amount: context.transactionAmount,
+              networkFee: 5,
+              platformFee: context.transactionAmount * 0.025 // 2.5% platform fee
+            }
+          };
+        }
 
         // Calculate scoring components
         const scoringComponents = await this.scoringSystem.calculateMethodScore(

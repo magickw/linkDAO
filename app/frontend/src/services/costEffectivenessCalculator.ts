@@ -182,7 +182,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
       
       return gasEstimate.totalCostUSD;
     } catch (error) {
-      console.error('Gas fee estimation failed, using fallback calculation:', error);
+      console.warn('Gas fee estimation failed, using fallback calculation:', error);
       return this.calculateGasFeeFallback(paymentMethod, networkConditions);
     }
   }
@@ -193,24 +193,38 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
   ): Promise<number> {
     if (!paymentMethod.token) return 0;
 
-    // Base gas limit for different transaction types
-    let gasLimit = 21000; // Standard transfer
+    try {
+      // Base gas limit for different transaction types
+      let gasLimit = 21000; // Standard transfer
 
-    // Adjust gas limit based on token type
-    if (paymentMethod.type === PaymentMethodType.STABLECOIN_USDC || 
-        paymentMethod.type === PaymentMethodType.STABLECOIN_USDT) {
-      gasLimit = 65000; // ERC-20 transfer
+      // Adjust gas limit based on token type
+      if (paymentMethod.type === PaymentMethodType.STABLECOIN_USDC || 
+          paymentMethod.type === PaymentMethodType.STABLECOIN_USDT) {
+        gasLimit = 65000; // ERC-20 transfer
+      }
+
+      // Calculate gas cost in USD
+      const gasCostWei = BigInt(gasLimit) * networkConditions.gasPrice;
+      const gasCostEth = Number(gasCostWei) / 1e18;
+      
+      // Convert to USD using exchange rate service
+      const ethPriceUSD = await this.getETHPriceUSD();
+      const gasFeeUSD = gasCostEth * ethPriceUSD;
+
+      return gasFeeUSD;
+    } catch (error) {
+      console.warn('Gas fee fallback calculation failed, using static fallback:', error);
+      // Static fallback values based on payment method type
+      switch (paymentMethod.type) {
+        case PaymentMethodType.STABLECOIN_USDC:
+        case PaymentMethodType.STABLECOIN_USDT:
+          return 5; // $5 for stablecoin transfers
+        case PaymentMethodType.NATIVE_ETH:
+          return 10; // $10 for ETH transfers
+        default:
+          return 5; // $5 default
+      }
     }
-
-    // Calculate gas cost in USD
-    const gasCostWei = BigInt(gasLimit) * networkConditions.gasPrice;
-    const gasCostEth = Number(gasCostWei) / 1e18;
-    
-    // Convert to USD using exchange rate service
-    const ethPriceUSD = await this.getETHPriceUSD();
-    const gasFeeUSD = gasCostEth * ethPriceUSD;
-
-    return gasFeeUSD;
   }
 
   private estimateConfirmationTime(networkConditions: NetworkConditions): number {
@@ -260,7 +274,7 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
       const exchangeRate = await exchangeRateService.getExchangeRate('ETH', 'USD');
       return exchangeRate?.rate || 2000; // Fallback to $2000 per ETH
     } catch (error) {
-      console.error('ETH price fetch failed, using fallback:', error);
+      console.warn('ETH price fetch failed, using fallback:', error);
       return 2000; // $2000 per ETH fallback
     }
   }
@@ -340,19 +354,42 @@ export class CostEffectivenessCalculator implements ICostEffectivenessCalculator
   }
 
   private async getNetworkConditionsFallback(chainId: number): Promise<NetworkConditions> {
-    // Mock implementation - would integrate with network monitoring APIs
-    const gasPrice = await this.estimateGasPrice(chainId);
-    const ethPrice = await this.getETHPriceUSD();
-    const gasPriceUSD = (Number(gasPrice) / 1e9) * (21000 / 1e9) * ethPrice;
+    try {
+      // Mock implementation - would integrate with network monitoring APIs
+      const gasPrice = await this.estimateGasPrice(chainId);
+      const ethPrice = await this.getETHPriceUSD();
+      const gasPriceUSD = (Number(gasPrice) / 1e9) * (21000 / 1e9) * ethPrice;
 
-    return {
-      chainId,
-      gasPrice,
-      gasPriceUSD,
-      networkCongestion: gasPriceUSD > 10 ? 'high' : gasPriceUSD > 5 ? 'medium' : 'low',
-      blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : 12, // seconds
-      lastUpdated: new Date()
-    };
+      return {
+        chainId,
+        gasPrice,
+        gasPriceUSD,
+        networkCongestion: gasPriceUSD > 10 ? 'high' : gasPriceUSD > 5 ? 'medium' : 'low',
+        blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : 12, // seconds
+        lastUpdated: new Date()
+      };
+    } catch (error) {
+      console.warn('Network conditions fallback failed, using static values:', error);
+      // Static fallback values
+      const fallbackGasPrices: Record<number, bigint> = {
+        1: BigInt(20e9), // 20 gwei for mainnet
+        137: BigInt(30e9), // 30 gwei for polygon
+        42161: BigInt(1e9), // 1 gwei for arbitrum
+        11155111: BigInt(10e9) // 10 gwei for sepolia
+      };
+
+      const gasPrice = fallbackGasPrices[chainId] || BigInt(20e9);
+      const gasPriceUSD = 5; // $5 fallback
+
+      return {
+        chainId,
+        gasPrice,
+        gasPriceUSD,
+        networkCongestion: 'medium',
+        blockTime: chainId === 137 ? 2 : chainId === 42161 ? 0.25 : 12,
+        lastUpdated: new Date()
+      };
+    }
   }
 }
 
