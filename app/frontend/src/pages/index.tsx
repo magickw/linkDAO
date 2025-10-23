@@ -15,8 +15,9 @@ import { CreatePostInput } from '@/models/Post';
 import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
 import BottomSheet from '@/components/BottomSheet';
 import Link from 'next/link';
-import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart, RefreshCw } from 'lucide-react';
+import { Plus, Send, Vote, TrendingUp, Users, MessageCircle, Heart, RefreshCw, HelpCircle, X, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import SupportWidget from '@/components/SupportWidget';
 
 export default function Home() {
   const { address, isConnected } = useWeb3();
@@ -33,6 +34,7 @@ export default function Home() {
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [feedSource, setFeedSource] = useState<'all' | 'following'>('all');
   const [hasNewPosts, setHasNewPosts] = useState(false);
+  const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
 
   // Initialize WebSocket for real-time updates
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
@@ -397,6 +399,166 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Support Center Section */}
+        <div className="py-24 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                Need Help? We've Got You Covered
+              </h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Comprehensive support for LDAO tokens, marketplace features, and platform guidance. Get help 24/7.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              <Link
+                href="/support"
+                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <MessageCircle className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Help Center</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  Browse FAQs, guides, and documentation for all platform features
+                </p>
+              </Link>
+              
+              <Link
+                href="/support/guides/ldao-complete-guide"
+                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">LDAO Guide</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  Complete guide to acquiring, staking, and using LDAO tokens
+                </p>
+              </Link>
+              
+              <Link
+                href="/support/tutorials/first-ldao-purchase"
+                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Video className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Tutorials</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  Step-by-step video tutorials for getting started
+                </p>
+              </Link>
+              
+              <a
+                href="mailto:support@linkdao.io"
+                className="group bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Mail className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Contact Us</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  Direct email support with 4-hour response time
+                </p>
+              </a>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Community Support</h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    Connect with other users in our Discord and Telegram communities
+                  </p>
+                  <div className="flex justify-center space-x-3">
+                    <a
+                      href="https://discord.gg/linkdao"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                    >
+                      Discord
+                    </a>
+                    <a
+                      href="https://t.me/linkdao"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-blue-500 hover:bg-blue-600 transition-colors"
+                    >
+                      Telegram
+                    </a>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Shield className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Security</h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    Learn how to keep your wallet and assets safe on our platform.
+                  </p>
+                  <Link
+                    href="/docs/support/security-guide"
+                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-sm"
+                  >
+                    Security Guide →
+                  </Link>
+                </div>
+                
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-8 h-8 text-white" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Live Chat</h4>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
+                    Get instant help from our support team. Available 24/7.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // In a real implementation, this would open a live chat widget
+                      alert('Live chat would open here in a real implementation');
+                    }}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all"
+                  >
+                    Start Chat
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-12 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Popular Support Topics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                {[
+                  { title: "Getting Started", href: "/docs/getting-started", icon: "🚀" },
+                  { title: "LDAO Token Acquisition", href: "/docs/ldao-token-guide", icon: "💰" },
+                  { title: "Wallet Setup", href: "/docs/wallet-setup", icon: "💳" },
+                  { title: "Marketplace Guide", href: "/docs/marketplace-guide", icon: "🏪" },
+                  { title: "Governance Participation", href: "/docs/governance-guide", icon: "🏛️" },
+                  { title: "Troubleshooting", href: "/docs/troubleshooting", icon: "🔧" }
+                ].map((topic) => (
+                  <Link
+                    key={topic.title}
+                    href={topic.href}
+                    className="flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all border border-gray-200 dark:border-gray-700 group"
+                  >
+                    <span className="text-2xl mr-3">{topic.icon}</span>
+                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                      {topic.title}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Community & Growth Section */}
         <div className="py-24 bg-white dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -625,8 +787,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Wallet Sheet Modal */}
+      {/* Support Widget - Floating */}
+      <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />
 
+      {/* Wallet Sheet Modal */}
       <BottomSheet
         isOpen={isWalletSheetOpen}
         onClose={() => setIsWalletSheetOpen(false)}

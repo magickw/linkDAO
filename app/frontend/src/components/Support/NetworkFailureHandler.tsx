@@ -331,15 +331,15 @@ export const NetworkFailureHandler: React.FC<NetworkFailureHandlerProps> = ({
 
     // Handle fetch errors globally
     const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
+    window.fetch = async (...args: Parameters<typeof fetch>) => {
       try {
         const response = await originalFetch(...args);
-        
+
         // Track successful requests
         if (response.ok && failedRequests.length > 0) {
           setFailedRequests(prev => prev.slice(1));
         }
-        
+
         return response;
       } catch (error) {
         // Add URL to error for tracking
