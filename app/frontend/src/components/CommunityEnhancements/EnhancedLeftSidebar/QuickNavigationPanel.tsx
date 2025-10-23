@@ -64,7 +64,7 @@ export const QuickNavigationPanel: React.FC<QuickNavigationPanelProps> = ({
         lastVisited: frequentData[community.id]?.lastVisited 
           ? new Date(frequentData[community.id].lastVisited)
           : new Date(),
-        unreadCount: Math.floor(Math.random() * 5) // Mock unread count
+        unreadCount: 0 // Initialize with 0 instead of mock data
       }))
       .filter(community => community.visitCount > 0 || community.userMembership.isJoined)
       .sort((a, b) => {
@@ -109,7 +109,7 @@ export const QuickNavigationPanel: React.FC<QuickNavigationPanelProps> = ({
       label: 'Notifications',
       icon: <Bell className="w-4 h-4" />,
       action: 'notifications',
-      badge: 3, // Mock notification count
+      // Remove mock notification count
       shortcut: 'N'
     },
     {

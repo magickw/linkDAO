@@ -15,7 +15,6 @@ export {
 } from '../../../services/serviceWorkerCacheService';
 
 export { 
-  ImageOptimizationService,
   imageOptimizationService 
 } from '../../../services/imageOptimizationService';
 

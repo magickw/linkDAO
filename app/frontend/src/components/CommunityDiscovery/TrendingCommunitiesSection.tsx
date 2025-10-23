@@ -46,146 +46,9 @@ export const TrendingCommunitiesSection: React.FC<TrendingCommunitiesSectionProp
       setLoading(true);
       setError(null);
       
-      // Mock data for now - replace with actual API call
-      const mockTrendingCommunities: TrendingCommunity[] = [
-        {
-          id: '1',
-          name: 'DeFi Innovators',
-          description: 'Building the future of decentralized finance',
-          memberCount: 15420,
-          icon: '🚀',
-          bannerImage: '/api/placeholder/400/200',
-          brandColors: {
-            primary: '#6366f1',
-            secondary: '#8b5cf6',
-            accent: '#06b6d4'
-          },
-          userMembership: {
-            isJoined: false,
-            joinDate: new Date(),
-            reputation: 0,
-            tokenBalance: 0
-          },
-          activityMetrics: {
-            postsToday: 45,
-            activeMembers: 892,
-            trendingScore: 95,
-            engagementRate: 0.78,
-            activityLevel: 'very-high'
-          },
-          governance: {
-            activeProposals: 3,
-            userVotingPower: 0,
-            participationRate: 0.65
-          },
-          growthMetrics: {
-            memberGrowth24h: 234,
-            memberGrowthPercentage: 1.54,
-            activityGrowth24h: 67,
-            trendingScore: 95,
-            rank: 1,
-            rankChange: 2
-          },
-          tokenMetrics: {
-            marketCap: 45600000,
-            volume24h: 2340000,
-            priceChange24h: 12.4,
-            stakingApr: 18.5
-          }
-        },
-        {
-          id: '2',
-          name: 'NFT Creators Hub',
-          description: 'Where digital artists and collectors meet',
-          memberCount: 12890,
-          icon: '🎨',
-          bannerImage: '/api/placeholder/400/200',
-          brandColors: {
-            primary: '#f59e0b',
-            secondary: '#ef4444',
-            accent: '#10b981'
-          },
-          userMembership: {
-            isJoined: true,
-            joinDate: new Date('2024-01-15'),
-            reputation: 150,
-            tokenBalance: 250
-          },
-          activityMetrics: {
-            postsToday: 38,
-            activeMembers: 743,
-            trendingScore: 87,
-            engagementRate: 0.72,
-            activityLevel: 'high'
-          },
-          governance: {
-            activeProposals: 2,
-            userVotingPower: 250,
-            participationRate: 0.58
-          },
-          growthMetrics: {
-            memberGrowth24h: 189,
-            memberGrowthPercentage: 1.49,
-            activityGrowth24h: 52,
-            trendingScore: 87,
-            rank: 2,
-            rankChange: -1
-          },
-          tokenMetrics: {
-            marketCap: 23400000,
-            volume24h: 1890000,
-            priceChange24h: -3.2,
-            stakingApr: 22.1
-          }
-        },
-        {
-          id: '3',
-          name: 'Web3 Gaming Alliance',
-          description: 'The future of gaming is decentralized',
-          memberCount: 9876,
-          icon: '🎮',
-          bannerImage: '/api/placeholder/400/200',
-          brandColors: {
-            primary: '#8b5cf6',
-            secondary: '#06b6d4',
-            accent: '#f59e0b'
-          },
-          userMembership: {
-            isJoined: false,
-            joinDate: new Date(),
-            reputation: 0,
-            tokenBalance: 0
-          },
-          activityMetrics: {
-            postsToday: 29,
-            activeMembers: 567,
-            trendingScore: 82,
-            engagementRate: 0.69,
-            activityLevel: 'high'
-          },
-          governance: {
-            activeProposals: 1,
-            userVotingPower: 0,
-            participationRate: 0.71
-          },
-          growthMetrics: {
-            memberGrowth24h: 156,
-            memberGrowthPercentage: 1.60,
-            activityGrowth24h: 48,
-            trendingScore: 82,
-            rank: 3,
-            rankChange: 1
-          },
-          tokenMetrics: {
-            marketCap: 18900000,
-            volume24h: 1230000,
-            priceChange24h: 8.7,
-            stakingApr: 15.3
-          }
-        }
-      ];
-
-      setTrendingCommunities(mockTrendingCommunities.slice(0, maxItems));
+      // TODO: Replace with actual API call to fetch trending communities
+      // For now, we'll use an empty array instead of mock data
+      setTrendingCommunities([]);
     } catch (err) {
       setError('Failed to load trending communities');
       console.error('Error fetching trending communities:', err);
@@ -247,6 +110,11 @@ export const TrendingCommunitiesSection: React.FC<TrendingCommunitiesSectionProp
         </div>
       </div>
     );
+  }
+
+  // Don't render the section if there are no trending communities
+  if (trendingCommunities.length === 0) {
+    return null;
   }
 
   return (

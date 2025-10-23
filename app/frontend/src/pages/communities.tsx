@@ -52,8 +52,9 @@ import {
 } from 'lucide-react';
 import { CommunityService } from '@/services/communityService';
 import { Community } from '@/models/Community';
+import { FeedSortType } from '@/types/feed';
 
-// Mock data for demonstration
+// Mock data for demonstration - will be removed
 const mockCommunities = [
   {
     id: 'ethereum-builders',
@@ -136,7 +137,7 @@ const CommunitiesPage: React.FC = () => {
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
-  const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
+  const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,9 +182,9 @@ const CommunitiesPage: React.FC = () => {
             limit: 50
           });
         } catch (err) {
-          console.error('Backend unavailable, using mock data:', err);
-          // Fallback to mock data when backend is unavailable
-          communitiesData = mockCommunities;
+          console.error('Backend unavailable:', err);
+          // Instead of using mock data, show empty array
+          communitiesData = [];
         }
         setCommunities(communitiesData);
 
@@ -193,9 +194,9 @@ const CommunitiesPage: React.FC = () => {
       } catch (err) {
         console.error('Error loading communities:', err);
         setError(err instanceof Error ? err.message : 'Failed to load communities');
-        // Even on error, show mock data
-        setCommunities(mockCommunities);
-        await loadWeb3EnhancedData(mockCommunities);
+        // Instead of using mock data, show empty array
+        setCommunities([]);
+        await loadWeb3EnhancedData([]);
       } finally {
         setLoading(false);
       }
@@ -231,108 +232,38 @@ const CommunitiesPage: React.FC = () => {
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {
     try {
-      // Mock enhanced data - replace with real API calls
-      const mockUserRoles: Record<string, string> = {};
-      const mockTokenBalances: Record<string, number> = {};
-      const mockLiveTokenPrices: Record<string, number> = {};
-      const mockStakingData: Record<string, any> = {};
+      // Initialize with empty data instead of mock data
+      const userRoles: Record<string, string> = {};
+      const tokenBalances: Record<string, number> = {};
+      const liveTokenPrices: Record<string, number> = {};
+      const stakingData: Record<string, any> = {};
 
       communitiesData.forEach(community => {
-        mockUserRoles[community.id] = joinedCommunities.includes(community.id) ? 'member' : 'visitor';
-        mockTokenBalances[community.id] = Math.floor(Math.random() * 1000);
-        mockLiveTokenPrices[community.id] = Math.random() * 100;
-        mockStakingData[community.id] = {
-          totalStaked: Math.floor(Math.random() * 10000),
-          stakerCount: Math.floor(Math.random() * 100),
-          stakingTier: ['bronze', 'silver', 'gold'][Math.floor(Math.random() * 3)],
-          userStake: Math.floor(Math.random() * 500)
+        userRoles[community.id] = 'visitor';
+        tokenBalances[community.id] = 0;
+        liveTokenPrices[community.id] = 0;
+        stakingData[community.id] = {
+          totalStaked: 0,
+          stakerCount: 0,
+          stakingTier: 'bronze',
+          userStake: 0
         };
       });
 
-      setUserRoles(mockUserRoles);
-      setTokenBalances(mockTokenBalances);
-      setLiveTokenPrices(mockLiveTokenPrices);
-      setStakingData(mockStakingData);
+      setUserRoles(userRoles);
+      setTokenBalances(tokenBalances);
+      setLiveTokenPrices(liveTokenPrices);
+      setStakingData(stakingData);
 
-      // Mock governance proposals with fallback
-      try {
-        // In a real app, this would call an API
-        setGovernanceProposals([
-          {
-            id: '1',
-            title: 'Increase staking rewards',
-            status: 'active',
-            votingProgress: { for: 1250, against: 340, abstain: 120 },
-            timestamp: new Date()
-          },
-          {
-            id: '2', 
-            title: 'New community guidelines',
-            status: 'pending',
-            votingProgress: { for: 890, against: 210, abstain: 80 },
-            timestamp: new Date()
-          }
-        ]);
-      } catch (err) {
-        console.error('Failed to load governance proposals, using mock data:', err);
-        // Fallback to mock data
-        setGovernanceProposals([
-          {
-            id: '1',
-            title: 'Increase staking rewards',
-            status: 'active',
-            votingProgress: { for: 1250, against: 340, abstain: 120 },
-            timestamp: new Date()
-          }
-        ]);
-      }
-
-      // Mock wallet activities with fallback
-      try {
-        // In a real app, this would call an API
-        setWalletActivities([
-          {
-            id: '1',
-            type: 'stake',
-            amount: 100,
-            timestamp: new Date(),
-            communityId: 'ethereum-builders'
-          },
-          {
-            id: '2',
-            type: 'tip',
-            amount: 25,
-            timestamp: new Date(),
-            communityId: 'defi-traders'
-          }
-        ]);
-      } catch (err) {
-        console.error('Failed to load wallet activities, using mock data:', err);
-        // Fallback to mock data
-        setWalletActivities([
-          {
-            id: '1',
-            type: 'stake',
-            amount: 100,
-            timestamp: new Date(),
-            communityId: 'ethereum-builders'
-          }
-        ]);
-      }
+      // Initialize with empty arrays instead of mock data
+      setGovernanceProposals([]);
+      setWalletActivities([]);
 
     } catch (err) {
       console.error('Error loading Web3 enhanced data:', err);
-      // Provide basic mock data as fallback
-      const mockUserRoles: Record<string, string> = {};
-      const mockTokenBalances: Record<string, number> = {};
-      
-      communitiesData.forEach(community => {
-        mockUserRoles[community.id] = 'visitor';
-        mockTokenBalances[community.id] = 0;
-      });
-      
-      setUserRoles(mockUserRoles);
-      setTokenBalances(mockTokenBalances);
+      // Provide empty data as fallback
+      setUserRoles({});
+      setTokenBalances({});
       setLiveTokenPrices({});
       setStakingData({});
       setGovernanceProposals([]);

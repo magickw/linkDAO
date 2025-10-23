@@ -239,18 +239,6 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
                   console.error('Error creating post:', error);
                 }
                 return; // Exit early since we're handling the API call
-                    followedUsersWhoEngaged: [],
-                    totalEngagementFromFollowed: 0,
-                    communityLeadersWhoEngaged: [],
-                    verifiedUsersWhoEngaged: []
-                  },
-                  trendingStatus: null,
-                  trendingScore: 0,
-                  isBookmarked: false,
-                  communityId: communityId,
-                  contentType: 'text'
-                };
-                handlePostCreated(newPost);
               }}
               onCancel={() => setShowComposer(false)}
             />

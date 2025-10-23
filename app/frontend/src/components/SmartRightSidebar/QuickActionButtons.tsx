@@ -25,53 +25,8 @@ const QuickActionButtons = React.memo(function QuickActionButtons({
     }
   };
 
-  // Default quick actions for ETH/USDC operations
-  const defaultActions: QuickAction[] = [
-    {
-      id: 'send-eth',
-      label: 'Send ETH',
-      icon: '💸',
-      action: async () => {},
-      tooltip: 'Send Ethereum to another wallet'
-    },
-    {
-      id: 'receive-eth',
-      label: 'Receive',
-      icon: '📥',
-      action: async () => {},
-      tooltip: 'Show QR code to receive payments'
-    },
-    {
-      id: 'send-usdc',
-      label: 'Send USDC',
-      icon: '💵',
-      action: async () => {},
-      tooltip: 'Send USDC stablecoin'
-    },
-    {
-      id: 'swap-tokens',
-      label: 'Swap',
-      icon: '🔄',
-      action: async () => {},
-      tooltip: 'Swap between different tokens'
-    },
-    {
-      id: 'buy-crypto',
-      label: 'Buy Crypto',
-      icon: '💳',
-      action: async () => {},
-      tooltip: 'Buy cryptocurrency with fiat'
-    },
-    {
-      id: 'stake-tokens',
-      label: 'Stake',
-      icon: '🏦',
-      action: async () => {},
-      tooltip: 'Stake tokens to earn rewards'
-    }
-  ];
-
-  const displayActions = actions.length > 0 ? actions : defaultActions;
+  // Only show actions if they are provided from wallet data
+  const displayActions = actions;
 
   return (
     <div className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden ${className}`}>
@@ -90,8 +45,19 @@ const QuickActionButtons = React.memo(function QuickActionButtons({
 
       {/* Action Buttons Grid */}
       <div className="p-4">
-        <div className="grid grid-cols-2 gap-3">
-          {displayActions.map((action) => {
+        {displayActions.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">⚡</div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+              Quick actions will appear here
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Connect your wallet to see available actions
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {displayActions.map((action) => {
             const isLoading = loadingAction === action.id;
             const isDisabled = action.disabled || isLoading;
 
@@ -135,8 +101,9 @@ const QuickActionButtons = React.memo(function QuickActionButtons({
                 )}
               </button>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
 
         {/* Additional Actions */}
         <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
@@ -163,12 +130,7 @@ const QuickActionButtons = React.memo(function QuickActionButtons({
               <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
               Ethereum Mainnet
             </div>
-            <div className="flex items-center">
-              <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              15 gwei
-            </div>
+            {/* Gas price will be loaded from real network data */}
           </div>
         </div>
       </div>

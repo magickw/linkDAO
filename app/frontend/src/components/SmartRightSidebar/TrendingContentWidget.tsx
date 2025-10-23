@@ -28,95 +28,28 @@ export default function TrendingContentWidget({
   const [trendingItems, setTrendingItems] = useState<TrendingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock trending data - in real app, this would come from API
+  // Fetch real trending data from API
   useEffect(() => {
-    const mockTrendingData: TrendingItem[] = [
-      {
-        id: '1',
-        type: 'hashtag',
-        title: '#DeFiSummer',
-        subtitle: '2.4K posts',
-        engagement: 2400,
-        growth: 25,
-        url: '/hashtags/defisummer'
-      },
-      {
-        id: '2',
-        type: 'post',
-        title: 'New Ethereum Upgrade Proposal',
-        subtitle: 'by @vitalik.eth',
-        engagement: 1850,
-        growth: 18,
-        url: '/posts/eth-upgrade-proposal',
-        thumbnail: 'https://placehold.co/40'
-      },
-      {
-        id: '3',
-        type: 'user',
-        title: '@defi_whale',
-        subtitle: '15.2K followers',
-        engagement: 1520,
-        growth: 12,
-        url: '/users/defi_whale',
-        thumbnail: 'https://placehold.co/40'
-      },
-      {
-        id: '4',
-        type: 'token',
-        title: 'LINK',
-        subtitle: 'Chainlink Token',
-        engagement: 3200,
-        growth: 8,
-        url: '/tokens/link',
-        metadata: { price: 14.52, change: 8.2 }
-      },
-      {
-        id: '5',
-        type: 'community',
-        title: 'Ethereum Builders',
-        subtitle: '12.4K members',
-        engagement: 890,
-        growth: 15,
-        url: '/dao/ethereum-builders',
-        thumbnail: 'https://placehold.co/40'
-      },
-      {
-        id: '6',
-        type: 'nft',
-        title: 'CryptoPunks Floor',
-        subtitle: '45.2 ETH',
-        engagement: 650,
-        growth: -5,
-        url: '/nfts/cryptopunks',
-        thumbnail: 'https://placehold.co/40'
-      },
-      {
-        id: '7',
-        type: 'hashtag',
-        title: '#Web3Gaming',
-        subtitle: '1.8K posts',
-        engagement: 1800,
-        growth: 22,
-        url: '/hashtags/web3gaming'
-      },
-      {
-        id: '8',
-        type: 'post',
-        title: 'DAO Governance Best Practices',
-        subtitle: 'by @dao_expert',
-        engagement: 1200,
-        growth: 14,
-        url: '/posts/dao-governance',
-        thumbnail: 'https://placehold.co/40'
+    const fetchTrendingData = async () => {
+      setIsLoading(true);
+      try {
+        // TODO: Replace with actual API call to fetch trending content
+        // const response = await fetch(`/api/trending?context=${context}&communityId=${communityId}&filter=${activeFilter}`);
+        // const data = await response.json();
+        // setTrendingItems(data.items || []);
+        
+        // For now, show empty state until real API is implemented
+        setTrendingItems([]);
+      } catch (error) {
+        console.error('Failed to fetch trending data:', error);
+        setTrendingItems([]);
+      } finally {
+        setIsLoading(false);
       }
-    ];
+    };
 
-    // Simulate loading
-    setTimeout(() => {
-      setTrendingItems(mockTrendingData);
-      setIsLoading(false);
-    }, 1000);
-  }, [context, communityId]);
+    fetchTrendingData();
+  }, [context, communityId, activeFilter]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
@@ -224,9 +157,12 @@ export default function TrendingContentWidget({
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-4xl mb-2">🔍</div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              No trending {activeFilter === 'all' ? 'content' : activeFilter} found
+            <div className="text-4xl mb-2">🚀</div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+              Be the first to create trending content!
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Trending {activeFilter === 'all' ? 'content' : activeFilter} will appear here as the community grows
             </p>
           </div>
         ) : (

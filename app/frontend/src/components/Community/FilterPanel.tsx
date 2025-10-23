@@ -70,7 +70,7 @@ export default function FilterPanel({
 
   // Debounced author search
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       if (authorSearch.trim()) {
         // Fetch real author suggestions from API
         try {

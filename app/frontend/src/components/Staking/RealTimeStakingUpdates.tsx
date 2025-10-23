@@ -26,33 +26,28 @@ export const RealTimeStakingUpdates: React.FC<RealTimeStakingUpdatesProps> = ({
 }) => {
   const [stakingUpdates, setStakingUpdates] = useState<StakingUpdate[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data generation - replace with real API calls
+  // TODO: Replace with real API calls to fetch staking data
   useEffect(() => {
-    const generateMockUpdates = () => {
-      const mockUpdates: StakingUpdate[] = communityIds.slice(0, maxUpdates).map(communityId => ({
-        communityId,
-        communityName: `Community ${communityId.slice(-6)}`,
-        totalStaked: Math.floor(Math.random() * 10000) + 1000,
-        stakerCount: Math.floor(Math.random() * 100) + 10,
-        recentChange: (Math.random() - 0.5) * 1000,
-        changePercentage: (Math.random() - 0.5) * 20,
-        timestamp: new Date()
-      }));
-
-      setStakingUpdates(mockUpdates);
-      
-      if (showAnimations) {
-        setIsAnimating(true);
-        setTimeout(() => setIsAnimating(false), 2000);
+    const fetchStakingUpdates = async () => {
+      setLoading(true);
+      try {
+        // In a real implementation, this would fetch actual staking data
+        // For now, we'll use an empty array
+        setStakingUpdates([]);
+      } catch (error) {
+        console.error('Error fetching staking updates:', error);
+        setStakingUpdates([]);
+      } finally {
+        setLoading(false);
       }
     };
 
-    generateMockUpdates();
+    fetchStakingUpdates();
     
-    // Update every 30 seconds
-    const interval = setInterval(generateMockUpdates, 30000);
-    return () => clearInterval(interval);
+    // In a real implementation, this would update periodically
+    // For now, we'll just fetch once
   }, [communityIds, maxUpdates, showAnimations]);
 
   const formatNumber = (num: number): string => {
@@ -73,7 +68,7 @@ export const RealTimeStakingUpdates: React.FC<RealTimeStakingUpdatesProps> = ({
     return null;
   };
 
-  if (stakingUpdates.length === 0) {
+  if (loading) {
     return (
       <div className={`p-4 ${className}`}>
         <div className="animate-pulse">
@@ -86,6 +81,11 @@ export const RealTimeStakingUpdates: React.FC<RealTimeStakingUpdatesProps> = ({
         </div>
       </div>
     );
+  }
+
+  // Don't render if there are no staking updates
+  if (stakingUpdates.length === 0) {
+    return null;
   }
 
   return (

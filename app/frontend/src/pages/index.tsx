@@ -693,14 +693,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Top Trending Tags */}
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {['defi','governance','nft','airdrops','layer2'].map((tag) => (
-                      <a key={tag} href={`/hashtags/${tag}`} className="rounded-full border border-gray-200 dark:border-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50">#{tag}</a>
-                    ))}
-                  </div>
-                </div>
+                {/* Trending tags will be loaded from real data */}
 
                 {/* Feed Content */}
                 {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
