@@ -5,6 +5,8 @@ import {
   ArrowTrendingDownIcon,
   MinusIcon
 } from '@heroicons/react/24/outline';
+import HeatmapChart from '@/components/Admin/Visualizations/HeatmapChart';
+import { HeatmapData } from '@/components/Admin/Visualizations/types';
 
 interface CohortHeatmapData {
   cohortPeriod: string;
@@ -33,19 +35,58 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
     rate: number;
   } | null>(null);
 
-  // Calculate the maximum number of periods across all cohorts
+  // Transform data for heatmap chart
+  const heatmapData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    const heatmapPoints: HeatmapData[] = [];
+    
+    data.forEach((cohort, cohortIndex) => {
+      cohort.retentionRates.forEach((rate, periodIndex) => {
+        if (rate !== null && rate !== undefined) {
+          heatmapPoints.push({
+            x: cohortIndex,
+            y: periodIndex,
+            value: rate,
+            label: `${cohort.cohortPeriod} - Period ${periodIndex + 1}`,
+            cohort: cohort.cohortPeriod,
+            period: periodIndex,
+            size: cohort.cohortSize
+          });
+        }
+      });
+    });
+    
+    return heatmapPoints;
+  }, [data]);
+
+  // Generate cohort labels for x-axis
+  const cohortLabels = useMemo(() => {
+    return data.map(cohort => cohort.cohortPeriod);
+  }, [data]);
+
+  // Generate period labels for y-axis
   const maxPeriods = useMemo(() => {
+    return Math.max(...data.map(cohort => cohort.retentionRates.length));
+  }, [data]);
+
+  const periodLabels = useMemo(() => {
+    return Array.from({ length: maxPeriods }, (_, i) => `Period ${i + 1}`);
+  }, [maxPeriods]);
+
+  // Calculate the maximum number of periods across all cohorts
+  const maxPeriodsCount = useMemo(() => {
     return Math.max(...data.map(cohort => cohort.retentionRates.length));
   }, [data]);
 
   // Generate period headers
   const periodHeaders = useMemo(() => {
     const headers = [];
-    for (let i = 0; i < maxPeriods; i++) {
+    for (let i = 0; i < maxPeriodsCount; i++) {
       headers.push(`Period ${i + 1}`);
     }
     return headers;
-  }, [maxPeriods]);
+  }, [maxPeriodsCount]);
 
   // Color scale for retention rates
   const getRetentionColor = (rate: number): string => {
@@ -143,8 +184,26 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
         </div>
       </div>
 
-      {/* Heatmap */}
+      {/* D3 Heatmap Visualization */}
       <div className="p-6">
+        <div className="h-96 mb-8">
+          <HeatmapChart
+            data={heatmapData}
+            width={800}
+            height={350}
+            showTooltip={true}
+            onCellClick={(d) => {
+              if (onCellClick && d.cohort && d.period !== undefined) {
+                onCellClick(d.cohort, d.period, d.value);
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Traditional Table View */}
+      <div className="p-6 border-t border-gray-200">
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Detailed Retention Data</h4>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
@@ -201,124 +260,39 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
                         <ArrowTrendingDownIcon className="w-5 h-5 text-red-500" />
                       )}
                       {trend === 'stable' && (
-                        <MinusIcon className="w-5 h-5 text-gray-400" />
+                        <MinusIcon className="w-5 h-5 text-gray-500" />
                       )}
                     </td>
                     
-                    {/* Retention Rate Cells */}
-                    {Array.from({ length: maxPeriods }, (_, periodIndex) => {
-                      const rate = cohort.retentionRates[periodIndex];
-                      const hasData = rate !== undefined;
-                      
-                      return (
-                        <td
-                          key={periodIndex}
-                          className="px-2 py-3 text-center cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (hasData) {
-                              handleCellClick(cohort.cohortPeriod, periodIndex, rate);
-                            }
-                          }}
-                          onMouseEnter={() => {
-                            if (hasData) {
-                              handleCellHover(cohort.cohortPeriod, periodIndex, rate);
-                            }
-                          }}
-                          onMouseLeave={() => setHoveredCell(null)}
-                        >
-                          {hasData ? (
-                            <div
-                              className={`
-                                w-12 h-8 rounded flex items-center justify-center text-xs font-medium
-                                ${getRetentionColor(rate)} ${getRetentionTextColor(rate)}
-                                hover:scale-110 transition-transform duration-200
-                              `}
-                            >
-                              {rate.toFixed(0)}%
-                            </div>
-                          ) : (
-                            <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center">
-                              <span className="text-gray-400 text-xs">-</span>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
+                    {/* Retention Rates */}
+                    {cohort.retentionRates.map((rate, periodIndex) => (
+                      <td
+                        key={periodIndex}
+                        className={`px-2 py-3 text-center text-xs font-medium cursor-pointer ${
+                          getRetentionTextColor(rate)
+                        } ${getRetentionColor(rate)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCellClick(cohort.cohortPeriod, periodIndex, rate);
+                        }}
+                        onMouseEnter={() => handleCellHover(cohort.cohortPeriod, periodIndex, rate)}
+                      >
+                        {rate > 0 ? `${rate.toFixed(0)}%` : '-'}
+                      </td>
+                    ))}
+                    
+                    {/* Fill empty cells if needed */}
+                    {Array.from({ length: maxPeriodsCount - cohort.retentionRates.length }).map((_, index) => (
+                      <td key={`empty-${index}`} className="px-2 py-3 text-center text-xs text-gray-400">
+                        -
+                      </td>
+                    ))}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-
-        {/* Tooltip */}
-        {hoveredCell && (
-          <div className="fixed z-50 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none">
-            <div className="font-medium">
-              {formatCohortPeriod(hoveredCell.cohort)}
-            </div>
-            <div>
-              Period {hoveredCell.period + 1}: {hoveredCell.rate.toFixed(1)}% retention
-            </div>
-          </div>
-        )}
-
-        {/* Selected Cohort Details */}
-        {selectedCohort && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-medium text-blue-900 mb-2">
-              Cohort Details: {formatCohortPeriod(selectedCohort)}
-            </h4>
-            
-            {(() => {
-              const cohort = data.find(c => c.cohortPeriod === selectedCohort);
-              if (!cohort) return null;
-              
-              return (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <div className="text-blue-600 font-medium">Cohort Size</div>
-                    <div className="text-blue-900 font-semibold">
-                      {cohort.cohortSize.toLocaleString()} users
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="text-blue-600 font-medium">First Period Retention</div>
-                    <div className="text-blue-900 font-semibold">
-                      {cohort.retentionRates[0]?.toFixed(1) || 'N/A'}%
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="text-blue-600 font-medium">Latest Retention</div>
-                    <div className="text-blue-900 font-semibold">
-                      {cohort.retentionRates[cohort.retentionRates.length - 1]?.toFixed(1) || 'N/A'}%
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="text-blue-600 font-medium">Trend</div>
-                    <div className="text-blue-900 font-semibold flex items-center">
-                      {(() => {
-                        const trend = getCohortTrend(cohort.retentionRates);
-                        return (
-                          <>
-                            {trend === 'up' && <ArrowTrendingUpIcon className="w-4 h-4 text-green-500 mr-1" />}
-                            {trend === 'down' && <ArrowTrendingDownIcon className="w-4 h-4 text-red-500 mr-1" />}
-                            {trend === 'stable' && <MinusIcon className="w-4 h-4 text-gray-400 mr-1" />}
-                            {trend.charAt(0).toUpperCase() + trend.slice(1)}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        )}
       </div>
     </div>
   );

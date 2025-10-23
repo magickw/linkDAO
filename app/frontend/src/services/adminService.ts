@@ -7,6 +7,103 @@ import {
   AuthUser 
 } from '@/types/auth';
 
+// AI Insights Types
+interface ContentDemandPrediction {
+  topic: string;
+  category: string;
+  predictedDemand: number;
+  confidence: number;
+  timeframe: 'week' | 'month' | 'quarter';
+  factors: Array<{
+    factor: string;
+    weight: number;
+    trend: 'increasing' | 'decreasing' | 'stable';
+  }>;
+  recommendations: string[];
+}
+
+interface UserBehaviorPrediction {
+  userId?: string;
+  sessionId: string;
+  predictions: Array<{
+    action: 'view_document' | 'search' | 'contact_support' | 'abandon' | 'convert';
+    probability: number;
+    confidence: number;
+    timeframe: number;
+    factors: string[];
+  }>;
+  riskFactors: Array<{
+    factor: string;
+    severity: 'low' | 'medium' | 'high';
+    mitigation: string;
+  }>;
+}
+
+interface ContentPerformancePrediction {
+  documentPath: string;
+  predictions: Array<{
+    metric: 'views' | 'satisfaction' | 'conversion' | 'support_escalation';
+    predictedValue: number;
+    currentValue: number;
+    trend: 'improving' | 'declining' | 'stable';
+    confidence: number;
+  }>;
+  recommendations: string[];
+}
+
+interface AIInsight {
+  id: string;
+  type: 'trend' | 'anomaly' | 'recommendation' | 'alert' | 'opportunity' | 'risk';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  title: string;
+  description: string;
+  confidence: number;
+  actionItems: any[];
+  relatedMetrics: string[];
+  timestamp: string;
+  category: string;
+  priority: number;
+  impact: 'positive' | 'negative' | 'neutral';
+  timeframe: string;
+  metadata: Record<string, any>;
+}
+
+interface ComprehensiveInsightReport {
+  generatedAt: string;
+  timeframe: string;
+  summary: {
+    totalInsights: number;
+    criticalAlerts: number;
+    opportunities: number;
+    risks: number;
+    trends: number;
+    anomalies: number;
+  };
+  insights: AIInsight[];
+  predictions: any[];
+  anomalies: any[];
+  trends: any[];
+  recommendations: string[];
+  nextActions: string[];
+}
+
+interface EngineStatus {
+  isRunning: boolean;
+  lastUpdate: string;
+  componentsStatus: {
+    predictiveAnalytics: 'active' | 'inactive' | 'error';
+    anomalyDetection: 'active' | 'inactive' | 'error';
+    automatedInsights: 'active' | 'inactive' | 'error';
+    trendAnalysis: 'active' | 'inactive' | 'error';
+  };
+  performance: {
+    totalInsightsGenerated: number;
+    averageProcessingTime: number;
+    errorRate: number;
+    lastError?: string;
+  };
+}
+
 class AdminService {
   private baseUrl: string;
 
@@ -631,6 +728,103 @@ class AdminService {
 
     if (!response.ok) {
       throw new Error('Failed to fetch audit log');
+    }
+
+    return response.json();
+  }
+
+  // AI Insights and Predictive Analytics
+  async getAIInsightsReport(timeframe: string = 'daily'): Promise<ComprehensiveInsightReport> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/report?timeframe=${timeframe}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch AI insights report');
+    }
+
+    return response.json();
+  }
+
+  async getAIEngineStatus(): Promise<EngineStatus> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/status`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch AI engine status');
+    }
+
+    return response.json();
+  }
+
+  async getPredictiveAnalytics(type: string, horizon: number = 7): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch predictive analytics');
+    }
+
+    return response.json();
+  }
+
+  async getContentDemandPredictions(timeframe: 'week' | 'month' | 'quarter' = 'month'): Promise<ContentDemandPrediction[]> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch content demand predictions');
+    }
+
+    return response.json();
+  }
+
+  async getUserBehaviorPredictions(horizon: number = 7): Promise<UserBehaviorPrediction[]> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user behavior predictions');
+    }
+
+    return response.json();
+  }
+
+  async getContentPerformancePredictions(): Promise<ContentPerformancePrediction[]> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_performance`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch content performance predictions');
+    }
+
+    return response.json();
+  }
+
+  async getAnomalies(): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/anomalies`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch anomalies');
+    }
+
+    return response.json();
+  }
+
+  async getTrendAnalysis(): Promise<any[]> {
+    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/trends`, {
+      headers: this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch trend analysis');
     }
 
     return response.json();

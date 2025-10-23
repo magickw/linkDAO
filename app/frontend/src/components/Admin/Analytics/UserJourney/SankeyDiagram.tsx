@@ -1,71 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-
-// Type-only import to avoid runtime issues
-type SankeyLayout<N, L> = {
-  (graph: { nodes: N[]; links: L[] }): { nodes: N[]; links: L[] };
-  nodeWidth(): number;
-  nodeWidth(width: number): SankeyLayout<N, L>;
-  nodePadding(): number;
-  nodePadding(padding: number): SankeyLayout<N, L>;
-  extent(): [[number, number], [number, number]];
-  extent(extent: [[number, number], [number, number]]): SankeyLayout<N, L>;
-};
-
-// Fallback implementation for d3-sankey
-const createSankey = <N, L>(): SankeyLayout<N, L> => {
-  let nodeWidth = 24;
-  let nodePadding = 8;
-  let extent: [[number, number], [number, number]] = [[0, 0], [1, 1]];
-
-  const sankey = ((graph: { nodes: N[]; links: L[] }) => {
-    // Simple fallback layout - just return the input
-    return { nodes: graph.nodes, links: graph.links };
-  }) as SankeyLayout<N, L>;
-
-  // Create properly typed functions for nodeWidth
-  function nodeWidthFn(): number;
-  function nodeWidthFn(width: number): SankeyLayout<N, L>;
-  function nodeWidthFn(width?: number): number | SankeyLayout<N, L> {
-    if (width === undefined) return nodeWidth;
-    nodeWidth = width;
-    return sankey;
-  }
-  sankey.nodeWidth = nodeWidthFn;
-
-  // Create properly typed functions for nodePadding
-  function nodePaddingFn(): number;
-  function nodePaddingFn(padding: number): SankeyLayout<N, L>;
-  function nodePaddingFn(padding?: number): number | SankeyLayout<N, L> {
-    if (padding === undefined) return nodePadding;
-    nodePadding = padding;
-    return sankey;
-  }
-  sankey.nodePadding = nodePaddingFn;
-
-  // Create properly typed functions for extent
-  function extentFn(): [[number, number], [number, number]];
-  function extentFn(extent: [[number, number], [number, number]]): SankeyLayout<N, L>;
-  function extentFn(ext?: [[number, number], [number, number]]): [[number, number], [number, number]] | SankeyLayout<N, L> {
-    if (ext === undefined) return extent;
-    extent = ext;
-    return sankey;
-  }
-  sankey.extent = extentFn;
-
-  return sankey;
-};
-
-// Fallback link path generator
-const createSankeyLinkHorizontal = () => {
-  return (d: any) => {
-    const x0 = d.source?.x1 || 0;
-    const x1 = d.target?.x0 || 100;
-    const y0 = d.source?.y0 || 0;
-    const y1 = d.target?.y0 || 0;
-    return `M${x0},${y0}L${x1},${y1}`;
-  };
-};
+import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 
 interface SankeyNode {
   id: string;
@@ -75,8 +10,8 @@ interface SankeyNode {
 }
 
 interface SankeyLink {
-  source: string;
-  target: string;
+  source: SankeyNode | number;
+  target: SankeyNode | number;
   value: number;
 }
 
@@ -130,18 +65,16 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Create sankey generator
-    const sankeyGenerator = createSankey<SankeyNode, SankeyLink>()
+    const sankeyGenerator = sankey<SankeyNode, SankeyLink>()
       .nodeWidth(15)
       .nodePadding(10)
       .extent([[1, 1], [innerWidth - 1, innerHeight - 5]]);
 
     // Process data
-    const processedData = {
-      nodes: data.nodes.map(d => ({ ...d })),
+    const { nodes, links } = sankeyGenerator({
+      nodes: data.nodes.map((d, i) => ({ ...d, index: i })),
       links: data.links.map(d => ({ ...d }))
-    };
-
-    const { nodes, links } = sankeyGenerator(processedData);
+    });
 
     // Color scale for nodes
     const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -149,39 +82,36 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
     // Draw links
     const link = g
       .append('g')
-      .selectAll('.link')
+      .attr('fill', 'none')
+      .attr('stroke-opacity', 0.5)
+      .selectAll('path')
       .data(links)
       .enter()
       .append('path')
-      .attr('class', 'link')
-      .attr('d', createSankeyLinkHorizontal())
-      .style('stroke', (d: any) => colorScale(d.source.category || 'default'))
-      .style('stroke-opacity', 0.5)
-      .style('stroke-width', (d: any) => Math.max(1, d.width))
-      .style('fill', 'none')
+      .attr('d', sankeyLinkHorizontal())
+      .attr('stroke', (d: any) => colorScale((d.source as SankeyNode).category || 'default'))
+      .attr('stroke-width', (d: any) => Math.max(1, d.width))
       .style('cursor', 'pointer')
       .on('mouseover', function(event: MouseEvent, d: any) {
-        d3.select(this).style('stroke-opacity', 0.8);
+        d3.select(this).attr('stroke-opacity', 0.8);
         
         const rect = svgRef.current!.getBoundingClientRect();
+        const sourceNode = d.source as SankeyNode;
+        const targetNode = d.target as SankeyNode;
         setTooltip({
           visible: true,
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
-          content: `${d.source.name} → ${d.target.name}\nUsers: ${d.value.toLocaleString()}\nConversion: ${((d.value / d.source.value) * 100).toFixed(1)}%`
+          content: `${sourceNode.name} → ${targetNode.name}\nUsers: ${d.value.toLocaleString()}\nConversion: ${sourceNode.value ? ((d.value / sourceNode.value) * 100).toFixed(1) + '%' : 'N/A'}`
         });
       })
       .on('mouseout', function() {
-        d3.select(this).style('stroke-opacity', 0.5);
+        d3.select(this).attr('stroke-opacity', 0.5);
         setTooltip(prev => ({ ...prev, visible: false }));
       })
       .on('click', (event: MouseEvent, d: any) => {
         if (onLinkClick) {
-          onLinkClick({
-            source: d.source.id,
-            target: d.target.id,
-            value: d.value
-          });
+          onLinkClick(d);
         }
       });
 
@@ -200,12 +130,12 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
     node
       .append('rect')
       .attr('height', (d: any) => d.y1 - d.y0)
-      .attr('width', sankeyGenerator.nodeWidth())
-      .style('fill', (d: any) => colorScale(d.category || 'default'))
-      .style('stroke', '#000')
-      .style('stroke-width', 0.5)
+      .attr('width', (d: any) => d.x1 - d.x0)
+      .attr('fill', (d: any) => colorScale(d.category || 'default'))
+      .attr('stroke', '#000')
+      .attr('stroke-width', 0.5)
       .on('mouseover', function(event: MouseEvent, d: any) {
-        d3.select(this).style('fill-opacity', 0.8);
+        d3.select(this).attr('fill-opacity', 0.8);
         
         const rect = svgRef.current!.getBoundingClientRect();
         setTooltip({
@@ -216,7 +146,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
         });
       })
       .on('mouseout', function() {
-        d3.select(this).style('fill-opacity', 1);
+        d3.select(this).attr('fill-opacity', 1);
         setTooltip(prev => ({ ...prev, visible: false }));
       })
       .on('click', (event: MouseEvent, d: any) => {
@@ -228,31 +158,12 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
     // Node labels
     node
       .append('text')
-      .attr('x', -6)
+      .attr('x', (d: any) => (d.x0 < width / 2 ? (d.x1 - d.x0) + 6 : -6))
       .attr('y', (d: any) => (d.y1 - d.y0) / 2)
       .attr('dy', '0.35em')
-      .attr('text-anchor', 'end')
-      .text((d: any) => d.name)
-      .style('font-family', 'Arial, sans-serif')
-      .style('font-size', '12px')
-      .style('fill', '#333')
-      .filter((d: any) => d.x0 < innerWidth / 2)
-      .attr('x', sankeyGenerator.nodeWidth() + 6)
-      .attr('text-anchor', 'start');
-
-    // Add value labels on nodes
-    node
-      .append('text')
-      .attr('x', sankeyGenerator.nodeWidth() / 2)
-      .attr('y', (d: any) => (d.y1 - d.y0) / 2)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'middle')
-      .text((d: any) => d.value.toLocaleString())
-      .style('font-family', 'Arial, sans-serif')
-      .style('font-size', '10px')
-      .style('fill', 'white')
-      .style('font-weight', 'bold')
-      .filter((d: any) => (d.y1 - d.y0) > 20); // Only show if node is tall enough
+      .attr('text-anchor', (d: any) => (d.x0 < width / 2 ? 'start' : 'end'))
+      .attr('font-size', '10px')
+      .text((d: any) => d.name);
 
   }, [data, width, height, onNodeClick, onLinkClick]);
 
@@ -262,19 +173,19 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
         ref={svgRef}
         width={width}
         height={height}
-        className="border border-gray-200 rounded-lg bg-white"
+        className="border border-gray-200 rounded-lg"
       />
-      
       {tooltip.visible && (
         <div
-          className="absolute z-10 px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none whitespace-pre-line"
+          className="absolute pointer-events-none bg-white border border-gray-200 rounded-lg shadow-lg p-2 text-sm z-10"
           style={{
-            left: tooltip.x + 10,
-            top: tooltip.y - 10,
-            transform: 'translateY(-100%)'
+            left: `${tooltip.x + 10}px`,
+            top: `${tooltip.y - 10}px`,
+            opacity: tooltip.visible ? 1 : 0,
+            transition: 'opacity 0.2s'
           }}
         >
-          {tooltip.content}
+          <pre className="font-sans whitespace-pre-wrap">{tooltip.content}</pre>
         </div>
       )}
     </div>

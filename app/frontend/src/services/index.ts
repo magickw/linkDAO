@@ -9,3 +9,6 @@ export * from './webSocketService';
 export * from './communityService';
 export * from './communityMembershipService';
 export * from './communityPostService';
+
+// Admin services
+export * from './adminWebSocketService';

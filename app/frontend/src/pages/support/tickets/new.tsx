@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
-import { 
-  Ticket, 
-  ArrowLeft, 
-  User, 
-  Mail, 
-  Tag, 
+import {
+  Ticket,
+  ArrowLeft,
+  User,
+  Mail,
+  Tag,
   AlertTriangle,
   Paperclip,
-  Send
+  Send,
+  XCircle
 } from 'lucide-react';
 
 const NewSupportTicket: NextPage = () => {

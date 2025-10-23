@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import {
   Users,
@@ -24,6 +24,7 @@ import { SellerPerformance } from './SellerPerformance';
 import { DisputeResolution } from './DisputeResolution';
 import { UserManagement } from './UserManagement';
 import { AdminAnalytics } from './AdminAnalytics';
+import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
   pendingModerations: number;
@@ -37,10 +38,11 @@ interface AdminStats {
 
 export function AdminDashboard() {
   const router = useRouter();
-  const { isAdmin, hasPermission } = usePermissions();
+  const { isAdmin, hasPermission, user } = usePermissions();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const webSocketManagerRef = useRef<any>(null);
 
   useEffect(() => {
     if (!isAdmin()) {
@@ -49,7 +51,74 @@ export function AdminDashboard() {
     }
     
     loadStats();
+    
+    // Initialize WebSocket connection
+    initializeWebSocket();
+    
+    // Set up periodic refresh as fallback
+    const interval = setInterval(() => {
+      if (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected) {
+        loadStats();
+      }
+    }, 30000); // Refresh every 30 seconds if WebSocket is not available
+    
+    return () => {
+      clearInterval(interval);
+      // Clean up WebSocket connection
+      if (webSocketManagerRef.current) {
+        webSocketManagerRef.current.disconnect();
+      }
+    };
   }, [isAdmin, router]);
+
+  const initializeWebSocket = async () => {
+    if (!user) return;
+    
+    try {
+      // Create admin user object for WebSocket service
+      const adminUser = {
+        adminId: user.id,
+        email: user.email || '',
+        role: user.role,
+        permissions: user.permissions || []
+      };
+      
+      // Initialize WebSocket manager
+      const manager = await initializeAdminWebSocketManager(adminUser);
+      webSocketManagerRef.current = manager;
+      
+      // Set up event listeners for real-time updates
+      manager.on('dashboard_update', (data) => {
+        if (data.data && activeTab === 'overview') {
+          // Update stats with real-time data
+          setStats(prevStats => {
+            if (!prevStats) return prevStats;
+            
+            return {
+              ...prevStats,
+              pendingModerations: data.data.systemMetrics?.pendingModerations || prevStats.pendingModerations,
+              pendingSellerApplications: data.data.systemMetrics?.pendingSellerApplications || prevStats.pendingSellerApplications,
+              openDisputes: data.data.systemMetrics?.openDisputes || prevStats.openDisputes,
+              suspendedUsers: data.data.userMetrics?.suspendedUsers || prevStats.suspendedUsers,
+              totalUsers: data.data.userMetrics?.totalUsers || prevStats.totalUsers,
+              totalSellers: data.data.businessMetrics?.totalSellers || prevStats.totalSellers
+            };
+          });
+        }
+      });
+      
+      manager.on('admin_alert', (alert) => {
+        // Handle real-time alerts
+        console.log('New admin alert:', alert);
+        // Could show a notification or update UI based on alert type
+      });
+      
+      console.log('Admin WebSocket connected successfully');
+    } catch (error) {
+      console.error('Failed to initialize admin WebSocket:', error);
+      // Fall back to polling
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -103,6 +172,14 @@ export function AdminDashboard() {
         <div className="mb-4 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
           <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Manage platform operations and user activities</p>
+          {webSocketManagerRef.current && (
+            <div className="flex items-center mt-2">
+              <div className={`w-3 h-3 rounded-full mr-2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-xs text-gray-300">
+                {webSocketManagerRef.current.isConnected ? 'Real-time updates enabled' : 'Connecting to real-time updates...'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}

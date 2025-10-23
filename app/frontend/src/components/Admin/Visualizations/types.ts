@@ -75,6 +75,10 @@ export interface HeatmapData {
   y: string | number;
   value: number;
   label?: string;
+  // Extended properties for cohort analysis
+  cohort?: string;
+  period?: number;
+  size?: number;
 }
 
 export interface TreemapProps {
