@@ -70,7 +70,17 @@ export const useFeed = (forUser?: string) => {
       setLastFetch(now);
       markEvent('feed.loaded', fetchedFeed.length);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch feed';
+      let errorMessage = err instanceof Error ? err.message : 'Failed to fetch feed';
+      
+      // Provide user-friendly error messages
+      if (errorMessage.includes('Service temporarily unavailable')) {
+        errorMessage = 'Our servers are temporarily unavailable. Please try again in a few minutes.';
+      } else if (errorMessage.includes('fetch') || errorMessage.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to our servers. Please check your internet connection and try again.';
+      } else if (errorMessage.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      }
+      
       setError(errorMessage);
       markEvent('feed.error');
       

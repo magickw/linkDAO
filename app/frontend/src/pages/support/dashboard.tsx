@@ -227,51 +227,50 @@ const SupportDashboard: NextPage = () => {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
-              <SupportAnalyticsDashboard />
-            </div>
-          )}
-                  <div className="space-y-4">
-                    {[
-                      { category: 'Technical Issues', count: 42, percentage: 35 },
-                      { category: 'Account Access', count: 38, percentage: 32 },
-                      { category: 'Token Questions', count: 25, percentage: 21 },
-                      { category: 'Other', count: 15, percentage: 12 },
-                    ].map((item, index) => (
-                      <div key={index}>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600 dark:text-gray-300">{item.category}</span>
-                          <span className="font-medium text-gray-900 dark:text-white">{item.count} ({item.percentage}%)</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${item.percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 border border-gray-200 dark:border-gray-700">
+                <SupportAnalyticsDashboard />
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { category: 'Technical Issues', count: 42, percentage: 35 },
+                  { category: 'Account Access', count: 38, percentage: 32 },
+                  { category: 'Token Questions', count: 25, percentage: 21 },
+                  { category: 'Other', count: 15, percentage: 12 },
+                ].map((item, index) => (
+                  <div key={index}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600 dark:text-gray-300">{item.category}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{item.count} ({item.percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${item.percentage}%` }}
+                      ></div>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Response Time Trends</h3>
-                  <div className="space-y-4">
-                    {[
-                      { day: 'Monday', time: '2.1h' },
-                      { day: 'Tuesday', time: '1.8h' },
-                      { day: 'Wednesday', time: '2.3h' },
-                      { day: 'Thursday', time: '1.9h' },
-                      { day: 'Friday', time: '2.5h' },
-                      { day: 'Saturday', time: '3.2h' },
-                      { day: 'Sunday', time: '2.8h' },
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-gray-300">{item.day}</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{item.time}</span>
-                      </div>
-                    ))}
-                  </div>
+                ))}
+              </div>
+
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Response Time Trends</h3>
+                <div className="space-y-4">
+                  {[
+                    { day: 'Monday', time: '2.1h' },
+                    { day: 'Tuesday', time: '1.8h' },
+                    { day: 'Wednesday', time: '2.3h' },
+                    { day: 'Thursday', time: '1.9h' },
+                    { day: 'Friday', time: '2.5h' },
+                    { day: 'Saturday', time: '3.2h' },
+                    { day: 'Sunday', time: '2.8h' },
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <span className="text-gray-600 dark:text-gray-300">{item.day}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{item.time}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

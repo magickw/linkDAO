@@ -47,10 +47,12 @@ export default function FacebookStylePostComposer({
 
   // Rotate placeholder hints
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setHintIdx((i) => (i + 1) % HINTS.length);
-    }, 4000);
-    return () => window.clearInterval(id);
+    if (typeof window !== 'undefined') {
+      const id = window.setInterval(() => {
+        setHintIdx((i) => (i + 1) % HINTS.length);
+      }, 4000);
+      return () => window.clearInterval(id);
+    }
   }, []);
 
   const handleFocus = () => {

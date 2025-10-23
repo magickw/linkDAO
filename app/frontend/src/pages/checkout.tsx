@@ -5,6 +5,7 @@ import { useEnhancedCart } from '@/hooks/useEnhancedCart';
 import EnhancedCheckoutFlow from '@/components/Marketplace/Payment/EnhancedCheckoutFlow';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
+import { stringifyWithBigInt } from '@/utils/bigIntSerializer';
 
 const RECENT_ORDERS_KEY = 'linkdao_recent_orders';
 
@@ -39,7 +40,7 @@ const CheckoutPage: React.FC = () => {
       };
       sessionStorage.setItem(
         RECENT_ORDERS_KEY,
-        JSON.stringify([orderRecord, ...parsed].slice(0, 25))
+        stringifyWithBigInt([orderRecord, ...parsed].slice(0, 25))
       );
     }
 

@@ -142,7 +142,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
     handleCommunitySelect(communityId);
     navigateToCommunity(communityId);
     // Close sidebar on mobile after selection
-    if (window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       toggleSidebar();
     }
   };

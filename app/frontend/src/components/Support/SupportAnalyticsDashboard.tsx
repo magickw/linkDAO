@@ -1,24 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart, 
-  LineChart, 
-  PieChart, 
-  Bar, 
-  Line, 
-  Pie, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
   Calendar,
   Clock,
   MessageCircle,
   TrendingUp,
   AlertCircle,
   CheckCircle,
-  Users
+  Users,
+  BarChart,
+  LineChart,
+  PieChart
 } from 'lucide-react';
 
 // Since we don't have the actual charting libraries installed, I'll create a simplified version

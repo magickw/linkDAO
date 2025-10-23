@@ -138,14 +138,26 @@ class RequestManager {
     // Handle service unavailable errors more gracefully
     if (lastError && ((lastError as any)?.isServiceUnavailable || (lastError as any)?.status === 503)) {
       console.warn('Service unavailable after all retries, throwing service unavailable error');
-      const serviceError = new Error('Service temporarily unavailable. Please try again later.');
+      const serviceError = new Error('Our servers are temporarily unavailable. Please try again in a few minutes.');
       (serviceError as any).isServiceUnavailable = true;
       (serviceError as any).status = 503;
       throw serviceError;
     }
 
     if (lastError) {
-      throw lastError;
+      // Provide user-friendly error messages
+      let errorMessage = lastError instanceof Error ? lastError.message : 'Request failed with unknown error';
+      
+      if (errorMessage.includes('fetch') || errorMessage.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to our servers. Please check your internet connection and try again.';
+      } else if (errorMessage.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      }
+      
+      const error = new Error(errorMessage);
+      // Preserve original error properties
+      Object.assign(error, lastError);
+      throw error;
     }
 
     // This should never happen, but TypeScript requires it
@@ -168,7 +180,18 @@ class RequestManager {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        
+        // Provide user-friendly error messages
+        if (response.status === 503) {
+          errorMessage = 'Our servers are temporarily unavailable. Please try again in a few minutes.';
+        } else if (response.status === 429) {
+          errorMessage = 'Too many requests. Please wait before trying again.';
+        } else if (response.status >= 500) {
+          errorMessage = 'Our servers are experiencing issues. Please try again later.';
+        }
+        
+        const error = new Error(errorMessage);
         (error as any).status = response.status;
         (error as any).response = response;
         if (response.status === 503) {
@@ -190,7 +213,7 @@ class RequestManager {
       clearTimeout(timeoutId);
       
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeout}ms`);
+        throw new Error('Request timeout. Please try again.');
       }
       
       throw error;
