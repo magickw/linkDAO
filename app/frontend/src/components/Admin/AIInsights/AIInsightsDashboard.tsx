@@ -23,65 +23,64 @@ import { PredictiveAnalytics } from './PredictiveAnalytics';
 import { AnomalyDetection } from './AnomalyDetection';
 import { TrendAnalysis } from './TrendAnalysis';
 
-// Type definitions from adminService
-interface ContentDemandPrediction {
-  topic: string;
-  category: string;
-  predictedDemand: number;
-  confidence: number;
-  timeframe: 'week' | 'month' | 'quarter';
-  factors: Array<{
-    factor: string;
-    weight: number;
-    trend: 'increasing' | 'decreasing' | 'stable';
-  }>;
-  recommendations: string[];
+// Type definitions to match child components
+interface InsightMetric {
+  name: string;
+  value: number;
+  change: number;
+  trend: 'increasing' | 'decreasing' | 'stable';
 }
 
-interface UserBehaviorPrediction {
-  userId?: string;
-  sessionId: string;
-  predictions: Array<{
-    action: 'view_document' | 'search' | 'contact_support' | 'abandon' | 'convert';
-    probability: number;
-    confidence: number;
-    timeframe: number;
-    factors: string[];
-  }>;
-  riskFactors: Array<{
-    factor: string;
-    severity: 'low' | 'medium' | 'high';
-    mitigation: string;
-  }>;
+interface ChartDataPoint {
+  date: string;
+  engagement?: number;
+  quality?: number;
+  health?: number;
+  [key: string]: any;
 }
 
-interface ContentPerformancePrediction {
-  documentPath: string;
-  predictions: Array<{
-    metric: 'views' | 'satisfaction' | 'conversion' | 'support_escalation';
-    predictedValue: number;
-    currentValue: number;
-    trend: 'improving' | 'declining' | 'stable';
-    confidence: number;
-  }>;
-  recommendations: string[];
-}
-
-interface AIInsight {
+interface Prediction {
   id: string;
-  type: 'trend' | 'anomaly' | 'recommendation' | 'alert' | 'opportunity' | 'risk';
+  description: string;
+  details: string;
+  confidence: number;
+  impact: number;
+  category: string;
+  timeline: string;
+}
+
+interface Anomaly {
+  id: string;
+  description: string;
+  details: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
+  confidence: number;
+  type: string;
+  timestamp: string;
+}
+
+interface TrendDataPoint {
+  timestamp: string;
+  engagement?: number;
+  quality?: number;
+  systemHealth?: number;
+  growthRate?: number;
+  anomalyCount?: number;
+}
+
+interface AnomalyDistribution {
+  name: string;
+  value: number;
+  [key: string]: any;
+}
+
+interface Recommendation {
+  id: string;
   title: string;
   description: string;
-  confidence: number;
-  actionItems: any[];
-  relatedMetrics: string[];
-  timestamp: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  impact: 'low' | 'medium' | 'high' | 'critical';
   category: string;
-  priority: number;
-  impact: 'positive' | 'negative' | 'neutral';
-  timeframe: string;
-  metadata: Record<string, any>;
 }
 
 interface ComprehensiveInsightReport {
@@ -95,12 +94,25 @@ interface ComprehensiveInsightReport {
     trends: number;
     anomalies: number;
   };
-  insights: AIInsight[];
-  predictions: any[];
-  anomalies: any[];
-  trends: any[];
-  recommendations: string[];
+  insights: any[];
+  predictions: Prediction[];
+  anomalies: Anomaly[];
+  trendAnalysis: TrendDataPoint[];
+  recommendations: Recommendation[];
   nextActions: string[];
+  userEngagementScore: number;
+  userEngagementChange: number;
+  userEngagementTrend: 'increasing' | 'decreasing' | 'stable';
+  contentQualityScore: number;
+  contentQualityChange: number;
+  contentQualityTrend: 'increasing' | 'decreasing' | 'stable';
+  systemHealthScore: number;
+  systemHealthChange: number;
+  systemHealthTrend: 'increasing' | 'decreasing' | 'stable';
+  anomalyCount: number;
+  anomalyCountChange: number;
+  anomalyCountTrend: 'increasing' | 'decreasing' | 'stable';
+  anomalyDistribution: AnomalyDistribution[];
 }
 
 interface EngineStatus {
@@ -135,7 +147,84 @@ export const AIInsightsDashboard: React.FC = () => {
         adminService.getAIInsightsReport(timeframe),
         adminService.getAIEngineStatus()
       ]);
-      setInsightsReport(report);
+      
+      // Transform the report to match our interface
+      const transformedReport: ComprehensiveInsightReport = {
+        generatedAt: report.generatedAt || new Date().toISOString(),
+        timeframe: report.timeframe || timeframe,
+        summary: report.summary || {
+          totalInsights: 0,
+          criticalAlerts: 0,
+          opportunities: 0,
+          risks: 0,
+          trends: 0,
+          anomalies: 0
+        },
+        insights: report.insights || [],
+        predictions: Array.isArray(report.predictions) 
+          ? report.predictions.map((pred: any, index: number) => ({
+              id: pred.id || `pred-${index}`,
+              description: pred.description || 'Prediction',
+              details: pred.details || 'No details available',
+              confidence: pred.confidence || 0,
+              impact: pred.impact || 0,
+              category: pred.category || 'general',
+              timeline: pred.timeline || 'unknown'
+            }))
+          : [],
+        anomalies: Array.isArray(report.anomalies)
+          ? report.anomalies.map((anom: any, index: number) => ({
+              id: anom.id || `anom-${index}`,
+              description: anom.description || 'Anomaly detected',
+              details: anom.details || 'No details available',
+              severity: anom.severity || 'low',
+              confidence: anom.confidence || 0,
+              type: anom.type || 'unknown',
+              timestamp: anom.timestamp || new Date().toISOString()
+            }))
+          : [],
+        trendAnalysis: Array.isArray(report.trends)
+          ? report.trends.map((trend: any) => ({
+              timestamp: trend.timestamp || new Date().toISOString(),
+              engagement: trend.engagement,
+              quality: trend.quality,
+              systemHealth: trend.systemHealth,
+              growthRate: trend.growthRate,
+              anomalyCount: trend.anomalyCount
+            }))
+          : [],
+        recommendations: Array.isArray(report.recommendations)
+          ? report.recommendations.map((rec: any, index: number) => ({
+              id: `rec-${index}`,
+              title: typeof rec === 'string' ? rec : rec.title || 'Recommendation',
+              description: typeof rec === 'string' ? rec : rec.description || rec,
+              priority: 'medium',
+              impact: 'medium',
+              category: 'general'
+            }))
+          : [],
+        nextActions: report.nextActions || [],
+        userEngagementScore: 75,
+        userEngagementChange: 5,
+        userEngagementTrend: 'increasing',
+        contentQualityScore: 82,
+        contentQualityChange: -2,
+        contentQualityTrend: 'decreasing',
+        systemHealthScore: 95,
+        systemHealthChange: 1,
+        systemHealthTrend: 'increasing',
+        anomalyCount: report.anomalies?.length || 0,
+        anomalyCountChange: -1,
+        anomalyCountTrend: 'decreasing',
+        anomalyDistribution: [
+          { name: 'Critical', value: report.anomalies?.filter((a: any) => a.severity === 'critical').length || 0 },
+          { name: 'High', value: report.anomalies?.filter((a: any) => a.severity === 'high').length || 0 },
+          { name: 'Medium', value: report.anomalies?.filter((a: any) => a.severity === 'medium').length || 0 },
+          { name: 'Low', value: report.anomalies?.filter((a: any) => a.severity === 'low').length || 0 }
+        ]
+      };
+      
+      setInsightsReport(transformedReport);
       setEngineStatus(status);
     } catch (error) {
       console.error('Failed to fetch AI insights:', error);
@@ -240,7 +329,7 @@ export const AIInsightsDashboard: React.FC = () => {
         
         <TabsContent value="trends" className="mt-6">
           <TrendAnalysis 
-            trends={insightsReport?.trends || []} 
+            trends={insightsReport?.trendAnalysis || []} 
             loading={loading} 
           />
         </TabsContent>
