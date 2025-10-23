@@ -233,7 +233,7 @@ export const CommunityPerformanceOptimizer: React.FC<CommunityPerformanceOptimiz
   }, [communityId]);
 
   // Optimize images for better performance
-  const optimizeImage = useCallback((img: HTMLImageElement) => {
+  const optimizeImage = useCallback(async (img: HTMLImageElement) => {
     const originalSrc = img.dataset.src || img.src;
     
     // Check if we have cached optimization data
