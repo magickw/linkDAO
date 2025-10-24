@@ -13,6 +13,9 @@ import {
 import { useAccount, useConnect, useBalance } from 'wagmi';
 import { GlassPanel } from '../../../design-system/components/GlassPanel';
 import { Button } from '../../../design-system/components/Button';
+import { useCheckoutFlow, CheckoutFlowConfig } from '../../../hooks/useCheckoutFlow';
+import { ShippingStep } from '../../Checkout/Steps';
+import { paymentProcessor, PaymentRequest } from '../../../services/paymentProcessor';
 
 interface CartItem {
   id: string;
@@ -554,9 +557,10 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
         </AnimatePresence>
       </motion.div>
     );
-    
-    // Step Components
-    const CartReviewStep = () => (
+  };
+
+  // Step Components
+  const CartReviewStep = () => (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-white mb-4">Review Your Cart</h2>
         {cartItems.map((item) => (
@@ -565,106 +569,16 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
       </div>
     );
     
-    const ShippingStep = () => (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-white mb-4">Shipping Information</h2>
-          
-        <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <TouchInput
-              label="First Name"
-              value={shippingAddress.firstName}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, firstName: value }))}
-              placeholder="Enter first name"
-              required
-              error={errors.firstName}
-              inputKey="firstName"
-            />
-            <TouchInput
-              label="Last Name"
-              value={shippingAddress.lastName}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, lastName: value }))}
-              placeholder="Enter last name"
-              required
-              error={errors.lastName}
-              inputKey="lastName"
-            />
-          </div>
-            
-          <TouchInput
-            label="Email"
-            value={shippingAddress.email}
-            onChange={(value) => setShippingAddress(prev => ({ ...prev, email: value }))}
-            placeholder="Enter email address"
-            type="email"
-            required
-            error={errors.email}
-            inputKey="email"
-          />
-            
-          <TouchInput
-            label="Address Line 1"
-            value={shippingAddress.address1}
-            onChange={(value) => setShippingAddress(prev => ({ ...prev, address1: value }))}
-            placeholder="Street address"
-            required
-            error={errors.address1}
-            inputKey="address1"
-          />
-            
-          <TouchInput
-            label="Address Line 2"
-            value={shippingAddress.address2 || ''}
-            onChange={(value) => setShippingAddress(prev => ({ ...prev, address2: value }))}
-            placeholder="Apartment, suite, etc. (optional)"
-            inputKey="address2"
-          />
-            
-          <div className="grid grid-cols-2 gap-4">
-            <TouchInput
-              label="City"
-              value={shippingAddress.city}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, city: value }))}
-              placeholder="City"
-              required
-              error={errors.city}
-              inputKey="city"
-            />
-            <TouchInput
-              label="State"
-              value={shippingAddress.state}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, state: value }))}
-              placeholder="State"
-              required
-              error={errors.state}
-              inputKey="state"
-            />
-          </div>
-            
-          <div className="grid grid-cols-2 gap-4">
-            <TouchInput
-              label="ZIP Code"
-              value={shippingAddress.zipCode}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, zipCode: value }))}
-              placeholder="ZIP code"
-              required
-              error={errors.zipCode}
-              inputKey="zipCode"
-            />
-            <TouchInput
-              label="Phone"
-              value={shippingAddress.phone || ''}
-              onChange={(value) => setShippingAddress(prev => ({ ...prev, phone: value }))}
-              placeholder="Phone number"
-              type="tel"
-              inputKey="phone"
-            />
-          </div>
-        </div>
-      </div>
-    );
-    
-    const PaymentStep = () => (
+  const MobileShippingStep = () => (
+    <ShippingStep
+      shippingAddress={shippingAddress}
+      errors={errors}
+      onAddressChange={(address) => setShippingAddress(prev => ({ ...prev, ...address }))}
+      variant="mobile"
+    />
+  );
+
+  const PaymentStep = () => (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-white mb-4">Payment & Security</h2>
           
@@ -780,9 +694,9 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
           )}
         </GlassPanel>
       </div>
-    );
-    
-    const ReviewStep = () => (
+  );
+
+  const ReviewStep = () => (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-white mb-4">Review Your Order</h2>
           
@@ -878,11 +792,16 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
   const getCurrentStepComponent = () => {
     const currentStepKey = steps[currentStep]?.key;
     switch (currentStepKey) {
-      case 'cart': return <div className="text-white">Cart Review Step - Coming Soon</div>;
-      case 'shipping': return <div className="text-white">Shipping Step - Coming Soon</div>;
-      case 'payment': return <div className="text-white">Payment Step - Coming Soon</div>;
-      case 'review': return <div className="text-white">Review Step - Coming Soon</div>;
-      default: return <div className="text-white">Cart Review Step - Coming Soon</div>;
+      case 'cart':
+        return <CartReviewStep />;
+      case 'shipping':
+        return <MobileShippingStep />;
+      case 'payment':
+        return <PaymentStep />;
+      case 'review':
+        return <ReviewStep />;
+      default:
+        return <CartReviewStep />;
     }
   };
 

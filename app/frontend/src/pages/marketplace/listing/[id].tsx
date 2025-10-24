@@ -197,7 +197,7 @@ const ProductDetailPageRoute: NextPage = () => {
     // TODO: Implement buy now functionality
     console.log('Buy now:', { productId, quantity });
     // This would redirect to checkout
-    router.push(`/checkout?product=${productId}&quantity=${quantity}`);
+    router.push(`/marketplace/checkout?product=${productId}&quantity=${quantity}`);
   };
 
   const handleAddToWishlist = (productId: string) => {

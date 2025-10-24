@@ -15,6 +15,7 @@ import { Button } from '../../../design-system/components/Button';
 import { useProfile } from '../../../hooks/useProfile';
 import { countries } from '../../../utils/countries';
 import { marketplaceService } from '../../../services/marketplaceService';
+import { paymentProcessor, PaymentRequest, EscrowSetupRequest } from '../../../services/paymentProcessor';
 
 interface CartItem {
   id: string;
@@ -117,27 +118,34 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const setupEscrow = async () => {
     setIsProcessing(true);
     try {
-      // Use the imported marketplace service
-      const service = marketplaceService;
-      
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
+
       // Validate payment method first
-      // TODO: Implement payment validation in marketplaceService
-      const validationResult = {
-        isValid: true,
-        hasSufficientBalance: true,
-        errors: [],
-        suggestedAlternatives: []
-      };
+      const validationResult = await paymentProcessor.validatePaymentMethod('crypto', address);
 
       if (!validationResult.isValid) {
         throw new Error(validationResult.errors.join(', '));
       }
 
-      // Skip balance check for now
+      // Setup escrow with backend
+      const escrowRequest: EscrowSetupRequest = {
+        orderId: `ORDER_${Date.now()}`,
+        amount: total,
+        buyerAddress: address,
+        sellerAddress: cartItems[0]?.seller.id || '',
+        networkId: 1 // Default to Ethereum mainnet
+      };
 
-      // Setup escrow if validation passes
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const escrowResult = await paymentProcessor.setupEscrow(escrowRequest);
+
+      if (!escrowResult.success) {
+        throw new Error(escrowResult.error || 'Failed to setup escrow');
+      }
+
       setEscrowSetup(true);
+      console.log('Escrow setup successful:', escrowResult);
     } catch (error) {
       console.error('Escrow setup error:', error);
       setErrors({ escrow: error instanceof Error ? error.message : 'Failed to setup escrow' });
@@ -149,32 +157,45 @@ export const EnhancedCheckoutFlow: React.FC<EnhancedCheckoutFlowProps> = ({
   const processPayment = async () => {
     setIsProcessing(true);
     try {
-      // Use the imported marketplace service
-      const service = marketplaceService;
-      
-      const checkoutData = {
-        items: cartItems,
-        shippingAddress: hasPhysicalItems ? shippingAddress : null,
-        paymentMethod: 'escrow',
-        totals: { subtotal, shippingCost, escrowFee, total },
+      if (!address) {
+        throw new Error('Wallet not connected');
+      }
+
+      if (!escrowSetup) {
+        throw new Error('Escrow must be setup before payment');
+      }
+
+      // Process payment through payment processor
+      const paymentRequest: PaymentRequest = {
+        orderId: `ORDER_${Date.now()}`,
+        amount: total,
+        currency: 'ETH',
+        paymentMethod: 'crypto',
         userAddress: address,
-        escrowEnabled: escrowSetup
+        tokenSymbol: 'ETH',
+        networkId: 1
       };
 
-      // TODO: Implement checkout processing in marketplaceService
-      const result = {
-        orderId: `ORDER_${Date.now()}`,
-        status: 'success',
-        transactionHash: '0x123456789'
-      };
-      
+      const paymentResult = await paymentProcessor.processPayment(paymentRequest);
+
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error || 'Payment processing failed');
+      }
+
+      // Create order data for completion
       const orderData = {
-        id: result.orderId || `ORDER_${Date.now()}`,
+        id: paymentResult.orderId,
         items: cartItems,
         shippingAddress: hasPhysicalItems ? shippingAddress : null,
         totals: { subtotal, shippingCost, escrowFee, total },
         timestamp: new Date(),
-        paymentResult: result
+        paymentResult: {
+          orderId: paymentResult.orderId,
+          status: paymentResult.status,
+          transactionHash: paymentResult.transactionHash,
+          transactionId: paymentResult.transactionId,
+          estimatedCompletionTime: paymentResult.estimatedCompletionTime
+        }
       };
       
       onComplete(orderData);
