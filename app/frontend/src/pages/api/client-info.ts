@@ -97,7 +97,7 @@ async function getGeolocationData(ip: string): Promise<{
 
     // Try IP-API first (free, no key required)
     try {
-      const response = await fetch(`http://ip-api.com/json/${ip}`);
+      const response = await fetch(`https://ip-api.com/json/${ip}`);
       const data = await response.json();
 
       if (data.status === 'success') {

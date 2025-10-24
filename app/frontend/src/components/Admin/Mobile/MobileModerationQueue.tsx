@@ -235,12 +235,12 @@ export const MobileModerationQueue: React.FC<MobileModerationQueueProps> = ({
                 {/* Content */}
                 <div className="mb-3">
                   <p className="text-white text-sm mb-2 line-clamp-3">
-                    {item.content}
+                    {item.description || 'No description available'}
                   </p>
                   <div className="flex items-center space-x-4 text-xs text-white/70">
-                    <span>By: {item.author}</span>
-                    <span>Reason: {item.reportReason}</span>
-                    <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
+                    <span>By: {item.reportedBy || 'Unknown'}</span>
+                    <span>Reason: {item.reason || 'No reason provided'}</span>
+                    <span>{new Date(item.createdAt).toLocaleTimeString()}</span>
                   </div>
                 </div>
 
