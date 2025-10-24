@@ -5,7 +5,8 @@
   "main": "src/index.production.js",
   "scripts": {
     "build": "echo 'Using JavaScript backend - no build needed'",
-    "start": "node --max-old-space-size=450 --optimize-for-size src/index.production.optimized.js",
+    "start": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",
+    "start:optimized": "node --max-old-space-size=450 --optimize-for-size src/index.production.optimized.js",
     "start:ts": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",
     "dev": "ts-node --transpileOnly src/index.ts",
     "simple": "node src/index.simple.js",
