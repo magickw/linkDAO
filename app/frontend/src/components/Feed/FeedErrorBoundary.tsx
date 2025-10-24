@@ -1,5 +1,5 @@
 import React, { ErrorInfo } from 'react';
-import { analyticsService } from '@/services/analyticsService';
+import { monitoring } from '@/utils/monitoring';
 
 interface FeedErrorBoundaryProps {
   children: React.ReactNode;
@@ -24,11 +24,19 @@ class FeedErrorBoundary extends React.Component<FeedErrorBoundaryProps, FeedErro
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Feed Error Boundary caught an error:', error, errorInfo);
     
-    // Track error with analytics
-    analyticsService.trackError('feed_crash', { 
-      error: error.message,
+    // Track error with monitoring service
+    monitoring.trackError({
+      errorId: `feed_error_${Date.now()}`,
+      message: error.message,
       stack: error.stack,
-      componentStack: errorInfo.componentStack
+      component: 'FeedErrorBoundary',
+      userId: undefined,
+      sessionId: monitoring['sessionId'], // Access private property
+      timestamp: new Date(),
+      severity: 'high',
+      context: {
+        componentStack: errorInfo.componentStack
+      }
     });
   }
 
