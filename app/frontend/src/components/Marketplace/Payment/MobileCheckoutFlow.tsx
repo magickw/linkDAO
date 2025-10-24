@@ -561,14 +561,14 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
 
   // Step Components
   const CartReviewStep = () => (
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white mb-4">Review Your Cart</h2>
-        {cartItems.map((item) => (
-          <CollapsibleOrderDetails key={item.id} item={item} />
-        ))}
-      </div>
-    );
-    
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold text-white mb-4">Review Your Cart</h2>
+      {cartItems.map((item) => (
+        <CollapsibleOrderDetails key={item.id} item={item} />
+      ))}
+    </div>
+  );
+  
   const MobileShippingStep = () => (
     <ShippingStep
       shippingAddress={shippingAddress}
@@ -579,215 +579,214 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
   );
 
   const PaymentStep = () => (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-white mb-4">Payment & Security</h2>
-          
-        {/* Wallet Connection */}
-        <GlassPanel variant="primary" className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <Wallet size={20} className="mr-2" />
-              Wallet Connection
-            </h3>
-            {isConnected && (
-              <CheckCircle size={20} className="text-green-400" />
-            )}
-          </div>
-            
-          {!isConnected ? (
-            <div className="space-y-4">
-              <p className="text-white/70 text-sm">
-                Connect your wallet to proceed with payment
-              </p>
-              {connectors.map((connector) => (
-                <Button
-                  key={connector.uid}
-                  variant="primary"
-                  onClick={() => connect({ connector })}
-                  className="w-full h-12 rounded-xl touch-manipulation"
-                  style={{ WebkitTapHighlightColor: 'transparent' }}
-                >
-                  Connect {connector.name}
-                </Button>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Connected Wallet:</span>
-                <span className="text-white font-mono text-sm">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/70">Balance:</span>
-                <span className="text-white">
-                  {balance ? parseFloat(balance.formatted).toFixed(4) : '0'} {balance?.symbol}
-                </span>
-              </div>
-            </div>
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-white mb-4">Payment & Security</h2>
+        
+      {/* Wallet Connection */}
+      <GlassPanel variant="primary" className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <Wallet size={20} className="mr-2" />
+            Wallet Connection
+          </h3>
+          {isConnected && (
+            <CheckCircle size={20} className="text-green-400" />
           )}
-            
-          {errors.wallet && (
-            <p className="text-red-400 text-sm mt-2">{errors.wallet}</p>
-          )}
-        </GlassPanel>
+        </div>
           
-        {/* Escrow Setup */}
-        <GlassPanel variant="primary" className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white flex items-center">
-              <Shield size={20} className="mr-2" />
-              Escrow Protection
-            </h3>
-            {escrowSetup && (
-              <CheckCircle size={20} className="text-green-400" />
-            )}
-          </div>
-            
+        {!isConnected ? (
           <div className="space-y-4">
             <p className="text-white/70 text-sm">
-              Your funds will be held securely until delivery is confirmed
+              Connect your wallet to proceed with payment
             </p>
-              
-            <div className="bg-blue-500/10 p-4 rounded-lg border border-blue-500/20">
-              <div className="flex items-start space-x-3">
-                <Info size={16} className="text-blue-400 mt-0.5" />
-                <div className="text-sm text-blue-400">
-                  <p className="font-medium mb-1">How escrow works:</p>
-                  <ul className="space-y-1 text-blue-300/80">
-                    <li>• Funds are locked in smart contract</li>
-                    <li>• Released when delivery is confirmed</li>
-                    <li>• Dispute resolution available if needed</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-              
-            {!escrowSetup ? (
+            {connectors.map((connector) => (
               <Button
+                key={connector.uid}
                 variant="primary"
-                onClick={setupEscrow}
-                disabled={!isConnected || isProcessing}
+                onClick={() => connect({ connector })}
                 className="w-full h-12 rounded-xl touch-manipulation"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
               >
-                {isProcessing ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white mr-2" />
-                    Setting up escrow...
-                  </div>
-                ) : (
-                  'Setup Escrow Protection'
-                )}
+                Connect {connector.name}
               </Button>
-            ) : (
-              <div className="flex items-center space-x-2 text-green-400">
-                <CheckCircle size={16} />
-                <span className="text-sm">Escrow protection enabled</span>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-white/70">Connected Wallet:</span>
+              <span className="text-white font-mono text-sm">
+                {address?.slice(0, 6)}...{address?.slice(-4)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-white/70">Balance:</span>
+              <span className="text-white">
+                {balance ? parseFloat(balance.formatted).toFixed(4) : '0'} {balance?.symbol}
+              </span>
+            </div>
+          </div>
+        )}
+          
+        {errors.wallet && (
+          <p className="text-red-400 text-sm mt-2">{errors.wallet}</p>
+        )}
+      </GlassPanel>
+        
+      {/* Escrow Setup */}
+      <GlassPanel variant="primary" className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white flex items-center">
+            <Shield size={20} className="mr-2" />
+            Escrow Protection
+          </h3>
+          {escrowSetup && (
+            <CheckCircle size={20} className="text-green-400" />
+          )}
+        </div>
+          
+        <div className="space-y-4">
+          <p className="text-white/70 text-sm">
+            Your funds will be held securely until delivery is confirmed
+          </p>
+            
+          <div className="bg-blue-500/10 p-4 rounded-lg border border-blue-500/20">
+            <div className="flex items-start space-x-3">
+              <Info size={16} className="text-blue-400 mt-0.5" />
+              <div className="text-sm text-blue-400">
+                <p className="font-medium mb-1">How escrow works:</p>
+                <ul className="space-y-1 text-blue-300/80">
+                  <li>• Funds are locked in smart contract</li>
+                  <li>• Released when delivery is confirmed</li>
+                  <li>• Dispute resolution available if needed</li>
+                </ul>
               </div>
-            )}
+            </div>
           </div>
             
-          {errors.escrow && (
-            <p className="text-red-400 text-sm mt-2">{errors.escrow}</p>
+          {!escrowSetup ? (
+            <Button
+              variant="primary"
+              onClick={setupEscrow}
+              disabled={!isConnected || isProcessing}
+              className="w-full h-12 rounded-xl touch-manipulation"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            >
+              {isProcessing ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white mr-2" />
+                  Setting up escrow...
+                </div>
+              ) : (
+                'Setup Escrow Protection'
+              )}
+            </Button>
+          ) : (
+            <div className="flex items-center space-x-2 text-green-400">
+              <CheckCircle size={16} />
+              <span className="text-sm">Escrow protection enabled</span>
+            </div>
           )}
-        </GlassPanel>
-      </div>
+        </div>
+          
+        {errors.escrow && (
+          <p className="text-red-400 text-sm mt-2">{errors.escrow}</p>
+        )}
+      </GlassPanel>
+    </div>
   );
 
   const ReviewStep = () => (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-white mb-4">Review Your Order</h2>
-          
-        {/* Order Items */}
-        <GlassPanel variant="primary" className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Items ({cartItems.length})</h3>
-          <div className="space-y-4">
-            {cartItems.map((item) => (
-              <CollapsibleOrderDetails key={item.id} item={item} />
-            ))}
-          </div>
-        </GlassPanel>
-          
-        {/* Shipping Information */}
-        {hasPhysicalItems && (
-          <GlassPanel variant="primary" className="p-6">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-              <Truck size={20} className="mr-2" />
-              Shipping Information
-            </h3>
-            <div className="bg-white/5 p-4 rounded-lg">
-              <p className="text-white font-medium">
-                {shippingAddress.firstName} {shippingAddress.lastName}
-              </p>
-              <p className="text-white/70">{shippingAddress.address1}</p>
-              {shippingAddress.address2 && (
-                <p className="text-white/70">{shippingAddress.address2}</p>
-              )}
-              <p className="text-white/70">
-                {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}
-              </p>
-              <p className="text-white/70">{shippingAddress.email}</p>
-              {shippingAddress.phone && (
-                <p className="text-white/70">{shippingAddress.phone}</p>
-              )}
-            </div>
-          </GlassPanel>
-        )}
-          
-        {/* Payment Summary */}
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-white mb-4">Review Your Order</h2>
+        
+      {/* Order Items */}
+      <GlassPanel variant="primary" className="p-6">
+        <h3 className="text-lg font-semibold text-white mb-4">Items ({cartItems.length})</h3>
+        <div className="space-y-4">
+          {cartItems.map((item) => (
+            <CollapsibleOrderDetails key={item.id} item={item} />
+          ))}
+        </div>
+      </GlassPanel>
+        
+      {/* Shipping Information */}
+      {hasPhysicalItems && (
         <GlassPanel variant="primary" className="p-6">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <CreditCard size={20} className="mr-2" />
-            Payment Summary
+            <Truck size={20} className="mr-2" />
+            Shipping Information
           </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-white/70">Subtotal</span>
-              <span className="text-white">{subtotal.toFixed(4)} ETH</span>
-            </div>
-            {shippingCost > 0 && (
-              <div className="flex justify-between">
-                <span className="text-white/70">Shipping</span>
-                <span className="text-white">{shippingCost.toFixed(4)} ETH</span>
-              </div>
+          <div className="bg-white/5 p-4 rounded-lg">
+            <p className="text-white font-medium">
+              {shippingAddress.firstName} {shippingAddress.lastName}
+            </p>
+            <p className="text-white/70">{shippingAddress.address1}</p>
+            {shippingAddress.address2 && (
+              <p className="text-white/70">{shippingAddress.address2}</p>
             )}
+            <p className="text-white/70">
+              {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zipCode}
+            </p>
+            <p className="text-white/70">{shippingAddress.email}</p>
+            {shippingAddress.phone && (
+              <p className="text-white/70">{shippingAddress.phone}</p>
+            )}
+          </div>
+        </GlassPanel>
+      )}
+        
+      {/* Payment Summary */}
+      <GlassPanel variant="primary" className="p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <CreditCard size={20} className="mr-2" />
+          Payment Summary
+        </h3>
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-white/70">Subtotal</span>
+            <span className="text-white">{subtotal.toFixed(4)} ETH</span>
+          </div>
+          {shippingCost > 0 && (
             <div className="flex justify-between">
-              <span className="text-white/70">Escrow Fee (1%)</span>
-              <span className="text-white">{escrowFee.toFixed(4)} ETH</span>
+              <span className="text-white/70">Shipping</span>
+              <span className="text-white">{shippingCost.toFixed(4)} ETH</span>
             </div>
-            <div className="border-t border-white/20 pt-3 flex justify-between">
-              <span className="text-white font-semibold text-lg">Total</span>
-              <span className="text-white font-bold text-lg">{total.toFixed(4)} ETH</span>
-            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-white/70">Escrow Fee (1%)</span>
+            <span className="text-white">{escrowFee.toFixed(4)} ETH</span>
           </div>
-        </GlassPanel>
-          
-        {/* Security Features */}
-        <GlassPanel variant="primary" className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-            <Lock size={20} className="mr-2" />
-            Security Features
-          </h3>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <CheckCircle size={16} className="text-green-400" />
-              <span className="text-white/90 text-sm">Escrow protection enabled</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <CheckCircle size={16} className="text-green-400" />
-              <span className="text-white/90 text-sm">Smart contract verified</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <CheckCircle size={16} className="text-green-400" />
-              <span className="text-white/90 text-sm">Dispute resolution available</span>
-            </div>
+          <div className="border-t border-white/20 pt-3 flex justify-between">
+            <span className="text-white font-semibold text-lg">Total</span>
+            <span className="text-white font-bold text-lg">{total.toFixed(4)} ETH</span>
           </div>
-        </GlassPanel>
-      </div>
-    );
-  };
+        </div>
+      </GlassPanel>
+        
+      {/* Security Features */}
+      <GlassPanel variant="primary" className="p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Lock size={20} className="mr-2" />
+          Security Features
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <CheckCircle size={16} className="text-green-400" />
+            <span className="text-white/90 text-sm">Escrow protection enabled</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <CheckCircle size={16} className="text-green-400" />
+            <span className="text-white/90 text-sm">Smart contract verified</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <CheckCircle size={16} className="text-green-400" />
+            <span className="text-white/90 text-sm">Dispute resolution available</span>
+          </div>
+        </div>
+      </GlassPanel>
+    </div>
+  );
 
   const getCurrentStepComponent = () => {
     const currentStepKey = steps[currentStep]?.key;
@@ -887,4 +886,4 @@ export const MobileCheckoutFlow: React.FC<MobileCheckoutFlowProps> = ({
       </AnimatePresence>
     </div>
   );
-};
+}

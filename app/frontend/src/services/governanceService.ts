@@ -7,6 +7,7 @@ import {
   ParticipationMetrics 
 } from '../types/governance';
 import { communityWeb3Service, CommunityGovernanceProposal } from './communityWeb3Service';
+import { ethers } from 'ethers';
 
 // Safe JSON helper to avoid crashing on non-JSON API responses
 async function safeJson(response: Response): Promise<any | null> {
@@ -22,15 +23,128 @@ async function safeJson(response: Response): Promise<any | null> {
   }
 }
 
+// Governance Contract ABI (from CONTRACT_ADDRESSES_ABIS.md)
+const GOVERNANCE_ABI = [
+  {
+    "type": "function",
+    "name": "proposalCount",
+    "inputs": [],
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getProposal",
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "outputs": [
+      {"name": "proposer", "type": "address"},
+      {"name": "description", "type": "string"},
+      {"name": "forVotes", "type": "uint256"},
+      {"name": "againstVotes", "type": "uint256"},
+      {"name": "executed", "type": "bool"},
+      {"name": "category", "type": "uint256"}
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "vote",
+    "inputs": [
+      {"name": "proposalId", "type": "uint256"},
+      {"name": "support", "type": "bool"}
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createProposal",
+    "inputs": [
+      {"name": "description", "type": "string"},
+      {"name": "category", "type": "uint256"},
+      {"name": "data", "type": "bytes"}
+    ],
+    "outputs": [{"name": "proposalId", "type": "uint256"}],
+    "stateMutability": "nonpayable"
+  }
+];
+
 export class GovernanceService {
   private baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  private governanceAddress = process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || '0x27a78A860445DFFD9073aFd7065dd421487c0F8A';
+  private contract: ethers.Contract | null = null;
+  private provider: ethers.providers.Provider | null = null;
+
+  /**
+   * Initialize Web3 contract connection
+   */
+  private async initializeContract(): Promise<void> {
+    if (this.contract) return;
+
+    try {
+      // Try to use window.ethereum if available
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        this.provider = provider;
+        this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, provider);
+      } else {
+        // Fallback to JSON-RPC provider
+        const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.g.alchemy.com/v2/demo';
+        this.provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+        this.contract = new ethers.Contract(this.governanceAddress, GOVERNANCE_ABI, this.provider);
+      }
+    } catch (error) {
+      console.error('Failed to initialize governance contract:', error);
+    }
+  }
+
+  /**
+   * Get proposal count from contract
+   */
+  async getProposalCount(): Promise<number> {
+    try {
+      await this.initializeContract();
+      if (!this.contract) return 0;
+      
+      const count = await this.contract.proposalCount();
+      return count.toNumber();
+    } catch (error) {
+      console.error('Error getting proposal count:', error);
+      return 0;
+    }
+  }
 
   /**
    * Get governance proposals for a community
    */
   async getCommunityProposals(communityId: string): Promise<Proposal[]> {
     try {
-      // First try to get from backend API
+      // First try to get from blockchain
+      await this.initializeContract();
+      if (this.contract) {
+        try {
+          const proposalCount = await this.getProposalCount();
+          const proposals: Proposal[] = [];
+          
+          // Fetch each proposal from the contract
+          for (let i = 0; i < proposalCount; i++) {
+            try {
+              const proposal = await this.contract.getProposal(i);
+              proposals.push(this.transformContractProposal(i, proposal, communityId));
+            } catch (err) {
+              console.warn(`Failed to fetch proposal ${i}:`, err);
+            }
+          }
+          
+          if (proposals.length > 0) {
+            return proposals;
+          }
+        } catch (contractError) {
+          console.warn('Contract fetch failed, trying backend:', contractError);
+        }
+      }
+      
+      // Try backend API
       const response = await fetch(`${this.baseUrl}/api/governance/dao/${communityId}/proposals`);
       if (response.ok) {
         const data = await safeJson(response);
@@ -312,7 +426,23 @@ export class GovernanceService {
     support: boolean
   ): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
     try {
-      // Try to vote via Web3
+      // Try to vote via smart contract
+      await this.initializeContract();
+      if (this.contract && typeof window !== 'undefined' && (window as any).ethereum) {
+        const provider = new ethers.providers.Web3Provider((window as any).ethereum);
+        const signer = provider.getSigner();
+        const contractWithSigner = this.contract.connect(signer);
+        
+        const tx = await contractWithSigner.vote(parseInt(proposalId), support);
+        const receipt = await tx.wait();
+        
+        return {
+          success: true,
+          transactionHash: receipt.transactionHash
+        };
+      }
+      
+      // Fallback to Web3 service
       const transactionHash = await communityWeb3Service.voteOnProposal(proposalId, support);
       
       return { 
@@ -553,6 +683,60 @@ export class GovernanceService {
         rank: 125,
         totalVoters: 1000
       };
+    }
+  }
+
+  /**
+   * Transform contract proposal to our Proposal type
+   */
+  private transformContractProposal(proposalId: number, contractProposal: any, communityId: string): Proposal {
+    const [proposer, description, forVotes, againstVotes, executed, category] = contractProposal;
+    
+    // Calculate status based on execution and votes
+    let status: ProposalStatus = ProposalStatus.ACTIVE;
+    if (executed) {
+      status = ProposalStatus.EXECUTED;
+    } else {
+      const totalVotes = forVotes.add(againstVotes);
+      if (totalVotes.gt(0)) {
+        const forPercentage = forVotes.mul(100).div(totalVotes);
+        status = forPercentage.gte(60) ? ProposalStatus.SUCCEEDED : ProposalStatus.FAILED;
+      }
+    }
+    
+    return {
+      id: `prop_${proposalId}`,
+      onChainId: proposalId.toString(),
+      title: description.substring(0, 100), // Use first 100 chars as title
+      description: description,
+      proposer: proposer,
+      communityId,
+      type: 'general',
+      startTime: new Date(Date.now() - 7 * 86400000), // Assume started 7 days ago
+      endTime: new Date(Date.now() + 7 * 86400000), // Ends 7 days from now
+      forVotes: ethers.utils.formatEther(forVotes),
+      againstVotes: ethers.utils.formatEther(againstVotes),
+      abstainVotes: '0',
+      quorum: '1000.0',
+      status,
+      category: this.mapContractCategory(category.toNumber()),
+      executionDelay: 172800,
+      requiredMajority: 60,
+      participationRate: 75,
+      canVote: !executed
+    };
+  }
+
+  /**
+   * Map contract category number to our ProposalCategory enum
+   */
+  private mapContractCategory(categoryNum: number): ProposalCategory {
+    switch (categoryNum) {
+      case 0: return ProposalCategory.GOVERNANCE;
+      case 1: return ProposalCategory.FUNDING;
+      case 2: return ProposalCategory.TECHNICAL;
+      case 3: return ProposalCategory.COMMUNITY;
+      default: return ProposalCategory.GOVERNANCE;
     }
   }
 

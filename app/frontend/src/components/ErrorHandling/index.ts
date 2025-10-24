@@ -17,6 +17,9 @@ export {
 
 // Marketplace-specific error handling
 export { MarketplaceErrorBoundary } from './MarketplaceErrorBoundary';
+
+// Governance-specific error handling
+export { GovernanceErrorBoundary } from './GovernanceErrorBoundary';
 export {
   ProductNotFoundFallback,
   SellerNotFoundFallback,
