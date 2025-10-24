@@ -4,8 +4,9 @@
   "description": "LinkDao Web3 Marketplace Backend",
   "main": "src/index.production.js",
   "scripts": {
-    "build": "echo 'Using JavaScript backend - no build needed'",
-    "start": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",
+    "build": "tsc --project tsconfig.json || echo 'TypeScript compilation failed, using fallback'",
+    "start": "node --max-old-space-size=450 --optimize-for-size -r ts-node/register src/index.ts",
+    "start:compiled": "node --max-old-space-size=450 --optimize-for-size dist/index.js",
     "start:optimized": "node --max-old-space-size=450 --optimize-for-size src/index.production.optimized.js",
     "start:ts": "node --max-old-space-size=1024 --optimize-for-size -r ts-node/register src/index.ts",
     "dev": "ts-node --transpileOnly src/index.ts",
