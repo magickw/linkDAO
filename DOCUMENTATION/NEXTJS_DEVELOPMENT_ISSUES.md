@@ -184,7 +184,7 @@ This is typically resolved by:
 ## Additional Notes
 
 ### Port Conflicts
-The console output shows that ports 3000, 3001, and 3002 are in use. Consider using a different port for development by modifying the dev script in [package.json](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/package.json):
+The console output shows that ports 3000, 3001, and 10000 are in use. Consider using a different port for development by modifying the dev script in [package.json](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/package.json):
 ```json
 "scripts": {
   "dev": "next dev -p 3004"

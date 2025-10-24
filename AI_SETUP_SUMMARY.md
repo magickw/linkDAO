@@ -9,7 +9,7 @@ This document summarizes the complete setup of AI features for LinkDAO, confirmi
 All required environment variables have been set:
 - **OPENAI_API_KEY**: Configured for GPT model access
 - **RPC_URL**: Set to Base mainnet endpoint
-- **PORT**: Backend running on port 3002
+- **PORT**: Backend running on port 10000
 - **PINECONE_API_KEY**: Configured for vector database (optional)
 - **PINECONE_ENVIRONMENT**: Set for Pinecone environment
 - **PINECONE_INDEX_NAME**: Configured as "linkdao"
@@ -92,17 +92,17 @@ Backend has been successfully compiled and is ready for use.
 
 3. **Access the Application**:
    - Frontend: http://localhost:3004
-   - Backend API: http://localhost:3002
+   - Backend API: http://localhost:10000
 
 ### Testing the AI Features
 
 #### Using cURL
 ```bash
 # Get available bots
-curl http://localhost:3002/api/ai/bots
+curl http://localhost:10000/api/ai/bots
 
 # Test Wallet Guard bot
-curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/process \
+curl -X POST http://localhost:10000/api/ai/bots/wallet-guard/process \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Is this contract safe: 0x741f1923953245b6e52578205d83e468c1b390d4?",

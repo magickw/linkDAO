@@ -207,14 +207,14 @@ services:
     image: marketplace-backend:latest
     environment:
       - NODE_ENV=production
-      - PORT=3002
+      - PORT=10000
     networks:
       - marketplace-green
   
   frontend-green:
     image: marketplace-frontend:latest
     environment:
-      - REACT_APP_API_URL=http://backend-green:3002
+      - REACT_APP_API_URL=http://backend-green:10000
     networks:
       - marketplace-green
   

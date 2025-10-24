@@ -13,7 +13,7 @@ All components of the LinkDAO application are now successfully running:
      - Governance features
 
 2. **Backend (Node.js/Express)**
-   - Running on: http://localhost:3002
+   - Running on: http://localhost:10000
    - Features:
      - User profile management API
      - Post management API
@@ -42,7 +42,7 @@ All components of the LinkDAO application are now successfully running:
 3. Fixed indexerService.ts file:
    - Corrected imports to use existing services
    - Updated to ethers.js v6 syntax
-4. Resolved port conflicts by changing backend port to 3002
+4. Resolved port conflicts by changing backend port to 10000
 5. Fixed wagmi configuration issues in frontend:
    - Updated import paths for providers and connectors
    - Updated wagmi.config.ts for new CLI format
@@ -74,6 +74,6 @@ All components of the LinkDAO application are now successfully running:
 ## Access Information
 
 - Frontend: http://localhost:3004
-- Backend API: http://localhost:3002
-- Backend Health Check: http://localhost:3002/health
+- Backend API: http://localhost:10000
+- Backend Health Check: http://localhost:10000/health
 - Mobile App: Scan QR code from Expo development server

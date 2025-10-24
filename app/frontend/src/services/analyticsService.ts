@@ -91,8 +91,8 @@ class AnalyticsService {
   private baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
 
   constructor() {
-    // Use port 3002 based on the start-services.sh script
-    this.baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002'}/api/analytics`;
+    // Use port 10000 based on the start-services.sh script
+    this.baseUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000'}/api/analytics`;
   }
 
   /**

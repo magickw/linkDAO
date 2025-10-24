@@ -14,17 +14,17 @@ Fixed HTTP URLs that should be HTTPS to prevent mixed content warnings:
 - To: `https://ip-api.com/json/`
 
 ### 2. Backend URL Configuration
-Updated default backend URLs to use port 3002 to match the start-services.sh script:
+Updated default backend URLs to use port 10000 to match the start-services.sh script:
 
 **File: [/app/frontend/src/services/webSocketService.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/services/webSocketService.ts)**
-- Changed default URL from `http://localhost:10000` to `http://localhost:3002`
+- Changed default URL from `http://localhost:10000` to `http://localhost:10000`
 
 ### 3. Environment Configuration
 Verified that the frontend is correctly configured to use the production backend URL:
 - [.env.production](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/.env.production) correctly sets `NEXT_PUBLIC_BACKEND_URL=https://linkdao-backend.onrender.com`
 
 ## Services Already Using Correct Configuration
-The following services were already correctly configured to use the environment variable or fallback to port 3002:
+The following services were already correctly configured to use the environment variable or fallback to port 10000:
 - [adminService.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/services/adminService.ts)
 - [marketplaceService.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/services/marketplaceService.ts)
 - [analyticsService.ts](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/services/analyticsService.ts) (constructor)
@@ -32,7 +32,7 @@ The following services were already correctly configured to use the environment 
 ## WebSocket Configuration
 The WebSocket service now uses the same backend URL configuration pattern:
 - Uses `process.env.NEXT_PUBLIC_BACKEND_URL` in production
-- Falls back to `http://localhost:3002` in development
+- Falls back to `http://localhost:10000` in development
 
 ## Expected Results
 These fixes should resolve:

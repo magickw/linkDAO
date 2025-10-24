@@ -156,7 +156,7 @@ class EnvironmentManager {
       apiUrl.includes('localhost') ||
       apiUrl.includes('127.0.0.1') ||
       apiUrl.includes(':3000') ||
-      apiUrl.includes(':3002')
+      apiUrl.includes(':10000')
     )) {
       return true;
     }

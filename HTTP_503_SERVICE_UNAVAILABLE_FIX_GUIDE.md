@@ -3,8 +3,8 @@
 ## 🚨 Issue Identified
 The frontend application is encountering **HTTP 503: Service Unavailable** errors when trying to connect to the backend API. This is happening because:
 
-1. **Local Development Configuration**: The frontend is configured to connect to `http://localhost:3002`
-2. **Production Environment**: In deployment, localhost:3002 is not available
+1. **Local Development Configuration**: The frontend is configured to connect to `http://localhost:10000`
+2. **Production Environment**: In deployment, localhost:10000 is not available
 3. **Backend Service**: The backend service may not be running or accessible
 
 ## 🔧 Immediate Solutions
@@ -25,8 +25,8 @@ NEXT_PUBLIC_BACKEND_URL=https://staging-api.your-domain.com
 
 **Current Configuration (app/frontend/.env):**
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:3002  # ❌ This won't work in production
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002  # ❌ This won't work in production
+NEXT_PUBLIC_API_URL=http://localhost:10000  # ❌ This won't work in production
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000  # ❌ This won't work in production
 ```
 
 ### 2. Vercel Deployment Fix
@@ -158,7 +158,7 @@ self.addEventListener('fetch', (event) => {
 ### 1. Check Network Tab
 ```javascript
 // Open browser DevTools → Network tab
-// Look for failed requests to localhost:3002
+// Look for failed requests to localhost:10000
 // Verify the actual URLs being called
 ```
 

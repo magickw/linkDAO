@@ -95,7 +95,7 @@ npm run dev
 
 ### 2. Access the Application
 - Frontend: `http://localhost:3004`
-- Backend: `http://localhost:3002`
+- Backend: `http://localhost:10000`
 - Dashboard: `http://localhost:3004/dashboard`
 
 ### 3. Verify Fixes

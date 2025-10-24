@@ -17,8 +17,8 @@ NC='\033[0m' # No Color
 
 # Check if backend is running
 echo "📡 Checking backend server..."
-if curl -s http://localhost:3002/health > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Backend server is running on port 3002${NC}"
+if curl -s http://localhost:10000/health > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Backend server is running on port 10000${NC}"
 else
     echo -e "${RED}✗ Backend server is not running!${NC}"
     echo "Please start the backend server first:"
@@ -29,7 +29,7 @@ fi
 echo ""
 
 # Set test environment variables
-export TEST_API_URL="http://localhost:3002"
+export TEST_API_URL="http://localhost:10000"
 export NODE_ENV="test"
 
 # Check if specific test suite is requested

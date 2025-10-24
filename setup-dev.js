@@ -67,10 +67,10 @@ function setupEnvironment() {
 JWT_SECRET=dev-jwt-secret-change-in-production
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/linkdao
 REDIS_URL=redis://localhost:6379
-PORT=3002
+PORT=10000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:3000
-BACKEND_URL=http://localhost:3002
+BACKEND_URL=http://localhost:10000
 RPC_URL=http://localhost:8545
 `;
     fs.writeFileSync(backendEnvPath, envContent);
@@ -80,8 +80,8 @@ RPC_URL=http://localhost:8545
   if (!fs.existsSync(frontendEnvPath)) {
     console.log('Creating frontend .env.local file...');
     const envContent = `# LinkDAO Frontend Local Development
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
-NEXT_PUBLIC_WS_URL=ws://localhost:3002
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
+NEXT_PUBLIC_WS_URL=ws://localhost:10000
 NEXT_PUBLIC_IPFS_GATEWAY=http://localhost:8080
 NEXT_PUBLIC_CHAIN_ID=31337
 `;
@@ -180,7 +180,7 @@ async function main() {
     console.log('   npm run dev');
     console.log('');
     console.log('2. Or start services individually:');
-    console.log('   npm run dev:backend    # Backend API (port 3002)');
+    console.log('   npm run dev:backend    # Backend API (port 10000)');
     console.log('   npm run dev:frontend   # Frontend (port 3000)');
     console.log('');
     console.log('3. Deploy contracts to local network:');
@@ -188,7 +188,7 @@ async function main() {
     console.log('');
     console.log('4. Access services:');
     console.log('   Frontend: http://localhost:3000');
-    console.log('   Backend API: http://localhost:3002');
+    console.log('   Backend API: http://localhost:10000');
     console.log('   IPFS Gateway: http://localhost:8080');
     console.log('   IPFS API: http://localhost:5001');
     console.log('');

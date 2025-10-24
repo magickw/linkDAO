@@ -68,7 +68,7 @@ If you prefer to set up manually:
 ```bash
 npm run dev              # Start both frontend and backend
 npm run dev:frontend     # Start frontend only (port 3000)
-npm run dev:backend      # Start backend only (port 3002)
+npm run dev:backend      # Start backend only (port 10000)
 ```
 
 ### Building
@@ -119,7 +119,7 @@ npm run reset            # Full reset (clean + setup)
 When running locally:
 
 - **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:3002
+- **Backend API:** http://localhost:10000
 - **IPFS Gateway:** http://localhost:8080
 - **IPFS API:** http://localhost:5001
 - **Database Studio:** Available via `npm run db:studio`
@@ -176,7 +176,7 @@ JWT_SECRET=your-jwt-secret
 
 # Services
 REDIS_URL=redis://localhost:6379
-PORT=3002
+PORT=10000
 
 # Blockchain
 RPC_URL=http://localhost:8545
@@ -188,8 +188,8 @@ Key environment variables for the frontend (in `app/frontend/.env.local`):
 
 ```env
 # API
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
-NEXT_PUBLIC_WS_URL=ws://localhost:3002
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
+NEXT_PUBLIC_WS_URL=ws://localhost:10000
 
 # IPFS
 NEXT_PUBLIC_IPFS_GATEWAY=http://localhost:8080
@@ -273,7 +273,7 @@ Already covered in the setup section above.
    ```
 
 3. **Port conflicts:**
-   - Check if ports 3000, 3002, 5432, 6379, 5001, 8080 are available
+   - Check if ports 3000, 10000, 5432, 6379, 5001, 8080 are available
    - Stop conflicting services or change ports in configuration
 
 4. **Contract deployment issues:**

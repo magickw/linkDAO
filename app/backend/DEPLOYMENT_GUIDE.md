@@ -161,7 +161,7 @@ sudo systemctl start ai-moderation
 upstream ai_moderation {
     server 127.0.0.1:3000;
     server 127.0.0.1:3001;
-    server 127.0.0.1:3002;
+    server 127.0.0.1:10000;
 }
 
 server {

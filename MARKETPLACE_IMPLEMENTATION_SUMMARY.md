@@ -78,4 +78,4 @@ The marketplace functionality has been verified with:
 - Retrieval of marketplace listings via API
 - JWT authentication working correctly
 - Frontend development server running on port 3001
-- Backend server running on port 3002
+- Backend server running on port 10000

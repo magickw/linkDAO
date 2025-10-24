@@ -37,8 +37,8 @@ export const linkdaoConfig = {
   // API Configuration
   api: {
     backend: {
-      url: process.env.BACKEND_URL || 'http://localhost:3002',
-      wsUrl: process.env.BACKEND_WS_URL || 'ws://localhost:3002',
+      url: process.env.BACKEND_URL || 'http://localhost:10000',
+      wsUrl: process.env.BACKEND_WS_URL || 'ws://localhost:10000',
     },
     ipfs: {
       gateway: process.env.IPFS_GATEWAY || 'http://localhost:8080',

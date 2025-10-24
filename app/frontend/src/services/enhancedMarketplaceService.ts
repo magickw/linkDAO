@@ -25,7 +25,7 @@ export interface ApiResponse<T> {
 }
 
 export class EnhancedMarketplaceService {
-  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000';
   
   private defaultRetryConfig: RetryConfig = {
     maxRetries: 3,

@@ -33,7 +33,7 @@ pm2 status | grep worker
 
 # Check worker health
 curl -f http://localhost:3001/worker/health
-curl -f http://localhost:3002/worker/health
+curl -f http://localhost:10000/worker/health
 ```
 
 ### 3. Review Recent Performance

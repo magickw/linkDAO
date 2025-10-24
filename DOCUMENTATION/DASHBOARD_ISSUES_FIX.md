@@ -130,7 +130,7 @@ The frontend WebSocket service ([webSocketService.ts](file:///Users/bfguo/Dropbo
 
 ```typescript
 // Get the backend URL from environment variables
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 ```
 
 Make sure this is properly configured in your frontend [.env.local](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/.env.local) file:
@@ -140,7 +140,7 @@ NEXT_PUBLIC_BACKEND_URL=https://linkdao-backend.onrender.com
 
 For local development, you might want to change this to:
 ```
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
 ```
 
 ### Notification System

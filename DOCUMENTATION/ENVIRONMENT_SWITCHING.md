@@ -19,8 +19,8 @@ NEXT_PUBLIC_BASE_GOERLI_RPC_URL=https://goerli.base.org
 NEXT_PUBLIC_ADMIN_ADDRESS=your_admin_address
 
 # Backend API URL - Local development
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
 ```
 
 ### Backend (.env)
@@ -29,7 +29,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
 FRONTEND_URL=http://localhost:3000,http://localhost:3001
 
 # Backend URL
-BACKEND_URL=http://localhost:3002
+BACKEND_URL=http://localhost:10000
 ```
 
 ## Production Environment
@@ -58,8 +58,8 @@ BACKEND_URL=https://your-backend-url.com
 
 1. Update frontend [.env.local](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/.env.local):
    ```
-   NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
-   NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
    ```
 
 2. Update backend [.env](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/backend/.env):

@@ -222,8 +222,8 @@ export interface MarketplaceListing {
 }
 
 export class UnifiedMarketplaceService {
-  // Use port 3002 based on the start-services.sh script
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+  // Use port 10000 based on the start-services.sh script
+  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
   private createTimeoutSignal(timeoutMs: number): AbortSignal {
     const controller = new AbortController();

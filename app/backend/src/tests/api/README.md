@@ -63,7 +63,7 @@ Tests integration between follow system and feed filtering:
 ## Prerequisites
 
 ### Backend Server
-The backend server must be running on port 3002:
+The backend server must be running on port 10000:
 ```bash
 cd app/backend
 npm run dev
@@ -71,13 +71,13 @@ npm run dev
 
 Verify it's running:
 ```bash
-curl http://localhost:3002/health
+curl http://localhost:10000/health
 ```
 
 ### Environment Variables
 Set these in your `.env.test` file:
 ```bash
-TEST_API_URL=http://localhost:3002
+TEST_API_URL=http://localhost:10000
 TEST_AUTH_TOKEN=your-test-token-here
 TEST_AUTH_TOKEN_ALICE=alice-token
 TEST_AUTH_TOKEN_BOB=bob-token
@@ -243,12 +243,12 @@ npm run dev
 3. Run migrations: `npm run migrate`
 
 ### Port Already in Use
-**Error:** `EADDRINUSE: address already in use :::3002`
+**Error:** `EADDRINUSE: address already in use :::10000`
 
 **Solution:**
 ```bash
-# Kill process on port 3002
-lsof -ti:3002 | xargs kill -9
+# Kill process on port 10000
+lsof -ti:10000 | xargs kill -9
 
 # Restart backend
 npm run dev
@@ -266,7 +266,7 @@ npm run dev
 import request from 'supertest';
 import { describe, it, expect } from '@jest/globals';
 
-const API_BASE_URL = process.env.TEST_API_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.TEST_API_URL || 'http://localhost:10000';
 
 describe('Feature Name Tests', () => {
   let agent: any;
@@ -350,7 +350,7 @@ jobs:
           cd app/backend
           ./scripts/run-api-tests.sh
         env:
-          TEST_API_URL: http://localhost:3002
+          TEST_API_URL: http://localhost:10000
 ```
 
 ## Performance Benchmarks
@@ -367,7 +367,7 @@ jobs:
 ### Load Testing
 
 For load testing, use tools like:
-- **Artillery**: `artillery quick --count 100 --num 10 http://localhost:3002/api/feed/enhanced`
+- **Artillery**: `artillery quick --count 100 --num 10 http://localhost:10000/api/feed/enhanced`
 - **k6**: For more complex scenarios
 
 ## Security Considerations

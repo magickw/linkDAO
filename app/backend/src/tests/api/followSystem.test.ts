@@ -12,7 +12,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/glo
  * - GET /api/follow/count/:address
  */
 
-const API_BASE_URL = process.env.TEST_API_URL || 'http://localhost:3002';
+const API_BASE_URL = process.env.TEST_API_URL || 'http://localhost:10000';
 
 // Test wallet addresses
 const TEST_ADDRESSES = {

@@ -54,7 +54,7 @@ echo "─────────────────"
 
 # Check backend
 backend_running=false
-if check_service 3002 "Backend" "http://localhost:3002/health"; then
+if check_service 10000 "Backend" "http://localhost:10000/health"; then
     backend_running=true
 fi
 
@@ -69,12 +69,12 @@ echo "🧪 API Tests:"
 echo "─────────────"
 
 if [ "$backend_running" = true ]; then
-    test_api "http://localhost:3002/health" "Health endpoint"
-    test_api "http://localhost:3002/api/posts" "Posts API"
+    test_api "http://localhost:10000/health" "Health endpoint"
+    test_api "http://localhost:10000/api/posts" "Posts API"
     
     # Test creating a post
     echo -n "Testing post creation... "
-    if curl -s -X POST http://localhost:3002/api/posts \
+    if curl -s -X POST http://localhost:10000/api/posts \
         -H "Content-Type: application/json" \
         -d '{"author":"0x1234567890123456789012345678901234567890","content":"Status check test post","tags":["test"]}' \
         > /dev/null 2>&1; then
@@ -95,7 +95,7 @@ if [ -f "app/frontend/.env.local" ]; then
     echo -e "${GREEN}✅ Frontend .env.local exists${NC}"
     
     # Check if it's configured for local development
-    if grep -q "localhost:3002" app/frontend/.env.local; then
+    if grep -q "localhost:10000" app/frontend/.env.local; then
         echo -e "${GREEN}   └─ Configured for local development${NC}"
     else
         echo -e "${YELLOW}   └─ May be configured for production${NC}"
@@ -128,7 +128,7 @@ if [ "$backend_running" = true ] && [ "$frontend_running" = true ]; then
     echo "📱 Access your app:"
     echo "   Frontend: http://localhost:3000"
     echo "   Test Page: http://localhost:3000/test-posting"
-    echo "   Backend API: http://localhost:3002"
+    echo "   Backend API: http://localhost:10000"
     echo ""
     echo "🔧 Troubleshooting:"
     echo "   1. Connect your wallet (MetaMask, etc.)"

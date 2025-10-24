@@ -10,7 +10,7 @@ Source: src/services/requestManager.ts (144:22)
 ```
 
 **Root Cause:**
-The frontend application is configured to connect to `http://localhost:3002` for the backend API, but in the production/deployment environment, this localhost service is not available, resulting in HTTP 503 Service Unavailable errors.
+The frontend application is configured to connect to `http://localhost:10000` for the backend API, but in the production/deployment environment, this localhost service is not available, resulting in HTTP 503 Service Unavailable errors.
 
 ## ✅ Solutions Implemented
 
@@ -67,8 +67,8 @@ The frontend application is configured to connect to `http://localhost:3002` for
 **Current Configuration (Problematic):**
 ```bash
 # app/frontend/.env
-NEXT_PUBLIC_API_URL=http://localhost:3002  # ❌ Won't work in production
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002  # ❌ Won't work in production
+NEXT_PUBLIC_API_URL=http://localhost:10000  # ❌ Won't work in production
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000  # ❌ Won't work in production
 ```
 
 **Required Fix:**

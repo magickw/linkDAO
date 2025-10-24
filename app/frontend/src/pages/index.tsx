@@ -616,17 +616,14 @@ export default function Home() {
             {/* Center Feed */}
             <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
               <div className="max-w-2xl mx-auto py-6 px-4">
-                {/* Post Composer - Quick Create */}
-                <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => openModal('postCreation')}
-                    className="w-full text-left px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-3 text-gray-500 dark:text-gray-400"
-                  >
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
-                      {(profile as any)?.handle?.charAt(0).toUpperCase() || address?.slice(2, 3).toUpperCase() || 'U'}
-                    </div>
-                    <span className="flex-1">What's on your mind, {(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}?</span>
-                  </button>
+                {/* Post Composer - Inline Facebook-style */}
+                <div className="mb-6">
+                  <FacebookStylePostComposer
+                    onSubmit={handlePostSubmit}
+                    isLoading={isCreatingPost}
+                    userAvatar={(profile as any)?.avatar}
+                    userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                  />
                 </div>
 
                 {/* New Posts Banner - Real-time Update Indicator */}

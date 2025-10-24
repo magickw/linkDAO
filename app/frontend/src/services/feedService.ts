@@ -3,7 +3,10 @@ import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
 import { analyticsService } from './analyticsService';
 
-const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+// Use localhost:3004 for local development (backend port), fallback to environment variable or default
+const BACKEND_API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+  ? 'http://localhost:3004' 
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000');
 
 export interface FeedResponse {
   posts: EnhancedPost[];
@@ -966,8 +969,12 @@ export class FeedService {
     filter?: FeedFilter
   ): Promise<() => void> {
     try {
-      // WebSocket connection for real-time updates
-      const wsUrl = `${BACKEND_API_BASE_URL.replace('http', 'ws')}/ws/feed`;
+      // Use localhost:3004 for local development (backend port), fallback to environment variable or default
+      const wsBaseUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+        ? 'ws://localhost:3004'
+        : (process.env.NEXT_PUBLIC_BACKEND_URL?.replace('http', 'ws') || 'ws://localhost:10000');
+      
+      const wsUrl = `${wsBaseUrl}/ws/feed`;
       const ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {

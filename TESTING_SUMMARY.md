@@ -3,7 +3,7 @@
 ## Status: ✅ READY FOR TESTING
 
 **Date:** October 19, 2025
-**Backend:** Running on http://localhost:3002
+**Backend:** Running on http://localhost:10000
 **Frontend:** Running on http://localhost:3000
 
 ---
@@ -12,11 +12,11 @@
 
 ### 1. Backend Debugging & Setup ✅
 - **Fixed TypeScript compilation errors** in messagingService and governanceController
-- **Resolved server initialization** - Backend running successfully on port 3002
+- **Resolved server initialization** - Backend running successfully on port 10000
 - **Configured environment** - All services operational (Database healthy, Cache degraded but functional)
 
 ### 2. Frontend Configuration ✅
-- **Environment variables** configured in `.env.local` pointing to correct backend port (3002)
+- **Environment variables** configured in `.env.local` pointing to correct backend port (10000)
 - **Frontend server started** and running on port 3000
 - **API integration verified** - Services correctly using NEXT_PUBLIC_BACKEND_URL
 
@@ -120,7 +120,7 @@ npm test -- src/tests/api/followFeedIntegration.test.ts
 ### Manual Browser Testing
 
 #### Prerequisites:
-1. ✅ Backend running on port 3002
+1. ✅ Backend running on port 10000
 2. ✅ Frontend running on port 3000
 3. 🔴 **You need:** Web3 wallet (MetaMask, etc.) connected
 
@@ -254,7 +254,7 @@ You'll need:
 ```
 /Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/
 ├── backend/.env                      (Backend config)
-└── frontend/.env.local               (Frontend config - port 3002)
+└── frontend/.env.local               (Frontend config - port 10000)
 ```
 
 ---
@@ -280,24 +280,24 @@ You'll need:
 
 ### Backend Won't Start:
 ```bash
-# Check if port 3002 is in use
-lsof -ti:3002
+# Check if port 10000 is in use
+lsof -ti:10000
 
 # Kill process if needed
-lsof -ti:3002 | xargs kill -9
+lsof -ti:10000 | xargs kill -9
 
 # Restart backend
 cd app/backend && npm run dev
 ```
 
 ### Frontend Can't Connect:
-1. Check `.env.local` has `NEXT_PUBLIC_BACKEND_URL=http://localhost:3002`
-2. Verify backend is running: `curl http://localhost:3002/health`
+1. Check `.env.local` has `NEXT_PUBLIC_BACKEND_URL=http://localhost:10000`
+2. Verify backend is running: `curl http://localhost:10000/health`
 3. Check browser console for CORS errors
 
 ### API Tests Failing:
 1. Ensure backend is running
-2. Set `TEST_API_URL=http://localhost:3002` environment variable
+2. Set `TEST_API_URL=http://localhost:10000` environment variable
 3. Check test output for specific failures
 4. Verify database connection
 
@@ -342,7 +342,7 @@ cd app/backend && npm run dev
 
 **The development environment is fully set up and ready for testing!**
 
-✅ **Backend:** Running on port 3002, APIs responding
+✅ **Backend:** Running on port 10000, APIs responding
 ✅ **Frontend:** Running on port 3000, configured correctly
 ✅ **Tests:** Comprehensive automated test suite ready
 🔴 **Next Step:** Manual browser testing with wallet connection

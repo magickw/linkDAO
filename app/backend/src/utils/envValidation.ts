@@ -17,7 +17,7 @@ export interface EnvConfig {
 export function validateEnv(): EnvConfig {
   const config: EnvConfig = {
     NODE_ENV: process.env.NODE_ENV || 'development',
-    PORT: parseInt(process.env.PORT || '3002', 10),
+    PORT: parseInt(process.env.PORT || '10000', 10),
     JWT_SECRET: process.env.JWT_SECRET || 'linkdao_secret_key',
   };
 

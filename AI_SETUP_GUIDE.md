@@ -56,7 +56,7 @@ PINECONE_INDEX_NAME=linkdao
 RPC_URL=https://mainnet.base.org
 
 # Server Configuration
-PORT=3002
+PORT=10000
 
 # Frontend URL for CORS
 FRONTEND_URL=http://localhost:3004
@@ -71,7 +71,7 @@ FRONTEND_URL=http://localhost:3004
 | PINECONE_ENVIRONMENT | No | Your Pinecone environment (e.g., us-west1-gcp) |
 | PINECONE_INDEX_NAME | No | Your Pinecone index name (default: linkdao) |
 | RPC_URL | Yes | Ethereum RPC endpoint for on-chain data |
-| PORT | Yes | Backend server port (default: 3002) |
+| PORT | Yes | Backend server port (default: 10000) |
 | FRONTEND_URL | Yes | Frontend URL for CORS configuration |
 
 ## Step 3: Install Dependencies
@@ -116,10 +116,10 @@ Once the backend is running, test the AI endpoints:
 
 ```bash
 # Get list of available bots
-curl http://localhost:3002/api/ai/bots
+curl http://localhost:10000/api/ai/bots
 
 # Test Wallet Guard bot
-curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/process \
+curl -X POST http://localhost:10000/api/ai/bots/wallet-guard/process \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Is this contract safe: 0x741f1923953245b6e52578205d83e468c1b390d4?",
@@ -148,7 +148,7 @@ Visit http://localhost:3004 to access the frontend and test the AI chat interfac
    - Check that your OpenAI account has billing configured
 
 2. **Port Conflicts**
-   - If port 3002 is already in use, change the PORT variable in .env
+   - If port 10000 is already in use, change the PORT variable in .env
    - Update the FRONTEND_URL accordingly if you change the frontend port
 
 3. **Dependency Issues**

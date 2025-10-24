@@ -78,7 +78,7 @@ cd app/backend
 npm run dev
 ```
 
-The backend will start on port 3002 by default.
+The backend will start on port 10000 by default.
 
 ### 2. Start the Frontend
 
@@ -94,7 +94,7 @@ The frontend will start on port 3004 by default.
 Check that the AI services are properly integrated by accessing the bots endpoint:
 
 ```bash
-curl http://localhost:3002/api/ai/bots
+curl http://localhost:10000/api/ai/bots
 ```
 
 You should see a list of available bots.
@@ -105,12 +105,12 @@ You should see a list of available bots.
 
 #### Get Available Bots
 ```bash
-curl http://localhost:3002/api/ai/bots
+curl http://localhost:10000/api/ai/bots
 ```
 
 #### Process Message with Bot
 ```bash
-curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/process \
+curl -X POST http://localhost:10000/api/ai/bots/wallet-guard/process \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Is this contract safe: 0x741f1923953245b6e52578205d83e468c1b390d4?",
@@ -120,7 +120,7 @@ curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/process \
 
 #### Analyze Transaction (Wallet Guard)
 ```bash
-curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/analyze-transaction \
+curl -X POST http://localhost:10000/api/ai/bots/wallet-guard/analyze-transaction \
   -H "Content-Type: application/json" \
   -d '{
     "transaction": {
@@ -137,7 +137,7 @@ curl -X POST http://localhost:3002/api/ai/bots/wallet-guard/analyze-transaction 
 
 #### Summarize Proposal (Proposal Summarizer)
 ```bash
-curl -X POST http://localhost:3002/api/ai/bots/proposal-summarizer/summarize \
+curl -X POST http://localhost:10000/api/ai/bots/proposal-summarizer/summarize \
   -H "Content-Type: application/json" \
   -d '{
     "proposal": {

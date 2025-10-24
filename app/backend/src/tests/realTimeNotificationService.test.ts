@@ -7,7 +7,7 @@ describe('RealTimeNotificationService', () => {
   let testPort: number;
 
   beforeAll(() => {
-    testPort = 3002; // Use different port for testing
+    testPort = 10000; // Use different port for testing
     notificationService = new RealTimeNotificationService(testPort);
   });
 

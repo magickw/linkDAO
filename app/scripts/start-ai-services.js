@@ -89,7 +89,7 @@ async function startAIServices() {
     
     // Start the backend in development mode
     console.log('🚀 Starting backend services...');
-    console.log('   The backend will start on port 3002');
+    console.log('   The backend will start on port 10000');
     console.log('   Press Ctrl+C to stop the services\n');
     
     const backendProcess = spawn('npm', ['run', 'dev'], { 

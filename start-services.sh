@@ -14,8 +14,8 @@ check_port() {
 }
 
 # Check if backend is running
-echo "Checking backend (port 3002)..."
-if ! check_port 3002; then
+echo "Checking backend (port 10000)..."
+if ! check_port 10000; then
     echo "Starting backend..."
     cd app/backend
     nohup npm run dev > backend.log 2>&1 &
@@ -38,13 +38,13 @@ fi
 # Verify services are running
 echo ""
 echo "🔍 Service Status:"
-check_port 3002 && echo "Backend: http://localhost:3002"
+check_port 10000 && echo "Backend: http://localhost:10000"
 check_port 3000 && echo "Frontend: http://localhost:3000"
 
 # Test backend API
 echo ""
 echo "🧪 Testing Backend API..."
-if curl -s http://localhost:3002/health > /dev/null; then
+if curl -s http://localhost:10000/health > /dev/null; then
     echo "✅ Backend API is responding"
 else
     echo "❌ Backend API is not responding"
@@ -53,4 +53,4 @@ fi
 echo ""
 echo "🎉 Services are ready!"
 echo "📱 Open http://localhost:3000 in your browser"
-echo "🔧 Backend API: http://localhost:3002"
+echo "🔧 Backend API: http://localhost:10000"

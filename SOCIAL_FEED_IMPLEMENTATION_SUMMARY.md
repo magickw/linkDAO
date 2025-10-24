@@ -104,7 +104,7 @@ Added new columns to support enhanced social feed functionality:
 - Tested index creation
 
 ### Backend
-- Server starts successfully on port 3002
+- Server starts successfully on port 10000
 - Existing API endpoints remain functional
 - New schema is accessible to services
 
@@ -134,7 +134,7 @@ Added new columns to support enhanced social feed functionality:
 ## Services Status
 
 1. **Frontend**: Running on http://localhost:3001
-2. **Backend**: Running on http://localhost:3002
+2. **Backend**: Running on http://localhost:10000
 3. **Database**: Successfully migrated with new schema
 
 ## Conclusion

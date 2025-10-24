@@ -7,7 +7,7 @@ console.log('=== LinkDAO Frontend Debug Script ===');
 async function testBackendConnection() {
     console.log('Testing backend connection...');
     try {
-        const response = await fetch('http://localhost:3002/health');
+        const response = await fetch('http://localhost:10000/health');
         const data = await response.json();
         console.log('✅ Backend is reachable:', data);
         return true;
@@ -21,7 +21,7 @@ async function testBackendConnection() {
 async function testPostsAPI() {
     console.log('Testing posts API...');
     try {
-        const response = await fetch('http://localhost:3002/api/posts');
+        const response = await fetch('http://localhost:10000/api/posts');
         const posts = await response.json();
         console.log(`✅ Posts API works, found ${posts.length} posts`);
         return true;
@@ -41,7 +41,7 @@ async function testCreatePost() {
     };
 
     try {
-        const response = await fetch('http://localhost:3002/api/posts', {
+        const response = await fetch('http://localhost:10000/api/posts', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ function testEnvironmentVariables() {
     console.log('NEXT_PUBLIC_BACKEND_URL:', backendUrl);
     console.log('NEXT_PUBLIC_API_URL:', apiUrl);
 
-    if (backendUrl.includes('localhost:3002')) {
+    if (backendUrl.includes('localhost:10000')) {
         console.log('✅ Backend URL is correctly set for local development');
         return true;
     } else {

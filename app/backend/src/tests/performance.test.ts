@@ -240,7 +240,7 @@ describe('Performance Tests', () => {
       loadBalancer.addServer({
         id: 'server2',
         host: 'localhost',
-        port: 3002,
+        port: 10000,
         weight: 2,
         maxConnections: 100,
       });

@@ -43,7 +43,7 @@
     "PaymentRouter": {
       "address": "0xD1c8a34f34D10504FDF0728401e996AA2a03Ca50",
       "owner": "0xEe034b53D4cCb101b2a4faec27708be507197350",
-      "deploymentTx": "0x4346750921f2f1f804f2c19ec7de1c78af6c56d91c10eeb60088863d630022f3"
+      "deploymentTx": "0x4346750921f2f1f804f2c19ec7de1c78af6c56d91c10eeb60088863d6100002f3"
     },
     "EnhancedEscrow": {
       "address": "0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1",

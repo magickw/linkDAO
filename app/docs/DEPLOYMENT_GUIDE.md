@@ -38,7 +38,7 @@ The backend .env file contains many configuration options. Here are the key ones
 
 ```bash
 # Server Configuration
-PORT=3002
+PORT=10000
 NODE_ENV=production
 
 # JWT Configuration

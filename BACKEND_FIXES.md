@@ -3,7 +3,7 @@
 ## Issues Resolved
 
 ### 1. Backend URL Mismatch
-- **Problem**: Frontend was calling `localhost:3002` but backend runs on `localhost:10000`
+- **Problem**: Frontend was calling `localhost:10000` but backend runs on `localhost:10000`
 - **Solution**: Updated all service files to use `localhost:10000` as default
 - **Files Updated**: All service files in `app/frontend/src/services/`
 

@@ -26,7 +26,7 @@ The backend requires the following environment variables:
 | Variable Name | Description | Example Value |
 |---------------|-------------|---------------|
 | `JWT_SECRET` | Secret key for JWT token generation | `your-super-secret-jwt-key` |
-| `PORT` | Port to run the server on | `3002` |
+| `PORT` | Port to run the server on | `10000` |
 | `FRONTEND_URL` | URL of the frontend application | `https://your-frontend.vercel.app` |
 | `RPC_URL` | Blockchain RPC endpoint | `https://goerli.base.org` |
 | `PROFILE_REGISTRY_ADDRESS` | Deployed ProfileRegistry contract address | `0x1234...7890` |
@@ -66,7 +66,7 @@ heroku create your-app-name
 
 # Set environment variables
 heroku config:set JWT_SECRET=your-super-secret-jwt-key
-heroku config:set PORT=3002
+heroku config:set PORT=10000
 heroku config:set FRONTEND_URL=https://your-frontend.vercel.app
 # ... set other environment variables
 
@@ -228,7 +228,7 @@ Most hosting providers offer log viewing:
 
 ## Additional Notes
 
-- The backend is configured to run on port 3002 by default, but hosting providers will typically assign a port via the `PORT` environment variable
+- The backend is configured to run on port 10000 by default, but hosting providers will typically assign a port via the `PORT` environment variable
 - Make sure your smart contracts are deployed to the same network you're using in your RPC_URL
 - Consider implementing proper logging and monitoring for production deployments
 - For high-traffic applications, consider using a CDN for static assets and implementing caching strategies

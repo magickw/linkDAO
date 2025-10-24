@@ -179,7 +179,7 @@ export class PerformanceOptimizationManager {
     // In production, this would be configured based on actual server instances
     const servers = [
       { id: 'server-1', host: 'localhost', port: 3001, weight: 1, maxConnections: 1000 },
-      { id: 'server-2', host: 'localhost', port: 3002, weight: 1, maxConnections: 1000 },
+      { id: 'server-2', host: 'localhost', port: 10000, weight: 1, maxConnections: 1000 },
       { id: 'server-3', host: 'localhost', port: 3003, weight: 1, maxConnections: 1000 },
     ];
 

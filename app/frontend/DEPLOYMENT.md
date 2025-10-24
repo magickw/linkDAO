@@ -27,7 +27,7 @@ Create environment files for each deployment environment:
 
 #### `.env.local` (Development)
 ```bash
-NEXT_PUBLIC_BACKEND_URL=http://localhost:3002
+NEXT_PUBLIC_BACKEND_URL=http://localhost:10000
 NEXT_PUBLIC_WS_URL=ws://localhost:8000
 NEXT_PUBLIC_CHAIN_ID=31337
 NEXT_PUBLIC_ENABLE_ANALYTICS=false

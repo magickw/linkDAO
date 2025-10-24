@@ -9,7 +9,7 @@ The backend server was not running, which prevented the frontend from communicat
 ## ✅ Solution Applied
 
 ### 1. **Started Backend Server**
-- Backend is now running on `http://localhost:3002`
+- Backend is now running on `http://localhost:10000`
 - All API endpoints are functional
 - Database connections are working
 
@@ -83,8 +83,8 @@ The backend server was not running, which prevented the frontend from communicat
 ### Common Issues:
 
 - **"Please connect your wallet"**: Connect MetaMask or another Web3 wallet
-- **Network errors**: Check that backend is running on port 3002
-- **CORS errors**: Ensure frontend .env.local points to localhost:3002
+- **Network errors**: Check that backend is running on port 10000
+- **CORS errors**: Ensure frontend .env.local points to localhost:10000
 - **Empty feed**: Create some posts first, or check if you're following anyone
 
 ## 📁 Files Modified/Created
