@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { EnhancedPost, FeedFilter, InfiniteScrollState, FeedError } from '../../types/feed';
 import { FeedService } from '../../services/feedService';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import VirtualFeed from './VirtualFeed';
+import { useFeedCache } from '@/hooks/useFeedCache';
 
 interface InfiniteScrollFeedProps {
   filter: FeedFilter;
@@ -12,9 +14,12 @@ interface InfiniteScrollFeedProps {
   initialLoad?: boolean;
   postsPerPage?: number;
   onError?: (error: FeedError) => void;
+  enableVirtualization?: boolean; // Enable virtual scrolling for large feeds
+  virtualHeight?: number; // Height of the virtualized list
+  itemHeight?: number; // Height of each item in the virtualized list
 }
 
-export default function InfiniteScrollFeed({
+const InfiniteScrollFeed = React.memo(({
   filter,
   onPostsLoad,
   children,
@@ -22,8 +27,11 @@ export default function InfiniteScrollFeed({
   threshold = 1000,
   initialLoad = true,
   postsPerPage = 20,
-  onError
-}: InfiniteScrollFeedProps) {
+  onError,
+  enableVirtualization = false,
+  virtualHeight = 600,
+  itemHeight = 300
+}: InfiniteScrollFeedProps) => {
   const { isMobile } = useMobileOptimization();
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [scrollState, setScrollState] = useState<InfiniteScrollState>({
@@ -39,7 +47,18 @@ export default function InfiniteScrollFeed({
   const lastFilterRef = useRef<string>('');
 
   // Create a stable filter key for comparison
-  const filterKey = JSON.stringify(filter);
+  const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
+
+  // Use caching hook for feed data
+  const { data: cachedData, error: cacheError, isLoading: isCacheLoading, mutate } = useFeedCache(
+    filter,
+    scrollState.page,
+    {
+      cacheTime: 30000, // 30 seconds cache
+      revalidateOnFocus: false,
+      dedupingInterval: 30000
+    }
+  );
 
   // Load more posts
   const loadMorePosts = useCallback(async (page: number, isInitial: boolean = false) => {
@@ -48,6 +67,7 @@ export default function InfiniteScrollFeed({
     setScrollState(prev => ({ ...prev, isLoading: true, error: undefined }));
 
     try {
+      // Try to get data from cache first
       const response = await FeedService.getEnhancedFeed(filter, page, postsPerPage);
       
       setScrollState(prev => ({
@@ -162,13 +182,13 @@ export default function InfiniteScrollFeed({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (isMobile && e.touches[0].clientY === 0) {
       setPullStart(e.touches[0].clientY);
     }
-  };
+  }, [isMobile]);
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isMobile && pullStart > 0) {
       const distance = e.touches[0].clientY - pullStart;
       if (distance > 0 && window.scrollY === 0) {
@@ -176,9 +196,9 @@ export default function InfiniteScrollFeed({
         setPullDistance(Math.min(distance, 100)); // Max 100px pull
       }
     }
-  };
+  }, [isMobile, pullStart]);
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = useCallback(() => {
     if (isMobile && pullDistance > 50) { // Pull threshold of 50px
       setIsRefreshing(true);
       refresh();
@@ -186,7 +206,111 @@ export default function InfiniteScrollFeed({
     }
     setPullStart(0);
     setPullDistance(0);
-  };
+  }, [isMobile, pullDistance, refresh]);
+
+  // Memoized pull-to-refresh indicator
+  const pullToRefreshIndicator = useMemo(() => {
+    if (!isMobile || pullDistance <= 0) return null;
+    
+    return (
+      <div className="flex justify-center py-2 bg-gray-100 dark:bg-gray-800">
+        <div className="flex items-center space-x-2">
+          {isRefreshing ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Refreshing...</span>
+            </>
+          ) : pullDistance > 50 ? (
+            <>
+              <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Release to refresh</span>
+            </>
+          ) : (
+            <>
+              <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Pull to refresh</span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }, [isMobile, pullDistance, isRefreshing]);
+
+  // Memoized loading trigger
+  const loadingTrigger = useMemo(() => {
+    if (!scrollState.hasMore) return null;
+    
+    return (
+      <div
+        ref={loadingRef}
+        className="flex items-center justify-center py-8"
+      >
+        {scrollState.isLoading ? (
+          <LoadingSpinner />
+        ) : scrollState.error ? (
+          <ErrorState error={scrollState.error} onRetry={retry} />
+        ) : (
+          <div className="text-gray-500 dark:text-gray-400 text-sm">
+            {isMobile ? 'Pull up to load more' : 'Scroll to load more posts...'}
+          </div>
+        )}
+      </div>
+    );
+  }, [scrollState.hasMore, scrollState.isLoading, scrollState.error, isMobile, retry]);
+
+  // Memoized end of feed indicator
+  const endOfFeedIndicator = useMemo(() => {
+    if (scrollState.hasMore || posts.length === 0) return null;
+    
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center">
+          <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+            🎉 You've reached the end!
+          </div>
+          <button
+            onClick={refresh}
+            className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium transition-colors duration-200"
+          >
+            Refresh feed
+          </button>
+        </div>
+      </div>
+    );
+  }, [scrollState.hasMore, posts.length, refresh]);
+
+  // Memoized virtual feed
+  const virtualFeed = useMemo(() => {
+    if (!enableVirtualization || posts.length < 50) return null;
+    
+    return (
+      <VirtualFeed
+        posts={posts}
+        height={virtualHeight}
+        itemHeight={itemHeight}
+        onReaction={async (postId, reactionType, amount) => {
+          console.log('Reaction', postId, reactionType, amount);
+        }}
+        onTip={async (postId, amount, token) => {
+          console.log('Tip', postId, amount, token);
+        }}
+        onExpand={() => {
+          console.log('Expand post');
+        }}
+      />
+    );
+  }, [enableVirtualization, posts, virtualHeight, itemHeight]);
+
+  // Memoized regular feed
+  const regularFeed = useMemo(() => {
+    if (enableVirtualization && posts.length >= 50) return null;
+    
+    return children(posts, { ...scrollState, refresh, retry } as any);
+  }, [enableVirtualization, posts.length, children, posts, scrollState, refresh, retry]);
 
   return (
     <div 
@@ -197,72 +321,23 @@ export default function InfiniteScrollFeed({
       onTouchEnd={handleTouchEnd}
       style={isMobile && pullDistance > 0 ? { transform: `translateY(${pullDistance}px)` } : {}}
     >
-      {isMobile && pullDistance > 0 && (
-        <div className="flex justify-center py-2 bg-gray-100 dark:bg-gray-800">
-          <div className="flex items-center space-x-2">
-            {isRefreshing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Refreshing...</span>
-              </>
-            ) : pullDistance > 50 ? (
-              <>
-                <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Release to refresh</span>
-              </>
-            ) : (
-              <>
-                <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Pull to refresh</span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {pullToRefreshIndicator}
       
-      {children(posts, { ...scrollState, refresh, retry } as any)}
+      {virtualFeed || regularFeed}
       
       {/* Loading trigger element */}
-      {scrollState.hasMore && (
-        <div
-          ref={loadingRef}
-          className="flex items-center justify-center py-8"
-        >
-          {scrollState.isLoading ? (
-            <LoadingSpinner />
-          ) : scrollState.error ? (
-            <ErrorState error={scrollState.error} onRetry={retry} />
-          ) : (
-            <div className="text-gray-500 dark:text-gray-400 text-sm">
-              {isMobile ? 'Pull up to load more' : 'Scroll to load more posts...'}
-            </div>
-          )}
-        </div>
-      )}
+      {loadingTrigger}
       
       {/* End of feed indicator */}
-      {!scrollState.hasMore && posts.length > 0 && (
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="text-gray-500 dark:text-gray-400 text-sm mb-2">
-              🎉 You've reached the end!
-            </div>
-            <button
-              onClick={refresh}
-              className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 text-sm font-medium transition-colors duration-200"
-            >
-              Refresh feed
-            </button>
-          </div>
-        </div>
-      )}
+      {endOfFeedIndicator}
     </div>
   );
-}
+});
+
+// Add display name for debugging
+InfiniteScrollFeed.displayName = 'InfiniteScrollFeed';
+
+export default InfiniteScrollFeed;
 
 // Loading spinner component
 function LoadingSpinner() {

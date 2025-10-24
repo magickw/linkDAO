@@ -4,7 +4,6 @@
  */
 
 import { ethers } from 'ethers';
-import { useAccount, useContractWrite, useContractRead } from 'wagmi';
 
 // Escrow contract ABI (simplified for demo)
 const ESCROW_ABI = [

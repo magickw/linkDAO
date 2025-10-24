@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { CreatePostInput } from '@/models/Post';
 import { Camera, Image, Link as LinkIcon, Smile, MapPin, Video, X } from 'lucide-react';
 
@@ -10,19 +10,19 @@ interface FacebookStylePostComposerProps {
   className?: string;
 }
 
-export default function FacebookStylePostComposer({
+const FacebookStylePostComposer = React.memo(({
   onSubmit,
   isLoading,
   userAvatar,
   userName,
   className = ''
-}: FacebookStylePostComposerProps) {
+}: FacebookStylePostComposerProps) => {
   const [content, setContent] = useState('');
-  const HINTS = [
+  const HINTS = useMemo(() => [
     'Share your latest DAO proposal 🧠',
     'Post your NFT drop 🚀',
     'Comment on trending governance votes 🏛️',
-  ];
+  ], []);
   const [hintIdx, setHintIdx] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -53,20 +53,20 @@ export default function FacebookStylePostComposer({
       }, 4000);
       return () => window.clearInterval(id);
     }
+  }, [HINTS]);
+
+  const handleFocus = useCallback(() => {
+    setIsExpanded(true);
   }, []);
 
-  const handleFocus = () => {
-    setIsExpanded(true);
-  };
-
   // Extract hashtags from content
-  const extractHashtags = (text: string): string[] => {
+  const extractHashtags = useCallback((text: string): string[] => {
     const hashtagRegex = /#[\w]+/g;
     const matches = text.match(hashtagRegex);
     return matches ? matches.map(tag => tag.substring(1)) : [];
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!content.trim()) return;
@@ -104,9 +104,9 @@ export default function FacebookStylePostComposer({
     } catch (error) {
       console.error('Error submitting post:', error);
     }
-  };
+  }, [content, feeling, location, linkUrl, selectedFiles, onSubmit, extractHashtags]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -122,9 +122,9 @@ export default function FacebookStylePostComposer({
       };
       reader.readAsDataURL(file);
     });
-  };
+  }, []);
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -140,14 +140,14 @@ export default function FacebookStylePostComposer({
       };
       reader.readAsDataURL(file);
     });
-  };
+  }, []);
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setContent('');
     setFeeling('');
     setLocation('');
@@ -158,7 +158,64 @@ export default function FacebookStylePostComposer({
     setShowFeelingInput(false);
     setShowLocationInput(false);
     setShowLinkInput(false);
-  };
+  }, []);
+
+  // Memoized hashtag preview
+  const hashtagPreview = useMemo(() => {
+    if (!isExpanded || extractHashtags(content).length === 0) return null;
+    
+    return (
+      <div className="mt-2 flex flex-wrap gap-1">
+        {extractHashtags(content).map((tag, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200"
+          >
+            #{tag}
+          </span>
+        ))}
+      </div>
+    );
+  }, [isExpanded, content, extractHashtags]);
+
+  // Memoized file previews
+  const filePreviews = useMemo(() => {
+    if (previews.length === 0) return null;
+
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {previews.map((preview, index) => {
+          const file = selectedFiles[index];
+          const isVideo = file?.type.startsWith('video/');
+
+          return (
+            <div key={index} className="relative">
+              {isVideo ? (
+                <video
+                  src={preview}
+                  className="w-full h-32 object-cover rounded-lg"
+                  controls
+                />
+              ) : (
+                <img
+                  src={preview}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => removeFile(index)}
+                className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }, [previews, selectedFiles, removeFile]);
 
   return (
     <div className={`group rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent bg-gradient-to-r from-transparent to-transparent focus-within:from-primary-500/10 focus-within:to-purple-500/10`}>
@@ -196,53 +253,10 @@ export default function FacebookStylePostComposer({
               />
 
               {/* Hashtag preview */}
-              {isExpanded && extractHashtags(content).length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {extractHashtags(content).map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {hashtagPreview}
 
               {/* File previews */}
-              {previews.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {previews.map((preview, index) => {
-                    const file = selectedFiles[index];
-                    const isVideo = file?.type.startsWith('video/');
-
-                    return (
-                      <div key={index} className="relative">
-                        {isVideo ? (
-                          <video
-                            src={preview}
-                            className="w-full h-32 object-cover rounded-lg"
-                            controls
-                          />
-                        ) : (
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="absolute top-2 right-2 w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white hover:bg-opacity-70"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {filePreviews}
 
               {/* Additional inputs when expanded */}
               {isExpanded && (
@@ -446,4 +460,9 @@ export default function FacebookStylePostComposer({
       />
     </div>
   );
-}
+});
+
+// Add display name for debugging
+FacebookStylePostComposer.displayName = 'FacebookStylePostComposer';
+
+export default FacebookStylePostComposer;

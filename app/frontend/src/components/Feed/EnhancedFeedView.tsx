@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EnhancedPost as FeedEnhancedPost, FeedFilter, FeedSortType, FeedError } from '../../types/feed';
 import { useFeedSortingPreferences, useDisplayPreferences, useAutoRefreshPreferences } from '../../hooks/useFeedPreferences';
 import { FeedSortingHeader } from './FeedSortingTabs';
@@ -6,10 +6,50 @@ import InfiniteScrollFeed from './InfiniteScrollFeed';
 import LikedByModal from './LikedByModal';
 import TrendingContentDetector, { TrendingBadge } from './TrendingContentDetector';
 import CommunityEngagementMetrics from './CommunityEngagementMetrics';
-import EnhancedPostCard, { EnhancedPost } from '../EnhancedPostCard/EnhancedPostCard';
+import EnhancedPostCard from '../EnhancedPostCard/EnhancedPostCard';
 import { useToast } from '@/context/ToastContext';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { analyticsService } from '@/services/analyticsService';
+
+interface EnhancedPost {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  authorProfile: {
+    handle: string;
+    verified: boolean;
+    reputationTier?: string;
+    avatar?: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // Enhanced content
+  contentType?: 'text' | 'media' | 'link' | 'poll' | 'proposal';
+  media?: string[];
+  previews: any[];
+  hashtags: string[];
+  mentions: string[];
+  
+  // Engagement data
+  reactions: any[];
+  tips: any[];
+  comments: number;
+  shares: number;
+  views: number;
+  engagementScore: number;
+  
+  // Social proof
+  socialProof: any;
+  trendingStatus?: any;
+  pinnedUntil?: Date;
+  
+  // Community context
+  communityId?: string;
+  communityName?: string;
+  tags?: string[];
+}
 
 interface EnhancedFeedViewProps {
   communityId?: string;
@@ -18,12 +58,12 @@ interface EnhancedFeedViewProps {
   className?: string;
 }
 
-export default function EnhancedFeedView({
+const EnhancedFeedView = React.memo(({
   communityId,
   initialFilter = {},
   showCommunityMetrics = false,
   className = ''
-}: EnhancedFeedViewProps) {
+}: EnhancedFeedViewProps) => {
   const { addToast } = useToast();
   const { isMobile } = useMobileOptimization();
   
@@ -211,68 +251,89 @@ export default function EnhancedFeedView({
         showSocialProof={showSocialProof}
         showTrending={showTrendingBadges}
         className=""
+        onReaction={async (postId, reactionType, amount) => {
+          console.log('Reaction', postId, reactionType, amount);
+        }}
+        onTip={async (postId, amount, token) => {
+          console.log('Tip', postId, amount, token);
+        }}
       />
     </div>
   ), [showSocialProof, showTrendingBadges]);
 
-  return (
-    <div className={`${className}`}>
-      {/* Community Metrics - Only show when explicitly enabled */}
-      {showCommunityMetrics && communityId && (
-        <div className="mb-4">
-          <CommunityEngagementMetrics
-            communityId={communityId}
-            timeRange={filter.timeRange}
-          />
-        </div>
-      )}
+  // Memoized sorting options
+  const sortingOptions = useMemo(() => [
+    { value: FeedSortType.HOT, label: '🔥 Hot', desc: 'Trending' },
+    { value: FeedSortType.NEW, label: '🆕 New', desc: 'Latest' },
+    { value: FeedSortType.TOP, label: '⭐ Top', desc: 'Best' },
+    { value: FeedSortType.RISING, label: '📈 Rising', desc: 'Growing' }
+  ], []);
 
-      {/* Trending Content Detector - Hidden, runs in background */}
-      <div className="hidden">
-        <TrendingContentDetector
-          posts={posts}
-          onTrendingUpdate={handleTrendingUpdate}
+  // Memoized sorting header
+  const sortingHeader = useMemo(() => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
+      <div className="flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
+        {sortingOptions.map(option => (
+          <button
+            key={option.value}
+            onClick={() => handleSortChange(option.value)}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${
+              filter.sortBy === option.value
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+            }`}
+            title={option.desc}
+          >
+            {option.label}
+            {filter.sortBy === option.value && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  ), [sortingOptions, filter.sortBy, handleSortChange]);
+
+  // Memoized community metrics
+  const communityMetrics = useMemo(() => {
+    if (!showCommunityMetrics || !communityId) return null;
+    
+    return (
+      <div className="mb-4">
+        <CommunityEngagementMetrics
+          communityId={communityId}
+          timeRange={filter.timeRange}
         />
       </div>
+    );
+  }, [showCommunityMetrics, communityId, filter.timeRange]);
 
-      {/* Minimal Sorting Tabs - Facebook Style */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-        <div className="flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
-          {[
-            { value: FeedSortType.HOT, label: '🔥 Hot', desc: 'Trending' },
-            { value: FeedSortType.NEW, label: '🆕 New', desc: 'Latest' },
-            { value: FeedSortType.TOP, label: '⭐ Top', desc: 'Best' },
-            { value: FeedSortType.RISING, label: '📈 Rising', desc: 'Growing' }
-          ].map(option => (
-            <button
-              key={option.value}
-              onClick={() => handleSortChange(option.value)}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${
-                filter.sortBy === option.value
-                  ? 'text-primary-600 dark:text-primary-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
-              title={option.desc}
-            >
-              {option.label}
-              {filter.sortBy === option.value && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
+  // Memoized trending detector
+  const trendingDetector = useMemo(() => (
+    <div className="hidden">
+      <TrendingContentDetector
+        posts={posts}
+        onTrendingUpdate={handleTrendingUpdate}
+      />
+    </div>
+  ), [posts, handleTrendingUpdate]);
 
-      {/* Error state */}
-      {error && (
-        <ErrorState 
-          error={error} 
-          onRetry={handleRetry} 
-        />
-      )}
+  // Memoized error state
+  const errorState = useMemo(() => {
+    if (!error) return null;
+    
+    return (
+      <ErrorState 
+        error={error} 
+        onRetry={handleRetry} 
+      />
+    );
+  }, [error, handleRetry]);
 
-      {/* Feed Content */}
-      {infiniteScroll ? (
+  // Memoized feed content
+  const feedContent = useMemo(() => {
+    if (infiniteScroll) {
+      return (
         <InfiniteScrollFeed
           key={`${JSON.stringify(filter)}-${refreshKey}`}
           filter={filter}
@@ -280,11 +341,12 @@ export default function EnhancedFeedView({
           postsPerPage={postsPerPage}
           threshold={1000}
           onError={handleError}
+          enableVirtualization={true} // Enable virtual scrolling for better performance
+          virtualHeight={isMobile ? 500 : 600} // Adjust height based on device
+          itemHeight={isMobile ? 250 : 300} // Adjust item height based on device
         >
           {(feedPosts, scrollState) => (
             <div>
-              {/* Posts are managed by the handlePostsLoad callback */}
-
               {/* Render posts */}
               {feedPosts.length === 0 && !scrollState.isLoading && !scrollState.error ? (
                 <EmptyFeedState filter={filter} />
@@ -309,7 +371,9 @@ export default function EnhancedFeedView({
             </div>
           )}
         </InfiniteScrollFeed>
-      ) : (
+      );
+    } else {
+      return (
         <PaginatedFeed
           filter={filter}
           postsPerPage={postsPerPage}
@@ -318,7 +382,26 @@ export default function EnhancedFeedView({
           convertPost={convertFeedPostToCardPost}
           onError={handleError}
         />
-      )}
+      );
+    }
+  }, [infiniteScroll, filter, refreshKey, handlePostsLoad, postsPerPage, handleError, isMobile, posts, renderPost, convertFeedPostToCardPost]);
+
+  return (
+    <div className={`${className}`}>
+      {/* Community Metrics - Only show when explicitly enabled */}
+      {communityMetrics}
+
+      {/* Trending Content Detector - Hidden, runs in background */}
+      {trendingDetector}
+
+      {/* Minimal Sorting Tabs - Facebook Style */}
+      {sortingHeader}
+
+      {/* Error state */}
+      {errorState}
+
+      {/* Feed Content */}
+      {feedContent}
 
       {/* Liked By Modal */}
       <LikedByModal
@@ -328,7 +411,12 @@ export default function EnhancedFeedView({
       />
     </div>
   );
-}
+});
+
+// Add display name for debugging
+EnhancedFeedView.displayName = 'EnhancedFeedView';
+
+export default EnhancedFeedView;
 
 // Empty feed state component
 interface EmptyFeedStateProps {

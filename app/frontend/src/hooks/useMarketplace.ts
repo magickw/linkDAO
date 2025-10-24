@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAccount, useContractRead, useContractWrite, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ethers } from 'ethers';
 import { formatEther, parseEther } from 'ethers/lib/utils';
 
@@ -192,7 +192,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
   const queryClient = useQueryClient();
 
   // Contract read functions
-  const { data: sellerProductsCount } = useContractRead({
+  const { data: sellerProductsCount } = useReadContract({
     address: MARKETPLACE_ADDRESS as `0x${string}`,
     abi: marketplaceABI.abi,
     functionName: 'getSellerProductsCount',
@@ -203,7 +203,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
     chainId: CHAIN_ID,
   });
 
-  const { data: sellerOrdersCount } = useContractRead({
+  const { data: sellerOrdersCount } = useReadContract({
     address: MARKETPLACE_ADDRESS as `0x${string}`,
     abi: marketplaceABI.abi,
     functionName: 'getSellerOrdersCount',
@@ -215,9 +215,9 @@ export const useMarketplace = (): UseMarketplaceReturn => {
   });
 
   // Contract write functions
-  const { writeContractAsync: createProductWrite, isPending: isCreatingProduct } = useContractWrite();
-  const { writeContractAsync: updateProductWrite, isPending: isUpdatingProduct } = useContractWrite();
-  const { writeContractAsync: deleteProductWrite, isPending: isDeletingProduct } = useContractWrite();
+  const { writeContractAsync: createProductWrite, isPending: isCreatingProduct } = useWriteContract();
+  const { writeContractAsync: updateProductWrite, isPending: isUpdatingProduct } = useWriteContract();
+  const { writeContractAsync: deleteProductWrite, isPending: isDeletingProduct } = useWriteContract();
   
   // Helper function to handle contract writes
   const writeContract = async (functionName: string, args: any[]) => {
@@ -312,10 +312,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       ],
       value: BigInt(0), // No ETH value needed for product creation
     });
-    
-    // Wait for transaction confirmation
-    const { data: receipt } = await useWaitForTransactionReceipt({ hash });
-    
+
     // Invalidate products query to refetch
     queryClient.invalidateQueries({ queryKey: ['sellerProducts', address] });
     
@@ -361,9 +358,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
         }
       ],
     });
-    
-    await useWaitForTransactionReceipt({ hash });
-    
+
     // Invalidate products query
     queryClient.invalidateQueries({ queryKey: ['sellerProducts', address] });
     
@@ -381,9 +376,7 @@ export const useMarketplace = (): UseMarketplaceReturn => {
       account: address,
       args: [productId],
     });
-    
-    await useWaitForTransactionReceipt({ hash });
-    
+
     // Invalidate products query
     queryClient.invalidateQueries({ queryKey: ['sellerProducts', address] });
     

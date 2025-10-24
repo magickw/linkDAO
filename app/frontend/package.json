@@ -65,11 +65,14 @@
     "react-hot-toast": "^2.6.0",
     "react-is": "^17.0.2",
     "react-swipeable": "^7.0.2",
+    "react-window": "^2.2.1",
     "recharts": "^3.3.0",
+    "swr": "^2.3.6",
     "tailwind-merge": "^2.5.4",
     "tailwindcss": "^3.4.18",
     "viem": "^2.38.3",
-    "wagmi": "^2.18.2"
+    "wagmi": "^2.18.2",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

@@ -2,7 +2,7 @@
  * Custom hooks for Governance contract interactions using wagmi
  */
 
-import { useContractRead, useContractWrite, useWaitForTransaction } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { useCallback, useMemo } from 'react';
 import { parseEther } from 'ethers/lib/utils';
 
@@ -75,11 +75,10 @@ const GOVERNANCE_ABI = [
  * Hook to read the total number of proposals
  */
 export function useProposalCount() {
-  const { data, isError, isLoading, refetch } = useContractRead({
+  const { data, isError, isLoading, refetch } = useReadContract({
     address: GOVERNANCE_ADDRESS,
     abi: GOVERNANCE_ABI,
-    functionName: 'proposalCount',
-    watch: true
+    functionName: 'proposalCount'
   });
 
   return {
@@ -94,13 +93,14 @@ export function useProposalCount() {
  * Hook to read a specific proposal by ID
  */
 export function useProposal(proposalId: number | undefined) {
-  const { data, isError, isLoading, refetch } = useContractRead({
+  const { data, isError, isLoading, refetch } = useReadContract({
     address: GOVERNANCE_ADDRESS,
     abi: GOVERNANCE_ABI,
     functionName: 'getProposal',
     args: proposalId !== undefined ? [BigInt(proposalId)] : undefined,
-    enabled: proposalId !== undefined,
-    watch: true
+    query: {
+      enabled: proposalId !== undefined
+    }
   });
 
   const proposal = useMemo(() => {
@@ -130,14 +130,15 @@ export function useProposal(proposalId: number | undefined) {
  * Hook to check if an address has voted on a proposal
  */
 export function useHasVoted(proposalId: number | undefined, voterAddress: string | undefined) {
-  const { data, isLoading, refetch } = useContractRead({
+  const { data, isLoading, refetch } = useReadContract({
     address: GOVERNANCE_ADDRESS,
     abi: GOVERNANCE_ABI,
     functionName: 'hasVoted',
-    args: proposalId !== undefined && voterAddress ? 
+    args: proposalId !== undefined && voterAddress ?
       [BigInt(proposalId), voterAddress as `0x${string}`] : undefined,
-    enabled: proposalId !== undefined && !!voterAddress,
-    watch: true
+    query: {
+      enabled: proposalId !== undefined && !!voterAddress
+    }
   });
 
   return {
@@ -151,13 +152,14 @@ export function useHasVoted(proposalId: number | undefined, voterAddress: string
  * Hook to get voting power for an address
  */
 export function useVotingPower(address: string | undefined) {
-  const { data, isLoading, refetch } = useContractRead({
+  const { data, isLoading, refetch } = useReadContract({
     address: GOVERNANCE_ADDRESS,
     abi: GOVERNANCE_ABI,
     functionName: 'getVotingPower',
     args: address ? [address as `0x${string}`] : undefined,
-    enabled: !!address,
-    watch: true
+    query: {
+      enabled: !!address
+    }
   });
 
   return {
@@ -171,23 +173,20 @@ export function useVotingPower(address: string | undefined) {
  * Hook to vote on a proposal
  */
 export function useVoteOnProposal() {
-  const { data, write, isLoading: isWriting, isError, error } = useContractWrite({
-    address: GOVERNANCE_ADDRESS,
-    abi: GOVERNANCE_ABI,
-    functionName: 'vote'
-  });
+  const { data: hash, writeContract, isPending: isWriting, isError, error } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
-    hash: data?.hash
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash
   });
 
   const vote = useCallback((proposalId: number, support: boolean) => {
-    if (write) {
-      write({
-        args: [BigInt(proposalId), support]
-      });
-    }
-  }, [write]);
+    writeContract({
+      address: GOVERNANCE_ADDRESS,
+      abi: GOVERNANCE_ABI,
+      functionName: 'vote',
+      args: [BigInt(proposalId), support]
+    });
+  }, [writeContract]);
 
   return {
     vote,
@@ -195,7 +194,7 @@ export function useVoteOnProposal() {
     isSuccess,
     isError,
     error,
-    txHash: data?.hash
+    txHash: hash
   };
 }
 
@@ -203,14 +202,10 @@ export function useVoteOnProposal() {
  * Hook to create a new proposal
  */
 export function useCreateProposal() {
-  const { data, write, isLoading: isWriting, isError, error } = useContractWrite({
-    address: GOVERNANCE_ADDRESS,
-    abi: GOVERNANCE_ABI,
-    functionName: 'createProposal'
-  });
+  const { data: hash, writeContract, isPending: isWriting, isError, error } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransaction({
-    hash: data?.hash
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash
   });
 
   const createProposal = useCallback((
@@ -218,12 +213,13 @@ export function useCreateProposal() {
     category: number,
     executionData: string = '0x'
   ) => {
-    if (write) {
-      write({
-        args: [description, BigInt(category), executionData as `0x${string}`]
-      });
-    }
-  }, [write]);
+    writeContract({
+      address: GOVERNANCE_ADDRESS,
+      abi: GOVERNANCE_ABI,
+      functionName: 'createProposal',
+      args: [description, BigInt(category), executionData as `0x${string}`]
+    });
+  }, [writeContract]);
 
   return {
     createProposal,
@@ -231,7 +227,7 @@ export function useCreateProposal() {
     isSuccess,
     isError,
     error,
-    txHash: data?.hash
+    txHash: hash
   };
 }
 

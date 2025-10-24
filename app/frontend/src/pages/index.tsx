@@ -1,8 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import Layout from '@/components/Layout';
-import { SmartRightSidebar } from '@/components/SmartRightSidebar';
-import CommunityView from '@/components/CommunityView';
-import NavigationSidebar from '@/components/NavigationSidebar';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
 import { useCreatePost } from '@/hooks/usePosts';
@@ -10,14 +7,53 @@ import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
-import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
-import PostCreationModal from '@/components/PostCreationModal';
-import BottomSheet from '@/components/BottomSheet';
-import EnhancedFeedView from '@/components/Feed/EnhancedFeedView';
 import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SupportWidget from '@/components/SupportWidget';
+
+// Lazy load heavy components
+const SmartRightSidebar = lazy(() => import('@/components/SmartRightSidebar/SmartRightSidebar'));
+const CommunityView = lazy(() => import('@/components/CommunityView'));
+const NavigationSidebar = lazy(() => import('@/components/NavigationSidebar'));
+const FacebookStylePostComposer = lazy(() => import('@/components/FacebookStylePostComposer'));
+const PostCreationModal = lazy(() => import('@/components/PostCreationModal'));
+const BottomSheet = lazy(() => import('@/components/BottomSheet'));
+const EnhancedFeedView = lazy(() => import('@/components/Feed/EnhancedFeedView'));
+
+// Loading skeleton components
+const FeedSkeleton = () => (
+  <div className="space-y-6">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          <div className="flex-1">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2" />
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6" />
+          </div>
+        </div>
+        <div className="space-y-2 mb-4">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const SidebarSkeleton = () => (
+  <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 space-y-4 animate-pulse">
+    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+  </div>
+);
 
 export default function Home() {
   const { address, isConnected } = useWeb3();
@@ -90,8 +126,6 @@ export default function Home() {
     setHasNewPosts(false);
     setFeedRefreshKey(prev => prev + 1);
   };
-
-
 
   // If not connected, show enhanced landing page
   if (!mounted || !isConnected) {
@@ -605,7 +639,9 @@ export default function Home() {
         {/* Left Sidebar - Navigation */}
         <div className="hidden lg:flex lg:flex-shrink-0">
           <div className="flex flex-col w-64">
-            <NavigationSidebar className="h-full" />
+            <Suspense fallback={<SidebarSkeleton />}>
+              <NavigationSidebar className="h-full" />
+            </Suspense>
           </div>
         </div>
 
@@ -618,12 +654,14 @@ export default function Home() {
               <div className="max-w-2xl mx-auto py-6 px-4">
                 {/* Post Composer - Inline Facebook-style */}
                 <div className="mb-6">
-                  <FacebookStylePostComposer
-                    onSubmit={handlePostSubmit}
-                    isLoading={isCreatingPost}
-                    userAvatar={(profile as any)?.avatar}
-                    userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                  />
+                  <Suspense fallback={<FeedSkeleton />}>
+                    <FacebookStylePostComposer
+                      onSubmit={handlePostSubmit}
+                      isLoading={isCreatingPost}
+                      userAvatar={(profile as any)?.avatar}
+                      userName={(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                    />
+                  </Suspense>
                 </div>
 
                 {/* New Posts Banner - Real-time Update Indicator */}
@@ -640,23 +678,27 @@ export default function Home() {
                 )}
 
                 {/* Enhanced Feed View with Advanced Features */}
-                {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
-                  <CommunityView communityId={navigationState.activeCommunity} />
-                ) : (
-                  <EnhancedFeedView
-                    key={feedRefreshKey}
-                    communityId={navigationState.activeCommunity}
-                    showCommunityMetrics={false}
-                    className=""
-                  />
-                )}
+                <Suspense fallback={<FeedSkeleton />}>
+                  {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
+                    <CommunityView communityId={navigationState.activeCommunity} />
+                  ) : (
+                    <EnhancedFeedView
+                      key={feedRefreshKey}
+                      communityId={navigationState.activeCommunity}
+                      showCommunityMetrics={false}
+                      className=""
+                    />
+                  )}
+                </Suspense>
               </div>
             </div>
 
             {/* Right Sidebar - Activity & Notifications */}
             <div className="hidden xl:flex xl:flex-shrink-0">
               <div className="flex flex-col w-80">
-                <SmartRightSidebar context="feed" />
+                <Suspense fallback={<SidebarSkeleton />}>
+                  <SmartRightSidebar context="feed" />
+                </Suspense>
               </div>
             </div>
           </div>
@@ -664,34 +706,38 @@ export default function Home() {
       </div>
 
       {/* Post Creation Modal */}
-      <PostCreationModal
-        isOpen={navigationState.modalState.postCreation}
-        onClose={() => closeModal('postCreation')}
-        onSubmit={handlePostSubmit}
-        isLoading={isCreatingPost}
-      />
+      <Suspense fallback={null}>
+        <PostCreationModal
+          isOpen={navigationState.modalState.postCreation}
+          onClose={() => closeModal('postCreation')}
+          onSubmit={handlePostSubmit}
+          isLoading={isCreatingPost}
+        />
+      </Suspense>
 
       {/* Support Widget - Floating */}
       <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />
 
       {/* Wallet Sheet Modal */}
-      <BottomSheet
-        isOpen={isWalletSheetOpen}
-        onClose={() => setIsWalletSheetOpen(false)}
-        title="Send Tokens"
-      >
-        <div className="p-4">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            Wallet-to-wallet token sending feature coming soon!
-          </p>
-          <button
-            onClick={() => setIsWalletSheetOpen(false)}
-            className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </BottomSheet>
+      <Suspense fallback={null}>
+        <BottomSheet
+          isOpen={isWalletSheetOpen}
+          onClose={() => setIsWalletSheetOpen(false)}
+          title="Send Tokens"
+        >
+          <div className="p-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Wallet-to-wallet token sending feature coming soon!
+            </p>
+            <button
+              onClick={() => setIsWalletSheetOpen(false)}
+              className="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </BottomSheet>
+      </Suspense>
     </Layout>
   );
 }
