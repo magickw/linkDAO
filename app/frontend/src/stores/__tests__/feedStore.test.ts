@@ -1,4 +1,8 @@
-import { useFeedStore, filterPosts, generateFilterKey } from '../feedStore';
+import useFeedStore, { filterPosts, generateFilterKey } from '../feedStore';
+import { FeedSortType } from '../../types/feed';
+
+// Import testing utilities
+import '@testing-library/jest-dom';
 
 // Mock the offline feed manager
 jest.mock('../../services/offlineFeedManager', () => ({
@@ -21,7 +25,7 @@ describe('Feed Store', () => {
     expect(state.posts).toEqual([]);
     expect(state.filteredPosts).toEqual([]);
     expect(state.filters).toEqual({ 
-      sortBy: 'hot',
+      sortBy: FeedSortType.HOT,
       timeRange: '24h'
     });
     expect(state.displaySettings).toEqual({
@@ -74,11 +78,11 @@ describe('Feed Store', () => {
   });
 
   it('should update filters correctly', () => {
-    useFeedStore.getState().updateFilter({ sortBy: 'new', timeRange: '7d' });
+    useFeedStore.getState().updateFilter({ sortBy: FeedSortType.NEW, timeRange: '7d' });
     
     const state = useFeedStore.getState();
     expect(state.filters).toEqual({ 
-      sortBy: 'new',
+      sortBy: FeedSortType.NEW,
       timeRange: '7d'
     });
   });
@@ -177,7 +181,7 @@ describe('Feed Store', () => {
   it('should reset feed to initial state', () => {
     // Set some state
     useFeedStore.getState().setPosts([{ id: '1', title: 'Post 1' }] as any);
-    useFeedStore.getState().updateFilter({ sortBy: 'new' });
+    useFeedStore.getState().updateFilter({ sortBy: FeedSortType.NEW });
     useFeedStore.getState().setError('Some error');
     
     // Reset
@@ -186,7 +190,7 @@ describe('Feed Store', () => {
     // Check that state is reset
     const state = useFeedStore.getState();
     expect(state.posts).toEqual([]);
-    expect(state.filters.sortBy).toBe('hot'); // Back to default
+    expect(state.filters.sortBy).toBe(FeedSortType.HOT); // Back to default
     expect(state.error).toBeNull();
   });
 
@@ -218,47 +222,52 @@ describe('Feed Store', () => {
     expect(selectedPosts).toEqual(posts);
     
     const filters = useFeedStore.getState().filters;
-    expect(filters.sortBy).toBe('hot');
+    expect(filters.sortBy).toBe(FeedSortType.HOT);
+    expect(filters.timeRange).toBe('24h');
   });
 
   // Test utility functions
-  it('should filter posts by time range', () => {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    const posts = [
-      { id: '1', title: 'Recent Post', createdAt: now },
-      { id: '2', title: '1 Hour Old', createdAt: oneHourAgo },
-      { id: '3', title: '1 Day Old', createdAt: oneDayAgo },
-      { id: '4', title: '1 Week Old', createdAt: oneWeekAgo }
-    ] as any;
-    
-    // Test 1 hour filter
-    const oneHourFilter = { timeRange: '1h' } as any;
-    const oneHourFiltered = filterPosts(posts, oneHourFilter);
-    expect(oneHourFiltered).toHaveLength(2); // Recent and 1 hour old
-    
-    // Test 24 hour filter
-    const oneDayFilter = { timeRange: '24h' } as any;
-    const oneDayFiltered = filterPosts(posts, oneDayFilter);
-    expect(oneDayFiltered).toHaveLength(3); // Recent, 1 hour old, and 1 day old
-    
-    // Test 7 day filter
-    const oneWeekFilter = { timeRange: '7d' } as any;
-    const oneWeekFiltered = filterPosts(posts, oneWeekFilter);
-    expect(oneWeekFiltered).toHaveLength(4); // All posts
-  });
-
-  it('should generate filter keys correctly', () => {
+  it('should generate correct filter keys', () => {
     const filters = { 
-      sortBy: 'hot',
-      timeRange: '24h',
-      communityId: 'test-community'
+      sortBy: FeedSortType.HOT, 
+      timeRange: '24h' 
     };
     
-    const filterKey = generateFilterKey(filters as any);
-    expect(filterKey).toBe(JSON.stringify(filters));
+    const key = generateFilterKey(filters);
+    expect(key).toBe(JSON.stringify(filters));
+  });
+
+  it('should filter posts by time range', () => {
+    const now = new Date();
+    const posts = [
+      { id: '1', createdAt: new Date(now.getTime() - 30 * 60 * 1000) }, // 30 minutes ago
+      { id: '2', createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000) }, // 2 hours ago
+      { id: '3', createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1000) }, // 25 hours ago
+    ] as any;
+
+    // Test 1 hour filter
+    let filtered = filterPosts(posts, { sortBy: FeedSortType.HOT, timeRange: '1h' });
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].id).toBe('1');
+
+    // Test 24 hour filter
+    filtered = filterPosts(posts, { sortBy: FeedSortType.HOT, timeRange: '24h' });
+    expect(filtered).toHaveLength(2);
+    expect(filtered.map(p => p.id)).toEqual(['1', '2']);
+
+    // Test 7 day filter
+    filtered = filterPosts(posts, { sortBy: FeedSortType.HOT, timeRange: '7d' });
+    expect(filtered).toHaveLength(3);
+  });
+
+  it('should handle edge cases in filtering', () => {
+    // Test with no time range
+    const posts = [{ id: '1', createdAt: new Date() }] as any;
+    const filtered = filterPosts(posts, { sortBy: FeedSortType.HOT });
+    expect(filtered).toHaveLength(1);
+
+    // Test with unknown time range
+    const filtered2 = filterPosts(posts, { sortBy: FeedSortType.HOT, timeRange: 'unknown' });
+    expect(filtered2).toHaveLength(1);
   });
 });

@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect, useMemo } from 'react';
+import React, { ReactNode, useState, useEffect, useMemo, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -15,6 +15,9 @@ const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({
 });
 import NotificationSystem from '@/components/NotificationSystem';
 import { MessagingWidget } from '@/components/Messaging';
+const NavigationSidebar = dynamic(() => import('@/components/NavigationSidebar'), {
+  ssr: false
+});
 
 interface LayoutProps {
   children: ReactNode;
@@ -36,6 +39,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const touchStart = useRef<number>(0);
 
   // Live badge counts
   const { conversations } = useChatHistory();
@@ -138,16 +143,86 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     return () => { active = false; };
   }, [address]);
 
+  // Add keyboard event listener for mobile menu
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+      // Add Ctrl/Cmd + K for search focus
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        // Focus search input if it exists
+        const searchInput = document.querySelector('input[aria-label="Global search"]');
+        if (searchInput) {
+          (searchInput as HTMLInputElement).focus();
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
+  // Add touch event handlers for swipe gestures
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStart.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const diff = e.changedTouches[0].clientX - touchStart.current;
+      // Swipe right from edge to open menu
+      if (diff > 50 && !mobileMenuOpen && touchStart.current < 50) {
+        setMobileMenuOpen(true);
+      }
+      // Swipe left to close menu
+      else if (diff < -50 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <Head>
-        <title>{title}</title>
-        <meta name="description" content="LinkDAO - Web3 Social Platform" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+      {/* Mobile slide-out drawer */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out lg:hidden ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}></div>
+        <div className="relative flex flex-col h-full bg-white dark:bg-gray-800 shadow-xl">
+          {/* Mobile header with close button */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="LinkDAO Logo" className="h-8 w-8" />
+              <span className="text-xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Mobile Navigation Sidebar */}
+          <div className="flex-1 overflow-y-auto">
+            <React.Suspense fallback={<div className="p-4">Loading...</div>}>
+              <NavigationSidebar className="h-full" />
+            </React.Suspense>
+          </div>
+        </div>
+      </div>
 
-      <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">
             <img src="/logo.png" alt="LinkDAO Logo" className="h-10 w-10" />
@@ -258,6 +333,17 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-2">
+            {/* Hamburger menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
+              aria-label="Open navigation menu"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </button>
+          
             {/* Dark mode toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}

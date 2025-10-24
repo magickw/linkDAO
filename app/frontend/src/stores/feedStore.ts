@@ -1,14 +1,11 @@
 import { create } from 'zustand';
-import { EnhancedPost, FeedFilter } from '../types/feed';
+import { devtools, persist } from 'zustand/middleware';
 import { offlineFeedManager } from '../services/offlineFeedManager';
+import { EnhancedPost, FeedFilter, FeedSortType } from '../types/feed';
 
-// Define the feed state interface
 interface FeedState {
-  // Posts data
   posts: EnhancedPost[];
   filteredPosts: EnhancedPost[];
-  
-  // Feed filters and settings
   filters: FeedFilter;
   displaySettings: {
     showSocialProof: boolean;
@@ -16,27 +13,22 @@ interface FeedState {
     infiniteScroll: boolean;
     postsPerPage: number;
   };
-  
-  // Loading and error states
   loading: {
     initial: boolean;
     more: boolean;
     refreshing: boolean;
   };
   error: string | null;
-  
-  // Pagination
   pagination: {
     currentPage: number;
     totalPages: number;
     hasMore: boolean;
   };
-  
-  // Offline support
   isOnline: boolean;
   hasOfflineData: boolean;
-  
-  // Actions
+}
+
+interface FeedActions {
   setPosts: (posts: EnhancedPost[]) => void;
   setFilteredPosts: (posts: EnhancedPost[]) => void;
   appendPosts: (posts: EnhancedPost[]) => void;
@@ -53,8 +45,10 @@ interface FeedState {
   removeOptimisticPost: (postId: string) => void;
   updatePost: (postId: string, updates: Partial<EnhancedPost>) => void;
   
-  // Refresh and reset
+  // Refresh feed
   refreshFeed: () => Promise<void>;
+  
+  // Reset feed
   resetFeed: () => void;
   
   // Offline operations
@@ -63,158 +57,172 @@ interface FeedState {
   clearOffline: () => Promise<void>;
 }
 
-// Create the feed store
-export const useFeedStore = create<FeedState>((set, get) => ({
-  // Initial state
-  posts: [],
-  filteredPosts: [],
-  filters: { 
-    sortBy: 'hot',
-    timeRange: '24h'
-  },
-  displaySettings: {
-    showSocialProof: true,
-    showTrendingBadges: true,
-    infiniteScroll: true,
-    postsPerPage: 20
-  },
-  loading: {
-    initial: false,
-    more: false,
-    refreshing: false
-  },
-  error: null,
-  pagination: {
-    currentPage: 1,
-    totalPages: 1,
-    hasMore: true
-  },
-  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
-  hasOfflineData: false,
+const useFeedStore = create<FeedState & FeedActions>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        posts: [],
+        filteredPosts: [],
+        filters: { 
+          sortBy: FeedSortType.HOT,
+          timeRange: '24h'
+        },
+        displaySettings: {
+          showSocialProof: true,
+          showTrendingBadges: true,
+          infiniteScroll: true,
+          postsPerPage: 20
+        },
+        loading: {
+          initial: false,
+          more: false,
+          refreshing: false
+        },
+        error: null,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          hasMore: true
+        },
+        isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+        hasOfflineData: false,
 
-  // Actions
-  setPosts: (posts) => set({ posts, filteredPosts: posts }),
-  setFilteredPosts: (posts) => set({ filteredPosts: posts }),
-  appendPosts: (newPosts) => set((state) => ({
-    posts: [...state.posts, ...newPosts],
-    filteredPosts: [...state.filteredPosts, ...newPosts]
-  })),
-  updateFilter: (filter) => set((state) => ({
-    filters: { ...state.filters, ...filter }
-  })),
-  updateDisplaySettings: (settings) => set((state) => ({
-    displaySettings: { ...state.displaySettings, ...settings }
-  })),
-  setLoading: (loading) => set((state) => ({
-    loading: { ...state.loading, ...loading }
-  })),
-  setError: (error) => set({ error }),
-  setPagination: (pagination) => set((state) => ({
-    pagination: { ...state.pagination, ...pagination }
-  })),
-  setIsOnline: (isOnline) => set({ isOnline }),
-  setHasOfflineData: (hasOfflineData) => set({ hasOfflineData }),
-  
-  // Optimistic updates
-  optimisticAddPost: (post) => set((state) => ({
-    posts: [post, ...state.posts],
-    filteredPosts: [post, ...state.filteredPosts]
-  })),
-  
-  removeOptimisticPost: (postId) => set((state) => ({
-    posts: state.posts.filter(p => p.id !== postId),
-    filteredPosts: state.filteredPosts.filter(p => p.id !== postId)
-  })),
-  
-  updatePost: (postId, updates) => set((state) => ({
-    posts: state.posts.map(p => 
-      p.id === postId ? { ...p, ...updates } : p
-    ),
-    filteredPosts: state.filteredPosts.map(p => 
-      p.id === postId ? { ...p, ...updates } : p
-    )
-  })),
-  
-  // Refresh feed
-  refreshFeed: async () => {
-    const { setLoading, setError } = get();
-    
-    setLoading({ refreshing: true, initial: true });
-    setError(null);
-    
-    try {
-      // In a real implementation, this would fetch fresh data
-      // For now, we'll just simulate a refresh
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setLoading({ refreshing: false, initial: false });
-    } catch (error) {
-      setError('Failed to refresh feed');
-      setLoading({ refreshing: false, initial: false });
-    }
-  },
-  
-  // Reset feed
-  resetFeed: () => set({
-    posts: [],
-    filteredPosts: [],
-    filters: { 
-      sortBy: 'hot',
-      timeRange: '24h'
-    },
-    loading: {
-      initial: false,
-      more: false,
-      refreshing: false
-    },
-    error: null,
-    pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      hasMore: true
-    }
-  }),
-  
-  // Offline operations
-  saveOffline: async () => {
-    const { posts, filters } = get();
-    const filterKey = JSON.stringify(filters);
-    
-    try {
-      await offlineFeedManager.savePosts(posts, filters, filterKey);
-      set({ hasOfflineData: true });
-    } catch (error) {
-      console.error('Failed to save feed data offline:', error);
-    }
-  },
-  
-  loadOffline: async () => {
-    const { filters } = get();
-    const filterKey = JSON.stringify(filters);
-    
-    try {
-      const offlinePosts = await offlineFeedManager.getCachedPosts(filterKey);
-      if (offlinePosts.length > 0) {
-        set({ 
-          posts: offlinePosts,
-          filteredPosts: offlinePosts,
-          hasOfflineData: true
-        });
+        // Actions
+        setPosts: (posts) => set({ posts, filteredPosts: posts }),
+        setFilteredPosts: (posts) => set({ filteredPosts: posts }),
+        appendPosts: (newPosts) => set((state) => ({
+          posts: [...state.posts, ...newPosts],
+          filteredPosts: [...state.filteredPosts, ...newPosts]
+        })),
+        updateFilter: (filter) => set((state) => ({
+          filters: { ...state.filters, ...filter }
+        })),
+        updateDisplaySettings: (settings) => set((state) => ({
+          displaySettings: { ...state.displaySettings, ...settings }
+        })),
+        setLoading: (loading) => set((state) => ({
+          loading: { ...state.loading, ...loading }
+        })),
+        setError: (error) => set({ error }),
+        setPagination: (pagination) => set((state) => ({
+          pagination: { ...state.pagination, ...pagination }
+        })),
+        setIsOnline: (isOnline) => set({ isOnline }),
+        setHasOfflineData: (hasOfflineData) => set({ hasOfflineData }),
+        
+        // Optimistic updates
+        optimisticAddPost: (post) => set((state) => ({
+          posts: [post, ...state.posts],
+          filteredPosts: [post, ...state.filteredPosts]
+        })),
+        
+        removeOptimisticPost: (postId) => set((state) => ({
+          posts: state.posts.filter(p => p.id !== postId),
+          filteredPosts: state.filteredPosts.filter(p => p.id !== postId)
+        })),
+        
+        updatePost: (postId, updates) => set((state) => ({
+          posts: state.posts.map(p => 
+            p.id === postId ? { ...p, ...updates } : p
+          ),
+          filteredPosts: state.filteredPosts.map(p => 
+            p.id === postId ? { ...p, ...updates } : p
+          )
+        })),
+        
+        // Refresh feed
+        refreshFeed: async () => {
+          const { setLoading, setError } = get();
+          
+          setLoading({ refreshing: true, initial: true });
+          setError(null);
+          
+          try {
+            // In a real implementation, this would fetch fresh data
+            // For now, we'll just simulate a refresh
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            setLoading({ refreshing: false, initial: false });
+          } catch (error) {
+            setError('Failed to refresh feed');
+            setLoading({ refreshing: false, initial: false });
+          }
+        },
+        
+        // Reset feed
+        resetFeed: () => set({
+          posts: [],
+          filteredPosts: [],
+          filters: { 
+            sortBy: FeedSortType.HOT,
+            timeRange: '24h'
+          },
+          loading: {
+            initial: false,
+            more: false,
+            refreshing: false
+          },
+          error: null,
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            hasMore: true
+          }
+        }),
+        
+        // Offline operations
+        saveOffline: async () => {
+          const { posts, filters } = get();
+          const filterKey = JSON.stringify(filters);
+          
+          try {
+            await offlineFeedManager.savePosts(posts, filters, filterKey);
+            set({ hasOfflineData: true });
+          } catch (error) {
+            console.error('Failed to save feed data offline:', error);
+          }
+        },
+        
+        loadOffline: async () => {
+          const { filters } = get();
+          const filterKey = JSON.stringify(filters);
+          
+          try {
+            const offlinePosts = await offlineFeedManager.getCachedPosts(filterKey);
+            if (offlinePosts.length > 0) {
+              set({ 
+                posts: offlinePosts,
+                filteredPosts: offlinePosts,
+                hasOfflineData: true
+              });
+            }
+          } catch (error) {
+            console.error('Failed to load offline feed data:', error);
+          }
+        },
+        
+        clearOffline: async () => {
+          try {
+            await offlineFeedManager.clearAllCache();
+            set({ hasOfflineData: false });
+          } catch (error) {
+            console.error('Failed to clear offline feed data:', error);
+          }
+        }
+      }),
+      {
+        name: 'feed-storage',
+        partialize: (state) => ({ 
+          posts: state.posts,
+          filters: state.filters,
+          displaySettings: state.displaySettings,
+          isOnline: state.isOnline,
+          hasOfflineData: state.hasOfflineData
+        }),
       }
-    } catch (error) {
-      console.error('Failed to load offline feed data:', error);
-    }
-  },
-  
-  clearOffline: async () => {
-    try {
-      await offlineFeedManager.clearAllCache();
-      set({ hasOfflineData: false });
-    } catch (error) {
-      console.error('Failed to clear offline feed data:', error);
-    }
-  }
-}));
+    )
+  )
+);
 
 // Selector hooks for common state slices
 export const useFeedPosts = () => useFeedStore(state => state.posts);
@@ -279,3 +287,5 @@ export const filterPosts = (posts: EnhancedPost[], filters: FeedFilter): Enhance
     return true;
   });
 };
+
+export default useFeedStore;

@@ -18,6 +18,7 @@ import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
+import { useQuery } from '@tanstack/react-query'; // Add React Query import
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -39,24 +40,20 @@ interface NavigationSidebarProps {
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
-const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const { data: profile } = useProfile(address);
-  const { getCommunityUnreadCount } = useNotifications();
-  // Load user's communities on component mount
-  useEffect(() => {
-    const loadUserCommunities = async () => {
-      if (!address) {
-        setLoading(false);
-        return;
-      }
-
+  const { userPreferences, updateUserPreferences, toggleFavoriteCommunity, setSidebarCollapsed } = useNavigation(); // Add user preferences and setSidebarCollapsed
+  
+  // Replace direct service calls with React Query
+  const { 
+    data: communities = [], 
+    isLoading: isCommunitiesLoading, 
+    error 
+  } = useQuery({
+    queryKey: ['userCommunities', address],
+    queryFn: async () => {
+      if (!address) return [];
+      
       try {
-        setLoading(true);
-        setError(null);
-        
         // Get user's memberships with fallback for network errors
         let rawMemberships: CommunityMembership[] = [];
         try {
@@ -86,7 +83,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
           .map((r: any) => r.value) as CommunityModel[];
         
         // Transform to expected format with membership info
-        const communitiesWithMembership = validCommunities.map((community) => ({
+        return validCommunities.map((community) => ({
           id: community.id,
           name: community.name,
           displayName: community.displayName,
@@ -96,21 +93,19 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
           unreadCount: 0, // Would be calculated from notifications
           // keep role info out of the view model for now
         }));
-        
-        setCommunities(communitiesWithMembership);
       } catch (err) {
         console.error('Error loading user communities:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load communities');
-        // Set empty communities on error to prevent UI crashes
-        setCommunities([]);
-      } finally {
-        setLoading(false);
+        // Return empty array on error to prevent UI crashes
+        return [];
       }
-    };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    enabled: !!address, // Only run query when address is available
+  });
 
-    loadUserCommunities();
-  }, [address]);
-
+  const { getCommunityUnreadCount } = useNotifications();
+  
   const { 
     navigationState, 
     navigateToFeed,
@@ -131,7 +126,7 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
     breadcrumbs,
     activityIndicators,
     handleActivityIndicatorClick,
-    isLoading
+    isLoading: isEnhancedNavLoading
   } = useEnhancedNavigation();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -146,6 +141,13 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
       toggleSidebar();
     }
   };
+
+  // Use user preferences for sidebar state
+  useEffect(() => {
+    if (userPreferences.sidebarCollapsed !== navigationState.sidebarCollapsed) {
+      setSidebarCollapsed(userPreferences.sidebarCollapsed);
+    }
+  }, [userPreferences.sidebarCollapsed, navigationState.sidebarCollapsed, setSidebarCollapsed]);
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`} data-tour="navigation">
@@ -387,11 +389,26 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
                       </svg>
                       <span>Create Community</span>
                     </button>
+                    
+                    {/* User Preferences Controls */}
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                        className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   
                   <CommunityIconList
                     communities={enhancedCommunities as any}
                     onCommunitySelect={handleCommunitySelectWithContext}
+                    favoriteCommunities={userPreferences.favoriteCommunities}
+                    onToggleFavorite={toggleFavoriteCommunity}
                   />
 
                   {/* Create Post action moved up from footer to reduce whitespace */}
@@ -431,8 +448,8 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
                 {/* Message notification indicator will be loaded from real data */}
               </Link>
 
-              {/* Collapsed joined communities */}
-              {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 3).map((community: any) => (
+              {/* Collapsed joined communities with favorites */}
+              {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 5).map((community: any) => (
                 <button
                   key={community.id}
                   onClick={() => handleCommunitySelectWithContext(community.id)}
@@ -446,6 +463,9 @@ const [communities, setCommunities] = useState<SidebarCommunity[]>([]);
                   <span className="text-lg">{community.icon || community.avatar}</span>
                   {community.unreadCount && community.unreadCount > 0 && (
                     <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                  )}
+                  {userPreferences.favoriteCommunities.includes(community.id) && (
+                    <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
                   )}
                 </button>
               ))}

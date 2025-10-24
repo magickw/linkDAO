@@ -2,9 +2,8 @@
  * Custom hooks for Governance contract interactions using wagmi
  */
 
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { useCallback, useMemo } from 'react';
-import { parseEther } from 'ethers/lib/utils';
 
 const GOVERNANCE_ADDRESS = (process.env.NEXT_PUBLIC_GOVERNANCE_ADDRESS || 
   '0x27a78A860445DFFD9073aFd7065dd421487c0F8A') as `0x${string}`;
@@ -173,6 +172,7 @@ export function useVotingPower(address: string | undefined) {
  * Hook to vote on a proposal
  */
 export function useVoteOnProposal() {
+  const { address, chain } = useAccount();
   const { data: hash, writeContract, isPending: isWriting, isError, error } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -184,9 +184,11 @@ export function useVoteOnProposal() {
       address: GOVERNANCE_ADDRESS,
       abi: GOVERNANCE_ABI,
       functionName: 'vote',
-      args: [BigInt(proposalId), support]
+      args: [BigInt(proposalId), support],
+      chain,
+      account: address,
     });
-  }, [writeContract]);
+  }, [writeContract, chain, address]);
 
   return {
     vote,
@@ -202,6 +204,7 @@ export function useVoteOnProposal() {
  * Hook to create a new proposal
  */
 export function useCreateProposal() {
+  const { address, chain } = useAccount();
   const { data: hash, writeContract, isPending: isWriting, isError, error } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
@@ -217,9 +220,11 @@ export function useCreateProposal() {
       address: GOVERNANCE_ADDRESS,
       abi: GOVERNANCE_ABI,
       functionName: 'createProposal',
-      args: [description, BigInt(category), executionData as `0x${string}`]
+      args: [description, BigInt(category), executionData as `0x${string}`],
+      chain,
+      account: address,
     });
-  }, [writeContract]);
+  }, [writeContract, chain, address]);
 
   return {
     createProposal,

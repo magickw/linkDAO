@@ -15,8 +15,17 @@ export interface NavigationState {
   };
 }
 
+// Add user preferences interface
+interface UserPreferences {
+  sidebarCollapsed: boolean;
+  autoHide: boolean;
+  favoriteCommunities: string[];
+  quickActions: string[];
+}
+
 interface NavigationContextType {
   navigationState: NavigationState;
+  userPreferences: UserPreferences; // Add user preferences
   setActiveView: (view: 'feed' | 'community') => void;
   setActiveCommunity: (communityId?: string) => void;
   setActivePost: (postId?: string) => void;
@@ -30,6 +39,11 @@ interface NavigationContextType {
   openModal: (modal: keyof NavigationState['modalState']) => void;
   closeModal: (modal: keyof NavigationState['modalState']) => void;
   closeAllModals: () => void;
+  // Add preference methods
+  updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
+  toggleFavoriteCommunity: (communityId: string) => void;
+  addQuickAction: (action: string) => void;
+  removeQuickAction: (action: string) => void;
 }
 
 // Create the context
@@ -38,6 +52,27 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // Provider component
 export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
+  
+  // Load user preferences from localStorage
+  const getDefaultPreferences = (): UserPreferences => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('navigationPreferences');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // Return default preferences if parsing fails
+        }
+      }
+    }
+    return {
+      sidebarCollapsed: false,
+      autoHide: false,
+      favoriteCommunities: [],
+      quickActions: ['createPost', 'discoverCommunities', 'messages'],
+    };
+  };
+
   const [navigationState, setNavigationState] = useState<NavigationState>({
     activeView: 'feed',
     activeCommunity: undefined,
@@ -50,6 +85,15 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       userProfile: false,
     },
   });
+  
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>(getDefaultPreferences());
+
+  // Save user preferences to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('navigationPreferences', JSON.stringify(userPreferences));
+    }
+  }, [userPreferences]);
 
   // Sync navigation state with URL
   useEffect(() => {
@@ -102,7 +146,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         const isMobile = window.innerWidth < 768; // md breakpoint
         setNavigationState(prev => ({
           ...prev,
-          sidebarCollapsed: isMobile,
+          sidebarCollapsed: isMobile || userPreferences.sidebarCollapsed,
           rightSidebarVisible: !isMobile,
         }));
       };
@@ -114,7 +158,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
-  }, []);
+  }, [userPreferences.sidebarCollapsed]);
 
   const setActiveView = (view: 'feed' | 'community') => {
     setNavigationState(prev => ({
@@ -218,10 +262,45 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     }));
   };
 
+  const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
+    setUserPreferences(prev => ({
+      ...prev,
+      ...preferences,
+    }));
+  };
+
+  const toggleFavoriteCommunity = (communityId: string) => {
+    setUserPreferences(prev => {
+      const favorites = prev.favoriteCommunities.includes(communityId)
+        ? prev.favoriteCommunities.filter(id => id !== communityId)
+        : [...prev.favoriteCommunities, communityId];
+      
+      return {
+        ...prev,
+        favoriteCommunities: favorites,
+      };
+    });
+  };
+
+  const addQuickAction = (action: string) => {
+    setUserPreferences(prev => ({
+      ...prev,
+      quickActions: [...prev.quickActions, action],
+    }));
+  };
+
+  const removeQuickAction = (action: string) => {
+    setUserPreferences(prev => ({
+      ...prev,
+      quickActions: prev.quickActions.filter(a => a !== action),
+    }));
+  };
+
   return (
     <NavigationContext.Provider
       value={{
         navigationState,
+        userPreferences,
         setActiveView,
         setActiveCommunity,
         setActivePost,
@@ -235,6 +314,10 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         openModal,
         closeModal,
         closeAllModals,
+        updateUserPreferences,
+        toggleFavoriteCommunity,
+        addQuickAction,
+        removeQuickAction,
       }}
     >
       {children}
