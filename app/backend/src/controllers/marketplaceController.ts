@@ -1,328 +1,506 @@
 import { Request, Response } from 'express';
-import { marketplaceListingsService } from '../services/marketplaceListingsService';
-import { sellerProfileService } from '../services/sellerProfileService';
-import { successResponse, errorResponse, paginatedResponse, notFoundResponse, createPaginationInfo } from '../utils/apiResponse';
+import { ProductService } from '../services/productService';
+import { sellerService } from '../services/sellerService';
+import { databaseService } from '../services/databaseService';
+import { eq } from 'drizzle-orm';
+import * as schema from '../db/schema';
+import { Product, ProductSortOptions } from '../models/Product';
 
-export const marketplaceController = {
+const productService = new ProductService();
+
+export class MarketplaceController {
   /**
    * Get individual product details by ID
-   * GET /api/marketplace/listings/:id
    */
-  async getListingById(req: Request, res: Response): Promise<void> {
+  async getListingById(req: Request, res: Response) {
     try {
       const { id } = req.params;
       
-      const listing = await marketplaceListingsService.getListingById(id);
-      
-      if (!listing) {
-        notFoundResponse(res, 'Product not found');
-        return;
+      // Validate ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_ID',
+            message: 'Product ID is required'
+          }
+        });
       }
 
-      // Transform data to match frontend expectations
-      const transformedListing = {
-        id: listing.id,
-        title: listing.title,
-        description: listing.description,
-        price: {
-          crypto: listing.price,
-          cryptoSymbol: listing.currency || 'ETH',
-          fiat: null, // Will be calculated by frontend or price service
-          fiatSymbol: 'USD'
-        },
-        images: listing.images || [],
-        seller: {
-          id: listing.sellerAddress,
-          address: listing.sellerAddress,
-          name: null, // Will be populated from seller profile if available
-          avatar: null,
+      // Fetch product from database
+      const product = await productService.getProductById(id);
+      
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Product not found'
+          }
+        });
+      }
+
+      // Fetch seller information
+      let sellerProfile = null;
+      try {
+        sellerProfile = await sellerService.getSellerProfile(product.sellerId);
+      } catch (sellerError) {
+        console.warn('Could not fetch seller profile:', sellerError);
+        // Continue without seller profile if there's an error
+      }
+
+      // Prepare response data
+      const responseData = {
+        id: product.id,
+        sellerId: product.sellerId,
+        title: product.title,
+        description: product.description,
+        priceAmount: parseFloat(product.price.amount),
+        priceCurrency: product.price.currency,
+        category: product.category,
+        images: product.images,
+        inventory: product.inventory,
+        status: product.status,
+        tags: product.tags,
+        shipping: product.shipping,
+        nft: product.nft,
+        views: product.views,
+        favorites: product.favorites,
+        listingStatus: product.status,
+        publishedAt: product.createdAt.toISOString(),
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString(),
+        seller: sellerProfile ? {
+          id: sellerProfile.walletAddress,
+          walletAddress: sellerProfile.walletAddress,
+          displayName: sellerProfile.displayName,
+          storeName: sellerProfile.storeName,
+          rating: 4.5, // This would come from actual ratings
+          reputation: sellerProfile.reputation?.overallScore || 0,
+          verified: sellerProfile.reputation?.reputationTier === 'verified' || false,
+          daoApproved: false, // This would come from actual DAO approval status
+          profileImageUrl: sellerProfile.profileImageCdn || '/images/default-avatar.png',
+          isOnline: true
+        } : {
+          id: product.sellerId,
+          walletAddress: product.sellerId,
+          displayName: 'Unknown Seller',
+          storeName: 'Unknown Store',
+          rating: 0,
+          reputation: 0,
           verified: false,
-          reputation: 0
+          daoApproved: false,
+          profileImageUrl: '/images/default-avatar.png',
+          isOnline: false
         },
-        category: listing.category,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
+        trust: {
+          verified: sellerProfile?.reputation?.reputationTier === 'verified' || false,
+          escrowProtected: true, // Default to true for marketplace products
+          onChainCertified: false, // This would come from actual blockchain verification
+          safetyScore: sellerProfile?.reputation?.overallScore || 0
+        },
+        metadata: product.metadata,
+        specifications: product.metadata?.customAttributes || {}
       };
 
-      // Try to get seller profile information
+      // Update view count
       try {
-        const sellerProfile = await sellerProfileService.getProfile(listing.sellerAddress);
-        if (sellerProfile) {
-          transformedListing.seller.name = sellerProfile.displayName || sellerProfile.storeName;
-          transformedListing.seller.avatar = sellerProfile.profilePicture;
-          transformedListing.seller.verified = sellerProfile.isVerified;
-          transformedListing.seller.reputation = sellerProfile.stats?.reputationScore || 0;
-        }
-      } catch (error) {
-        console.warn('Failed to fetch seller profile for listing:', error);
-        // Continue without seller profile data
+        await databaseService.db.update(schema.products)
+          .set({ views: product.views + 1 })
+          .where(eq(schema.products.id, id));
+      } catch (viewError) {
+        console.warn('Could not update view count:', viewError);
       }
 
-      successResponse(res, transformedListing);
+      return res.json({
+        success: true,
+        data: responseData,
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
     } catch (error) {
-      console.error('Error fetching listing:', error);
-      errorResponse(res, 'FETCH_ERROR', 'Failed to fetch product details', 500);
+      console.error('Error fetching product details:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch product details'
+        }
+      });
     }
-  },
+  }
 
   /**
    * Get product listings with filtering and pagination
-   * GET /api/marketplace/listings
    */
-  async getListings(req: Request, res: Response): Promise<void> {
+  async getListings(req: Request, res: Response) {
     try {
-      const { 
-        page = 1, 
-        limit = 20, 
-        category, 
-        minPrice, 
-        maxPrice, 
-        sellerId, 
-        search 
+      const {
+        page = 1,
+        limit = 20,
+        category,
+        minPrice,
+        maxPrice,
+        sellerId,
+        search,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
       } = req.query;
 
-      const pageNum = Number(page);
-      const limitNum = Number(limit);
-      const offset = (pageNum - 1) * limitNum;
+      // Build filters
+      const filters: any = {};
       
-      const filters = {
-        limit: limitNum,
-        offset,
-        category: category as string,
-        sellerAddress: sellerId as string,
-        priceRange: (minPrice || maxPrice) ? {
-          min: minPrice ? String(minPrice) : undefined,
-          max: maxPrice ? String(maxPrice) : undefined
-        } : undefined
+      if (category) filters.categoryId = category;
+      if (minPrice) filters.priceMin = minPrice;
+      if (maxPrice) filters.priceMax = maxPrice;
+      if (sellerId) filters.sellerId = sellerId;
+      if (search) filters.query = search;
+
+      // Build sort options
+      const sortOptions: ProductSortOptions = {
+        field: sortBy as any,
+        direction: sortOrder === 'asc' ? 'asc' : 'desc'
       };
 
-      let result;
-      if (search) {
-        result = await marketplaceListingsService.searchListings(search as string, filters);
-      } else {
-        result = await marketplaceListingsService.getListings(filters);
-      }
+      // Build pagination options
+      const paginationOptions = {
+        page: parseInt(page as string),
+        limit: Math.min(parseInt(limit as string), 100) // Cap at 100 items per page
+      };
 
-      // Transform listings to match frontend expectations
-      const transformedListings = result.listings.map(listing => ({
-        id: listing.id,
-        title: listing.title,
-        description: listing.description,
+      // Search products
+      const searchResult = await productService.searchProducts(
+        filters,
+        sortOptions,
+        paginationOptions
+      );
+
+      // Transform products for response
+      const listings = searchResult.products.map((product: Product) => ({
+        id: product.id,
+        sellerId: product.sellerId,
+        title: product.title,
+        description: product.description,
         price: {
-          amount: listing.price,
-          currency: listing.currency || 'ETH',
-          usdEquivalent: null // Will be calculated by frontend
+          amount: parseFloat(product.price.amount),
+          currency: product.price.currency
         },
-        images: listing.images || [],
-        seller: {
-          id: listing.sellerAddress,
-          address: listing.sellerAddress,
-          name: null, // Could be populated in batch if needed
-          reputation: 0
-        },
-        category: listing.category,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt
+        category: product.category,
+        images: product.images,
+        inventory: product.inventory,
+        status: product.status,
+        tags: product.tags,
+        views: product.views,
+        favorites: product.favorites,
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString()
       }));
 
-      const pagination = createPaginationInfo(pageNum, limitNum, result.total);
-
-      paginatedResponse(res, transformedListings, pagination);
+      return res.json({
+        success: true,
+        data: {
+          listings,
+          pagination: {
+            total: searchResult.total,
+            page: searchResult.page,
+            limit: searchResult.limit,
+            totalPages: searchResult.totalPages
+          }
+        },
+        metadata: {
+          timestamp: new Date().toISOString(),
+          filters: searchResult.filters,
+          sort: searchResult.sort
+        }
+      });
     } catch (error) {
-      console.error('Error fetching listings:', error);
-      errorResponse(res, 'FETCH_ERROR', 'Failed to fetch marketplace listings', 500);
+      console.error('Error fetching product listings:', error);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch product listings'
+        }
+      });
     }
-  },
+  }
 
   /**
-   * Get seller profile information
-   * GET /api/marketplace/sellers/:id
+   * Get seller profile information by ID
    */
-  async getSellerById(req: Request, res: Response): Promise<void> {
+  async getSellerById(req: Request, res: Response) {
     try {
       const { id } = req.params;
       
-      const sellerProfile = await sellerProfileService.getProfile(id);
-      
-      if (!sellerProfile) {
-        notFoundResponse(res, 'Seller not found');
-        return;
+      // Validate ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_ID',
+            message: 'Seller ID is required'
+          }
+        });
       }
 
-      // Transform seller data to match frontend expectations
-      const transformedSeller = {
+      // Fetch seller profile
+      const sellerProfile = await sellerService.getSellerProfile(id);
+      
+      if (!sellerProfile) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Seller not found'
+          }
+        });
+      }
+
+      // Prepare response data
+      const responseData = {
         id: sellerProfile.walletAddress,
-        address: sellerProfile.walletAddress,
+        walletAddress: sellerProfile.walletAddress,
         displayName: sellerProfile.displayName,
         storeName: sellerProfile.storeName,
         bio: sellerProfile.bio,
-        description: sellerProfile.description || sellerProfile.storeDescription,
-        profileImage: sellerProfile.profilePicture,
-        coverImage: sellerProfile.coverImageUrl,
+        description: sellerProfile.description,
+        sellerStory: sellerProfile.sellerStory,
         location: sellerProfile.location,
+        ensHandle: sellerProfile.ensHandle,
+        ensVerified: sellerProfile.ensVerified,
         websiteUrl: sellerProfile.websiteUrl,
-        socialLinks: sellerProfile.socialLinks,
-        isVerified: sellerProfile.isVerified,
-        tier: sellerProfile.tier,
-        stats: {
-          totalSales: sellerProfile.stats?.totalSales || 0,
-          activeListings: sellerProfile.stats?.activeListings || 0,
-          completedOrders: sellerProfile.stats?.completedOrders || 0,
-          averageRating: sellerProfile.stats?.averageRating || 0,
-          totalReviews: sellerProfile.stats?.totalReviews || 0,
-          reputationScore: sellerProfile.stats?.reputationScore || 0,
-          joinDate: sellerProfile.stats?.joinDate || sellerProfile.createdAt,
-          lastActive: sellerProfile.stats?.lastActive || sellerProfile.updatedAt
-        },
-        onboarding: {
-          completed: sellerProfile.onboardingCompleted,
-          steps: sellerProfile.onboardingSteps,
-          completeness: sellerProfile.profileCompleteness
-        },
-        createdAt: sellerProfile.createdAt,
-        updatedAt: sellerProfile.updatedAt
+        twitterHandle: sellerProfile.twitterHandle,
+        discordHandle: sellerProfile.discordHandle,
+        telegramHandle: sellerProfile.telegramHandle,
+        profileImageUrl: sellerProfile.profileImageCdn || '/images/default-avatar.png',
+        coverImageUrl: sellerProfile.coverImageCdn,
+        reputation: sellerProfile.reputation,
+        profileCompleteness: sellerProfile.profileCompleteness,
+        isOnline: (sellerProfile as any)?.isOnline || false,
+        lastSeen: (sellerProfile as any)?.lastSeen,
+        tier: (sellerProfile as any)?.tier,
+        createdAt: (sellerProfile as any)?.createdAt,
+        updatedAt: (sellerProfile as any)?.updatedAt
       };
 
-      successResponse(res, transformedSeller);
+      return res.json({
+        success: true,
+        data: responseData,
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
     } catch (error) {
       console.error('Error fetching seller profile:', error);
-      errorResponse(res, 'FETCH_ERROR', 'Failed to fetch seller profile', 500);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch seller profile'
+        }
+      });
     }
-  },
+  }
 
   /**
-   * Get seller's products
-   * GET /api/marketplace/sellers/:id/listings
+   * Get seller's product listings
    */
-  async getSellerListings(req: Request, res: Response): Promise<void> {
+  async getSellerListings(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { page = 1, limit = 20 } = req.query;
 
-      const pageNum = Number(page);
-      const limitNum = Number(limit);
-      const offset = (pageNum - 1) * limitNum;
+      // Validate ID
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_ID',
+            message: 'Seller ID is required'
+          }
+        });
+      }
 
+      // Build filters
       const filters = {
-        limit: limitNum,
-        offset,
-        sellerAddress: id
+        sellerId: id
       };
 
-      const result = await marketplaceListingsService.getListings(filters);
+      // Build pagination options
+      const paginationOptions = {
+        page: parseInt(page as string),
+        limit: Math.min(parseInt(limit as string), 100) // Cap at 100 items per page
+      };
 
-      // Transform listings to match frontend expectations
-      const transformedListings = result.listings.map(listing => ({
-        id: listing.id,
-        title: listing.title,
-        description: listing.description,
+      // Search products
+      const searchResult = await productService.searchProducts(
+        filters,
+        { field: 'createdAt', direction: 'desc' },
+        paginationOptions
+      );
+
+      // Transform products for response
+      const listings = searchResult.products.map((product: Product) => ({
+        id: product.id,
+        sellerId: product.sellerId,
+        title: product.title,
+        description: product.description,
         price: {
-          amount: listing.price,
-          currency: listing.currency || 'ETH',
-          usdEquivalent: null
+          amount: parseFloat(product.price.amount),
+          currency: product.price.currency
         },
-        images: listing.images || [],
-        category: listing.category,
-        isActive: listing.isActive,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt
+        category: product.category,
+        images: product.images,
+        inventory: product.inventory,
+        status: product.status,
+        tags: product.tags,
+        views: product.views,
+        favorites: product.favorites,
+        createdAt: product.createdAt.toISOString(),
+        updatedAt: product.updatedAt.toISOString()
       }));
 
-      const pagination = createPaginationInfo(pageNum, limitNum, result.total);
-
-      paginatedResponse(res, transformedListings, pagination);
+      return res.json({
+        success: true,
+        data: {
+          listings,
+          pagination: {
+            total: searchResult.total,
+            page: searchResult.page,
+            limit: searchResult.limit,
+            totalPages: searchResult.totalPages
+          }
+        },
+        metadata: {
+          timestamp: new Date().toISOString()
+        }
+      });
     } catch (error) {
       console.error('Error fetching seller listings:', error);
-      errorResponse(res, 'FETCH_ERROR', 'Failed to fetch seller listings', 500);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch seller listings'
+        }
+      });
     }
-  },
+  }
 
   /**
    * Search products and sellers
-   * GET /api/marketplace/search
    */
-  async searchMarketplace(req: Request, res: Response): Promise<void> {
+  async searchMarketplace(req: Request, res: Response) {
     try {
-      const { 
-        q: searchTerm, 
-        type = 'all', 
-        page = 1, 
-        limit = 20, 
-        category, 
-        minPrice, 
-        maxPrice 
-      } = req.query;
+      const { q, type = 'all', page = 1, limit = 20, category, minPrice, maxPrice } = req.query;
 
-      const pageNum = Number(page);
-      const limitNum = Number(limit);
-      const offset = (pageNum - 1) * limitNum;
+      // Validate search query
+      if (!q || (q as string).trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_QUERY',
+            message: 'Search query is required'
+          }
+        });
+      }
 
-      const searchResults: any = {
-        query: searchTerm,
-        type,
-        results: {
-          products: [],
-          sellers: []
-        },
+      const query = q as string;
+      const searchType = type as string;
+      
+      // Build pagination options
+      const paginationOptions = {
+        page: parseInt(page as string),
+        limit: Math.min(parseInt(limit as string), 100) // Cap at 100 items per page
+      };
+
+      let results: any = {
+        products: [],
+        sellers: [],
         pagination: {
-          products: null,
-          sellers: null
+          total: 0,
+          page: paginationOptions.page,
+          limit: paginationOptions.limit,
+          totalPages: 0
         }
       };
 
-      // Search products if type is 'products' or 'all'
-      if (type === 'products' || type === 'all') {
-        try {
-          const filters = {
-            limit: limitNum,
-            offset,
-            category: category as string,
-            priceRange: (minPrice || maxPrice) ? {
-              min: minPrice ? String(minPrice) : undefined,
-              max: maxPrice ? String(maxPrice) : undefined
-            } : undefined
-          };
+      // Search based on type
+      if (searchType === 'products' || searchType === 'all') {
+        // Build filters for products
+        const filters: any = {
+          query: query
+        };
+        
+        if (category) filters.categoryId = category;
+        if (minPrice) filters.priceMin = minPrice;
+        if (maxPrice) filters.priceMax = maxPrice;
 
-          const productResults = await marketplaceListingsService.searchListings(searchTerm as string, filters);
-          
-          searchResults.results.products = productResults.listings.map(listing => ({
-            id: listing.id,
-            title: listing.title,
-            description: listing.description,
-            price: {
-              amount: listing.price,
-              currency: listing.currency || 'ETH'
-            },
-            images: listing.images || [],
-            seller: {
-              id: listing.sellerAddress,
-              address: listing.sellerAddress
-            },
-            category: listing.category,
-            createdAt: listing.createdAt
-          }));
+        // Search products
+        const productSearchResult = await productService.searchProducts(
+          filters,
+          { field: 'relevance', direction: 'desc' },
+          paginationOptions
+        );
 
-          searchResults.pagination.products = createPaginationInfo(pageNum, limitNum, productResults.total);
-        } catch (error) {
-          console.warn('Product search failed:', error);
-          searchResults.results.products = [];
-          searchResults.pagination.products = createPaginationInfo(pageNum, limitNum, 0);
+        results.products = productSearchResult.products.map((product: Product) => ({
+          id: product.id,
+          sellerId: product.sellerId,
+          title: product.title,
+          description: product.description,
+          price: {
+            amount: parseFloat(product.price.amount),
+            currency: product.price.currency
+          },
+          category: product.category,
+          images: product.images,
+          inventory: product.inventory,
+          status: product.status,
+          tags: product.tags,
+          views: product.views,
+          favorites: product.favorites,
+          createdAt: product.createdAt.toISOString(),
+          updatedAt: product.updatedAt.toISOString()
+        }));
+
+        results.pagination = {
+          total: productSearchResult.total,
+          page: productSearchResult.page,
+          limit: productSearchResult.limit,
+          totalPages: productSearchResult.totalPages
+        };
+      }
+
+      // For simplicity, we're not implementing seller search in this example
+      // In a real implementation, you would also search sellers here
+
+      return res.json({
+        success: true,
+        data: results,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          query: query,
+          type: searchType
         }
-      }
-
-      // Search sellers if type is 'sellers' or 'all'
-      if (type === 'sellers' || type === 'all') {
-        // For now, return empty sellers array since we don't have seller search implemented
-        // This can be enhanced later with seller search functionality
-        searchResults.results.sellers = [];
-        searchResults.pagination.sellers = createPaginationInfo(pageNum, limitNum, 0);
-      }
-
-      successResponse(res, searchResults);
+      });
     } catch (error) {
       console.error('Error searching marketplace:', error);
-      errorResponse(res, 'SEARCH_ERROR', 'Failed to search marketplace', 500);
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to search marketplace'
+        }
+      });
     }
   }
-};
+}
+
+// Create a singleton instance
+export const marketplaceController = new MarketplaceController();

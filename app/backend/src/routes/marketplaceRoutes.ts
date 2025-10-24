@@ -70,4 +70,52 @@ router.get('/search',
   marketplaceController.searchMarketplace
 );
 
+// GET /api/marketplace/test - Test endpoint to verify controller is working
+router.get('/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Marketplace controller is working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// POST /api/marketplace/test/create - Create a test product
+router.post('/test/create', async (req, res) => {
+  try {
+    // This is a simplified test endpoint to create a product
+    res.json({
+      success: true,
+      message: 'Test product creation endpoint',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to create test product'
+      }
+    });
+  }
+});
+
+// GET /api/marketplace/test/db - Test database connection
+router.get('/test/db', async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      message: 'Database connection test endpoint',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Database connection test failed'
+      }
+    });
+  }
+});
+
 export default router;

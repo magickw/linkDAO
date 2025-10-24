@@ -17,6 +17,7 @@ import { EnhancedTipButton } from '@/components/Web3PostInteractions/EnhancedTip
 import { OnChainVerificationBadge } from '@/components/OnChainVerification/OnChainVerificationBadge';
 import { ExplorerLinkButton } from '@/components/OnChainVerification/ExplorerLinkButton';
 import { AdvancedSearchInterface } from '@/components/CommunityDiscovery/AdvancedSearchInterface';
+import PostHoverPreview from '@/components/Community/PostHoverPreview';
 
 // Mobile Web3 Components (preserve existing functionality)
 import {
@@ -141,6 +142,9 @@ const CommunitiesPage: React.FC = () => {
   const [timeFilter, setTimeFilter] = useState<'hour' | 'day' | 'week' | 'month' | 'year' | 'all'>('day');
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
   
   // Web3 mobile state
@@ -165,6 +169,11 @@ const CommunitiesPage: React.FC = () => {
   const [stakingData, setStakingData] = useState<Record<string, any>>({});
   const [governanceProposals, setGovernanceProposals] = useState<any[]>([]);
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
+  
+  // Hover preview state with debouncing
+  const [hoveredPost, setHoveredPost] = useState<any>(null);
+  const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
 
   // Load communities and enhanced Web3 data on component mount
@@ -205,29 +214,56 @@ const CommunitiesPage: React.FC = () => {
     loadEnhancedCommunities();
   }, []);
 
-  // Load posts from backend API
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        // Import FeedService dynamically to avoid circular dependencies
-        const { FeedService } = await import('../services/feedService');
-        
-        const response = await FeedService.getEnhancedFeed({
-          sortBy: sortBy,
-          timeRange: timeFilter,
-          feedSource: 'all'
-        }, 1, 20);
-        
-        setPosts(response.posts || []);
-      } catch (error) {
-        console.error('Failed to fetch posts:', error);
-        // On error, show empty array instead of mock data
-        setPosts([]);
+  // Load posts from backend API with pagination
+  const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
+    try {
+      if (pageNum === 1) setLoading(true);
+      else setLoadingMore(true);
+      
+      // Import FeedService dynamically to avoid circular dependencies
+      const { FeedService } = await import('../services/feedService');
+      
+      const response = await FeedService.getEnhancedFeed({
+        sortBy: sortBy,
+        timeRange: timeFilter,
+        feedSource: 'all'
+      }, pageNum, 20);
+      
+      const newPosts = response.posts || [];
+      
+      if (append) {
+        setPosts(prev => [...prev, ...newPosts]);
+      } else {
+        setPosts(newPosts);
       }
-    };
-    
-    fetchPosts();
+      
+      setHasMore(newPosts.length === 20);
+      setPage(pageNum);
+    } catch (error) {
+      console.error('Failed to fetch posts:', error);
+      if (!append) setPosts([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts(1, false);
   }, [sortBy, timeFilter]);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || loadingMore || !hasMore) {
+        return;
+      }
+      fetchPosts(page + 1, true);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [page, loadingMore, hasMore]);
 
   // Load Web3 enhanced data
   const loadWeb3EnhancedData = async (communitiesData: Community[]) => {
@@ -522,6 +558,52 @@ const CommunitiesPage: React.FC = () => {
 
             {/* Enhanced Mobile Posts Feed */}
             <div className="px-4 pb-24 space-y-4">
+              {/* Mobile Loading State */}
+              {loading && (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <div className="h-3 bg-gray-200 rounded w-1/3" />
+                          <div className="h-2 bg-gray-200 rounded w-1/4" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-12 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Mobile Empty State */}
+              {!loading && filteredPosts.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Users className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No posts yet
+                  </h3>
+                  <p className="text-gray-500 mb-6 px-4">
+                    {joinedCommunities.length === 0 
+                      ? "Join communities to see posts"
+                      : "Be the first to post!"
+                    }
+                  </p>
+                  <button
+                    onClick={handleCreatePost}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    Create Post
+                  </button>
+                </div>
+              )}
+
               {filteredPosts.map(post => {
                 const community = communityList.find(c => c.id === post.communityId);
                 const stakingInfo = stakingData[post.communityId];
@@ -566,6 +648,25 @@ const CommunitiesPage: React.FC = () => {
                   />
                 );
               })}
+
+              {/* Mobile Load More */}
+              {loadingMore && (
+                <div className="flex justify-center py-6">
+                  <div className="flex items-center space-x-2 text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                    <span className="text-sm">Loading...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile End of Feed */}
+              {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
+                <div className="text-center py-6">
+                  <p className="text-gray-500 text-sm">
+                    You've reached the end! 🎉
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Mobile Floating Action Button */}
@@ -658,6 +759,63 @@ const CommunitiesPage: React.FC = () => {
                 />
               </div>
 
+              {/* Enhanced Loading State */}
+              {loading && (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                      <div className="flex space-x-3">
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Enhanced Empty State with Error Handling */}
+              {!loading && filteredPosts.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                    <Users className="w-12 h-12 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    {error ? 'Unable to load posts' : 'No posts yet'}
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+                    {error 
+                      ? 'There was an issue loading posts. Please try again.'
+                      : joinedCommunities.length === 0 
+                      ? "Join some communities to see posts in your feed"
+                      : "Be the first to share something with your communities"
+                    }
+                  </p>
+                  {error ? (
+                    <button
+                      onClick={() => {
+                        setError(null);
+                        fetchPosts(1, false);
+                      }}
+                      className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Try Again
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleCreatePost}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Post
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-4">
                 {filteredPosts.map(post => {
                   const community = communityList.find(c => c.id === post.communityId);
@@ -676,7 +834,24 @@ const CommunitiesPage: React.FC = () => {
                     >
                       <div 
                         onClick={() => router.push(`/dao/${community?.name || post.communityId}/posts/${post.id}`)}
-                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors cursor-pointer overflow-hidden"
+                        onMouseEnter={(e) => {
+                          if (hoverTimeout) clearTimeout(hoverTimeout);
+                          const timeout = setTimeout(() => {
+                            setHoveredPost(post);
+                            setHoverPosition({ x: e.clientX, y: e.clientY });
+                          }, 500);
+                          setHoverTimeout(timeout);
+                        }}
+                        onMouseLeave={() => {
+                          if (hoverTimeout) clearTimeout(hoverTimeout);
+                          setHoveredPost(null);
+                        }}
+                        onMouseMove={(e) => {
+                          if (hoveredPost?.id === post.id) {
+                            setHoverPosition({ x: e.clientX, y: e.clientY });
+                          }
+                        }}
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all cursor-pointer overflow-hidden group"
                       >
                         <div className="flex">
                           {/* Enhanced Voting Section */}
@@ -722,47 +897,26 @@ const CommunitiesPage: React.FC = () => {
                           </div>
 
                           <div className="flex-1 p-4">
-                            {/* Enhanced Post Header */}
+                            {/* Simplified Post Header */}
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                                <span className="text-gray-600 dark:text-gray-300">
+                                <span className="text-gray-600 dark:text-gray-300 font-medium">
                                   r/{community?.name || post.communityId}
                                 </span>
                                 <span>•</span>
-                                <span>Posted by u/{post.authorName}</span>
+                                <span>u/{post.authorName}</span>
                                 <span>•</span>
                                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                                {post.isStaked && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="flex items-center space-x-1 text-yellow-600">
-                                      <Coins className="w-3 h-3" />
-                                      <span>{post.stakedTokens} staked</span>
-                                    </span>
-                                  </>
-                                )}
                               </div>
                               
-                              {/* On-Chain Verification Badge */}
+                              {/* Consolidated Web3 Status */}
                               {post.isStaked && (
-                                <OnChainVerificationBadge
-                                  proof={{
-                                    id: `proof-${post.id}`,
-                                    proofType: 'staking_action',
-                                    transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-                                    blockNumber: Math.floor(Math.random() * 1000000),
-                                    contractAddress: '0x1234567890123456789012345678901234567890',
-                                    status: 'verified',
-                                    confirmations: 12,
-                                    requiredConfirmations: 12,
-                                    timestamp: new Date(post.createdAt),
-                                    verified: true,
-                                    verificationSource: 'blockchain',
-                                    fromAddress: post.author
-                                  }}
-                                  size="small"
-                                  onViewTransaction={handleViewTransaction}
-                                />
+                                <div className="flex items-center space-x-1 text-xs">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full" title="On-chain verified" />
+                                  <span className="text-green-600 dark:text-green-400 font-medium">
+                                    {post.stakedTokens} staked
+                                  </span>
+                                </div>
                               )}
                             </div>
 
@@ -774,18 +928,24 @@ const CommunitiesPage: React.FC = () => {
                               {post.content}
                             </p>
 
+                            {/* Simplified Tags - Show only first 3 */}
                             <div className="flex flex-wrap gap-1 mb-3">
-                              {post.tags.map(tag => (
+                              {post.tags.slice(0, 3).map(tag => (
                                 <span
                                   key={tag}
-                                  className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer"
+                                  className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                                 >
                                   #{tag}
                                 </span>
                               ))}
+                              {post.tags.length > 3 && (
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  +{post.tags.length - 3} more
+                                </span>
+                              )}
                             </div>
 
-                            {/* Enhanced Interaction Bar */}
+                            {/* Streamlined Interaction Bar */}
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
                                 <button 
@@ -793,21 +953,8 @@ const CommunitiesPage: React.FC = () => {
                                   className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                                 >
                                   <MessageCircle className="w-4 h-4" />
-                                  <span>{post.commentCount} Comments</span>
+                                  <span>{post.commentCount}</span>
                                 </button>
-                                
-                                {/* Token Reaction System */}
-                                <div onClick={(e) => e.stopPropagation()}>
-                                  <TokenReactionSystem
-                                    postId={post.id}
-                                    initialReactions={[
-                                      { type: 'like', totalAmount: post.upvotes },
-                                      { type: 'tip', totalAmount: Math.floor(Math.random() * 100) }
-                                    ]}
-                                    onReaction={handleTokenReaction}
-                                    showAnalytics={false}
-                                  />
-                                </div>
                                 
                                 <button 
                                   onClick={(e) => e.stopPropagation()}
@@ -816,48 +963,48 @@ const CommunitiesPage: React.FC = () => {
                                   <Share className="w-4 h-4" />
                                   <span>Share</span>
                                 </button>
+                                
                                 <button 
                                   onClick={(e) => e.stopPropagation()}
                                   className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                                 >
                                   <Bookmark className="w-4 h-4" />
-                                  <span>Save</span>
                                 </button>
                               </div>
 
-                              {/* Enhanced Action Buttons */}
-                              <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                                <EnhancedTipButton
-                                  postId={post.id}
-                                  authorAddress={post.author}
-                                  currentTipAmount={Math.floor(Math.random() * 50)}
-                                  userBalance={userBalance}
-                                  onTip={handleTip}
-                                  size="sm"
-                                />
-                                
-                                <BoostButton
-                                  postId={post.id}
-                                  currentStake={post.stakedTokens}
-                                  userBalance={userBalance}
-                                  token={{ 
-                                    symbol: 'LDAO',
-                                    address: '0x1234567890123456789012345678901234567890',
-                                    decimals: 18,
-                                    name: 'LinkDAO Token'
-                                  }}
-                                  onBoost={handleBoost}
-                                  size="sm"
-                                  variant="outline"
-                                />
-                                
-                                {/* Explorer Link Button */}
-                                {post.isStaked && (
-                                  <ExplorerLinkButton
-                                    transactionHash={`0x${Math.random().toString(16).substr(2, 64)}`}
-                                    network="ethereum"
-                                    size="sm"
-                                  />
+                              {/* Consolidated Web3 Actions */}
+                              <div className="flex items-center space-x-1" onClick={(e) => e.stopPropagation()}>
+                                {walletConnected && (
+                                  <div className="relative group">
+                                    <button className="flex items-center space-x-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-full hover:from-blue-600 hover:to-purple-700 transition-all">
+                                      <Coins className="w-3 h-3" />
+                                      <span>Web3</span>
+                                    </button>
+                                    
+                                    {/* Dropdown Menu */}
+                                    <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                      <button
+                                        onClick={() => handleTip(post.id)}
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
+                                      >
+                                        💰 Tip Author
+                                      </button>
+                                      <button
+                                        onClick={() => handleBoost(post.id, 10)}
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      >
+                                        🚀 Boost Post
+                                      </button>
+                                      {post.isStaked && (
+                                        <button
+                                          onClick={() => handleViewTransaction(`0x${Math.random().toString(16).substr(2, 64)}`)}
+                                          className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg"
+                                        >
+                                          🔗 View TX
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -868,6 +1015,25 @@ const CommunitiesPage: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* Load More Indicator */}
+              {loadingMore && (
+                <div className="flex justify-center py-8">
+                  <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+                    <span>Loading more posts...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* End of Feed Indicator */}
+              {!loading && !loadingMore && !hasMore && filteredPosts.length > 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    You've reached the end! 🎉
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Community-Focused Right Sidebar */}
@@ -881,6 +1047,25 @@ const CommunitiesPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Hover Preview */}
+          {hoveredPost && (
+            <PostHoverPreview
+              post={{
+                id: hoveredPost.id,
+                title: hoveredPost.title,
+                content: hoveredPost.content,
+                authorName: hoveredPost.authorName,
+                communityName: communityList.find(c => c.id === hoveredPost.communityId)?.displayName || 'Unknown',
+                upvotes: hoveredPost.upvotes,
+                commentCount: hoveredPost.commentCount,
+                createdAt: hoveredPost.createdAt,
+                tags: hoveredPost.tags
+              }}
+              isVisible={true}
+              position={hoverPosition}
+            />
+          )}
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>

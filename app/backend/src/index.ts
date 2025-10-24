@@ -598,7 +598,13 @@ app.use('/api/admin/report-library', reportTemplateLibraryRoutes);
 
 // Marketplace fallback endpoint is now handled by marketplaceListingsRoutes
 
-// Catch all API routes
+// Error handling middleware (must be last)
+app.use(errorCorrelationMiddleware);
+app.use(enhancedErrorHandler); // Use enhanced error handler as primary
+app.use(globalErrorHandler); // Keep as fallback
+app.use(notFoundHandler);
+
+// Catch all API routes (should be just before error handlers)
 app.use('/api/*', (req, res) => {
   res.json({
     success: true,
@@ -606,12 +612,6 @@ app.use('/api/*', (req, res) => {
     data: null
   });
 });
-
-// Error handling middleware (must be last)
-app.use(errorCorrelationMiddleware);
-app.use(enhancedErrorHandler); // Use enhanced error handler as primary
-app.use(globalErrorHandler); // Keep as fallback
-app.use(notFoundHandler);
 
 // Start server
 httpServer.listen(PORT, () => {
