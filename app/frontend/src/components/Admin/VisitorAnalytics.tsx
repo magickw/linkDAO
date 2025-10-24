@@ -72,6 +72,7 @@ interface VisitorAnalyticsProps {
 export const VisitorAnalytics: React.FC<VisitorAnalyticsProps> = ({ className }) => {
   const [data, setData] = useState<VisitorData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('24h');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);

@@ -14,7 +14,7 @@ import {
   Loader,
   Download,
   FileText,
-  FilePdf,
+
   Filter,
   Bell,
   Settings,
@@ -429,7 +429,7 @@ const EnhancedSupportAnalyticsDashboard: React.FC = () => {
             className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
             title="Export to PDF"
           >
-            <FilePdf className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             <span>PDF</span>
           </button>
 

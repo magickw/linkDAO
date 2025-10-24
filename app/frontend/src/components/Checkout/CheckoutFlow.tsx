@@ -523,7 +523,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 <div className="mt-6 flex justify-center">
                   <Button
                     variant="primary"
-                    size="lg"
+                    size="large"
                     onClick={() => setCurrentStep('payment-details')}
                     className="px-8"
                   >
@@ -605,7 +605,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
             </div>
             <Button
               variant="outline"
-              size="sm"
+              size="small"
               onClick={() => setCurrentStep('payment-method')}
               className="text-white border-white/30 hover:bg-white/10"
             >
