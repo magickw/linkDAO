@@ -286,8 +286,10 @@ import communityRoutes from './routes/communityRoutes';
 import messagingRoutes from './routes/messagingRoutes';
 
 // Import notification preferences routes
-import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
-import mobileRoutes from './routes/mobileRoutes';
+// DISABLED: Heavy routes that load massive dependencies (~200MB)
+// These load Firebase Admin SDK and other heavy packages
+// import notificationPreferencesRoutes from './routes/notificationPreferencesRoutes';
+// import mobileRoutes from './routes/mobileRoutes';
 
 // Import security routes
 import securityRoutes from './routes/securityRoutes';
@@ -317,8 +319,9 @@ app.use('/api/communities', communityRoutes);
 app.use('/api/messaging', messagingRoutes);
 
 // Use notification preferences routes
-app.use('/api/notification-preferences', notificationPreferencesRoutes);
-app.use('/api/mobile', mobileRoutes);
+// DISABLED: Heavy routes (saves ~200MB memory)
+// app.use('/api/notification-preferences', notificationPreferencesRoutes);
+// app.use('/api/mobile', mobileRoutes);
 
 // Import proxy routes
 import proxyRoutes from './routes/proxyRoutes';
