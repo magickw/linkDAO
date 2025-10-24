@@ -30,8 +30,7 @@ export const MobileDisputeResolution: React.FC = () => {
   const filters = [
     { id: 'open', label: 'Open', count: disputes.filter(d => d.status === 'open').length },
     { id: 'investigating', label: 'Investigating', count: disputes.filter(d => d.status === 'investigating').length },
-    { id: 'resolved', label: 'Resolved', count: disputes.filter(d => d.status === 'resolved').length },
-    { id: 'escalated', label: 'Escalated', count: disputes.filter(d => d.status === 'escalated').length }
+    { id: 'resolved', label: 'Resolved', count: disputes.filter(d => d.status === 'resolved').length }
   ];
 
   const handleAction = async (disputeId: string, action: string) => {
@@ -57,7 +56,6 @@ export const MobileDisputeResolution: React.FC = () => {
       case 'open': return 'bg-red-100 text-red-800';
       case 'investigating': return 'bg-yellow-100 text-yellow-800';
       case 'resolved': return 'bg-green-100 text-green-800';
-      case 'escalated': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -136,10 +134,10 @@ export const MobileDisputeResolution: React.FC = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2 mb-1">
                   <div className={`w-2 h-2 rounded-full ${getPriorityColor(dispute.priority || 'medium')}`}></div>
-                  <h3 className="text-white font-medium truncate">{dispute.title}</h3>
+                  <h3 className="text-white font-medium truncate">{dispute.description || `Dispute #${dispute.id}`}</h3>
                 </div>
                 <p className="text-white/70 text-sm">
-                  {dispute.buyer} vs {dispute.seller}
+                  {dispute.buyerId} vs {dispute.sellerId}
                 </p>
               </div>
               <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(dispute.status)}`}>
@@ -170,10 +168,7 @@ export const MobileDisputeResolution: React.FC = () => {
             {/* Messages Indicator */}
             <div className="flex items-center space-x-2 mb-3">
               <MessageSquare className="w-4 h-4 text-white/50" />
-              <span className="text-white/70 text-sm">{dispute.messageCount || 0} messages</span>
-              {dispute.messageCount && dispute.messageCount > 0 && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
+              <span className="text-white/70 text-sm">View details for messages</span>
             </div>
 
             {/* Actions */}

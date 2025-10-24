@@ -257,15 +257,17 @@ export class PerformanceOptimizationIntegration {
         // Implementation would depend on how queries are tracked
       }
 
-      // Add performance headers
-      res.set({
-        'X-Response-Time': `${responseTime.toFixed(2)}ms`,
-        'X-Performance-Optimized': 'true',
-        'X-Optimizations': Object.entries(req.performance?.optimizations || {})
-          .filter(([_, enabled]) => enabled)
-          .map(([name]) => name)
-          .join(',')
-      });
+      // Add performance headers only if headers haven't been sent yet
+      if (!res.headersSent) {
+        res.set({
+          'X-Response-Time': `${responseTime.toFixed(2)}ms`,
+          'X-Performance-Optimized': 'true',
+          'X-Optimizations': Object.entries(req.performance?.optimizations || {})
+            .filter(([_, enabled]) => enabled)
+            .map(([name]) => name)
+            .join(',')
+        });
+      }
     });
   }
 

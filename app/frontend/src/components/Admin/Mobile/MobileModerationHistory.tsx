@@ -184,8 +184,8 @@ export const MobileModerationHistory: React.FC = () => {
                   {getActionIcon(item.action)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-medium">{item.description}</h3>
-                  <p className="text-white/70 text-sm">by {item.adminId}</p>
+                  <h3 className="text-white font-medium">{item.action}</h3>
+                  <p className="text-white/70 text-sm">by {item.adminHandle || item.adminId}</p>
                 </div>
               </div>
               <button className="p-1 text-white/70 hover:text-white">
@@ -201,7 +201,7 @@ export const MobileModerationHistory: React.FC = () => {
 
             <div className="mb-3">
               <p className="text-white/50 text-xs mb-1">Reason</p>
-              <p className="text-white text-sm">{item.metadata?.reason || 'No reason provided'}</p>
+              <p className="text-white text-sm">{item.reason || 'No reason provided'}</p>
             </div>
 
             {/* Timestamp */}
