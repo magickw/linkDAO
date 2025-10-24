@@ -3,16 +3,17 @@ import Layout from '@/components/Layout';
 import { SmartRightSidebar } from '@/components/SmartRightSidebar';
 import CommunityView from '@/components/CommunityView';
 import NavigationSidebar from '@/components/NavigationSidebar';
-import Web3SocialPostCard from '@/components/Web3SocialPostCard';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
-import { useFeed, useCreatePost } from '@/hooks/usePosts';
+import { useCreatePost } from '@/hooks/usePosts';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/context/ToastContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { CreatePostInput } from '@/models/Post';
 import FacebookStylePostComposer from '@/components/FacebookStylePostComposer';
+import PostCreationModal from '@/components/PostCreationModal';
 import BottomSheet from '@/components/BottomSheet';
+import EnhancedFeedView from '@/components/Feed/EnhancedFeedView';
 import Link from 'next/link';
 import { Send, Vote, TrendingUp, Users, MessageCircle, RefreshCw, Award, Video, Mail, Shield, Zap } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -21,17 +22,15 @@ import SupportWidget from '@/components/SupportWidget';
 export default function Home() {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
-  const { feed: feedData, isLoading: isFeedLoading, error: feedError, refetch } = useFeed(address);
-  const { createPost } = useCreatePost();
+  const { createPost, isLoading: isCreatingPost } = useCreatePost();
   const { data: profile } = useProfile(address);
-  const { navigationState } = useNavigation();
+  const { navigationState, openModal, closeModal } = useNavigation();
   
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'for-you' | 'following' | 'hot' | 'new' | 'top' | 'rising'>('for-you');
-  const [isPostLoading, setIsPostLoading] = useState(false);
   const [isWalletSheetOpen, setIsWalletSheetOpen] = useState(false);
   const [hasNewPosts, setHasNewPosts] = useState(false);
   const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
 
   // Initialize WebSocket for real-time updates
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
@@ -56,7 +55,6 @@ export default function Home() {
       const handleFeedUpdate = (data: any) => {
         console.log('New post received:', data);
         setHasNewPosts(true);
-        // Optionally show a toast
         addToast('New posts available', 'info');
       };
 
@@ -68,42 +66,29 @@ export default function Home() {
     }
   }, [wsConnected, address, subscribe, on, off, addToast]);
 
-  // Use real feed data - ensure it's always an array
-  const displayPosts = useMemo(() => {
-    return Array.isArray(feedData) ? feedData : [];
-  }, [feedData]);
-
   // Handle post creation
   const handlePostSubmit = async (postData: CreatePostInput) => {
-    setIsPostLoading(true);
+    if (!isConnected || !address) {
+      addToast('Please connect your wallet to post', 'error');
+      return;
+    }
+
     try {
-      const createdPost = await createPost({ ...postData, author: address || '' });
-      
-      // The feed will automatically update through the useFeed hook
+      await createPost({ ...postData, author: address });
       addToast('Post created successfully!', 'success');
+      closeModal('postCreation');
+      // Refresh feed to show new post
+      setFeedRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error creating post:', error);
       addToast('Failed to create post', 'error');
-    } finally {
-      setIsPostLoading(false);
     }
   };
 
-  // Handle tipping
-  const handleTip = async (postId: string, amount: string, token: string) => {
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to tip', 'error');
-      return;
-    }
-    
-    try {
-      console.log(`Tipping ${amount} ${token} on post ${postId}`);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      addToast(`Successfully tipped ${amount} ${token}!`, 'success');
-    } catch (error) {
-      console.error('Error tipping:', error);
-      addToast('Failed to send tip. Please try again.', 'error');
-    }
+  // Handle feed refresh
+  const handleRefreshFeed = () => {
+    setHasNewPosts(false);
+    setFeedRefreshKey(prev => prev + 1);
   };
 
 
@@ -631,60 +616,24 @@ export default function Home() {
             {/* Center Feed */}
             <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
               <div className="max-w-2xl mx-auto py-6 px-4">
-                {/* Facebook-style Post Composer */}
-                <FacebookStylePostComposer
-                  onSubmit={handlePostSubmit}
-                  isLoading={isPostLoading}
-                  userName={(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                  className="mb-6"
-                />
-
-
-                {/* Feed Tabs */}
-                <div className="flex space-x-1 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow">
+                {/* Post Composer - Quick Create */}
+                <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
                   <button
-                    onClick={() => setActiveTab('for-you')}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
-                      activeTab === 'for-you'
-                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                    }`}
+                    onClick={() => openModal('postCreation')}
+                    className="w-full text-left px-4 py-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors flex items-center space-x-3 text-gray-500 dark:text-gray-400"
                   >
-                    For You
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-medium flex-shrink-0">
+                      {(profile as any)?.handle?.charAt(0).toUpperCase() || address?.slice(2, 3).toUpperCase() || 'U'}
+                    </div>
+                    <span className="flex-1">What's on your mind, {(profile as any)?.handle || `${address?.slice(0, 6)}...${address?.slice(-4)}`}?</span>
                   </button>
-                  <button
-                    onClick={() => setActiveTab('following')}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
-                      activeTab === 'following'
-                        ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                    }`}
-                  >
-                    Following
-                  </button>
-                  {(['hot', 'new', 'top', 'rising'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-full transition ${
-                        activeTab === tab
-                          ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                          : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                      }`}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </button>
-                  ))}
                 </div>
 
                 {/* New Posts Banner - Real-time Update Indicator */}
                 {hasNewPosts && (
                   <div className="mb-4">
                     <button
-                      onClick={() => {
-                        setHasNewPosts(false);
-                        refetch(); // Use proper refetch instead of page reload
-                      }}
+                      onClick={handleRefreshFeed}
                       className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -693,69 +642,16 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Trending tags will be loaded from real data */}
-
-                {/* Feed Content */}
+                {/* Enhanced Feed View with Advanced Features */}
                 {navigationState.activeView === 'community' && navigationState.activeCommunity ? (
                   <CommunityView communityId={navigationState.activeCommunity} />
                 ) : (
-                  <div className="space-y-6">
-                    {isFeedLoading ? (
-                      <div className="space-y-4">
-                        {[0,1,2].map((i) => (
-                          <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 animate-pulse">
-                            <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-                            <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-                            <div className="h-24 w-full bg-gray-200 dark:bg-gray-700 rounded" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : feedError ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-                        <MessageCircle className="mx-auto h-12 w-12 text-red-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to load feed</h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">
-                          {feedError}
-                        </p>
-                        <button
-                          onClick={() => refetch()}
-                          className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors"
-                        >
-                          Try Again
-                        </button>
-                      </div>
-                    ) : displayPosts.length === 0 ? (
-                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-                        <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">👋 Welcome! Start the conversation</h3>
-                        <p className="text-gray-500 dark:text-gray-400">
-                          Your first post will show here. Create your first post above to get started!
-                        </p>
-                      </div>
-                    ) : (
-                      displayPosts.map((post: any) => {
-                        return (
-                          <Web3SocialPostCard
-                            key={post.id}
-                            post={post}
-                            onReaction={async (postId, reactionType, amount) => {
-                              try {
-                                console.log('Reaction:', postId, reactionType, amount);
-                                addToast(`Reacted with ${reactionType}!`, 'success');
-                              } catch (error) {
-                                console.error('Error reacting to post:', error);
-                                addToast('Failed to react to post', 'error');
-                              }
-                            }}
-                            onTip={handleTip}
-                            onExpand={() => {
-                              console.log('Expanding post:', post.id);
-                            }}
-                          />
-                        );
-                      })
-                    )}
-                  </div>
+                  <EnhancedFeedView
+                    key={feedRefreshKey}
+                    communityId={navigationState.activeCommunity}
+                    showCommunityMetrics={false}
+                    className=""
+                  />
                 )}
               </div>
             </div>
@@ -769,6 +665,14 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Post Creation Modal */}
+      <PostCreationModal
+        isOpen={navigationState.modalState.postCreation}
+        onClose={() => closeModal('postCreation')}
+        onSubmit={handlePostSubmit}
+        isLoading={isCreatingPost}
+      />
 
       {/* Support Widget - Floating */}
       <SupportWidget isOpen={isSupportWidgetOpen} onClose={() => setIsSupportWidgetOpen(false)} />

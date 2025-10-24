@@ -205,42 +205,62 @@ export default function EnhancedFeedView({
 
   // Render post card with enhanced features
   const renderPost = useCallback((post: EnhancedPost) => (
-    <div key={post.id} className="mb-6">
+    <div key={post.id} className="mb-4">
       <EnhancedPostCard
         post={post}
         showSocialProof={showSocialProof}
         showTrending={showTrendingBadges}
-        className="transition-all duration-200 hover:shadow-lg"
+        className=""
       />
     </div>
   ), [showSocialProof, showTrendingBadges]);
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Community Metrics */}
+    <div className={`${className}`}>
+      {/* Community Metrics - Only show when explicitly enabled */}
       {showCommunityMetrics && communityId && (
-        <CommunityEngagementMetrics
-          communityId={communityId}
-          timeRange={filter.timeRange}
-        />
+        <div className="mb-4">
+          <CommunityEngagementMetrics
+            communityId={communityId}
+            timeRange={filter.timeRange}
+          />
+        </div>
       )}
 
-      {/* Trending Content Detector */}
-      <TrendingContentDetector
-        posts={posts}
-        onTrendingUpdate={handleTrendingUpdate}
-      />
-
-      {/* Feed Header with Sorting */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 design-card hover-lift">
-        <FeedSortingHeader
-          activeSort={filter.sortBy}
-          activeTimeRange={filter.timeRange || 'day'}
-          onSortChange={handleSortChange}
-          onTimeRangeChange={handleTimeRangeChange}
-          showTimeRange={filter.sortBy !== FeedSortType.NEW}
-          showCounts={false}
+      {/* Trending Content Detector - Hidden, runs in background */}
+      <div className="hidden">
+        <TrendingContentDetector
+          posts={posts}
+          onTrendingUpdate={handleTrendingUpdate}
         />
+      </div>
+
+      {/* Minimal Sorting Tabs - Facebook Style */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
+        <div className="flex items-center justify-center border-b border-gray-200 dark:border-gray-700">
+          {[
+            { value: FeedSortType.HOT, label: '🔥 Hot', desc: 'Trending' },
+            { value: FeedSortType.NEW, label: '🆕 New', desc: 'Latest' },
+            { value: FeedSortType.TOP, label: '⭐ Top', desc: 'Best' },
+            { value: FeedSortType.RISING, label: '📈 Rising', desc: 'Growing' }
+          ].map(option => (
+            <button
+              key={option.value}
+              onClick={() => handleSortChange(option.value)}
+              className={`flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative ${
+                filter.sortBy === option.value
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              }`}
+              title={option.desc}
+            >
+              {option.label}
+              {filter.sortBy === option.value && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600 dark:bg-primary-400" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Error state */}
@@ -269,7 +289,7 @@ export default function EnhancedFeedView({
               {feedPosts.length === 0 && !scrollState.isLoading && !scrollState.error ? (
                 <EmptyFeedState filter={filter} />
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {posts.map(renderPost)}
                 </div>
               )}
@@ -537,7 +557,7 @@ function PaginatedFeed({ filter, postsPerPage, renderPost, onPostsUpdate, conver
   return (
     <div>
       {/* Posts */}
-      <div className="space-y-6 mb-8">
+      <div className="space-y-4 mb-6">
         {posts.map(renderPost)}
       </div>
 

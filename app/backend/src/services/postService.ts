@@ -31,9 +31,11 @@ export class PostService {
     let user = await userProfileService.getProfileByAddress(input.author);
     if (!user) {
       // Create user if they don't exist
+      // Generate a unique handle using wallet address (truncated) and timestamp
+      const uniqueHandle = `user_${input.author.substring(0, 8)}_${Date.now()}`;
       user = await userProfileService.createProfile({
         walletAddress: input.author,
-        handle: '',
+        handle: uniqueHandle,
         ens: '',
         avatarCid: '',
         bioCid: ''

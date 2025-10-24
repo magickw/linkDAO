@@ -30,6 +30,12 @@ import {
 // Enhanced Components
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import VisualPolishIntegration from '@/components/VisualPolish/VisualPolishIntegration';
+import QuickFilterChips from '@/components/Community/QuickFilterChips';
+import EmptyStates from '@/components/Community/EmptyStates';
+import TokenPriceSparkline, { generateMockPriceHistory } from '@/components/Community/TokenPriceSparkline';
+import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPulse';
+import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 import {
   TrendingUp,
@@ -174,6 +180,12 @@ const CommunitiesPage: React.FC = () => {
   const [hoveredPost, setHoveredPost] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Quick filter chips state
+  const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
+  
+  // Keyboard shortcuts state
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
 
   // Load communities and enhanced Web3 data on component mount
@@ -443,6 +455,27 @@ const CommunitiesPage: React.FC = () => {
   const handleNavigate = (path: string) => {
     router.push(path);
   };
+  
+  const handleQuickFilterToggle = (filterId: string) => {
+    setActiveQuickFilters(prev => 
+      prev.includes(filterId) 
+        ? prev.filter(f => f !== filterId)
+        : [...prev, filterId]
+    );
+  };
+  
+  // Keyboard shortcuts integration
+  useKeyboardShortcuts({
+    onScrollDown: () => window.scrollBy({ top: 150, behavior: 'smooth' }),
+    onScrollUp: () => window.scrollBy({ top: -150, behavior: 'smooth' }),
+    onGoToTop: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+    onGoToBottom: () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }),
+    onCreatePost: handleCreatePost,
+    onRefresh: () => fetchPosts(1, false),
+    onShowHelp: () => setShowKeyboardHelp(true),
+    onEscape: () => setShowKeyboardHelp(false),
+    enabled: !isMobile
+  });
 
 
 
@@ -749,6 +782,15 @@ const CommunitiesPage: React.FC = () => {
 
             {/* Enhanced Center Feed */}
             <div className="col-span-12 lg:col-span-6">
+              {/* Quick Filter Chips - Sticky */}
+              <div className="sticky top-20 z-10 bg-white dark:bg-gray-900 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
+                <QuickFilterChips
+                  activeFilters={activeQuickFilters}
+                  onFilterToggle={handleQuickFilterToggle}
+                  className="py-2"
+                />
+              </div>
+              
               {/* Live Post Updates */}
               <div className="mb-6">
                 <LivePostUpdates
@@ -779,41 +821,12 @@ const CommunitiesPage: React.FC = () => {
 
               {/* Enhanced Empty State with Error Handling */}
               {!loading && filteredPosts.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                    <Users className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    {error ? 'Unable to load posts' : 'No posts yet'}
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
-                    {error 
-                      ? 'There was an issue loading posts. Please try again.'
-                      : joinedCommunities.length === 0 
-                      ? "Join some communities to see posts in your feed"
-                      : "Be the first to share something with your communities"
-                    }
-                  </p>
-                  {error ? (
-                    <button
-                      onClick={() => {
-                        setError(null);
-                        fetchPosts(1, false);
-                      }}
-                      className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Try Again
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleCreatePost}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Post
-                    </button>
-                  )}
-                </div>
+                <EmptyStates
+                  type={error ? 'no-posts' : joinedCommunities.length === 0 ? 'not-joined' : activeQuickFilters.length > 0 ? 'no-filter-results' : 'no-posts'}
+                  onAction={error ? () => { setError(null); fetchPosts(1, false); } : handleCreatePost}
+                  actionLabel={error ? 'Try Again' : undefined}
+                  activeFilters={activeQuickFilters}
+                />
               )}
 
               <div className="space-y-4">
@@ -1066,6 +1079,12 @@ const CommunitiesPage: React.FC = () => {
               position={hoverPosition}
             />
           )}
+          
+          {/* Keyboard Shortcuts Modal */}
+          <KeyboardShortcutsModal
+            isOpen={showKeyboardHelp}
+            onClose={() => setShowKeyboardHelp(false)}
+          />
         </Layout>
       </VisualPolishIntegration>
     </ErrorBoundary>
