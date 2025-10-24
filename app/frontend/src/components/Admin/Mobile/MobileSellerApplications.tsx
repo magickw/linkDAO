@@ -28,10 +28,10 @@ export const MobileSellerApplications: React.FC = () => {
   };
 
   const filters = [
-    { id: 'pending', label: 'Pending', count: applications.filter(app => app.applicationStatus === 'pending').length },
-    { id: 'under_review', label: 'Under Review', count: applications.filter(app => app.applicationStatus === 'under_review').length },
-    { id: 'approved', label: 'Approved', count: applications.filter(app => app.applicationStatus === 'approved').length },
-    { id: 'rejected', label: 'Rejected', count: applications.filter(app => app.applicationStatus === 'rejected').length }
+    { id: 'pending', label: 'Pending', count: applications.filter(app => app.status === 'pending').length },
+    { id: 'under_review', label: 'Under Review', count: applications.filter(app => app.status === 'under_review').length },
+    { id: 'approved', label: 'Approved', count: applications.filter(app => app.status === 'approved').length },
+    { id: 'rejected', label: 'Rejected', count: applications.filter(app => app.status === 'rejected').length }
   ];
 
   const handleAction = async (applicationId: string, action: 'approve' | 'reject' | 'review') => {
@@ -47,7 +47,7 @@ export const MobileSellerApplications: React.FC = () => {
           });
           // Update local state
           setApplications(prev => prev.map(app => 
-            app.id === applicationId ? { ...app, applicationStatus: 'approved' } : app
+            app.id === applicationId ? { ...app, status: 'approved' } : app
           ));
           break;
         case 'reject':
@@ -57,7 +57,7 @@ export const MobileSellerApplications: React.FC = () => {
           });
           // Update local state
           setApplications(prev => prev.map(app => 
-            app.id === applicationId ? { ...app, applicationStatus: 'rejected' } : app
+            app.id === applicationId ? { ...app, status: 'rejected' } : app
           ));
           break;
       }
@@ -140,10 +140,10 @@ export const MobileSellerApplications: React.FC = () => {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <h3 className="text-white font-medium">{application.businessName}</h3>
-                <p className="text-white/70 text-sm">by {application.applicantName}</p>
+                <p className="text-white/70 text-sm">by {application.applicantHandle}</p>
               </div>
-              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.applicationStatus)}`}>
-                {application.applicationStatus.replace('_', ' ').toUpperCase()}
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
+                {application.status.replace('_', ' ').toUpperCase()}
               </div>
             </div>
 
@@ -151,7 +151,7 @@ export const MobileSellerApplications: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 mb-3">
               <div>
                 <p className="text-white/50 text-xs">Category</p>
-                <p className="text-white text-sm">{application.businessCategory}</p>
+                <p className="text-white text-sm">{application.businessType}</p>
               </div>
               <div>
                 <p className="text-white/50 text-xs">Submitted</p>
@@ -159,13 +159,13 @@ export const MobileSellerApplications: React.FC = () => {
               </div>
             </div>
 
-            {/* Documents */}
+            {/* Categories */}
             <div className="mb-3">
-              <p className="text-white/50 text-xs mb-2">Documents ({application.requiredDocuments?.length || 0})</p>
+              <p className="text-white/50 text-xs mb-2">Categories ({application.categories?.length || 0})</p>
               <div className="flex flex-wrap gap-2">
-                {application.requiredDocuments?.map((doc, index) => (
+                {application.categories?.map((category, index) => (
                   <span key={index} className="px-2 py-1 bg-white/10 text-white text-xs rounded">
-                    {doc}
+                    {category}
                   </span>
                 ))}
               </div>

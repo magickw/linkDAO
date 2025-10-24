@@ -25,7 +25,7 @@ export interface ApiResponse<T> {
 }
 
 export class EnhancedMarketplaceService {
-  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  private baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
   
   private defaultRetryConfig: RetryConfig = {
     maxRetries: 3,
@@ -208,7 +208,7 @@ export class EnhancedMarketplaceService {
     try {
       const product = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/marketplace/listings/${id}`, {
+          const response = await fetch(`${this.baseURL}/api/marketplace/listings/${id}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -276,7 +276,7 @@ export class EnhancedMarketplaceService {
             });
           }
 
-          const response = await fetch(`${this.baseURL}/marketplace/listings?${queryParams}`, {
+          const response = await fetch(`${this.baseURL}/api/marketplace/listings?${queryParams}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -319,7 +319,7 @@ export class EnhancedMarketplaceService {
     try {
       const seller = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/marketplace/sellers/${sellerId}`, {
+          const response = await fetch(`${this.baseURL}/api/marketplace/sellers/${sellerId}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -389,7 +389,7 @@ export class EnhancedMarketplaceService {
             });
           }
 
-          const response = await fetch(`${this.baseURL}/marketplace/search?${queryParams}`, {
+          const response = await fetch(`${this.baseURL}/api/marketplace/search?${queryParams}`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -429,7 +429,7 @@ export class EnhancedMarketplaceService {
     try {
       const products = await this.retryWithExponentialBackoff(
         async () => {
-          const response = await fetch(`${this.baseURL}/marketplace/listings?featured=true&limit=10`, {
+          const response = await fetch(`${this.baseURL}/api/marketplace/listings?featured=true&limit=10`, {
             headers: {
               'Content-Type': 'application/json',
             },
@@ -469,7 +469,7 @@ export class EnhancedMarketplaceService {
   async healthCheck(): Promise<boolean> {
     try {
       const isHealthy = await Promise.race([
-        fetch(`${this.baseURL}/health`).then(response => response.ok),
+        fetch(`${this.baseURL}/api/health`).then(response => response.ok),
         new Promise<boolean>((_, reject) => 
           setTimeout(() => reject(new Error('Health check timeout')), 5000)
         )
@@ -493,7 +493,7 @@ export class EnhancedMarketplaceService {
 
     try {
       // Preload categories
-      const response = await fetch(`${this.baseURL}/marketplace/categories`);
+      const response = await fetch(`${this.baseURL}/api/marketplace/categories`);
       results.categories = response.ok;
     } catch (error) {
       console.warn('Failed to preload categories:', error);

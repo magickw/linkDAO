@@ -394,6 +394,75 @@ app.get('/marketplace/seller/listings/:address', (req, res) => {
   });
 });
 
+// Marketplace listing by ID endpoint
+app.get('/api/marketplace/listings/:id', (req, res) => {
+  const { id } = req.params;
+  
+  // Mock response for now - in a real implementation, this would fetch from database
+  res.json({
+    success: true,
+    data: {
+      id: id,
+      sellerId: '0x1234567890123456789012345678901234567890',
+      title: 'Sample Product',
+      description: 'This is a sample product description',
+      price: {
+        amount: 0.1,
+        currency: 'ETH'
+      },
+      cryptoPrice: 0.1,
+      cryptoCurrency: 'ETH',
+      category: 'Electronics',
+      images: [
+        'https://placehold.co/600x400',
+        'https://placehold.co/600x400/cccccc',
+        'https://placehold.co/600x400/999999'
+      ],
+      inventory: 10,
+      status: 'active',
+      tags: ['electronics', 'gadget'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      views: 0,
+      favorites: 0,
+      seller: {
+        id: '0x1234567890123456789012345678901234567890',
+        walletAddress: '0x1234567890123456789012345678901234567890',
+        displayName: 'Sample Seller',
+        storeName: 'Sample Store',
+        rating: 4.5,
+        reputation: 95,
+        verified: true,
+        daoApproved: true,
+        profileImageUrl: 'https://placehold.co/100x100',
+        isOnline: true
+      },
+      trust: {
+        verified: true,
+        escrowProtected: true,
+        onChainCertified: true,
+        safetyScore: 98
+      },
+      specifications: {
+        'Brand': 'Sample Brand',
+        'Model': 'XYZ-123',
+        'Color': 'Black',
+        'Weight': '1.5kg'
+      },
+      shipping: {
+        free: true,
+        cost: '0',
+        estimatedDays: '3-5 business days',
+        regions: ['US', 'CA', 'UK', 'DE'],
+        expedited: true
+      }
+    },
+    metadata: {
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
 // Seller notifications endpoint
 app.get('/marketplace/seller/notifications/:address', (req, res) => {
   const { address } = req.params;
