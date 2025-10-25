@@ -119,11 +119,15 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 10000;
 
+// Reduce database pool size for memory-constrained environments
+const maxConnections = process.env.RENDER ? 3 : 20; // Render free tier gets minimal pool
+const minConnections = process.env.RENDER ? 1 : 5;
+
 // Initialize database pool for performance optimization
 const dbPool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,
-  min: 5,
+  max: maxConnections,
+  min: minConnections,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
@@ -629,13 +633,17 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   // Initialize services asynchronously without blocking
   setImmediate(() => {
     initializeServices().then(({ cacheService, cacheWarmingService }) => {
-    // Initialize WebSocket service
-    try {
-      const webSocketService = initializeWebSocket(httpServer);
-      console.log('✅ WebSocket service initialized');
-      console.log(`🔌 WebSocket ready for real-time updates`);
-    } catch (error) {
-      console.warn('⚠️ WebSocket service initialization failed:', error);
+    // MEMORY OPTIMIZATION: Disable WebSocket on Render free tier
+    if (!process.env.RENDER) {
+      try {
+        const webSocketService = initializeWebSocket(httpServer);
+        console.log('✅ WebSocket service initialized');
+        console.log(`🔌 WebSocket ready for real-time updates`);
+      } catch (error) {
+        console.warn('⚠️ WebSocket service initialization failed:', error);
+      }
+    } else {
+      console.log('⚠️ WebSocket disabled on Render to save memory');
     }
 
     // DISABLED: Admin WebSocket service (saves ~30MB memory)
@@ -707,13 +715,17 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     console.log('⚠️ Comprehensive monitoring disabled to save memory');
 
 
-    // Start order event listener
-    try {
-      orderEventListenerService.startListening();
-      console.log('✅ Order event listener started');
-      console.log('🔄 Listening for order events to trigger messaging automation');
-    } catch (error) {
-      console.warn('⚠️ Order event listener failed to start:', error);
+    // MEMORY OPTIMIZATION: Disable order event listener on Render
+    if (!process.env.RENDER) {
+      try {
+        orderEventListenerService.startListening();
+        console.log('✅ Order event listener started');
+        console.log('🔄 Listening for order events to trigger messaging automation');
+      } catch (error) {
+        console.warn('⚠️ Order event listener failed to start:', error);
+      }
+    } else {
+      console.log('⚠️ Order event listener disabled on Render to save memory');
     }
   }).catch((error) => {
     console.error('Failed to initialize services:', error);
