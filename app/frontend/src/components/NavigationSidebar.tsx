@@ -13,7 +13,6 @@ import {
   NavigationBreadcrumbs, 
   ActivityIndicators 
 } from '@/components/Navigation';
-import { GlassPanel } from '@/design-system';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
@@ -153,123 +152,126 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`} data-tour="navigation">
       {/* Enhanced User Profile Section */}
       <div className="px-4 pt-4">
-        <GlassPanel variant="primary" padding={navigationState.sidebarCollapsed ? '0.5rem' : '0.75rem'} className="w-full">
-          {enhancedUser ? (
-            <EnhancedUserCard
-              user={enhancedUser as any}
-              onClick={() => {/* Handle profile click */}}
-            />
-          ) : (
-            /* Fallback to original profile display */
-            !navigationState.sidebarCollapsed ? (
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
+        {/* Use consistent card styling with right sidebar */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            {enhancedUser ? (
+              <EnhancedUserCard
+                user={enhancedUser as any}
+                onClick={() => {/* Handle profile click */}}
+              />
+            ) : (
+              /* Fallback to original profile display */
+              !navigationState.sidebarCollapsed ? (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      {/* XP Progress Ring */}
+                      <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
+                        <circle
+                          cx="24"
+                          cy="24"
+                          r="22"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className="text-gray-200 dark:text-gray-700"
+                        />
+                        <circle
+                          cx="24"
+                          cy="24"
+                          r="22"
+                          fill="none"
+                          stroke="url(#gradient)"
+                          strokeWidth="2"
+                          strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
+                          strokeLinecap="round"
+                          className="transition-all duration-500"
+                          transform="rotate(-90 24 24)"
+                        />
+                        <defs>
+                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
+                            <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
+                        {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                        </p>
+                        {/* Badges will be loaded from real reputation data */}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {/* Balance will be loaded from wallet data */}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* XP Bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span>XP Progress</span>
+                      <span>680 / 1000</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
+                        style={{ width: '68%' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-center">
                   <div className="relative">
-                    {/* XP Progress Ring */}
-                    <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
+                    {/* XP Progress Ring for collapsed state */}
+                    <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
                       <circle
-                        cx="24"
-                        cy="24"
-                        r="22"
+                        cx="20"
+                        cy="20"
+                        r="18"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
                         className="text-gray-200 dark:text-gray-700"
                       />
                       <circle
-                        cx="24"
-                        cy="24"
-                        r="22"
+                        cx="20"
+                        cy="20"
+                        r="18"
                         fill="none"
-                        stroke="url(#gradient)"
+                        stroke="url(#gradient-collapsed)"
                         strokeWidth="2"
-                        strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
+                        strokeDasharray={`${(68 / 100) * 113} 113`}
                         strokeLinecap="round"
                         className="transition-all duration-500"
-                        transform="rotate(-90 24 24)"
+                        transform="rotate(-90 20 20)"
                       />
                       <defs>
-                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
                           <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
                           <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
                         </linearGradient>
                       </defs>
                     </svg>
-                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
+                    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                       {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                      </p>
-                      {/* Badges will be loaded from real reputation data */}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {/* Balance will be loaded from wallet data */}
-                      </p>
-                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                   </div>
                 </div>
-                {/* XP Bar */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>XP Progress</span>
-                    <span>680 / 1000</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
-                      style={{ width: '68%' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="relative">
-                  {/* XP Progress Ring for collapsed state */}
-                  <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="18"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-gray-200 dark:text-gray-700"
-                    />
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="18"
-                      fill="none"
-                      stroke="url(#gradient-collapsed)"
-                      strokeWidth="2"
-                      strokeDasharray={`${(68 / 100) * 113} 113`}
-                      strokeLinecap="round"
-                      className="transition-all duration-500"
-                      transform="rotate(-90 20 20)"
-                    />
-                    <defs>
-                      <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
-                        <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                    {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                </div>
-              </div>
-            )
-          )}
-        </GlassPanel>
+              )
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Navigation Breadcrumbs */}
@@ -291,13 +293,18 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         </div>
       )}
 
-      {/* Main Navigation */}
-      <div className="flex-1 overflow-y-auto">
-        <nav className="p-4 space-y-1">
-          {!navigationState.sidebarCollapsed ? (
-            <>
-              {/* Quick Filters Panel */}
-              <GlassPanel variant="secondary" padding={'0.5rem'} className="mb-3">
+      {/* Main Navigation - Individual cards like right sidebar */}
+      <div className={`flex-1 overflow-y-auto p-4 ${!navigationState.sidebarCollapsed ? 'space-y-4' : ''}`}>
+        {!navigationState.sidebarCollapsed ? (
+          <>
+            {/* Quick Filters Panel Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                  Quick Filters
+                </div>
+              </div>
+              <div className="p-2">
                 <QuickFilterPanel 
                   activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
                   onFilterChange={(filters) => {
@@ -309,16 +316,20 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   }}
                   className="space-y-1"
                 />
-              </GlassPanel>
+              </div>
+            </div>
 
-
-              {/* Card: Navigation */}
-              <GlassPanel variant="secondary" padding={'0.5rem'}>
-                {/* Navigation Header */}
+            {/* Navigation Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              {/* Navigation Header */}
+              <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 px-1">
                   Navigation
                 </div>
+              </div>
 
+              {/* Navigation Items */}
+              <div className="p-2 space-y-1">
                 {/* Search */}
                 <Link
                   href="/search"
@@ -375,129 +386,130 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   </svg>
                   <span>Marketplace</span>
                 </Link>
-
-                {/* Enhanced Communities Section */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <button
-                      onClick={() => setShowCreateModal(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full shadow-sm border border-white/20 dark:border-white/10 hover:from-primary-600 hover:to-secondary-600 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-primary-400/50 transition-all"
-                      title="Create Community"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      <span>Create Community</span>
-                    </button>
-                    
-                    {/* User Preferences Controls */}
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
-                        className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                        title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <CommunityIconList
-                    communities={enhancedCommunities as any}
-                    onCommunitySelect={handleCommunitySelectWithContext}
-                    favoriteCommunities={userPreferences.favoriteCommunities}
-                    onToggleFavorite={toggleFavoriteCommunity}
-                  />
-
-                  {/* Create Post action moved up from footer to reduce whitespace */}
-                  <div className="mt-4">
-                    <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Create Post
-                    </button>
-                  </div>
-                </div>
-              </GlassPanel>
-            </>
-          ) : (
-            /* Collapsed Navigation */
-            <div className="space-y-2">
-
-              <Link
-                href="/dao"
-                className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
-                title="Communities"
-              >
-                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </Link>
-              
-              <Link
-                href="/messaging"
-                className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
-                title="Messages"
-              >
-                <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-                {/* Message notification indicator will be loaded from real data */}
-              </Link>
-
-              {/* Collapsed joined communities with favorites */}
-              {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 5).map((community: any) => (
-                <button
-                  key={community.id}
-                  onClick={() => handleCommunitySelectWithContext(community.id)}
-                  className={`w-full p-2 rounded-lg transition-colors relative ${
-                    navigationState.activeCommunity === community.id
-                      ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
-                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
-                  }`}
-                  title={community.displayName}
-                >
-                  <span className="text-lg">{community.icon || community.avatar}</span>
-                  {community.unreadCount && community.unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
-                  )}
-                  {userPreferences.favoriteCommunities.includes(community.id) && (
-                    <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
-                  )}
-                </button>
-              ))}
-              
-              {/* Activity Indicators in Collapsed Mode */}
-              {activityIndicators.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex flex-col space-y-1">
-                    {activityIndicators.slice(0, 2).map((indicator) => (
-                      <button
-                        key={indicator.id}
-                        onClick={() => handleActivityIndicatorClick(indicator)}
-                        className="w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
-                        title={`${indicator.type} - ${indicator.count} items`}
-                      >
-                        <span className="text-lg">
-                          {indicator.type === 'notification' && '🔔'}
-                          {indicator.type === 'transaction' && '💰'}
-                          {indicator.type === 'community' && '👥'}
-                          {indicator.type === 'governance' && '🗳️'}
-                        </span>
-                        {indicator.count > 0 && (
-                          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
-          )}
-        </nav>
+
+            {/* Enhanced Communities Section Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full shadow-sm border border-white/20 dark:border-white/10 hover:from-primary-600 hover:to-secondary-600 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-primary-400/50 transition-all"
+                    title="Create Community"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Create Community</span>
+                  </button>
+                  
+                  {/* User Preferences Controls */}
+                  <div className="flex space-x-1">
+                    <button
+                      onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                      title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <CommunityIconList
+                  communities={enhancedCommunities as any}
+                  onCommunitySelect={handleCommunitySelectWithContext}
+                  favoriteCommunities={userPreferences.favoriteCommunities}
+                  onToggleFavorite={toggleFavoriteCommunity}
+                />
+
+                {/* Create Post action moved up from footer to reduce whitespace */}
+                <div className="mt-4">
+                  <button className="w-full flex items-center justify-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg transition-colors">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Post
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Collapsed Navigation */
+          <div className="space-y-2 p-2">
+            <Link
+              href="/dao"
+              className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+              title="Communities"
+            >
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </Link>
+            
+            <Link
+              href="/messaging"
+              className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
+              title="Messages"
+            >
+              <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              {/* Message notification indicator will be loaded from real data */}
+            </Link>
+
+            {/* Collapsed joined communities with favorites */}
+            {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 5).map((community: any) => (
+              <button
+                key={community.id}
+                onClick={() => handleCommunitySelectWithContext(community.id)}
+                className={`w-full p-2 rounded-lg transition-colors relative ${
+                  navigationState.activeCommunity === community.id
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
+                }`}
+                title={community.displayName}
+              >
+                <span className="text-lg">{community.icon || community.avatar}</span>
+                {community.unreadCount && community.unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary-500 rounded-full"></span>
+                )}
+                {userPreferences.favoriteCommunities.includes(community.id) && (
+                  <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full"></span>
+                )}
+              </button>
+            ))}
+            
+            {/* Activity Indicators in Collapsed Mode */}
+            {activityIndicators.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-col space-y-1">
+                  {activityIndicators.slice(0, 2).map((indicator) => (
+                    <button
+                      key={indicator.id}
+                      onClick={() => handleActivityIndicatorClick(indicator)}
+                      className="w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
+                      title={`${indicator.type} - ${indicator.count} items`}
+                    >
+                      <span className="text-lg">
+                        {indicator.type === 'notification' && '🔔'}
+                        {indicator.type === 'transaction' && '💰'}
+                        {indicator.type === 'community' && '👥'}
+                        {indicator.type === 'governance' && '🗳️'}
+                      </span>
+                      {indicator.count > 0 && (
+                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
 

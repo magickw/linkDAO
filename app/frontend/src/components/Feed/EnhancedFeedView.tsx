@@ -10,6 +10,8 @@ import EnhancedPostCard from '../EnhancedPostCard/EnhancedPostCard';
 import { useToast } from '@/context/ToastContext';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { analyticsService } from '@/services/analyticsService';
+import FeedErrorBoundary from './FeedErrorBoundary';
+import { FeedSkeleton } from '@/components/animations/LoadingSkeletons';
 
 interface EnhancedPost {
   id: string;
@@ -229,6 +231,9 @@ const EnhancedFeedView = React.memo(({
       filter: filter,
       communityId: communityId
     });
+    
+    // Log to console for debugging
+    console.error('Feed error:', error);
   }, [addToast, filter, communityId]);
 
   // Enhanced retry function with analytics
@@ -241,6 +246,9 @@ const EnhancedFeedView = React.memo(({
       communityId: communityId,
       timestamp: new Date()
     });
+    
+    // Log retry attempt
+    console.log('Feed retry attempt', { filter, communityId });
   }, [filter, communityId]);
 
   // Render post card with enhanced features
@@ -387,29 +395,31 @@ const EnhancedFeedView = React.memo(({
   }, [infiniteScroll, filter, refreshKey, handlePostsLoad, postsPerPage, handleError, isMobile, posts, renderPost, convertFeedPostToCardPost]);
 
   return (
-    <div className={`${className}`}>
-      {/* Community Metrics - Only show when explicitly enabled */}
-      {communityMetrics}
+    <FeedErrorBoundary>
+      <div className={`${className}`}>
+        {/* Community Metrics - Only show when explicitly enabled */}
+        {communityMetrics}
 
-      {/* Trending Content Detector - Hidden, runs in background */}
-      {trendingDetector}
+        {/* Trending Content Detector - Hidden, runs in background */}
+        {trendingDetector}
 
-      {/* Minimal Sorting Tabs - Facebook Style */}
-      {sortingHeader}
+        {/* Minimal Sorting Tabs - Facebook Style */}
+        {sortingHeader}
 
-      {/* Error state */}
-      {errorState}
+        {/* Error state */}
+        {errorState}
 
-      {/* Feed Content */}
-      {feedContent}
+        {/* Feed Content */}
+        {feedContent}
 
-      {/* Liked By Modal */}
-      <LikedByModal
-        postId={likedByModal.postId}
-        isOpen={likedByModal.isOpen}
-        onClose={handleCloseLikedBy}
-      />
-    </div>
+        {/* Liked By Modal */}
+        <LikedByModal
+          postId={likedByModal.postId}
+          isOpen={likedByModal.isOpen}
+          onClose={handleCloseLikedBy}
+        />
+      </div>
+    </FeedErrorBoundary>
   );
 });
 
@@ -472,28 +482,7 @@ function EmptyFeedState({ filter }: EmptyFeedStateProps) {
 function FeedLoadingState() {
   return (
     <div className="space-y-6">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="animate-pulse">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full" />
-              <div className="flex-1">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-2" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/6" />
-              </div>
-            </div>
-            <div className="space-y-2 mb-4">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-16" />
-            </div>
-          </div>
-        </div>
-      ))}
+      <FeedSkeleton count={3} />
     </div>
   );
 }
