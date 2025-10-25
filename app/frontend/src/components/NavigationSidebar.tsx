@@ -162,73 +162,91 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     user={enhancedUser as any}
                     onClick={() => {/* Handle profile click */}}
                   />
-                ) : (
-                  /* Fallback to original profile display */
+                ) : address ? (
+                  /* Display connected wallet profile */
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <div className="relative">
-                        {/* XP Progress Ring */}
-                        <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
-                          <circle
-                            cx="24"
-                            cy="24"
-                            r="22"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            className="text-gray-200 dark:text-gray-700"
-                          />
-                          <circle
-                            cx="24"
-                            cy="24"
-                            r="22"
-                            fill="none"
-                            stroke="url(#gradient)"
-                            strokeWidth="2"
-                            strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
-                            strokeLinecap="round"
-                            className="transition-all duration-500"
-                            transform="rotate(-90 24 24)"
-                          />
-                          <defs>
-                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
-                              <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                          {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                        {/* Avatar with gradient background */}
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
+                          {(profile as any)?.handle
+                            ? (profile as any).handle.charAt(0).toUpperCase()
+                            : (profile as any)?.ens
+                            ? (profile as any).ens.charAt(0).toUpperCase()
+                            : address.slice(2, 4).toUpperCase()}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+                        {/* Online status indicator */}
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                       </div>
                       <div className="flex-1 min-w-0">
+                        {/* Handle or ENS name */}
                         <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            {(profile as any)?.handle || (profile as any)?.ens || `User ${address.slice(2, 6)}`}
                           </p>
-                          {/* Badges will be loaded from real reputation data */}
+                          {(profile as any)?.verified && (
+                            <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                          )}
                         </div>
+                        {/* Wallet address */}
                         <div className="flex items-center space-x-2">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {/* Balance will be loaded from wallet data */}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">
+                            {address.slice(0, 6)}...{address.slice(-4)}
                           </p>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(address);
+                            }}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            title="Copy address"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
-                    {/* XP Bar */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>XP Progress</span>
-                        <span>680 / 1000</span>
+
+                    {/* Reputation & Stats */}
+                    {(profile as any)?.reputationScore && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500 dark:text-gray-400">Reputation</span>
+                          <div className="flex items-center space-x-1">
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {(profile as any).reputationScore}
+                            </span>
+                            {(profile as any)?.reputationTier && (
+                              <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full text-xs font-medium">
+                                {(profile as any).reputationTier}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Reputation progress bar */}
+                        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(((profile as any).reputationScore % 1000) / 10, 100)}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
-                          style={{ width: '68%' }}
-                        />
-                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Not connected */
+                  <div className="text-center py-4">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
                     </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      Connect your wallet
+                    </p>
                   </div>
                 )}
               </div>
@@ -433,42 +451,26 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             {/* Collapsed User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-3 flex justify-center">
-                <div className="relative">
-                  {/* XP Progress Ring for collapsed state */}
-                  <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="18"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="text-gray-200 dark:text-gray-700"
-                    />
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="18"
-                      fill="none"
-                      stroke="url(#gradient-collapsed)"
-                      strokeWidth="2"
-                      strokeDasharray={`${(68 / 100) * 113} 113`}
-                      strokeLinecap="round"
-                      className="transition-all duration-500"
-                      transform="rotate(-90 20 20)"
-                    />
-                    <defs>
-                      <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
-                        <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                    {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                {address ? (
+                  <div className="relative">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold shadow-lg">
+                      {(profile as any)?.handle
+                        ? (profile as any).handle.charAt(0).toUpperCase()
+                        : (profile as any)?.ens
+                        ? (profile as any).ens.charAt(0).toUpperCase()
+                        : address.slice(2, 4).toUpperCase()}
+                    </div>
+                    {/* Online status indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                </div>
+                ) : (
+                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
               </div>
             </div>
 
