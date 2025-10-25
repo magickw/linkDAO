@@ -670,12 +670,15 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
   const data = event.notification.data;
-  let url = '/dashboard';
+  let url = '/communities';
   
-  if (data.postId) {
-    url = `/dashboard/post/${data.postId}`;
+  if (data.postId && data.communityId) {
+    url = `/dao/${data.communityId}?post=${data.postId}`;
   } else if (data.communityId) {
-    url = `/dashboard/community/${data.communityId}`;
+    url = `/dao/${data.communityId}`;
+  } else if (data.postId) {
+    // Fallback - try to find a community context or go to communities page
+    url = '/communities';
   }
   
   event.waitUntil(

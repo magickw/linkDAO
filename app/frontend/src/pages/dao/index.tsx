@@ -146,7 +146,7 @@ export default function CommunitiesPage() {
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {communities.filter(c => c.token).length}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tokenized DAOs</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Tokenized LDAOs</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -168,7 +168,7 @@ export default function CommunitiesPage() {
             {filteredCommunities.map((community) => (
               <Link 
                 key={community.id} 
-                href={isConnected ? `/dashboard/community/${community.id}` : `/dao/${community.id}`}
+                href={`/dao/${community.id}`}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
               >
                 <div className={`h-20 bg-gradient-to-r ${community.bannerColor}`}></div>

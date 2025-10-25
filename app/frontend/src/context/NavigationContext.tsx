@@ -109,10 +109,10 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
           activeCommunity: typeof community === 'string' ? community : undefined,
           activePost: typeof post === 'string' ? post : undefined,
         }));
-      } else if (pathname.startsWith('/dashboard/community/')) {
+      } else if (pathname.startsWith('/dao/')) {
         // Extract community ID from path
         const pathParts = pathname.split('/');
-        const communityId = pathParts[3];
+        const communityId = pathParts[2];
         const { post } = query;
         
         setNavigationState(prev => ({
@@ -120,18 +120,6 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
           activeView: 'community',
           activeCommunity: communityId,
           activePost: typeof post === 'string' ? post : undefined,
-        }));
-      } else if (pathname.startsWith('/dashboard/post/')) {
-        // Extract post ID from path
-        const pathParts = pathname.split('/');
-        const postId = pathParts[3];
-        const { community } = query;
-        
-        setNavigationState(prev => ({
-          ...prev,
-          activeView: typeof community === 'string' ? 'community' : 'feed',
-          activeCommunity: typeof community === 'string' ? community : undefined,
-          activePost: postId,
         }));
       }
     };
@@ -197,9 +185,11 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   const navigateToPost = (postId: string, communityId?: string) => {
     if (communityId) {
-      router.push(`/dashboard/community/${communityId}?post=${postId}`, undefined, { shallow: true });
+      router.push(`/dao/${communityId}?post=${postId}`, undefined, { shallow: true });
     } else {
-      router.push(`/dashboard/post/${postId}`, undefined, { shallow: true });
+      // If no community ID, we can't navigate to a specific post without context
+      // This would be an error case in the new routing structure
+      console.warn('Cannot navigate to post without community context');
     }
   };
 
