@@ -105,78 +105,92 @@ export const EnhancedLeftSidebar: React.FC<EnhancedLeftSidebarProps> = ({
   }, [onQuickAction]);
 
   return (
-    <div className="enhanced-left-sidebar w-80 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-      {/* Header with Create Community Button */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Communities
-          </h2>
-          
-          {/* Governance Notifications Bell */}
-          {totalNotifications > 0 && (
-            <div className="relative">
-              <GovernanceNotificationBadge
-                count={totalNotifications}
-                type={urgentNotifications > 0 ? 'urgent' : 'pending'}
-                size="md"
-                onClick={handleGovernanceNotificationClick}
-              />
+    <>
+      {/* All cards at the same level with consistent spacing - matching right sidebar pattern */}
+      <div className="space-y-4">
+        {/* Header Card with Create Community Button */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Communities
+              </h2>
+
+              {/* Governance Notifications Bell */}
+              {totalNotifications > 0 && (
+                <div className="relative">
+                  <GovernanceNotificationBadge
+                    count={totalNotifications}
+                    type={urgentNotifications > 0 ? 'urgent' : 'pending'}
+                    size="md"
+                    onClick={handleGovernanceNotificationClick}
+                  />
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Create Community Button */}
+            <button
+              onClick={handleCreateCommunityClick}
+              className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600
+                       text-white font-medium rounded-lg transition-colors duration-200
+                       focus:outline-none focus:ring-2 focus:ring-primary-400/50
+                       shadow-sm hover:shadow-md"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Community
+            </button>
+          </div>
         </div>
 
-        {/* Create Community Button */}
-        <button
-          onClick={handleCreateCommunityClick}
-          className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 
-                   text-white font-medium rounded-lg transition-colors duration-200 
-                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                   shadow-sm hover:shadow-md"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Create Community
-        </button>
-      </div>
+        {/* Community Search Card */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            <CommunitySearchBar
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              placeholder="Search communities..."
+            />
+          </div>
+        </div>
 
-      {/* Community Search */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <CommunitySearchBar
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          placeholder="Search communities..."
-        />
-      </div>
+        {/* Quick Navigation Panel Card */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            <QuickNavigationPanel
+              communities={communities as any}
+              onCommunitySelect={onCommunitySelect}
+              onQuickAction={onQuickAction}
+            />
+          </div>
+        </div>
 
-      {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="space-y-4 p-4">
-          {/* Quick Navigation Panel */}
-          <QuickNavigationPanel
-            communities={communities as any}
-            onCommunitySelect={onCommunitySelect}
-            onQuickAction={onQuickAction}
-          />
+        {/* Multi-Select Filters Card */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            <MultiSelectFilters
+              availableFilters={availableFilters}
+              selectedFilters={selectedFilters}
+              onFiltersChange={onFiltersChange}
+              allowCombinations={true}
+            />
+          </div>
+        </div>
 
-          {/* Multi-Select Filters */}
-          <MultiSelectFilters
-            availableFilters={availableFilters}
-            selectedFilters={selectedFilters}
-            onFiltersChange={onFiltersChange}
-            allowCombinations={true}
-          />
-
-          {/* Community Icon List with Web3 Features */}
-          <CommunityIconList
-            communities={communities}
-            selectedCommunity={selectedCommunity}
-            userRoles={userRoles}
-            tokenBalances={tokenBalances}
-            searchQuery={searchQuery}
-            onCommunitySelect={onCommunitySelect}
-            showBadges={true}
-            showWeb3Features={true}
-          />
+        {/* Community Icon List Card with Web3 Features */}
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-4">
+            <CommunityIconList
+              communities={communities}
+              selectedCommunity={selectedCommunity}
+              userRoles={userRoles}
+              tokenBalances={tokenBalances}
+              searchQuery={searchQuery}
+              onCommunitySelect={onCommunitySelect}
+              showBadges={true}
+              showWeb3Features={true}
+            />
+          </div>
         </div>
       </div>
 
@@ -187,7 +201,7 @@ export const EnhancedLeftSidebar: React.FC<EnhancedLeftSidebarProps> = ({
         onSubmit={handleCreateCommunitySubmit}
         isLoading={isCreatingCommunity}
       />
-    </div>
+    </>
   );
 };
 

@@ -6,12 +6,11 @@ import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
-import { 
-  QuickFilterPanel, 
-  CommunityIconList, 
-  EnhancedUserCard, 
-  NavigationBreadcrumbs, 
-  ActivityIndicators 
+import {
+  CommunityIconList,
+  EnhancedUserCard,
+  NavigationBreadcrumbs,
+  ActivityIndicators
 } from '@/components/Navigation';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
@@ -114,18 +113,12 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
   // Enhanced navigation hook
   const {
-    quickFilters,
-    handleFilterChange,
     communities: enhancedCommunities,
-    showAllCommunities,
-    toggleShowAllCommunities,
     handleCommunitySelect,
-    handleCommunityToggle,
     enhancedUser,
     breadcrumbs,
     activityIndicators,
-    handleActivityIndicatorClick,
-    isLoading: isEnhancedNavLoading
+    handleActivityIndicatorClick
   } = useEnhancedNavigation();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -149,131 +142,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
   }, [userPreferences.sidebarCollapsed, navigationState.sidebarCollapsed, setSidebarCollapsed]);
 
   return (
-    <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`} data-tour="navigation">
-      {/* Enhanced User Profile Section */}
-      <div className="px-4 pt-4">
-        {/* Use consistent card styling with right sidebar */}
-        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-          <div className="p-4">
-            {enhancedUser ? (
-              <EnhancedUserCard
-                user={enhancedUser as any}
-                onClick={() => {/* Handle profile click */}}
-              />
-            ) : (
-              /* Fallback to original profile display */
-              !navigationState.sidebarCollapsed ? (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      {/* XP Progress Ring */}
-                      <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="22"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className="text-gray-200 dark:text-gray-700"
-                        />
-                        <circle
-                          cx="24"
-                          cy="24"
-                          r="22"
-                          fill="none"
-                          stroke="url(#gradient)"
-                          strokeWidth="2"
-                          strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
-                          strokeLinecap="round"
-                          className="transition-all duration-500"
-                          transform="rotate(-90 24 24)"
-                        />
-                        <defs>
-                          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
-                            <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
-                        {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                      </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
-                        </p>
-                        {/* Badges will be loaded from real reputation data */}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {/* Balance will be loaded from wallet data */}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* XP Bar */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                      <span>XP Progress</span>
-                      <span>680 / 1000</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
-                        style={{ width: '68%' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  <div className="relative">
-                    {/* XP Progress Ring for collapsed state */}
-                    <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
-                      <circle
-                        cx="20"
-                        cy="20"
-                        r="18"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className="text-gray-200 dark:text-gray-700"
-                      />
-                      <circle
-                        cx="20"
-                        cy="20"
-                        r="18"
-                        fill="none"
-                        stroke="url(#gradient-collapsed)"
-                        strokeWidth="2"
-                        strokeDasharray={`${(68 / 100) * 113} 113`}
-                        strokeLinecap="round"
-                        className="transition-all duration-500"
-                        transform="rotate(-90 20 20)"
-                      />
-                      <defs>
-                        <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
-                          <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                      {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      </div>
-
+    <div className={`flex flex-col h-full bg-white dark:bg-gray-800 overflow-y-auto ${className}`} data-tour="navigation">
       {/* Navigation Breadcrumbs */}
       {!navigationState.sidebarCollapsed && breadcrumbs.length > 1 && (
         <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -281,41 +150,162 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         </div>
       )}
 
-      {/* Activity Indicators */}
-      {!navigationState.sidebarCollapsed && activityIndicators.length > 0 && (
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Activity
-            </span>
-            <ActivityIndicators />
-          </div>
-        </div>
-      )}
-
-      {/* Main Navigation - Individual cards like right sidebar */}
-      <div className={`flex-1 overflow-y-auto p-4 ${!navigationState.sidebarCollapsed ? 'space-y-4' : ''}`}>
+      {/* All cards at the same level with consistent spacing - no padding on container */}
+      <div className={!navigationState.sidebarCollapsed ? 'space-y-4' : 'space-y-2'}>
         {!navigationState.sidebarCollapsed ? (
           <>
-            {/* Quick Filters Panel Card */}
+            {/* Enhanced User Profile Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-              <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                  Quick Filters
+              <div className="p-4">
+                {enhancedUser ? (
+                  <EnhancedUserCard
+                    user={enhancedUser as any}
+                    onClick={() => {/* Handle profile click */}}
+                  />
+                ) : (
+                  /* Fallback to original profile display */
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="relative">
+                        {/* XP Progress Ring */}
+                        <svg className="absolute -inset-1 w-12 h-12" viewBox="0 0 48 48">
+                          <circle
+                            cx="24"
+                            cy="24"
+                            r="22"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-gray-200 dark:text-gray-700"
+                          />
+                          <circle
+                            cx="24"
+                            cy="24"
+                            r="22"
+                            fill="none"
+                            stroke="url(#gradient)"
+                            strokeWidth="2"
+                            strokeDasharray={`${(68 / 100) * 138.23} 138.23`}
+                            strokeLinecap="round"
+                            className="transition-all duration-500"
+                            transform="rotate(-90 24 24)"
+                          />
+                          <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
+                              <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
+                            </linearGradient>
+                          </defs>
+                        </svg>
+                        <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
+                          {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full animate-pulse"></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {(profile as any)?.handle || (profile as any)?.ens || `${address?.slice(0, 6)}...${address?.slice(-4)}`}
+                          </p>
+                          {/* Badges will be loaded from real reputation data */}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {/* Balance will be loaded from wallet data */}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* XP Bar */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>XP Progress</span>
+                        <span>680 / 1000</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full transition-all duration-500"
+                          style={{ width: '68%' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Activity Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-4">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  Activity
+                </div>
+                <div className="space-y-2">
+                  {/* New Posts */}
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">New Posts</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">12</span>
+                  </div>
+
+                  {/* Mentions */}
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Mentions</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">3</span>
+                  </div>
+
+                  {/* Reactions */}
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Reactions</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">8</span>
+                  </div>
+
+                  {/* Comments */}
+                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Comments</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">5</span>
+                  </div>
                 </div>
               </div>
-              <div className="p-2">
-                <QuickFilterPanel 
-                  activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
-                  onFilterChange={(filters) => {
-                    quickFilters.forEach(filter => {
-                      if (filters.includes(filter.id) !== filter.active) {
-                        handleFilterChange(filter.id);
-                      }
-                    });
-                  }}
-                  className="space-y-1"
-                />
+            </div>
+
+            {/* Quick Filters Panel Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-4">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                  Quick Filters
+                </div>
+                <div className="space-y-1">
+                  {/* Trending */}
+                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
+                    Trending
+                  </button>
+
+                  {/* Following */}
+                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
+                    Following
+                  </button>
+
+                  {/* Recent */}
+                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
+                    Recent
+                  </button>
+
+                  {/* Popular */}
+                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
+                    Popular
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -439,7 +429,51 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
           </>
         ) : (
           /* Collapsed Navigation */
-          <div className="space-y-2 p-2">
+          <>
+            {/* Collapsed User Profile Card */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+              <div className="p-3 flex justify-center">
+                <div className="relative">
+                  {/* XP Progress Ring for collapsed state */}
+                  <svg className="absolute -inset-1 w-10 h-10" viewBox="0 0 40 40">
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-gray-200 dark:text-gray-700"
+                    />
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="18"
+                      fill="none"
+                      stroke="url(#gradient-collapsed)"
+                      strokeWidth="2"
+                      strokeDasharray={`${(68 / 100) * 113} 113`}
+                      strokeLinecap="round"
+                      className="transition-all duration-500"
+                      transform="rotate(-90 20 20)"
+                    />
+                    <defs>
+                      <linearGradient id="gradient-collapsed" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" className="text-primary-500" stopColor="currentColor" />
+                        <stop offset="100%" className="text-secondary-500" stopColor="currentColor" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                    {(profile as any)?.handle ? (profile as any).handle.charAt(0).toUpperCase() : address?.slice(2, 4).toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Collapsed Navigation Items */}
+            <div className="space-y-2">
             <Link
               href="/dao"
               className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
@@ -508,7 +542,8 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
