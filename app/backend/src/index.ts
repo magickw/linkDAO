@@ -616,15 +616,19 @@ app.use('/api/*', (req, res) => {
   });
 });
 
+console.log('📝 All routes and middleware registered successfully');
+console.log(`📡 Attempting to start server on port ${PORT}...`);
+
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 LinkDAO Backend with Enhanced Social Platform running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
   console.log(`📡 API ready: http://localhost:${PORT}/`);
-  
-  // Initialize services
-  initializeServices().then(({ cacheService, cacheWarmingService }) => {
+
+  // Initialize services asynchronously without blocking
+  setImmediate(() => {
+    initializeServices().then(({ cacheService, cacheWarmingService }) => {
     // Initialize WebSocket service
     try {
       const webSocketService = initializeWebSocket(httpServer);
@@ -713,87 +717,19 @@ httpServer.listen(PORT, () => {
     }
   }).catch((error) => {
     console.error('Failed to initialize services:', error);
+    console.log('📝 Server will continue without some services');
   });
+  }); // End setImmediate
+});
 
-  // DISABLED: Duplicate WebSocket initialization (already initialized above)
-  // try {
-  //   const webSocketService = initializeWebSocket(httpServer);
-  //   console.log('✅ WebSocket service initialized');
-  //   console.log(`🔌 WebSocket ready for real-time updates`);
-  // } catch (error) {
-  //   console.warn('⚠️ WebSocket service initialization failed:', error);
-  // }
-
-  // DISABLED: Admin WebSocket service (saves ~30MB memory)
-  // try {
-  //   const adminWebSocketService = initializeAdminWebSocket(httpServer);
-  //   console.log('✅ Admin WebSocket service initialized');
-  //   console.log(`🔧 Admin real-time dashboard ready`);
-  // } catch (error) {
-  //   console.warn('⚠️ Admin WebSocket service initialization failed:', error);
-  // }
-
-  // DISABLED: Seller WebSocket service (saves ~30MB memory)
-  // try {
-  //   const sellerWebSocketService = initializeSellerWebSocket();
-  //   console.log('✅ Seller WebSocket service initialized');
-  //   console.log(`🛒 Seller real-time updates ready`);
-  // } catch (error) {
-  //   console.warn('⚠️ Seller WebSocket service initialization failed:', error);
-  // }
-
-  // Initialize cache service
-  try {
-    // Check if cacheService has connect method or if it's already connected
-    if (cacheService) {
-      if (typeof cacheService.connect === 'function') {
-        cacheService.connect().then(() => {
-          console.log('✅ Cache service initialized via connect method');
-        }).catch((error: any) => {
-          console.warn('⚠️ Cache service connection failed:', error);
-        });
-      } else if (cacheService.isConnected) {
-        console.log('✅ Cache service already connected');
-      } else {
-        console.log('⚠️ Cache service available but not connected');
-      }
-    } else {
-      console.log('⚠️ Cache service not available');
-    }
-
-    // DISABLED: Duplicate cache warming (saves ~30MB memory)
-    // setTimeout(async () => {
-    //   try {
-    //     await cacheWarmingService.performQuickWarmup();
-    //     console.log('✅ Initial cache warming completed');
-    //   } catch (error) {
-    //     console.warn('⚠️ Initial cache warming failed:', error);
-    //   }
-    // }, 5000); // Wait 5 seconds after server start
-
-  } catch (error) {
-    console.warn('⚠️ Cache service initialization failed:', error);
-    console.log('📝 Server will continue without caching');
+// Add error handler for listen failures
+httpServer.on('error', (error: any) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use`);
+  } else {
+    console.error('❌ Server error:', error);
   }
-
-  // DISABLED: Duplicate comprehensive monitoring (saves ~50MB memory)
-  // try {
-  //   comprehensiveMonitoringService.startMonitoring(60000); // Monitor every minute
-  //   console.log('✅ Comprehensive monitoring service started');
-  //   console.log('📊 System health monitoring active');
-  // } catch (error) {
-  //   console.warn('⚠️ Monitoring service initialization failed:', error);
-  // }
-
-
-  // Start order event listener
-  try {
-    orderEventListenerService.startListening();
-    console.log('✅ Order event listener started');
-    console.log('🔄 Listening for order events to trigger messaging automation');
-  } catch (error) {
-    console.warn('⚠️ Order event listener failed to start:', error);
-  }
+  process.exit(1);
 });
 
 // Graceful shutdown handling
@@ -835,6 +771,18 @@ const gracefulShutdown = async (signal: string) => {
     process.exit(1);
   }, 10000);
 };
+
+// Handle unhandled rejections and exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - log and continue
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // For uncaught exceptions, we should gracefully shutdown
+  gracefulShutdown('uncaughtException');
+});
 
 // Handle shutdown signals
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
