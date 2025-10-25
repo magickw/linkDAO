@@ -2,6 +2,7 @@ import { Post, CreatePostInput, UpdatePostInput } from '../models/Post';
 import { MetadataService } from './metadataService';
 import { databaseService } from './databaseService'; // Import the singleton instance
 import { UserProfileService } from './userProfileService';
+import { aiContentModerationService } from './aiContentModerationService';
 
 // Use the singleton instance instead of creating a new one
 // const databaseService = new DatabaseService();
@@ -15,19 +16,7 @@ export class PostService {
   }
 
   async createPost(input: CreatePostInput): Promise<Post> {
-    // Upload content to IPFS
-    const contentCid = await this.metadataService.uploadToIPFS(input.content);
-    
-    // Upload media to IPFS (if any)
-    const mediaCids: string[] = [];
-    if (input.media) {
-      for (const media of input.media) {
-        const mediaCid = await this.metadataService.uploadToIPFS(media);
-        mediaCids.push(mediaCid);
-      }
-    }
-    
-    // Get user ID from address
+    // Get user ID and profile from address
     let user = await userProfileService.getProfileByAddress(input.author);
     if (!user) {
       // Create user if they don't exist
@@ -41,13 +30,72 @@ export class PostService {
         bioCid: ''
       });
     }
-    
-    // Create post in database
-    const dbPost = await databaseService.createPost(user.id, contentCid, input.parentId ? parseInt(input.parentId) : undefined);
-    
+
+    // Generate temporary content ID for moderation
+    const tempContentId = `post_${Date.now()}_${user.id}`;
+
+    // Run AI moderation check
+    const moderationReport = await aiContentModerationService.moderateContent({
+      id: tempContentId,
+      text: input.content,
+      userId: user.id,
+      type: 'post'
+    });
+
+    // Check if content should be blocked immediately
+    if (moderationReport.recommendedAction === 'block') {
+      throw new Error(
+        `Content violates community guidelines: ${moderationReport.explanation}. ` +
+        `Risk score: ${moderationReport.overallRiskScore.toFixed(2)}. ` +
+        `Please review our content policy and try again.`
+      );
+    }
+
+    // Upload content to IPFS (allowed or limited content)
+    const contentCid = await this.metadataService.uploadToIPFS(input.content);
+
+    // Upload media to IPFS (if any)
+    const mediaCids: string[] = [];
+    if (input.media) {
+      for (const media of input.media) {
+        const mediaCid = await this.metadataService.uploadToIPFS(media);
+        mediaCids.push(mediaCid);
+      }
+    }
+
+    // Determine post status based on moderation result
+    let postStatus: 'active' | 'limited' | 'pending_review' = 'active';
+    let moderationWarning: string | null = null;
+
+    if (moderationReport.recommendedAction === 'review') {
+      postStatus = 'pending_review';
+      moderationWarning = 'This post is under review by moderators.';
+    } else if (moderationReport.recommendedAction === 'limit') {
+      postStatus = 'limited';
+      moderationWarning = 'This post has limited visibility due to potentially sensitive content.';
+    }
+
+    // Create post in database with moderation metadata
+    const dbPost = await databaseService.createPost(
+      user.id,
+      contentCid,
+      input.parentId ? parseInt(input.parentId) : undefined,
+      {
+        moderationStatus: postStatus,
+        moderationRiskScore: moderationReport.overallRiskScore,
+        moderationCategories: [
+          moderationReport.spamDetection.isSpam ? 'spam' : null,
+          moderationReport.toxicityDetection.isToxic ? moderationReport.toxicityDetection.toxicityType : null,
+          moderationReport.contentPolicy.violatesPolicy ? moderationReport.contentPolicy.policyType : null,
+          moderationReport.copyrightDetection.potentialInfringement ? 'copyright' : null
+        ].filter(Boolean),
+        moderationExplanation: moderationReport.explanation
+      }
+    );
+
     // Handle potential null dates by providing default values
     const createdAt = dbPost.createdAt || new Date();
-    
+
     const post: Post = {
       id: dbPost.id.toString(),
       author: input.author,
@@ -57,7 +105,14 @@ export class PostService {
       tags: input.tags || [],
       createdAt,
       onchainRef: input.onchainRef || '',
+      // Add moderation metadata
+      moderationStatus: postStatus,
+      moderationWarning: moderationWarning,
+      riskScore: moderationReport.overallRiskScore
     };
+
+    // Log moderation result for analytics
+    console.log(`[MODERATION] Post ${post.id} created with status: ${postStatus}, risk: ${moderationReport.overallRiskScore.toFixed(2)}`);
 
     return post;
   }

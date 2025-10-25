@@ -7,6 +7,11 @@ export interface Post {
   tags: string[];
   createdAt: Date;
   onchainRef: string;
+  // Moderation fields
+  moderationStatus?: 'active' | 'limited' | 'pending_review' | 'blocked';
+  moderationWarning?: string | null;
+  riskScore?: number;
+  moderationCategories?: string[];
 }
 
 export interface CreatePostInput {

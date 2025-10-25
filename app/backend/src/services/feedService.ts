@@ -110,6 +110,9 @@ export class FeedService {
     const sortOrder = this.buildSortOrder(sort);
 
     try {
+      // Build moderation filter - exclude blocked content
+      const moderationFilter = sql`(${posts.moderationStatus} IS NULL OR ${posts.moderationStatus} != 'blocked')`;
+
       // Get posts with engagement metrics using proper subqueries
       const feedPosts = await db
         .select({
@@ -123,14 +126,19 @@ export class FeedService {
           stakedValue: posts.stakedValue,
           walletAddress: users.walletAddress,
           handle: users.handle,
-          profileCid: users.profileCid
+          profileCid: users.profileCid,
+          // Moderation fields
+          moderationStatus: posts.moderationStatus,
+          moderationWarning: posts.moderationWarning,
+          riskScore: posts.riskScore
         })
         .from(posts)
         .leftJoin(users, eq(posts.authorId, users.id))
         .where(and(
           timeFilter,
           communityFilter,
-          followingFilter
+          followingFilter,
+          moderationFilter // Add moderation filter
         ))
         .orderBy(sortOrder)
         .limit(limit)
@@ -173,14 +181,15 @@ export class FeedService {
         })
       );
 
-      // Get total count for pagination
+      // Get total count for pagination (excluding blocked content)
       const totalCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(posts)
         .where(and(
           timeFilter,
           communityFilter,
-          followingFilter
+          followingFilter,
+          moderationFilter // Include moderation filter in count
         ));
 
       return {

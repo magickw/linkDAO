@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Upload, Coins, Users, Shield, Info, AlertCircle } from 'lucide-react';
 
 interface CreateCommunityModalProps {
@@ -188,8 +189,11 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+  // Ensure we're in a browser environment before using portal
+  if (typeof window === 'undefined') return null;
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -575,7 +579,8 @@ export const CreateCommunityModal: React.FC<CreateCommunityModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

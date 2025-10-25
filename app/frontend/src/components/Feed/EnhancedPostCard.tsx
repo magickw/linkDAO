@@ -7,6 +7,7 @@ import SocialProofIndicator from '../SocialProof/SocialProofIndicator';
 import TrendingBadge from '../TrendingBadge/TrendingBadge';
 import TokenReactionSystem from '../TokenReactionSystem/TokenReactionSystem';
 import OptimizedImage from '../OptimizedImage';
+import { ModerationWarning, ReportContentButton } from '../Moderation';
 
 interface EnhancedPostCardProps {
   post: any;
@@ -108,8 +109,23 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
           >
             Bookmark
           </button>
+
+          <ReportContentButton
+            contentId={post.id}
+            contentType="post"
+          />
         </div>
       </div>
+
+      {/* Moderation Warning */}
+      {post.moderationStatus && post.moderationStatus !== 'active' && (
+        <ModerationWarning
+          status={post.moderationStatus}
+          warning={post.moderationWarning}
+          riskScore={post.riskScore}
+          className="mb-3"
+        />
+      )}
 
       {/* Content */}
       <div>

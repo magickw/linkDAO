@@ -6,11 +6,14 @@ import { useWalletData, usePortfolioPerformance } from '@/hooks/useWalletData';
 import { useToast } from '@/context/ToastContext';
 import { formatDistanceToNow } from 'date-fns';
 import { RefreshCw, TrendingUp, TrendingDown, ExternalLink, Copy } from 'lucide-react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useSwitchChain } from 'wagmi';
+import { base, baseSepolia, mainnet, polygon, arbitrum, sepolia } from '@/lib/wagmi';
+import { getTokensForChain, SUPPORTED_CHAINS } from '@/config/payment';
 
 export default function Wallet() {
   const { isConnected } = useWeb3();
   const { address, chain } = useAccount();
+  const { switchChain } = useSwitchChain();
   const { data: balanceData } = useBalance({ address: address as `0x${string}` | undefined });
   const chainId = chain?.id;
   
@@ -18,8 +21,12 @@ export default function Wallet() {
   const [amount, setAmount] = useState('');
   const [recipient, setRecipient] = useState('');
   const [token, setToken] = useState('ETH');
+  const [selectedChainId, setSelectedChainId] = useState(chain?.id || mainnet.id);
   const [activeTab, setActiveTab] = useState<'overview' | 'send' | 'history'>('overview');
   const [portfolioTimeframe, setPortfolioTimeframe] = useState<'1d' | '1w' | '1m' | '1y'>('1d');
+  
+  // Get available tokens for the selected chain
+  const availableTokens = getTokensForChain(selectedChainId);
   
   // Use real wallet data
   const {
@@ -58,7 +65,7 @@ export default function Wallet() {
     isSuccess: isTokenSent,
   } = useWritePaymentRouterSendTokenPayment();
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!recipient || !amount) {
@@ -66,17 +73,40 @@ export default function Wallet() {
       return;
     }
     
-    const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
+    // Switch to the selected chain if needed
+    if (chainId !== selectedChainId) {
+      try {
+        addToast(`Switching to ${getChainName(selectedChainId)} network...`, 'info');
+        await switchChain({ chainId: selectedChainId });
+      } catch (error) {
+        addToast('Failed to switch network. Please switch manually in your wallet.', 'error');
+        return;
+      }
+    }
     
-    if (token === 'ETH') {
+    const selectedToken = availableTokens.find(t => t.symbol === token);
+    
+    if (token === 'ETH' || (selectedToken && selectedToken.isNative)) {
+      // Handle ETH/native token payments
+      const amountInWei = BigInt(Math.floor(parseFloat(amount) * 1e18));
       sendEthPayment({
         args: [recipient as `0x${string}`, amountInWei, ''],
         value: amountInWei,
       });
+    } else if (selectedToken) {
+      // Handle ERC-20 token payments
+      const decimals = selectedToken.decimals;
+      const amountInWei = BigInt(Math.floor(parseFloat(amount) * Math.pow(10, decimals)));
+      
+      sendTokenPayment({
+        args: [
+          selectedToken.address as `0x${string}`,
+          recipient as `0x${string}`,
+          amountInWei
+        ],
+      });
     } else {
-      // For token payments, we would need the token address
-      // This is a simplified example
-      addToast('Token payments not fully implemented in this example', 'info');
+      addToast('Selected token not available on this network', 'error');
     }
   };
 
@@ -164,12 +194,12 @@ export default function Wallet() {
   };
 
   // Transform real data for display
-  const portfolioData = tokens.map(token => ({
-    name: token.symbol,
-    balance: token.balanceFormatted,
-    value: formatCurrency(token.valueUSD),
-    change: formatPercentage(token.change24h),
-    changeType: token.change24h > 0 ? 'positive' : token.change24h < 0 ? 'negative' : 'neutral'
+  const portfolioData = tokens.map(tokenItem => ({
+    name: tokenItem.symbol,
+    balance: tokenItem.balanceFormatted,
+    value: formatCurrency(tokenItem.valueUSD),
+    change: formatPercentage(tokenItem.change24h),
+    changeType: tokenItem.change24h > 0 ? 'positive' : tokenItem.change24h < 0 ? 'negative' : 'neutral'
   }));
 
   const transactionData = transactions.map(tx => ({
@@ -182,6 +212,28 @@ export default function Wallet() {
     hash: tx.hash
   }));
 
+  // Helper function to get chain name
+  const getChainName = (chainId: number) => {
+    const chain = SUPPORTED_CHAINS.find(c => c.chainId === chainId);
+    return chain ? chain.name : 'Unknown Network';
+  };
+
+  // Effect to update selected chain when wallet chain changes
+  React.useEffect(() => {
+    if (chain?.id) {
+      setSelectedChainId(chain.id);
+    }
+  }, [chain?.id]);
+
+  // Effect to update token when chain changes
+  React.useEffect(() => {
+    const chainTokens = getTokensForChain(selectedChainId);
+    if (chainTokens.length > 0 && !chainTokens.some(t => t.symbol === token)) {
+      // If the currently selected token is not available on this chain, select the first available token
+      setToken(chainTokens[0].symbol);
+    }
+  }, [selectedChainId, token]);
+
   return (
     <Layout title="Wallet - LinkDAO" fullWidth={true}>
       <div className="px-4 py-6 sm:px-0">
@@ -189,6 +241,11 @@ export default function Wallet() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Your Wallet</h1>
             <div className="flex items-center space-x-3">
+              {chain && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  {getChainName(chain.id)}
+                </span>
+              )}
               {lastUpdated && (
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   Updated {formatDistanceToNow(lastUpdated, { addSuffix: true })}
@@ -466,6 +523,24 @@ export default function Wallet() {
               
               <form onSubmit={handleSend}>
                 <div className="mb-4">
+                  <label htmlFor="network" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Network
+                  </label>
+                  <select
+                    id="network"
+                    value={selectedChainId}
+                    onChange={(e) => setSelectedChainId(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    {SUPPORTED_CHAINS.map((chain) => (
+                      <option key={chain.chainId} value={chain.chainId}>
+                        {chain.name} {chain.chainId === chainId ? '(Connected)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="mb-4">
                   <label htmlFor="token" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Token
                   </label>
@@ -475,9 +550,11 @@ export default function Wallet() {
                     onChange={(e) => setToken(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
                   >
-                    <option value="ETH">ETH</option>
-                    <option value="USDC">USDC</option>
-                    <option value="USDT">USDT</option>
+                    {availableTokens.map((availableToken) => (
+                      <option key={availableToken.symbol} value={availableToken.symbol}>
+                        {availableToken.symbol} ({availableToken.name})
+                      </option>
+                    ))}
                   </select>
                 </div>
                 
@@ -537,7 +614,7 @@ export default function Wallet() {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-3300 uppercase tracking-wider">
                         Transaction
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
