@@ -106,52 +106,6 @@ export const SUPPORTED_PAYMENT_METHODS: PaymentMethod[] = [
     icon: '/icons/credit-card.svg',
     enabled: true,
     supportedNetworks: [] // Available on all networks
-  },
-
-  // Native Token Methods
-  {
-    id: 'eth-mainnet',
-    type: PaymentMethodType.NATIVE_ETH,
-    name: 'ETH (Ethereum)',
-    description: 'Native Ethereum token - widely accepted but variable gas costs',
-    token: ETH,
-    chainId: mainnet.id,
-    icon: '/icons/eth.svg',
-    enabled: true,
-    supportedNetworks: [mainnet.id]
-  },
-  {
-    id: 'eth-arbitrum',
-    type: PaymentMethodType.NATIVE_ETH,
-    name: 'ETH (Arbitrum)',
-    description: 'Ethereum on Arbitrum - lower gas fees than mainnet',
-    token: { ...ETH, chainId: arbitrum.id },
-    chainId: arbitrum.id,
-    icon: '/icons/eth.svg',
-    enabled: true,
-    supportedNetworks: [arbitrum.id]
-  },
-  {
-    id: 'eth-sepolia',
-    type: PaymentMethodType.NATIVE_ETH,
-    name: 'ETH (Sepolia)',
-    description: 'Ethereum on Sepolia testnet - for testing purposes',
-    token: ETH_SEPOLIA,
-    chainId: sepolia.id,
-    icon: '/icons/eth.svg',
-    enabled: true,
-    supportedNetworks: [sepolia.id]
-  },
-  {
-    id: 'matic-polygon',
-    type: PaymentMethodType.NATIVE_ETH, // Using same type for native tokens
-    name: 'MATIC (Polygon)',
-    description: 'Native Polygon token - very low gas fees',
-    token: MATIC,
-    chainId: polygon.id,
-    icon: '/icons/matic.svg',
-    enabled: true,
-    supportedNetworks: [polygon.id]
   }
 ];
 
@@ -215,9 +169,9 @@ export const NETWORK_PRIORITIZATION_RULES: {
   [mainnet.id]: {
     preferredMethods: [
       PaymentMethodType.STABLECOIN_USDC,
-      PaymentMethodType.FIAT_STRIPE,
       PaymentMethodType.STABLECOIN_USDT,
-      PaymentMethodType.NATIVE_ETH
+      PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 1.0,
     description: 'Ethereum mainnet - prioritize stablecoins due to gas costs'
@@ -226,30 +180,31 @@ export const NETWORK_PRIORITIZATION_RULES: {
     preferredMethods: [
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
-      PaymentMethodType.NATIVE_ETH, // MATIC
       PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.1,
-    description: 'Polygon - low gas fees make crypto methods more attractive'
+    description: 'Polygon - prioritize stablecoins for consistent value'
   },
   [arbitrum.id]: {
     preferredMethods: [
       PaymentMethodType.STABLECOIN_USDC,
-      PaymentMethodType.NATIVE_ETH,
-      PaymentMethodType.FIAT_STRIPE,
-      PaymentMethodType.STABLECOIN_USDT
+      PaymentMethodType.STABLECOIN_USDT,
+      PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.2,
-    description: 'Arbitrum - fast and cheap, good for all crypto methods'
+    description: 'Arbitrum - prioritize stablecoins for consistent value'
   },
   [sepolia.id]: {
     preferredMethods: [
       PaymentMethodType.STABLECOIN_USDC,
-      PaymentMethodType.NATIVE_ETH,
+      PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.01,
-    description: 'Sepolia testnet - minimal gas fees for testing'
+    description: 'Sepolia testnet - prioritize stablecoins for testing'
   }
 };
 
@@ -261,8 +216,8 @@ export const USER_TIER_CONFIGS = {
     autoSelectBestOption: true,
     availablePaymentMethods: [
       PaymentMethodType.STABLECOIN_USDC,
-      PaymentMethodType.FIAT_STRIPE,
-      PaymentMethodType.NATIVE_ETH
+      PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ]
   },
   premium: {
@@ -272,19 +227,19 @@ export const USER_TIER_CONFIGS = {
     availablePaymentMethods: [
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
-      PaymentMethodType.FIAT_STRIPE,
-      PaymentMethodType.NATIVE_ETH
+      PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ]
   },
   vip: {
     maxGasFeeThreshold: 100, // $100 USD
-    preferStablecoins: false, // VIP users might prefer ETH for prestige
+    preferStablecoins: true, // Changed to always prefer stablecoins
     autoSelectBestOption: false, // VIP users want control
     availablePaymentMethods: [
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
-      PaymentMethodType.FIAT_STRIPE,
-      PaymentMethodType.NATIVE_ETH
+      PaymentMethodType.FIAT_STRIPE
+      // ETH payment method removed as per requirements
     ]
   }
 };

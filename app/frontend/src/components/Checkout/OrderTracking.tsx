@@ -20,53 +20,20 @@ import {
 } from 'lucide-react';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { UnifiedCheckoutService } from '@/services/unifiedCheckoutService';
-import { CryptoPaymentService } from '@/services/cryptoPaymentService';
-import { StripePaymentService } from '@/services/stripePaymentService';
+import { orderService, OrderTrackingStatus } from '@/services/orderService';
 import { toast } from 'react-hot-toast';
 
 interface OrderTrackingProps {
   orderId: string;
 }
 
-interface OrderStatus {
-  orderId: string;
-  status: string;
-  paymentPath: 'crypto' | 'fiat';
-  progress: {
-    step: number;
-    totalSteps: number;
-    currentStep: string;
-    nextStep?: string;
-  };
-  actions: {
-    canConfirmDelivery: boolean;
-    canReleaseFunds: boolean;
-    canDispute: boolean;
-    canCancel: boolean;
-  };
-  timeline: Array<{
-    timestamp: Date;
-    event: string;
-    description: string;
-    status: 'completed' | 'pending' | 'failed';
-  }>;
-}
-
 export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
   const router = useRouter();
-  const [orderStatus, setOrderStatus] = useState<OrderStatus | null>(null);
+  const [orderStatus, setOrderStatus] = useState<OrderTrackingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showDispute, setShowDispute] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
-
-  // Services
-  const [checkoutService] = useState(() => {
-    const cryptoService = new CryptoPaymentService();
-    const stripeService = new StripePaymentService();
-    return new UnifiedCheckoutService(cryptoService, stripeService);
-  });
 
   useEffect(() => {
     loadOrderStatus();
@@ -79,7 +46,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
 
   const loadOrderStatus = async () => {
     try {
-      const status = await checkoutService.getOrderStatus(orderId);
+      const status = await orderService.getOrderTrackingStatus(orderId);
       setOrderStatus(status);
     } catch (error) {
       console.error('Failed to load order status:', error);
@@ -99,7 +66,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
     if (!orderStatus) return;
 
     try {
-      await checkoutService.confirmDelivery(orderId, {
+      await orderService.confirmDelivery(orderId, {
         confirmedAt: new Date(),
         satisfactionRating: 5
       });
@@ -116,7 +83,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
     if (!orderStatus) return;
 
     try {
-      await checkoutService.releaseFunds(orderId);
+      await orderService.releaseFunds(orderId);
       toast.success('Funds released to seller successfully!');
       loadOrderStatus();
     } catch (error) {
@@ -132,7 +99,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
     }
 
     try {
-      await checkoutService.openDispute(orderId, disputeReason);
+      await orderService.openDispute(orderId, disputeReason);
       toast.success('Dispute opened successfully. Our team will review it.');
       setShowDispute(false);
       setDisputeReason('');
@@ -150,7 +117,8 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
       case 'processing':
       case 'shipped':
         return 'text-blue-400';
-      case 'pending':
+      case 'created':
+      case 'paid':
         return 'text-yellow-400';
       case 'cancelled':
       case 'disputed':
@@ -168,7 +136,8 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
         return <Package className="w-5 h-5 text-blue-400" />;
       case 'shipped':
         return <Truck className="w-5 h-5 text-blue-400" />;
-      case 'pending':
+      case 'created':
+      case 'paid':
         return <Clock className="w-5 h-5 text-yellow-400" />;
       case 'disputed':
         return <AlertTriangle className="w-5 h-5 text-red-400" />;
@@ -218,26 +187,29 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
         
         <div className="space-y-4">
           {orderStatus.timeline.map((event, index) => (
-            <div key={index} className="flex items-start gap-4">
+            <div key={event.id} className="flex items-start gap-4">
               <div className={`p-2 rounded-full ${
-                event.status === 'completed' ? 'bg-green-500/20' :
-                event.status === 'pending' ? 'bg-yellow-500/20' :
-                'bg-red-500/20'
+                event.eventType.includes('COMPLETED') || event.eventType.includes('CONFIRMED') ? 'bg-green-500/20' :
+                event.eventType.includes('PENDING') || event.eventType.includes('CREATED') ? 'bg-yellow-500/20' :
+                event.eventType.includes('FAILED') || event.eventType.includes('DISPUTE') ? 'bg-red-500/20' :
+                'bg-blue-500/20'
               }`}>
-                {event.status === 'completed' ? (
+                {event.eventType.includes('COMPLETED') || event.eventType.includes('CONFIRMED') ? (
                   <CheckCircle className="w-4 h-4 text-green-400" />
-                ) : event.status === 'pending' ? (
+                ) : event.eventType.includes('PENDING') || event.eventType.includes('CREATED') ? (
                   <Clock className="w-4 h-4 text-yellow-400" />
-                ) : (
+                ) : event.eventType.includes('FAILED') || event.eventType.includes('DISPUTE') ? (
                   <AlertTriangle className="w-4 h-4 text-red-400" />
+                ) : (
+                  <Package className="w-4 h-4 text-blue-400" />
                 )}
               </div>
               
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-white">{event.event}</h4>
+                  <h4 className="font-medium text-white">{event.eventType.replace(/_/g, ' ')}</h4>
                   <span className="text-white/60 text-sm">
-                    {event.timestamp.toLocaleDateString()} {event.timestamp.toLocaleTimeString()}
+                    {new Date(event.timestamp).toLocaleDateString()} {new Date(event.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
                 <p className="text-white/70 text-sm mt-1">{event.description}</p>
@@ -339,7 +311,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
           <div className="flex justify-between">
             <span className="text-white/70">Status:</span>
             <span className={`capitalize ${getStatusColor(orderStatus.status)}`}>
-              {orderStatus.status}
+              {orderStatus.status.toLowerCase().replace(/_/g, ' ')}
             </span>
           </div>
           
@@ -461,7 +433,7 @@ export const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId }) => {
           {getStatusIcon(orderStatus.status)}
           <div>
             <h2 className="text-xl font-bold text-white">
-              Order {orderStatus.status.charAt(0).toUpperCase() + orderStatus.status.slice(1)}
+              Order {orderStatus.status.toLowerCase().replace(/_/g, ' ').charAt(0).toUpperCase() + orderStatus.status.toLowerCase().replace(/_/g, ' ').slice(1)}
             </h2>
             <p className="text-white/70">Order #{orderStatus.orderId}</p>
           </div>

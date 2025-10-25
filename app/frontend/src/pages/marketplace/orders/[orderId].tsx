@@ -74,6 +74,54 @@ const OrderDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const errorToastShownRef = useRef(false);
 
+  // Function to convert service Order type to types/order.ts Order type
+  const convertServiceOrderToTypesOrder = (serviceOrder: any): Order => {
+    // Create a minimal Order object that matches the types/order.ts interface
+    const convertedOrder: Order = {
+      id: serviceOrder.id,
+      listingId: serviceOrder.id, // Using order.id as listingId since it's not available
+      buyerAddress: address || '', // Using current user's address as buyer
+      sellerAddress: serviceOrder.seller?.id || '', // Using seller id as address
+      status: serviceOrder.status,
+      amount: serviceOrder.total.toString(),
+      paymentToken: serviceOrder.paymentMethod === 'crypto' ? 'USDC' : 'FIAT',
+      paymentMethod: serviceOrder.paymentMethod,
+      totalAmount: serviceOrder.total,
+      currency: serviceOrder.currency,
+      product: {
+        id: serviceOrder.items[0]?.id || '1',
+        title: serviceOrder.items[0]?.title || `Order #${serviceOrder.id}`,
+        description: '',
+        image: serviceOrder.items[0]?.image || '/api/placeholder/400/400',
+        category: '',
+        quantity: serviceOrder.items[0]?.quantity || 1,
+        unitPrice: serviceOrder.items[0]?.unitPrice || serviceOrder.total,
+        totalPrice: serviceOrder.items[0]?.totalPrice || serviceOrder.total
+      },
+      shippingAddress: undefined,
+      billingAddress: undefined,
+      trackingNumber: serviceOrder.trackingNumber,
+      trackingCarrier: undefined,
+      estimatedDelivery: serviceOrder.estimatedDelivery?.toISOString(),
+      actualDelivery: undefined,
+      deliveryConfirmation: undefined,
+      orderNotes: undefined,
+      orderMetadata: undefined,
+      createdAt: serviceOrder.createdAt.toISOString(),
+      updatedAt: serviceOrder.createdAt.toISOString(),
+      timeline: [],
+      trackingInfo: undefined,
+      disputeId: undefined,
+      canConfirmDelivery: false,
+      canOpenDispute: false,
+      canCancel: false,
+      canRefund: false,
+      isEscrowProtected: false,
+      daysUntilAutoComplete: 0
+    };
+    return convertedOrder;
+  };
+
   useEffect(() => {
     if (!orderId || typeof orderId !== 'string') return;
 
@@ -82,12 +130,17 @@ const OrderDetailPage: React.FC = () => {
       try {
         const apiOrder = await orderService.getOrderById(orderId);
         if (apiOrder) {
-          setOrder(apiOrder);
-          if (apiOrder.timeline && apiOrder.timeline.length > 0) {
-            setTimeline(apiOrder.timeline);
-          } else {
-            const fetchedTimeline = await orderService.getOrderTimeline(orderId);
-            setTimeline(fetchedTimeline);
+          // Convert the service Order type to the types/order.ts Order type
+          const convertedOrder = convertServiceOrderToTypesOrder(apiOrder);
+          setOrder(convertedOrder);
+            
+          // Fetch the timeline using getOrderTrackingStatus
+          try {
+            const trackingStatus = await orderService.getOrderTrackingStatus(orderId);
+            setTimeline(trackingStatus.timeline);
+          } catch (timelineError) {
+            console.warn('Failed to fetch order timeline:', timelineError);
+            setTimeline([]);
           }
         } else {
           const fallback = loadFallbackOrder(orderId);
@@ -307,13 +360,25 @@ const OrderDetailPage: React.FC = () => {
                       addToast('Connect your wallet to export receipts.', 'info');
                       return;
                     }
-                    const blob = await orderService.exportOrderHistory(address, 'buyer', {
-                      status: order.status,
-                    });
+                    
+                    // Create a simple CSV export since exportOrderHistory doesn't exist
+                    const csvContent = [
+                      ['Order ID', 'Status', 'Amount', 'Currency', 'Created At', 'Tracking Number'],
+                      [
+                        order.id,
+                        order.status,
+                        order.totalAmount.toString(),
+                        order.currency,
+                        order.createdAt,
+                        order.trackingNumber || ''
+                      ]
+                    ].map(row => row.join(',')).join('\n');
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = url;
-                    link.download = `linkdao-orders-${new Date().toISOString()}.csv`;
+                    link.download = `linkdao-order-${order.id}-${new Date().toISOString()}.csv`;
                     link.click();
                     window.URL.revokeObjectURL(url);
                   } catch (err) {

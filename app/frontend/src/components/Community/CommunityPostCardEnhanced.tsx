@@ -5,14 +5,15 @@ import { CommunityMembership } from '@/models/CommunityMembership';
 import { CommunityPostService } from '@/services/communityPostService';
 import { useWeb3 } from '@/context/Web3Context';
 import { useToast } from '@/context/ToastContext';
-import CommentThread from './CommentThread';
-import StakingVoteButton from './StakingVoteButton';
-import CommunityTipButton from './CommunityTipButton';
-import CommunityNFTEmbed from './CommunityNFTEmbed';
-import CommunityDeFiEmbed from './CommunityDeFiEmbed';
-import WalletSnapshotEmbed from './WalletSnapshotEmbed';
-import CommunityGovernance from './CommunityGovernance';
-import PostInteractionBar from './PostInteractionBar';
+import CommentThread from '../CommentThread';
+import StakingVoteButton from '../StakingVoteButton';
+import CommunityTipButton from '../CommunityTipButton';
+import CommunityNFTEmbed from '../CommunityNFTEmbed';
+import CommunityDeFiEmbed from '../CommunityDeFiEmbed';
+import WalletSnapshotEmbed from '../WalletSnapshotEmbed';
+import CommunityGovernance from '../CommunityGovernance';
+import PostInteractionBar from '../PostInteractionBar';
+import { motion } from 'framer-motion';
 
 interface Reaction {
   type: 'hot' | 'diamond' | 'bullish' | 'governance' | 'art';
@@ -24,7 +25,7 @@ interface Reaction {
   rewardsEarned: number;
 }
 
-interface CommunityPostCardProps {
+interface CommunityPostCardEnhancedProps {
   post: CommunityPost;
   community: Community;
   userMembership: CommunityMembership | null;
@@ -32,17 +33,19 @@ interface CommunityPostCardProps {
   onReaction?: (postId: string, reactionType: string, amount?: number) => Promise<void>;
   onTip?: (postId: string, amount: string, token: string) => Promise<void>;
   className?: string;
+  isLoading?: boolean;
 }
 
-export default function CommunityPostCard({
+export default function CommunityPostCardEnhanced({
   post,
   community,
   userMembership,
   onVote,
   onReaction,
   onTip,
-  className = ''
-}: CommunityPostCardProps) {
+  className = '',
+  isLoading = false
+}: CommunityPostCardEnhancedProps) {
   const { address, isConnected } = useWeb3();
   const { addToast } = useToast();
 
@@ -61,6 +64,43 @@ export default function CommunityPostCard({
     { type: 'bullish', emoji: '🚀', label: 'Bullish', totalStaked: 21, userStaked: 0, contributors: [], rewardsEarned: 4.2 },
     { type: 'governance', emoji: '⚖️', label: 'Governance', totalStaked: 9, userStaked: 0, contributors: [], rewardsEarned: 1.8 }
   ]);
+
+  // Loading skeleton
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden animate-pulse ${className}`}
+      >
+        <div className="flex">
+          <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-600 w-16">
+            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+            <div className="w-8 h-4 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+            <div className="w-6 h-6 bg-gray-200 dark:bg-gray-600 rounded"></div>
+          </div>
+          <div className="flex-1 p-4">
+            <div className="flex items-center mb-3">
+              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-600 rounded-full mr-2"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/3"></div>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4">
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-5/6"></div>
+            </div>
+            <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
+              <div className="h-8 w-24 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   // Calculate vote score
   const voteScore = post.upvotes - post.downvotes;
@@ -154,7 +194,7 @@ export default function CommunityPostCard({
       
       const commentData: CreateCommentInput = {
         postId: post.id,
-        author: address,
+        author: address || '',
         content: newComment.trim()
       };
 
@@ -199,7 +239,7 @@ export default function CommunityPostCard({
             totalStaked: reaction.totalStaked + amount,
             userStaked: reaction.userStaked + amount,
             rewardsEarned: reaction.rewardsEarned + reward,
-            contributors: [...reaction.contributors, address.substring(0, 6) + '...' + address.substring(38)]
+            contributors: [...reaction.contributors, address ? address.substring(0, 6) + '...' + address.substring(38) : '']
           };
         }
         return reaction;
@@ -211,8 +251,6 @@ export default function CommunityPostCard({
       addToast('Failed to react. Please try again.', 'error');
     }
   };
-
-
 
   // Handle comment vote
   const handleCommentVote = async (commentId: string, voteType: 'upvote' | 'downvote') => {
@@ -279,7 +317,13 @@ export default function CommunityPostCard({
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200 ${className}`}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow duration-200 ${className}`}
+      role="article"
+      aria-label={`Post by ${post.author} in ${community.displayName}`}
+    >
       <div className="flex">
         {/* Vote Section with Staking */}
         <div className="flex flex-col items-center p-3 bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-600">
@@ -295,13 +339,16 @@ export default function CommunityPostCard({
           />
 
           {/* Vote Score */}
-          <span className={`text-sm font-bold py-1 ${
-            voteScore > 0 
-              ? 'text-orange-500' 
-              : voteScore < 0 
-                ? 'text-blue-500' 
-                : 'text-gray-500 dark:text-gray-400'
-          }`}>
+          <span 
+            className={`text-sm font-bold py-1 ${
+              voteScore > 0 
+                ? 'text-orange-500' 
+                : voteScore < 0 
+                  ? 'text-blue-500' 
+                  : 'text-gray-500 dark:text-gray-400'
+            }`}
+            aria-label={`Vote score: ${voteScore > 0 ? '+' : ''}${voteScore}`}
+          >
             {voteScore > 0 ? '+' : ''}{voteScore}
           </span>
 
@@ -348,7 +395,7 @@ export default function CommunityPostCard({
             {/* Post Actions Menu */}
             <div className="flex items-center space-x-2">
               {post.isLocked && (
-                <span className="text-yellow-500" title="Comments are locked">
+                <span className="text-yellow-500" title="Comments are locked" aria-label="Comments are locked">
                   🔒
                 </span>
               )}
@@ -371,6 +418,10 @@ export default function CommunityPostCard({
                     alt={`Post media ${index + 1}`}
                     className="rounded-lg max-h-96 object-cover w-full cursor-pointer hover:opacity-90 transition-opacity duration-200"
                     onClick={() => window.open(mediaUrl, '_blank')}
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && window.open(mediaUrl, '_blank')}
+                    role="button"
+                    aria-label={`View media ${index + 1}`}
                   />
                 ))}
               </div>
@@ -398,6 +449,7 @@ export default function CommunityPostCard({
                   <span
                     key={tag}
                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer bg-gradient-to-r ${getCategoryGradient()} text-white shadow-sm hover:shadow-md hover:scale-105`}
+                    aria-label={`Tag: ${tag}`}
                   >
                     #{tag}
                   </span>
@@ -474,6 +526,7 @@ export default function CommunityPostCard({
                 <button
                   onClick={toggleComments}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                  aria-label="Toggle comments"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -484,6 +537,7 @@ export default function CommunityPostCard({
                 <button 
                   onClick={() => setShowAnalytics(!showAnalytics)}
                   className="flex items-center space-x-1 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-200"
+                  aria-label="Toggle analytics"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -497,8 +551,6 @@ export default function CommunityPostCard({
               </div>
             </div>
           )}
-
-
 
           {/* Comments Section */}
           {showComments && (
@@ -520,12 +572,14 @@ export default function CommunityPostCard({
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white resize-none"
                         rows={3}
                         disabled={commentSubmitting}
+                        aria-label="Write a comment"
                       />
                       <div className="flex justify-end mt-2">
                         <button
                           type="submit"
                           disabled={!newComment.trim() || commentSubmitting}
                           className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                          aria-label={commentSubmitting ? "Posting comment..." : "Post comment"}
                         >
                           {commentSubmitting ? 'Posting...' : 'Comment'}
                         </button>
@@ -573,6 +627,6 @@ export default function CommunityPostCard({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

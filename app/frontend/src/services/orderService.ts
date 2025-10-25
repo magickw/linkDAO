@@ -1,268 +1,178 @@
-/**
- * Order Service - Comprehensive order tracking and management
- * Handles order history, status updates, search, and filtering
- */
+import { 
+  Order as MarketplaceOrder, 
+  OrderEvent, 
+  OrderStatus 
+} from '../types/order';
 
-import { Order, OrderStatus, OrderEvent, OrderFilters, OrderSearchQuery, PaginatedOrders } from '../types/order';
+export interface OrderItem {
+  id: string;
+  title: string;
+  image: string;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+}
 
-export class OrderService {
-  private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+export interface Order {
+  id: string;
+  status: OrderStatus;
+  paymentMethod: 'crypto' | 'fiat';
+  total: number;
+  currency: string;
+  items: OrderItem[];
+  createdAt: Date;
+  estimatedDelivery?: Date;
+  trackingNumber?: string;
+  seller: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+}
+
+export interface OrderTrackingStatus {
+  orderId: string;
+  status: string;
+  paymentPath: 'crypto' | 'fiat';
+  progress: {
+    step: number;
+    totalSteps: number;
+    currentStep: string;
+    nextStep?: string;
+  };
+  actions: {
+    canConfirmDelivery: boolean;
+    canReleaseFunds: boolean;
+    canDispute: boolean;
+    canCancel: boolean;
+  };
+  timeline: OrderEvent[];
+}
+
+class OrderService {
+  private apiBaseUrl: string;
+
+  constructor() {
+    this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  }
 
   /**
-   * Get order history for a user (buyer or seller)
+   * Get all orders for the current user
    */
-  async getOrderHistory(
-    userAddress: string, 
-    userType: 'buyer' | 'seller' = 'buyer',
-    page: number = 1,
-    limit: number = 20,
-    filters?: OrderFilters
-  ): Promise<PaginatedOrders> {
-    const fallback: PaginatedOrders = {
-      orders: [],
-      total: 0,
-      page,
-      limit,
-      totalPages: 0,
-    };
-
+  async getOrdersByUser(userAddress: string): Promise<Order[]> {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        userType,
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/user/${userAddress}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
       });
 
-      // Add filters to query params
-      if (filters) {
-        if (filters.status) params.append('status', filters.status);
-        if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
-        if (filters.dateTo) params.append('dateTo', filters.dateTo);
-        if (filters.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
-        if (filters.minAmount) params.append('minAmount', filters.minAmount.toString());
-        if (filters.maxAmount) params.append('maxAmount', filters.maxAmount.toString());
-        if (filters.hasDispute !== undefined) params.append('hasDispute', filters.hasDispute.toString());
-        if (filters.hasTracking !== undefined) params.append('hasTracking', filters.hasTracking.toString());
-      }
-
-      const response = await fetch(
-        `${this.baseUrl}/api/orders/user/${userAddress}?${params.toString()}`
-      );
-
       if (!response.ok) {
-        console.warn(`Order history unavailable (${response.status}). Using fallback.`);
-        return fallback;
+        throw new Error('Failed to fetch orders');
       }
 
-      const result = await response.json();
+      const { orders } = await response.json();
       
-      if (result.success) {
-        return {
-          orders: result.data.orders || [],
-          total: result.data.total || 0,
-          page: result.data.page || page,
-          limit: result.data.limit || limit,
-          totalPages: result.data.totalPages || Math.ceil((result.data.total || 0) / limit),
-        };
-      } else {
-        console.warn('Order history response not successful. Using fallback.');
-        return fallback;
-      }
+      // Transform backend orders to frontend format
+      return orders.map((order: any) => this.transformOrder(order));
     } catch (error) {
-      console.error('Error fetching order history:', error);
-      return fallback;
+      console.error('Error fetching orders:', error);
+      throw error;
     }
   }
 
   /**
-   * Get detailed order information by ID
+   * Get order by ID
    */
   async getOrderById(orderId: string): Promise<Order | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}`);
-      
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
       if (!response.ok) {
-        if (response.status === 404) return null;
-        console.warn(`Order ${orderId} unavailable (${response.status}). Returning null.`);
-        return null;
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error('Failed to fetch order');
       }
 
-      const result = await response.json().catch(() => ({ success: false }));
-      
-      if (result.success) {
-        return result.data as Order;
-      } else {
-        console.warn('Order response not successful. Returning null.');
-        return null;
-      }
+      const order = await response.json();
+      return this.transformOrder(order);
     } catch (error) {
       console.error('Error fetching order:', error);
-      // Gracefully degrade instead of throwing to avoid runtime overlays
-      return null;
+      throw error;
     }
   }
 
   /**
-   * Get order timeline/events
+   * Get order tracking status
    */
-  async getOrderTimeline(orderId: string): Promise<OrderEvent[]> {
+  async getOrderTrackingStatus(orderId: string): Promise<OrderTrackingStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}/timeline`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch order timeline: ${response.status} ${response.statusText}`);
+      // Get order details
+      const orderResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to fetch order details');
       }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        return result.data || [];
-      } else {
-        throw new Error(result.message || 'Failed to fetch order timeline');
+      const order = await orderResponse.json();
+
+      // Get order history/timeline
+      const historyResponse = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/history`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+
+      if (!historyResponse.ok) {
+        throw new Error('Failed to fetch order history');
       }
+
+      const timeline = await historyResponse.json();
+
+      // Transform to tracking status format
+      return this.transformOrderToTrackingStatus(order, timeline);
     } catch (error) {
-      console.error('Error fetching order timeline:', error);
-      return [];
+      console.error('Error fetching order tracking status:', error);
+      throw error;
     }
   }
 
   /**
-   * Search orders with advanced filtering
+   * Confirm delivery for an order
    */
-  async searchOrders(
-    userAddress: string,
-    query: OrderSearchQuery,
-    page: number = 1,
-    limit: number = 20
-  ): Promise<PaginatedOrders> {
+  async confirmDelivery(orderId: string, deliveryInfo: any): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/search`, {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/delivery/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userAddress,
-          query,
-          page,
-          limit,
-        }),
+        credentials: 'include',
+        body: JSON.stringify({ deliveryInfo })
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to search orders: ${response.status} ${response.statusText}`);
+        throw new Error('Failed to confirm delivery');
       }
 
-      const result = await response.json();
-      
-      if (result.success) {
-        return {
-          orders: result.data.orders || [],
-          total: result.data.total || 0,
-          page: result.data.page || page,
-          limit: result.data.limit || limit,
-          totalPages: result.data.totalPages || Math.ceil((result.data.total || 0) / limit),
-        };
-      } else {
-        throw new Error(result.message || 'Failed to search orders');
-      }
-    } catch (error) {
-      console.error('Error searching orders:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update order status (seller only)
-   */
-  async updateOrderStatus(
-    orderId: string, 
-    status: OrderStatus, 
-    metadata?: any
-  ): Promise<void> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status, metadata }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update order status: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to update order status');
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Add tracking information to order
-   */
-  async addTrackingInfo(
-    orderId: string,
-    trackingNumber: string,
-    carrier: string,
-    estimatedDelivery?: string
-  ): Promise<void> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}/tracking`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          trackingNumber,
-          carrier,
-          estimatedDelivery,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to add tracking info: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to add tracking info');
-      }
-    } catch (error) {
-      console.error('Error adding tracking info:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Confirm delivery (buyer only)
-   */
-  async confirmDelivery(orderId: string, deliveryInfo?: any): Promise<void> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}/confirm-delivery`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ deliveryInfo }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to confirm delivery: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to confirm delivery');
-      }
+      return true;
     } catch (error) {
       console.error('Error confirming delivery:', error);
       throw error;
@@ -270,375 +180,126 @@ export class OrderService {
   }
 
   /**
-   * Track payment method selection for analytics
+   * Release funds for an order
    */
-  async trackPaymentMethodSelection(
-    orderId: string,
-    paymentMethodData: {
-      selectedMethodId: string;
-      methodName: string;
-      priority: number;
-      recommendationReason: string;
-      costEstimate: any;
-      alternativeMethods?: any[];
-    }
-  ): Promise<void> {
+  async releaseFunds(orderId: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/orders/${orderId}/payment-method`, {
+      // This would typically be a specific endpoint, but for now we'll simulate
+      // by updating the order status to completed
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(paymentMethodData),
+        credentials: 'include',
+        body: JSON.stringify({ status: 'COMPLETED' })
       });
 
       if (!response.ok) {
-        console.warn(`Failed to track payment method selection: ${response.status}`);
+        throw new Error('Failed to release funds');
       }
+
+      return true;
     } catch (error) {
-      console.error('Error tracking payment method selection:', error);
-      // Don't throw - this is analytics data
+      console.error('Error releasing funds:', error);
+      throw error;
     }
   }
 
   /**
-   * Get payment method analytics for user
+   * Open dispute for an order
    */
-  async getPaymentMethodAnalytics(
-    userAddress: string,
-    timeframe: 'week' | 'month' | 'year' = 'month'
-  ): Promise<{
-    preferredMethods: Array<{
-      methodId: string;
-      methodName: string;
-      usageCount: number;
-      successRate: number;
-      averageCost: number;
-      lastUsed: string;
-    }>;
-    costSavings: {
-      totalSaved: number;
-      averageSavingsPerTransaction: number;
-      bestAlternativeUsed: string;
+  async openDispute(orderId: string, reason: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/orders/${orderId}/dispute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          initiatorAddress: '', // This would be filled with the user's address
+          reason 
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to open dispute');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error opening dispute:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Transform backend order to frontend format
+   */
+  private transformOrder(order: any): Order {
+    // This is a simplified transformation - in a real implementation,
+    // you would map the actual backend order structure to the frontend format
+    return {
+      id: order.id,
+      status: order.status as OrderStatus,
+      paymentMethod: order.paymentToken && (order.paymentToken.includes('USDC') || order.paymentToken.includes('USDT')) ? 'crypto' : 'fiat',
+      total: parseFloat(order.amount) || 0,
+      currency: 'USD',
+      items: [
+        {
+          id: order.listingId || '1',
+          title: `Order #${order.id}`,
+          image: '/api/placeholder/400/400',
+          unitPrice: parseFloat(order.amount) || 0,
+          quantity: 1,
+          totalPrice: parseFloat(order.amount) || 0
+        }
+      ],
+      createdAt: new Date(order.createdAt),
+      estimatedDelivery: order.status === 'SHIPPED' ? new Date(Date.now() + 86400000 * 3) : undefined,
+      trackingNumber: order.status === 'SHIPPED' ? `TRK${order.id}` : undefined,
+      seller: {
+        id: order.sellerId || 'seller_1',
+        name: 'Marketplace Seller',
+        avatar: '/api/placeholder/40/40'
+      }
     };
-    methodPerformance: Record<string, {
-      count: number;
-      successRate: number;
-      averageTime: number;
-      averageCost: number;
-    }>;
-  }> {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/orders/analytics/payment-methods/${userAddress}?timeframe=${timeframe}`
-      );
-
-      if (!response.ok) {
-        console.warn(`Payment method analytics unavailable (${response.status}). Using defaults.`);
-        return {
-          preferredMethods: [],
-          costSavings: {
-            totalSaved: 0,
-            averageSavingsPerTransaction: 0,
-            bestAlternativeUsed: 'N/A'
-          },
-          methodPerformance: {}
-        };
-      }
-
-      const result = await response.json();
-      return result.success ? result.data : {
-        preferredMethods: [],
-        costSavings: {
-          totalSaved: 0,
-          averageSavingsPerTransaction: 0,
-          bestAlternativeUsed: 'N/A'
-        },
-        methodPerformance: {}
-      };
-    } catch (error) {
-      console.error('Error fetching payment method analytics:', error);
-      return {
-        preferredMethods: [],
-        costSavings: {
-          totalSaved: 0,
-          averageSavingsPerTransaction: 0,
-          bestAlternativeUsed: 'N/A'
-        },
-        methodPerformance: {}
-      };
-    }
   }
 
   /**
-   * Get order statistics for dashboard
+   * Transform order and timeline to tracking status format
    */
-  async getOrderStatistics(
-    userAddress: string,
-    userType: 'buyer' | 'seller' = 'buyer',
-    timeframe: 'week' | 'month' | 'year' = 'month'
-  ): Promise<{
-    totalOrders: number;
-    completedOrders: number;
-    pendingOrders: number;
-    disputedOrders: number;
-    totalValue: number;
-    averageOrderValue: number;
-    completionRate: number;
-    statusBreakdown: Record<OrderStatus, number>;
-    paymentMethodBreakdown: Record<string, {
-      count: number;
-      totalValue: number;
-      averageCost: number;
-      successRate: number;
-    }>;
-    paymentMethodPreferences: Array<{
-      methodId: string;
-      methodName: string;
-      usageCount: number;
-      successRate: number;
-      averageCost: number;
-      lastUsed: string;
-    }>;
-  }> {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/marketplace/orders/statistics/${userAddress}?userType=${userType}&timeframe=${timeframe}`
-      );
+  private transformOrderToTrackingStatus(order: any, timeline: OrderEvent[]): OrderTrackingStatus {
+    const statusSteps = [
+      { status: 'CREATED', step: 1, label: 'Order Created' },
+      { status: 'PAID', step: 2, label: 'Payment Received' },
+      { status: 'PROCESSING', step: 3, label: 'Processing' },
+      { status: 'SHIPPED', step: 4, label: 'Shipped' },
+      { status: 'DELIVERED', step: 5, label: 'Delivered' },
+      { status: 'COMPLETED', step: 6, label: 'Completed' }
+    ];
 
-      if (!response.ok) {
-        console.warn(`Order statistics unavailable (${response.status}). Using defaults.`);
-        return {
-          totalOrders: 0,
-          completedOrders: 0,
-          pendingOrders: 0,
-          disputedOrders: 0,
-          totalValue: 0,
-          averageOrderValue: 0,
-          completionRate: 0,
-          statusBreakdown: {
-            CREATED: 0,
-            PAYMENT_PENDING: 0,
-            PAID: 0,
-            PROCESSING: 0,
-            SHIPPED: 0,
-            DELIVERED: 0,
-            COMPLETED: 0,
-            DISPUTED: 0,
-            CANCELLED: 0,
-            REFUNDED: 0,
-          },
-          paymentMethodBreakdown: {},
-          paymentMethodPreferences: [],
-        };
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        return {
-          ...result.data,
-          paymentMethodBreakdown: result.data.paymentMethodBreakdown || {},
-          paymentMethodPreferences: result.data.paymentMethodPreferences || [],
-        };
-      } else {
-        console.warn('Order statistics response not successful. Using defaults.');
-        return {
-          totalOrders: 0,
-          completedOrders: 0,
-          pendingOrders: 0,
-          disputedOrders: 0,
-          totalValue: 0,
-          averageOrderValue: 0,
-          completionRate: 0,
-          statusBreakdown: {
-            CREATED: 0,
-            PAYMENT_PENDING: 0,
-            PAID: 0,
-            PROCESSING: 0,
-            SHIPPED: 0,
-            DELIVERED: 0,
-            COMPLETED: 0,
-            DISPUTED: 0,
-            CANCELLED: 0,
-            REFUNDED: 0,
-          },
-          paymentMethodBreakdown: {},
-          paymentMethodPreferences: [],
-        };
-      }
-    } catch (error) {
-      console.error('Error fetching order statistics:', error);
-      // Return default statistics on error
-      return {
-        totalOrders: 0,
-        completedOrders: 0,
-        pendingOrders: 0,
-        disputedOrders: 0,
-        totalValue: 0,
-        averageOrderValue: 0,
-        completionRate: 0,
-        statusBreakdown: {
-          CREATED: 0,
-          PAYMENT_PENDING: 0,
-          PAID: 0,
-          PROCESSING: 0,
-          SHIPPED: 0,
-          DELIVERED: 0,
-          COMPLETED: 0,
-          DISPUTED: 0,
-          CANCELLED: 0,
-          REFUNDED: 0,
-        },
-        paymentMethodBreakdown: {},
-        paymentMethodPreferences: [],
-      };
-    }
-  }
-
-  /**
-   * Get tracking information for an order
-   */
-  async getTrackingInfo(orderId: string): Promise<{
-    trackingNumber?: string;
-    carrier?: string;
-    status?: string;
-    estimatedDelivery?: string;
-    actualDelivery?: string;
-    events: Array<{
-      timestamp: string;
-      status: string;
-      location: string;
-      description: string;
-    }>;
-  } | null> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/marketplace/orders/${orderId}/tracking`);
-      
-      if (!response.ok) {
-        if (response.status === 404) return null;
-        throw new Error(`Failed to fetch tracking info: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to fetch tracking info');
-      }
-    } catch (error) {
-      console.error('Error fetching tracking info:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Export order history to CSV
-   */
-  async exportOrderHistory(
-    userAddress: string,
-    userType: 'buyer' | 'seller' = 'buyer',
-    filters?: OrderFilters
-  ): Promise<Blob> {
-    try {
-      const params = new URLSearchParams({
-        userType,
-        format: 'csv',
-      });
-
-      // Add filters to query params
-      if (filters) {
-        if (filters.status) params.append('status', filters.status);
-        if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
-        if (filters.dateTo) params.append('dateTo', filters.dateTo);
-        if (filters.paymentMethod) params.append('paymentMethod', filters.paymentMethod);
-      }
-
-      const response = await fetch(
-        `${this.baseUrl}/api/marketplace/orders/export/${userAddress}?${params.toString()}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to export order history: ${response.status} ${response.statusText}`);
-      }
-
-      return await response.blob();
-    } catch (error) {
-      console.error('Error exporting order history:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get order notifications
-   */
-  async getOrderNotifications(
-    userAddress: string,
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<{
-    notifications: Array<{
-      id: string;
-      orderId: string;
-      type: string;
-      message: string;
-      metadata?: any;
-      read: boolean;
-      createdAt: string;
-    }>;
-    total: number;
-    unreadCount: number;
-  }> {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/marketplace/orders/notifications/${userAddress}?limit=${limit}&offset=${offset}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.message || 'Failed to fetch notifications');
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      return {
-        notifications: [],
-        total: 0,
-        unreadCount: 0,
-      };
-    }
-  }
-
-  /**
-   * Mark notification as read
-   */
-  async markNotificationAsRead(notificationId: string): Promise<void> {
-    try {
-      const response = await fetch(
-        `${this.baseUrl}/api/marketplace/orders/notifications/${notificationId}/read`,
-        { method: 'PUT' }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to mark notification as read: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to mark notification as read');
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
+    const currentStep = statusSteps.find(step => step.status === order.status) || statusSteps[0];
+    
+    return {
+      orderId: order.id,
+      status: order.status,
+      paymentPath: order.paymentToken && (order.paymentToken.includes('USDC') || order.paymentToken.includes('USDT')) ? 'crypto' : 'fiat',
+      progress: {
+        step: currentStep.step,
+        totalSteps: statusSteps.length,
+        currentStep: currentStep.label,
+        nextStep: currentStep.step < statusSteps.length ? statusSteps[currentStep.step].label : undefined
+      },
+      actions: {
+        canConfirmDelivery: order.status === 'SHIPPED',
+        canReleaseFunds: order.status === 'DELIVERED',
+        canDispute: ['PAID', 'PROCESSING', 'SHIPPED'].includes(order.status),
+        canCancel: ['CREATED', 'PAID'].includes(order.status)
+      },
+      timeline: timeline
+    };
   }
 }
 

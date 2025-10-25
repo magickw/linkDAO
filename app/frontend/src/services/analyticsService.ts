@@ -88,7 +88,7 @@ export interface RealTimeStats {
 }
 
 class AnalyticsService {
-  private baseUrl = `${BACKEND_API_BASE_URL}/api/analytics`;
+  private baseUrl: string;
 
   constructor() {
     // Use port 10000 based on the start-services.sh script

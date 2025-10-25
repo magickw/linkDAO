@@ -22,35 +22,15 @@ import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import Layout from '@/components/Layout';
 import OrderTracking from '@/components/Checkout/OrderTracking';
+import { orderService, Order } from '@/services/orderService';
+import { useAccount } from 'wagmi';
 
-interface Order {
-  id: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'completed' | 'cancelled' | 'disputed';
-  paymentMethod: 'crypto' | 'fiat';
-  total: number;
-  currency: string;
-  items: Array<{
-    id: string;
-    name: string;
-    image: string;
-    price: number;
-    quantity: number;
-  }>;
-  createdAt: Date;
-  estimatedDelivery?: Date;
-  trackingNumber?: string;
-  seller: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-}
-
-type OrderFilter = 'all' | 'pending' | 'processing' | 'shipped' | 'completed' | 'disputed';
+type OrderFilter = 'all' | 'CREATED' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'DISPUTED' | 'CANCELLED';
 type OrderSort = 'newest' | 'oldest' | 'amount-high' | 'amount-low';
 
 const OrdersPage: React.FC = () => {
   const router = useRouter();
+  const { address } = useAccount();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -59,86 +39,18 @@ const OrdersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadOrders();
-  }, []);
+    if (address) {
+      loadOrders();
+    }
+  }, [address]);
 
   const loadOrders = async () => {
+    if (!address) return;
+    
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockOrders: Order[] = [
-        {
-          id: 'order_1',
-          status: 'processing',
-          paymentMethod: 'crypto',
-          total: 299.99,
-          currency: 'USD',
-          items: [
-            {
-              id: '1',
-              name: 'Premium Digital Art NFT',
-              image: '/api/placeholder/400/400',
-              price: 299.99,
-              quantity: 1
-            }
-          ],
-          createdAt: new Date(Date.now() - 86400000), // 1 day ago
-          estimatedDelivery: new Date(Date.now() + 86400000 * 3), // 3 days from now
-          seller: {
-            id: 'seller_1',
-            name: 'ArtistDAO',
-            avatar: '/api/placeholder/40/40'
-          }
-        },
-        {
-          id: 'order_2',
-          status: 'shipped',
-          paymentMethod: 'fiat',
-          total: 149.50,
-          currency: 'USD',
-          items: [
-            {
-              id: '2',
-              name: 'Blockchain Development Course',
-              image: '/api/placeholder/400/400',
-              price: 149.50,
-              quantity: 1
-            }
-          ],
-          createdAt: new Date(Date.now() - 86400000 * 3), // 3 days ago
-          estimatedDelivery: new Date(Date.now() + 86400000), // 1 day from now
-          trackingNumber: 'TRK123456789',
-          seller: {
-            id: 'seller_2',
-            name: 'EduChain',
-            avatar: '/api/placeholder/40/40'
-          }
-        },
-        {
-          id: 'order_3',
-          status: 'completed',
-          paymentMethod: 'crypto',
-          total: 89.99,
-          currency: 'USD',
-          items: [
-            {
-              id: '3',
-              name: 'DeFi Analytics Tool',
-              image: '/api/placeholder/400/400',
-              price: 89.99,
-              quantity: 1
-            }
-          ],
-          createdAt: new Date(Date.now() - 86400000 * 7), // 1 week ago
-          seller: {
-            id: 'seller_3',
-            name: 'DeFiTools',
-            avatar: '/api/placeholder/40/40'
-          }
-        }
-      ];
-
-      setOrders(mockOrders);
+      const userOrders = await orderService.getOrdersByUser(address);
+      setOrders(userOrders);
     } catch (error) {
       console.error('Failed to load orders:', error);
     } finally {
@@ -148,17 +60,18 @@ const OrdersPage: React.FC = () => {
 
   const getStatusIcon = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
+      case 'CREATED':
         return <Clock className="w-4 h-4 text-yellow-400" />;
-      case 'processing':
+      case 'PAID':
+      case 'PROCESSING':
         return <Package className="w-4 h-4 text-blue-400" />;
-      case 'shipped':
+      case 'SHIPPED':
         return <Truck className="w-4 h-4 text-blue-400" />;
-      case 'delivered':
-      case 'completed':
+      case 'DELIVERED':
+      case 'COMPLETED':
         return <CheckCircle className="w-4 h-4 text-green-400" />;
-      case 'cancelled':
-      case 'disputed':
+      case 'CANCELLED':
+      case 'DISPUTED':
         return <AlertTriangle className="w-4 h-4 text-red-400" />;
       default:
         return <Package className="w-4 h-4 text-white/60" />;
@@ -167,16 +80,17 @@ const OrdersPage: React.FC = () => {
 
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
-      case 'pending':
+      case 'CREATED':
         return 'text-yellow-400';
-      case 'processing':
-      case 'shipped':
+      case 'PAID':
+      case 'PROCESSING':
+      case 'SHIPPED':
         return 'text-blue-400';
-      case 'delivered':
-      case 'completed':
+      case 'DELIVERED':
+      case 'COMPLETED':
         return 'text-green-400';
-      case 'cancelled':
-      case 'disputed':
+      case 'CANCELLED':
+      case 'DISPUTED':
         return 'text-red-400';
       default:
         return 'text-white/70';
@@ -187,7 +101,7 @@ const OrdersPage: React.FC = () => {
     .filter(order => {
       if (filter !== 'all' && order.status !== filter) return false;
       if (searchQuery && !order.id.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !order.items.some(item => item.name.toLowerCase().includes(searchQuery.toLowerCase()))) {
+          !order.items.some(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))) {
         return false;
       }
       return true;
@@ -195,9 +109,9 @@ const OrdersPage: React.FC = () => {
     .sort((a, b) => {
       switch (sort) {
         case 'newest':
-          return b.createdAt.getTime() - a.createdAt.getTime();
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case 'oldest':
-          return a.createdAt.getTime() - b.createdAt.getTime();
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         case 'amount-high':
           return b.total - a.total;
         case 'amount-low':
@@ -215,14 +129,14 @@ const OrdersPage: React.FC = () => {
           <div>
             <h3 className="font-semibold text-white">Order #{order.id}</h3>
             <p className="text-white/70 text-sm">
-              {order.createdAt.toLocaleDateString()} • {order.items.length} item{order.items.length > 1 ? 's' : ''}
+              {new Date(order.createdAt).toLocaleDateString()} • {order.items.length} item{order.items.length > 1 ? 's' : ''}
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(order.status)} bg-current/20`}>
-            {order.status}
+            {order.status.toLowerCase()}
           </span>
           <Button
             variant="ghost"
@@ -240,14 +154,14 @@ const OrdersPage: React.FC = () => {
           <div key={item.id} className="flex items-center gap-4">
             <img
               src={item.image}
-              alt={item.name}
+              alt={item.title}
               className="w-12 h-12 rounded-lg object-cover"
             />
             <div className="flex-1">
-              <h4 className="font-medium text-white text-sm">{item.name}</h4>
+              <h4 className="font-medium text-white text-sm">{item.title}</h4>
               <p className="text-white/70 text-xs">Qty: {item.quantity}</p>
             </div>
-            <span className="text-white font-medium">${item.price}</span>
+            <span className="text-white font-medium">${item.totalPrice}</span>
           </div>
         ))}
       </div>
@@ -305,7 +219,7 @@ const OrdersPage: React.FC = () => {
         </div>
       )}
 
-      {order.estimatedDelivery && order.status !== 'completed' && (
+      {order.estimatedDelivery && order.status !== 'COMPLETED' && (
         <div className="mt-3 flex items-center gap-2 text-white/70 text-sm">
           <Calendar className="w-3 h-3" />
           Estimated delivery: {order.estimatedDelivery.toLocaleDateString()}
@@ -375,11 +289,14 @@ const OrdersPage: React.FC = () => {
               className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white"
             >
               <option value="all">All Orders</option>
-              <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
-              <option value="completed">Completed</option>
-              <option value="disputed">Disputed</option>
+              <option value="CREATED">Created</option>
+              <option value="PAID">Paid</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="SHIPPED">Shipped</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="DISPUTED">Disputed</option>
+              <option value="CANCELLED">Cancelled</option>
             </select>
             
             <select
@@ -405,7 +322,7 @@ const OrdersPage: React.FC = () => {
             <GlassPanel variant="secondary" className="p-6 text-center">
               <Clock className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
               <h3 className="text-2xl font-bold text-white">
-                {orders.filter(o => ['pending', 'processing'].includes(o.status)).length}
+                {orders.filter(o => ['CREATED', 'PAID', 'PROCESSING'].includes(o.status)).length}
               </h3>
               <p className="text-white/70 text-sm">In Progress</p>
             </GlassPanel>
@@ -413,7 +330,7 @@ const OrdersPage: React.FC = () => {
             <GlassPanel variant="secondary" className="p-6 text-center">
               <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
               <h3 className="text-2xl font-bold text-white">
-                {orders.filter(o => o.status === 'completed').length}
+                {orders.filter(o => o.status === 'COMPLETED').length}
               </h3>
               <p className="text-white/70 text-sm">Completed</p>
             </GlassPanel>

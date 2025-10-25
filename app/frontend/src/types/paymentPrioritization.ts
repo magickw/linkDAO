@@ -226,9 +226,9 @@ export const DEFAULT_GAS_FEE_THRESHOLDS: Record<PaymentMethodType, GasFeeThresho
     blockTransactionThresholdUSD: 0
   },
   [PaymentMethodType.NATIVE_ETH]: {
-    maxAcceptableGasFeeUSD: 100,
-    warningThresholdUSD: 50,
-    blockTransactionThresholdUSD: 200
+    maxAcceptableGasFeeUSD: 0, // Disabled
+    warningThresholdUSD: 0, // Disabled
+    blockTransactionThresholdUSD: 0 // Disabled
   }
 };
 
@@ -261,12 +261,12 @@ export const DEFAULT_PAYMENT_METHOD_CONFIGS: Record<PaymentMethodType, PaymentMe
     enabled: true
   },
   [PaymentMethodType.NATIVE_ETH]: {
-    basePriority: 4,
+    basePriority: 99, // Deprioritized
     costWeight: 0.6,
     preferenceWeight: 0.2,
     availabilityWeight: 0.2,
     gasFeeThreshold: DEFAULT_GAS_FEE_THRESHOLDS[PaymentMethodType.NATIVE_ETH],
-    displayOrder: 4,
-    enabled: true
+    displayOrder: 99, // Hidden from display
+    enabled: false // Disabled as per requirements
   }
 };

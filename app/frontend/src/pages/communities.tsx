@@ -12,6 +12,7 @@ import { BoostButton } from '@/components/Staking/BoostButton';
 import { RealTimeStakingUpdates } from '@/components/Staking/RealTimeStakingUpdates';
 import { EnhancedLeftSidebar } from '@/components/CommunityEnhancements/EnhancedLeftSidebar/EnhancedLeftSidebar';
 import CommunityRightSidebar from '@/components/Community/CommunityRightSidebar';
+import { CreateCommunityModal } from '@/components/CommunityEnhancements/Modals/CreateCommunityModal';
 import TokenReactionSystem from '@/components/TokenReactionSystem/TokenReactionSystem';
 import { EnhancedTipButton } from '@/components/Web3PostInteractions/EnhancedTipButton';
 import { OnChainVerificationBadge } from '@/components/OnChainVerification/OnChainVerificationBadge';
@@ -55,7 +56,8 @@ import {
   Coins,
   Shield,
   Vote,
-  Trophy
+  Trophy,
+  X
 } from 'lucide-react';
 import { CommunityService } from '@/services/communityService';
 import { Community } from '@/models/Community';
@@ -186,6 +188,10 @@ const CommunitiesPage: React.FC = () => {
   
   // Keyboard shortcuts state
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  
+  // Create community modal state
+  const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
+  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
 
   // Load communities and enhanced Web3 data on component mount
@@ -371,6 +377,27 @@ const CommunitiesPage: React.FC = () => {
     } catch (err) {
       console.error('Error creating community:', err);
       throw err;
+    }
+  };
+
+  const handleCreateCommunityClick = async (_communityData: any): Promise<void> => {
+    setShowCreateCommunityModal(true);
+  };
+
+  const handleCloseCreateCommunityModal = () => {
+    setShowCreateCommunityModal(false);
+  };
+
+  const handleCreateCommunitySubmit = async (communityData: any) => {
+    setIsCreatingCommunity(true);
+    try {
+      await handleCreateCommunity(communityData);
+      setShowCreateCommunityModal(false);
+    } catch (error) {
+      console.error('Failed to create community:', error);
+      throw error;
+    } finally {
+      setIsCreatingCommunity(false);
     }
   };
 
@@ -775,7 +802,7 @@ const CommunitiesPage: React.FC = () => {
                   }}
                   onFiltersChange={handleFiltersChange}
                   onQuickAction={handleQuickAction}
-                  onCreateCommunity={handleCreateCommunity}
+                  onCreateCommunity={handleCreateCommunityClick}
                 />
               </div>
             </div>
@@ -1084,6 +1111,14 @@ const CommunitiesPage: React.FC = () => {
           <KeyboardShortcutsModal
             isOpen={showKeyboardHelp}
             onClose={() => setShowKeyboardHelp(false)}
+          />
+          
+          {/* Create Community Modal */}
+          <CreateCommunityModal
+            isOpen={showCreateCommunityModal}
+            onClose={handleCloseCreateCommunityModal}
+            onSubmit={handleCreateCommunitySubmit}
+            isLoading={isCreatingCommunity}
           />
         </Layout>
       </VisualPolishIntegration>

@@ -33,7 +33,9 @@ import { governanceContract } from '@/services/governanceContract';
 import { notificationService } from '@/services/notificationService';
 import { ethers } from 'ethers';
 
-
+// Enhanced Components
+import { CommunityCardSkeleton } from '@/components/Community/CommunityLoadingSkeletons';
+import CommunityPostCardEnhanced from '@/components/Community/CommunityPostCardEnhanced';
 
 export default function CommunityPage() {
   const router = useRouter();

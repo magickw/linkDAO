@@ -419,7 +419,7 @@ import { ViewModeToggle } from '@/components/Community/ViewModeToggle';
 
 Comment preview with expand/collapse functionality.
 
-```tsx
+``tsx
 import { CommentPreviewSystem } from '@/components/Community/CommentPreviewSystem';
 
 <CommentPreviewSystem
@@ -679,7 +679,7 @@ All components use consistent CSS class naming:
 
 ### Screen Reader Support
 
-```tsx
+``tsx
 // Live regions for dynamic content
 <div aria-live="polite" aria-atomic="true">
   {voteScore} points
@@ -757,7 +757,7 @@ const GovernanceWidget = lazy(() =>
 
 ### Unit Tests
 
-```tsx
+``tsx
 import { render, screen, fireEvent } from '@testing-library/react';
 import { RedditStylePostCard } from '@/components/Community/RedditStylePostCard';
 
@@ -782,7 +782,7 @@ test('should handle vote interaction', async () => {
 
 ### Integration Tests
 
-```tsx
+``tsx
 import { render, screen, waitFor } from '@testing-library/react';
 import { CommunityView } from '@/components/Community/CommunityView';
 
@@ -798,3 +798,113 @@ test('should load community with posts and sidebar', async () => {
 ```
 
 This documentation provides comprehensive guidance for implementing and using the Reddit-style community components. For additional examples and advanced usage patterns, refer to the component source files and test suites.
+
+# Enhanced Community Components
+
+This directory contains enhanced versions of the community components with improved styling, accessibility, performance, and loading states.
+
+## Components
+
+### CommunityCardEnhanced
+An enhanced version of the CommunityCard component with:
+- Improved visual design using Tailwind CSS
+- Better accessibility with ARIA labels and keyboard navigation
+- Loading skeletons for better UX during data fetching
+- Animation effects using Framer Motion
+- Responsive design for all screen sizes
+
+### CommunityPostCardEnhanced
+An enhanced version of the CommunityPostCard component with:
+- Consistent Tailwind CSS styling
+- Improved accessibility features
+- Loading skeletons for better perceived performance
+- Animation effects for better user experience
+- Enhanced interaction elements
+
+### VirtualFeedEnhanced
+A virtualized feed component for better performance with large lists of posts:
+- Uses react-window for efficient rendering
+- Falls back to normal rendering for small lists
+- Loading states for better UX
+- Accessible navigation
+
+## Key Enhancements
+
+### 1. Styling Consistency
+All components now use a consistent Tailwind CSS approach with:
+- Unified color palette
+- Consistent spacing and typography
+- Responsive design patterns
+- Dark mode support
+
+### 2. Loading States
+Enhanced loading experiences with:
+- Skeleton screens that match the actual content structure
+- Smooth animations during loading
+- Clear visual feedback for user actions
+
+### 3. Accessibility Improvements
+- Proper ARIA labels for screen readers
+- Keyboard navigation support
+- Focus management
+- Semantic HTML structure
+- Color contrast compliance
+
+### 4. Performance Optimization
+- Virtualization for large lists
+- Memoization of expensive operations
+- Efficient rendering strategies
+- Reduced DOM complexity
+
+## Usage
+
+### CommunityCardEnhanced
+``tsx
+import CommunityCardEnhanced from '@/components/Community/CommunityCardEnhanced';
+
+<CommunityCardEnhanced
+  community={communityData}
+  onSelect={handleCommunitySelect}
+  onJoin={handleJoinCommunity}
+  showTrendingInfo={true}
+  compact={false}
+  isLoading={false}
+/>
+```
+
+### CommunityPostCardEnhanced
+``tsx
+import CommunityPostCardEnhanced from '@/components/Community/CommunityPostCardEnhanced';
+
+<CommunityPostCardEnhanced
+  post={postData}
+  community={communityData}
+  userMembership={userMembership}
+  onVote={handleVote}
+  onReaction={handleReaction}
+  onTip={handleTip}
+  isLoading={false}
+/>
+```
+
+### VirtualFeedEnhanced
+``tsx
+import VirtualFeedEnhanced from '@/components/Feed/VirtualFeedEnhanced';
+
+<VirtualFeedEnhanced
+  posts={posts}
+  community={communityData}
+  userMembership={userMembership}
+  onVote={handleVote}
+  height={600}
+  itemHeight={300}
+/>
+```
+
+## Future Improvements
+
+1. Add more sophisticated animation effects
+2. Implement internationalization support
+3. Add more customization options
+4. Improve performance metrics tracking
+5. Add more comprehensive testing

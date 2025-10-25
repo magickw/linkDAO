@@ -136,28 +136,109 @@ const OrdersPage: React.FC = () => {
 
       setLoading(true);
       try {
-        const [history, statistics] = await Promise.all([
-          orderService.getOrderHistory(address, 'buyer', 1, 20),
-          orderService.getOrderStatistics(address, 'buyer').catch((statsErr) => {
-            console.error('Failed to fetch order stats', statsErr);
-            setStatsError('Unable to load marketplace stats right now.');
-            return null;
-          })
-        ]);
+        // Use getOrdersByUser instead of getOrderHistory since it doesn't exist
+        const orders = await orderService.getOrdersByUser(address);
+        
+        // Mock statistics since getOrderStatistics doesn't exist
+        const statusBreakdown: Record<OrderStatus, number> = {
+          'CREATED': orders.filter(order => order.status === 'CREATED').length,
+          'PAYMENT_PENDING': orders.filter(order => order.status === 'PAYMENT_PENDING').length,
+          'PAID': orders.filter(order => order.status === 'PAID').length,
+          'PROCESSING': orders.filter(order => order.status === 'PROCESSING').length,
+          'SHIPPED': orders.filter(order => order.status === 'SHIPPED').length,
+          'DELIVERED': orders.filter(order => order.status === 'DELIVERED').length,
+          'COMPLETED': orders.filter(order => order.status === 'COMPLETED').length,
+          'DISPUTED': orders.filter(order => order.status === 'DISPUTED').length,
+          'CANCELLED': orders.filter(order => order.status === 'CANCELLED').length,
+          'REFUNDED': orders.filter(order => order.status === 'REFUNDED').length,
+        };
+        
+        const paymentMethodBreakdown: Record<string, {
+          count: number;
+          totalValue: number;
+          averageCost: number;
+          successRate: number;
+        }> = {
+          'crypto': {
+            count: orders.filter(order => order.paymentMethod === 'crypto').length,
+            totalValue: orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0),
+            averageCost: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
+              : 0,
+            successRate: orders.filter(order => order.paymentMethod === 'crypto' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'crypto').length)
+          },
+          'fiat': {
+            count: orders.filter(order => order.paymentMethod === 'fiat').length,
+            totalValue: orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0),
+            averageCost: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
+              : 0,
+            successRate: orders.filter(order => order.paymentMethod === 'fiat' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'fiat').length)
+          }
+        };
+        
+        const paymentMethodPreferences = [
+          {
+            methodId: 'crypto',
+            methodName: 'Crypto',
+            usageCount: orders.filter(order => order.paymentMethod === 'crypto').length,
+            successRate: orders.filter(order => order.paymentMethod === 'crypto' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'crypto').length),
+            averageCost: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'crypto').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'crypto').length
+              : 0,
+            lastUsed: orders.filter(order => order.paymentMethod === 'crypto').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'crypto')[0].createdAt.toISOString()
+              : new Date().toISOString()
+          },
+          {
+            methodId: 'fiat',
+            methodName: 'Fiat',
+            usageCount: orders.filter(order => order.paymentMethod === 'fiat').length,
+            successRate: orders.filter(order => order.paymentMethod === 'fiat' && order.status === 'COMPLETED').length / Math.max(1, orders.filter(order => order.paymentMethod === 'fiat').length),
+            averageCost: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'fiat').reduce((sum, order) => sum + order.total, 0) / orders.filter(order => order.paymentMethod === 'fiat').length
+              : 0,
+            lastUsed: orders.filter(order => order.paymentMethod === 'fiat').length > 0 
+              ? orders.filter(order => order.paymentMethod === 'fiat')[0].createdAt.toISOString()
+              : new Date().toISOString()
+          }
+        ];
+
+        const statistics: OrderStatistics = {
+          totalOrders: orders.length,
+          completedOrders: orders.filter(order => order.status === 'COMPLETED').length,
+          pendingOrders: orders.filter(order => ['CREATED', 'PAID', 'PROCESSING'].includes(order.status)).length,
+          disputedOrders: orders.filter(order => order.status === 'DISPUTED').length,
+          totalValue: orders.reduce((sum, order) => sum + order.total, 0),
+          averageOrderValue: orders.length > 0 ? orders.reduce((sum, order) => sum + order.total, 0) / orders.length : 0,
+          completionRate: orders.length > 0 ? orders.filter(order => order.status === 'COMPLETED').length / orders.length : 0,
+          statusBreakdown,
+          paymentMethodBreakdown,
+          paymentMethodPreferences
+        };
 
         if (!cancelled) {
-          if (history.orders.length > 0) {
-            const normalized = history.orders.map<OrderSummary>((order) => ({
+          if (orders.length > 0) {
+            const normalized = orders.map<OrderSummary>((order) => ({
               id: order.id,
-              product: order.product,
+              product: {
+                id: order.items[0]?.id || '1',
+                title: order.items[0]?.title || `Order #${order.id}`,
+                description: '',
+                image: order.items[0]?.image || '/api/placeholder/400/400',
+                category: '',
+                quantity: order.items[0]?.quantity || 1,
+                unitPrice: order.items[0]?.unitPrice || order.total,
+                totalPrice: order.items[0]?.totalPrice || order.total
+              },
               status: order.status,
-              totalAmount: order.totalAmount,
+              totalAmount: order.total,
               currency: order.currency,
-              createdAt: order.createdAt,
-              estimatedDelivery: order.estimatedDelivery,
-              trackingCarrier: order.trackingCarrier,
+              createdAt: order.createdAt.toISOString(),
+              estimatedDelivery: order.estimatedDelivery?.toISOString(),
+              trackingCarrier: undefined,
               trackingNumber: order.trackingNumber,
-              sellerName: order.product?.description,
+              sellerName: order.seller?.name || 'Marketplace Seller',
             }));
             setOrders(normalized);
           } else {
@@ -165,10 +246,8 @@ const OrdersPage: React.FC = () => {
             setOrders(localOrders ? JSON.parse(localOrders) : FALLBACK_ORDERS);
           }
 
-          if (statistics) {
-            setStats(statistics);
-            setStatsError(null);
-          }
+          setStats(statistics);
+          setStatsError(null);
         }
       } catch (error) {
         console.error('Failed to load orders', error);

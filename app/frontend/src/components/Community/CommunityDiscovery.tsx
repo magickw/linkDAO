@@ -8,7 +8,7 @@ import { Community } from '../../models/Community';
 import { CommunityService } from '../../services/communityService';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';
-import { CommunityCard } from './CommunityCard';
+import { CommunityCardEnhanced as CommunityCard } from './CommunityCardEnhanced';
 import { formatNumber } from '../../utils/formatters';
 
 interface CommunityDiscoveryProps {

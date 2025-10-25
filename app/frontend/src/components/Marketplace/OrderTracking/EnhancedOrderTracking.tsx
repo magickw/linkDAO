@@ -55,10 +55,14 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
     
     setLoading(true);
     try {
-      const result = await orderService.getOrderHistory(address, userType, 1, 20);
-      setOrders(result.orders);
+      const orders = await orderService.getOrdersByUser(address);
+      // Filter orders based on user type (buyer/seller)
+      const filteredOrders = userType === 'buyer' 
+        ? orders.filter(order => order.seller.id !== address)
+        : orders.filter(order => order.seller.id === address);
+      setOrders(filteredOrders as any);
       
-      if (result.orders.length === 0) {
+      if (filteredOrders.length === 0) {
         addToast(`No ${userType === 'buyer' ? 'orders' : 'orders to fulfill'} found`, 'info');
       }
     } catch (error) {
@@ -162,7 +166,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
     try {
       switch (action) {
         case 'confirm_delivery':
-          await orderService.confirmDelivery(order.id);
+          await orderService.confirmDelivery(order.id, {});
           addToast('Delivery confirmed', 'success');
           break;
         case 'track_package':
