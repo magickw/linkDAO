@@ -41,6 +41,14 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "tests/**/*",
-    "coverage/**/*"
+    "src/tests/**/*",
+    "coverage/**/*",
+    "src/controllers/advancedTradingController.ts",
+    "src/controllers/dexTradingController.ts",
+    "src/services/advancedTradingService.ts",
+    "src/services/multiChainDEXService.ts",
+    "src/services/uniswapV3Service.ts",
+    "src/routes/advancedTradingRoutes.ts",
+    "src/routes/dexTradingRoutes.ts"
   ]
 }
