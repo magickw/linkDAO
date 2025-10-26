@@ -5,7 +5,6 @@ import { useNavigation } from '@/context/NavigationContext';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
 import {
   CommunityIconList,
   EnhancedUserCard,
@@ -17,6 +16,23 @@ import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingConten
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
 import { useQuery } from '@tanstack/react-query'; // Add React Query import
+
+// Dynamic imports to avoid circular dependencies
+import dynamic from 'next/dynamic';
+
+const CommunityCreationModal = dynamic(
+  () => import('@/components/CommunityManagement/CommunityCreationModal'),
+  { ssr: false }
+);
+
+const CommunityDiscovery = dynamic(
+  () => import('@/components/CommunityManagement/CommunityDiscovery'),
+  { ssr: false }
+);
+
+// Type definitions for dynamic components
+type CommunityCreationModalType = typeof import('@/components/CommunityManagement/CommunityCreationModal').default;
+type CommunityDiscoveryType = typeof import('@/components/CommunityManagement/CommunityDiscovery').default;
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -448,6 +464,18 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
         ) : (
           /* Collapsed Navigation */
           <>
+            {/* Sidebar Toggle Button */}
+            <div className="flex justify-end p-2">
+                <button
+                    onClick={() => updateUserPreferences({ sidebarCollapsed: !userPreferences.sidebarCollapsed })}
+                    className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title={userPreferences.sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={userPreferences.sidebarCollapsed ? "M4 6h16M4 12h16m-7 6h7" : "M4 6h16M4 12h16M4 18h16"} />
+                    </svg>
+                </button>
+            </div>
             {/* Collapsed User Profile Card */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-3 flex justify-center">
@@ -551,15 +579,17 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
 
       {/* Community Creation Modal */}
-      <CommunityCreationModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={(community) => {
-          // This will be handled by the enhanced navigation hook
-          // For now, we can trigger a refresh or update
-          console.log('Community created:', community);
-        }}
-      />
+      {showCreateModal && (
+        <CommunityCreationModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={(community) => {
+            // This will be handled by the enhanced navigation hook
+            // For now, we can trigger a refresh or update
+            console.log('Community created:', community);
+          }}
+        />
+      )}
 
       {/* Community Discovery Modal */}
       {showDiscoveryModal && (
