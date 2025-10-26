@@ -1,56 +1,76 @@
 /**
- * Cart Page - Shopping cart with checkout integration
+ * Cart Page - Displays user's shopping cart
  */
 
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react';
-import { useCart } from '@/hooks/useCart';
-import { useToast } from '@/context/ToastContext';
-import { Button } from '@/design-system/components/Button';
-import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { DualPricing } from '@/design-system/components/DualPricing';
+import Head from 'next/head';
 import Layout from '@/components/Layout';
+import { cartService, CartItem, CartState } from '@/services/cartService';
+import { X, Plus, Minus, ShoppingCart } from 'lucide-react';
 
 const CartPage: React.FC = () => {
-  const router = useRouter();
-  const { state, actions } = useCart();
-  const { addToast } = useToast();
-
-  const handleQuantityChange = async (itemId: string, newQuantity: number) => {
-    try {
-      await actions.updateQuantity(itemId, newQuantity);
-    } catch (error) {
-      addToast('Failed to update quantity', 'error');
-    }
-  };
-
-  const handleRemoveItem = async (itemId: string) => {
-    try {
-      await actions.removeItem(itemId);
-      addToast('Item removed from cart', 'success');
-    } catch (error) {
-      addToast('Failed to remove item', 'error');
-    }
-  };
-
-  const handleClearCart = async () => {
-    if (window.confirm('Are you sure you want to clear your cart?')) {
-      try {
-        await actions.clearCart();
-        addToast('Cart cleared', 'success');
-      } catch (error) {
-        addToast('Failed to clear cart', 'error');
+  const [cartState, setCartState] = useState<CartState>({
+    items: [],
+    totals: {
+      itemCount: 0,
+      subtotal: {
+        crypto: '0',
+        cryptoSymbol: 'ETH',
+        fiat: '0.00',
+        fiatSymbol: 'USD'
+      },
+      shipping: {
+        crypto: '0',
+        cryptoSymbol: 'ETH',
+        fiat: '0.00',
+        fiatSymbol: 'USD'
+      },
+      total: {
+        crypto: '0',
+        cryptoSymbol: 'ETH',
+        fiat: '0.00',
+        fiatSymbol: 'USD'
       }
+    },
+    lastUpdated: new Date()
+  });
+  
+  const router = useRouter();
+
+  useEffect(() => {
+    // Load cart items
+    const loadCart = async () => {
+      const state = await cartService.getCartState();
+      setCartState(state);
+    };
+
+    loadCart();
+
+    // Subscribe to cart changes
+    const unsubscribe = cartService.subscribe((state) => {
+      setCartState(state);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleRemoveItem = (itemId: string) => {
+    cartService.removeItem(itemId);
+  };
+
+  const handleUpdateQuantity = (itemId: string, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveItem(itemId);
+      return;
     }
+    
+    cartService.updateQuantity(itemId, quantity);
   };
 
   const handleCheckout = () => {
-    if (state.items.length === 0) {
-      addToast('Your cart is empty', 'warning');
-      return;
-    }
     router.push('/marketplace/checkout');
   };
 
@@ -58,265 +78,126 @@ const CartPage: React.FC = () => {
     router.push('/marketplace');
   };
 
-  if (state.items.length === 0) {
-    return (
-      <Layout title="Shopping Cart - LinkDAO Marketplace">
-        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <GlassPanel variant="secondary" className="text-center py-16">
-              <ShoppingBag className="mx-auto h-16 w-16 text-white/60 mb-6" />
-              <h1 className="text-3xl font-bold text-white mb-4">Your cart is empty</h1>
-              <p className="text-white/70 mb-8 max-w-md mx-auto">
-                Looks like you haven't added any items to your cart yet. 
-                Start exploring our marketplace to find amazing products!
-              </p>
-              <Button variant="primary" onClick={handleContinueShopping}>
-                Continue Shopping
-              </Button>
-            </GlassPanel>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout title="Shopping Cart - LinkDAO Marketplace">
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Button
-              variant="ghost"
-              onClick={handleContinueShopping}
-              className="flex items-center gap-2 text-white/70 hover:text-white"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Continue Shopping
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white">Shopping Cart</h1>
-              <p className="text-white/70">
-                {state.totals.itemCount} item{state.totals.itemCount !== 1 ? 's' : ''} in your cart
-              </p>
-            </div>
-            {state.items.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleClearCart}
-                className="text-red-300 border-red-400/30 hover:bg-red-500/20"
-              >
-                Clear Cart
-              </Button>
-            )}
-          </div>
+    <Layout title="Shopping Cart | Marketplace" fullWidth={true}>
+      <Head>
+        <title>Shopping Cart | Marketplace</title>
+      </Head>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
-            <div className="lg:col-span-2 space-y-4">
-              <AnimatePresence>
-                {state.items.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <GlassPanel variant="secondary" className="p-6">
-                      <div className="flex gap-4">
-                        {/* Product Image */}
-                        <div className="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-                          <img
-                            src={item.image || '/placeholder-product.jpg'}
-                            alt={item.title}
-                            className="w-full h-full object-cover"
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-3xl font-bold text-white mb-8">Shopping Cart</h1>
+
+          {cartState.items.length === 0 ? (
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/20">
+              <ShoppingCart size={48} className="text-white/30 mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-white mb-2">Your cart is empty</h2>
+              <p className="text-white/70 mb-6">Add some products to your cart</p>
+              <button
+                onClick={handleContinueShopping}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Browse Marketplace
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/20">
+                  <div className="divide-y divide-white/10">
+                    {cartState.items.map((item) => (
+                      <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-4">
+                        <div className="flex-shrink-0">
+                          <img 
+                            src={item.image} 
+                            alt={item.title} 
+                            className="w-24 h-24 object-cover rounded-lg"
                           />
                         </div>
-
-                        {/* Product Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h3 className="font-semibold text-lg text-white truncate">
-                                {item.title}
-                              </h3>
-                              <p className="text-white/70 text-sm">
-                                by {item.seller.name}
-                                {item.seller.verified && <span className="ml-1">✅</span>}
-                                {item.seller.daoApproved && (
-                                  <span className="ml-1 text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
-                                    DAO
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="small"
+                        
+                        <div className="flex-grow">
+                          <div className="flex justify-between">
+                            <h3 className="font-semibold text-white">{item.title}</h3>
+                            <button
                               onClick={() => handleRemoveItem(item.id)}
-                              className="text-red-300 hover:text-red-200 hover:bg-red-500/20"
+                              className="text-white/50 hover:text-white"
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                              <X size={20} />
+                            </button>
                           </div>
-
-                          {/* Price and Quantity */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <DualPricing
-                                cryptoPrice={item.price.crypto}
-                                cryptoSymbol={item.price.cryptoSymbol}
-                                fiatPrice={item.price.fiat}
-                                fiatSymbol={item.price.fiatSymbol}
-                                size="small"
-                                layout="horizontal"
-                              />
-
-                              {/* Quantity Controls */}
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="small"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                  disabled={item.quantity <= 1}
-                                  className="w-8 h-8 p-0"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </Button>
-                                <span className="text-white font-medium min-w-[2rem] text-center">
-                                  {item.quantity}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="small"
-                                  onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                  disabled={item.quantity >= item.inventory}
-                                  className="w-8 h-8 p-0"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </Button>
-                              </div>
+                          
+                          <p className="text-white/70 text-sm mb-2">{item.seller.name}</p>
+                          
+                          <div className="flex flex-wrap items-center gap-4 mt-4">
+                            <div className="flex items-center border border-white/20 rounded-lg bg-white/10">
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                className="p-2 hover:bg-white/20"
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <span className="px-4 py-2 text-white">{item.quantity}</span>
+                              <button
+                                onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                className="p-2 hover:bg-white/20"
+                              >
+                                <Plus size={16} />
+                              </button>
                             </div>
-
-                            {/* Item Total */}
-                            <div className="text-right">
-                              <div className="text-lg font-semibold text-white">
-                                {(parseFloat(item.price.crypto) * item.quantity).toFixed(6)} {item.price.cryptoSymbol}
-                              </div>
-                              <div className="text-sm text-white/70">
-                                ${(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
-                              </div>
+                            
+                            <div className="text-lg font-semibold text-white">
+                              {item.price.fiatSymbol}{(parseFloat(item.price.fiat) * item.quantity).toFixed(2)}
                             </div>
-                          </div>
-
-                          {/* Shipping Info */}
-                          {!item.isDigital && (
-                            <div className="mt-2 text-xs text-white/60">
-                              {item.shipping.freeShipping ? (
-                                <span className="text-green-300">Free shipping</span>
-                              ) : (
-                                <span>Shipping: {item.shipping.cost} ETH</span>
-                              )}
-                              {' • '}
-                              <span>Delivery: {item.shipping.estimatedDays} days</span>
-                            </div>
-                          )}
-
-                          {/* Trust Indicators */}
-                          <div className="mt-2 flex gap-2">
-                            {item.trust.escrowProtected && (
-                              <span className="text-xs bg-green-500/20 text-green-300 px-2 py-0.5 rounded">
-                                Escrow Protected
-                              </span>
-                            )}
-                            {item.trust.onChainCertified && (
-                              <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
-                                On-Chain Certified
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
-                    </GlassPanel>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-
-            {/* Order Summary */}
-            <div className="lg:col-span-1">
-              <GlassPanel variant="secondary" className="p-6 sticky top-8">
-                <h2 className="text-xl font-semibold text-white mb-6">Order Summary</h2>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-white/70">
-                    <span>Subtotal ({state.totals.itemCount} items)</span>
-                    <div className="text-right">
-                      <div>{state.totals.subtotal.crypto} {state.totals.subtotal.cryptoSymbol}</div>
-                      <div className="text-sm">${state.totals.subtotal.fiat}</div>
-                    </div>
-                  </div>
-
-                  {parseFloat(state.totals.shipping.crypto) > 0 && (
-                    <div className="flex justify-between text-white/70">
-                      <span>Shipping</span>
-                      <div className="text-right">
-                        <div>{state.totals.shipping.crypto} {state.totals.shipping.cryptoSymbol}</div>
-                        <div className="text-sm">${state.totals.shipping.fiat}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  <hr className="border-white/20" />
-
-                  <div className="flex justify-between text-white font-semibold text-lg">
-                    <span>Total</span>
-                    <div className="text-right">
-                      <div>{state.totals.total.crypto} {state.totals.total.cryptoSymbol}</div>
-                      <div className="text-sm font-normal">${state.totals.total.fiat}</div>
-                    </div>
+                    ))}
                   </div>
                 </div>
-
-                <Button
-                  variant="primary"
-                  onClick={handleCheckout}
-                  className="w-full mb-4"
-                  disabled={state.items.length === 0}
-                >
-                  Proceed to Checkout
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleContinueShopping}
-                  className="w-full"
-                >
-                  Continue Shopping
-                </Button>
-
-                {/* Trust Features */}
-                <div className="mt-6 pt-6 border-t border-white/20">
-                  <h3 className="text-sm font-medium text-white mb-3">Protected Purchase</h3>
-                  <div className="space-y-2 text-xs text-white/70">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                      Escrow protection
+              </div>
+              
+              <div className="lg:col-span-1">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 sticky top-8 border border-white/20">
+                  <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
+                  
+                  <div className="space-y-3 mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Subtotal</span>
+                      <span className="font-medium text-white">
+                        {cartState.totals.subtotal.fiatSymbol}{cartState.totals.subtotal.fiat}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                      On-chain verification
+                    <div className="flex justify-between">
+                      <span className="text-white/70">Shipping</span>
+                      <span className="font-medium text-white">
+                        {cartState.totals.shipping.fiatSymbol}{cartState.totals.shipping.fiat}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-purple-400 rounded-full"></span>
-                      DAO dispute resolution
+                    <div className="flex justify-between pt-3 border-t border-white/20">
+                      <span className="text-lg font-semibold text-white">Total</span>
+                      <span className="text-lg font-semibold text-white">
+                        {cartState.totals.total.fiatSymbol}{cartState.totals.total.fiat}
+                      </span>
                     </div>
                   </div>
+                  
+                  <button
+                    onClick={handleCheckout}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors font-medium mb-3"
+                  >
+                    Proceed to Checkout
+                  </button>
+                  
+                  <button
+                    onClick={handleContinueShopping}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white py-3 rounded-lg transition-colors font-medium border border-white/30"
+                  >
+                    Continue Shopping
+                  </button>
                 </div>
-              </GlassPanel>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </Layout>

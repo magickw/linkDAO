@@ -79,8 +79,15 @@ export const MarketplacePreloader: React.FC<{
     if (!finalConfig.preloadOnHover) return;
 
     const handleMouseEnter = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
+      // Ensure target is an HTMLElement before using DOM methods
+      if (!(event.target instanceof Element)) return;
+      
+      const target = event.target;
+      
+      // Additional safety check to ensure target has closest method
+      if (typeof target.closest !== 'function') return;
+      
+      const link = target.closest('a[href]') as HTMLAnchorElement | null;
       
       if (!link) return;
 
@@ -112,10 +119,10 @@ export const MarketplacePreloader: React.FC<{
       }
     };
 
-    document.addEventListener('mouseenter', handleMouseEnter, true);
+    document.addEventListener('mouseover', handleMouseEnter, true);
 
     return () => {
-      document.removeEventListener('mouseenter', handleMouseEnter, true);
+      document.removeEventListener('mouseover', handleMouseEnter, true);
     };
   }, [finalConfig.preloadOnHover, preloadProductDetails, preloadSellerStore]);
 

@@ -65,6 +65,7 @@ The product data from the marketplace service is transformed to match the interf
 - Mobile-optimized layout with touch-friendly controls
 - Desktop-optimized layout with expanded information panels
 - Flexible grid system for product images
+- Consistent styling with other marketplace pages
 
 ### 2. Web3 Integration
 - Ethereum-based pricing display
@@ -77,6 +78,8 @@ The product data from the marketplace service is transformed to match the interf
 - Quantity selector with inventory validation
 - Image gallery with thumbnail navigation
 - Action feedback through alerts
+- Functional action buttons (Add to Cart, Buy Now, Wishlist, Contact Seller)
+- Easy navigation back to marketplace
 
 ### 4. Performance
 - Lazy loading for images
@@ -85,8 +88,9 @@ The product data from the marketplace service is transformed to match the interf
 
 ## URLs for Testing
 
-1. **Product Detail Page**: http://localhost:3003/marketplace/listing/1
-2. **Manual Test Page**: http://localhost:3003/test/product-detail
+1. **Product Detail Page**: http://localhost:3001/marketplace/listing/1
+2. **Wishlist Page**: http://localhost:3001/marketplace/wishlist
+3. **Cart Page**: http://localhost:3001/marketplace/cart
 
 ## Mock Data
 
@@ -102,6 +106,26 @@ The implementation includes comprehensive error handling with multiple fallback 
 - Fallback to mock API endpoint when backend service is unavailable
 - Final fallback to static mock data when all other methods fail
 - User-friendly error messages and retry options
+
+## New Functionality
+
+### Action Buttons
+The product detail page now includes fully functional action buttons:
+
+1. **Add to Cart**: Adds the product to the user's shopping cart using the cartService
+2. **Buy Now**: Adds the product to cart and redirects to checkout
+3. **Wishlist**: Adds the product to the user's wishlist using the wishlistService
+4. **Contact Seller**: Redirects to the messaging page with the seller pre-selected
+5. **View Seller Profile**: Redirects to the seller's store page
+
+### Navigation Improvements
+- Added back button for easy navigation to marketplace
+- Consistent styling across all marketplace pages
+- Improved error and loading states with matching design
+
+### Related Pages
+- **Wishlist Page**: `/marketplace/wishlist` - View and manage saved products
+- **Cart Page**: `/marketplace/cart` - View and manage shopping cart items
 
 ## Future Improvements
 

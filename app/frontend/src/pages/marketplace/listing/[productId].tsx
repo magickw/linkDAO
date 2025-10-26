@@ -9,6 +9,8 @@ import Head from 'next/head';
 import ProductDetailPage from '@/components/Marketplace/ProductDisplay/ProductDetailPage';
 import { marketplaceService } from '@/services/marketplaceService';
 import { mockProducts } from '@/data/mockProducts';
+import { cartService } from '@/services/cartService';
+import { wishlistService } from '@/services/wishlistService';
 import Layout from '@/components/Layout';
 
 const ProductDetailPageRoute: React.FC = () => {
@@ -135,11 +137,11 @@ const ProductDetailPageRoute: React.FC = () => {
   if (loading) {
     return (
       <Layout title="Loading Product | Marketplace" fullWidth={true}>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Product</h2>
-            <p className="text-gray-600">Please wait...</p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+          <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white mx-auto mb-4"></div>
+            <h2 className="text-2xl font-semibold text-white mb-2">Loading Product</h2>
+            <p className="text-white/70">Please wait while we fetch the product details...</p>
           </div>
         </div>
       </Layout>
@@ -149,16 +151,24 @@ const ProductDetailPageRoute: React.FC = () => {
   if (error) {
     return (
       <Layout title="Error Loading Product | Marketplace" fullWidth={true}>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Product</h2>
-            <p className="text-gray-600 mb-4">{error}</p>
-            <button 
-              onClick={() => router.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Try Again
-            </button>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+          <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-semibold text-white mb-2">Error Loading Product</h2>
+            <p className="text-white/70 mb-6">{error}</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => router.reload()}
+                className="px-6 py-3 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors border border-white/30"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={() => router.push('/marketplace')}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Back to Marketplace
+              </button>
+            </div>
           </div>
         </div>
       </Layout>
@@ -168,13 +178,13 @@ const ProductDetailPageRoute: React.FC = () => {
   if (!product) {
     return (
       <Layout title="Product Not Found | Marketplace" fullWidth={true}>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Product Not Found</h2>
-            <p className="text-gray-600">The requested product could not be found.</p>
+        <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+          <div className="text-center bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-semibold text-white mb-2">Product Not Found</h2>
+            <p className="text-white/70 mb-6">The requested product could not be found.</p>
             <button 
               onClick={() => router.push('/marketplace')}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               Browse Marketplace
             </button>
@@ -191,40 +201,138 @@ const ProductDetailPageRoute: React.FC = () => {
         <meta name="description" content={product.description} />
       </Head>
       
-      <ProductDetailPage
-        product={product}
-        onAddToCart={(productId, quantity) => {
-          console.log('Add to cart:', { productId, quantity });
-          // TODO: Implement add to cart functionality
-          alert('Added to cart!');
-        }}
-        onBuyNow={async (productId, quantity) => {
-          console.log('Buy now:', { productId, quantity });
-          // TODO: Implement buy now functionality
-          alert('Redirecting to checkout...');
-          // Redirect to checkout page
-          router.push('/marketplace/checkout');
-        }}
-        onAddToWishlist={(productId) => {
-          console.log('Add to wishlist:', productId);
-          // TODO: Implement add to wishlist functionality
-          alert('Added to wishlist!');
-        }}
-        onContactSeller={(sellerId) => {
-          console.log('Contact seller:', sellerId);
-          // TODO: Implement contact seller functionality
-          alert('Opening seller contact...');
-          // Redirect to messaging page
-          router.push(`/messages?to=${sellerId}`);
-        }}
-        onViewSellerProfile={(sellerId) => {
-          console.log('View seller profile:', sellerId);
-          // TODO: Implement view seller profile functionality
-          alert('Opening seller profile...');
-          // Redirect to seller profile page
-          router.push(`/seller/${sellerId}`);
-        }}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back button */}
+          <div className="mb-6">
+            <button
+              onClick={() => router.push('/marketplace')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors border border-white/20"
+            >
+              ← Back to Marketplace
+            </button>
+          </div>
+          
+          <ProductDetailPage
+            product={product}
+            onAddToCart={(productId, quantity) => {
+              console.log('Add to cart:', { productId, quantity });
+              
+              // Transform product data for cart service
+              const cartItem = {
+                id: product.id,
+                title: product.title,
+                description: product.description,
+                image: product.media[0]?.url || '',
+                price: product.price,
+                seller: {
+                  id: product.seller.id,
+                  name: product.seller.name,
+                  avatar: product.seller.avatar,
+                  verified: product.seller.verified,
+                  daoApproved: product.seller.daoApproved,
+                  escrowSupported: product.trust.escrowProtected
+                },
+                category: product.category,
+                isDigital: product.isNFT || false,
+                isNFT: product.isNFT || false,
+                inventory: product.inventory || 0,
+                shipping: product.shipping,
+                trust: product.trust
+              };
+              
+              // Add to cart
+              cartService.addItemSync(cartItem, quantity);
+              
+              // Show confirmation
+              if (typeof window !== 'undefined') {
+                alert(`Added ${quantity} ${product.title} to your cart!`);
+              }
+            }}
+            onBuyNow={async (productId, quantity) => {
+              console.log('Buy now:', { productId, quantity });
+              
+              // Transform product data for cart service
+              const cartItem = {
+                id: product.id,
+                title: product.title,
+                description: product.description,
+                image: product.media[0]?.url || '',
+                price: product.price,
+                seller: {
+                  id: product.seller.id,
+                  name: product.seller.name,
+                  avatar: product.seller.avatar,
+                  verified: product.seller.verified,
+                  daoApproved: product.seller.daoApproved,
+                  escrowSupported: product.trust.escrowProtected
+                },
+                category: product.category,
+                isDigital: product.isNFT || false,
+                isNFT: product.isNFT || false,
+                inventory: product.inventory || 0,
+                shipping: product.shipping,
+                trust: product.trust
+              };
+              
+              // Add to cart first
+              cartService.addItemSync(cartItem, quantity);
+              
+              // Redirect to checkout page
+              router.push(`/marketplace/checkout?product=${productId}&quantity=${quantity}`);
+            }}
+            onAddToWishlist={(productId) => {
+              console.log('Add to wishlist:', productId);
+              
+              // Check if already in wishlist
+              if (wishlistService.isInWishlist(productId)) {
+                if (typeof window !== 'undefined') {
+                  alert(`${product.title} is already in your wishlist!`);
+                }
+                return;
+              }
+              
+              // Transform product data for wishlist service
+              const wishlistItem = {
+                id: product.id,
+                title: product.title,
+                description: product.description,
+                image: product.media[0]?.url || '',
+                price: product.price,
+                seller: {
+                  id: product.seller.id,
+                  name: product.seller.name,
+                  avatar: product.seller.avatar
+                },
+                category: product.category,
+                isDigital: product.isNFT || false,
+                isNFT: product.isNFT || false,
+                inventory: product.inventory || 0
+              };
+              
+              // Add to wishlist
+              wishlistService.addItem(wishlistItem);
+              
+              // Show confirmation
+              if (typeof window !== 'undefined') {
+                alert(`Added ${product.title} to your wishlist!`);
+              }
+            }}
+            onContactSeller={(sellerId) => {
+              console.log('Contact seller:', sellerId);
+              
+              // Redirect to messaging page with seller pre-selected
+              router.push(`/messages?to=${encodeURIComponent(sellerId)}`);
+            }}
+            onViewSellerProfile={(sellerId) => {
+              console.log('View seller profile:', sellerId);
+              
+              // Redirect to seller profile page
+              router.push(`/marketplace/seller/store/${encodeURIComponent(sellerId)}`);
+            }}
+          />
+        </div>
+      </div>
     </Layout>
   );
 };
