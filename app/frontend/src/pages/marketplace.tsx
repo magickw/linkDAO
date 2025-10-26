@@ -428,6 +428,22 @@ const MarketplaceContent: React.FC = () => {
   }, []);
 
   // Filter and sort listings with new filter options
+  // Calculate marketplace stats from listings
+  const marketplaceStats = useMemo(() => {
+    const allListings = Array.isArray(listings) ? listings : [];
+
+    return {
+      totalListings: allListings.length,
+      escrowBackedCount: allListings.filter(l => l.isEscrowed).length,
+      daoReviewedCount: allListings.filter(l => {
+        // Check if enhancedData exists (added during transformation)
+        const listing = l as any;
+        return listing.enhancedData?.seller?.daoApproved || false;
+      }).length,
+      activeListings: allListings.filter(l => l.status === 'ACTIVE').length,
+    };
+  }, [listings]);
+
   const filteredAndSortedListings = useMemo(() => {
     let result = Array.isArray(listings) ? [...listings] : [];
 
@@ -472,7 +488,11 @@ const MarketplaceContent: React.FC = () => {
       result = result.filter(listing => listing.isEscrowed);
     }
     if (filters.daoApproved) {
-      // Skip daoApproved filter for now
+      result = result.filter(listing => {
+        // Check if enhancedData exists (added during transformation)
+        const l = listing as any;
+        return l.enhancedData?.seller?.daoApproved || false;
+      });
     }
 
     // In stock filter
@@ -507,11 +527,11 @@ const MarketplaceContent: React.FC = () => {
     return result;
   }, [listings, debouncedSearchTerm, filters, sortField, sortDirection]);
 
-  // Grid columns based on density - optimized for product browsing
+  // Grid columns based on density - optimized for product browsing (max 3 per row)
   const gridColumns =
     density === 'comfortable'
-      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
 
   return (
     <Layout title="Marketplace - LinkDAO" fullWidth={true}>
@@ -529,94 +549,113 @@ const MarketplaceContent: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
-        <div className="bg-white/10 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 text-white">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
-              <p className="text-white/70 text-base">
-                Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
-              </p>
-            </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative" ref={actionsMenuRef}>
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
-                onClick={() => setActionsMenuOpen((prev) => !prev)}
-                aria-haspopup="true"
-                aria-expanded={actionsMenuOpen}
-              >
-                Marketplace actions
-                <ChevronDown size={16} />
-              </Button>
-              {actionsMenuOpen && (
-                <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
-                  <ul className="py-2">
-                    {marketplaceActions.map((action) => (
-                      <li key={action.href}>
-                        <button
-                          type="button"
-                          className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                          onClick={() => {
-                            setActionsMenuOpen(false);
-                            router.push(action.href);
-                          }}
-                        >
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <Button variant="primary" onClick={handleStartSelling}>
-              {profile ? 'Seller dashboard' : 'Become a seller'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <aside className="space-y-4 lg:col-span-3">
-            <div className="bg-white/10 rounded-2xl p-5 space-y-4 lg:sticky lg:top-24 text-white">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-white/70">Search</h2>
-              <SearchBar
-                value={searchTerm}
-                onChange={setSearchTerm}
-                resultCount={filteredAndSortedListings.length}
-                placeholder="Search collections, sellers, tokens..."
-              />
-            </div>
-
-            <div className="bg-white/10 rounded-2xl p-5 text-white">
-              <FilterBar
-                filters={filters}
-                onFiltersChange={setFilters}
-                className="space-y-3"
-              />
-            </div>
-          </aside>
-
-          <section className="space-y-6 lg:col-span-9">
-            {/* Active Filter Chips */}
-            <ActiveFilterChips
-              filters={filters}
-              onRemoveFilter={handleRemoveFilter}
-              onClearAll={handleClearAllFilters}
-            />
-
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between bg-white/10 rounded-2xl p-4 text-white">
-              <div className="flex items-center gap-3 text-sm">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Escrow-backed
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 text-cyan-700 dark:text-cyan-300 font-medium">
-                  <span className="h-2 w-2 rounded-full bg-cyan-500" />
-                  DAO reviewed sellers
-                </span>
+        <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
+                <p className="text-white/70 text-base">
+                  Discover tokenized goods, on-chain verified services, and rare NFTs backed by escrow protection.
+                </p>
               </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative" ref={actionsMenuRef}>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    onClick={() => setActionsMenuOpen((prev) => !prev)}
+                    aria-haspopup="true"
+                    aria-expanded={actionsMenuOpen}
+                  >
+                    Marketplace actions
+                    <ChevronDown size={16} />
+                  </Button>
+                  {actionsMenuOpen && (
+                    <div className="absolute right-0 mt-3 w-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl z-50">
+                      <ul className="py-2">
+                        {marketplaceActions.map((action) => (
+                          <li key={action.href}>
+                            <button
+                              type="button"
+                              className="w-full px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                              onClick={() => {
+                                setActionsMenuOpen(false);
+                                router.push(action.href);
+                              }}
+                            >
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{action.label}</p>
+                              <p className="text-xs text-gray-600 dark:text-gray-400">{action.description}</p>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <Button variant="primary" onClick={handleStartSelling}>
+                  {profile ? 'Seller dashboard' : 'Become a seller'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Bar and Filters in Banner */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Search Bar */}
+              <div className="lg:col-span-8">
+                <SearchBar
+                  value={searchTerm}
+                  onChange={setSearchTerm}
+                  resultCount={filteredAndSortedListings.length}
+                  placeholder="Search collections, sellers, tokens..."
+                />
+              </div>
+              
+              {/* Trust Labels - Dynamic based on actual data */}
+              <div className="lg:col-span-4 flex items-center justify-end">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      escrowProtected: !prev.escrowProtected
+                    }))}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                      filters.escrowProtected
+                        ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200'
+                        : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                    }`}
+                    title="Click to filter by escrow-backed items"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Escrow-backed ({marketplaceStats.escrowBackedCount})
+                  </button>
+                  <button
+                    onClick={() => setFilters(prev => ({
+                      ...prev,
+                      daoApproved: !prev.daoApproved
+                    }))}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                      filters.daoApproved
+                        ? 'border-cyan-400 dark:border-cyan-600 bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200'
+                        : 'border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/40'
+                    }`}
+                    title="Click to filter by DAO-reviewed sellers"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-cyan-500" />
+                    DAO reviewed ({marketplaceStats.daoReviewedCount})
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="w-full md:w-auto">
+                <FilterBar
+                  filters={filters}
+                  onFiltersChange={setFilters}
+                  className="space-y-3"
+                />
+              </div>
+              
               <div className="flex flex-wrap items-center gap-3">
                 <SortingControls
                   currentSort={{ field: sortField, direction: sortDirection }}
@@ -628,6 +667,20 @@ const MarketplaceContent: React.FC = () => {
                 <ViewDensityToggle density={density} onDensityChange={setDensity} />
               </div>
             </div>
+          </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+
+          <section className="space-y-6 lg:col-span-12">
+            {/* Active Filter Chips */}
+            <ActiveFilterChips
+              filters={filters}
+              onRemoveFilter={handleRemoveFilter}
+              onClearAll={handleClearAllFilters}
+            />
+
+            {/* Trust labels and sorting controls moved to banner area */}
 
             {loading ? (
             <div className={`grid ${gridColumns} gap-6`}>
