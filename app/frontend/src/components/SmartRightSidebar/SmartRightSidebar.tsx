@@ -280,16 +280,16 @@ export default function SmartRightSidebar({
 
   if (isLoading) {
     return (
-      <div className={`space-y-4 ${className}`}>
+      <div className={`space-y-6 ${className}`}>
         {/* Loading skeletons */}
         {[...Array(3)].map((_, index) => (
-          <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse" />
+          <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+            <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse" />
             </div>
-            <div className="p-3 space-y-2">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="p-4 space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               ))}
             </div>
           </div>
@@ -300,17 +300,17 @@ export default function SmartRightSidebar({
 
   if (!walletData) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="p-4 text-center">
-            <div className="text-2xl mb-2">👛</div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+      <div className={`space-y-6 ${className}`}>
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+          <div className="p-8 text-center">
+            <div className="text-4xl mb-4">👛</div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Connect Your Wallet
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Connect to see portfolio and transactions
+            <p className="text-gray-500 dark:text-gray-400 mb-4">
+              Connect your wallet to see portfolio and transaction data
             </p>
-            <button className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all text-sm">
+            <button className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
               Connect Wallet
             </button>
           </div>
@@ -324,7 +324,7 @@ export default function SmartRightSidebar({
 
   return (
     <>
-      <div className={`space-y-4 ${className}`}>
+      <div className={`space-y-6 ${className}`}>
         {/* Wallet Dashboard */}
         <WalletDashboard
           walletData={walletData}
@@ -332,19 +332,19 @@ export default function SmartRightSidebar({
           onPortfolioClick={handlePortfolioClick}
         />
 
-        {/* Recent Transactions */}
-        <TransactionMiniFeed
-          transactions={walletData.recentTransactions}
-          onTransactionClick={handleTransactionClick}
-        />
-
-        {/* Trending Now */}
+        {/* Trending Now (moved here from left sidebar) */}
         <TrendingContentWidget context={context} />
 
         {/* Quick Action Buttons */}
         <QuickActionButtons
           actions={walletData.quickActions}
           onActionClick={handleQuickAction}
+        />
+
+        {/* Transaction Mini Feed */}
+        <TransactionMiniFeed
+          transactions={walletData.recentTransactions}
+          onTransactionClick={handleTransactionClick}
         />
 
         {/* Trending content moved to left sidebar */}

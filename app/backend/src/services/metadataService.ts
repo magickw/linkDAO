@@ -24,7 +24,8 @@ export class MetadataService {
 
   private async initializeIpfsClient(): Promise<any | null> {
     try {
-      const { create } = await import('ipfs-http-client');
+      // Use require instead of import for CommonJS compatibility
+      const { create } = require('ipfs-http-client');
       const client = create({
         host: IPFS_CONFIG.host,
         port: IPFS_CONFIG.port,

@@ -652,7 +652,7 @@ export default function Home() {
             {/* Center Feed */}
             <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
               <div className="max-w-2xl mx-auto py-6 px-4">
-                {/* Enhanced Post Composer - More prominent Facebook-style */}
+                {/* Post Composer - Inline Facebook-style */}
                 <div className="mb-6">
                   <Suspense fallback={<FeedSkeleton />}>
                     <FacebookStylePostComposer
@@ -666,12 +666,12 @@ export default function Home() {
 
                 {/* New Posts Banner - Real-time Update Indicator */}
                 {hasNewPosts && (
-                  <div className="mb-4 animate-pulse">
+                  <div className="mb-4">
                     <button
                       onClick={handleRefreshFeed}
-                      className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg shadow-md transition-all duration-300 flex items-center justify-center gap-2 font-medium"
+                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium"
                     >
-                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <RefreshCw className="w-4 h-4" />
                       New posts available - Click to refresh
                     </button>
                   </div>

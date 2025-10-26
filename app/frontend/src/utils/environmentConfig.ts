@@ -40,7 +40,7 @@ class EnvironmentManager {
       } else if (isStaging) {
         apiUrl = 'https://staging-api.linkdao.io'; // Replace with your staging API
       } else {
-        // Development fallback
+        // Development fallback - using port 10000 as intended
         apiUrl = 'http://localhost:10000';
       }
     }
