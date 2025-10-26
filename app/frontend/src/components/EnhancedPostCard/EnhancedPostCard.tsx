@@ -249,23 +249,23 @@ const EnhancedPostCard = React.memo(({
         aria-describedby={`post-content-${post.id}`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className="focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-2xl"
+        className="focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-xl"
       >
-        <RippleEffect className="rounded-2xl">
+        <RippleEffect className="rounded-xl">
           <EnhancedPostCardGlass
             trending={trendingLevel !== null}
             pinned={post.pinnedUntil && new Date(post.pinnedUntil) > new Date()}
             onClick={onExpand}
-            className={`${categoryStyle} ${className}`}
+            className={`${categoryStyle} ${className} bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200`}
           >
           {/* Header with improved visual hierarchy */}
-          <div className="px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50">
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3 flex-1 min-w-0">
                 {/* Author Avatar */}
                 <div className="relative flex-shrink-0">
                   <div 
-                    className="w-12 h-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-md"
+                    className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary-400 to-secondary-500 border-2 border-white dark:border-gray-800 shadow-sm"
                     aria-label={`${post.authorProfile.handle}'s avatar`}
                   >
                     {post.authorProfile.avatar ? (
@@ -275,7 +275,7 @@ const EnhancedPostCard = React.memo(({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                      <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
                         {post.authorProfile.handle.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -284,20 +284,20 @@ const EnhancedPostCard = React.memo(({
                   {/* Reputation indicator */}
                   {post.authorProfile.reputationTier && (
                     <div 
-                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-sm"
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 border-2 border-white dark:border-gray-800 flex items-center justify-center shadow-xs"
                       aria-label={`Reputation tier: ${post.authorProfile.reputationTier}`}
                     >
-                      <span className="text-xs">🏆</span>
+                      <span className="text-[8px]">🏆</span>
                     </div>
                   )}
                 </div>
 
                 {/* Author Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center space-x-2 mb-0.5">
                     <Link 
                       href={`/profile/${post.author}`}
-                      className="font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate"
+                      className="font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 truncate text-sm"
                       aria-label={`View profile of ${post.authorProfile.handle}`}
                     >
                       {post.authorProfile.handle}
@@ -305,7 +305,7 @@ const EnhancedPostCard = React.memo(({
                     
                     {post.authorProfile.verified && (
                       <span 
-                        className="text-blue-500 flex-shrink-0" 
+                        className="text-blue-500 flex-shrink-0 text-xs" 
                         title="Verified"
                         aria-label="Verified user"
                       >
@@ -314,7 +314,7 @@ const EnhancedPostCard = React.memo(({
                     )}
                   </div>
                   
-                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                     <span>{formatTimestamp(post.createdAt)}</span>
                     
                     {post.communityName && (
@@ -335,12 +335,12 @@ const EnhancedPostCard = React.memo(({
 
               {/* Trending Badge */}
               {showTrending && trendingLevel && (
-                <div className="flex-shrink-0 ml-3">
+                <div className="flex-shrink-0 ml-2">
                   <TrendingBadge 
                     level={trendingLevel} 
                     score={post.engagementScore}
-                    showScore
-                    aria-label={`Trending level: ${trendingLevel}, Score: ${post.engagementScore}`}
+                    showScore={false}
+                    aria-label={`Trending level: ${trendingLevel}`}
                   />
                 </div>
               )}
@@ -348,11 +348,11 @@ const EnhancedPostCard = React.memo(({
           </div>
 
           {/* Content with emphasized hierarchy */}
-          <div className="px-6 py-4">
+          <div className="px-4 py-3">
             {/* Title - emphasized */}
             {post.title && (
               <h2 
-                className="text-xl font-bold text-gray-900 dark:text-white leading-tight mb-3 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
+                className="text-lg font-semibold text-gray-900 dark:text-white leading-tight mb-2 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200"
                 id={`post-title-${post.id}`}
               >
                 {post.title}
@@ -360,9 +360,9 @@ const EnhancedPostCard = React.memo(({
             )}
 
             {/* Content - main focus */}
-            <div className="mb-4">
+            <div className="mb-3">
               <p 
-                className="text-gray-700 dark:text-gray-300 text-base leading-relaxed"
+                className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed"
                 id={`post-content-${post.id}`}
               >
                 {contentDisplay}
@@ -371,7 +371,7 @@ const EnhancedPostCard = React.memo(({
               {!expanded && post.content.length > 280 && (
                 <button
                   onClick={() => setExpanded(true)}
-                  className="text-primary-600 dark:text-primary-400 hover:underline text-sm font-medium mt-2 transition-colors duration-200"
+                  className="text-primary-600 dark:text-primary-400 hover:underline text-xs font-medium mt-1 transition-colors duration-200"
                   aria-expanded={expanded}
                   aria-controls={`post-content-${post.id}`}
                 >
@@ -382,13 +382,13 @@ const EnhancedPostCard = React.memo(({
 
             {/* Media */}
             {post.media && post.media.length > 0 && (
-              <div className="mb-4 rounded-xl overflow-hidden">
+              <div className="mb-3 rounded-lg overflow-hidden">
                 <OptimizedImage
                   src={post.media[0]}
                   alt="Post media"
                   width={600}
                   height={300}
-                  className="w-full h-64 object-cover transition-transform duration-500 hover:scale-105"
+                  className="w-full h-64 object-cover transition-transform duration-300 hover:scale-105"
                   lazy={true}
                   quality={85}
                 />
@@ -397,7 +397,7 @@ const EnhancedPostCard = React.memo(({
 
             {/* Inline Previews */}
             {showPreviews && post.previews.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-3">
                 {post.previews.slice(0, showAllPreviews ? undefined : 2).map((contentPreview, index) => {
                   // Extract LinkPreview from ContentPreview
                   if (contentPreview.type === 'link' && contentPreview.data) {
@@ -424,7 +424,7 @@ const EnhancedPostCard = React.memo(({
                 {post.previews.length > 2 && !showAllPreviews && (
                   <button
                     onClick={() => setShowAllPreviews(true)}
-                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-2"
+                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1"
                     aria-label={`Show ${post.previews.length - 2} more previews`}
                   >
                     Show {post.previews.length - 2} more preview{post.previews.length - 2 > 1 ? 's' : ''}
@@ -435,12 +435,12 @@ const EnhancedPostCard = React.memo(({
 
             {/* Hashtags - de-emphasized */}
             {post.hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-1 mb-3">
                 {post.hashtags.map((tag, index) => (
                   <Link
                     key={index}
                     href={`/hashtag/${tag}`}
-                    className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
+                    className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300 transition-colors duration-200"
                     aria-label={`View posts tagged with ${tag}`}
                   >
                     #{tag}
@@ -451,12 +451,12 @@ const EnhancedPostCard = React.memo(({
 
             {/* Social Proof */}
             {showSocialProof && post.socialProof && (
-              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+              <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700/20 rounded-lg">
                 <SocialProofIndicator socialProof={post.socialProof} />
               </div>
             )}
 
-            {/* Enhanced Interactions */}
+            {/* Enhanced Interactions - Facebook-style */}
             <PostInteractionBar
               post={{
                 id: post.id,
@@ -483,11 +483,12 @@ const EnhancedPostCard = React.memo(({
                   timestamp: new Date()
                 });
               }}
+              className="border-t border-gray-100 dark:border-gray-700 pt-2"
             />
 
             {/* Comment System - Show when expanded */}
             {expanded && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                 <EnhancedCommentSystem
                   postId={post.id}
                   postType="enhanced"
@@ -501,7 +502,7 @@ const EnhancedPostCard = React.memo(({
                       timestamp: new Date()
                     });
                   }}
-                  className="mt-4"
+                  className="mt-2"
                 />
               </div>
             )}

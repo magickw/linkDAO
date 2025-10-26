@@ -218,7 +218,7 @@ const FacebookStylePostComposer = React.memo(({
   }, [previews, selectedFiles, removeFile]);
 
   return (
-    <div className={`group rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-colors focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent bg-gradient-to-r from-transparent to-transparent focus-within:from-primary-500/10 focus-within:to-purple-500/10`}>
+    <div className={`group rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 ${className} bg-white dark:bg-gray-800 transition-all hover:shadow-md focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent`}>
       <form onSubmit={handleSubmit}>
         {/* Main composer area */}
         <div className="p-4">
@@ -246,7 +246,7 @@ const FacebookStylePostComposer = React.memo(({
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={handleFocus}
                 placeholder={content.length ? '' : HINTS[hintIdx]}
-                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg"
+                className="w-full resize-none border-none outline-none bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-lg font-medium"
                 rows={isExpanded ? 3 : 1}
                 disabled={isLoading}
                 style={{ minHeight: isExpanded ? '80px' : '40px' }}
@@ -420,7 +420,7 @@ const FacebookStylePostComposer = React.memo(({
                 <button
                   type="submit"
                   disabled={!content.trim() || isLoading}
-                  className="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-gray-600 dark:disabled:to-gray-700 text-white text-sm font-medium rounded-lg transition-all disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                 >
                   {isLoading ? 'Posting...' : 'Post'}
                 </button>

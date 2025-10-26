@@ -110,7 +110,7 @@ export default function PostInteractionBar({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-3 ${className}`}>
       {/* Enhanced Reaction System */}
       <EnhancedReactionSystem
         postId={post.id}
@@ -118,30 +118,29 @@ export default function PostInteractionBar({
         onReaction={onReaction}
       />
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-        <div className="flex items-center space-x-4">
+      {/* Action Buttons - Facebook-style */}
+      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex items-center space-x-3">
           {/* Comment Button */}
           <button
             onClick={handleCommentClick}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            className="flex items-center space-x-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 text-sm font-medium transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="hidden sm:inline">{post.commentCount || 0} Comments</span>
-            <span className="sm:hidden">{post.commentCount || 0}</span>
+            <span className="hidden sm:inline text-xs">{post.commentCount || 0}</span>
           </button>
 
           {/* Share Button */}
           <button
             onClick={handleShareClick}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            className="flex items-center space-x-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 text-sm font-medium transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            <span className="hidden sm:inline">Share</span>
+            <span className="hidden sm:inline text-xs">Share</span>
           </button>
 
           {/* Tip Button */}
@@ -155,36 +154,36 @@ export default function PostInteractionBar({
           ) : (
             <button
               onClick={() => setShowTipInput(!showTipInput)}
-              className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+              className="flex items-center space-x-2 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 text-sm font-medium transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="hidden sm:inline">Tip</span>
+              <span className="hidden sm:inline text-xs">Tip</span>
             </button>
           )}
 
           {/* Save Button */}
           <button
             onClick={handleSavePost}
-            className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm font-medium transition-colors duration-200 hover:scale-105"
+            className="flex items-center space-x-2 text-gray-500 hover:text-yellow-600 dark:text-gray-400 dark:hover:text-yellow-400 text-sm font-medium transition-colors duration-200 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            <span className="hidden sm:inline">Save</span>
+            <span className="hidden sm:inline text-xs">Save</span>
           </button>
         </div>
 
         {/* Staked Value Display */}
-        <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-          {post.stakedValue ? `${post.stakedValue} $LNK staked` : '0 $LNK staked'}
+        <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+          {post.stakedValue ? `${post.stakedValue} $LNK` : '0 $LNK'}
         </div>
       </div>
 
       {/* Quick Tip Input */}
       {showTipInput && (postType === 'feed' || postType === 'enhanced') && (
-        <form onSubmit={handleQuickTip} className="flex items-center space-x-2 animate-fadeIn">
+        <form onSubmit={handleQuickTip} className="flex items-center space-x-2 animate-fadeIn bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
           <input
             type="number"
             step="0.01"
@@ -192,12 +191,12 @@ export default function PostInteractionBar({
             value={tipAmount}
             onChange={(e) => setTipAmount(e.target.value)}
             placeholder="Amount"
-            className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-l-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-20 px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white focus:ring-1 focus:ring-primary-500 focus:border-transparent"
           />
           <select
             value={selectedToken}
             onChange={(e) => setSelectedToken(e.target.value)}
-            className="px-3 py-2 text-sm border-y border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-white"
+            className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 dark:text-white"
           >
             <option value="USDC">USDC</option>
             <option value="ETH">ETH</option>
@@ -205,14 +204,14 @@ export default function PostInteractionBar({
           </select>
           <button
             type="submit"
-            className="px-4 py-2 text-sm bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white rounded-r-lg transition-all duration-200 font-medium"
+            className="px-3 py-1 text-xs bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded transition-all duration-200 font-medium"
           >
             Send
           </button>
           <button
             type="button"
             onClick={() => setShowTipInput(false)}
-            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
+            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors duration-200"
           >
             Cancel
           </button>
