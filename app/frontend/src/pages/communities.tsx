@@ -533,6 +533,15 @@ const CommunitiesPage: React.FC = () => {
     return (
       <ErrorBoundary>
         <VisualPolishIntegration>
+          <style jsx>{`
+            .hide-scrollbar {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+            .hide-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             <Head>
               <title>Communities - LinkDAO Enhanced</title>
@@ -558,6 +567,28 @@ const CommunitiesPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Mobile Navigation Bar - Added for user navigation */}
+            <div className="sticky top-16 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex overflow-x-auto py-2 px-2 hide-scrollbar">
+                {[
+                  { name: 'Home', href: '/', icon: '🏠' },
+                  { name: 'Messages', href: '/messaging', icon: '💬' },
+                  { name: 'Governance', href: '/governance', icon: '🗳️' },
+                  { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
+                  { name: 'Profile', href: '/profile', icon: '👤' }
+                ].map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => router.push(item.href)}
+                    className="flex flex-col items-center px-3 py-2 text-xs font-medium rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 transition-colors min-w-[60px] min-h-[44px]"
+                  >
+                    <span className="text-lg mb-1">{item.icon}</span>
+                    <span>{item.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
 

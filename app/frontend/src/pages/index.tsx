@@ -636,7 +636,7 @@ export default function Home() {
   return (
     <Layout title="LinkDAO - Home">
       <div className="flex bg-gray-50 dark:bg-gray-900">
-        {/* Left Sidebar - Navigation */}
+        {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
         <div className="hidden lg:flex lg:flex-shrink-0">
           <div className="flex flex-col w-64">
             <Suspense fallback={<SidebarSkeleton />}>
