@@ -430,101 +430,124 @@ const MarketplaceContent: React.FC = () => {
   // Filter and sort listings with new filter options
   // Calculate marketplace stats from listings
   const marketplaceStats = useMemo(() => {
-    const allListings = Array.isArray(listings) ? listings : [];
+    try {
+      const allListings = Array.isArray(listings) ? listings : [];
 
-    return {
-      totalListings: allListings.length,
-      escrowBackedCount: allListings.filter(l => l.isEscrowed).length,
-      daoReviewedCount: allListings.filter(l => {
-        // Check if enhancedData exists (added during transformation)
-        const listing = l as any;
-        return listing.enhancedData?.seller?.daoApproved || false;
-      }).length,
-      activeListings: allListings.filter(l => l.status === 'ACTIVE').length,
-    };
+      return {
+        totalListings: allListings.length,
+        escrowBackedCount: allListings.filter(l => l?.isEscrowed === true).length,
+        daoReviewedCount: allListings.filter(l => {
+          try {
+            // Check if enhancedData exists (added during transformation)
+            const listing = l as any;
+            return listing?.enhancedData?.seller?.daoApproved === true;
+          } catch (err) {
+            return false;
+          }
+        }).length,
+        activeListings: allListings.filter(l => l?.status === 'ACTIVE').length,
+      };
+    } catch (error) {
+      console.error('Error calculating marketplace stats:', error);
+      return {
+        totalListings: 0,
+        escrowBackedCount: 0,
+        daoReviewedCount: 0,
+        activeListings: 0,
+      };
+    }
   }, [listings]);
 
   const filteredAndSortedListings = useMemo(() => {
-    let result = Array.isArray(listings) ? [...listings] : [];
+    try {
+      let result = Array.isArray(listings) ? [...listings] : [];
 
-    // Search filter
-    if (debouncedSearchTerm) {
-      const query = debouncedSearchTerm.toLowerCase();
-      result = result.filter(listing =>
-        listing.metadataURI?.toLowerCase().includes(query) ||
-        listing.metadataURI?.toLowerCase().includes(query) ||
-        listing.sellerWalletAddress?.toLowerCase().includes(query)
-      );
-    }
-
-    // Category filter
-    if (filters.category) {
-      result = result.filter(listing =>
-        listing.itemType.toLowerCase() === filters.category
-      );
-    }
-
-    // Price range filter
-    if (filters.priceRange) {
-      const { min, max } = filters.priceRange;
-      result = result.filter(listing => {
-        const price = parseFloat(listing.price);
-        if (min !== undefined && price < min) return false;
-        if (max !== undefined && price > max) return false;
-        return true;
-      });
-    }
-
-    // Condition filter
-    if (filters.condition) {
-      // Skip condition filter for now
-    }
-
-    // Trust filters
-    if (filters.verified) {
-      // Skip verified filter for now
-    }
-    if (filters.escrowProtected) {
-      result = result.filter(listing => listing.isEscrowed);
-    }
-    if (filters.daoApproved) {
-      result = result.filter(listing => {
-        // Check if enhancedData exists (added during transformation)
-        const l = listing as any;
-        return l.enhancedData?.seller?.daoApproved || false;
-      });
-    }
-
-    // In stock filter
-    if (filters.inStock) {
-      result = result.filter(listing => (listing.quantity ?? 0) > 0);
-    }
-
-    // Sorting
-    result.sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case 'price':
-          comparison = parseFloat(a.price) - parseFloat(b.price);
-          break;
-        case 'rating':
-          // Skip rating comparison for now
-          break;
-        case 'popularity':
-          // Skip views comparison for now
-          break;
-        case 'date':
-          comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          break;
-        default:
-          comparison = 0;
+      // Search filter
+      if (debouncedSearchTerm) {
+        const query = debouncedSearchTerm.toLowerCase();
+        result = result.filter(listing =>
+          listing.metadataURI?.toLowerCase().includes(query) ||
+          listing.metadataURI?.toLowerCase().includes(query) ||
+          listing.sellerWalletAddress?.toLowerCase().includes(query)
+        );
       }
 
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
+      // Category filter
+      if (filters.category) {
+        result = result.filter(listing =>
+          listing.itemType.toLowerCase() === filters.category
+        );
+      }
 
-    return result;
+      // Price range filter
+      if (filters.priceRange) {
+        const { min, max } = filters.priceRange;
+        result = result.filter(listing => {
+          const price = parseFloat(listing.price);
+          if (min !== undefined && price < min) return false;
+          if (max !== undefined && price > max) return false;
+          return true;
+        });
+      }
+
+      // Condition filter
+      if (filters.condition) {
+        // Skip condition filter for now
+      }
+
+      // Trust filters
+      if (filters.verified) {
+        // Skip verified filter for now
+      }
+      if (filters.escrowProtected) {
+        result = result.filter(listing => listing?.isEscrowed === true);
+      }
+      if (filters.daoApproved) {
+        result = result.filter(listing => {
+          try {
+            // Check if enhancedData exists (added during transformation)
+            const l = listing as any;
+            return l?.enhancedData?.seller?.daoApproved === true;
+          } catch (err) {
+            return false;
+          }
+        });
+      }
+
+      // In stock filter
+      if (filters.inStock) {
+        result = result.filter(listing => (listing.quantity ?? 0) > 0);
+      }
+
+      // Sorting
+      result.sort((a, b) => {
+        let comparison = 0;
+
+        switch (sortField) {
+          case 'price':
+            comparison = parseFloat(a.price) - parseFloat(b.price);
+            break;
+          case 'rating':
+            // Skip rating comparison for now
+            break;
+          case 'popularity':
+            // Skip views comparison for now
+            break;
+          case 'date':
+            comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            break;
+          default:
+            comparison = 0;
+        }
+
+        return sortDirection === 'asc' ? comparison : -comparison;
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error filtering and sorting listings:', error);
+      return Array.isArray(listings) ? listings : [];
+    }
   }, [listings, debouncedSearchTerm, filters, sortField, sortDirection]);
 
   // Grid columns based on density - optimized for product browsing (max 3 per row)
