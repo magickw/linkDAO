@@ -20,6 +20,19 @@ export class TokenService {
 
   async getTokenInfo(tokenAddress: string): Promise<TokenInfo | null> {
     try {
+      // Check if this is the LDAO token
+      if (tokenAddress === 'LDAO' || tokenAddress.toLowerCase() === 'ldao') {
+        return {
+          address: '0x0000000000000000000000000000000000000000', // Placeholder address
+          symbol: 'LDAO',
+          decimals: 18,
+          name: 'LinkDAO Token',
+          logoUrl: '/images/ldao-token.png',
+          priceUSD: await this.getTokenPrice('LDAO'),
+          priceChange24h: 0
+        };
+      }
+      
       // This would typically call a token registry or blockchain RPC
       // For now, return mock data structure
       return {
@@ -47,6 +60,17 @@ export class TokenService {
       const cached = this.priceCache.get(tokenAddress);
       if (cached && Date.now() - cached.timestamp.getTime() < this.PRICE_CACHE_TTL) {
         return cached.price;
+      }
+
+      // Special handling for LDAO token
+      if (tokenAddress === 'LDAO' || tokenAddress.toLowerCase() === 'ldao') {
+        // Mock price for LDAO token - in a real implementation, this would call a price API
+        const price = 0.5; // $0.50 USD
+        this.priceCache.set(tokenAddress, {
+          price,
+          timestamp: new Date()
+        });
+        return price;
       }
 
       // This would typically call a price API like CoinGecko or DEX aggregator

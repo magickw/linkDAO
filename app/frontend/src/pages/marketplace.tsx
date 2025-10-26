@@ -37,6 +37,7 @@ import { MarketplacePreloader } from '@/components/Performance/MarketplacePreloa
 import { PerformanceIndicator } from '@/components/Performance/MarketplacePerformanceDashboard';
 import { navigationPreloadService } from '@/services/navigationPreloadService';
 import { productCache, sellerCache, searchCache } from '@/services/marketplaceDataCache';
+import TokenAcquisitionSection from '@/components/Marketplace/TokenAcquisition/TokenAcquisitionSection';
 
 // Define design tokens for fallback
 const designTokens = {
@@ -89,6 +90,11 @@ const MarketplaceContent: React.FC = () => {
         label: 'Secure checkout',
         description: 'Complete escrow-backed purchases',
         href: '/marketplace/checkout',
+      },
+      {
+        label: 'Get LDAO Tokens',
+        description: 'Buy, stake, and earn with LDAO tokens',
+        href: '/token',
       },
       {
         label: 'Orders & tracking',
@@ -528,8 +534,11 @@ const MarketplaceContent: React.FC = () => {
       
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div ref={browseSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          
+          {/* Token Acquisition Section */}
+          <TokenAcquisitionSection />
 
-        <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
+          <div className="bg-white/10 rounded-2xl p-6 space-y-6 text-white">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-white tracking-tight">Web3 Marketplace</h1>
