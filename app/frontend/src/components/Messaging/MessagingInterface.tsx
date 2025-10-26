@@ -1,8 +1,3 @@
-/**
- * Wallet-to-Wallet Messaging Components
- * Main messaging interface with conversation list and chat view
- */
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -32,15 +27,16 @@ import {
   Volume2,
   VolumeX,
   Bell,
-  BellOff
+  BellOff,
+  Loader2
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
 import { useToast } from '@/context/ToastContext';
-import messagingService, { 
-  ChatMessage, 
-  ChatConversation, 
-  UserPresence 
+import messagingService, {
+  ChatMessage,
+  ChatConversation,
+  UserPresence
 } from '../../services/messagingService';
 import { useChatHistory } from '../../hooks/useChatHistory';
 import nftNegotiationBot from '../../services/nftNegotiationBot';
@@ -89,7 +85,17 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   // Chat history hook (drives conversations/messages from backend)
   const chat = useChatHistory();
-  const { messages: hookMessages, conversations: hookConversations, loading: chatLoading, loadMessages: loadMessagesHook, sendMessage: sendMessageHook, markAsRead: markAsReadHook } = chat;
+  const {
+    messages: hookMessages,
+    conversations: hookConversations,
+    loading: chatLoading,
+    conversationsLoading,
+    hasMoreConversations,
+    loadMessages: loadMessagesHook,
+    sendMessage: sendMessageHook,
+    markAsRead: markAsReadHook,
+    loadMoreConversations
+  } = chat;
 
   // Initialize messaging service (real-time) and sync initial data from hook
   useEffect(() => {
@@ -464,7 +470,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Conversations List */}
+        {/* Conversations List - Paginated */}
         <div className="flex-1 overflow-y-auto">
           {conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -473,78 +479,102 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <p className="text-sm">Send a message to start chatting</p>
             </div>
           ) : (
-            conversations
-              .filter(conv => {
-                if (!searchQuery) return true;
-                const otherParticipant = conv.participants.find(p => 
-                  p.toLowerCase() !== address?.toLowerCase()
-                );
-                return otherParticipant?.toLowerCase().includes(searchQuery.toLowerCase());
-              })
-              .map(conversation => {
-                const otherParticipant = conversation.participants.find(p => 
-                  p.toLowerCase() !== address?.toLowerCase()
-                );
-                const isOnline = userPresence.get(otherParticipant || '')?.isOnline;
-                const isBlocked = blockedUsers.has(otherParticipant || '');
+            <>
+              {conversations
+                .filter(conv => {
+                  if (!searchQuery) return true;
+                  const otherParticipant = conv.participants.find(p =>
+                    p.toLowerCase() !== address?.toLowerCase()
+                  );
+                  return otherParticipant?.toLowerCase().includes(searchQuery.toLowerCase());
+                })
+                .map(conversation => {
+                  const otherParticipant = conversation.participants.find(p =>
+                    p.toLowerCase() !== address?.toLowerCase()
+                  );
+                  const isOnline = userPresence.get(otherParticipant || '')?.isOnline;
+                  const isBlocked = blockedUsers.has(otherParticipant || '');
 
-                return (
-                  <motion.div
-                    key={conversation.id}
-                    className={`p-3 sm:p-4 border-b border-gray-700 cursor-pointer transition-colors ${
-                      selectedConversation === conversation.id ? 'bg-blue-600/20' : 'hover:bg-gray-800'
-                    } ${isBlocked ? 'opacity-50' : ''}`}
-                    onClick={() => {
-                      setSelectedConversation(conversation.id);
-                      setShowMobileSidebar(false);
-                    }}
-                    whileHover={{ backgroundColor: 'rgba(75, 85, 99, 0.5)' }}
-                  >
-                    <div className="flex items-center space-x-2 sm:space-x-3">
-                      {/* Avatar */}
-                      <div className="relative flex-shrink-0">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                          <User size={16} className="text-white sm:w-5 sm:h-5" />
-                        </div>
-                        {isOnline && (
-                          <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
-                        )}
-                      </div>
-
-                      {/* Conversation Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1 sm:space-x-2">
-                            <p className="font-medium text-white text-xs sm:text-sm truncate">
-                              {formatAddress(otherParticipant || '')}
-                            </p>
-                            {conversation.isPinned && (
-                              <Pin size={10} className="text-yellow-500 sm:w-3 sm:h-3 flex-shrink-0" />
-                            )}
-                            {isBlocked && (
-                              <Block size={10} className="text-red-500 sm:w-3 sm:h-3 flex-shrink-0" />
-                            )}
+                  return (
+                    <motion.div
+                      key={conversation.id}
+                      className={`p-3 sm:p-4 border-b border-gray-700 cursor-pointer transition-colors ${
+                        selectedConversation === conversation.id ? 'bg-blue-600/20' : 'hover:bg-gray-800'
+                      } ${isBlocked ? 'opacity-50' : ''}`}
+                      onClick={() => {
+                        setSelectedConversation(conversation.id);
+                        setShowMobileSidebar(false);
+                      }}
+                      whileHover={{ backgroundColor: 'rgba(75, 85, 99, 0.5)' }}
+                    >
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        {/* Avatar */}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                            <User size={16} className="text-white sm:w-5 sm:h-5" />
                           </div>
-                          <span className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0 ml-2">
-                            {conversation.lastMessage && formatTime(conversation.lastMessage.timestamp)}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-0.5 sm:mt-1">
-                          <p className="text-xs sm:text-sm text-gray-400 truncate">
-                            {conversation.lastMessage?.content || 'No messages yet'}
-                          </p>
-                          {conversation.unreadCount > 0 && (
-                            <span className="bg-blue-500 text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 min-w-[18px] sm:min-w-[20px] text-center flex-shrink-0 ml-2">
-                              {conversation.unreadCount}
-                            </span>
+                          {isOnline && (
+                            <div className="absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
                           )}
                         </div>
+
+                        {/* Conversation Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1 sm:space-x-2">
+                              <p className="font-medium text-white text-xs sm:text-sm truncate">
+                                {formatAddress(otherParticipant || '')}
+                              </p>
+                              {conversation.isPinned && (
+                                <Pin size={10} className="text-yellow-500 sm:w-3 sm:h-3 flex-shrink-0" />
+                              )}
+                              {isBlocked && (
+                                <Block size={10} className="text-red-500 sm:w-3 sm:h-3 flex-shrink-0" />
+                              )}
+                            </div>
+                            <span className="text-[10px] sm:text-xs text-gray-400 flex-shrink-0 ml-2">
+                              {conversation.lastMessage && formatTime(conversation.lastMessage.timestamp)}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-0.5 sm:mt-1">
+                            <p className="text-xs sm:text-sm text-gray-400 truncate">
+                              {conversation.lastMessage?.content || 'No messages yet'}
+                            </p>
+                            {conversation.unreadCount > 0 && (
+                              <span className="bg-blue-500 text-white text-[10px] sm:text-xs rounded-full px-1.5 sm:px-2 py-0.5 min-w-[18px] sm:min-w-[20px] text-center flex-shrink-0 ml-2">
+                                {conversation.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })
+                    </motion.div>
+                  );
+                })}
+
+              {/* Load More Button */}
+              {hasMoreConversations && (
+                <div className="p-4 border-t border-gray-700">
+                  <Button
+                    variant="outline"
+                    size="small"
+                    className="w-full flex items-center justify-center gap-2"
+                    onClick={loadMoreConversations}
+                    disabled={conversationsLoading}
+                  >
+                    {conversationsLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Conversations'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

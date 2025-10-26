@@ -119,72 +119,9 @@ const DiscordStyleMessagingInterface: React.FC<{ className?: string; onClose?: (
   const { conversations: hookConversations, messages: hookMessages, loadMessages, sendMessage } = useChatHistory();
   const [dmConversations, setDmConversations] = useState<DirectMessageConversation[]>([]);
 
-  const [channels, setChannels] = useState<ChatChannel[]>([
-    {
-      id: 'general',
-      name: 'general',
-      isPrivate: false,
-      memberCount: 0,
-      unreadCount: 0,
-      isPinned: true,
-      topic: 'Welcome to LinkDAO! Discuss anything Web3 related here.',
-      category: 'public',
-      icon: '🌍'
-    },
-    {
-      id: 'trading',
-      name: 'trading',
-      isPrivate: false,
-      memberCount: 0,
-      unreadCount: 0,
-      topic: 'Share your trading insights and strategies',
-      category: 'public',
-      icon: '📈'
-    },
-    {
-      id: 'nfts',
-      name: 'nfts',
-      isPrivate: false,
-      memberCount: 0,
-      unreadCount: 0,
-      topic: 'Discuss the latest NFT projects and drops',
-      category: 'public',
-      icon: '🎨'
-    },
-    {
-      id: 'governance',
-      name: 'governance',
-      isPrivate: false,
-      memberCount: 0,
-      unreadCount: 0,
-      topic: 'DAO proposals and voting discussions',
-      category: 'public',
-      icon: '🏛️'
-    },
-    {
-      id: 'private-trading',
-      name: 'private-trading',
-      isPrivate: true,
-      memberCount: 0,
-      unreadCount: 0,
-      topic: 'Private trading discussions',
-      category: 'private'
-    },
-    {
-      id: 'nft-holders',
-      name: 'nft-holders',
-      isPrivate: false,
-      isGated: true,
-      gateType: 'nft',
-      gateRequirement: 'LinkDAO Genesis NFT',
-      memberCount: 0,
-      unreadCount: 0,
-      topic: 'Exclusive discussions for NFT holders',
-      category: 'gated',
-      icon: '🏆'
-    }
-  ]);
-  
+  // Channels will be loaded from backend - no mock data
+  const [channels, setChannels] = useState<ChatChannel[]>([]);
+
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   
   // Add state to track if we're viewing a DM or channel

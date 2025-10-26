@@ -8,8 +8,11 @@ interface UseChatHistoryReturn {
   loading: boolean;
   error: string | null;
   hasMore: boolean;
+  hasMoreConversations: boolean;
+  conversationsLoading: boolean;
   loadMessages: (request: ChatHistoryRequest) => Promise<void>;
-  loadConversations: () => Promise<void>;
+  loadConversations: (append?: boolean) => Promise<void>;
+  loadMoreConversations: () => Promise<void>;
   sendMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   markAsRead: (conversationId: string, messageIds: string[]) => Promise<void>;
@@ -22,28 +25,50 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [conversationOffset, setConversationOffset] = useState(0);
+  const conversationLimit = 20; // Load 20 conversations at a time
 
-  // Load conversations on mount
+  // Load initial conversations on mount (only first page)
   useEffect(() => {
     loadConversations();
   }, []);
 
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (append = false) => {
     try {
-      setLoading(true);
+      setConversationsLoading(true);
       setError(null);
-      const data = await chatHistoryService.getConversations();
-      setConversations(data);
+
+      const offset = append ? conversationOffset : 0;
+      const result = await chatHistoryService.getConversations({
+        limit: conversationLimit,
+        offset
+      });
+
+      setConversations(prev => append ? [...prev, ...result.conversations] : result.conversations);
+      setHasMoreConversations(result.hasMore);
+
+      if (append) {
+        setConversationOffset(prev => prev + conversationLimit);
+      } else {
+        setConversationOffset(conversationLimit);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load conversations');
     } finally {
-      setLoading(false);
+      setConversationsLoading(false);
     }
-  }, []);
+  }, [conversationOffset, conversationLimit]);
+
+  const loadMoreConversations = useCallback(async () => {
+    if (conversationsLoading || !hasMoreConversations) return;
+    await loadConversations(true);
+  }, [conversationsLoading, hasMoreConversations, loadConversations]);
 
   const loadMessages = useCallback(async (request: ChatHistoryRequest) => {
     try {
@@ -167,10 +192,13 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     messages,
     conversations,
     loading,
+    conversationsLoading,
     error,
     hasMore,
+    hasMoreConversations,
     loadMessages,
     loadConversations,
+    loadMoreConversations,
     sendMessage,
     loadMoreMessages,
     markAsRead,

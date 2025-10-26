@@ -93,38 +93,11 @@ const CrossChainBridge: React.FC<{
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
-  
-  const [bridgeChannels, setBridgeChannels] = useState<BridgeChannel[]>([
-    {
-      id: 'ethereum-general',
-      name: 'ethereum-general',
-      chains: [1, 137],
-      isActive: true,
-      messageCount: 1247,
-      lastSync: new Date(Date.now() - 300000),
-      bridgeStatus: 'synced'
-    },
-    {
-      id: 'polygon-general',
-      name: 'polygon-general',
-      chains: [1, 137],
-      isActive: true,
-      messageCount: 1247,
-      lastSync: new Date(Date.now() - 300000),
-      bridgeStatus: 'synced'
-    },
-    {
-      id: 'defi-discussion',
-      name: 'defi-discussion',
-      chains: [1, 137, 56],
-      isActive: true,
-      messageCount: 892,
-      lastSync: new Date(Date.now() - 600000),
-      bridgeStatus: 'syncing'
-    }
-  ]);
 
-  const [selectedChannel, setSelectedChannel] = useState<string>('ethereum-general');
+  // Bridge channels will be loaded from backend - no mock data
+  const [bridgeChannels, setBridgeChannels] = useState<BridgeChannel[]>([]);
+
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
   const [bridgeMessages, setBridgeMessages] = useState<CrossChainMessage[]>([]);
   const [isBridgeActive, setIsBridgeActive] = useState(true);
   const [bridgeSettings, setBridgeSettings] = useState({

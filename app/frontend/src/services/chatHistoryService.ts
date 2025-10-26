@@ -65,17 +65,39 @@ class ChatHistoryService {
     return this.transformMessage(data);
   }
 
-  // Get user conversations
-  async getConversations(): Promise<Conversation[]> {
+  // Get user conversations with pagination support
+  async getConversations(options?: {
+    limit?: number;
+    offset?: number;
+    cursor?: string;
+  }): Promise<{
+    conversations: Conversation[];
+    hasMore: boolean;
+    nextCursor?: string;
+    total?: number;
+  }> {
+    const limit = options?.limit || 20;
+    const offset = options?.offset || 0;
+    const cursor = options?.cursor;
+
+    // Build query parameters for pagination
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      ...(cursor && { cursor })
+    });
+
     // Check cache first to avoid hammering the backend with repeated 404s
+    let cachedPath: string | null = null;
     try {
       const cached = localStorage.getItem(this.conversationEndpointCacheKey);
       if (cached) {
         if (cached === 'none') {
           console.debug('[chatHistoryService] Conversations endpoint cached as none; skipping checks');
-          return [];
+          return { conversations: [], hasMore: false };
         }
-        const cachedUrl = `${this.baseUrl}${cached}`;
+        cachedPath = cached;
+        const cachedUrl = `${this.baseUrl}${cached}?${params}`;
         try {
           const response = await fetch(cachedUrl, {
             headers: {
@@ -87,7 +109,22 @@ class ChatHistoryService {
           if (response.ok) {
             console.debug('[chatHistoryService] Using cached conversations endpoint:', cachedUrl);
             const data = await response.json();
-            return Array.isArray(data) ? data.map(this.transformConversation) : [];
+
+            // Handle both paginated and non-paginated responses
+            if (Array.isArray(data)) {
+              return {
+                conversations: data.map(this.transformConversation),
+                hasMore: false,
+                total: data.length
+              };
+            } else {
+              return {
+                conversations: (data.conversations || data.data || []).map(this.transformConversation),
+                hasMore: data.hasMore || false,
+                nextCursor: data.nextCursor,
+                total: data.total
+              };
+            }
           }
         } catch (err) {
           console.warn('[chatHistoryService] Cached conversations endpoint failed, will try candidates', err);
@@ -100,7 +137,7 @@ class ChatHistoryService {
 
     // Try a list of candidate endpoints in case the deployed backend uses a different route
     for (const path of this.conversationEndpointCandidates) {
-      const url = `${this.baseUrl}${path}`;
+      const url = `${this.baseUrl}${path}?${params}`;
       try {
         const response = await fetch(url, {
           headers: {
@@ -132,7 +169,21 @@ class ChatHistoryService {
           /* ignore localStorage write errors */
         }
 
-        return Array.isArray(data) ? data.map(this.transformConversation) : [];
+        // Handle both paginated and non-paginated responses
+        if (Array.isArray(data)) {
+          return {
+            conversations: data.map(this.transformConversation),
+            hasMore: false,
+            total: data.length
+          };
+        } else {
+          return {
+            conversations: (data.conversations || data.data || []).map(this.transformConversation),
+            hasMore: data.hasMore || false,
+            nextCursor: data.nextCursor,
+            total: data.total
+          };
+        }
       } catch (err) {
         // If it's the last candidate rethrow; otherwise continue
         if (path === this.conversationEndpointCandidates[this.conversationEndpointCandidates.length - 1]) {
@@ -150,7 +201,7 @@ class ChatHistoryService {
       /* ignore */
     }
 
-    return [];
+    return { conversations: [], hasMore: false };
   }
 
   // Create or get DM conversation
