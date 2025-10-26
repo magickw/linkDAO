@@ -158,13 +158,30 @@ export default function Wallet() {
     console.log('Address:', address);
 
     try {
-      // Open in new tab - using _blank as target
-      window.open(explorerUrl, '_blank');
-      addToast('Opening blockchain explorer...', 'success');
+      // Open in new tab with security attributes
+      const newWindow = window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+      if (newWindow) {
+        newWindow.opener = null;
+        addToast('Opening blockchain explorer...', 'success');
+      } else {
+        addToast('Failed to open explorer. Please check your popup blocker.', 'error');
+      }
     } catch (error) {
       console.error('Error opening explorer:', error);
       addToast('Failed to open explorer. Please check your popup blocker.', 'error');
     }
+  };
+
+  const handleSendAsset = (assetName: string) => {
+    // Set the token and switch to the send tab
+    setToken(assetName);
+    setActiveTab('send');
+    addToast(`Ready to send ${assetName}`, 'info');
+  };
+
+  const handleSwapAsset = (assetName: string) => {
+    // TODO: Implement swap functionality
+    addToast(`Swap feature for ${assetName} coming soon!`, 'info');
   };
 
   const formatCurrency = (value: number): string => {
@@ -495,10 +512,16 @@ export default function Wallet() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 mr-3">
+                            <button
+                              onClick={() => handleSendAsset(asset.name)}
+                              className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 mr-3 transition-colors"
+                            >
                               Send
                             </button>
-                            <button className="text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-secondary-300">
+                            <button
+                              onClick={() => handleSwapAsset(asset.name)}
+                              className="text-secondary-600 hover:text-secondary-900 dark:text-secondary-400 dark:hover:text-secondary-300 transition-colors"
+                            >
                               Swap
                             </button>
                           </td>

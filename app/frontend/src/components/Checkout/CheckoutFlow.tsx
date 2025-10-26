@@ -45,7 +45,7 @@ import {
   MarketConditions
 } from '@/types/paymentPrioritization';
 import { toast } from 'react-hot-toast';
-import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA, USDT_MAINNET, USDT_POLYGON } from '@/config/payment';
+import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -193,25 +193,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       });
     });
 
-    // Add USDT options for supported networks
-    const usdtConfigs = [
-      { token: USDT_MAINNET, name: 'USDT (Ethereum)', chainId: 1, networkName: 'Ethereum' },
-      { token: USDT_POLYGON, name: 'USDT (Polygon)', chainId: 137, networkName: 'Polygon' }
-    ];
-
-    usdtConfigs.forEach(config => {
-      methods.push({
-        id: `usdt-${config.chainId}`,
-        type: PaymentMethodType.STABLECOIN_USDT,
-        name: config.name,
-        description: `Tether USD on ${config.networkName}`,
-        chainId: config.chainId,
-        enabled: true,
-        supportedNetworks: [config.chainId],
-        token: config.token
-      });
-    });
-
     // Add Fiat payment option
     methods.push({
       id: 'stripe-fiat',
@@ -221,6 +202,43 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       chainId: 0, // Not applicable for fiat
       enabled: true,
       supportedNetworks: []
+    });
+
+    // Add native ETH options for supported networks
+    methods.push({
+      id: 'eth-mainnet',
+      type: PaymentMethodType.NATIVE_ETH,
+      name: 'Ethereum (Mainnet)',
+      description: 'Native ETH on Ethereum',
+      chainId: 1,
+      enabled: true,
+      supportedNetworks: [1],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ethereum',
+        chainId: 1,
+        isNative: true
+      }
+    });
+
+    methods.push({
+      id: 'eth-arbitrum',
+      type: PaymentMethodType.NATIVE_ETH,
+      name: 'Ethereum (Arbitrum)',
+      description: 'Native ETH on Arbitrum',
+      chainId: 42161,
+      enabled: true,
+      supportedNetworks: [42161],
+      token: {
+        address: '0x0000000000000000000000000000000000000000',
+        symbol: 'ETH',
+        decimals: 18,
+        name: 'Ethereum',
+        chainId: 42161,
+        isNative: true
+      }
     });
 
     return methods;
@@ -325,17 +343,17 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       // User preference tracking is handled through order analytics
 
       // Track payment method selection for analytics
-      try {
-        // TODO: Implement payment method tracking in orderService
-        console.log('Payment method selected:', {
-          orderId: result.orderId,
-          selectedMethodId: selectedPaymentMethod?.method.id,
-          methodName: selectedPaymentMethod?.method.name,
-          priority: selectedPaymentMethod?.priority,
-          recommendationReason: selectedPaymentMethod?.recommendationReason,
-          costEstimate: selectedPaymentMethod?.costEstimate,
+      // TODO: Re-enable when trackPaymentMethodSelection method is implemented in orderService
+      /* try {
+        const { orderService } = await import('@/services/orderService');
+        await orderService.trackPaymentMethodSelection(result.orderId, {
+          selectedMethodId: selectedPaymentMethod.method.id,
+          methodName: selectedPaymentMethod.method.name,
+          priority: selectedPaymentMethod.priority,
+          recommendationReason: selectedPaymentMethod.recommendationReason,
+          costEstimate: selectedPaymentMethod.costEstimate,
           alternativeMethods: prioritizationResult?.prioritizedMethods
-            .filter(m => m.method.id !== selectedPaymentMethod?.method.id)
+            .filter(m => m.method.id !== selectedPaymentMethod.method.id)
             .map(m => ({
               id: m.method.id,
               name: m.method.name,
@@ -345,7 +363,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         });
       } catch (error) {
         console.warn('Failed to track payment method selection:', error);
-      }
+      } */
 
       // Clear cart on successful checkout
       actions.clearCart();

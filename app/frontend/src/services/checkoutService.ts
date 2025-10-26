@@ -134,7 +134,7 @@ export class CheckoutService {
       const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.price.fiat) * item.quantity), 0);
       const shipping = this.calculateShipping(items);
       const tax = this.calculateTax(subtotal, shipping);
-      const platformFee = subtotal * 0.025; // 2.5% platform fee
+      const platformFee = subtotal * 0.125; // 12.5% platform fee
       const total = subtotal + shipping + tax + platformFee;
 
       const session: CheckoutSession = {

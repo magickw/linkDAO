@@ -287,6 +287,8 @@ class CartService {
     let subtotalFiat = 0;
     let shippingCrypto = 0;
     let shippingFiat = 0;
+    let platformFeeCrypto = 0;
+    let platformFeeFiat = 0;
     let itemCount = 0;
 
     items.forEach(item => {
@@ -304,8 +306,12 @@ class CartService {
       }
     });
 
-    const totalCrypto = subtotalCrypto + shippingCrypto;
-    const totalFiat = subtotalFiat + shippingFiat;
+    // Calculate platform fee (12.5% of subtotal)
+    platformFeeCrypto = subtotalCrypto * 0.125;
+    platformFeeFiat = subtotalFiat * 0.125;
+
+    const totalCrypto = subtotalCrypto + shippingCrypto + platformFeeCrypto;
+    const totalFiat = subtotalFiat + shippingFiat + platformFeeFiat;
 
     return {
       itemCount,

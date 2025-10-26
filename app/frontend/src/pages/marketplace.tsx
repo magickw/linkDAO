@@ -428,133 +428,90 @@ const MarketplaceContent: React.FC = () => {
   }, []);
 
   // Filter and sort listings with new filter options
-  // Calculate marketplace stats from listings
-  const marketplaceStats = useMemo(() => {
-    try {
-      const allListings = Array.isArray(listings) ? listings : [];
-
-      return {
-        totalListings: allListings.length,
-        escrowBackedCount: allListings.filter(l => l?.isEscrowed === true).length,
-        daoReviewedCount: allListings.filter(l => {
-          try {
-            // Check if enhancedData exists (added during transformation)
-            const listing = l as any;
-            return listing?.enhancedData?.seller?.daoApproved === true;
-          } catch (err) {
-            return false;
-          }
-        }).length,
-        activeListings: allListings.filter(l => l?.status === 'ACTIVE').length,
-      };
-    } catch (error) {
-      console.error('Error calculating marketplace stats:', error);
-      return {
-        totalListings: 0,
-        escrowBackedCount: 0,
-        daoReviewedCount: 0,
-        activeListings: 0,
-      };
-    }
-  }, [listings]);
-
   const filteredAndSortedListings = useMemo(() => {
-    try {
-      let result = Array.isArray(listings) ? [...listings] : [];
+    let result = Array.isArray(listings) ? [...listings] : [];
 
-      // Search filter
-      if (debouncedSearchTerm) {
-        const query = debouncedSearchTerm.toLowerCase();
-        result = result.filter(listing =>
-          listing.metadataURI?.toLowerCase().includes(query) ||
-          listing.metadataURI?.toLowerCase().includes(query) ||
-          listing.sellerWalletAddress?.toLowerCase().includes(query)
-        );
-      }
-
-      // Category filter
-      if (filters.category) {
-        result = result.filter(listing =>
-          listing.itemType.toLowerCase() === filters.category
-        );
-      }
-
-      // Price range filter
-      if (filters.priceRange) {
-        const { min, max } = filters.priceRange;
-        result = result.filter(listing => {
-          const price = parseFloat(listing.price);
-          if (min !== undefined && price < min) return false;
-          if (max !== undefined && price > max) return false;
-          return true;
-        });
-      }
-
-      // Condition filter
-      if (filters.condition) {
-        // Skip condition filter for now
-      }
-
-      // Trust filters
-      if (filters.verified) {
-        // Skip verified filter for now
-      }
-      if (filters.escrowProtected) {
-        result = result.filter(listing => listing?.isEscrowed === true);
-      }
-      if (filters.daoApproved) {
-        result = result.filter(listing => {
-          try {
-            // Check if enhancedData exists (added during transformation)
-            const l = listing as any;
-            return l?.enhancedData?.seller?.daoApproved === true;
-          } catch (err) {
-            return false;
-          }
-        });
-      }
-
-      // In stock filter
-      if (filters.inStock) {
-        result = result.filter(listing => (listing.quantity ?? 0) > 0);
-      }
-
-      // Sorting
-      result.sort((a, b) => {
-        let comparison = 0;
-
-        switch (sortField) {
-          case 'price':
-            comparison = parseFloat(a.price) - parseFloat(b.price);
-            break;
-          case 'rating':
-            // Skip rating comparison for now
-            break;
-          case 'popularity':
-            // Skip views comparison for now
-            break;
-          case 'date':
-            comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            break;
-          default:
-            comparison = 0;
-        }
-
-        return sortDirection === 'asc' ? comparison : -comparison;
-      });
-
-      return result;
-    } catch (error) {
-      console.error('Error filtering and sorting listings:', error);
-      return Array.isArray(listings) ? listings : [];
+    // Search filter
+    if (debouncedSearchTerm) {
+      const query = debouncedSearchTerm.toLowerCase();
+      result = result.filter(listing =>
+        listing.metadataURI?.toLowerCase().includes(query) ||
+        listing.metadataURI?.toLowerCase().includes(query) ||
+        listing.sellerWalletAddress?.toLowerCase().includes(query)
+      );
     }
+
+    // Category filter
+    if (filters.category) {
+      result = result.filter(listing =>
+        listing.itemType.toLowerCase() === filters.category
+      );
+    }
+
+    // Price range filter
+    if (filters.priceRange) {
+      const { min, max } = filters.priceRange;
+      result = result.filter(listing => {
+        const price = parseFloat(listing.price);
+        if (min !== undefined && price < min) return false;
+        if (max !== undefined && price > max) return false;
+        return true;
+      });
+    }
+
+    // Condition filter
+    if (filters.condition) {
+      // Skip condition filter for now
+    }
+
+    // Trust filters
+    if (filters.verified) {
+      // Skip verified filter for now
+    }
+    if (filters.escrowProtected) {
+      result = result.filter(listing => listing.isEscrowed);
+    }
+    if (filters.daoApproved) {
+      // Skip daoApproved filter for now
+    }
+
+    // In stock filter
+    if (filters.inStock) {
+      result = result.filter(listing => (listing.quantity ?? 0) > 0);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortField) {
+        case 'price':
+          comparison = parseFloat(a.price) - parseFloat(b.price);
+          break;
+        case 'rating':
+          // Skip rating comparison for now
+          break;
+        case 'popularity':
+          // Skip views comparison for now
+          break;
+        case 'date':
+          comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          break;
+        default:
+          comparison = 0;
+      }
+
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
+    return result;
   }, [listings, debouncedSearchTerm, filters, sortField, sortDirection]);
 
-  // Grid columns based on density - optimized for product browsing (max 3 per row)
+  // Grid columns based on density - optimized for product browsing
   const gridColumns =
     density === 'comfortable'
-      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+      : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
   return (
     <Layout title="Marketplace - LinkDAO" fullWidth={true}>
@@ -633,39 +590,17 @@ const MarketplaceContent: React.FC = () => {
                 />
               </div>
               
-              {/* Trust Labels - Dynamic based on actual data */}
+              {/* Trust Labels */}
               <div className="lg:col-span-4 flex items-center justify-end">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      escrowProtected: !prev.escrowProtected
-                    }))}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
-                      filters.escrowProtected
-                        ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200'
-                        : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
-                    }`}
-                    title="Click to filter by escrow-backed items"
-                  >
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1.5 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    Escrow-backed ({marketplaceStats.escrowBackedCount})
-                  </button>
-                  <button
-                    onClick={() => setFilters(prev => ({
-                      ...prev,
-                      daoApproved: !prev.daoApproved
-                    }))}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
-                      filters.daoApproved
-                        ? 'border-cyan-400 dark:border-cyan-600 bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200'
-                        : 'border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-900/40'
-                    }`}
-                    title="Click to filter by DAO-reviewed sellers"
-                  >
+                    Escrow-backed
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 dark:border-cyan-800 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 text-cyan-700 dark:text-cyan-300 text-sm font-medium">
                     <span className="h-2 w-2 rounded-full bg-cyan-500" />
-                    DAO reviewed ({marketplaceStats.daoReviewedCount})
-                  </button>
+                    DAO reviewed
+                  </span>
                 </div>
               </div>
             </div>

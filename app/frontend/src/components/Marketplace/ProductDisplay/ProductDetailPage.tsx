@@ -216,6 +216,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               )}
             </div>
             
+            {/* Tags */}
+            {product.tags && product.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {product.tags.map((tag, index) => (
+                  <span key={index} className="bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            
             {/* Rating */}
             <div className="flex items-center mb-4">
               <div className="flex">
@@ -423,7 +434,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </div>
               </div>
               <div className="mt-3 text-sm text-gray-600">
-                Member since {new Date(product.seller.memberSince).toLocaleDateString()}
+                Member since {product.seller.memberSince ? new Date(product.seller.memberSince).toLocaleDateString() : 'Unknown'}
               </div>
               <div className="text-sm text-gray-600">
                 Avg. response time: {product.seller.responseTime}

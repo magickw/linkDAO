@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ProductDetailPage } from '../ProductDetailPage';
+import ProductDetailPage from '../ProductDetailPage';
 
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
@@ -17,7 +17,7 @@ jest.mock('framer-motion', () => ({
 }));
 
 // Mock design system components
-jest.mock('../../../design-system/components/DualPricing', () => ({
+jest.mock('@/design-system/components/DualPricing', () => ({
   DualPricing: ({ cryptoPrice, fiatPrice, showToggle }: any) => (
     <div data-testid="dual-pricing">
       {cryptoPrice} ≈ {fiatPrice}
@@ -26,7 +26,7 @@ jest.mock('../../../design-system/components/DualPricing', () => ({
   ),
 }));
 
-jest.mock('../../../design-system/components/TrustIndicators', () => ({
+jest.mock('@/design-system/components/TrustIndicators', () => ({
   TrustIndicators: ({ verified, escrowProtected, onChainCertified }: any) => (
     <div data-testid="trust-indicators">
       {verified && <span>✅</span>}
@@ -36,17 +36,17 @@ jest.mock('../../../design-system/components/TrustIndicators', () => ({
   ),
 }));
 
-jest.mock('../../../design-system/components/LoadingSkeleton', () => ({
+jest.mock('@/design-system/components/LoadingSkeleton', () => ({
   LoadingSkeleton: () => <div data-testid="loading-skeleton">Loading...</div>,
 }));
 
-jest.mock('../../../design-system/components/GlassPanel', () => ({
+jest.mock('@/design-system/components/GlassPanel', () => ({
   GlassPanel: ({ children, className }: any) => (
     <div className={`glass-panel ${className}`}>{children}</div>
   ),
 }));
 
-jest.mock('../../../design-system/components/Button', () => ({
+jest.mock('@/design-system/components/Button', () => ({
   Button: ({ children, onClick, variant, size, disabled }: any) => (
     <button 
       onClick={onClick} 
