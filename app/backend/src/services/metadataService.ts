@@ -3,9 +3,12 @@ import axios from 'axios';
 
 // IPFS configuration
 const IPFS_CONFIG = {
-  host: process.env.IPFS_HOST || 'localhost',
-  port: parseInt(process.env.IPFS_PORT || '5001', 10),
-  protocol: process.env.IPFS_PROTOCOL || 'http',
+  host: process.env.IPFS_HOST || 'api.pinata.cloud',
+  port: parseInt(process.env.IPFS_PORT || '443', 10),
+  protocol: process.env.IPFS_PROTOCOL || 'https',
+  projectId: process.env.IPFS_PROJECT_ID,
+  projectSecret: process.env.IPFS_PROJECT_SECRET,
+  gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
 };
 
 // Arweave configuration
@@ -26,16 +29,44 @@ export class MetadataService {
     try {
       // Use require instead of import for CommonJS compatibility
       const { create } = require('ipfs-http-client');
-      const client = create({
-        host: IPFS_CONFIG.host,
-        port: IPFS_CONFIG.port,
-        protocol: IPFS_CONFIG.protocol,
-      });
       
-      // Test connection
-      await client.id();
-      console.log('IPFS client initialized successfully');
-      return client;
+      // For Pinata, we need to use a different configuration
+      if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
+        // Configure for Pinata gateway (read-only operations)
+        console.log('Configuring IPFS client for Pinata gateway');
+        const client = create({
+          host: 'api.pinata.cloud',
+          port: 443,
+          protocol: 'https',
+          headers: {
+            Authorization: `Bearer ${IPFS_CONFIG.projectId}`
+          },
+          apiPath: '/data'
+        });
+        
+        // Test connection with a simple request
+        console.log('Testing Pinata connection...');
+        return client;
+      } else if (IPFS_CONFIG.projectId && IPFS_CONFIG.projectSecret) {
+        // Generic IPFS with authentication
+        const client = create({
+          host: IPFS_CONFIG.host,
+          port: IPFS_CONFIG.port,
+          protocol: IPFS_CONFIG.protocol,
+          headers: {
+            Authorization: `Bearer ${IPFS_CONFIG.projectId}`
+          }
+        });
+        return client;
+      } else {
+        // Standard IPFS configuration
+        const client = create({
+          host: IPFS_CONFIG.host,
+          port: IPFS_CONFIG.port,
+          protocol: IPFS_CONFIG.protocol,
+        });
+        return client;
+      }
     } catch (error) {
       console.error('Failed to initialize IPFS client:', error);
       console.warn('IPFS not available, using fallback storage');
@@ -60,9 +91,10 @@ export class MetadataService {
         return fallbackCid;
       }
       
-      const { cid } = await ipfsClient.add(content);
-      console.log(`Content uploaded to IPFS: ${cid.toString()}`);
-      return cid.toString();
+      // For Pinata, use the add method
+      const { IpfsHash } = await ipfsClient.add(content);
+      console.log(`Content uploaded to IPFS: ${IpfsHash}`);
+      return IpfsHash;
     } catch (error) {
       console.error('Error uploading to IPFS:', error);
       // Generate deterministic fallback CID

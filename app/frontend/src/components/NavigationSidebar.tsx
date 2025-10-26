@@ -297,36 +297,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </div>
             </div>
 
-            {/* Quick Filters Panel Card */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-              <div className="p-4">
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                  Quick Filters
-                </div>
-                <div className="space-y-1">
-                  {/* Trending */}
-                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
-                    Trending
-                  </button>
-
-                  {/* Following */}
-                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
-                    Following
-                  </button>
-
-                  {/* Recent */}
-                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
-                    Recent
-                  </button>
-
-                  {/* Popular */}
-                  <button className="w-full text-left py-2.5 px-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors">
-                    Popular
-                  </button>
-                </div>
-              </div>
-            </div>
-
             {/* Navigation Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               {/* Navigation Header */}

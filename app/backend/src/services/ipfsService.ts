@@ -1,6 +1,16 @@
 import type { IPFSHTTPClient } from 'ipfs-http-client';
 import { Readable } from 'stream';
 
+// IPFS configuration
+const IPFS_CONFIG = {
+  host: process.env.IPFS_HOST || 'api.pinata.cloud',
+  port: parseInt(process.env.IPFS_PORT || '443', 10),
+  protocol: process.env.IPFS_PROTOCOL || 'https',
+  projectId: process.env.IPFS_PROJECT_ID,
+  projectSecret: process.env.IPFS_PROJECT_SECRET,
+  gatewayUrl: process.env.IPFS_GATEWAY_URL || process.env.IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/',
+};
+
 export interface NFTMetadata {
   name: string;
   description: string;
@@ -30,19 +40,48 @@ export interface IPFSUploadResult {
 class IPFSService {
   private client: IPFSHTTPClient | null = null;
   private gatewayUrl: string;
+  private projectId: string | undefined;
+  private projectSecret: string | undefined;
 
   constructor() {
-    this.gatewayUrl = process.env.IPFS_GATEWAY_URL || 'https://ipfs.io/ipfs/';
+    this.gatewayUrl = IPFS_CONFIG.gatewayUrl;
+    this.projectId = IPFS_CONFIG.projectId;
+    this.projectSecret = IPFS_CONFIG.projectSecret;
   }
 
   private async initializeClient(): Promise<void> {
     try {
       const { create } = await import('ipfs-http-client');
-      this.client = create({
-        host: process.env.IPFS_HOST || 'localhost',
-        port: parseInt(process.env.IPFS_PORT || '5001'),
-        protocol: process.env.IPFS_PROTOCOL || 'http',
-      });
+      
+      if (this.projectId && this.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
+        // Configure for Pinata
+        this.client = create({
+          host: 'api.pinata.cloud',
+          port: 443,
+          protocol: 'https',
+          headers: {
+            Authorization: `Bearer ${this.projectId}`
+          },
+          apiPath: '/data'
+        });
+      } else if (this.projectId && this.projectSecret) {
+        // Generic IPFS with authentication
+        this.client = create({
+          host: IPFS_CONFIG.host,
+          port: IPFS_CONFIG.port,
+          protocol: IPFS_CONFIG.protocol,
+          headers: {
+            Authorization: `Bearer ${this.projectId}`
+          }
+        });
+      } else {
+        // Standard IPFS configuration
+        this.client = create({
+          host: IPFS_CONFIG.host,
+          port: IPFS_CONFIG.port,
+          protocol: IPFS_CONFIG.protocol,
+        });
+      }
     } catch (error) {
       console.error('Failed to initialize IPFS client:', error);
     }
@@ -64,16 +103,44 @@ class IPFSService {
   async uploadFile(file: Buffer | Uint8Array, filename?: string): Promise<IPFSUploadResult> {
     try {
       const client = await this.ensureClient();
-      const result = await client.add({
-        content: file,
-        path: filename,
-      });
+      
+      // For Pinata, we need to use a different approach
+      if (this.projectId && this.projectSecret && IPFS_CONFIG.host.includes('pinata')) {
+        // Use Pinata's dedicated API
+        const formData = new FormData();
+        formData.append('file', new Blob([file]), filename || 'file');
+        
+        const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.projectId}`
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return {
+          hash: result.IpfsHash,
+          url: `${this.gatewayUrl}${result.IpfsHash}`,
+          size: result.PinSize
+        };
+      } else {
+        // Standard IPFS client
+        const result = await client.add({
+          content: file,
+          path: filename,
+        });
 
-      return {
-        hash: result.cid.toString(),
-        url: `${this.gatewayUrl}${result.cid.toString()}`,
-        size: result.size,
-      };
+        return {
+          hash: result.cid.toString(),
+          url: `${this.gatewayUrl}${result.cid.toString()}`,
+          size: result.size,
+        };
+      }
     } catch (error) {
       console.error('Error uploading file to IPFS:', error);
       throw new Error('Failed to upload file to IPFS');

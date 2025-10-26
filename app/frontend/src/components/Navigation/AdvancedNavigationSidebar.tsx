@@ -1,5 +1,4 @@
 import React from 'react';
-import { QuickFilterPanel } from './QuickFilterPanel';
 import { CommunityIconList } from './CommunityIconList';
 import { EnhancedUserCard } from './EnhancedUserCard';
 import NavigationBreadcrumbs from './NavigationBreadcrumbs';
@@ -30,6 +29,8 @@ const AdvancedNavigationSidebar: React.FC = () => {
       </div>
 
       {/* Quick Filter Panel */}
+      {/* Removed as per user request */}
+      {/* 
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <QuickFilterPanel
           activeFilters={quickFilters.filter(f => f.active).map(f => f.id)}
@@ -42,6 +43,7 @@ const AdvancedNavigationSidebar: React.FC = () => {
           }}
         />
       </div>
+      */}
 
       {/* Community List with Icons */}
       <div className="flex-1 overflow-y-auto">

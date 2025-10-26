@@ -129,6 +129,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
               </div>
 
               {/* Quick Filters */}
+              {/* 
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
                   Quick Filters
@@ -139,6 +140,7 @@ export const MobileNavigationSidebar: React.FC<MobileNavigationSidebarProps> = (
                   className="mobile-optimized"
                 />
               </div>
+              */}
 
               {/* Communities */}
               <div className="p-4 border-b border-gray-200 dark:border-gray-700">
