@@ -23,6 +23,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { TokenInfo } from '@/types/web3Community';
+import PurchaseModal from '@/components/Marketplace/TokenAcquisition/PurchaseModal';
 
 type LocalTokenInfo = TokenInfo & {
   priceUSD: number;
@@ -34,6 +35,7 @@ const TokenPage: React.FC = () => {
   const router = useRouter();
   const [tokenInfo, setTokenInfo] = useState<LocalTokenInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
@@ -60,8 +62,7 @@ const TokenPage: React.FC = () => {
   }, []);
 
   const handleBuyTokens = () => {
-    // In a real implementation, this would connect to a DEX or token sale contract
-    alert('Token purchase functionality would be implemented here. In a real application, this would connect to a DEX or token sale contract.');
+    setIsPurchaseModalOpen(true);
   };
 
   const handleStakeTokens = () => {
@@ -84,6 +85,11 @@ const TokenPage: React.FC = () => {
         <title>LDAO Token - LinkDAO</title>
         <meta name="description" content="Discover the LDAO token - the governance and utility token of LinkDAO. Buy, stake, and earn rewards." />
       </Head>
+      
+      <PurchaseModal 
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+      />
 
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -149,6 +155,15 @@ const TokenPage: React.FC = () => {
                       >
                         <ShoppingCart size={18} />
                         Buy LDAO Tokens
+                      </Button>
+                                        
+                      <Button 
+                        variant="outline" 
+                        onClick={() => router.push('/ldao-dashboard')}
+                        className="flex items-center gap-2 border-white/30 text-white hover:bg-white/10"
+                      >
+                        <Zap size={18} />
+                        Token Dashboard
                       </Button>
                       
                       <Button 

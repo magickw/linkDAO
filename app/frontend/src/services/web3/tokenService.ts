@@ -5,6 +5,8 @@
 import { TokenActivity, TokenActivityType, TokenTransactionRequest, TokenTransactionResponse } from '../../types/tokenActivity';
 import { TokenInfo } from '../../types/web3Community';
 import { web3ErrorHandler } from '../../utils/web3ErrorHandling';
+import deployedAddresses from '../../../../contracts/deployedAddresses-sepolia.json';
+import { ldaoTokenService } from './ldaoTokenService';
 
 export class TokenService {
   private static instance: TokenService;
@@ -22,8 +24,24 @@ export class TokenService {
     try {
       // Check if this is the LDAO token
       if (tokenAddress === 'LDAO' || tokenAddress.toLowerCase() === 'ldao') {
+        // Get actual token info from the contract
+        const tokenInfo = await ldaoTokenService.getTokenInfo();
+        
+        if (tokenInfo) {
+          return {
+            address: deployedAddresses.contracts.LDAOToken.address,
+            symbol: tokenInfo.symbol,
+            decimals: tokenInfo.decimals,
+            name: tokenInfo.name,
+            logoUrl: '/images/ldao-token.png',
+            priceUSD: await this.getTokenPrice('LDAO'),
+            priceChange24h: 0
+          };
+        }
+        
+        // Fallback if contract call fails
         return {
-          address: '0x0000000000000000000000000000000000000000', // Placeholder address
+          address: deployedAddresses.contracts.LDAOToken.address,
           symbol: 'LDAO',
           decimals: 18,
           name: 'LinkDAO Token',
@@ -93,7 +111,14 @@ export class TokenService {
 
   async getUserTokenBalance(userAddress: string, tokenAddress: string): Promise<number> {
     try {
-      // This would call the blockchain to get actual balance
+      // Check if this is the LDAO token
+      if (tokenAddress === 'LDAO' || tokenAddress.toLowerCase() === 'ldao') {
+        // Get actual balance from the contract
+        const balance = await ldaoTokenService.getUserBalance(userAddress);
+        return parseFloat(balance);
+      }
+      
+      // This would call the blockchain to get actual balance for other tokens
       return 0;
     } catch (error) {
       web3ErrorHandler.handleError(error as Error, {

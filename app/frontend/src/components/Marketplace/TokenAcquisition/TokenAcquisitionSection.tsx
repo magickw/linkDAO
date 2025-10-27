@@ -10,6 +10,7 @@ import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { ShoppingCart, TrendingUp, Users, Zap } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { TokenInfo } from '@/types/web3Community';
+import PurchaseModal from './PurchaseModal';
 
 type LocalTokenInfo = TokenInfo & {
   priceUSD: number;
@@ -21,6 +22,7 @@ const TokenAcquisitionSection: React.FC = () => {
   const router = useRouter();
   const [tokenInfo, setTokenInfo] = useState<LocalTokenInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
@@ -47,8 +49,7 @@ const TokenAcquisitionSection: React.FC = () => {
   }, []);
 
   const handleBuyTokens = () => {
-    // In a real implementation, this would connect to a DEX or token sale contract
-    alert('Token purchase functionality would be implemented here. In a real application, this would connect to a DEX or token sale contract.');
+    setIsPurchaseModalOpen(true);
   };
 
   const handleStakeTokens = () => {
@@ -78,6 +79,10 @@ const TokenAcquisitionSection: React.FC = () => {
 
   return (
     <GlassPanel variant="secondary" className="p-6">
+      <PurchaseModal 
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+      />
       <div className="flex flex-col md:flex-row gap-6 items-center">
         {/* Token Info */}
         <div className="flex-1 text-center md:text-left">
@@ -134,6 +139,15 @@ const TokenAcquisitionSection: React.FC = () => {
           >
             <Users size={18} />
             Learn More
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            onClick={() => router.push('/ldao-dashboard')}
+            className="flex-1 flex items-center justify-center gap-2 text-white/80 hover:text-white hover:bg-white/5"
+          >
+            <Zap size={18} />
+            Dashboard
           </Button>
         </div>
       </div>
