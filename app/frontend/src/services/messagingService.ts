@@ -25,9 +25,11 @@ export interface ChatMessage {
     fileUrl?: string;
     fileName?: string;
     fileSize?: number;
+    audioUrl?: string;
+    duration?: number;
     rewardAmount?: string;
     transactionHash?: string;
-    decryptionFailed?: boolean; // Add this line
+    decryptionFailed?: boolean;
   };
   signature?: string;
   chainId?: number;
