@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { WorkflowDesigner } from './WorkflowDesigner';
 import { WorkflowList } from './WorkflowList';
 import { WorkflowInstanceViewer } from './WorkflowInstanceViewer';
+import { EnhancedWorkflowDesigner } from './EnhancedWorkflowDesigner';
 import { Button, GlassPanel } from '@/design-system';
 import { 
   BarChart3, 
   List, 
   Play, 
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  Palette
 } from 'lucide-react';
 
-type ViewMode = 'list' | 'designer' | 'viewer';
+type ViewMode = 'list' | 'designer' | 'enhanced-designer' | 'viewer';
 
 export const WorkflowAutomationDashboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -23,9 +25,19 @@ export const WorkflowAutomationDashboard: React.FC = () => {
     setViewMode('designer');
   };
 
+  const handleCreateEnhancedWorkflow = () => {
+    setSelectedTemplateId(null);
+    setViewMode('enhanced-designer');
+  };
+
   const handleEditWorkflow = (templateId: string) => {
     setSelectedTemplateId(templateId);
     setViewMode('designer');
+  };
+
+  const handleEditEnhancedWorkflow = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    setViewMode('enhanced-designer');
   };
 
   const handleViewWorkflow = (templateId: string) => {
@@ -101,6 +113,18 @@ export const WorkflowAutomationDashboard: React.FC = () => {
             </button>
             
             <button
+              onClick={() => setViewMode('enhanced-designer')}
+              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'enhanced-designer'
+                  ? 'bg-white text-gray-900'
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Palette className="w-4 h-4 mr-2" />
+              Enhanced Designer
+            </button>
+            
+            <button
               onClick={() => setViewMode('viewer')}
               className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'viewer'
@@ -117,16 +141,44 @@ export const WorkflowAutomationDashboard: React.FC = () => {
         {/* Content */}
         <GlassPanel className="p-6 rounded-xl">
           {viewMode === 'list' && (
-            <WorkflowList
-              onCreate={handleCreateWorkflow}
-              onEdit={handleEditWorkflow}
-              onView={handleViewWorkflow}
-              onExecute={handleExecuteWorkflow}
-            />
+            <div>
+              <div className="flex justify-end mb-4">
+                <Button 
+                  variant="primary" 
+                  onClick={handleCreateEnhancedWorkflow}
+                  className="flex items-center mr-2"
+                >
+                  <Palette className="w-4 h-4 mr-2" />
+                  Create Enhanced Workflow
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleCreateWorkflow}
+                  className="flex items-center"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Create Workflow
+                </Button>
+              </div>
+              <WorkflowList
+                onCreate={handleCreateWorkflow}
+                onEdit={handleEditWorkflow}
+                onView={handleViewWorkflow}
+                onExecute={handleExecuteWorkflow}
+                onEditEnhanced={handleEditEnhancedWorkflow}
+              />
+            </div>
           )}
           
           {viewMode === 'designer' && (
             <WorkflowDesigner
+              templateId={selectedTemplateId || undefined}
+              onCancel={handleBackToList}
+            />
+          )}
+          
+          {viewMode === 'enhanced-designer' && (
+            <EnhancedWorkflowDesigner
               templateId={selectedTemplateId || undefined}
               onCancel={handleBackToList}
             />

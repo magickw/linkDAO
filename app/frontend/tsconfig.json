@@ -38,7 +38,8 @@
     // Additional optimizations for build performance
     "disableSizeLimit": true,
     "noImplicitAny": false,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "types": []
   },
   "include": [
     "next-env.d.ts",
@@ -58,6 +59,7 @@
     "jest.*.config.js",
     "**/*.stories.ts",
     "**/*.stories.tsx",
-    ".storybook/**/*"
+    ".storybook/**/*",
+    "**/node_modules/@types/react-native/**/*"
   ]
 }

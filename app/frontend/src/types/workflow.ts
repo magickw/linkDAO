@@ -154,7 +154,8 @@ export type StepType =
   | 'approval'
   | 'data_processing'
   | 'external_api'
-  | 'delay';
+  | 'delay'
+  | 'data';
 
 export type StepExecutionStatus =
   | 'pending'
@@ -358,5 +359,8 @@ export interface WorkflowDesignerData {
     category: WorkflowCategory;
     triggerType: TriggerType;
     triggerConfig: TriggerConfig;
+    version?: string;
+    tags?: string[];
+    priority?: 'low' | 'medium' | 'high' | 'urgent';
   };
 }

@@ -11,19 +11,22 @@ import {
   Eye, 
   BarChart3,
   Filter,
-  Search
+  Search,
+  Palette
 } from 'lucide-react';
 
 interface WorkflowListProps {
-  onEdit?: (templateId: string) => void;
-  onCreate?: () => void;
-  onView?: (templateId: string) => void;
-  onExecute?: (templateId: string) => void;
+  onCreate: () => void;
+  onEdit: (id: string) => void;
+  onEditEnhanced: (id: string) => void;
+  onView: (id: string) => void;
+  onExecute: (id: string) => void;
 }
 
 export const WorkflowList: React.FC<WorkflowListProps> = ({ 
-  onEdit, 
   onCreate, 
+  onEdit, 
+  onEditEnhanced,
   onView, 
   onExecute 
 }) => {
@@ -240,42 +243,27 @@ export const WorkflowList: React.FC<WorkflowListProps> = ({
               <span>Updated: {workflow.updatedAt.toLocaleDateString()}</span>
             </div>
             
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
                 size="small"
-                onClick={() => onView?.(workflow.id)}
+                onClick={() => onEdit(workflow.id)}
               >
-                <Eye className="w-4 h-4 mr-1" />
-                View
+                <Edit className="w-4 h-4" />
               </Button>
-              
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="small"
-                onClick={() => onEdit?.(workflow.id)}
+                onClick={() => onEditEnhanced(workflow.id)}
               >
-                <Edit className="w-4 h-4 mr-1" />
-                Edit
+                <Palette className="w-4 h-4" />
               </Button>
-              
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 size="small"
-                onClick={() => onExecute?.(workflow.id)}
-                disabled={!workflow.isActive}
+                onClick={() => onExecute(workflow.id)}
               >
-                <Play className="w-4 h-4 mr-1" />
-                Run
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="small"
-                onClick={() => handleDelete(workflow.id)}
-                className="text-red-600 hover:text-red-800"
-              >
-                <Trash2 className="w-4 h-4" />
+                <Play className="w-4 h-4" />
               </Button>
             </div>
           </GlassPanel>

@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "skipLibCheck": true,
+    "types": []
+  },
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**/*",
+    "**/e2e/**/*",
+    "jest.setup.ts",
+    "jest.config.js",
+    "jest.*.config.js",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    ".storybook/**/*",
+    "**/node_modules/@types/react-native/**/*"
+  ]
+}

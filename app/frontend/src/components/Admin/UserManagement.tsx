@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users,
   Eye,
@@ -28,6 +28,8 @@ import {
 import { adminService } from '@/services/adminService';
 import { AuthUser, UserRole } from '@/types/auth';
 import { Button, GlassPanel } from '@/design-system';
+import { VirtualizedUserList } from './VirtualizedUserList';
+import { UserSegmentation } from './UserSegmentation';
 
 export function UserManagement() {
   const [users, setUsers] = useState<AuthUser[]>([]);
@@ -59,7 +61,9 @@ export function UserManagement() {
     lastLoginAfter: '',
     lastLoginBefore: '',
     createdAfter: '',
-    createdBefore: ''
+    createdBefore: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc'
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -77,7 +81,7 @@ export function UserManagement() {
       const response = await adminService.getUsers({
         ...filters,
         page: pagination.page,
-        limit: 20
+        limit: 50 // Increase limit for better performance with virtual scrolling
       });
 
       setUsers(response.users);
@@ -286,6 +290,60 @@ export function UserManagement() {
     return date.toLocaleDateString();
   };
 
+  // Debounced search to reduce API calls
+  const debouncedSearch = useMemo(() => {
+    const handler = setTimeout(() => {
+      if (filters.search) {
+        loadUsers();
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [filters.search]);
+
+  useEffect(() => {
+    if (!filters.search) {
+      loadUsers();
+    }
+    return debouncedSearch;
+  }, [filters, pagination.page, debouncedSearch]);
+
+  const renderUserList = () => {
+    if (loading) {
+      return (
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="p-4 bg-white/5 rounded-lg animate-pulse">
+              <div className="h-16 bg-white/10 rounded"></div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (users.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-400">No users found</p>
+        </div>
+      );
+    }
+
+    return (
+      <VirtualizedUserList
+        users={users}
+        selectedUsers={selectedUsers}
+        showBulkActions={showBulkActions}
+        selectedUser={selectedUser}
+        onSelectUser={setSelectedUser}
+        onToggleUserSelection={toggleUserSelection}
+        getRoleColor={getRoleColor}
+        getKycStatusColor={getKycStatusColor}
+      />
+    );
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header with Export */}
@@ -313,6 +371,9 @@ export function UserManagement() {
           </Button>
         </div>
       </div>
+
+      {/* User Segmentation Section */}
+      <UserSegmentation />
 
       {/* Filters */}
       <GlassPanel className="p-4 sm:p-6">
@@ -380,6 +441,23 @@ export function UserManagement() {
                 className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white flex-1 text-sm"
               />
             </div>
+
+            {/* Add sort options */}
+            <select
+              value={`${filters.sortBy}:${filters.sortOrder}`}
+              onChange={(e) => {
+                const [sortBy, sortOrder] = e.target.value.split(':');
+                setFilters({ ...filters, sortBy, sortOrder });
+              }}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-white text-sm"
+            >
+              <option value="createdAt:desc">Newest First</option>
+              <option value="createdAt:asc">Oldest First</option>
+              <option value="lastLogin:desc">Recently Active</option>
+              <option value="lastLogin:asc">Least Recently Active</option>
+              <option value="handle:asc">Name A-Z</option>
+              <option value="handle:desc">Name Z-A</option>
+            </select>
 
             <Button
               variant={showAdvancedSearch ? "primary" : "outline"}
@@ -464,7 +542,9 @@ export function UserManagement() {
                     lastLoginAfter: '',
                     lastLoginBefore: '',
                     createdAfter: '',
-                    createdBefore: ''
+                    createdBefore: '',
+                    sortBy: 'createdAt',
+                    sortOrder: 'desc'
                   })}
                   className="flex items-center gap-2"
                 >
@@ -543,94 +623,7 @@ export function UserManagement() {
             )}
           </div>
 
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <GlassPanel key={i} className="p-4 animate-pulse">
-                  <div className="h-20 bg-white/10 rounded"></div>
-                </GlassPanel>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {users.map((user) => {
-                const isSelected = selectedUsers.has(user.id);
-                return (
-                  <GlassPanel
-                    key={user.id}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedUser?.id === user.id ? 'ring-2 ring-purple-500' :
-                      isSelected ? 'ring-2 ring-blue-500 bg-blue-500/10' :
-                      'hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Selection Checkbox */}
-                      {showBulkActions && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleUserSelection(user.id);
-                          }}
-                          className="mt-1 flex-shrink-0"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-5 h-5 text-blue-400" />
-                          ) : (
-                            <Square className="w-5 h-5 text-gray-400 hover:text-gray-300" />
-                          )}
-                        </button>
-                      )}
-
-                      {/* User Content */}
-                      <div className="flex-1 min-w-0" onClick={() => setSelectedUser(user)}>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-white font-bold">
-                                {user.handle.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="text-white font-medium text-sm sm:text-base">{user.handle}</span>
-                                {user.ens && (
-                                  <span className="text-blue-400 text-xs sm:text-sm">({user.ens})</span>
-                                )}
-                              </div>
-                              <p className="text-gray-400 text-xs sm:text-sm mb-1 truncate">{user.address}</p>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
-                                  {user.role.replace('_', ' ')}
-                                </span>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getKycStatusColor(user.kycStatus)}`}>
-                                  KYC: {user.kycStatus}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                            {user.isSuspended ? (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium text-red-400 bg-red-500/20 whitespace-nowrap">
-                                Suspended
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium text-green-400 bg-green-500/20 whitespace-nowrap">
-                                Active
-                              </span>
-                            )}
-                            <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">
-                              Joined {new Date(user.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </GlassPanel>
-                );
-              })}
-            </div>
-          )}
+          {renderUserList()}
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
@@ -1071,3 +1064,5 @@ export function UserManagement() {
     </div>
   );
 }
+
+export default UserManagement;

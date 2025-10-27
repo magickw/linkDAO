@@ -508,6 +508,13 @@ class AdminService {
     status?: string;
     kycStatus?: string;
     search?: string;
+    searchField?: string;
+    lastLoginAfter?: string;
+    lastLoginBefore?: string;
+    createdAfter?: string;
+    createdBefore?: string;
+    sortBy?: string;
+    sortOrder?: string;
     page?: number;
     limit?: number;
   }): Promise<{ users: AuthUser[]; total: number; page: number; totalPages: number }> {

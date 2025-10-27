@@ -15,7 +15,9 @@ import {
   History,
   Bell,
   Phone,
-  HelpCircle
+  HelpCircle,
+  LineChart,
+  Brain
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
@@ -32,6 +34,8 @@ import { NotificationCenter } from './Notifications/NotificationCenter';
 import { MobilePushSetup } from './Notifications/MobilePushSetup';
 import { WorkflowAutomationDashboard } from './WorkflowAutomation/WorkflowAutomationDashboard';
 import { AdminOnboarding } from './Onboarding/AdminOnboarding';
+import { EnhancedAnalytics } from './EnhancedAnalytics';
+import { EnhancedAIModeration } from './EnhancedAIModeration';
 import { initializeAdminWebSocketManager, getAdminWebSocketManager } from '@/services/adminWebSocketService';
 
 interface AdminStats {
@@ -160,6 +164,7 @@ export function AdminDashboard() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3, permission: null },
     { id: 'moderation', label: 'Moderation', icon: Shield, permission: 'content.moderate' },
+    { id: 'ai-moderation', label: 'AI Moderation', icon: Brain, permission: 'content.moderate' },
     { id: 'history', label: 'Mod History', icon: History, permission: 'system.audit' },
     { id: 'audit', label: 'Audit System', icon: FileText, permission: 'system.audit' },
     { id: 'notifications', label: 'Notifications', icon: Bell, permission: null },
@@ -171,6 +176,7 @@ export function AdminDashboard() {
     { id: 'disputes', label: 'Disputes', icon: AlertTriangle, permission: 'disputes.view' },
     { id: 'users', label: 'User Management', icon: Users, permission: 'users.view' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: 'system.analytics' },
+    { id: 'enhanced-analytics', label: 'Enhanced Analytics', icon: LineChart, permission: 'system.analytics' },
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
@@ -353,6 +359,10 @@ export function AdminDashboard() {
           <ModerationQueue />
         )}
 
+        {activeTab === 'ai-moderation' && hasPermission('content.moderate') && (
+          <EnhancedAIModeration />
+        )}
+
         {activeTab === 'history' && hasPermission('system.audit') && (
           <ModerationHistory />
         )}
@@ -387,6 +397,10 @@ export function AdminDashboard() {
 
         {activeTab === 'analytics' && hasPermission('system.analytics') && (
           <AdminAnalytics />
+        )}
+        
+        {activeTab === 'enhanced-analytics' && hasPermission('system.analytics') && (
+          <EnhancedAnalytics />
         )}
         
         {activeTab === 'workflows' && (

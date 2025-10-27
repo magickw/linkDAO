@@ -45,6 +45,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   // Check if we're on the home/feed page
   const isHomePage = router.pathname === '/';
 
+  
+
   // Live badge counts
   const { conversations } = useChatHistory();
   const [messagesUnread, setMessagesUnread] = useState(0);
@@ -196,36 +198,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Mobile slide-out drawer - only show on non-home pages or always hide based on your preference */}
-      {!isHomePage && (
-        <div className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out lg:hidden ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}></div>
-          <div className="relative flex flex-col h-full bg-white dark:bg-gray-800 shadow-xl">
-            {/* Mobile header with close button */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="LinkDAO Logo" className="h-8 w-8" />
-                <span className="text-xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
-              </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Mobile Navigation Sidebar */}
-            <div className="flex-1 overflow-y-auto">
-              <React.Suspense fallback={<div className="p-4">Loading...</div>}>
-                <NavigationSidebar className="h-full" />
-              </React.Suspense>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       <header className="bg-white dark:bg-gray-800 shadow dark:shadow-gray-900 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center gap-4">
@@ -339,17 +312,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center space-x-2">
             {/* Hamburger menu button - only show on non-home pages */}
-            {!isHomePage && (
-              <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 focus:outline-none"
-                aria-label="Open navigation menu"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
-              </button>
-            )}
+            
           
             {/* Dark mode toggle */}
             <button
