@@ -168,7 +168,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       setMessages(prev => prev.map(msg => {
         if (msg.id === messageId) {
           // Add reaction to metadata
-          const reactions = msg.metadata?.reactions || [];
+          const reactions = (msg.metadata as any)?.reactions || [];
           const existingReaction = reactions.find((r: any) => r.emoji === emoji);
           
           if (existingReaction) {
@@ -250,7 +250,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         toAddress: getOtherParticipant(selectedConversation) || '',
         content: 'Voice message',
         timestamp: new Date(),
-        messageType: 'voice',
+        messageType: 'file',
         isEncrypted: false,
         isRead: false,
         isDelivered: false,
@@ -546,6 +546,46 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     return <Clock size={14} className="text-gray-400" />;
   };
 
+  // Row component for react-window virtualization
+  const Row: React.FC<{
+    index: number;
+    style: React.CSSProperties;
+    data: {
+      messages: ChatMessage[];
+      address: string | undefined;
+      formatTime: (date: Date) => string;
+      getMessageStatus: (message: ChatMessage) => React.ReactNode;
+      getOtherParticipant: (conversationId: string | null) => string | null;
+      selectedConversation: string | null;
+      onAddReaction: (messageId: string, emoji: string) => void;
+      onEditMessage: (messageId: string, newContent: string) => void;
+      onDeleteMessage: (messageId: string) => void;
+      onReplyToMessage: (message: ChatMessage) => void;
+    };
+  }> = ({ index, style, data }) => {
+    const message = data.messages[index];
+    const isOwn = message.fromAddress === data.address?.toLowerCase();
+    
+    return (
+      <div style={style} className="px-4">
+        <SwipeableMessage
+          message={message}
+          isOwn={isOwn}
+          onDelete={() => data.onDeleteMessage(message.id)}
+          onReply={() => data.onReplyToMessage(message)}
+        >
+          <MessageItem
+            message={message}
+            isOwn={isOwn}
+            showAvatar={true}
+            timestamp={data.formatTime(message.timestamp)}
+            status={data.getMessageStatus(message)}
+          />
+        </SwipeableMessage>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -555,7 +595,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   }
 
   return (
-    <div className={`flex h-[600px] bg-gray-900 rounded-lg overflow-hidden ${className}`}>
+    <div className={`flex flex-col md:flex-row h-screen md:h-[calc(100vh-4rem)] lg:h-[600px] bg-gray-900 md:rounded-lg overflow-hidden ${className}`}>
       {/* Conversations Sidebar */}
       <div className={`${showMobileSidebar || !selectedConversation ? 'flex' : 'hidden'} md:flex w-full md:w-80 border-r border-gray-700 flex-col`}>
         {/* Header */}
