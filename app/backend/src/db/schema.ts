@@ -12,6 +12,15 @@ export const users = pgTable("users", {
   // Role field for admin functionality
   role: varchar("role", { length: 32 }).default('user'),
   
+  // Admin credentials fields
+  email: varchar("email", { length: 255 }).unique(),
+  passwordHash: varchar("password_hash", { length: 255 }),
+  emailVerified: boolean("email_verified").default(false),
+  permissions: jsonb("permissions").default('[]'),
+  lastLogin: timestamp("last_login"),
+  loginAttempts: integer("login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  
   // Billing address fields
   billingFirstName: varchar("billing_first_name", { length: 100 }),
   billingLastName: varchar("billing_last_name", { length: 100 }),
@@ -4111,4 +4120,37 @@ export const autoCompoundQueue = pgTable("auto_compound_queue", {
 }, (table) => ({
   scheduledIdx: index("idx_auto_compound_queue_scheduled").on(table.scheduledTime),
   userIdx: index("idx_auto_compound_queue_user").on(table.userId),
+}));
+// Admin Sessions table for tracking admin logins
+export const adminSessions = pgTable("admin_sessions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: varchar("token_hash", { length: 255 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  lastActivity: timestamp("last_activity").defaultNow(),
+  isActive: boolean("is_active").default(true),
+}, (t) => ({
+  userIdIdx: index("idx_admin_sessions_user_id").on(t.userId),
+  tokenHashIdx: index("idx_admin_sessions_token_hash").on(t.tokenHash),
+  expiresAtIdx: index("idx_admin_sessions_expires_at").on(t.expiresAt),
+}));
+
+// Admin Audit Log table for tracking admin actions
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  adminId: uuid("admin_id").notNull().references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(),
+  resourceType: varchar("resource_type", { length: 50 }),
+  resourceId: varchar("resource_id", { length: 255 }),
+  details: jsonb("details"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => ({
+  adminIdIdx: index("idx_admin_audit_log_admin_id").on(t.adminId),
+  actionIdx: index("idx_admin_audit_log_action").on(t.action),
+  createdAtIdx: index("idx_admin_audit_log_created_at").on(t.createdAt),
 }));
