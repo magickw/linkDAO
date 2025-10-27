@@ -219,6 +219,88 @@ export interface MarketplaceListing {
   tokenId?: string;
   createdAt: string;
   updatedAt: string;
+  // Enhanced data for UI display (optional, added by frontend transformation)
+  enhancedData?: {
+    title: string;
+    description: string;
+    images: string[];
+    price: {
+      crypto: string;
+      cryptoSymbol: string;
+      fiat: string;
+      fiatSymbol: string;
+    };
+    seller: {
+      id: string;
+      name: string;
+      rating: number;
+      verified: boolean;
+      daoApproved: boolean;
+      walletAddress: string;
+    };
+    trust: {
+      verified: boolean;
+      escrowProtected: boolean;
+      onChainCertified: boolean;
+      safetyScore: number;
+    };
+    category: string;
+    tags: string[];
+    views: number;
+    favorites: number;
+    condition: string;
+    escrowEnabled: boolean;
+  };
+}
+
+// Interfaces for missing service methods
+export interface Offer {
+  id: string;
+  listingId: string;
+  buyerAddress: string;
+  sellerAddress: string;
+  offerAmount: string;
+  currency: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface CreateOrderRequest {
+  listingId: string;
+  buyerAddress: string;
+  sellerAddress: string;
+  price: string;
+  tokenAddress: string;
+  quantity: number;
+  deliveryInfo?: DeliveryInfo;
+}
+
+export interface DeliveryInfo {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+}
+
+export interface TrackingInfo {
+  orderId: string;
+  trackingNumber: string;
+  carrier: string;
+  status: string;
+  estimatedDelivery?: string;
+  updates: TrackingUpdate[];
+}
+
+export interface TrackingUpdate {
+  timestamp: string;
+  status: string;
+  location: string;
+  description: string;
 }
 
 export class UnifiedMarketplaceService {
@@ -891,6 +973,244 @@ export class UnifiedMarketplaceService {
     } catch (error) {
       console.error('Error fetching seller by ID:', error);
       return null;
+    }
+  }
+
+  // ============================================================================
+  // ESCROW MANAGEMENT
+  // ============================================================================
+
+  async approveEscrow(escrowId: string, userAddress: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/escrow/${escrowId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress }),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to approve escrow' }));
+        throw new Error(error.message || 'Failed to approve escrow');
+      }
+    } catch (error) {
+      console.error('Error approving escrow:', error);
+      throw error;
+    }
+  }
+
+  async openDispute(escrowId: string, userAddress: string, reason: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/escrow/${escrowId}/dispute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress, reason }),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to open dispute' }));
+        throw new Error(error.message || 'Failed to open dispute');
+      }
+    } catch (error) {
+      console.error('Error opening dispute:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // OFFER MANAGEMENT
+  // ============================================================================
+
+  async makeOffer(listingId: string, buyerAddress: string, offerAmount: string): Promise<Offer> {
+    try {
+      const response = await fetch(`${this.baseUrl}/listings/${listingId}/offers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buyerAddress, offerAmount }),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to make offer' }));
+        throw new Error(error.message || 'Failed to make offer');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error making offer:', error);
+      throw error;
+    }
+  }
+
+  async respondToOffer(offerId: string, action: 'accept' | 'reject', sellerAddress: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/offers/${offerId}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerAddress }),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: `Failed to ${action} offer` }));
+        throw new Error(error.message || `Failed to ${action} offer`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing offer:`, error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // ORDER MANAGEMENT
+  // ============================================================================
+
+  async createOrder(orderData: CreateOrderRequest): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+        signal: this.createTimeoutSignal(30000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to create order' }));
+        throw new Error(error.message || 'Failed to create order');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating order:', error);
+      throw error;
+    }
+  }
+
+  async createEscrowForOrder(orderId: string, escrowData: any): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}/escrow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(escrowData),
+        signal: this.createTimeoutSignal(30000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to create escrow' }));
+        throw new Error(error.message || 'Failed to create escrow');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating escrow:', error);
+      throw error;
+    }
+  }
+
+  async getTrackingInfo(orderId: string): Promise<TrackingInfo> {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}/tracking`, {
+        signal: this.createTimeoutSignal(10000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to get tracking info' }));
+        throw new Error(error.message || 'Failed to get tracking info');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error getting tracking info:', error);
+      throw error;
+    }
+  }
+
+  async updateTrackingInfo(orderId: string, trackingData: Partial<TrackingInfo>): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}/tracking`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trackingData),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to update tracking' }));
+        throw new Error(error.message || 'Failed to update tracking');
+      }
+    } catch (error) {
+      console.error('Error updating tracking info:', error);
+      throw error;
+    }
+  }
+
+  // ============================================================================
+  // SELLER LISTING MANAGEMENT
+  // ============================================================================
+
+  async getListingsBySeller(sellerAddress: string): Promise<MarketplaceListing[]> {
+    try {
+      const params = new URLSearchParams({ sellerWalletAddress: sellerAddress });
+      const response = await fetch(`${this.baseUrl}/listings?${params}`, {
+        signal: this.createTimeoutSignal(10000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to fetch seller listings' }));
+        throw new Error(error.message || 'Failed to fetch seller listings');
+      }
+
+      const result = await response.json();
+      return result.listings || result.data || [];
+    } catch (error) {
+      console.error('Error fetching seller listings:', error);
+      throw error;
+    }
+  }
+
+  async cancelListing(listingId: string, sellerAddress: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/listings/${listingId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerAddress }),
+        signal: this.createTimeoutSignal(15000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to cancel listing' }));
+        throw new Error(error.message || 'Failed to cancel listing');
+      }
+    } catch (error) {
+      console.error('Error cancelling listing:', error);
+      throw error;
+    }
+  }
+
+  async bulkUpdateListings(updates: Array<{ listingId: string; updates: Partial<MarketplaceListing> }>): Promise<{ success: number; failed: number; errors: string[] }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/listings/bulk-update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates }),
+        signal: this.createTimeoutSignal(30000)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to bulk update' }));
+        throw new Error(error.message || 'Failed to bulk update');
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error) {
+      console.error('Error bulk updating listings:', error);
+      throw error;
     }
   }
 }

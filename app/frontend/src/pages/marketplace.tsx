@@ -907,27 +907,18 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
       // Ensure we always have an array
       const validListings = Array.isArray(userListings) ? userListings : [];
       
-      // If no listings found for this address, but there are test listings with test address, show them for demo purposes
+      // If no listings found, try the dedicated seller listings method
       if (validListings.length === 0) {
-        console.log('No listings found for current address, checking for demo listings...');
+        console.log('No listings found, trying getListingsBySeller...');
         try {
-          // TODO: Implement getListingsBySeller in marketplaceService
-          const demoListings = await service.getMarketplaceListings({
-            sellerWalletAddress: '0x1234567890123456789012345678901234567890'
-          });
-          if (demoListings && demoListings.length > 0) {
-            console.log('Found demo listings, displaying them for current user');
-            // Update the seller address to match current user for display purposes
-            const updatedDemoListings = demoListings.map((listing: any) => ({
-              ...listing,
-              sellerWalletAddress: address!
-            }));
-            setListings(updatedDemoListings);
-            addToast('Displaying demo listings for development purposes', 'info');
+          const sellerListings = await marketplaceService.getListingsBySeller(address!);
+          if (sellerListings && sellerListings.length > 0) {
+            console.log('Found seller listings:', sellerListings.length);
+            setListings(sellerListings);
             return;
           }
-        } catch (demoError) {
-          console.log('No demo listings available either');
+        } catch (sellerError) {
+          console.log('getListingsBySeller also returned no results');
         }
       }
       
@@ -1052,8 +1043,7 @@ const MyListingsTab: React.FC<{ address: string | undefined; onCreateClick: () =
                         onClick={async () => {
                           if (window.confirm('Are you sure you want to cancel this listing?')) {
                             try {
-                              // TODO: Implement cancelListing in marketplaceService
-                              console.log('Cancel listing:', listing.id);
+                              await marketplaceService.cancelListing(listing.id, address!);
                               addToast('Listing cancelled successfully', 'success');
                               fetchMyListings();
                             } catch (error) {

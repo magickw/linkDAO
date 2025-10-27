@@ -165,9 +165,22 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           label: 'Open Dispute',
           icon: AlertTriangle,
           variant: 'outline' as const,
-          onClick: () => {
-            // TODO: Open dispute modal
-            addToast('Dispute system will be implemented', 'info');
+          onClick: async () => {
+            const reason = prompt('Please describe the issue with this order:');
+            if (!reason) return;
+            
+            try {
+              // If order has escrow, open dispute on escrow
+              if (order.escrowId) {
+                await marketplaceService.openDispute(order.escrowId, address!, reason);
+                addToast('Dispute opened successfully', 'success');
+              } else {
+                addToast('This order does not have escrow protection', 'warning');
+              }
+            } catch (error) {
+              console.error('Error opening dispute:', error);
+              addToast('Failed to open dispute', 'error');
+            }
           }
         });
       }
@@ -247,7 +260,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             
             <Button
               variant="outline"
-              size="small"
+              size="sm"
               onClick={onClose}
             >
               <X size={16} />
@@ -498,7 +511,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
-                size="small"
+                size="sm"
                 onClick={() => window.print()}
               >
                 <Download size={16} className="mr-2" />
@@ -513,7 +526,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <Button
                     key={action.key}
                     variant={action.variant}
-                    size="small"
+                    size="sm"
                     onClick={action.onClick}
                   >
                     <Icon size={16} className="mr-2" />

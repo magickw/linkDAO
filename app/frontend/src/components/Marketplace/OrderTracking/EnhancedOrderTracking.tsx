@@ -170,13 +170,18 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
           addToast('Delivery confirmed', 'success');
           break;
         case 'track_package':
-          // TODO: Implement tracking info in marketplaceService
-          const trackingInfo = {
-            trackingNumber: order.trackingNumber,
-            status: 'In Transit'
-          };
-          if (trackingInfo) {
-            addToast(`Tracking: ${trackingInfo.trackingNumber} - ${trackingInfo.status}`, 'info');
+          try {
+            const trackingInfo = await marketplaceService.getTrackingInfo(order.id);
+            if (trackingInfo) {
+              addToast(`Tracking: ${trackingInfo.trackingNumber} - ${trackingInfo.status}`, 'info');
+            }
+          } catch (error) {
+            // Fallback to order's tracking number if service unavailable
+            if (order.trackingNumber) {
+              addToast(`Tracking: ${order.trackingNumber} - Status: ${order.status}`, 'info');
+            } else {
+              addToast('Tracking information not available yet', 'warning');
+            }
           }
           break;
         case 'view_details':
@@ -229,7 +234,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
         
         <Button
           variant="outline"
-          size="small"
+          size="sm"
           onClick={refreshOrders}
           disabled={refreshing}
         >
@@ -342,7 +347,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
                     {/* Actions */}
                     <div className="flex flex-col space-y-2">
                       <Button
-                        size="small"
+                        size="sm"
                         variant="outline"
                         onClick={() => handleOrderAction(order, 'view_details')}
                       >
@@ -352,7 +357,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
 
                       {order.canConfirmDelivery && (
                         <Button
-                          size="small"
+                          size="sm"
                           variant="primary"
                           onClick={() => handleOrderAction(order, 'confirm_delivery')}
                         >
@@ -363,7 +368,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
 
                       {order.trackingNumber && (
                         <Button
-                          size="small"
+                          size="sm"
                           variant="outline"
                           onClick={() => handleOrderAction(order, 'track_package')}
                         >
@@ -434,7 +439,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
                 <h2 className="text-xl font-bold text-white">Order Details</h2>
                 <Button
                   variant="outline"
-                  size="small"
+                  size="sm"
                   onClick={() => setSelectedOrder(null)}
                 >
                   Close

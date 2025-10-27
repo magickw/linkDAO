@@ -55,10 +55,9 @@ const MakeOfferModal: React.FC<MakeOfferModalProps> = ({
     try {
       setLoading(true);
       
-      // TODO: Implement makeOffer in marketplaceService
-      console.log('Make offer:', listing.id, address, offerAmount);
+      const offer = await marketplaceService.makeOffer(listing.id, address!, offerAmount);
       
-      addToast('Offer submitted successfully!', 'success');
+      addToast(`Offer submitted successfully! Offer ID: ${offer.id}`, 'success');
       onSuccess();
       onClose();
     } catch (err: any) {

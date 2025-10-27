@@ -29,8 +29,7 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
       setLoading(true);
       setError('');
       
-      // TODO: Implement approveEscrow in marketplaceService
-      console.log('Approve escrow:', escrow.id, userAddress);
+      await marketplaceService.approveEscrow(escrow.id, userAddress);
       onUpdate();
     } catch (err: any) {
       setError(err.message || 'Failed to approve escrow');
@@ -46,8 +45,10 @@ const EscrowPanel: React.FC<EscrowPanelProps> = ({
       setLoading(true);
       setError('');
       
-      // TODO: Implement openDispute in marketplaceService
-      console.log('Open dispute:', escrow.id, userAddress);
+      const reason = prompt('Please describe the issue:');
+      if (!reason) return;
+      
+      await marketplaceService.openDispute(escrow.id, userAddress, reason);
       onUpdate();
     } catch (err: any) {
       setError(err.message || 'Failed to open dispute');

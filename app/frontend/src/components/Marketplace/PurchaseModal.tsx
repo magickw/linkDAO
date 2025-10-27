@@ -99,10 +99,28 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         return;
       }
 
-      // TODO: Implement createOrder and createEscrow in marketplaceService
-      console.log('Create order:', listing.id, address, listing.sellerWalletAddress, listing.price, listing.tokenAddress);
-      console.log('Create escrow:', listing.id, address, deliveryInfo);
-      addToast('Purchase successful!', 'success');
+      // Create order
+      const order = await marketplaceService.createOrder({
+        listingId: listing.id,
+        buyerAddress: address!,
+        sellerAddress: listing.sellerWalletAddress,
+        price: listing.price,
+        tokenAddress: listing.tokenAddress,
+        quantity: quantity,
+        deliveryInfo: listing.itemType !== 'DIGITAL' && listing.itemType !== 'NFT' ? deliveryInfo : undefined
+      });
+
+      // Create escrow for order
+      if (order.id) {
+        await marketplaceService.createEscrowForOrder(order.id, {
+          buyerAddress: address!,
+          sellerAddress: listing.sellerWalletAddress,
+          amount: listing.price,
+          tokenAddress: listing.tokenAddress
+        });
+      }
+
+      addToast('Purchase successful! Order created with escrow protection.', 'success');
 
       onSuccess();
       onClose();
