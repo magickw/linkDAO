@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FixedSizeList as List } from 'react-window';
 import {
   MessageCircle,
   Search,
@@ -33,6 +34,7 @@ import {
 import { useAccount } from 'wagmi';
 import { GlassPanel, Button } from '../../design-system';
 import { useToast } from '@/context/ToastContext';
+import { MessageItem } from './MessageItem';
 import messagingService, {
   ChatMessage,
   ChatConversation,
@@ -43,6 +45,9 @@ import nftNegotiationBot from '../../services/nftNegotiationBot';
 import multichainResolver, { ResolvedAddress } from '../../services/multichainResolver';
 import notificationService from '../../services/notificationService';
 import AddressSearch from './AddressSearch';
+import { VoiceMessageRecorder } from './VoiceMessageRecorder';
+import { SwipeableMessage } from './SwipeableMessage';
+import { GroupManagement } from './GroupManagement';
 
 interface MessagingInterfaceProps {
   className?: string;
@@ -69,6 +74,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [messageSearchQuery, setMessageSearchQuery] = useState(''); // Add this for message search
   const [isLoading, setIsLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [userPresence, setUserPresence] = useState<Map<string, UserPresence>>(new Map());
@@ -77,6 +83,8 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [showAddressSearch, setShowAddressSearch] = useState(false);
   const [showNFTBot, setShowNFTBot] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showGroupManagement, setShowGroupManagement] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
@@ -149,6 +157,136 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
     setMessages(transformedMsgs);
   }, [hookMessages]);
+
+  const handleAddReaction = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      // In a real implementation, this would call the chat history service
+      // For now, we'll just log it
+      console.log(`Adding reaction ${emoji} to message ${messageId}`);
+      
+      // Update local state to show the reaction
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId) {
+          // Add reaction to metadata
+          const reactions = msg.metadata?.reactions || [];
+          const existingReaction = reactions.find((r: any) => r.emoji === emoji);
+          
+          if (existingReaction) {
+            // Increment count
+            return {
+              ...msg,
+              metadata: {
+                ...msg.metadata,
+                reactions: reactions.map((r: any) => 
+                  r.emoji === emoji ? { ...r, count: r.count + 1 } : r
+                )
+              }
+            };
+          } else {
+            // Add new reaction
+            return {
+              ...msg,
+              metadata: {
+                ...msg.metadata,
+                reactions: [...reactions, { emoji, count: 1 }]
+              }
+            };
+          }
+        }
+        return msg;
+      }));
+      
+      // In a real implementation, you would call:
+      // await chat.addReaction(messageId, emoji);
+    } catch (error) {
+      console.error('Failed to add reaction:', error);
+    }
+  }, []);
+
+  const handleEditMessage = useCallback(async (messageId: string, newContent: string) => {
+    try {
+      // In a real implementation, this would call the chat history service
+      // For now, we'll just update local state
+      console.log(`Editing message ${messageId} with content: ${newContent}`);
+      
+      // Update local state
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId) {
+          return {
+            ...msg,
+            content: newContent,
+            // Add edited timestamp to metadata
+            metadata: {
+              ...msg.metadata,
+              editedAt: new Date()
+            }
+          };
+        }
+        return msg;
+      }));
+      
+      // In a real implementation, you would call:
+      // await chat.editMessage(messageId, newContent);
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+    }
+  }, []);
+
+  const handleSendVoiceMessage = async (audioBlob: Blob) => {
+    if (!selectedConversation) return;
+    
+    try {
+      // In a real implementation, you would upload the audio file and send a message
+      // For now, we'll just create a mock voice message
+      console.log('Sending voice message');
+      
+      // Create a mock URL for the audio (in real implementation, this would be from your backend)
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      // Create a mock message
+      const mockVoiceMessage: ChatMessage = {
+        id: `voice-${Date.now()}`,
+        fromAddress: address?.toLowerCase() || '',
+        toAddress: getOtherParticipant(selectedConversation) || '',
+        content: 'Voice message',
+        timestamp: new Date(),
+        messageType: 'voice',
+        isEncrypted: false,
+        isRead: false,
+        isDelivered: false,
+        metadata: {
+          audioUrl,
+          duration: 10 // Mock duration
+        }
+      };
+      
+      // Add to local messages
+      setMessages(prev => [mockVoiceMessage, ...prev]);
+      
+      // In a real implementation, you would:
+      // 1. Upload the audio file to your backend
+      // 2. Get the URL of the uploaded file
+      // 3. Send a message with the audio URL
+      // await chat.sendMessage({
+      //   conversationId: selectedConversation,
+      //   fromAddress: address?.toLowerCase() || '',
+      //   content: 'Voice message',
+      //   contentType: 'voice',
+      //   deliveryStatus: 'sent'
+      // });
+    } catch (error) {
+      console.error('Failed to send voice message:', error);
+    }
+  };
+
+  // Filter messages based on search query
+  const filteredMessages = useMemo(() => {
+    if (!messageSearchQuery) return messages;
+    
+    return messages.filter(message => 
+      message.content.toLowerCase().includes(messageSearchQuery.toLowerCase())
+    );
+  }, [messages, messageSearchQuery]);
 
   // Load initial conversation
   useEffect(() => {
@@ -585,7 +723,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           <>
             {/* Chat Header */}
             <div className="p-3 sm:p-4 border-b border-gray-700 bg-gray-800">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   {/* Mobile Back Button */}
                   <Button
@@ -634,150 +772,44 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   </Button>
                 </div>
               </div>
+              
+              {/* Message Search */}
+              <div className="relative mt-2">
+                <Search size={14} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={messageSearchQuery}
+                  onChange={(e) => setMessageSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message, index) => {
-                const isOwn = message.fromAddress === address?.toLowerCase();
-                const showAvatar = index === 0 || 
-                  messages[index - 1].fromAddress !== message.fromAddress ||
-                  (message.timestamp.getTime() - messages[index - 1].timestamp.getTime()) > 300000; // 5 minutes
-
-                return (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex max-w-xs lg:max-w-md ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end space-x-2`}>
-                      {/* Avatar */}
-                      {!isOwn && showAvatar && (
-                        <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User size={12} className="text-white" />
-                        </div>
-                      )}
-                      {!isOwn && !showAvatar && <div className="w-6" />}
-
-                      {/* Message */}
-                      <div className="relative">
-                        <div
-                          className={`px-4 py-2 rounded-2xl ${
-                            isOwn
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-700 text-white'
-                          }`}
-                        >
-                          {/* NFT Offer Messages */}
-                          {message.messageType === 'nft_offer' && message.metadata && (
-                            <div className="mb-2 p-3 bg-black/20 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Coins size={16} className="text-yellow-500" />
-                                <span className="text-sm font-medium">NFT Offer</span>
-                              </div>
-                              <p className="text-sm">
-                                Token #{message.metadata.nftTokenId}
-                              </p>
-                              <p className="text-lg font-bold">
-                                {message.metadata.offerAmount} ETH
-                              </p>
-                              {!isOwn && (
-                                <div className="flex space-x-2 mt-2">
-                                  <Button 
-                                    variant="primary" 
-                                    size="small"
-                                    onClick={() => {
-                                      // Accept offer
-                                      const otherParticipant = getOtherParticipant(selectedConversation);
-                                      if (otherParticipant) {
-                                        messagingService.sendMessage(
-                                          otherParticipant,
-                                          'Offer accepted! 🎉',
-                                          'text'
-                                        );
-                                      }
-                                    }}
-                                  >
-                                    Accept
-                                  </Button>
-                                  <Button 
-                                    variant="outline" 
-                                    size="small"
-                                    onClick={() => {
-                                      // Counter offer
-                                      const counterAmount = prompt('Enter counter offer (ETH):');
-                                      const otherParticipant = getOtherParticipant(selectedConversation);
-                                      if (counterAmount && otherParticipant) {
-                                        messagingService.sendNFTCounter(
-                                          otherParticipant,
-                                          message.id,
-                                          counterAmount,
-                                          `Counter offer: ${counterAmount} ETH`
-                                        );
-                                      }
-                                    }}
-                                  >
-                                    Counter
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* NFT Counter Offer Messages */}
-                          {message.messageType === 'nft_counter' && message.metadata && (
-                            <div className="mb-2 p-3 bg-purple-500/20 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Star size={16} className="text-purple-400" />
-                                <span className="text-sm font-medium">Counter Offer</span>
-                              </div>
-                              <p className="text-lg font-bold">
-                                {message.metadata.offerAmount} ETH
-                              </p>
-                            </div>
-                          )}
-
-                          {/* System Messages */}
-                          {message.messageType === 'system' && message.metadata?.rewardAmount && (
-                            <div className="mb-2 p-3 bg-green-500/20 rounded-lg">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Coins size={16} className="text-green-400" />
-                                <span className="text-sm font-medium">Reward Received</span>
-                              </div>
-                              <p className="text-sm">
-                                {message.metadata.rewardAmount} ETH testnet reward
-                              </p>
-                              {message.metadata.transactionHash && (
-                                <Button
-                                  variant="outline"
-                                  size="small"
-                                  className="mt-2"
-                                  onClick={() => {
-                                    window.open(`https://etherscan.io/tx/${message.metadata?.transactionHash}`, '_blank');
-                                  }}
-                                >
-                                  View Transaction
-                                </Button>
-                              )}
-                            </div>
-                          )}
-
-                          <p className="text-sm">{message.content}</p>
-                        </div>
-
-                        {/* Message Status */}
-                        <div className={`flex items-center space-x-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                          <span className="text-xs text-gray-400">
-                            {formatTime(message.timestamp)}
-                          </span>
-                          {getMessageStatus(message)}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredMessages.length > 0 ? (
+                <List
+                  height={400}
+                  itemCount={filteredMessages.length}
+                  itemSize={80}
+                  itemData={{
+                    messages: filteredMessages,
+                    address,
+                    formatTime,
+                    getMessageStatus,
+                    getOtherParticipant,
+                    selectedConversation,
+                    onAddReaction: handleAddReaction,
+                    onEditMessage: handleEditMessage,
+                    onDeleteMessage: handleDeleteMessage,
+                    onReplyToMessage: handleReplyToMessage
+                  }}
+                  width="100%"
+                >
+                  {Row}
+                </List>
+              ) : null}
               
               {/* Typing Indicator */}
               {typingUsers.size > 0 && (
@@ -839,6 +871,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   variant="outline"
                   size="small"
                   className="p-1.5 sm:p-2"
+                  onClick={() => setShowVoiceRecorder(true)}
+                  title="Send Voice Message"
+                >
+                  <Volume2 size={14} className="sm:w-4 sm:h-4" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="small"
+                  className="p-1.5 sm:p-2 hidden sm:flex"
                   onClick={() => {
                     const otherParticipant = getOtherParticipant(selectedConversation);
                     if (otherParticipant) {
@@ -871,6 +913,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 </Button>
               </div>
             </div>
+
+            {/* Voice Message Recorder */}
+            {showVoiceRecorder && (
+              <div className="p-2 sm:p-4 border-t border-gray-700 bg-gray-800">
+                <VoiceMessageRecorder
+                  onSend={handleSendVoiceMessage}
+                  onCancel={() => setShowVoiceRecorder(false)}
+                />
+              </div>
+            )}
           </>
         ) : (
           /* No Conversation Selected */
@@ -886,7 +938,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
       {/* Conversation Info Sidebar */}
       <AnimatePresence>
-        {showConversationInfo && selectedConversation && (
+        {showConversationInfo && selectedConversation && !showGroupManagement && (
           <motion.div
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -926,6 +978,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <Button variant="outline" className="w-full justify-start text-sm">
                 <Shield size={14} className="mr-2 sm:w-4 sm:h-4" />
                 View Profile
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-sm"
+                onClick={() => setShowGroupManagement(true)}
+              >
+                <Settings size={14} className="mr-2 sm:w-4 sm:h-4" />
+                Group Settings
               </Button>
 
               <Button variant="outline" className="w-full justify-start text-sm">
@@ -1088,8 +1149,172 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Group Management Modal */}
+      <AnimatePresence>
+        {showGroupManagement && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={() => setShowGroupManagement(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-lg mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center">
+                  <Users size={20} className="mr-2 text-blue-400" />
+                  Group Management
+                </h3>
+                <Button variant="outline" size="small" onClick={() => setShowGroupManagement(false)} className="p-2">
+                  <X size={16} />
+                </Button>
+              </div>
+              
+              <GroupManagement
+                conversationId={selectedConversation}
+                onAddMember={handleAddMember}
+                onRemoveMember={handleRemoveMember}
+                onUpdateRole={handleUpdateRole}
+                onUpdateGroupName={handleUpdateGroupName}
+                onLeaveGroup={handleLeaveGroup}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default MessagingInterface;
+
+const Row: React.FC<{
+  index: number;
+  style: React.CSSProperties;
+  data: {
+    messages: ChatMessage[];
+    address: string | undefined;
+    formatTime: (date: Date) => string;
+    getMessageStatus: (message: ChatMessage) => React.ReactNode;
+    getOtherParticipant: (conversationId: string | null) => string | null;
+    selectedConversation: string | null;
+    onAddReaction: (messageId: string, emoji: string) => void;
+    onEditMessage: (messageId: string, newContent: string) => void;
+    onDeleteMessage: (messageId: string) => void;
+    onReplyToMessage: (message: ChatMessage) => void;
+  };
+}> = ({ index, style, data }) => {
+  const message = data.messages[index];
+  const isOwn = message.fromAddress === data.address?.toLowerCase();
+  const showAvatar = index === 0 || 
+    data.messages[index - 1].fromAddress !== message.fromAddress ||
+    (message.timestamp.getTime() - data.messages[index - 1].timestamp.getTime()) > 300000; // 5 minutes
+
+  return (
+    <div style={style}>
+      <SwipeableMessage
+        message={message}
+        isOwn={isOwn}
+        showAvatar={showAvatar}
+        formatTime={data.formatTime}
+        getMessageStatus={data.getMessageStatus}
+        getOtherParticipant={data.getOtherParticipant}
+        selectedConversation={data.selectedConversation}
+        onAddReaction={data.onAddReaction}
+        onEditMessage={data.onEditMessage}
+        onDeleteMessage={data.onDeleteMessage}
+        onReplyToMessage={data.onReplyToMessage}
+      />
+    </div>
+  );
+};
+
+const handleDeleteMessage = useCallback(async (messageId: string) => {
+  try {
+    // In a real implementation, this would call the chat history service
+    // For now, we'll just update local state
+    console.log(`Deleting message ${messageId}`);
+    
+    // Update local state
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    
+    // In a real implementation, you would call:
+    // await chat.deleteMessage(messageId);
+  } catch (error) {
+    console.error('Failed to delete message:', error);
+  }
+}, []);
+
+const handleReplyToMessage = useCallback((message: ChatMessage) => {
+  // Set the message as a reply in the input
+  setNewMessage(`> ${message.content}\n\n`);
+  // Focus the input
+  messageInputRef.current?.focus();
+}, []);
+
+  // Group management functions
+  const handleAddMember = useCallback((address: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Adding member ${address} to group`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       participants: [...conv.participants, address]
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleRemoveMember = useCallback((address: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Removing member ${address} from group`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       participants: conv.participants.filter(p => p !== address)
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleUpdateRole = useCallback((address: string, role: 'admin' | 'member') => {
+    // In a real implementation, this would call the backend
+    console.log(`Updating role for ${address} to ${role}`);
+  }, []);
+
+  const handleUpdateGroupName = useCallback((name: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Updating group name to ${name}`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       metadata: {
+    //         ...conv.metadata,
+    //         title: name
+    //       }
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleLeaveGroup = useCallback(() => {
+    // In a real implementation, this would call the backend
+    console.log('Leaving group');
+    setShowGroupManagement(false);
+  }, []);

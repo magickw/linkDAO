@@ -21,7 +21,6 @@ export interface FeedFilter {
   sortBy: FeedSortType;
   timeRange?: string;
   communityId?: string;
-  communities?: string[];
   tags?: string[];
   author?: string;
   feedSource?: 'following' | 'all';
