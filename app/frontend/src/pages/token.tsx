@@ -10,20 +10,20 @@ import Layout from '@/components/Layout';
 import { tokenService } from '@/services/web3/tokenService';
 import { Button } from '@/design-system/components/Button';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
-import { 
-  Zap, 
-  TrendingUp, 
-  Users, 
-  Shield, 
-  Award, 
-  Globe, 
-  BarChart3, 
+import {
+  Zap,
+  TrendingUp,
+  Users,
+  Shield,
+  Award,
+  Globe,
+  BarChart3,
   Lock,
   ShoppingCart,
   ArrowRight
 } from 'lucide-react';
 import { TokenInfo } from '@/types/web3Community';
-import PurchaseModal from '@/components/Marketplace/TokenAcquisition/PurchaseModal';
+import LDAOPurchaseModal from '@/components/LDAOAcquisition/LDAOPurchaseModal';
 
 type LocalTokenInfo = TokenInfo & {
   priceUSD: number;
@@ -31,16 +31,14 @@ type LocalTokenInfo = TokenInfo & {
 };
 
 const TokenPage: React.FC = () => {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const router = useRouter();
   const [tokenInfo, setTokenInfo] = useState<LocalTokenInfo | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTokenInfo = async () => {
       try {
-        setLoading(true);
         const info = await tokenService.getTokenInfo('LDAO');
         if (info) {
           // Convert to our local type with required fields
@@ -53,8 +51,6 @@ const TokenPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to fetch token info:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -86,9 +82,10 @@ const TokenPage: React.FC = () => {
         <meta name="description" content="Discover the LDAO token - the governance and utility token of LinkDAO. Buy, stake, and earn rewards." />
       </Head>
       
-      <PurchaseModal 
+      <LDAOPurchaseModal
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
+        userAddress={address}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">

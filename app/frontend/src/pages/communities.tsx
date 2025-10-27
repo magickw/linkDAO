@@ -818,7 +818,7 @@ const CommunitiesPage: React.FC = () => {
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded mb-2"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ Create Community</span>
+                    <span>Create Community</span>
                   </button>
                   
                   <Link 

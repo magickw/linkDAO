@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
-import { 
-  XMarkIcon, 
-  CreditCardIcon, 
-  BanknotesIcon, 
+import {
+  XMarkIcon,
+  CreditCardIcon,
+  BanknotesIcon,
   DevicePhoneMobileIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -13,6 +13,7 @@ import {
   ArrowRightIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
+import { ethers } from 'ethers';
 import { ldaoAcquisitionService, PurchaseQuote } from '../../services/ldaoAcquisitionService';
 import { toast } from 'react-hot-toast';
 
@@ -187,20 +188,60 @@ export default function LDAOPurchaseModal({
       setPurchasing(true);
       setCurrentStep('processing');
       stopPriceRefresh();
-      
+
       // Initialize transaction status
       setTransactionStatus({
         step: 'Initializing transaction...',
         status: 'processing'
       });
-      
+
+      // Check network for crypto purchases
+      if (purchaseMethod === 'crypto' && typeof window !== 'undefined' && window.ethereum) {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const network = await provider.getNetwork();
+        const expectedChainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111'); // Sepolia
+
+        if (network.chainId !== expectedChainId) {
+          setTransactionStatus({
+            step: 'Wrong network detected',
+            status: 'failed',
+            message: `Please switch to ${process.env.NEXT_PUBLIC_NETWORK_NAME || 'Sepolia'} network`
+          });
+
+          // Attempt to switch network
+          try {
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${expectedChainId.toString(16)}` }],
+            });
+
+            // Wait a bit for network to switch
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Verify network switched
+            const newNetwork = await provider.getNetwork();
+            if (newNetwork.chainId !== expectedChainId) {
+              throw new Error('Network switch failed');
+            }
+
+            toast.success('Network switched successfully!');
+          } catch (switchError) {
+            console.error('Network switch error:', switchError);
+            setCurrentStep('error');
+            setPurchasing(false);
+            toast.error(`Please manually switch to ${process.env.NEXT_PUBLIC_NETWORK_NAME || 'Sepolia'} network in your wallet`);
+            return;
+          }
+        }
+      }
+
       let result;
       if (purchaseMethod === 'fiat') {
         setTransactionStatus({
           step: 'Processing payment...',
           status: 'processing'
         });
-        
+
         result = await ldaoAcquisitionService.purchaseWithFiat({
           amount: parseFloat(quote?.usdAmount || '0'),
           currency: 'USD',
@@ -211,10 +252,10 @@ export default function LDAOPurchaseModal({
           step: 'Confirming blockchain transaction...',
           status: 'processing'
         });
-        
+
         result = await ldaoAcquisitionService.purchaseWithCrypto(cryptoMethod, ldaoAmount);
       }
-      
+
       if (result?.success) {
         setTransactionStatus({
           step: 'Transaction completed successfully!',
@@ -840,7 +881,13 @@ export default function LDAOPurchaseModal({
                     
                     <div className="space-y-3">
                       <button
-                        onClick={() => window.open(`https://etherscan.io/tx/${transactionStatus?.txHash}`, '_blank')}
+                        onClick={() => {
+                          const networkName = process.env.NEXT_PUBLIC_NETWORK_NAME || 'sepolia';
+                          const etherscanUrl = networkName === 'sepolia'
+                            ? `https://sepolia.etherscan.io/tx/${transactionStatus?.txHash}`
+                            : `https://etherscan.io/tx/${transactionStatus?.txHash}`;
+                          window.open(etherscanUrl, '_blank');
+                        }}
                         className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         View on Etherscan
