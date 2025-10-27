@@ -147,8 +147,9 @@ export class CorsManager {
   private getConfigForEnvironment(env: string): CorsConfig {
     const envConfig = CORS_CONFIGS[env as keyof typeof CORS_CONFIGS] || CORS_CONFIGS.development;
     
-    // Add environment variables if available
-    const additionalOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [];
+    // Add environment variables if available (support both variable names)
+    const corsOrigins = process.env.CORS_ORIGIN || process.env.CORS_ALLOWED_ORIGINS || '';
+    const additionalOrigins = corsOrigins.split(',').map(o => o.trim()).filter(Boolean);
     
     return {
       ...envConfig,
