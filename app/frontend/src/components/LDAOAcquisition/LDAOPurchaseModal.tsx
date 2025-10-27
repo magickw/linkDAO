@@ -24,8 +24,8 @@ interface LDAOPurchaseModalProps {
   userAddress?: string;
 }
 
-type PurchaseMethod = 'fiat' | 'crypto' | 'earn';
-type FiatMethod = 'card' | 'apple_pay' | 'google_pay';
+type PurchaseMethod = 'fiat' | 'crypto' | 'dex' | 'earn';
+type FiatMethod = 'card' | 'apple_pay' | 'google_pay' | 'moonpay';
 type CryptoMethod = 'ETH' | 'USDC';
 type PurchaseStep = 'method' | 'amount' | 'payment' | 'confirmation' | 'processing' | 'success' | 'error';
 
@@ -33,6 +33,7 @@ interface TransactionStatus {
   step: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   txHash?: string;
+  ldaoReceived?: string;
   message?: string;
 }
 
@@ -183,6 +184,8 @@ export default function LDAOPurchaseModal({
     }
   };
 
+
+
   const handlePurchase = async () => {
     try {
       setPurchasing(true);
@@ -237,16 +240,28 @@ export default function LDAOPurchaseModal({
 
       let result;
       if (purchaseMethod === 'fiat') {
-        setTransactionStatus({
-          step: 'Processing payment...',
-          status: 'processing'
-        });
+        if (fiatMethod === 'moonpay') {
+          setTransactionStatus({
+            step: 'Redirecting to MoonPay...',
+            status: 'processing'
+          });
+          
+          // For MoonPay, we initiate the purchase directly
+          result = await ldaoAcquisitionService.purchaseWithMoonPay(
+            parseFloat(quote?.usdAmount || '0')
+          );
+        } else {
+          setTransactionStatus({
+            step: 'Processing payment...',
+            status: 'processing'
+          });
 
-        result = await ldaoAcquisitionService.purchaseWithFiat({
-          amount: parseFloat(quote?.usdAmount || '0'),
-          currency: 'USD',
-          paymentMethod: fiatMethod
-        });
+          result = await ldaoAcquisitionService.purchaseWithFiat({
+            amount: parseFloat(quote?.usdAmount || '0'),
+            currency: 'USD',
+            paymentMethod: fiatMethod
+          });
+        }
       } else if (purchaseMethod === 'crypto') {
         setTransactionStatus({
           step: 'Confirming blockchain transaction...',
@@ -254,16 +269,29 @@ export default function LDAOPurchaseModal({
         });
 
         result = await ldaoAcquisitionService.purchaseWithCrypto(cryptoMethod, ldaoAmount);
+      } else if (purchaseMethod === 'dex') {
+        setTransactionStatus({
+          step: 'Processing token swap...',
+          status: 'processing'
+        });
+
+        // For DEX swaps, we'll use the crypto method as the source token
+        result = await ldaoAcquisitionService.swapForLDAO(cryptoMethod, ldaoAmount);
       }
 
       if (result?.success) {
         setTransactionStatus({
           step: 'Transaction completed successfully!',
           status: 'completed',
-          txHash: result.transactionHash
+          txHash: result.transactionHash,
+          ldaoReceived: result.ldaoReceived
         });
         setCurrentStep('success');
-        toast.success(`Successfully purchased ${ldaoAmount} LDAO tokens!`);
+        if (purchaseMethod === 'dex') {
+          toast.success(`Successfully swapped for ${result.ldaoReceived || ldaoAmount} LDAO tokens!`);
+        } else {
+          toast.success(`Successfully purchased ${ldaoAmount} LDAO tokens!`);
+        }
       } else {
         setTransactionStatus({
           step: 'Transaction failed',
@@ -479,6 +507,23 @@ export default function LDAOPurchaseModal({
                         </button>
                         
                         <button
+                          onClick={() => setPurchaseMethod('dex')}
+                          className={`p-4 rounded-lg border text-left transition-all ${
+                            purchaseMethod === 'dex'
+                              ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                              : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <BanknotesIcon className="h-6 w-6 mr-3 text-purple-600" />
+                            <div>
+                              <div className="font-medium text-gray-900">Swap for LDAO</div>
+                              <div className="text-sm text-gray-500">Swap ETH/USDC for LDAO • DEX • Low fees</div>
+                            </div>
+                          </div>
+                        </button>
+                        
+                        <button
                           onClick={() => setPurchaseMethod('earn')}
                           className={`p-4 rounded-lg border text-left transition-all ${
                             purchaseMethod === 'earn'
@@ -619,6 +664,29 @@ export default function LDAOPurchaseModal({
                               <div className="text-right">
                                 <div className="text-sm font-medium text-gray-900">Instant</div>
                                 <div className="text-sm text-gray-500">2.9% fee</div>
+                              </div>
+                            </div>
+                          </button>
+                          
+                          <button
+                            onClick={() => setFiatMethod('moonpay')}
+                            className={`w-full p-4 rounded-lg border text-left transition-all ${
+                              fiatMethod === 'moonpay'
+                                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                                : 'border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <CreditCardIcon className="h-6 w-6 mr-3 text-purple-600" />
+                                <div>
+                                  <div className="font-medium text-gray-900">MoonPay</div>
+                                  <div className="text-sm text-gray-500">Buy crypto with card/bank transfer</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-medium text-gray-900">Instant</div>
+                                <div className="text-sm text-gray-500">3.5% fee</div>
                               </div>
                             </div>
                           </button>
@@ -786,7 +854,7 @@ export default function LDAOPurchaseModal({
                           <span className="font-medium">
                             {purchaseMethod === 'crypto' 
                               ? `${cryptoMethod} (Crypto)`
-                              : `${fiatMethod === 'card' ? 'Credit Card' : 'Apple Pay'} (Fiat)`
+                              : `${fiatMethod === 'card' ? 'Credit Card' : fiatMethod === 'moonpay' ? 'MoonPay' : 'Apple Pay'} (Fiat)`
                             }
                           </span>
                         </div>
@@ -867,7 +935,9 @@ export default function LDAOPurchaseModal({
                       Purchase Successful!
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      You've successfully purchased {ldaoAmount} LDAO tokens
+                      {purchaseMethod === 'dex' 
+                        ? `You've successfully swapped for ${transactionStatus?.ldaoReceived || ldaoAmount} LDAO tokens` 
+                        : `You've successfully purchased ${ldaoAmount} LDAO tokens`}
                     </p>
                     
                     {transactionStatus?.txHash && (

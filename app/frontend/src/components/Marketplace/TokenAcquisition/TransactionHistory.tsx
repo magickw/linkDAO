@@ -23,7 +23,7 @@ const TransactionHistory: React.FC = () => {
   const { address, isConnected } = useAccount();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'transfers' | 'staking'>('all');
+  const [filter, setFilter] = useState<'all' | 'transfers' | 'staking' | 'purchases'>('all');
 
   // Load transaction history on component mount
   useEffect(() => {
@@ -46,7 +46,9 @@ const TransactionHistory: React.FC = () => {
       if (filter === 'transfers') {
         filtered = history.filter(tx => 'value' in tx);
       } else if (filter === 'staking') {
-        filtered = history.filter(tx => 'amount' in tx);
+        filtered = history.filter(tx => 'amount' in tx && tx.type !== 'purchase');
+      } else if (filter === 'purchases') {
+        filtered = history.filter(tx => tx.type === 'purchase');
       }
       
       setTransactions(filtered);
@@ -94,6 +96,8 @@ const TransactionHistory: React.FC = () => {
         return <Unlock className="text-yellow-400" size={16} />;
       case 'claim':
         return <Gift className="text-green-400" size={16} />;
+      case 'purchase':
+        return <ArrowDownLeft className="text-blue-400" size={16} />;
       default:
         return <ArrowDownLeft className="text-gray-400" size={16} />;
     }
@@ -113,6 +117,8 @@ const TransactionHistory: React.FC = () => {
         return 'Unstake';
       case 'claim':
         return 'Reward Claim';
+      case 'purchase':
+        return 'Token Purchase';
       default:
         return type;
     }
@@ -162,6 +168,13 @@ const TransactionHistory: React.FC = () => {
             >
               Staking
             </Button>
+            <Button
+              variant={filter === 'purchases' ? 'primary' : 'outline'}
+              onClick={() => setFilter('purchases')}
+              className="py-2 px-3 text-sm"
+            >
+              Purchases
+            </Button>
           </div>
           
           <Button
@@ -191,7 +204,9 @@ const TransactionHistory: React.FC = () => {
           <p className="text-white/70">
             {filter === 'all' 
               ? "You don't have any LDAO token transactions yet." 
-              : `You don't have any ${filter} transactions yet.`}
+              : filter === 'purchases'
+                ? "You don't have any token purchases yet."
+                : `You don't have any ${filter} transactions yet.`}
           </p>
         </GlassPanel>
       )}
@@ -224,6 +239,15 @@ const TransactionHistory: React.FC = () => {
                       </div>
                       <div className="text-sm text-white/70">
                         {tx.from === address ? `To: ${formatAddress(tx.to)}` : `From: ${formatAddress(tx.from)}`}
+                      </div>
+                    </>
+                  ) : tx.type === 'purchase' ? (
+                    <>
+                      <div className="font-bold text-blue-400">
+                        +{tx.amount} LDAO
+                      </div>
+                      <div className="text-sm text-white/70">
+                        Paid {tx.cost} {tx.currency}
                       </div>
                     </>
                   ) : (
