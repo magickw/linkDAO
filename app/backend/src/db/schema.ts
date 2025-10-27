@@ -40,8 +40,6 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-});
-
 // Posts
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),

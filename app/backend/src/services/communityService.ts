@@ -2891,6 +2891,309 @@ export class CommunityService {
       throw new Error('Failed to search authors');
     }
   }
+
+  /**
+   * Calculate voting power based on user reputation and role
+   */
+  async calculateVotingPower(communityId: string, voterAddress: string): Promise<number> {
+    try {
+      // Get member info
+      const memberResult = await db
+        .select({
+          role: communityMembers.role,
+          reputation: communityMembers.reputation,
+        })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, voterAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (memberResult.length === 0) {
+        return 1; // Base voting power for non-members
+      }
+
+      const member = memberResult[0];
+      let votingPower = 1;
+
+      // Role-based multipliers
+      switch (member.role) {
+        case 'admin':
+          votingPower *= 3;
+          break;
+        case 'moderator':
+          votingPower *= 2;
+          break;
+        case 'member':
+          votingPower *= 1;
+          break;
+        default:
+          votingPower *= 1;
+      }
+
+      // Reputation-based bonus (add 1% per 100 reputation points)
+      const reputation = member.reputation || 0;
+      const reputationBonus = Math.floor(reputation / 100) * 0.01;
+      votingPower *= (1 + reputationBonus);
+
+      return Math.floor(votingPower * 100) / 100; // Round to 2 decimal places
+    } catch (error) {
+      console.error('Error calculating voting power:', error);
+      return 1;
+    }
+  }
+
+  /**
+   * Update proposal status based on voting results
+   */
+  async updateProposalStatus(proposalId: string): Promise<void> {
+    try {
+      // Get proposal
+      const proposalResult = await db
+        .select()
+        .from(communityGovernanceProposals)
+        .where(eq(communityGovernanceProposals.id, proposalId))
+        .limit(1);
+
+      if (proposalResult.length === 0) {
+        throw new Error('Proposal not found');
+      }
+
+      const proposal = proposalResult[0];
+      const now = new Date();
+
+      // Check if voting period has ended
+      if (now < proposal.votingEndTime) {
+        return; // Voting still in progress
+      }
+
+      // Calculate results
+      const totalVotes = Number(proposal.totalVotes);
+      const yesVotes = Number(proposal.yesVotes);
+      const noVotes = Number(proposal.noVotes);
+      const quorum = Number(proposal.quorum);
+
+      // Check if quorum reached
+      const quorumReached = totalVotes >= quorum;
+
+      // Check if proposal passed (majority vote)
+      const yesPercentage = totalVotes > 0 ? (yesVotes / totalVotes) * 100 : 0;
+      const passed = quorumReached && yesPercentage >= proposal.requiredMajority;
+
+      // Determine new status
+      let newStatus: string;
+      if (proposal.status === 'cancelled') {
+        return; // Don't change cancelled proposals
+      } else if (!quorumReached) {
+        newStatus = 'failed';
+      } else if (passed) {
+        newStatus = 'passed';
+      } else {
+        newStatus = 'failed';
+      }
+
+      // Calculate execution ETA if passed and has execution delay
+      let executionEta: Date | null = null;
+      if (newStatus === 'passed' && proposal.executionDelay) {
+        executionEta = new Date(now.getTime() + proposal.executionDelay * 1000);
+      }
+
+      // Update proposal
+      await db
+        .update(communityGovernanceProposals)
+        .set({
+          status: newStatus,
+          quorumReached,
+          executionEta,
+          updatedAt: now,
+        })
+        .where(eq(communityGovernanceProposals.id, proposalId));
+
+    } catch (error) {
+      console.error('Error updating proposal status:', error);
+      throw new Error('Failed to update proposal status');
+    }
+  }
+
+  /**
+   * Execute a passed governance proposal
+   */
+  async executeProposal(proposalId: string, executorAddress: string): Promise<any> {
+    try {
+      // Get proposal
+      const proposalResult = await db
+        .select()
+        .from(communityGovernanceProposals)
+        .where(eq(communityGovernanceProposals.id, proposalId))
+        .limit(1);
+
+      if (proposalResult.length === 0) {
+        return { success: false, message: 'Proposal not found' };
+      }
+
+      const proposal = proposalResult[0];
+      const now = new Date();
+
+      // Check if proposal can be executed
+      if (proposal.status !== 'passed') {
+        return { success: false, message: 'Proposal has not passed' };
+      }
+
+      if (proposal.executedAt) {
+        return { success: false, message: 'Proposal already executed' };
+      }
+
+      // Check execution delay
+      if (proposal.executionEta && now < proposal.executionEta) {
+        return { 
+          success: false, 
+          message: `Proposal cannot be executed until ${proposal.executionEta.toISOString()}` 
+        };
+      }
+
+      // Check if executor is authorized (admin or moderator)
+      const memberResult = await db
+        .select({ role: communityMembers.role })
+        .from(communityMembers)
+        .where(
+          and(
+            eq(communityMembers.communityId, proposal.communityId),
+            eq(communityMembers.userAddress, executorAddress),
+            eq(communityMembers.isActive, true)
+          )
+        )
+        .limit(1);
+
+      if (memberResult.length === 0) {
+        return { success: false, message: 'Not a community member' };
+      }
+
+      const isAuthorized = ['admin', 'moderator'].includes(memberResult[0].role);
+      if (!isAuthorized) {
+        return { success: false, message: 'Only admins or moderators can execute proposals' };
+      }
+
+      // Execute proposal based on type
+      const metadata = proposal.metadata ? JSON.parse(proposal.metadata) : {};
+      let executionResult: any = {};
+
+      switch (proposal.type) {
+        case 'settings_update':
+          executionResult = await this.executeSettingsUpdate(proposal.communityId, metadata);
+          break;
+        case 'member_promotion':
+          executionResult = await this.executeMemberPromotion(proposal.communityId, metadata);
+          break;
+        case 'treasury_allocation':
+          executionResult = await this.executeTreasuryAllocation(proposal.communityId, metadata);
+          break;
+        case 'rule_change':
+          executionResult = await this.executeRuleChange(proposal.communityId, metadata);
+          break;
+        default:
+          executionResult = { success: true, message: 'Generic proposal executed' };
+      }
+
+      // Mark proposal as executed
+      await db
+        .update(communityGovernanceProposals)
+        .set({
+          status: 'executed',
+          executedAt: now,
+          updatedAt: now,
+          metadata: JSON.stringify({ ...metadata, executionResult }),
+        })
+        .where(eq(communityGovernanceProposals.id, proposalId));
+
+      return { 
+        success: true, 
+        message: 'Proposal executed successfully',
+        executionResult 
+      };
+
+    } catch (error) {
+      console.error('Error executing proposal:', error);
+      return { success: false, message: 'Failed to execute proposal' };
+    }
+  }
+
+  // Helper methods for proposal execution
+
+  private async executeSettingsUpdate(communityId: string, metadata: any): Promise<any> {
+    try {
+      const { settings } = metadata;
+      await db
+        .update(communities)
+        .set({
+          settings: JSON.stringify(settings),
+          updatedAt: new Date(),
+        })
+        .where(eq(communities.id, communityId));
+      return { success: true, message: 'Community settings updated' };
+    } catch (error) {
+      console.error('Error executing settings update:', error);
+      return { success: false, message: 'Failed to update settings' };
+    }
+  }
+
+  private async executeMemberPromotion(communityId: string, metadata: any): Promise<any> {
+    try {
+      const { memberAddress, newRole } = metadata;
+      await db
+        .update(communityMembers)
+        .set({
+          role: newRole,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(communityMembers.communityId, communityId),
+            eq(communityMembers.userAddress, memberAddress)
+          )
+        );
+      return { success: true, message: `Member promoted to ${newRole}` };
+    } catch (error) {
+      console.error('Error executing member promotion:', error);
+      return { success: false, message: 'Failed to promote member' };
+    }
+  }
+
+  private async executeTreasuryAllocation(communityId: string, metadata: any): Promise<any> {
+    try {
+      const { amount, recipient, tokenAddress } = metadata;
+      // This would integrate with smart contracts for actual treasury transfers
+      // For now, just record the allocation intent
+      return { 
+        success: true, 
+        message: `Treasury allocation of ${amount} approved for ${recipient}`,
+        note: 'Smart contract execution required'
+      };
+    } catch (error) {
+      console.error('Error executing treasury allocation:', error);
+      return { success: false, message: 'Failed to allocate treasury funds' };
+    }
+  }
+
+  private async executeRuleChange(communityId: string, metadata: any): Promise<any> {
+    try {
+      const { rules } = metadata;
+      await db
+        .update(communities)
+        .set({
+          rules: JSON.stringify(rules),
+          updatedAt: new Date(),
+        })
+        .where(eq(communities.id, communityId));
+      return { success: true, message: 'Community rules updated' };
+    } catch (error) {
+      console.error('Error executing rule change:', error);
+      return { success: false, message: 'Failed to update rules' };
+    }
+  }
 }
 
 export const communityService = new CommunityService();
