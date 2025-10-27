@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   profileCid: text("profile_cid"), // IPFS metadata
   physicalAddress: text("physical_address"), // JSON object for shipping/billing address (deprecated)
   
+  // Role field for admin functionality
+  role: varchar("role", { length: 32 }).default('user'),
+  
   // Billing address fields
   billingFirstName: varchar("billing_first_name", { length: 100 }),
   billingLastName: varchar("billing_last_name", { length: 100 }),

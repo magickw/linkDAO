@@ -37,7 +37,7 @@ export const FeedPage: React.FC<FeedPageProps> = ({
       const response = await FeedService.getEnhancedFeed({
         sortBy: currentSort,
         timeRange: currentTimeRange,
-        communityId
+        communityId: communityId
       }, 1, 20);
       
       setPosts(response.posts);

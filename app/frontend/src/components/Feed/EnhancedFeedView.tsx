@@ -78,7 +78,7 @@ const EnhancedFeedView = React.memo(({
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
-    communityId,
+    communityId: communityId,
     ...initialFilter
   });
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
@@ -90,13 +90,13 @@ const EnhancedFeedView = React.memo(({
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<FeedError | null>(null);
 
-  // Update filter when preferences change
+  // Update filter when preferences or communityId change
   useEffect(() => {
     setFilter(prev => ({
       ...prev,
       sortBy: currentSort,
       timeRange: currentTimeRange,
-      communityId
+      communityId: communityId
     }));
   }, [currentSort, currentTimeRange, communityId]);
 

@@ -64,8 +64,10 @@ export class FeedService {
         params.append('feedSource', filter.feedSource);
       }
 
-      if (filter.communityId) {
-        params.append('communities', filter.communityId);
+      if (filter.communities && filter.communities.length > 0) {
+        filter.communities.forEach(communityId => {
+          params.append('communities', communityId);
+        });
       }
 
       if (filter.tags && filter.tags.length > 0) {

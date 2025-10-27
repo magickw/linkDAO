@@ -81,11 +81,25 @@ export class UserController {
       const { userId } = req.params;
       const { role } = req.body;
       
-      // In a real implementation, we would update user roles in a roles/permissions system
-      // For now, we'll just log it
-      console.log(`User ${userId} role updated to: ${role}`);
+      // Validate role
+      const validRoles = ['user', 'moderator', 'admin', 'super_admin'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
       
-      res.json({ success: true });
+      const db = databaseService.getDatabase();
+      
+      // Update user role in database
+      const updatedUser = await db.update(users)
+        .set({ role: role })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (updatedUser.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({ success: true, message: `User ${userId} role updated to: ${role}` });
     } catch (error) {
       console.error("Error updating user role:", error);
       res.status(500).json({ error: "Failed to update user role" });

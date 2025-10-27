@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/**)",
+      "Edit(!/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/**)"
+    ],
+    "allow": [
+      "Read(/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/**)",
+      "Edit(/Users/bfguo/Dropbox/Mac/Documents/LinkDAO/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}
