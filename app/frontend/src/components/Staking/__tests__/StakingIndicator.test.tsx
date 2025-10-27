@@ -110,7 +110,7 @@ describe('StakingIndicator', () => {
       <StakingIndicator 
         stakingInfo={mockStakingInfo}
         token={mockToken}
-        size="sm"
+        size="small"
       />
     );
 

@@ -766,7 +766,7 @@ createAdmin().catch(console.error);
 Run with:
 ```bash
 cd app/backend
-npx ts-node src/scripts/createAdminUser.ts admin@linkdao.com SecurePassword123! super_admin
+npx ts-node src/scripts/createAdminUser.ts admin@linkdao.io SecurePassword123! super_admin
 ```
 
 ### Option 2: Direct SQL
@@ -784,7 +784,7 @@ INSERT INTO users (
   created_at
 ) VALUES (
   gen_random_uuid(),
-  'admin@linkdao.com',
+  'admin@linkdao.io',
   '$2b$12$REPLACE_WITH_BCRYPT_HASH', -- Generate with: bcrypt.hash('password', 12)
   'super_admin',
   '["*"]'::jsonb,
@@ -805,7 +805,7 @@ INSERT INTO users (
 curl -X POST http://localhost:10000/api/auth/admin/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@linkdao.com",
+    "email": "admin@linkdao.io",
     "password": "your_password"
   }'
 
@@ -816,7 +816,7 @@ curl -X POST http://localhost:10000/api/auth/admin/login \
 #     "token": "eyJhbGc...",
 #     "user": {
 #       "id": "...",
-#       "email": "admin@linkdao.com",
+#       "email": "admin@linkdao.io",
 #       "role": "super_admin",
 #       "permissions": ["*"]
 #     },

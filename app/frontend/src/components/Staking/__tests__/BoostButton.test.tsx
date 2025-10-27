@@ -148,7 +148,7 @@ describe('BoostButton', () => {
   });
 
   it('handles different button sizes', () => {
-    const { rerender } = render(<BoostButton {...mockProps} size="sm" />);
+    const { rerender } = render(<BoostButton {...mockProps} size="small" />);
     
     let button = screen.getByText('Boost Post');
     expect(button).toHaveClass('size-sm');

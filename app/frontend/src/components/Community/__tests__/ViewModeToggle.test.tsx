@@ -151,7 +151,7 @@ describe('ViewModeToggle', () => {
     });
 
     it('applies different sizes correctly', () => {
-      const { rerender } = render(<ViewModeToggle size="sm" />);
+      const { rerender } = render(<ViewModeToggle size="small" />);
       
       // Test small size - look for the container div with the size class
       let container = document.querySelector('.h-8');

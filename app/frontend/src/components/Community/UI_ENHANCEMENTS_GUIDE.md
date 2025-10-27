@@ -181,7 +181,7 @@ The following components are created but need to be added to community cards:
     {community.governance?.activeProposals > 0 && (
       <GovernanceActivityPulse
         activeProposals={community.governance.activeProposals}
-        size="sm"
+        size="small"
       />
     )}
   </div>

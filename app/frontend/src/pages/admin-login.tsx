@@ -241,7 +241,7 @@ const AdminLoginPage: NextPage = () => {
                         Verifying admin privileges...
                       </p>
                     </div>
-                    <Button onClick={() => disconnect()} variant="outline" size="sm">
+                    <Button onClick={() => disconnect()} variant="outline" size="small">
                       Disconnect Wallet
                     </Button>
                   </div>
@@ -289,7 +289,7 @@ const AdminLoginPage: NextPage = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="admin@linkdao.com"
+                    placeholder="admin@linkdao.io"
                     required
                   />
                 </div>
@@ -365,7 +365,7 @@ const AdminLoginPage: NextPage = () => {
               <p className="text-center text-sm text-gray-400">
                 Need admin access?{' '}
                 <a
-                  href="mailto:admin@linkdao.com"
+                  href="mailto:admin@linkdao.io"
                   className="text-purple-400 hover:text-purple-300 transition-colors"
                 >
                   Contact support

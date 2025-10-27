@@ -23,10 +23,12 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { formatEther } from 'viem';
+import { useAccount } from 'wagmi';
 import { GlassPanel } from '@/design-system/components/GlassPanel';
 import { Button } from '@/design-system/components/Button';
 import { useToast } from '@/context/ToastContext';
 import { orderService } from '@/services/orderService';
+import { marketplaceService } from '@/services/marketplaceService';
 import { Order, OrderEvent, TrackingInfo } from '@/types/order';
 import OrderStatusBadge from './OrderStatusBadge';
 import OrderTimeline from './OrderTimeline';
@@ -45,6 +47,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onClose, 
   onUpdate 
 }) => {
+  const { address } = useAccount();
   const { addToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [timeline, setTimeline] = useState<OrderEvent[]>([]);
@@ -260,7 +263,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             
             <Button
               variant="outline"
-              size="sm"
+              size="small"
               onClick={onClose}
             >
               <X size={16} />
@@ -511,7 +514,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="flex items-center space-x-3">
               <Button
                 variant="outline"
-                size="sm"
+                size="small"
                 onClick={() => window.print()}
               >
                 <Download size={16} className="mr-2" />
@@ -526,7 +529,7 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <Button
                     key={action.key}
                     variant={action.variant}
-                    size="sm"
+                    size="small"
                     onClick={action.onClick}
                   >
                     <Icon size={16} className="mr-2" />

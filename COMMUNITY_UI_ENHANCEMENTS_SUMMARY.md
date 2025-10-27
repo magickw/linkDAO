@@ -196,7 +196,7 @@ Complete keyboard navigation system with help modal.
     {community.governance?.activeProposals > 0 && (
       <GovernanceActivityPulse
         activeProposals={community.governance.activeProposals}
-        size="sm"
+        size="small"
       />
     )}
   </div>

@@ -54,7 +54,7 @@ describe('PostFlair', () => {
   });
 
   it('applies correct size classes', () => {
-    const { rerender } = render(<PostFlair flair="Test" size="sm" />);
+    const { rerender } = render(<PostFlair flair="Test" size="small" />);
     let element = screen.getByLabelText('Flair: Test');
     expect(element).toHaveClass('text-xs', 'px-2', 'py-0.5');
 

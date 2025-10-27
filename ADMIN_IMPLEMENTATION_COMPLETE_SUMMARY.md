@@ -278,14 +278,14 @@ cd2ee7f3 Implement admin credentials authentication infrastructure
 4. **Create First Admin User:**
    ```bash
    # Copy createAdminUser.ts script from implementation guide
-   npx ts-node src/scripts/createAdminUser.ts admin@linkdao.com <your-password> super_admin
+   npx ts-node src/scripts/createAdminUser.ts admin@linkdao.io <your-password> super_admin
    ```
 
 5. **Test:**
    ```bash
    curl -X POST http://localhost:10000/api/auth/admin/login \
      -H "Content-Type: application/json" \
-     -d '{"email":"admin@linkdao.com","password":"<your-password>"}'
+     -d '{"email":"admin@linkdao.io","password":"<your-password>"}'
    ```
 
 ### Future Enhancements (Next Sprint)

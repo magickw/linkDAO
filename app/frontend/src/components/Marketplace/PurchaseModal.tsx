@@ -106,8 +106,16 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         sellerAddress: listing.sellerWalletAddress,
         price: listing.price,
         tokenAddress: listing.tokenAddress,
-        quantity: quantity,
-        deliveryInfo: listing.itemType !== 'DIGITAL' && listing.itemType !== 'NFT' ? deliveryInfo : undefined
+        quantity: listing.quantity,
+        deliveryInfo: listing.itemType !== 'DIGITAL' && listing.itemType !== 'NFT' && useEscrow ? {
+          fullName: 'Buyer Name',
+          addressLine1: deliveryInfo,
+          city: 'City',
+          state: 'State',
+          zipCode: '12345',
+          country: 'Country',
+          phone: 'Phone'
+        } : undefined
       });
 
       // Create escrow for order

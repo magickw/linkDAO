@@ -14,7 +14,7 @@ The Button component in the design system expects size values to be `'small'`, `
 ## Changes Made
 
 ### Fixed Button Size Props
-Updated all instances of `size="sm"` to `size="small"` in [/src/components/Admin/DisputeResolution.tsx](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/components/Admin/DisputeResolution.tsx):
+Updated all instances of `size="small"` to `size="small"` in [/src/components/Admin/DisputeResolution.tsx](file:///Users/bfguo/Dropbox/Mac/Documents/LinkDAO/app/frontend/src/components/Admin/DisputeResolution.tsx):
 
 1. Line 608 - Send message button
 2. Line 637 - Upload evidence button  

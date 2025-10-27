@@ -270,7 +270,7 @@ export const SubscriptionManagement: React.FC<SubscriptionManagementProps> = ({
             <Button
               onClick={handleCancelSubscription}
               variant="secondary"
-              size="sm"
+              size="small"
             >
               Cancel Subscription
             </Button>

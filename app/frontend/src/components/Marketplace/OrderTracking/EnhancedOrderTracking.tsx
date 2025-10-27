@@ -234,7 +234,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
         
         <Button
           variant="outline"
-          size="sm"
+          size="small"
           onClick={refreshOrders}
           disabled={refreshing}
         >
@@ -347,7 +347,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
                     {/* Actions */}
                     <div className="flex flex-col space-y-2">
                       <Button
-                        size="sm"
+                        size="small"
                         variant="outline"
                         onClick={() => handleOrderAction(order, 'view_details')}
                       >
@@ -357,7 +357,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
 
                       {order.canConfirmDelivery && (
                         <Button
-                          size="sm"
+                          size="small"
                           variant="primary"
                           onClick={() => handleOrderAction(order, 'confirm_delivery')}
                         >
@@ -368,7 +368,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
 
                       {order.trackingNumber && (
                         <Button
-                          size="sm"
+                          size="small"
                           variant="outline"
                           onClick={() => handleOrderAction(order, 'track_package')}
                         >
@@ -439,7 +439,7 @@ export const EnhancedOrderTracking: React.FC<EnhancedOrderTrackingProps> = ({
                 <h2 className="text-xl font-bold text-white">Order Details</h2>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="small"
                   onClick={() => setSelectedOrder(null)}
                 >
                   Close

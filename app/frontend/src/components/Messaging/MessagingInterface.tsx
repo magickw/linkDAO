@@ -105,6 +105,90 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     loadMoreConversations
   } = chat;
 
+  // Add these functions inside the component at the beginning
+  const handleDeleteMessage = useCallback(async (messageId: string) => {
+    try {
+      // In a real implementation, this would call the chat history service
+      // For now, we'll just update local state
+      console.log(`Deleting message ${messageId}`);
+      
+      // Update local state
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      
+      // In a real implementation, you would call:
+      // await chat.deleteMessage(messageId);
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+    }
+  }, []);
+
+  const handleReplyToMessage = useCallback((message: ChatMessage) => {
+    // Set the message as a reply in the input
+    setNewMessage(`> ${message.content}\n\n`);
+    // Focus the input
+    messageInputRef.current?.focus();
+  }, []);
+
+  // Group management functions
+  const handleAddMember = useCallback((address: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Adding member ${address} to group`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       participants: [...conv.participants, address]
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleRemoveMember = useCallback((address: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Removing member ${address} from group`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       participants: conv.participants.filter(p => p !== address)
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleUpdateRole = useCallback((address: string, role: 'admin' | 'member') => {
+    // In a real implementation, this would call the backend
+    console.log(`Updating role for ${address} to ${role}`);
+  }, []);
+
+  const handleUpdateGroupName = useCallback((name: string) => {
+    // In a real implementation, this would call the backend
+    console.log(`Updating group name to ${name}`);
+    // Update local state
+    // setConversations(prev => prev.map(conv => {
+    //   if (conv.id === selectedConversation) {
+    //     return {
+    //       ...conv,
+    //       metadata: {
+    //         ...conv.metadata,
+    //         title: name
+    //       }
+    //     };
+    //   }
+    //   return conv;
+    // }));
+  }, [selectedConversation]);
+
+  const handleLeaveGroup = useCallback(() => {
+    // In a real implementation, this would call the backend
+    console.log('Leaving group');
+    setShowGroupManagement(false);
+  }, []);
+
   // Initialize messaging service (real-time) and sync initial data from hook
   useEffect(() => {
     if (typeof window === 'undefined' || !isConnected || !address) return;
@@ -571,17 +655,16 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         <SwipeableMessage
           message={message}
           isOwn={isOwn}
-          onDelete={() => data.onDeleteMessage(message.id)}
-          onReply={() => data.onReplyToMessage(message)}
-        >
-          <MessageItem
-            message={message}
-            isOwn={isOwn}
-            showAvatar={true}
-            timestamp={data.formatTime(message.timestamp)}
-            status={data.getMessageStatus(message)}
-          />
-        </SwipeableMessage>
+          showAvatar={true}
+          formatTime={data.formatTime}
+          getMessageStatus={data.getMessageStatus}
+          getOtherParticipant={data.getOtherParticipant}
+          selectedConversation={data.selectedConversation}
+          onAddReaction={data.onAddReaction}
+          onEditMessage={data.onEditMessage}
+          onDeleteMessage={data.onDeleteMessage}
+          onReplyToMessage={data.onReplyToMessage}
+        />
       </div>
     );
   };
@@ -1234,127 +1317,3 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 };
 
 export default MessagingInterface;
-
-const Row: React.FC<{
-  index: number;
-  style: React.CSSProperties;
-  data: {
-    messages: ChatMessage[];
-    address: string | undefined;
-    formatTime: (date: Date) => string;
-    getMessageStatus: (message: ChatMessage) => React.ReactNode;
-    getOtherParticipant: (conversationId: string | null) => string | null;
-    selectedConversation: string | null;
-    onAddReaction: (messageId: string, emoji: string) => void;
-    onEditMessage: (messageId: string, newContent: string) => void;
-    onDeleteMessage: (messageId: string) => void;
-    onReplyToMessage: (message: ChatMessage) => void;
-  };
-}> = ({ index, style, data }) => {
-  const message = data.messages[index];
-  const isOwn = message.fromAddress === data.address?.toLowerCase();
-  const showAvatar = index === 0 || 
-    data.messages[index - 1].fromAddress !== message.fromAddress ||
-    (message.timestamp.getTime() - data.messages[index - 1].timestamp.getTime()) > 300000; // 5 minutes
-
-  return (
-    <div style={style}>
-      <SwipeableMessage
-        message={message}
-        isOwn={isOwn}
-        showAvatar={showAvatar}
-        formatTime={data.formatTime}
-        getMessageStatus={data.getMessageStatus}
-        getOtherParticipant={data.getOtherParticipant}
-        selectedConversation={data.selectedConversation}
-        onAddReaction={data.onAddReaction}
-        onEditMessage={data.onEditMessage}
-        onDeleteMessage={data.onDeleteMessage}
-        onReplyToMessage={data.onReplyToMessage}
-      />
-    </div>
-  );
-};
-
-const handleDeleteMessage = useCallback(async (messageId: string) => {
-  try {
-    // In a real implementation, this would call the chat history service
-    // For now, we'll just update local state
-    console.log(`Deleting message ${messageId}`);
-    
-    // Update local state
-    setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    
-    // In a real implementation, you would call:
-    // await chat.deleteMessage(messageId);
-  } catch (error) {
-    console.error('Failed to delete message:', error);
-  }
-}, []);
-
-const handleReplyToMessage = useCallback((message: ChatMessage) => {
-  // Set the message as a reply in the input
-  setNewMessage(`> ${message.content}\n\n`);
-  // Focus the input
-  messageInputRef.current?.focus();
-}, []);
-
-  // Group management functions
-  const handleAddMember = useCallback((address: string) => {
-    // In a real implementation, this would call the backend
-    console.log(`Adding member ${address} to group`);
-    // Update local state
-    // setConversations(prev => prev.map(conv => {
-    //   if (conv.id === selectedConversation) {
-    //     return {
-    //       ...conv,
-    //       participants: [...conv.participants, address]
-    //     };
-    //   }
-    //   return conv;
-    // }));
-  }, [selectedConversation]);
-
-  const handleRemoveMember = useCallback((address: string) => {
-    // In a real implementation, this would call the backend
-    console.log(`Removing member ${address} from group`);
-    // Update local state
-    // setConversations(prev => prev.map(conv => {
-    //   if (conv.id === selectedConversation) {
-    //     return {
-    //       ...conv,
-    //       participants: conv.participants.filter(p => p !== address)
-    //     };
-    //   }
-    //   return conv;
-    // }));
-  }, [selectedConversation]);
-
-  const handleUpdateRole = useCallback((address: string, role: 'admin' | 'member') => {
-    // In a real implementation, this would call the backend
-    console.log(`Updating role for ${address} to ${role}`);
-  }, []);
-
-  const handleUpdateGroupName = useCallback((name: string) => {
-    // In a real implementation, this would call the backend
-    console.log(`Updating group name to ${name}`);
-    // Update local state
-    // setConversations(prev => prev.map(conv => {
-    //   if (conv.id === selectedConversation) {
-    //     return {
-    //       ...conv,
-    //       metadata: {
-    //         ...conv.metadata,
-    //         title: name
-    //       }
-    //     };
-    //   }
-    //   return conv;
-    // }));
-  }, [selectedConversation]);
-
-  const handleLeaveGroup = useCallback(() => {
-    // In a real implementation, this would call the backend
-    console.log('Leaving group');
-    setShowGroupManagement(false);
-  }, []);

@@ -121,7 +121,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Admin Authentication', () => {
   test('admin can login with valid credentials', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('[data-testid="email-input"]', 'admin@linkdao.com');
+    await page.fill('[data-testid="email-input"]', 'admin@linkdao.io');
     await page.fill('[data-testid="password-input"]', 'SecurePassword123!');
     await page.click('[data-testid="login-button"]');
 
@@ -361,7 +361,7 @@ export class EmailService {
       const html = render(options.template);
 
       const { data, error } = await resend.emails.send({
-        from: 'LinkDAO <notifications@linkdao.com>',
+        from: 'LinkDAO <notifications@linkdao.io>',
         to: options.to,
         subject: options.subject,
         html,
@@ -460,7 +460,7 @@ export default function AdminAlertEmail({
           <Text style={footer}>
             This is an automated notification from LinkDAO Admin System.
             <br />
-            <Link href="https://linkdao.com/admin/settings/notifications">
+            <Link href="https://linkdao.io/admin/settings/notifications">
               Manage notification preferences
             </Link>
           </Text>
@@ -746,7 +746,7 @@ describe('Email Notification System', () => {
     expect(mockResend).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: expect.stringContaining('Moderation Required'),
-        to: expect.arrayContaining(['admin@linkdao.com']),
+        to: expect.arrayContaining(['admin@linkdao.io']),
       })
     );
   });
@@ -780,8 +780,8 @@ describe('Email Notification System', () => {
 #### Environment Variables
 ```env
 RESEND_API_KEY=re_xxxxxxxxxxxxx
-RESEND_DOMAIN=linkdao.com
-NOTIFICATION_FROM_EMAIL=notifications@linkdao.com
+RESEND_DOMAIN=linkdao.io
+NOTIFICATION_FROM_EMAIL=notifications@linkdao.io
 ```
 
 #### Success Metrics
@@ -1839,7 +1839,7 @@ OPENAI_ORG_ID=org-xxxxx
 
 # Resend
 RESEND_API_KEY=re-xxxxx
-RESEND_DOMAIN=linkdao.com
+RESEND_DOMAIN=linkdao.io
 
 # Twilio
 TWILIO_ACCOUNT_SID=ACxxxxx

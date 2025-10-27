@@ -186,8 +186,8 @@ export const AdminOnboarding: React.FC = () => {
                 <div className="mt-2 text-sm text-yellow-700">
                   <p>
                     For security-related questions, contact the security team at{' '}
-                    <a href="mailto:security@linkdao.com" className="font-medium underline">
-                      security@linkdao.com
+                    <a href="mailto:security@linkdao.io" className="font-medium underline">
+                      security@linkdao.io
                     </a>
                   </p>
                 </div>

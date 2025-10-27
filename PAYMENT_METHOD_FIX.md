@@ -109,7 +109,7 @@ const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
   </div>
   <Button
     variant="outline"
-    size="sm"
+    size="small"
     onClick={() => setCurrentStep('payment-method')}
     className="text-white border-white/30 hover:bg-white/10"
   >

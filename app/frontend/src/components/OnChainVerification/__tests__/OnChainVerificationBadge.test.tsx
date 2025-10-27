@@ -136,7 +136,7 @@ describe('OnChainVerificationBadge', () => {
   });
 
   it('handles different badge sizes', () => {
-    const { rerender } = render(<OnChainVerificationBadge {...mockProps} size="sm" />);
+    const { rerender } = render(<OnChainVerificationBadge {...mockProps} size="small" />);
     
     let badge = screen.getByTestId('verification-badge');
     expect(badge).toHaveClass('size-sm');

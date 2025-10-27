@@ -489,8 +489,8 @@ describe('AdminPage', () => {
 5. Automatically redirected to dashboard
 
 **Recommended URLs to Bookmark:**
-- Admin Login: `https://linkdao.com/admin-login`
-- Admin Dashboard: `https://linkdao.com/admin`
+- Admin Login: `https://linkdao.io/admin-login`
+- Admin Dashboard: `https://linkdao.io/admin`
 
 ### For Developers
 

@@ -67,7 +67,7 @@ const [showMobileSidebar, setShowMobileSidebar] = useState(true);
 ```typescript
 // Mixed button size props
 size="small"  // design-system Button
-size="sm"     // Shadcn-style Button
+size="small"     // Shadcn-style Button
 ```
 - **Issue**: Type errors due to different Button components
 - **Fix Priority**: MEDIUM
