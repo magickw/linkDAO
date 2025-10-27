@@ -319,6 +319,14 @@ app.use('/api/follows', followRoutes);
 // Use community routes
 app.use('/api/communities', communityRoutes);
 
+// Community treasury routes
+import communityTreasuryRoutes from './routes/communityTreasuryRoutes';
+app.use('/api/communities', communityTreasuryRoutes);
+
+// Community comment voting routes
+import communityCommentRoutes from './routes/communityCommentRoutes';
+app.use('/api/communities', communityCommentRoutes);
+
 // Use messaging routes
 app.use('/api/messaging', messagingRoutes);
 
