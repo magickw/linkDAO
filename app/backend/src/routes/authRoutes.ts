@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authController } from '../controllers/authController';
+import { adminAuthController } from '../controllers/adminAuthController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { body } from 'express-validator';
 
@@ -70,5 +71,38 @@ router.put('/profile', authMiddleware, profileUpdateValidation, authController.u
  * @access Private
  */
 router.post('/logout', authMiddleware, authController.logout);
+
+// Admin credentials login validation
+const adminLoginValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Valid email is required'),
+  body('password')
+    .isString()
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters'),
+];
+
+/**
+ * @route POST /api/auth/admin/login
+ * @desc Admin login with email and password
+ * @access Public
+ */
+router.post('/admin/login', adminLoginValidation, adminAuthController.adminLogin);
+
+/**
+ * @route POST /api/auth/admin/logout
+ * @desc Admin logout and revoke session
+ * @access Private (Admin)
+ */
+router.post('/admin/logout', authMiddleware, adminAuthController.adminLogout);
+
+/**
+ * @route GET /api/auth/admin/session
+ * @desc Get admin session info
+ * @access Private (Admin)
+ */
+router.get('/admin/session', authMiddleware, adminAuthController.getSessionInfo);
 
 export default router;

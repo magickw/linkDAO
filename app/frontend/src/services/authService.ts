@@ -589,6 +589,68 @@ class AuthService {
     
     return headers;
   }
+
+  /**
+   * Admin login with credentials
+   */
+  async adminLogin(email: string, password: string): Promise<AuthResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auth/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        return {
+          success: false,
+          error: data.message || 'Login failed',
+        };
+      }
+
+      this.token = data.data.token;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('auth_token', data.data.token);
+      }
+
+      return {
+        success: true,
+        token: data.data.token,
+        user: data.data.user,
+      };
+    } catch (error) {
+      console.error('Admin login error:', error);
+      return {
+        success: false,
+        error: 'Network error occurred',
+      };
+    }
+  }
+
+  /**
+   * Admin logout
+   */
+  async adminLogout(): Promise<void> {
+    try {
+      if (this.token) {
+        await fetch(`${this.baseUrl}/api/auth/admin/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Admin logout error:', error);
+    } finally {
+      this.clearToken();
+    }
+  }
 }
 
 export const authService = new AuthService();
