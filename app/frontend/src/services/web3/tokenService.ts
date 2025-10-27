@@ -33,7 +33,7 @@ export class TokenService {
             symbol: tokenInfo.symbol,
             decimals: tokenInfo.decimals,
             name: tokenInfo.name,
-            logoUrl: '/images/ldao-token.png',
+            logoUrl: '/logo.png',
             priceUSD: await this.getTokenPrice('LDAO'),
             priceChange24h: 0
           };
@@ -45,7 +45,7 @@ export class TokenService {
           symbol: 'LDAO',
           decimals: 18,
           name: 'LinkDAO Token',
-          logoUrl: '/images/ldao-token.png',
+          logoUrl: '/logo.png',
           priceUSD: await this.getTokenPrice('LDAO'),
           priceChange24h: 0
         };
