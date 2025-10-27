@@ -1,0 +1,395 @@
+import React, { useState, useEffect } from 'react';
+import { NextPage } from 'next';
+import { useRouter } from 'next/router';
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { Shield, AlertTriangle, Lock, Key, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { Button, GlassPanel } from '@/design-system';
+import { useAuth } from '@/hooks/useAuth';
+
+const AdminLoginPage: NextPage = () => {
+  const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, error: connectError, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<'wallet' | 'credentials'>('wallet');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if user is already authenticated and has admin role
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(user.role);
+      if (isAdminUser) {
+        const redirectTo = (router.query.redirect as string) || '/admin';
+        router.push(redirectTo);
+      } else {
+        setError('Your account does not have administrative privileges. Please contact your system administrator.');
+      }
+    }
+  }, [isAuthenticated, isLoading, user, router]);
+
+  // Handle wallet connection completion
+  useEffect(() => {
+    if (isConnected && address && loginMethod === 'wallet') {
+      // Wallet is connected, check for admin role
+      // The auth context should update automatically
+      console.log('Wallet connected:', address);
+    }
+  }, [isConnected, address, loginMethod]);
+
+  const handleCredentialsLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      // TODO: Implement admin credentials login
+      // This would typically call an admin-specific auth endpoint
+      console.log('Credentials login:', formData.email);
+      
+      // Placeholder: In production, this should call authService.adminLogin()
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      throw new Error('Credentials login not yet implemented. Please use wallet connection.');
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
+        <GlassPanel className="p-8 text-center">
+          <div className="animate-spin w-12 h-12 border-3 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-white text-lg">Verifying credentials...</p>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column - Branding & Info */}
+        <div className="hidden lg:flex flex-col justify-center space-y-8">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">LinkDAO Admin</h1>
+                <p className="text-purple-300">Secure Administration Portal</p>
+              </div>
+            </div>
+
+            <GlassPanel className="p-6 space-y-4">
+              <h3 className="text-xl font-semibold text-white mb-4">Admin Access Features</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <UserCheck className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">User Management</h4>
+                    <p className="text-gray-400 text-sm">Manage users, roles, and permissions</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Shield className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">Content Moderation</h4>
+                    <p className="text-gray-400 text-sm">Review and moderate platform content</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Key className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">System Configuration</h4>
+                    <p className="text-gray-400 text-sm">Configure platform settings and features</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-3">
+                  <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <AlertTriangle className="w-4 h-4 text-orange-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-medium">Security Monitoring</h4>
+                    <p className="text-gray-400 text-sm">Monitor security events and audit logs</p>
+                  </div>
+                </div>
+              </div>
+            </GlassPanel>
+
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <Lock className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-yellow-300 font-medium text-sm mb-1">Secure Access Required</h4>
+                  <p className="text-yellow-200/80 text-xs">
+                    This portal is restricted to authorized administrators only. All access attempts are logged and monitored.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Login Form */}
+        <div className="flex flex-col justify-center">
+          <GlassPanel className="p-8">
+            {/* Mobile Branding */}
+            <div className="lg:hidden mb-6">
+              <div className="flex items-center justify-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-white">LinkDAO Admin</h1>
+                  <p className="text-purple-300 text-sm">Administration Portal</p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-white mb-2">Admin Sign In</h2>
+            <p className="text-gray-400 mb-6">
+              Choose your authentication method to access the admin dashboard
+            </p>
+
+            {/* Login Method Toggle */}
+            <div className="flex space-x-2 mb-6 bg-gray-800/50 rounded-lg p-1">
+              <button
+                onClick={() => setLoginMethod('wallet')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginMethod === 'wallet'
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Wallet Connect
+              </button>
+              <button
+                onClick={() => setLoginMethod('credentials')}
+                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                  loginMethod === 'credentials'
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Email & Password
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 bg-red-900/50 border border-red-500/50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-200 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Connection Error */}
+            {connectError && (
+              <div className="mb-6 bg-red-900/50 border border-red-500/50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-200 text-sm">{connectError.message}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Connection */}
+            {loginMethod === 'wallet' && (
+              <div className="space-y-4">
+                {isConnected && address ? (
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full mx-auto flex items-center justify-center">
+                      <UserCheck className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2">Wallet Connected</h3>
+                      <div className="bg-gray-800 rounded-lg p-3 mb-4">
+                        <p className="text-sm text-gray-400 mb-1">Connected Address:</p>
+                        <p className="text-white font-mono text-sm break-all">{address}</p>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-4">
+                        Verifying admin privileges...
+                      </p>
+                    </div>
+                    <Button onClick={() => disconnect()} variant="outline" size="sm">
+                      Disconnect Wallet
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-gray-400 text-sm mb-4">
+                      Connect your admin wallet to sign in securely using Web3 authentication.
+                    </p>
+                    {connectors.map((connector) => (
+                      <Button
+                        key={connector.id}
+                        onClick={() => connect({ connector })}
+                        variant="primary"
+                        className="w-full justify-between"
+                        disabled={!connector.ready || isPending}
+                      >
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mr-3 flex items-center justify-center">
+                            <Shield className="w-4 h-4 text-white" />
+                          </div>
+                          <span>{connector.name}</span>
+                          {!connector.ready && ' (unsupported)'}
+                        </div>
+                        {isPending && (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Credentials Login */}
+            {loginMethod === 'credentials' && (
+              <form onSubmit={handleCredentialsLogin} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                    Admin Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="admin@linkdao.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent pr-12"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-700 rounded focus:ring-purple-500 focus:ring-2"
+                    />
+                    <span className="text-sm text-gray-400">Remember me</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Signing In...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 mr-2" />
+                      Sign In to Admin Panel
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {/* Footer Links */}
+            <div className="mt-6 pt-6 border-t border-gray-700">
+              <p className="text-center text-sm text-gray-400">
+                Need admin access?{' '}
+                <a
+                  href="mailto:admin@linkdao.com"
+                  className="text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Contact support
+                </a>
+              </p>
+            </div>
+          </GlassPanel>
+
+          {/* Security Notice - Mobile */}
+          <div className="lg:hidden mt-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Lock className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-yellow-300 font-medium text-sm mb-1">Secure Access</h4>
+                <p className="text-yellow-200/80 text-xs">
+                  All access attempts are logged and monitored.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLoginPage;

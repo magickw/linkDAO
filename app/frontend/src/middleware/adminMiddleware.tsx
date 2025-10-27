@@ -21,7 +21,7 @@ export function AdminMiddleware({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace('/login?redirect=' + encodeURIComponent(router.asPath));
+      router.replace('/admin-login?redirect=' + encodeURIComponent(router.asPath));
     } else if (!isLoading && isAuthenticated && !hasRole(requiredRole)) {
       router.replace(redirectTo);
     }
