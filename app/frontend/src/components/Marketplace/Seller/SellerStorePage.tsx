@@ -9,6 +9,8 @@ import { UnifiedSellerProfile, UnifiedSellerListing } from '@/types/unifiedSelle
 import { useUnifiedSeller, useUnifiedSellerListings } from '@/hooks/useUnifiedSeller';
 import { DAOEndorsementModal } from './DAOEndorsementModal';
 import { withSellerErrorBoundary } from './ErrorHandling';
+import { mapLegacyTierToUnified } from '@/utils/tierMapping';
+import { getDefaultMockSeller } from '@/mocks/sellerMockData';
 import { 
   Star, 
   Shield, 
@@ -314,7 +316,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'up',
               trendValue: '+12%'
             },
-            tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
+            tier: mapLegacyTierToUnified(sellerProfile.tier),
             tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
             isKYCVerified: sellerProfile.ensVerified,
             isDAOEndorsed: false,
@@ -446,7 +448,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               trend: 'up',
               trendValue: '+12%'
             },
-            tier: (sellerProfile.tier?.toUpperCase().replace('BASIC', 'TIER_1').replace('VERIFIED', 'TIER_2').replace('PRO', 'TIER_3') as any) || 'TIER_1',
+            tier: mapLegacyTierToUnified(sellerProfile.tier),
             tierProgress: { current: 150, required: 500, nextTier: 'TIER_3' },
             isKYCVerified: sellerProfile.ensVerified,
             isDAOEndorsed: false, // Default
@@ -489,60 +491,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         }
         
         // For other errors, use fallback mock data to prevent complete failure
-        const mockSeller: SellerInfo = {
-          id: sellerId,
-          name: 'Seller Store',
-          avatar: '',
-          coverImage: '',
-          walletAddress: sellerId,
-          ensName: undefined,
-          description: 'This seller store is currently unavailable. Please try again later.',
-          sellerStory: '',
-          memberSince: new Date(),
-          location: '',
-          isOnline: false,
-          lastSeen: new Date(),
-          reputationScore: { value: '0', tooltip: 'No reputation data available' },
-          successRate: { value: '0%', tooltip: 'No transaction history available' },
-          safetyScore: { value: '0', tooltip: 'No safety data available' },
-          totalTransactions: 0,
-          successfulTransactions: 0,
-          disputesRatio: 0,
-          verificationLevels: {
-            identity: { type: 'BASIC', verified: false },
-            business: { type: 'BASIC', verified: false },
-            kyc: { type: 'BASIC', verified: false }
-          },
-          socialLinks: {},
-          performanceMetrics: {
-            avgDeliveryTime: 'N/A',
-            customerSatisfaction: 0,
-            returnRate: 0,
-            repeatCustomerRate: 0,
-            responseTime: 'N/A',
-            trend: 'stable',
-            trendValue: '0%'
-          },
-          tier: 'TIER_1',
-          tierProgress: { current: 0, required: 100, nextTier: 'TIER_2' },
-          isKYCVerified: false,
-          isDAOEndorsed: false,
-          hasEscrowProtection: false,
-          followers: 0,
-          following: 0,
-          daoMemberships: [],
-          daoEndorsements: [],
-          topCategories: [],
-          totalListings: 0,
-          activeListings: 0,
-          featuredListings: [],
-          featuredProducts: [],
-          performanceBadges: [],
-          activityTimeline: [],
-          recentTransactions: [],
-          nftPortfolio: [],
-          web3Badges: []
-        };
+        const mockSeller: SellerInfo = getDefaultMockSeller(sellerId);
         
         setSeller(mockSeller);
       }

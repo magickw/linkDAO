@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAccount } from 'wagmi';
-import { useUnifiedSellerOnboarding, useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
+import { useUnifiedSeller } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
 import { withSellerErrorBoundary } from './ErrorHandling';
 import { TierProvider } from '../../../contexts/TierContext';
