@@ -193,12 +193,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       });
     });
 
-    // Add Fiat payment option
+    // Add Fiat payment option - Ensure this is properly included
     methods.push({
       id: 'stripe-fiat',
       type: PaymentMethodType.FIAT_STRIPE,
       name: 'Credit/Debit Card',
-      description: 'Traditional payment via Stripe',
+      description: 'Pay with your credit or debit card via Stripe',
       chainId: 0, // Not applicable for fiat
       enabled: true,
       supportedNetworks: []
@@ -496,7 +496,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
                 <h4 className="font-medium text-white mb-1">Network Selection</h4>
                 <p className="text-white/70 text-sm">
                   You're currently connected to <span className="font-medium text-white">{getNetworkName(chainId || 1)}</span>.
-                  Payment methods on your current network have lower gas fees. You can switch networks using the selector above.
+                  Payment methods on your current network have lower gas fees.
                 </p>
               </div>
             </div>

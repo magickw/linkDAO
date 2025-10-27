@@ -20,9 +20,38 @@ import postgres from 'postgres';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 import bcrypt from 'bcrypt';
+import * as dotenv from 'dotenv';
 
-const connectionString = process.env.DATABASE_URL!;
-const sql = postgres(connectionString, { ssl: 'require' });
+// Load environment variables
+dotenv.config();
+
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error('❌ Error: DATABASE_URL environment variable is not set');
+  console.log('\nPlease set DATABASE_URL in your .env file or environment:');
+  console.log('export DATABASE_URL="postgresql://user:pass@host:port/dbname"');
+  process.exit(1);
+}
+
+// Configure SSL - check if URL contains sslmode or if it's a cloud database
+const requiresSSL = connectionString.includes('sslmode=require') || 
+                    connectionString.includes('.supabase.co') ||
+                    connectionString.includes('.render.com') ||
+                    connectionString.includes('.aws') ||
+                    connectionString.includes('.azure') ||
+                    connectionString.includes('.neon.tech');
+
+const sslConfig = requiresSSL 
+  ? { rejectUnauthorized: false }  // Cloud database with SSL
+  : 'prefer';  // Try SSL first, fall back to no SSL
+
+const sql = postgres(connectionString, { 
+  ssl: sslConfig,
+  max: 1,  // Single connection for script
+  idle_timeout: 20,
+  connect_timeout: 10
+});
 const db = drizzle(sql);
 
 async function createAdmin() {

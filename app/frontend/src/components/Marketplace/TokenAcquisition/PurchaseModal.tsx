@@ -3,6 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccount } from 'wagmi';
 import { ethers } from 'ethers';
 import { ldaoTokenService } from '@/services/web3/ldaoTokenService';
@@ -231,9 +232,9 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl w-full max-w-md border border-white/20">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+      <div className="bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl w-full max-w-md border border-white/20 relative z-[10000]">
         <div className="p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
@@ -504,6 +505,11 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
       </div>
     </div>
   );
+
+  // Render modal in a portal to ensure it's above all other content
+  return typeof document !== 'undefined' 
+    ? createPortal(modalContent, document.body)
+    : null;
 };
 
 export default PurchaseModal;

@@ -146,10 +146,10 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-white">
             Choose Payment Method
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-white/70 mt-1">
             {availableMethods.length} of {displayedMethods.length} methods available
           </p>
         </div>
@@ -161,8 +161,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               onClick={() => setViewMode('compact')}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'compact'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-white/70 hover:text-white'
               }`}
             >
               Compact
@@ -171,8 +171,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               onClick={() => setViewMode('detailed')}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
                 viewMode === 'detailed'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-white/70 hover:text-white'
               }`}
             >
               Detailed
@@ -183,17 +183,17 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
       {/* Recommendations */}
       {showRecommendations && prioritizationResult.recommendations.length > 0 && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
+        <div className="mb-6 p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg">
+          <h3 className="text-sm font-semibold text-blue-300 mb-2">
             💡 Recommendations
           </h3>
           <div className="space-y-2">
             {prioritizationResult.recommendations.map((rec, index) => (
-              <div key={index} className="text-sm text-blue-800">
+              <div key={index} className="text-sm text-blue-200">
                 <span className="font-medium">{rec.type.replace('_', ' ').toUpperCase()}:</span>{' '}
                 {rec.message}
                 {rec.potentialSavings && (
-                  <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                  <span className="ml-2 px-2 py-1 bg-green-500/20 text-green-300 rounded-full text-xs">
                     Save ${rec.potentialSavings.toFixed(2)}
                   </span>
                 )}
@@ -205,17 +205,17 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
       {/* Warnings */}
       {showWarnings && prioritizationResult.warnings.length > 0 && (
-        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-          <h3 className="text-sm font-semibold text-orange-900 mb-2">
+        <div className="mb-6 p-4 bg-orange-500/20 border border-orange-400/30 rounded-lg">
+          <h3 className="text-sm font-semibold text-orange-300 mb-2">
             ⚠️ Important Notices
           </h3>
           <div className="space-y-2">
             {prioritizationResult.warnings.map((warning, index) => (
-              <div key={index} className="text-sm text-orange-800">
+              <div key={index} className="text-sm text-orange-200">
                 <span className="font-medium">{warning.type.replace('_', ' ').toUpperCase()}:</span>{' '}
                 {warning.message}
                 {warning.actionRequired && (
-                  <div className="mt-1 text-xs text-orange-700 italic">
+                  <div className="mt-1 text-xs text-orange-300 italic">
                     Action: {warning.actionRequired}
                   </div>
                 )}
@@ -228,7 +228,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       {/* Available Payment Methods */}
       {availableMethods.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+          <h3 className="text-lg font-medium text-white mb-4">
             Available Methods
           </h3>
           <div className={getLayoutClasses()}>
@@ -251,7 +251,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       {unavailableMethods.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-600">
+            <h3 className="text-lg font-medium text-white/60">
               Unavailable Methods
             </h3>
             <button
@@ -267,7 +267,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                   setExpandedMethods(newExpanded);
                 }
               }}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-white/50 hover:text-white"
             >
               {expandedMethods.size > 0 && unavailableMethods.some(m => expandedMethods.has(m.method.id))
                 ? 'Hide Details'
@@ -299,23 +299,23 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       {/* No Methods Available */}
       {displayedMethods.length === 0 && (
         <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
+          <div className="text-white/40 mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-white mb-2">
             No Payment Methods Available
           </h3>
-          <p className="text-gray-600">
+          <p className="text-white/70">
             Please check your network connection or try again later.
           </p>
         </div>
       )}
 
       {/* Metadata */}
-      <div className="mt-8 pt-4 border-t border-gray-200">
-        <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="mt-8 pt-4 border-t border-white/20">
+        <div className="flex items-center justify-between text-xs text-white/50">
           <div className="flex items-center space-x-4">
             <span>
               Updated: {prioritizationResult.metadata.calculatedAt.toLocaleTimeString()}

@@ -111,16 +111,17 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
   const isAvailable = availabilityStatus === 'available';
   const isDisabled = !isAvailable;
+  const isFiat = method.type === PaymentMethodType.FIAT_STRIPE;
 
   return (
     <div
       className={`
         relative p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer
         ${isSelected 
-          ? 'border-blue-500 bg-blue-50 shadow-md' 
+          ? 'border-blue-500 bg-blue-500/10 shadow-md' 
           : isAvailable 
-            ? 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm' 
-            : 'border-gray-200 bg-gray-50 opacity-75 cursor-not-allowed'
+            ? 'border-white/20 bg-white/5 hover:border-white/30 hover:shadow-sm' 
+            : 'border-white/10 bg-white/5 opacity-50 cursor-not-allowed'
         }
         ${isRecommended ? 'ring-2 ring-green-400 ring-opacity-50' : ''}
         ${className}
@@ -168,20 +169,20 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           />
           <div>
             <div className="flex items-center gap-2">
-              <h3 className={`font-semibold ${isDisabled ? 'text-gray-500' : 'text-gray-900'}`}>
+              <h3 className={`font-semibold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
                 {method.name}
               </h3>
               {/* Network Badge */}
               {method.chainId !== undefined && method.chainId !== 0 && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100">
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10">
                   <div className={`w-2 h-2 rounded-full ${getNetworkColor(method.chainId)}`}></div>
-                  <span className="text-xs text-gray-700 font-medium">
+                  <span className="text-xs text-white/80 font-medium">
                     {getNetworkName(method.chainId)}
                   </span>
                 </div>
               )}
             </div>
-            <p className={`text-sm ${isDisabled ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className={`text-sm ${isDisabled ? 'text-white/40' : 'text-white/70'}`}>
               {method.description}
             </p>
           </div>
@@ -198,15 +199,15 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
       {/* Cost Information */}
       {showCostBreakdown && (
-        <div className="mb-3 p-3 bg-gray-50 rounded-lg">
+        <div className="mb-3 p-3 bg-white/5 rounded-lg">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">Total Cost</span>
-            <span className={`text-lg font-bold ${isDisabled ? 'text-gray-500' : 'text-gray-900'}`}>
+            <span className="text-sm font-medium text-white/80">Total Cost</span>
+            <span className={`text-lg font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
               {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
             </span>
           </div>
           
-          <div className="space-y-1 text-xs text-gray-600">
+          <div className="space-y-1 text-xs text-white/70">
             <div className="flex justify-between">
               <span>Base Amount</span>
               <span>{formatCurrency(costEstimate.baseCost, costEstimate.currency)}</span>
@@ -214,7 +215,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             {costEstimate.gasFee > 0 && (
               <div className="flex justify-between">
                 <span>Gas Fee</span>
-                <span className={costEstimate.gasFee > 25 ? 'text-orange-600 font-medium' : ''}>
+                <span className={costEstimate.gasFee > 25 ? 'text-orange-400 font-medium' : ''}>
                   {formatCurrency(costEstimate.gasFee, costEstimate.currency)}
                 </span>
               </div>
@@ -227,10 +228,10 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             )}
           </div>
 
-          <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-            <span className="text-xs text-gray-600">Est. Time</span>
-            <span className="text-xs font-medium text-gray-700">
-              {formatTime(costEstimate.estimatedTime)}
+          <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
+            <span className="text-xs text-white/60">Est. Time</span>
+            <span className="text-xs font-medium text-white">
+              {isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}
             </span>
           </div>
         </div>
@@ -238,7 +239,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
 
       {/* Recommendation Reason */}
       <div className="mb-3">
-        <p className={`text-sm ${isDisabled ? 'text-gray-400' : 'text-gray-700'}`}>
+        <p className={`text-sm ${isDisabled ? 'text-white/40' : 'text-white/80'}`}>
           {recommendationReason}
         </p>
       </div>
@@ -250,7 +251,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             {benefits.map((benefit, index) => (
               <span
                 key={index}
-                className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full"
+                className="px-2 py-1 text-xs bg-green-500/20 text-green-300 rounded-full"
               >
                 ✓ {benefit}
               </span>
@@ -266,7 +267,7 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
             {warnings.map((warning, index) => (
               <span
                 key={index}
-                className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full"
+                className="px-2 py-1 text-xs bg-orange-500/20 text-orange-300 rounded-full"
               >
                 ⚠ {warning}
               </span>
@@ -276,10 +277,10 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
       )}
 
       {/* Confidence Indicator */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-white/50">
         <span>Confidence</span>
         <div className="flex items-center space-x-1">
-          <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-16 h-1 bg-white/20 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-300 ${
                 costEstimate.confidence >= 0.8 ? 'bg-green-500' :
