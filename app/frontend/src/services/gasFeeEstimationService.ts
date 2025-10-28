@@ -308,20 +308,53 @@ export class GasFeeEstimationService {
    * Fetch gas prices from all available APIs
    */
   private async fetchGasPricesFromAPIs(chainId: number): Promise<GasPriceResponse[]> {
+    // Check if we've made a request too recently (rate limiting)
+    const now = Date.now();
+    
+    // Rate limit to 1 request per API per 5 seconds per chain
+    const rateLimitKeys = [
+      `etherscan_${chainId}`,
+      `alchemy_${chainId}`,
+      `infura_${chainId}`
+    ];
+    
+    const shouldSkipRequest = rateLimitKeys.some(key => {
+      const lastRequestTime = this.requestTimestamps.get(key) || 0;
+      return (now - lastRequestTime) < 5000; // 5 second rate limit
+    });
+    
+    if (shouldSkipRequest) {
+      console.log(`Rate limit exceeded for chain ${chainId}, using cached or fallback data`);
+      // Return cached data if available, otherwise fallback
+      const cacheKey = `${CACHE_KEY_PREFIX}${chainId}`;
+      const cached = this.cache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp.getTime() < CACHE_DURATION * 2) {
+        return cached.data;
+      }
+      // Return fallback data
+      return this.getFallbackGasPrices(chainId);
+    }
+
     const promises: Promise<GasPriceResponse | null>[] = [];
 
     // Etherscan API
     if (this.apiKeys.etherscan) {
+      const requestKey = `etherscan_${chainId}`;
+      this.requestTimestamps.set(requestKey, now);
       promises.push(this.fetchEtherscanGasPrice(chainId));
     }
 
     // Alchemy API
     if (this.apiKeys.alchemy) {
+      const requestKey = `alchemy_${chainId}`;
+      this.requestTimestamps.set(requestKey, now);
       promises.push(this.fetchAlchemyGasPrice(chainId));
     }
 
     // Infura API
     if (this.apiKeys.infura) {
+      const requestKey = `infura_${chainId}`;
+      this.requestTimestamps.set(requestKey, now);
       promises.push(this.fetchInfuraGasPrice(chainId));
     }
 
@@ -522,6 +555,20 @@ export class GasFeeEstimationService {
         const tokenAmount = Number(gasCost) / 1e18;
         return tokenAmount * cached;
       }
+
+      // Check rate limiting for CoinGecko API
+      const now = Date.now();
+      const requestKey = `coingecko_${this.getNativeTokenSymbol(chainId)}`;
+      const lastRequestTime = this.requestTimestamps.get(requestKey) || 0;
+      
+      // Rate limit to 1 request per token per 10 seconds
+      if ((now - lastRequestTime) < 10000) {
+        console.log(`Rate limit exceeded for CoinGecko ${this.getNativeTokenSymbol(chainId)}, using fallback price`);
+        return this.getFallbackUSDPrice(gasCost, chainId);
+      }
+      
+      // Update request timestamp
+      this.requestTimestamps.set(requestKey, now);
 
       // Get native token price (ETH, MATIC, etc.)
       const tokenSymbol = this.getNativeTokenSymbol(chainId);

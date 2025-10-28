@@ -101,13 +101,38 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   // Load payment prioritization on mount
   useEffect(() => {
+    // Prevent excessive calls by tracking the last call
+    let isMounted = true;
+    
+    // Track the last values to prevent unnecessary calls
+    const lastCallData = {
+      itemsCount: cartState.items.length,
+      address: address,
+      chainId: chainId
+    };
+    
     // Debounce the load function to prevent excessive calls
     const timeoutId = setTimeout(() => {
-      loadPaymentPrioritization();
-    }, 500); // 500ms debounce
+      // Check if we already have a prioritization result to avoid unnecessary calls
+      if (!prioritizationResult && isMounted) {
+        loadPaymentPrioritization();
+      } else if (isMounted) {
+        // If we already have results, only reload if key dependencies changed significantly
+        const hasItemsChanged = cartState.items.length !== lastCallData.itemsCount;
+        const hasWalletChanged = address !== lastCallData.address;
+        const hasChainChanged = chainId !== lastCallData.chainId;
+        
+        if (hasItemsChanged || hasWalletChanged || hasChainChanged) {
+          loadPaymentPrioritization();
+        }
+      }
+    }, 1000); // Increased debounce to 1 second
 
-    return () => clearTimeout(timeoutId);
-  }, [cartState.items, address, chainId]);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [cartState.items.length, address, chainId, prioritizationResult]);
 
   const loadPaymentPrioritization = async () => {
     if (cartState.items.length === 0) return;
