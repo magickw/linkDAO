@@ -111,6 +111,18 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     method => method.availabilityStatus === AvailabilityStatus.AVAILABLE
   );
 
+  // Log to verify fiat is available
+  const fiatMethod = availableMethods.find(m => m.method.type === PaymentMethodType.FIAT_STRIPE);
+  if (fiatMethod) {
+    console.log('✅ Fiat payment method is available and selectable:', {
+      name: fiatMethod.method.name,
+      priority: fiatMethod.priority,
+      availabilityStatus: fiatMethod.availabilityStatus
+    });
+  } else {
+    console.warn('⚠️ Fiat payment method not found in available methods');
+  }
+
   const unavailableMethods = displayedMethods.filter(
     method => method.availabilityStatus !== AvailabilityStatus.AVAILABLE
   );

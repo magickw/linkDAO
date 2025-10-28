@@ -48,6 +48,7 @@ import AddressSearch from './AddressSearch';
 import { VoiceMessageRecorder } from './VoiceMessageRecorder';
 import { SwipeableMessage } from './SwipeableMessage';
 import { GroupManagement } from './GroupManagement';
+import { OfflineMessageQueueService } from '../../services/offlineMessageQueueService';
 
 interface MessagingInterfaceProps {
   className?: string;
@@ -85,11 +86,15 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showGroupManagement, setShowGroupManagement] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingMessages, setPendingMessages] = useState(0);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const { addToast } = useToast();
+  const offlineQueueService = OfflineMessageQueueService.getInstance();
 
   // Chat history hook (drives conversations/messages from backend)
   const chat = useChatHistory();
@@ -193,6 +198,38 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   useEffect(() => {
     if (typeof window === 'undefined' || !isConnected || !address) return;
     initializeMessaging();
+    
+    // Set up network status listener
+    const handleOnline = () => {
+      setIsOnline(true);
+      setShowOfflineBanner(false);
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowOfflineBanner(true);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check initial network status
+    setIsOnline(navigator.onLine);
+    if (!navigator.onLine) {
+      setShowOfflineBanner(true);
+    }
+    
+    // Set up offline queue listener
+    const interval = setInterval(async () => {
+      const stats = await offlineQueueService.getQueueStats();
+      setPendingMessages(stats.pendingMessages + stats.sendingMessages);
+    }, 5000);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
   }, [isConnected, address]);
 
   // Keep UI conversations/messages in sync with the chatHistory hook
@@ -536,6 +573,24 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
       const otherParticipant = getOtherParticipant(selectedConversation);
       if (!otherParticipant) return;
 
+      // Show pending state immediately for better UX
+      const tempMessage: ChatMessage = {
+        id: `temp_${Date.now()}`,
+        fromAddress: address.toLowerCase(),
+        toAddress: otherParticipant,
+        content: newMessage.trim(),
+        timestamp: new Date(),
+        messageType: 'text',
+        isEncrypted: false,
+        isRead: false,
+        isDelivered: false,
+        metadata: { isPending: true }
+      };
+
+      // Add to UI immediately
+      setMessages(prev => [tempMessage, ...prev]);
+      setNewMessage('');
+
       await sendMessageHook({
         conversationId: selectedConversation,
         fromAddress: address.toLowerCase(),
@@ -544,13 +599,14 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
         deliveryStatus: 'sent'
       });
 
-      setNewMessage('');
+      // Remove temp message and add real message
+      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
 
       // Stop typing indicator via real-time service
       messagingService.stopTyping(selectedConversation);
     } catch (error) {
       console.error('Failed to send message:', error);
-      // Show error toast
+      addToast('Failed to send message. It has been saved and will be sent when you\'re back online.', 'error');
     }
   };
 
@@ -679,6 +735,20 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
 
   return (
     <div className={`flex flex-col md:flex-row h-screen md:h-[calc(100vh-4rem)] lg:h-[600px] bg-gray-900 md:rounded-lg overflow-hidden ${className}`}>
+      {/* Offline Banner */}
+      {showOfflineBanner && (
+        <div className="bg-yellow-500 text-black text-center py-2 px-4 text-sm font-medium">
+          You are currently offline. Messages will be sent when you're back online.
+        </div>
+      )}
+      
+      {/* Pending Messages Indicator */}
+      {pendingMessages > 0 && (
+        <div className="bg-blue-500 text-white text-center py-2 px-4 text-sm font-medium">
+          {pendingMessages} message{pendingMessages > 1 ? 's' : ''} waiting to be sent...
+        </div>
+      )}
+
       {/* Conversations Sidebar */}
       <div className={`${showMobileSidebar || !selectedConversation ? 'flex' : 'hidden'} md:flex w-full md:w-80 border-r border-gray-700 flex-col`}>
         {/* Header */}
@@ -687,6 +757,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
             <h2 className="text-base sm:text-lg font-semibold text-white flex items-center">
               <MessageCircle size={18} className="mr-2 sm:w-5 sm:h-5" />
               Messages
+              {!isOnline && (
+                <span className="ml-2 text-xs bg-yellow-500 text-black px-2 py-1 rounded-full">
+                  Offline
+                </span>
+              )}
             </h2>
             <div className="flex items-center space-x-1 sm:space-x-2">
               <Button
@@ -872,6 +947,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     <h3 className="font-medium text-white text-sm sm:text-base truncate">
                       {formatAddress(getOtherParticipant(selectedConversation) || '')}
                     </h3>
+                    {!isOnline && (
+                      <p className="text-[10px] sm:text-xs text-yellow-400">Offline mode</p>
+                    )}
                     {typingUsers.size > 0 && (
                       <p className="text-[10px] sm:text-xs text-blue-400">Typing...</p>
                     )}
@@ -980,9 +1058,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         sendMessage();
                       }
                     }}
-                    placeholder="Type a message..."
+                    placeholder={isOnline ? "Type a message..." : "Type a message (will send when online)"}
                     className="w-full px-3 sm:px-4 py-2 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none max-h-20"
                     rows={1}
+                    disabled={!isOnline && !newMessage.trim()}
                   />
                 </div>
 
@@ -1030,7 +1109,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   size="small"
                   className="p-1.5 sm:p-2"
                   onClick={sendMessage}
-                  disabled={!newMessage.trim()}
+                  disabled={!newMessage.trim() || (!isOnline && pendingMessages > 0)}
                 >
                   <Send size={14} className="sm:w-4 sm:h-4" />
                 </Button>
@@ -1054,6 +1133,9 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <MessageCircle size={64} className="mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Select a conversation</h3>
               <p>Choose a conversation from the sidebar to start messaging</p>
+              {!isOnline && (
+                <p className="text-yellow-500 text-sm mt-2">You're currently offline. Some features may be limited.</p>
+              )}
             </div>
           </div>
         )}

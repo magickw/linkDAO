@@ -252,12 +252,12 @@ export const DEFAULT_PAYMENT_METHOD_CONFIGS: Record<PaymentMethodType, PaymentMe
     enabled: true
   },
   [PaymentMethodType.FIAT_STRIPE]: {
-    basePriority: 3,
-    costWeight: 0.2,
-    preferenceWeight: 0.4,
+    basePriority: 2, // High priority - should be visible alongside stablecoins
+    costWeight: 0.3,
+    preferenceWeight: 0.3,
     availabilityWeight: 0.4,
     gasFeeThreshold: DEFAULT_GAS_FEE_THRESHOLDS[PaymentMethodType.FIAT_STRIPE],
-    displayOrder: 3,
+    displayOrder: 2, // Display near top, after USDC
     enabled: true
   },
   [PaymentMethodType.NATIVE_ETH]: {

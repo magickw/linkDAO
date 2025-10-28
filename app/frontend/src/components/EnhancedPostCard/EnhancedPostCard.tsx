@@ -81,6 +81,22 @@ interface EnhancedPostCardProps {
   onExpand?: () => void;
 }
 
+// Add proper comparison function for React.memo
+const areEqual = (prevProps: EnhancedPostCardProps, nextProps: EnhancedPostCardProps) => {
+  return (
+    prevProps.post.id === nextProps.post.id &&
+    prevProps.post.title === nextProps.post.title &&
+    prevProps.post.content === nextProps.post.content &&
+    prevProps.post.reactions.length === nextProps.post.reactions.length &&
+    prevProps.post.comments === nextProps.post.comments &&
+    prevProps.post.shares === nextProps.post.shares &&
+    prevProps.post.views === nextProps.post.views &&
+    prevProps.showPreviews === nextProps.showPreviews &&
+    prevProps.showSocialProof === nextProps.showSocialProof &&
+    prevProps.showTrending === nextProps.showTrending
+  );
+};
+
 const EnhancedPostCard = React.memo(({
   post,
   className = '',

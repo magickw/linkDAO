@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Message as ChatMessage, Conversation, ChatHistoryRequest } from '@/types/messaging';
 import { chatHistoryService } from '@/services/chatHistoryService';
+import { OfflineManager } from '@/services/OfflineManager';
 
 interface UseChatHistoryReturn {
   messages: ChatMessage[];
@@ -32,11 +33,28 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [conversationOffset, setConversationOffset] = useState(0);
+  const [isOnline, setIsOnline] = useState(true);
+  const offlineManager = OfflineManager.getInstance();
   const conversationLimit = 20; // Load 20 conversations at a time
 
   // Load initial conversations on mount (only first page)
   useEffect(() => {
     loadConversations();
+    
+    // Set up network status listener
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check initial network status
+    setIsOnline(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   const loadConversations = useCallback(async (append = false) => {
@@ -108,9 +126,11 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     }
   }, [currentConversationId, hasMore, nextCursor, loading]);
 
-  const sendMessage = useCallback(async (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+  const sendMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => Promise<void> = useCallback(async (message) => {
     try {
       const newMessage = await chatHistoryService.sendMessage(message);
+      
+      // Add to local state immediately for better UX
       setMessages(prev => [newMessage, ...prev]);
       
       // Update conversation's last message
@@ -119,6 +139,8 @@ export const useChatHistory = (): UseChatHistoryReturn => {
           ? { ...conv, lastMessage: newMessage, lastActivity: newMessage.timestamp }
           : conv
       ));
+      
+      // Note: We don't return the message here to match the interface
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
       throw err;
@@ -129,7 +151,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     try {
       await chatHistoryService.markMessagesAsRead(conversationId, messageIds);
       
-      // Update conversation unread count
+      // Update conversation unread count locally
       setConversations(prev => prev.map(conv => {
         if (conv.id === conversationId) {
           const currentUserAddress = ''; // This should be passed from the component or context

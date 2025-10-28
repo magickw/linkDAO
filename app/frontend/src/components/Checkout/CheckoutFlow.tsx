@@ -136,6 +136,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
         marketConditions: await getCurrentMarketConditions()
       };
 
+      console.log('🔍 Payment context:', {
+        hasWallet: !!address,
+        chainId: context.userContext.chainId,
+        availableMethodsCount: context.availablePaymentMethods.length,
+        fiatAvailable: context.availablePaymentMethods.some(m => m.type === PaymentMethodType.FIAT_STRIPE)
+      });
+
       // Get prioritized payment methods
       const result = await prioritizationService.prioritizePaymentMethods(context);
       setPrioritizationResult(result);

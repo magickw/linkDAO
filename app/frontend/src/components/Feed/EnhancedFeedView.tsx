@@ -74,7 +74,7 @@ const EnhancedFeedView = React.memo(({
   const { showSocialProof, showTrendingBadges, infiniteScroll, postsPerPage } = useDisplayPreferences();
   const { isEnabled: autoRefreshEnabled, interval: refreshInterval } = useAutoRefreshPreferences();
 
-  // State
+  // State - properly memoized
   const [filter, setFilter] = useState<FeedFilter>({
     sortBy: currentSort,
     timeRange: currentTimeRange,
@@ -90,7 +90,7 @@ const EnhancedFeedView = React.memo(({
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<FeedError | null>(null);
 
-  // Update filter when preferences change
+  // Update filter when preferences change - memoized
   useEffect(() => {
     setFilter(prev => ({
       ...prev,
@@ -100,7 +100,7 @@ const EnhancedFeedView = React.memo(({
     }));
   }, [currentSort, currentTimeRange, communityId]);
 
-  // Auto-refresh functionality
+  // Auto-refresh functionality - memoized
   useEffect(() => {
     if (!autoRefreshEnabled) return;
 
@@ -111,19 +111,19 @@ const EnhancedFeedView = React.memo(({
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, refreshInterval]);
 
-  // Handle sorting changes
+  // Handle sorting changes - memoized
   const handleSortChange = useCallback((sort: FeedSortType) => {
     updateSort(sort, true); // Save as default
     setFilter(prev => ({ ...prev, sortBy: sort }));
   }, [updateSort]);
 
-  // Handle time range changes
+  // Handle time range changes - memoized
   const handleTimeRangeChange = useCallback((timeRange: string) => {
     updateTimeRange(timeRange, true); // Save as default
     setFilter(prev => ({ ...prev, timeRange }));
   }, [updateTimeRange]);
 
-  // Convert feed post to card post format
+  // Convert feed post to card post format - memoized
   const convertFeedPostToCardPost = useCallback((feedPost: FeedEnhancedPost): EnhancedPost => {
     return {
       id: feedPost.id,
@@ -196,19 +196,19 @@ const EnhancedFeedView = React.memo(({
     };
   }, []);
 
-  // Handle posts loading
+  // Handle posts loading - memoized
   const handlePostsLoad = useCallback((newPosts: FeedEnhancedPost[]) => {
     const convertedPosts = newPosts.map(convertFeedPostToCardPost);
     setPosts(convertedPosts);
     setError(null); // Clear any previous errors
   }, [convertFeedPostToCardPost]);
 
-  // Handle trending updates
+  // Handle trending updates - memoized
   const handleTrendingUpdate = useCallback((trending: EnhancedPost[]) => {
     setTrendingPosts(trending);
   }, []);
 
-  // Handle liked by modal
+  // Handle liked by modal - memoized
   const handleShowLikedBy = useCallback((postId: string) => {
     setLikedByModal({ isOpen: true, postId });
   }, []);
@@ -217,7 +217,7 @@ const EnhancedFeedView = React.memo(({
     setLikedByModal({ isOpen: false, postId: '' });
   }, []);
 
-  // Handle error with enhanced analytics
+  // Handle error with enhanced analytics - memoized
   const handleError = useCallback((error: FeedError) => {
     setError(error);
     addToast(error.message, 'error');
@@ -236,7 +236,7 @@ const EnhancedFeedView = React.memo(({
     console.error('Feed error:', error);
   }, [addToast, filter, communityId]);
 
-  // Enhanced retry function with analytics
+  // Enhanced retry function with analytics - memoized
   const handleRetry = useCallback(() => {
     setRefreshKey(prev => prev + 1);
     
@@ -251,7 +251,7 @@ const EnhancedFeedView = React.memo(({
     console.log('Feed retry attempt', { filter, communityId });
   }, [filter, communityId]);
 
-  // Render post card with enhanced features
+  // Render post card with enhanced features - memoized
   const renderPost = useCallback((post: EnhancedPost) => (
     <div key={post.id} className="mb-4">
       <EnhancedPostCard
@@ -423,10 +423,20 @@ const EnhancedFeedView = React.memo(({
   );
 });
 
-// Add display name for debugging
+// Add display name and proper comparison function for debugging
 EnhancedFeedView.displayName = 'EnhancedFeedView';
 
-export default EnhancedFeedView;
+// Add proper comparison function for React.memo
+const areEqual = (prevProps: EnhancedFeedViewProps, nextProps: EnhancedFeedViewProps) => {
+  return (
+    prevProps.communityId === nextProps.communityId &&
+    prevProps.showCommunityMetrics === nextProps.showCommunityMetrics &&
+    prevProps.className === nextProps.className &&
+    JSON.stringify(prevProps.initialFilter) === JSON.stringify(nextProps.initialFilter)
+  );
+};
+
+export default React.memo(EnhancedFeedView, areEqual);
 
 // Empty feed state component
 interface EmptyFeedStateProps {

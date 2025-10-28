@@ -5,6 +5,7 @@
 
 import { webSocketService } from './webSocketService';
 import { ethers } from 'ethers';
+import { OfflineMessageQueueService } from './offlineMessageQueueService';
 
 export interface ChatMessage {
   id: string;
@@ -30,6 +31,7 @@ export interface ChatMessage {
     rewardAmount?: string;
     transactionHash?: string;
     decryptionFailed?: boolean;
+    isPending?: boolean;
   };
   signature?: string;
   chainId?: number;
@@ -130,12 +132,17 @@ class MessagingService {
   private cryptoKey: CryptoKey | null = null;
   private isInitialized = false;
   private typingTimeouts: Map<string, NodeJS.Timeout> = new Map();
+  private offlineQueueService: OfflineMessageQueueService;
 
   // Events
   private listeners: Map<string, Function[]> = new Map();
 
   constructor() {
     this.initializeWebSocketListeners();
+    // Only initialize offline queue service in browser environment
+    if (typeof window !== 'undefined') {
+      this.offlineQueueService = OfflineMessageQueueService.getInstance();
+    }
   }
 
   /**
@@ -373,7 +380,7 @@ class MessagingService {
   }
 
   /**
-   * Send a message
+   * Send a message with offline support
    */
   async sendMessage(
     toAddress: string,
@@ -423,6 +430,47 @@ class MessagingService {
         metadata,
         chainId: 1 // Default to mainnet, could be dynamic
       };
+
+      // Check if we're in a browser environment and if offline, queue the message
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? (typeof navigator !== 'undefined' ? navigator.onLine : true) : true;
+      
+      if (isBrowser && !isOnline && this.offlineQueueService) {
+        // Queue message for sending when online
+        await this.offlineQueueService.queueMessage(
+          this.getConversationId(this.currentAddress, toAddress),
+          content,
+          'text'
+        );
+        
+        // Add to local storage for immediate UI feedback
+        this.addMessageToConversation(message);
+        
+        // Update conversation
+        const conversationId = this.getConversationId(this.currentAddress, toAddress);
+        const conversation = this.conversations.get(conversationId);
+        if (conversation) {
+          conversation.lastMessage = message;
+          conversation.lastActivity = now;
+        } else {
+          // Create new conversation
+          const newConversation: ChatConversation = {
+            id: conversationId,
+            participants: [this.currentAddress, toAddress.toLowerCase()],
+            lastMessage: message,
+            lastActivity: now,
+            unreadCount: 0,
+            isBlocked: false,
+            isPinned: false
+          };
+          this.conversations.set(conversationId, newConversation);
+        }
+
+        this.emit('message_queued', message);
+        this.emit('conversation_updated', conversationId);
+        
+        return message;
+      }
 
       // Encrypt content
       message.encryptedContent = await this.encryptMessage(content, toAddress);
@@ -503,7 +551,7 @@ class MessagingService {
   }
 
   /**
-   * Mark messages as read
+   * Mark messages as read with offline support
    */
   async markMessagesAsRead(conversationId: string): Promise<void> {
     const messages = this.messages.get(conversationId);
@@ -524,12 +572,31 @@ class MessagingService {
       conversation.unreadCount = 0;
     }
 
-    // Notify server
-    webSocketService.send('mark_read', {
-      conversationId,
-      messageIds: unreadMessages.map(msg => msg.id),
-      readerAddress: this.currentAddress
-    });
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    const isOnline = isBrowser ? (typeof navigator !== 'undefined' ? navigator.onLine : true) : true;
+    
+    // If offline and we have offline queue service, queue the action
+    if (isBrowser && !isOnline && this.offlineQueueService) {
+      await this.offlineQueueService.queueOfflineAction({
+        type: 'mark_read',
+        data: {
+          conversationId,
+          messageIds: unreadMessages.map(msg => msg.id),
+          readerAddress: this.currentAddress
+        },
+        timestamp: new Date(),
+        retryCount: 0,
+        maxRetries: 3
+      });
+    } else {
+      // Notify server
+      webSocketService.send('mark_read', {
+        conversationId,
+        messageIds: unreadMessages.map(msg => msg.id),
+        readerAddress: this.currentAddress
+      });
+    }
 
     this.emit('messages_read', conversationId, unreadMessages);
     this.emit('conversation_updated', conversationId);
@@ -806,6 +873,17 @@ class MessagingService {
 
     webSocketService.on('user_presence', (presence: UserPresence) => {
       this.emit('user_presence', presence);
+    });
+
+    // Listen for connection status changes
+    webSocketService.on('connected', () => {
+      // When reconnected, sync any pending messages
+      this.offlineQueueService.syncPendingMessages().catch(console.error);
+    });
+
+    webSocketService.on('disconnected', () => {
+      // Handle disconnection
+      this.emit('disconnected');
     });
   }
 

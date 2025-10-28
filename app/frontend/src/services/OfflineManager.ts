@@ -31,11 +31,17 @@ export class OfflineManager {
   private syncInterval?: NodeJS.Timeout;
 
   private constructor() {
-    if (typeof window !== 'undefined') {
+    // Check if we're in a browser environment before accessing window
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (isBrowser) {
       this.initializeEventListeners();
       this.loadQueueFromStorage();
       this.startPeriodicSync();
     }
+    
+    // Initialize online status based on environment
+    this.state.isOnline = isBrowser ? navigator.onLine : true;
   }
 
   static getInstance(): OfflineManager {
@@ -49,7 +55,10 @@ export class OfflineManager {
    * Initialize online/offline event listeners
    */
   private initializeEventListeners(): void {
-    if (typeof window !== 'undefined') {
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (isBrowser && typeof window !== 'undefined') {
       window.addEventListener('online', this.handleOnline.bind(this));
       window.addEventListener('offline', this.handleOffline.bind(this));
     }
@@ -187,6 +196,21 @@ export class OfflineManager {
       case 'JOIN_COMMUNITY':
         await this.executeJoinCommunity(action.payload);
         break;
+      case 'SEND_MESSAGE':
+        await this.executeSendMessage(action.payload);
+        break;
+      case 'MARK_MESSAGES_READ':
+        await this.executeMarkMessagesRead(action.payload);
+        break;
+      case 'ADD_REACTION':
+        await this.executeAddReaction(action.payload);
+        break;
+      case 'REMOVE_REACTION':
+        await this.executeRemoveReaction(action.payload);
+        break;
+      case 'DELETE_MESSAGE':
+        await this.executeDeleteMessage(action.payload);
+        break;
       default:
         console.warn(`Unknown action type: ${action.type}`);
     }
@@ -276,6 +300,97 @@ export class OfflineManager {
 
     if (!response.ok) {
       throw new Error(`Failed to join community: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Execute send message action
+   */
+  private async executeSendMessage(payload: any): Promise<void> {
+    const response = await fetch('/api/chat/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send message: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Execute mark messages read action
+   */
+  private async executeMarkMessagesRead(payload: any): Promise<void> {
+    const response = await fetch('/api/chat/messages/read', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to mark messages as read: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Execute add reaction action
+   */
+  private async executeAddReaction(payload: any): Promise<void> {
+    const { messageId, emoji } = payload;
+    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+      },
+      body: JSON.stringify({ emoji })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to add reaction: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Execute remove reaction action
+   */
+  private async executeRemoveReaction(payload: any): Promise<void> {
+    const { messageId, emoji } = payload;
+    const response = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+      },
+      body: JSON.stringify({ emoji })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to remove reaction: ${response.statusText}`);
+    }
+  }
+
+  /**
+   * Execute delete message action
+   */
+  private async executeDeleteMessage(payload: any): Promise<void> {
+    const { messageId } = payload;
+    const response = await fetch(`/api/chat/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('linkdao-auth-token') || ''}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete message: ${response.statusText}`);
     }
   }
 

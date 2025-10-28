@@ -8,8 +8,16 @@ export class OfflineMessageQueueService {
   private retryTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   private constructor() {
-    this.initializeDatabase();
-    this.setupNetworkListeners();
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
+    
+    if (isBrowser) {
+      this.initializeDatabase();
+      this.setupNetworkListeners();
+    }
+    
+    // Initialize online status based on environment
+    this.isOnline = isBrowser ? navigator.onLine : true;
   }
 
   public static getInstance(): OfflineMessageQueueService {
@@ -74,6 +82,11 @@ export class OfflineMessageQueueService {
    * Setup network status listeners
    */
   private setupNetworkListeners(): void {
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (!isBrowser) return;
+    
     window.addEventListener('online', () => {
       this.isOnline = true;
       this.syncPendingMessages();

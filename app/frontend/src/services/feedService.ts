@@ -8,6 +8,9 @@ const BACKEND_API_BASE_URL = typeof window !== 'undefined' && window.location.ho
   ? 'http://localhost:3004' 
   : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000');
 
+// In-memory cache for feed data
+const feedCache = new Map<string, { data: any; timestamp: number; expiresAt: number }>();
+
 export interface FeedResponse {
   posts: EnhancedPost[];
   hasMore: boolean;
@@ -23,6 +26,22 @@ interface BackendFeedResponse {
     totalPages: number;
   };
 }
+
+// Cache configuration
+const CACHE_CONFIG = {
+  FEED: {
+    TTL: 30000, // 30 seconds
+    MAX_ENTRIES: 100
+  },
+  COMMUNITY_METRICS: {
+    TTL: 60000, // 1 minute
+    MAX_ENTRIES: 50
+  },
+  TRENDING: {
+    TTL: 45000, // 45 seconds
+    MAX_ENTRIES: 20
+  }
+};
 
 // Analytics service integration
 class FeedAnalytics {
@@ -45,6 +64,48 @@ class FeedAnalytics {
 
 const feedAnalytics = new FeedAnalytics();
 
+// Cache management utilities
+const cacheUtils = {
+  set: (key: string, data: any, ttl: number = CACHE_CONFIG.FEED.TTL) => {
+    // Clean up expired entries
+    cacheUtils.cleanup();
+    
+    // Remove oldest entries if we're at max capacity
+    if (feedCache.size >= CACHE_CONFIG.FEED.MAX_ENTRIES) {
+      const firstKey = feedCache.keys().next().value;
+      if (firstKey) feedCache.delete(firstKey);
+    }
+    
+    const expiresAt = Date.now() + ttl;
+    feedCache.set(key, { data, timestamp: Date.now(), expiresAt });
+  },
+  
+  get: (key: string) => {
+    const entry = feedCache.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() > entry.expiresAt) {
+      feedCache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  },
+  
+  cleanup: () => {
+    const now = Date.now();
+    for (const [key, entry] of feedCache.entries()) {
+      if (now > entry.expiresAt) {
+        feedCache.delete(key);
+      }
+    }
+  },
+  
+  clear: () => {
+    feedCache.clear();
+  }
+};
+
 export class FeedService {
   static async getEnhancedFeed(
     filter: FeedFilter,
@@ -52,6 +113,22 @@ export class FeedService {
     limit: number = 20
   ): Promise<FeedResponse> {
     try {
+      // Create cache key
+      const cacheKey = `feed_${JSON.stringify(filter)}_${page}_${limit}`;
+      
+      // Check cache first
+      const cachedData = cacheUtils.get(cacheKey);
+      if (cachedData) {
+        // Track cache hit
+        feedAnalytics.trackEvent({
+          eventType: 'feed_cache_hit',
+          timestamp: new Date(),
+          metadata: { filter, page, limit }
+        });
+        
+        return cachedData;
+      }
+      
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -111,6 +188,15 @@ export class FeedService {
       // Transform backend posts to frontend posts
       const posts = data.posts.map(convertBackendPostToPost);
       
+      const result: FeedResponse = {
+        posts,
+        hasMore: data.pagination.page < data.pagination.totalPages,
+        totalPages: data.pagination.totalPages
+      };
+      
+      // Cache the result
+      cacheUtils.set(cacheKey, result, CACHE_CONFIG.FEED.TTL);
+      
       // Track success event with more detailed analytics
       feedAnalytics.trackEvent({
         eventType: 'feed_load_success',
@@ -134,11 +220,7 @@ export class FeedService {
         success: true
       });
 
-      return {
-        posts,
-        hasMore: data.pagination.page < data.pagination.totalPages,
-        totalPages: data.pagination.totalPages
-      };
+      return result;
     } catch (error: any) {
       console.error('Error fetching enhanced feed:', error);
       

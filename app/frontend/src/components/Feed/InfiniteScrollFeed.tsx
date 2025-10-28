@@ -35,6 +35,7 @@ const InfiniteScrollFeed = React.memo(({
   itemHeight = 300
 }: InfiniteScrollFeedProps) => {
   const { isMobile } = useMobileOptimization();
+  // Use useMemo to prevent unnecessary re-renders
   const [posts, setPosts] = useState<EnhancedPost[]>([]);
   const [scrollState, setScrollState] = useState<InfiniteScrollState>({
     hasMore: true,
@@ -62,7 +63,7 @@ const InfiniteScrollFeed = React.memo(({
     }
   );
 
-  // Load more posts
+  // Load more posts - memoized
   const loadMorePosts = useCallback(async (page: number, isInitial: boolean = false) => {
     if (scrollState.isLoading) return;
 
@@ -107,7 +108,7 @@ const InfiniteScrollFeed = React.memo(({
     }
   }, [filter, postsPerPage, onPostsLoad, scrollState.isLoading, onError]);
 
-  // Reset and load initial posts when filter changes
+  // Reset and load initial posts when filter changes - memoized with proper dependencies
   useEffect(() => {
     if (filterKey !== lastFilterRef.current) {
       lastFilterRef.current = filterKey;
@@ -156,7 +157,7 @@ const InfiniteScrollFeed = React.memo(({
     };
   }, [loadMorePosts, scrollState.hasMore, scrollState.isLoading, scrollState.page, threshold]);
 
-  // Manual refresh function
+  // Manual refresh function - memoized
   const refresh = useCallback(() => {
     setPosts([]);
     setScrollState({
@@ -169,7 +170,7 @@ const InfiniteScrollFeed = React.memo(({
     loadMorePosts(1, true);
   }, [loadMorePosts]);
 
-  // Retry on error
+  // Retry on error - memoized
   const retry = useCallback(() => {
     if (posts.length === 0) {
       loadMorePosts(1, true);
@@ -327,7 +328,7 @@ const InfiniteScrollFeed = React.memo(({
     );
   }, [enableVirtualization, posts, virtualHeight, itemHeight]);
 
-  // Memoized regular feed
+  // Memoized regular feed with proper optimization
   const regularFeed = useMemo(() => {
     if (enableVirtualization && posts.length >= 50) return null;
     
@@ -356,10 +357,18 @@ const InfiniteScrollFeed = React.memo(({
   );
 });
 
-// Add display name for debugging
+// Add display name and proper comparison function for debugging
 InfiniteScrollFeed.displayName = 'InfiniteScrollFeed';
 
-export default InfiniteScrollFeed;
+// Add proper comparison function for React.memo
+const areEqual = (prevProps: InfiniteScrollFeedProps, nextProps: InfiniteScrollFeedProps) => {
+  return (
+    prevProps.filter === nextProps.filter ||
+    JSON.stringify(prevProps.filter) === JSON.stringify(nextProps.filter)
+  );
+};
+
+export default React.memo(InfiniteScrollFeed, areEqual);
 
 // Loading spinner component
 function LoadingSpinner() {

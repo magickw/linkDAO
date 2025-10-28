@@ -60,90 +60,20 @@ import {
   X
 } from 'lucide-react';
 import { CommunityService } from '@/services/communityService';
+import { CommunityPostService } from '@/services/communityPostService';
+import { CommunityInteractionService } from '@/services/communityInteractionService';
+import { CommunityRankingService } from '@/services/communityRankingService';
+import { FeedService } from '@/services/feedService';
 import { Community } from '@/models/Community';
-import { FeedSortType } from '@/types/feed';
-
-// Mock data for demonstration - will be removed
-const mockCommunities = [
-  {
-    id: 'ethereum-builders',
-    name: 'ethereum-builders',
-    displayName: 'Ethereum Builders',
-    description: 'Building the future of Ethereum ecosystem',
-    memberCount: 12400,
-    avatar: '🔷',
-    banner: 'https://placehold.co/800x200/667eea/ffffff?text=Ethereum+Builders',
-    category: 'Development',
-    tags: ['ethereum', 'development', 'smart-contracts'],
-    isPublic: true,
-    rules: ['Be respectful', 'No spam', 'Share quality content'],
-    moderators: ['0x1234...5678'],
-    treasuryAddress: '0x1234567890123456789012345678901234567890',
-    governanceToken: 'ETH-BUILD',
-    createdAt: new Date('2023-01-15'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 0,
-      stakingRequirements: []
-    }
-  },
-  {
-    id: 'defi-traders',
-    name: 'defi-traders',
-    displayName: 'DeFi Traders',
-    description: 'Decentralized Finance trading strategies and insights',
-    memberCount: 8900,
-    avatar: '💰',
-    banner: 'https://placehold.co/800x200/10b981/ffffff?text=DeFi+Traders',
-    category: 'Finance',
-    tags: ['defi', 'trading', 'yield-farming'],
-    isPublic: true,
-    rules: ['No financial advice', 'Share research', 'Verify claims'],
-    moderators: ['0x2345...6789'],
-    treasuryAddress: '0x2345678901234567890123456789012345678901',
-    governanceToken: 'DEFI-TRD',
-    createdAt: new Date('2023-02-20'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 100,
-      stakingRequirements: []
-    }
-  },
-  {
-    id: 'nft-collectors',
-    name: 'nft-collectors',
-    displayName: 'NFT Collectors',
-    description: 'Discover, trade, and showcase NFT collections',
-    memberCount: 21000,
-    avatar: '🎨',
-    banner: 'https://placehold.co/800x200/8b5cf6/ffffff?text=NFT+Collectors',
-    category: 'Art',
-    tags: ['nft', 'art', 'collectibles'],
-    isPublic: true,
-    rules: ['Original content only', 'No price manipulation', 'Respect artists'],
-    moderators: ['0x3456...7890'],
-    treasuryAddress: '0x3456789012345678901234567890123456789012',
-    governanceToken: 'NFT-COL',
-    createdAt: new Date('2023-03-10'),
-    updatedAt: new Date(),
-    settings: {
-      allowedPostTypes: [],
-      requireApproval: false,
-      minimumReputation: 50,
-      stakingRequirements: []
-    }
-  }
-];
-
-// Mock posts removed - now fetching from backend API
+import { FeedSortType, FeedFilter } from '@/types/feed';
+import { useAccount } from 'wagmi';
+import { transformCommunitiesWithUserContext } from '@/utils/communityTransformers';
 
 const CommunitiesPage: React.FC = () => {
   const router = useRouter();
   const { isMobile, triggerHapticFeedback } = useMobileOptimization();
+  const { address, isConnected } = useAccount();
+
   const [communities, setCommunities] = useState<Community[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [sortBy, setSortBy] = useState<FeedSortType>(FeedSortType.HOT);
@@ -154,9 +84,9 @@ const CommunitiesPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [error, setError] = useState<string | null>(null);
-  
-  // Web3 mobile state
-  const [walletConnected, setWalletConnected] = useState(false);
+
+  // Web3 mobile state - derived from wallet connection
+  const walletConnected = isConnected;
   const [userBalance, setUserBalance] = useState(1250);
   const [stakingRewards, setStakingRewards] = useState(45);
   const [governanceNotifications, setGovernanceNotifications] = useState(3);
@@ -177,7 +107,10 @@ const CommunitiesPage: React.FC = () => {
   const [stakingData, setStakingData] = useState<Record<string, any>>({});
   const [governanceProposals, setGovernanceProposals] = useState<any[]>([]);
   const [walletActivities, setWalletActivities] = useState<any[]>([]);
-  
+
+  // Trending communities with ranking scores
+  const [trendingCommunities, setTrendingCommunities] = useState<any[]>([]);
+
   // Hover preview state with debouncing
   const [hoveredPost, setHoveredPost] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState({ x: 0, y: 0 });
@@ -232,30 +165,43 @@ const CommunitiesPage: React.FC = () => {
     loadEnhancedCommunities();
   }, []);
 
-  // Load posts from backend API with pagination
+  // Fetch trending communities from the service
+  useEffect(() => {
+    const fetchTrendingCommunities = async () => {
+      try {
+        const trending = await CommunityRankingService.getTrendingCommunities({ limit: 10 });
+        setTrendingCommunities(trending);
+      } catch (error) {
+        console.error('Failed to fetch trending communities:', error);
+        setTrendingCommunities([]);
+      }
+    };
+
+    fetchTrendingCommunities();
+  }, []);
+
+  // Load posts from backend API with pagination using CommunityPostService
   const fetchPosts = async (pageNum: number = 1, append: boolean = false) => {
     try {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
-      
-      // Import FeedService dynamically to avoid circular dependencies
-      const { FeedService } = await import('../services/feedService');
-      
-      const response = await FeedService.getEnhancedFeed({
-        sortBy: sortBy,
+
+      const feedFilter: FeedFilter = {
+        sortBy: sortBy as FeedSortType,
         timeRange: timeFilter,
-        feedSource: 'all'
-      }, pageNum, 20);
-      
-      const newPosts = response.posts || [];
-      
+        communities: joinedCommunities.length > 0 ? joinedCommunities : undefined,
+        feedSource: joinedCommunities.length > 0 ? 'all' : 'all'
+      };
+
+      const response = await FeedService.getEnhancedFeed(feedFilter, pageNum, 20);
+
       if (append) {
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts(prev => [...prev, ...response.posts]);
       } else {
-        setPosts(newPosts);
+        setPosts(response.posts);
       }
-      
-      setHasMore(newPosts.length === 20);
+
+      setHasMore(response.hasMore);
       setPage(pageNum);
     } catch (error) {
       console.error('Failed to fetch posts:', error);
@@ -326,19 +272,45 @@ const CommunitiesPage: React.FC = () => {
   };
 
   const handleJoinCommunity = async (communityId: string) => {
+    if (!address) {
+      console.error('Wallet not connected');
+      // Show a toast or modal to prompt wallet connection
+      return;
+    }
+
     try {
       if (joinedCommunities.includes(communityId)) {
-        // Leave community - would need user address from wallet context
-        setJoinedCommunities(prev => prev.filter(id => id !== communityId));
-        setUserRoles(prev => ({ ...prev, [communityId]: 'visitor' }));
+        // Leave community using CommunityInteractionService
+        const result = await CommunityInteractionService.leaveCommunity({
+          communityId,
+          userAddress: address
+        });
+
+        if (result.success) {
+          setJoinedCommunities(prev => prev.filter(id => id !== communityId));
+          setUserRoles(prev => ({ ...prev, [communityId]: 'visitor' }));
+          if (isMobile) triggerHapticFeedback('success');
+        } else {
+          console.error('Failed to leave community:', result.message);
+        }
       } else {
-        // Join community - would need user address from wallet context
-        setJoinedCommunities(prev => [...prev, communityId]);
-        setUserRoles(prev => ({ ...prev, [communityId]: 'member' }));
+        // Join community using CommunityInteractionService
+        const result = await CommunityInteractionService.joinCommunity({
+          communityId,
+          userAddress: address
+        });
+
+        if (result.success && result.data) {
+          setJoinedCommunities(prev => [...prev, communityId]);
+          setUserRoles(prev => ({ ...prev, [communityId]: result.data!.role }));
+          if (isMobile) triggerHapticFeedback('success');
+        } else {
+          console.error('Failed to join community:', result.message);
+        }
       }
-      if (isMobile) triggerHapticFeedback('success');
     } catch (err) {
       console.error('Error joining/leaving community:', err);
+      // Show error toast to user
     }
   };
 
@@ -821,14 +793,65 @@ const CommunitiesPage: React.FC = () => {
                     <span>Create Community</span>
                   </button>
                   
-                  <Link 
-                    href="/communities?sort=trending" 
+                  <Link
+                    href="/communities?sort=trending"
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded"
                   >
                     <span>✨</span>
                     <span>Discover Trending Communities</span>
                   </Link>
                 </div>
+
+                {/* Trending Communities Section */}
+                {trendingCommunities.length > 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-2 text-orange-500" />
+                        Trending
+                      </h3>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Top 5</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {trendingCommunities.slice(0, 5).map((community, index) => (
+                        <div
+                          key={community.id}
+                          onClick={() => router.push(`/dao/${community.name}`)}
+                          className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded cursor-pointer transition-colors"
+                        >
+                          <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-orange-400 to-pink-500 text-white text-xs font-bold">
+                            #{index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {community.icon} {community.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                              <span>{community.memberCount.toLocaleString()} members</span>
+                              <span>•</span>
+                              <span className="flex items-center text-orange-500">
+                                <TrendingUp className="w-3 h-3 mr-1" />
+                                {Math.round(community.growthMetrics.trendingScore)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {trendingCommunities.length > 5 && (
+                      <Link
+                        href="/communities?sort=trending"
+                        className="block text-center text-sm text-blue-600 dark:text-blue-400 hover:underline mt-3"
+                      >
+                        View all trending →
+                      </Link>
+                    )}
+                  </div>
+                )}
 
                 {/* Shortcuts Section */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">

@@ -430,7 +430,11 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
   ): AvailabilityStatus {
     const config = this.configs[method.type];
 
-    // Fiat payments are always available (no wallet or gas fees required)
+    // Fiat payments are ALWAYS available regardless of:
+    // - Wallet connection status
+    // - Network/chain ID
+    // - Gas fees (fiat has no gas fees)
+    // Users can choose fiat even when their wallet is connected
     if (method.type === PaymentMethodType.FIAT_STRIPE) {
       return AvailabilityStatus.AVAILABLE;
     }

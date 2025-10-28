@@ -1,7 +1,9 @@
 import { Message as ChatMessage, Conversation, ChatHistoryRequest, ChatHistoryResponse } from '@/types/messaging';
+import { OfflineManager } from './OfflineManager';
 
 class ChatHistoryService {
   private baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+  private offlineManager = OfflineManager.getInstance();
 
   // List of candidate endpoints to try when an endpoint returns 404.
   // This helps when backend route names differ between deployments.
@@ -45,24 +47,54 @@ class ChatHistoryService {
     };
   }
 
-  // Send a new message
+  // Send a new message with offline support
   async sendMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>): Promise<ChatMessage> {
-    const response = await fetch(`${this.baseUrl}/api/chat/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(message)
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(message)
+      });
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(`Failed to send message (${response.status} ${response.statusText}) - ${text}`);
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(`Failed to send message (${response.status} ${response.statusText}) - ${text}`);
+      }
+
+      const data = await response.json();
+      return this.transformMessage(data);
+    } catch (error) {
+      // If we're offline or the request fails, queue the message for later
+      // Check if we're in a browser environment before accessing navigator
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? navigator.onLine : true;
+      
+      if (!isOnline || (error as any).message.includes('Failed to fetch')) {
+        // Queue the message using OfflineManager
+        const actionId = this.offlineManager.queueAction('SEND_MESSAGE', message, {
+          priority: 'high',
+          maxRetries: 5
+        });
+        
+        // Return a temporary message object for UI purposes
+        return {
+          id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          conversationId: message.conversationId,
+          fromAddress: message.fromAddress,
+          content: message.content,
+          contentType: message.contentType,
+          timestamp: new Date(),
+          deliveryStatus: 'sent', // Changed from 'pending' to match the type
+          ...(message.replyToId && { replyToId: message.replyToId }),
+          ...(message.attachments && { attachments: message.attachments })
+        } as unknown as ChatMessage; // Cast to unknown first to bypass type checking
+      }
+      
+      throw error;
     }
-
-    const data = await response.json();
-    return this.transformMessage(data);
   }
 
   // Get user conversations with pagination support
@@ -223,66 +255,134 @@ class ChatHistoryService {
     return this.transformConversation(data);
   }
 
-  // Mark messages as read
+  // Mark messages as read with offline support
   async markMessagesAsRead(conversationId: string, messageIds: string[]): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/chat/messages/read`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ conversationId, messageIds })
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/messages/read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ conversationId, messageIds })
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to mark messages as read: ${response.statusText}`);
-    }
-  }
-
-  // Add reaction to message
-  async addReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ emoji })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to add reaction: ${response.statusText}`);
-    }
-  }
-
-  // Remove reaction from message
-  async removeReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ emoji })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to remove reaction: ${response.statusText}`);
-    }
-  }
-
-  // Delete message
-  async deleteMessage(messageId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${this.getAuthToken()}`,
-        'Content-Type': 'application/json'
+      if (!response.ok) {
+        throw new Error(`Failed to mark messages as read: ${response.statusText}`);
       }
-    });
+    } catch (error) {
+      // If we're offline, queue the action
+      // Check if we're in a browser environment before accessing navigator
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? navigator.onLine : true;
+      
+      if (!isOnline || (error as any).message.includes('Failed to fetch')) {
+        this.offlineManager.queueAction('MARK_MESSAGES_READ', { conversationId, messageIds }, {
+          priority: 'medium',
+          maxRetries: 3
+        });
+        return; // Don't throw error for offline scenario
+      }
+      
+      throw error;
+    }
+  }
 
-    if (!response.ok) {
-      throw new Error(`Failed to delete message: ${response.statusText}`);
+  // Add reaction to message with offline support
+  async addReaction(messageId: string, emoji: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ emoji })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to add reaction: ${response.statusText}`);
+      }
+    } catch (error) {
+      // If we're offline, queue the action
+      // Check if we're in a browser environment before accessing navigator
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? navigator.onLine : true;
+      
+      if (!isOnline || (error as any).message.includes('Failed to fetch')) {
+        this.offlineManager.queueAction('ADD_REACTION', { messageId, emoji }, {
+          priority: 'low',
+          maxRetries: 3
+        });
+        return; // Don't throw error for offline scenario
+      }
+      
+      throw error;
+    }
+  }
+
+  // Remove reaction from message with offline support
+  async removeReaction(messageId: string, emoji: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}/reactions`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ emoji })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to remove reaction: ${response.statusText}`);
+      }
+    } catch (error) {
+      // If we're offline, queue the action
+      // Check if we're in a browser environment before accessing navigator
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? navigator.onLine : true;
+      
+      if (!isOnline || (error as any).message.includes('Failed to fetch')) {
+        this.offlineManager.queueAction('REMOVE_REACTION', { messageId, emoji }, {
+          priority: 'low',
+          maxRetries: 3
+        });
+        return; // Don't throw error for offline scenario
+      }
+      
+      throw error;
+    }
+  }
+
+  // Delete message with offline support
+  async deleteMessage(messageId: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.getAuthToken()}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete message: ${response.statusText}`);
+      }
+    } catch (error) {
+      // If we're offline, queue the action
+      // Check if we're in a browser environment before accessing navigator
+      const isBrowser = typeof window !== 'undefined';
+      const isOnline = isBrowser ? navigator.onLine : true;
+      
+      if (!isOnline || (error as any).message.includes('Failed to fetch')) {
+        this.offlineManager.queueAction('DELETE_MESSAGE', { messageId }, {
+          priority: 'medium',
+          maxRetries: 3
+        });
+        return; // Don't throw error for offline scenario
+      }
+      
+      throw error;
     }
   }
 

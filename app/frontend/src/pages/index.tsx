@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense, useRef } from 'react';
 import Layout from '@/components/Layout';
 import { useWeb3 } from '@/context/Web3Context';
 import { useNavigation } from '@/context/NavigationContext';
@@ -68,12 +68,34 @@ export default function Home() {
   const [isSupportWidgetOpen, setIsSupportWidgetOpen] = useState(false);
   const [feedRefreshKey, setFeedRefreshKey] = useState(0);
 
+  // Refs for accessibility
+  const mainContentRef = useRef<HTMLDivElement>(null);
+  const skipToContentRef = useRef<HTMLAnchorElement>(null);
+
   // Initialize WebSocket for real-time updates
   const { isConnected: wsConnected, subscribe, on, off } = useWebSocket({
     walletAddress: address || '',
     autoConnect: isConnected && !!address,
     autoReconnect: true
   });
+
+  // Keyboard navigation support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip to content with Ctrl+Alt+C
+      if (e.ctrlKey && e.altKey && e.key === 'c') {
+        mainContentRef.current?.focus();
+      }
+      
+      // Refresh feed with Ctrl+Alt+R
+      if (e.ctrlKey && e.altKey && e.key === 'r') {
+        handleRefreshFeed();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -135,6 +157,15 @@ export default function Home() {
 
     return (
       <Layout title="LinkDAO - The Web3 Social Network" fullWidth={true}>
+        {/* Skip to content link for accessibility */}
+        <a 
+          ref={skipToContentRef}
+          href="#main-content" 
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
+        >
+          Skip to main content
+        </a>
+        
         {/* Hero Section */}
         <div className="relative min-h-[calc(100vh-4rem)] flex items-center justify-center overflow-hidden">
           {/* Background with glassmorphism shapes */}
@@ -635,6 +666,14 @@ export default function Home() {
   // Connected user experience - Main Social Dashboard/Feed
   return (
     <Layout title="LinkDAO - Home">
+      {/* Skip to content link for accessibility */}
+      <a 
+        href="#main-feed-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-white dark:bg-gray-800 px-4 py-2 rounded-md shadow-lg"
+      >
+        Skip to feed content
+      </a>
+      
       <div className="flex bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar - Navigation - hidden on mobile for home page since we have the burger menu */}
         <div className="hidden lg:flex lg:flex-shrink-0">
@@ -650,7 +689,12 @@ export default function Home() {
           {/* Main Feed Content */}
           <div className="flex-1 flex">
             {/* Center Feed */}
-            <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
+            <div 
+              id="main-feed-content"
+              ref={mainContentRef}
+              tabIndex={-1}
+              className="flex-1 overflow-y-auto pb-24 md:pb-6 focus:outline-none"
+            >
               <div className="max-w-2xl mx-auto py-6 px-4">
                 {/* Post Composer - Inline Facebook-style */}
                 <div className="mb-6">
@@ -669,7 +713,8 @@ export default function Home() {
                   <div className="mb-4">
                     <button
                       onClick={handleRefreshFeed}
-                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium"
+                      className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                      aria-label="Refresh feed to see new posts"
                     >
                       <RefreshCw className="w-4 h-4" />
                       New posts available - Click to refresh
