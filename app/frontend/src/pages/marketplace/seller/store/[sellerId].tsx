@@ -5,11 +5,13 @@ import { MarketplaceBreadcrumbs } from '@/components/Marketplace/Navigation/Mark
 import { useMarketplaceBreadcrumbs } from '@/hooks/useMarketplaceBreadcrumbs';
 import { MarketplaceErrorBoundary } from '@/components/ErrorHandling/MarketplaceErrorBoundary';
 import { SellerNotFoundFallback } from '@/components/ErrorHandling/MarketplaceErrorFallback';
+import { useAccount } from 'wagmi';
 
 export default function SellerStorePageRoute() {
   const router = useRouter();
   const { sellerId } = router.query;
   const { breadcrumbItems } = useMarketplaceBreadcrumbs();
+  const { address } = useAccount();
 
   // Handle product navigation from store page
   const handleProductClick = (productId: string) => {
@@ -41,6 +43,8 @@ export default function SellerStorePageRoute() {
         <SellerStorePage 
           sellerId={sellerId} 
           onProductClick={handleProductClick}
+          // Pass isEditable prop when this is the seller's own store
+          isEditable={address === sellerId}
         />
       </MarketplaceErrorBoundary>
     </Layout>

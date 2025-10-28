@@ -231,7 +231,7 @@ interface SellerStorePageProps {
   onProductClick?: (productId: string) => void;
 }
 
-const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick }) => {
+const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick, isEditable = false }) => {
   const router = useRouter();
   const { address } = useAccount();
   

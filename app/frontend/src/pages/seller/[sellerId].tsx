@@ -1,6 +1,7 @@
 /**
  * Public Seller Store Page Route
  * Displays enhanced seller information, listings, and purchase functionality for buyers
+ * This is the main public-facing store page for sellers
  */
 
 import React from 'react';
@@ -34,7 +35,8 @@ export default function SellerStoreRoute() {
   return (
     <Layout title={`Store - LinkDAO Marketplace`} fullWidth={true}>
       <EnhancedCartProvider>
-        <SellerStorePage sellerId={sellerId} />
+        {/* For public stores, isEditable is false by default */}
+        <SellerStorePage sellerId={sellerId} isEditable={false} />
       </EnhancedCartProvider>
     </Layout>
   );

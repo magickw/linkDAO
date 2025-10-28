@@ -218,15 +218,6 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
               </svg>
               View Store
             </Button>
-            <Button
-              onClick={() => router.push('/marketplace/seller/profile')}
-              variant="outline"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              Edit Profile
-            </Button>
             <TierAwareComponent 
               requiredAction={TIER_ACTIONS.CREATE_LISTING}
               showUpgradePrompt={true}
@@ -558,6 +549,68 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                 </p>
               </GlassPanel>
             </TierAwareComponent>
+          )}
+
+          {/* Add profile editing tab directly in the dashboard */}
+          {activeTab === 'profile' && profile && (
+            <GlassPanel className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Edit Seller Profile</h3>
+              <div className="space-y-6">
+                {/* Profile editing form - similar to SellerProfilePage but integrated */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-1">Display Name</label>
+                    <input
+                      type="text"
+                      defaultValue={profile.displayName || ''}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-1">Store Name</label>
+                    <input
+                      type="text"
+                      defaultValue={profile.storeName || ''}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-400 text-sm mb-1">Bio</label>
+                    <textarea
+                      defaultValue={profile.bio || ''}
+                      rows={3}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-400 text-sm mb-1">Description</label>
+                    <textarea
+                      defaultValue={profile.description || ''}
+                      rows={3}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-400 text-sm mb-1">Seller Story</label>
+                    <textarea
+                      defaultValue={profile.sellerStory || ''}
+                      rows={4}
+                      placeholder="Tell customers about your background, mission, and what makes you unique..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <Button variant="outline">Cancel</Button>
+                  <Button variant="primary">Save Changes</Button>
+                </div>
+              </div>
+            </GlassPanel>
           )}
 
           {/* Other tabs would be implemented similarly */}
