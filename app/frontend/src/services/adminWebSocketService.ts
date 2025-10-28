@@ -32,7 +32,7 @@ interface NotificationPreferences {
 }
 
 interface ConnectionHealth {
-  status: 'healthy' | 'degraded' | 'unstable' | 'disconnected';
+  status: 'healthy' | 'degraded' | 'unstable' | 'disconnected' | 'connecting';
   latency: number;
   lastHeartbeat: Date;
   reconnectCount: number;
@@ -79,6 +79,35 @@ export class AdminWebSocketManager {
     };
   }
 
+  private attemptReconnection(): void {
+    if (!this.adminUser || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log('Reconnection attempts exhausted or no user to reconnect with');
+      return;
+    }
+
+    // Calculate delay with exponential backoff
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
+      30000 // Max 30 seconds
+    );
+
+    console.log(`Attempting reconnection in ${delay}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+
+    setTimeout(() => {
+      if (!this.socket || this.socket.connected) {
+        return; // Already connected
+      }
+
+      this.reconnectAttempts++;
+      this.connectionHealth.status = 'connecting';
+      
+      // Try to reconnect
+      if (this.socket) {
+        this.socket.connect();
+      }
+    }, delay);
+  }
+
   // Connection management
   public async connect(adminUser: AdminUser, dashboardConfig?: DashboardConfig): Promise<void> {
     if (this.socket?.connected) {
@@ -98,14 +127,45 @@ export class AdminWebSocketManager {
       reconnectionAttempts: this.maxReconnectAttempts,
       reconnectionDelay: this.reconnectDelay,
       reconnectionDelayMax: 5000,
-      forceNew: true
+      forceNew: true,
+      // Add additional connection options for better reliability
+      randomizationFactor: 0.5,
+      autoConnect: false // We'll manually connect after setting up handlers
     });
 
     this.setupEventHandlers();
     
-    // Wait for authentication
-    this.authenticationPromise = this.authenticate();
-    await this.authenticationPromise;
+    // Set initial connection status
+    this.connectionHealth.status = 'connecting';
+    
+    // Attempt connection
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Connection timeout'));
+      }, 15000);
+
+      this.socket!.once('connect', () => {
+        clearTimeout(timeout);
+        console.log('Admin WebSocket connected');
+        this.connectionHealth.status = 'healthy';
+        this.reconnectAttempts = 0;
+        
+        // Now authenticate
+        this.authenticate()
+          .then(() => resolve())
+          .catch(reject);
+      });
+
+      this.socket!.once('connect_error', (error) => {
+        clearTimeout(timeout);
+        console.error('Admin WebSocket connection error:', error);
+        this.connectionHealth.status = 'unstable';
+        reject(new Error(`Connection failed: ${error.message}`));
+      });
+
+      // Manual connect
+      this.socket!.connect();
+    });
   }
 
   public disconnect(): void {
@@ -147,15 +207,16 @@ export class AdminWebSocketManager {
       this.socket.once('admin_auth_error', (error) => {
         clearTimeout(timeout);
         console.error('Admin authentication failed:', error);
+        this.connectionHealth.status = 'unstable';
         reject(new Error(error.message || 'Authentication failed'));
       });
 
       // Send authentication request
       this.socket.emit('admin_authenticate', {
-        adminId: this.adminUser.adminId,
-        email: this.adminUser.email,
-        role: this.adminUser.role,
-        permissions: this.adminUser.permissions,
+        adminId: this.adminUser!.adminId,
+        email: this.adminUser!.email,
+        role: this.adminUser!.role,
+        permissions: this.adminUser!.permissions,
         dashboardConfig: this.dashboardConfig
       });
     });
@@ -172,7 +233,14 @@ export class AdminWebSocketManager {
       
       // Re-authenticate if we were previously authenticated
       if (this.adminUser && !this.isAuthenticated) {
-        this.authenticate().catch(console.error);
+        this.authenticate()
+          .then(() => {
+            console.log('Re-authentication successful');
+          })
+          .catch((error) => {
+            console.error('Re-authentication failed:', error);
+            this.notifyConnectionListeners(false);
+          });
       }
     });
 
@@ -182,6 +250,11 @@ export class AdminWebSocketManager {
       this.isAuthenticated = false;
       this.cleanup();
       this.notifyConnectionListeners(false);
+      
+      // Attempt reconnection if it was not intentional
+      if (reason !== 'io client disconnect' && reason !== 'io server disconnect') {
+        this.attemptReconnection();
+      }
     });
 
     this.socket.on('connect_error', (error) => {
@@ -265,6 +338,10 @@ export class AdminWebSocketManager {
     this.socket.on('admin_server_shutdown', (data) => {
       console.warn('Admin server shutting down:', data);
       this.emit('server_shutdown', data);
+      // Attempt to reconnect after a delay
+      setTimeout(() => {
+        this.attemptReconnection();
+      }, 5000);
     });
 
     // Error handling

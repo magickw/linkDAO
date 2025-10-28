@@ -146,36 +146,48 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ items: ModerationQueue[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch moderation queue: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getModerationQueue:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { items: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch moderation queue');
-    }
-
-    return response.json();
   }
 
   async assignModerationItem(itemId: string, assigneeId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/assign`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ assigneeId }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/assign`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ assigneeId }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to assign moderation item');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to assign moderation item: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in assignModerationItem:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async resolveModerationItem(itemId: string, resolution: {
@@ -183,17 +195,23 @@ class AdminService {
     reason: string;
     details?: any;
   }): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/resolve`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(resolution),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}/resolve`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(resolution),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to resolve moderation item');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to resolve moderation item: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in resolveModerationItem:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   // Seller Application Management
@@ -204,44 +222,48 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ applications: SellerApplication[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
-      });
-    }
-
     try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
       const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications?${params}`, {
         headers: this.getHeaders(),
       });
 
-      const data = await response.json();
-
-      // Handle error responses gracefully - return empty results
-      if (!response.ok || !data.success) {
-        console.warn('Seller applications API error:', data.error?.message || 'Unknown error');
-        return { applications: [], total: 0, page: 1, totalPages: 0 };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch seller applications: ${response.status} ${response.statusText}`);
       }
 
+      const data = await response.json();
       return data.data || { applications: [], total: 0, page: 1, totalPages: 0 };
     } catch (error) {
-      console.error('Failed to fetch seller applications:', error);
-      // Return empty state instead of throwing
+      console.error('Error in getSellerApplications:', error);
+      // Return empty state instead of throwing to maintain UI stability
       return { applications: [], total: 0, page: 1, totalPages: 0 };
     }
   }
 
   async getSellerApplication(applicationId: string): Promise<SellerApplication> {
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch seller application');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch seller application: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getSellerApplication:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async reviewSellerApplication(applicationId: string, review: {
@@ -250,29 +272,41 @@ class AdminService {
     rejectionReason?: string;
     requiredInfo?: string[];
   }): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/review`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(review),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/review`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(review),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to review seller application');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to review seller application: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in reviewSellerApplication:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async getSellerRiskAssessment(applicationId: string): Promise<{ assessment: any }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/risk-assessment`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/applications/${applicationId}/risk-assessment`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch seller risk assessment');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch seller risk assessment: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getSellerRiskAssessment:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getSellerPerformance(filters?: {
@@ -285,22 +319,29 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ sellers: any[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch seller performance: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getSellerPerformance:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { sellers: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch seller performance');
-    }
-
-    return response.json();
   }
 
   async exportSellerPerformance(filters?: {
@@ -311,22 +352,28 @@ class AdminService {
     startDate?: string;
     endDate?: string;
   }): Promise<{ success: boolean; downloadUrl?: string }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance/export?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to export seller performance: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in exportSellerPerformance:', error);
+      return { success: false };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/sellers/performance/export?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to export seller performance');
-    }
-
-    return response.json();
   }
 
   // Dispute Resolution
@@ -338,58 +385,68 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ disputes: DisputeCase[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
-      });
-    }
-
     try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
       const response = await fetch(`${this.baseUrl}/api/admin/disputes?${params}`, {
         headers: this.getHeaders(),
       });
 
-      const data = await response.json();
-
-      // Handle error responses gracefully - return empty results
-      if (!response.ok || !data.success) {
-        console.warn('Disputes API error:', data.error?.message || 'Unknown error');
-        return { disputes: [], total: 0, page: 1, totalPages: 0 };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch disputes: ${response.status} ${response.statusText}`);
       }
 
+      const data = await response.json();
       return data.data || { disputes: [], total: 0, page: 1, totalPages: 0 };
     } catch (error) {
-      console.error('Failed to fetch disputes:', error);
-      // Return empty state instead of throwing
+      console.error('Error in getDisputes:', error);
+      // Return empty state instead of throwing to maintain UI stability
       return { disputes: [], total: 0, page: 1, totalPages: 0 };
     }
   }
 
   async getDispute(disputeId: string): Promise<DisputeCase> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch dispute');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch dispute: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getDispute:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async assignDispute(disputeId: string, assigneeId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/assign`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ assigneeId }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/assign`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ assigneeId }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to assign dispute');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to assign dispute: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in assignDispute:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async resolveDispute(disputeId: string, resolution: {
@@ -398,90 +455,127 @@ class AdminService {
     reasoning: string;
     adminNotes?: string;
   }): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/resolve`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(resolution),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/resolve`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(resolution),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to resolve dispute');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to resolve dispute: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in resolveDispute:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async addDisputeNote(disputeId: string, note: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/notes`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ note }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/notes`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ note }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to add dispute note');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to add dispute note: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in addDisputeNote:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   // Evidence Management
   async uploadDisputeEvidence(disputeId: string, formData: FormData): Promise<{ success: boolean; evidence: any[] }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence`, {
-      method: 'POST',
-      headers: {
-        ...this.getHeaders(),
-        // Remove Content-Type to let browser set it with boundary for FormData
-        'Content-Type': undefined as any
-      },
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence`, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(),
+          // Remove Content-Type to let browser set it with boundary for FormData
+          'Content-Type': undefined as any
+        },
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to upload evidence');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to upload evidence: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in uploadDisputeEvidence:', error);
+      return { success: false, evidence: [] };
     }
-
-    return response.json();
   }
 
   async deleteDisputeEvidence(disputeId: string, evidenceId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to delete evidence');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete evidence: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in deleteDisputeEvidence:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async updateEvidenceStatus(disputeId: string, evidenceId: string, status: 'verified' | 'rejected' | 'pending'): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
-      method: 'PATCH',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ status }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/evidence/${evidenceId}/status`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ status }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to update evidence status');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update evidence status: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in updateEvidenceStatus:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   // Communication Thread
   async getDisputeMessages(disputeId: string): Promise<{ messages: any[] }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch dispute messages');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch dispute messages: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getDisputeMessages:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { messages: [] };
     }
-
-    return response.json();
   }
 
   async sendDisputeMessage(disputeId: string, messageData: {
@@ -489,17 +583,23 @@ class AdminService {
     sender: string;
     isInternal?: boolean;
   }): Promise<{ success: boolean; message: any }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(messageData),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/disputes/${disputeId}/messages`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(messageData),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to send message');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to send message: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in sendDisputeMessage:', error);
+      return { success: false, message: null };
     }
-
-    return response.json();
   }
 
   // User Management
@@ -518,22 +618,29 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ users: AuthUser[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/users?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch users: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getUsers:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { users: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/users?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch users');
-    }
-
-    return response.json();
   }
 
   async suspendUser(userId: string, suspension: {
@@ -541,56 +648,81 @@ class AdminService {
     duration?: number; // days
     permanent?: boolean;
   }): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/suspend`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(suspension),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/suspend`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(suspension),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to suspend user');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to suspend user: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in suspendUser:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async unsuspendUser(userId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/unsuspend`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/unsuspend`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to unsuspend user');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to unsuspend user: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in unsuspendUser:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async updateUserRole(userId: string, role: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/role`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ role }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/role`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ role }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to update user role');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to update user role: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in updateUserRole:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async getUserActivity(userId: string): Promise<{ activities: any[] }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/activity`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/users/${userId}/activity`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch user activity');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch user activity: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getUserActivity:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { activities: [] };
     }
-
-    return response.json();
   }
 
   async exportUsers(filters?: {
@@ -599,22 +731,28 @@ class AdminService {
     kycStatus?: string;
     search?: string;
   }): Promise<{ success: boolean; downloadUrl?: string }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/users/export?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to export users: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in exportUsers:', error);
+      return { success: false };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/users/export?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to export users');
-    }
-
-    return response.json();
   }
 
   // Moderation History
@@ -627,35 +765,48 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ actions: any[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch moderation history: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getModerationHistory:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { actions: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch moderation history');
-    }
-
-    return response.json();
   }
 
   async undoModerationAction(actionId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/${actionId}/undo`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/${actionId}/undo`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to undo moderation action');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to undo moderation action: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in undoModerationAction:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async exportModerationHistory(filters?: {
@@ -664,35 +815,47 @@ class AdminService {
     dateFrom?: string;
     dateTo?: string;
   }): Promise<{ success: boolean; downloadUrl?: string }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== '') params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== '') params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/export?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to export moderation history: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in exportModerationHistory:', error);
+      return { success: false };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/history/export?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to export moderation history');
-    }
-
-    return response.json();
   }
 
   async deleteModerationItem(itemId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/moderation/${itemId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to delete moderation item');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to delete moderation item: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in deleteModerationItem:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   // Content Management
@@ -701,17 +864,23 @@ class AdminService {
     reason?: string;
     notes?: string;
   }): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/content/${contentId}/moderate`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(action),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/content/${contentId}/moderate`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(action),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to moderate content');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to moderate content: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in moderateContent:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   // Analytics and Reporting
@@ -724,15 +893,30 @@ class AdminService {
     totalSellers: number;
     recentActions: AdminAction[];
   }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/stats`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch admin stats');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch admin stats: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAdminStats:', error);
+      // Return default state instead of throwing to maintain UI stability
+      return {
+        pendingModerations: 0,
+        pendingSellerApplications: 0,
+        openDisputes: 0,
+        suspendedUsers: 0,
+        totalUsers: 0,
+        totalSellers: 0,
+        recentActions: []
+      };
     }
-
-    return response.json();
   }
 
   async getAuditLog(filters?: {
@@ -744,119 +928,174 @@ class AdminService {
     page?: number;
     limit?: number;
   }): Promise<{ actions: AdminAction[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/audit?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch audit log: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAuditLog:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { actions: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/audit?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch audit log');
-    }
-
-    return response.json();
   }
 
   // AI Insights and Predictive Analytics
   async getAIInsightsReport(timeframe: string = 'daily'): Promise<ComprehensiveInsightReport> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/report?timeframe=${timeframe}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/report?timeframe=${timeframe}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch AI insights report');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch AI insights report: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAIInsightsReport:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getAIEngineStatus(): Promise<EngineStatus> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/status`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/status`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch AI engine status');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch AI engine status: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAIEngineStatus:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getPredictiveAnalytics(type: string, horizon: number = 7): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=${type}&horizon=${horizon}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch predictive analytics');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch predictive analytics: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getPredictiveAnalytics:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getContentDemandPredictions(timeframe: 'week' | 'month' | 'quarter' = 'month'): Promise<ContentDemandPrediction[]> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_demand&timeframe=${timeframe}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch content demand predictions');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch content demand predictions: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getContentDemandPredictions:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getUserBehaviorPredictions(horizon: number = 7): Promise<UserBehaviorPrediction[]> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=user_behavior&horizon=${horizon}`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch user behavior predictions');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch user behavior predictions: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getUserBehaviorPredictions:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getContentPerformancePredictions(): Promise<ContentPerformancePrediction[]> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_performance`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/predictions?type=content_performance`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch content performance predictions');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch content performance predictions: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getContentPerformancePredictions:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getAnomalies(): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/anomalies`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/anomalies`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch anomalies');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch anomalies: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAnomalies:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   async getTrendAnalysis(): Promise<any[]> {
-    const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/trends`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/ai-insights/trends`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch trend analysis');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch trend analysis: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getTrendAnalysis:', error);
+      throw error; // Re-throw for critical operations
     }
-
-    return response.json();
   }
 
   // Admin Notification Management
@@ -864,100 +1103,150 @@ class AdminService {
     limit?: number;
     offset?: number;
   }): Promise<{ notifications: AdminNotification[]; total: number; page: number; totalPages: number }> {
-    const params = new URLSearchParams();
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) params.append(key, value.toString());
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) params.append(key, value.toString());
+        });
+      }
+
+      const response = await fetch(`${this.baseUrl}/api/admin/notifications?${params}`, {
+        headers: this.getHeaders(),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch admin notifications: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getAdminNotifications:', error);
+      // Return empty state instead of throwing to maintain UI stability
+      return { notifications: [], total: 0, page: 1, totalPages: 0 };
     }
-
-    const response = await fetch(`${this.baseUrl}/api/admin/notifications?${params}`, {
-      headers: this.getHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch admin notifications');
-    }
-
-    return response.json();
   }
 
   async markNotificationAsRead(notificationId: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/notifications/${notificationId}/read`, {
-      method: 'PATCH',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to mark notification as read');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to mark notification as read: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in markNotificationAsRead:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async markAllNotificationsAsRead(): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/notifications/read-all`, {
-      method: 'PATCH',
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/notifications/read-all`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to mark all notifications as read');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to mark all notifications as read: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in markAllNotificationsAsRead:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async getUnreadNotificationCount(): Promise<{ count: number }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/notifications/unread-count`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/notifications/unread-count`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch unread notification count');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch unread notification count: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getUnreadNotificationCount:', error);
+      // Return default state instead of throwing to maintain UI stability
+      return { count: 0 };
     }
-
-    return response.json();
   }
 
   async getNotificationStats(): Promise<NotificationStats> {
-    const response = await fetch(`${this.baseUrl}/api/admin/notifications/stats`, {
-      headers: this.getHeaders(),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/notifications/stats`, {
+        headers: this.getHeaders(),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch notification stats');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to fetch notification stats: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in getNotificationStats:', error);
+      // Return default state instead of throwing to maintain UI stability
+      return { 
+        total: 0, 
+        unread: 0, 
+        byType: {}, 
+        byCategory: {} 
+      };
     }
-
-    return response.json();
   }
 
   async registerMobilePushToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/register`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ token, platform }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/register`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ token, platform }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to register mobile push token');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to register mobile push token: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in registerMobilePushToken:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 
   async unregisterMobilePushToken(token: string): Promise<{ success: boolean }> {
-    const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/unregister`, {
-      method: 'DELETE',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ token }),
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/api/admin/mobile/push/unregister`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ token }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to unregister mobile push token');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Failed to unregister mobile push token: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error in unregisterMobilePushToken:', error);
+      return { success: false };
     }
-
-    return response.json();
   }
 }
 

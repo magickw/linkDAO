@@ -90,6 +90,10 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
   private scoringSystem: PaymentMethodScoringSystem;
   private dynamicEngine: DynamicPrioritizationEngine;
   private stablecoinRules: StablecoinPrioritizationRules;
+  private failureCount = 0;
+  private lastFailureTime: number | null = null;
+  private readonly MAX_FAILURES = 5;
+  private readonly FAILURE_RESET_TIME = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     costCalculator: ICostEffectivenessCalculator,
@@ -108,7 +112,52 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     this.stablecoinRules = new StablecoinPrioritizationRules();
   }
 
+  private async shouldAttemptRequest(): Promise<boolean> {
+    const now = Date.now();
+    
+    // Reset failure count if enough time has passed
+    if (this.lastFailureTime && (now - this.lastFailureTime) > this.FAILURE_RESET_TIME) {
+      this.failureCount = 0;
+      this.lastFailureTime = null;
+    }
+    
+    // Prevent requests if too many failures recently
+    if (this.failureCount >= this.MAX_FAILURES) {
+      console.warn('Circuit breaker open: Too many recent failures');
+      return false;
+    }
+    
+    return true;
+  }
+
+  private async withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+    let lastError: Error;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        this.failureCount++;
+        this.lastFailureTime = Date.now();
+        
+        if (i < maxRetries - 1) {
+          // Exponential backoff: 1s, 2s, 4s, etc.
+          const delay = Math.pow(2, i) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError!;
+  }
+
   async prioritizePaymentMethods(context: PrioritizationContext): Promise<PrioritizationResult> {
+    // Check circuit breaker
+    if (!(await this.shouldAttemptRequest())) {
+      throw new Error('Too many recent failures, request blocked by circuit breaker');
+    }
+
     const startTime = Date.now();
     
     try {
@@ -121,15 +170,19 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
         return cached;
       }
 
-      // Use performance optimizer for parallel cost calculations
-      const costResults = await prioritizationPerformanceOptimizer.parallelCostCalculation(
-        context.availablePaymentMethods,
-        context.userContext,
-        context.transactionAmount
+      // Use performance optimizer for parallel cost calculations with retry logic
+      const costResults = await this.withRetry(() => 
+        prioritizationPerformanceOptimizer.parallelCostCalculation(
+          context.availablePaymentMethods,
+          context.userContext,
+          context.transactionAmount
+        )
       );
 
       // Use the new dynamic prioritization engine with optimized cost data
-      const dynamicResult = await this.dynamicEngine.performDynamicPrioritization(context);
+      const dynamicResult = await this.withRetry(() => 
+        this.dynamicEngine.performDynamicPrioritization(context)
+      );
       
       // Apply stablecoin prioritization rules
       const stablecoinResult = this.stablecoinRules.applyStablecoinPrioritization(
@@ -173,15 +226,23 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
       };
 
       // Cache the result for future use
-      await prioritizationPerformanceOptimizer.cachePrioritizationResults(
-        contextKey,
-        prioritizedMethods,
-        context.userContext
+      await this.withRetry(() => 
+        prioritizationPerformanceOptimizer.cachePrioritizationResults(
+          contextKey,
+          prioritizedMethods,
+          context.userContext
+        )
       );
+
+      // Reset failure count on success
+      this.failureCount = 0;
+      this.lastFailureTime = null;
 
       return result;
     } catch (error) {
       console.error('Error in payment method prioritization:', error);
+      this.failureCount++;
+      this.lastFailureTime = Date.now();
       throw new Error('Failed to prioritize payment methods');
     }
   }

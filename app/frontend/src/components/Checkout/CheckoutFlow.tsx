@@ -101,7 +101,12 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
   // Load payment prioritization on mount
   useEffect(() => {
-    loadPaymentPrioritization();
+    // Debounce the load function to prevent excessive calls
+    const timeoutId = setTimeout(() => {
+      loadPaymentPrioritization();
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [cartState.items, address, chainId]);
 
   const loadPaymentPrioritization = async () => {

@@ -77,6 +77,10 @@ export class UnifiedCheckoutService {
   private stripePaymentService: StripePaymentService;
   private exchangeRateService: ExchangeRateService;
   private apiBaseUrl: string;
+  private failureCount = 0;
+  private lastFailureTime: number | null = null;
+  private readonly MAX_FAILURES = 5;
+  private readonly FAILURE_RESET_TIME = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     cryptoPaymentService: CryptoPaymentService,
@@ -88,21 +92,68 @@ export class UnifiedCheckoutService {
     this.apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   }
 
+  private async shouldAttemptRequest(): Promise<boolean> {
+    const now = Date.now();
+    
+    // Reset failure count if enough time has passed
+    if (this.lastFailureTime && (now - this.lastFailureTime) > this.FAILURE_RESET_TIME) {
+      this.failureCount = 0;
+      this.lastFailureTime = null;
+    }
+    
+    // Prevent requests if too many failures recently
+    if (this.failureCount >= this.MAX_FAILURES) {
+      console.warn('Circuit breaker open: Too many recent failures');
+      return false;
+    }
+    
+    return true;
+  }
+
+  private async withRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
+    let lastError: Error;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        this.failureCount++;
+        this.lastFailureTime = Date.now();
+        
+        if (i < maxRetries - 1) {
+          // Exponential backoff: 1s, 2s, 4s, etc.
+          const delay = Math.pow(2, i) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError!;
+  }
+
   /**
    * Get checkout recommendations with hybrid path analysis
    */
   async getCheckoutRecommendation(request: UnifiedCheckoutRequest): Promise<CheckoutRecommendation> {
+    // Check circuit breaker
+    if (!(await this.shouldAttemptRequest())) {
+      throw new Error('Too many recent failures, request blocked by circuit breaker');
+    }
+
     try {
       // Convert BigInt values to strings before serialization
       const serializedRequest = convertBigIntToStrings(request);
 
-      const response = await fetch(`${this.apiBaseUrl}/api/hybrid-payment/recommend-path`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(serializedRequest)
-      });
+      const response = await this.withRetry(() => 
+        fetch(`${this.apiBaseUrl}/api/hybrid-payment/recommend-path`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(serializedRequest)
+        })
+      );
 
       if (!response.ok) {
         throw new Error('Failed to get payment recommendation');
@@ -150,6 +201,8 @@ export class UnifiedCheckoutService {
       };
     } catch (error) {
       console.error('Error getting checkout recommendation:', error);
+      this.failureCount++;
+      this.lastFailureTime = Date.now();
       
       // Return default recommendation on error
       return {

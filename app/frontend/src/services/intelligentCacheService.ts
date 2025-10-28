@@ -15,29 +15,29 @@ import {
 // Cache configuration constants
 const CACHE_CONFIG = {
   GAS_ESTIMATES: {
-    TTL: 30 * 1000, // 30 seconds
+    TTL: 5 * 60 * 1000, // 5 minutes (increased from 30 seconds)
     MAX_ENTRIES: 100,
-    STALE_WHILE_REVALIDATE: 60 * 1000 // 1 minute
+    STALE_WHILE_REVALIDATE: 10 * 60 * 1000 // 10 minutes
   },
   EXCHANGE_RATES: {
-    TTL: 60 * 1000, // 1 minute
+    TTL: 10 * 60 * 1000, // 10 minutes (increased from 1 minute)
     MAX_ENTRIES: 200,
-    STALE_WHILE_REVALIDATE: 300 * 1000 // 5 minutes
+    STALE_WHILE_REVALIDATE: 30 * 60 * 1000 // 30 minutes
   },
   USER_PREFERENCES: {
-    TTL: 300 * 1000, // 5 minutes
+    TTL: 10 * 60 * 1000, // 10 minutes (increased from 5 minutes)
     MAX_ENTRIES: 1000,
-    STALE_WHILE_REVALIDATE: 600 * 1000 // 10 minutes
+    STALE_WHILE_REVALIDATE: 20 * 60 * 1000 // 20 minutes
   },
   NETWORK_CONDITIONS: {
-    TTL: 15 * 1000, // 15 seconds
+    TTL: 2 * 60 * 1000, // 2 minutes (increased from 15 seconds)
     MAX_ENTRIES: 50,
-    STALE_WHILE_REVALIDATE: 30 * 1000 // 30 seconds
+    STALE_WHILE_REVALIDATE: 5 * 60 * 1000 // 5 minutes
   },
   PRIORITIZATION_RESULTS: {
-    TTL: 45 * 1000, // 45 seconds
+    TTL: 2 * 60 * 1000, // 2 minutes (increased from 45 seconds)
     MAX_ENTRIES: 500,
-    STALE_WHILE_REVALIDATE: 90 * 1000 // 1.5 minutes
+    STALE_WHILE_REVALIDATE: 5 * 60 * 1000 // 5 minutes
   }
 };
 

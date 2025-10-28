@@ -1,49 +1,9 @@
 import { signMessage } from '@wagmi/core';
 import { config } from '@/lib/rainbowkit';
 import { ENV_CONFIG } from '@/config/environment';
+import { AuthUser } from '@/types/auth';
 
-export interface AuthUser {
-  id: string;
-  address: string;
-  handle: string;
-  ens?: string;
-  email?: string;
-  kycStatus: 'none' | 'pending' | 'basic' | 'intermediate' | 'advanced';
-  kycTier?: string;
-  role: 'user' | 'moderator' | 'admin' | 'super_admin';
-  permissions?: string[];
-  isSuspended?: boolean;
-  suspensionReason?: string;
-  suspensionExpiresAt?: string;
-  preferences?: {
-    notifications?: {
-      email?: boolean;
-      push?: boolean;
-      inApp?: boolean;
-    };
-    privacy?: {
-      showEmail?: boolean;
-      showTransactions?: boolean;
-      allowDirectMessages?: boolean;
-    };
-    trading?: {
-      autoApproveSmallAmounts?: boolean;
-      defaultSlippage?: number;
-      preferredCurrency?: string;
-    };
-  };
-  privacySettings?: {
-    profileVisibility?: 'public' | 'private' | 'friends';
-    activityVisibility?: 'public' | 'private' | 'friends';
-    contactVisibility?: 'public' | 'private' | 'friends';
-  };
-  sessionInfo?: {
-    lastLogin?: string;
-    loginCount?: number;
-    deviceInfo?: any;
-  };
-  createdAt: string;
-}
+// Remove the local AuthUser interface since we're importing it from types/auth
 
 export interface AuthResponse {
   success: boolean;
@@ -264,29 +224,10 @@ class AuthService {
           kycStatus: 'none',
           role: 'user',
           permissions: [],
-          preferences: {
-            notifications: {
-              email: true,
-              push: true,
-              inApp: true,
-            },
-            privacy: {
-              showEmail: false,
-              showTransactions: true,
-              allowDirectMessages: true,
-            },
-            trading: {
-              autoApproveSmallAmounts: false,
-              defaultSlippage: 0.5,
-              preferredCurrency: 'USD',
-            },
-          },
-          privacySettings: {
-            profileVisibility: 'public',
-            activityVisibility: 'public',
-            contactVisibility: 'friends',
-          },
+          isActive: true,
+          isSuspended: false,
           createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         };
       }
     }
@@ -323,7 +264,11 @@ class AuthService {
             handle: `user_${address.slice(0, 6)}`,
             kycStatus: 'none',
             role: 'user',
+            permissions: [],
+            isActive: true,
+            isSuspended: false,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           } as AuthUser;
         }
       }
@@ -540,29 +485,10 @@ class AuthService {
       kycStatus: 'none',
       role: 'user',
       permissions: [],
-      preferences: {
-        notifications: {
-          email: true,
-          push: true,
-          inApp: true,
-        },
-        privacy: {
-          showEmail: false,
-          showTransactions: true,
-          allowDirectMessages: true,
-        },
-        trading: {
-          autoApproveSmallAmounts: false,
-          defaultSlippage: 0.5,
-          preferredCurrency: 'USD',
-        },
-      },
-      privacySettings: {
-        profileVisibility: 'public',
-        activityVisibility: 'public',
-        contactVisibility: 'friends',
-      },
+      isActive: true,
+      isSuspended: false,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     this.setToken(mockToken);
@@ -608,19 +534,21 @@ class AuthService {
       if (!response.ok || !data.success) {
         return {
           success: false,
-          error: data.message || 'Login failed',
+          error: data.message || data.error || 'Login failed',
         };
       }
 
-      this.token = data.data.token;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', data.data.token);
+      if (data.data && data.data.token) {
+        this.token = data.data.token;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', data.data.token);
+        }
       }
 
       return {
         success: true,
-        token: data.data.token,
-        user: data.data.user,
+        token: data.data?.token,
+        user: data.data?.user,
       };
     } catch (error) {
       console.error('Admin login error:', error);

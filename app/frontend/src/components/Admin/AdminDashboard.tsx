@@ -17,10 +17,14 @@ import {
   Phone,
   HelpCircle,
   LineChart,
-  Brain
+  Brain,
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { usePermissions } from '@/hooks/useAuth';
 import { adminService } from '@/services/adminService';
+import { enhancedAdminService } from '@/services/enhancedAdminService';
 import { Button, GlassPanel } from '@/design-system';
 import { ModerationQueue } from './ModerationQueue';
 import { ModerationHistory } from './ModerationHistory';
@@ -54,6 +58,8 @@ export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const webSocketManagerRef = useRef<any>(null);
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export function AdminDashboard() {
     
     // Set up periodic refresh as fallback
     const interval = setInterval(() => {
-      if (!webSocketManagerRef.current || !webSocketManagerRef.current.isConnected) {
+      if (connectionStatus !== 'connected') {
         loadStats();
       }
     }, 30000); // Refresh every 30 seconds if WebSocket is not available
@@ -81,12 +87,14 @@ export function AdminDashboard() {
         webSocketManagerRef.current.disconnect();
       }
     };
-  }, [isAdmin, router]);
+  }, [isAdmin, router, connectionStatus]);
 
   const initializeWebSocket = async () => {
     if (!user) return;
     
     try {
+      setConnectionStatus('connecting');
+      
       // Create admin user object for WebSocket service
       // Map user role to valid admin roles for WebSocket service
       const roleMap: Record<string, 'super_admin' | 'admin' | 'moderator' | 'analyst'> = {
@@ -109,52 +117,77 @@ export function AdminDashboard() {
         permissions: user.permissions || []
       };
       
-      // Initialize WebSocket manager
-      const manager = await initializeAdminWebSocketManager(adminUser);
-      webSocketManagerRef.current = manager;
-      
-      // Set up event listeners for real-time updates
-      manager.on('dashboard_update', (data) => {
-        if (data.data && activeTab === 'overview') {
-          // Update stats with real-time data
-          setStats(prevStats => {
-            if (!prevStats) return prevStats;
+      // Initialize WebSocket manager with error handling
+      try {
+        const manager = await initializeAdminWebSocketManager(adminUser);
+        webSocketManagerRef.current = manager;
+        
+        // Set up event listeners for real-time updates
+        manager.on('dashboard_update', (data) => {
+          if (data.data && activeTab === 'overview') {
+            // Update stats with real-time data
+            setStats(prevStats => {
+              if (!prevStats) return prevStats;
+              
+              return {
+                ...prevStats,
+                pendingModerations: data.data.systemMetrics?.pendingModerations || prevStats.pendingModerations,
+                pendingSellerApplications: data.data.systemMetrics?.pendingSellerApplications || prevStats.pendingSellerApplications,
+                openDisputes: data.data.systemMetrics?.openDisputes || prevStats.openDisputes,
+                suspendedUsers: data.data.userMetrics?.suspendedUsers || prevStats.suspendedUsers,
+                totalUsers: data.data.userMetrics?.totalUsers || prevStats.totalUsers,
+                totalSellers: data.data.businessMetrics?.totalSellers || prevStats.totalSellers
+              };
+            });
             
-            return {
-              ...prevStats,
-              pendingModerations: data.data.systemMetrics?.pendingModerations || prevStats.pendingModerations,
-              pendingSellerApplications: data.data.systemMetrics?.pendingSellerApplications || prevStats.pendingSellerApplications,
-              openDisputes: data.data.systemMetrics?.openDisputes || prevStats.openDisputes,
-              suspendedUsers: data.data.userMetrics?.suspendedUsers || prevStats.suspendedUsers,
-              totalUsers: data.data.userMetrics?.totalUsers || prevStats.totalUsers,
-              totalSellers: data.data.businessMetrics?.totalSellers || prevStats.totalSellers
-            };
-          });
-        }
-      });
-      
-      manager.on('admin_alert', (alert) => {
-        // Handle real-time alerts
-        console.log('New admin alert:', alert);
-        // Could show a notification or update UI based on alert type
-      });
-      
-      console.log('Admin WebSocket connected successfully');
+            setLastUpdated(new Date());
+          }
+        });
+        
+        manager.on('admin_alert', (alert) => {
+          // Handle real-time alerts
+          console.log('New admin alert:', alert);
+          // Could show a notification or update UI based on alert type
+        });
+        
+        manager.onConnection((connected, health) => {
+          setConnectionStatus(connected ? 'connected' : 'disconnected');
+          if (connected) {
+            setLastUpdated(new Date());
+          }
+        });
+        
+        console.log('Admin WebSocket connected successfully');
+        setConnectionStatus('connected');
+      } catch (managerError) {
+        console.error('Failed to initialize admin WebSocket manager:', managerError);
+        setConnectionStatus('disconnected');
+      }
     } catch (error) {
       console.error('Failed to initialize admin WebSocket:', error);
-      // Fall back to polling
+      setConnectionStatus('disconnected');
     }
   };
 
   const loadStats = async () => {
     try {
-      const data = await adminService.getAdminStats();
-      setStats(data);
+      setLoading(true);
+      const result = await enhancedAdminService.getAdminStats();
+      if (result.success) {
+        setStats(result.data);
+        setLastUpdated(new Date());
+      } else {
+        console.error('Failed to load admin stats:', result.error);
+      }
     } catch (error) {
       console.error('Failed to load admin stats:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    loadStats();
   };
 
   if (!isAdmin()) {
@@ -180,7 +213,7 @@ export function AdminDashboard() {
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
   const StatCard = ({ title, value, icon: Icon, color, trend }: any) => (
-    <GlassPanel className="p-4 sm:p-6">
+    <GlassPanel className="p-4 sm:p-6 hover:bg-white/15 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-gray-400 text-xs sm:text-sm truncate">{title}</p>
@@ -203,15 +236,45 @@ export function AdminDashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Manage platform operations and user activities</p>
-          {webSocketManagerRef.current && (
-            <div className="flex items-center mt-2">
-              <div className={`w-3 h-3 rounded-full mr-2 ${webSocketManagerRef.current.isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-xs text-gray-300">
-                {webSocketManagerRef.current.isConnected ? 'Real-time updates enabled' : 'Connecting to real-time updates...'}
-              </span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Admin Dashboard</h1>
+              <p className="text-gray-400 mt-1 sm:mt-2 text-sm sm:text-base">Manage platform operations and user activities</p>
             </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                size="small"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden xs:inline">Refresh</span>
+              </Button>
+              <div className="flex items-center gap-2 text-sm">
+                {connectionStatus === 'connected' ? (
+                  <>
+                    <Wifi className="w-4 h-4 text-green-400" />
+                    <span className="text-green-400">Real-time</span>
+                  </>
+                ) : connectionStatus === 'connecting' ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-yellow-400">Connecting</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4 text-red-400" />
+                    <span className="text-red-400">Offline</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          {lastUpdated && (
+            <p className="text-gray-400 text-xs mt-2">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
           )}
         </div>
 
@@ -225,7 +288,7 @@ export function AdminDashboard() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                   activeTab === tab.id
-                    ? 'bg-purple-600 text-white'
+                    ? 'bg-purple-600 text-white shadow-lg'
                     : 'bg-white/10 text-gray-300 hover:bg-white/20'
                 }`}
               >
@@ -291,7 +354,14 @@ export function AdminDashboard() {
 
             {/* Recent Actions */}
             <GlassPanel className="p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4">Recent Admin Actions</h2>
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-lg sm:text-xl font-bold text-white">Recent Admin Actions</h2>
+                {stats?.recentActions && stats.recentActions.length > 0 && (
+                  <Button variant="outline" size="small">
+                    View All
+                  </Button>
+                )}
+              </div>
               {stats?.recentActions && stats.recentActions.length > 0 ? (
                 <div className="space-y-2 sm:space-y-3">
                   {stats.recentActions.slice(0, 10).map((action, index) => (

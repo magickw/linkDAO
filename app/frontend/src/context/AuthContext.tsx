@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAccount, useDisconnect } from 'wagmi';
-import { authService, AuthUser, KYCStatus } from '@/services/authService';
+import { authService, KYCStatus } from '@/services/authService';
+import { AuthUser } from '@/types/auth';
 import { UserRole, Permission } from '@/types/auth';
 
 interface AuthContextType {

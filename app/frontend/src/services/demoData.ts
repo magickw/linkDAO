@@ -1,4 +1,4 @@
-import { AuthUser } from '@/services/authService';
+import { AuthUser } from '@/types/auth';
 import { SellerProfile } from '@/types/seller';
 
 // Demo users with different roles
@@ -12,8 +12,11 @@ export const demoUsers: AuthUser[] = [
     kycStatus: 'advanced',
     role: 'super_admin',
     permissions: ['manage_users', 'manage_content', 'resolve_disputes', 'view_analytics', 'manage_sellers'],
-  createdAt: '2024-01-15T10:00:00Z',
-  sessionInfo: { lastLogin: '2024-09-18T14:30:00Z' }
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z',
+    sessionInfo: { lastLogin: '2024-09-18T14:30:00Z' }
   },
   {
     id: '2',
@@ -23,8 +26,11 @@ export const demoUsers: AuthUser[] = [
     kycStatus: 'intermediate',
     role: 'moderator',
     permissions: ['manage_content', 'resolve_disputes', 'manage_sellers'],
-  createdAt: '2024-02-20T09:15:00Z',
-  sessionInfo: { lastLogin: '2024-09-18T13:45:00Z' }
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2024-02-20T09:15:00Z',
+    updatedAt: '2024-02-20T09:15:00Z',
+    sessionInfo: { lastLogin: '2024-09-18T13:45:00Z' }
   },
   {
     id: '3',
@@ -33,8 +39,11 @@ export const demoUsers: AuthUser[] = [
     kycStatus: 'basic',
     role: 'user',
     permissions: [],
-  createdAt: '2024-03-10T16:20:00Z',
-  sessionInfo: { lastLogin: '2024-09-17T20:10:00Z' }
+    isActive: true,
+    isSuspended: false,
+    createdAt: '2024-03-10T16:20:00Z',
+    updatedAt: '2024-03-10T16:20:00Z',
+    sessionInfo: { lastLogin: '2024-09-17T20:10:00Z' }
   },
   {
     id: '4',
@@ -44,11 +53,13 @@ export const demoUsers: AuthUser[] = [
     kycStatus: 'none',
     role: 'user',
     permissions: [],
+    isActive: true,
     isSuspended: true,
     suspensionReason: 'Violation of community guidelines',
     suspensionExpiresAt: '2024-10-18T00:00:00Z',
-  createdAt: '2024-04-05T11:30:00Z',
-  sessionInfo: { lastLogin: '2024-09-15T08:20:00Z' }
+    createdAt: '2024-04-05T11:30:00Z',
+    updatedAt: '2024-04-05T11:30:00Z',
+    sessionInfo: { lastLogin: '2024-09-15T08:20:00Z' }
   }
 ];
 

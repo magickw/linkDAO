@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import { useRouter } from 'next/router';
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { Shield, AlertTriangle, Lock, Key, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { Shield, AlertTriangle, Lock, Key, UserCheck, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { Button, GlassPanel } from '@/design-system';
 import { useAuth } from '@/hooks/useAuth';
+import { authService } from '@/services/authService';
 
 const AdminLoginPage: NextPage = () => {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { connect, connectors, error: connectError, isPending } = useConnect();
   const { disconnect } = useDisconnect();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'wallet' | 'credentials'>('wallet');
   const [formData, setFormData] = useState({
@@ -20,6 +21,7 @@ const AdminLoginPage: NextPage = () => {
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Check if user is already authenticated and has admin role
   useEffect(() => {
@@ -46,17 +48,30 @@ const AdminLoginPage: NextPage = () => {
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement admin credentials login
-      // This would typically call an admin-specific auth endpoint
-      console.log('Credentials login:', formData.email);
+      const result = await authService.adminLogin(formData.email, formData.password);
       
-      // Placeholder: In production, this should call authService.adminLogin()
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      throw new Error('Credentials login not yet implemented. Please use wallet connection.');
+      if (result.success && result.user) {
+        // Refresh user context to get updated permissions
+        await refreshUser();
+        setSuccessMessage('Login successful! Redirecting to admin dashboard...');
+        
+        // Small delay to show success message
+        setTimeout(() => {
+          const isAdminUser = ['admin', 'super_admin', 'moderator'].includes(result.user!.role);
+          if (isAdminUser) {
+            const redirectTo = (router.query.redirect as string) || '/admin';
+            router.push(redirectTo);
+          } else {
+            setError('Your account does not have administrative privileges.');
+          }
+        }, 1500);
+      } else {
+        setError(result.error || 'Invalid credentials. Please try again.');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -202,6 +217,16 @@ const AdminLoginPage: NextPage = () => {
                 Email & Password
               </button>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="mb-6 bg-green-900/50 border border-green-500/50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-green-200 text-sm">{successMessage}</p>
+                </div>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
