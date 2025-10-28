@@ -11,7 +11,8 @@ import {
   MarketConditions,
   NetworkConditions,
   PrioritizationContext,
-  CostEstimate
+  CostEstimate,
+  AvailabilityStatus
 } from '../types/paymentPrioritization';
 import { PaymentMethodScoringSystem, ScoringComponents } from './paymentMethodScoringSystem';
 import { ICostEffectivenessCalculator } from './paymentMethodPrioritizationService';
@@ -445,9 +446,18 @@ export class DynamicPrioritizationEngine {
   private determineAvailabilityStatus(
     method: PaymentMethod,
     costEstimate: CostEstimate
-  ): any {
-    // Import the enum value - simplified for now
-    return 'available'; // Would use proper AvailabilityStatus enum
+  ): AvailabilityStatus {
+    // Fiat and x402 are always available
+    if (method.type === PaymentMethodType.FIAT_STRIPE || method.type === PaymentMethodType.X402) {
+      return AvailabilityStatus.AVAILABLE;
+    }
+
+    // Add other availability checks here, for example:
+    // if (costEstimate.gasFee > someThreshold) {
+    //   return AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES;
+    // }
+
+    return AvailabilityStatus.AVAILABLE;
   }
 
   private generateRecommendationReason(

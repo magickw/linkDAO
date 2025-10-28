@@ -44,6 +44,7 @@ import {
   UserContext,
   MarketConditions
 } from '@/types/paymentPrioritization';
+import { useDebounce } from '@/hooks/useDebounce';
 import { toast } from 'react-hot-toast';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
 
@@ -99,40 +100,15 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     );
   });
 
-  // Load payment prioritization on mount
-  useEffect(() => {
-    // Prevent excessive calls by tracking the last call
-    let isMounted = true;
-    
-    // Track the last values to prevent unnecessary calls
-    const lastCallData = {
-      itemsCount: cartState.items.length,
-      address: address,
-      chainId: chainId
-    };
-    
-    // Debounce the load function to prevent excessive calls
-    const timeoutId = setTimeout(() => {
-      // Check if we already have a prioritization result to avoid unnecessary calls
-      if (!prioritizationResult && isMounted) {
-        loadPaymentPrioritization();
-      } else if (isMounted) {
-        // If we already have results, only reload if key dependencies changed significantly
-        const hasItemsChanged = cartState.items.length !== lastCallData.itemsCount;
-        const hasWalletChanged = address !== lastCallData.address;
-        const hasChainChanged = chainId !== lastCallData.chainId;
-        
-        if (hasItemsChanged || hasWalletChanged || hasChainChanged) {
-          loadPaymentPrioritization();
-        }
-      }
-    }, 1000); // Increased debounce to 1 second
+  // Debounce cart, address, and chainId changes
+  const debouncedCartItemsLength = useDebounce(cartState.items.length, 1000);
+  const debouncedAddress = useDebounce(address, 1000);
+  const debouncedChainId = useDebounce(chainId, 1000);
 
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-    };
-  }, [cartState.items.length, address, chainId, prioritizationResult]);
+  // Load payment prioritization when debounced values change
+  useEffect(() => {
+    loadPaymentPrioritization();
+  }, [debouncedCartItemsLength, debouncedAddress, debouncedChainId]);
 
   const loadPaymentPrioritization = async () => {
     if (cartState.items.length === 0) return;
