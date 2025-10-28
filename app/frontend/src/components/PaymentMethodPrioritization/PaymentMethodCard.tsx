@@ -197,68 +197,21 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         </div>
       </div>
 
-      {/* Cost Information */}
-      {showCostBreakdown && (
-        <div className="mb-3 p-3 bg-white/5 rounded-lg">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-white/80">Total Cost</span>
-            <span className={`text-lg font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
-              {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
-            </span>
-          </div>
-          
-          <div className="space-y-1 text-xs text-white/70">
-            <div className="flex justify-between">
-              <span>Base Amount</span>
-              <span>{formatCurrency(costEstimate.baseCost, costEstimate.currency)}</span>
-            </div>
-            {costEstimate.gasFee > 0 && (
-              <div className="flex justify-between">
-                <span>Gas Fee</span>
-                <span className={costEstimate.gasFee > 25 ? 'text-orange-400 font-medium' : ''}>
-                  {formatCurrency(costEstimate.gasFee, costEstimate.currency)}
-                </span>
-              </div>
-            )}
-            {costEstimate.breakdown.platformFee && (
-              <div className="flex justify-between">
-                <span>Platform Fee</span>
-                <span>{formatCurrency(costEstimate.breakdown.platformFee, costEstimate.currency)}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
-            <span className="text-xs text-white/60">Est. Time</span>
-            <span className="text-xs font-medium text-white">
-              {isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}
-            </span>
+      {/* Cost Information - Simplified */}
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <span className="text-sm text-white/60">Total Cost</span>
+          <div className={`text-xl font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+            {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
           </div>
         </div>
-      )}
-
-      {/* Recommendation Reason */}
-      <div className="mb-3">
-        <p className={`text-sm ${isDisabled ? 'text-white/40' : 'text-white/80'}`}>
-          {recommendationReason}
-        </p>
+        <div className="text-right">
+          <span className="text-sm text-white/60">Est. Time</span>
+          <div className="text-sm font-medium text-white">
+            {isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}
+          </div>
+        </div>
       </div>
-
-      {/* Benefits */}
-      {benefits && benefits.length > 0 && (
-        <div className="mb-3">
-          <div className="flex flex-wrap gap-1">
-            {benefits.map((benefit, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 text-xs bg-green-500/20 text-green-300 rounded-full"
-              >
-                ✓ {benefit}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Warnings */}
       {warnings && warnings.length > 0 && (
@@ -275,23 +228,6 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           </div>
         </div>
       )}
-
-      {/* Confidence Indicator */}
-      <div className="flex items-center justify-between text-xs text-white/50">
-        <span>Confidence</span>
-        <div className="flex items-center space-x-1">
-          <div className="w-16 h-1 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                costEstimate.confidence >= 0.8 ? 'bg-green-500' :
-                costEstimate.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'
-              }`}
-              style={{ width: `${costEstimate.confidence * 100}%` }}
-            />
-          </div>
-          <span>{Math.round(costEstimate.confidence * 100)}%</span>
-        </div>
-      </div>
 
       {/* Selection Indicator */}
       {isSelected && (

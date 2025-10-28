@@ -121,22 +121,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
 
   const getLayoutClasses = (): string => {
     if (isMobile) {
-      return 'space-y-3';
+      return 'flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent';
     }
 
-    if (layout === 'list') {
-      return 'space-y-3';
-    }
-
-    // Grid layout
-    const methodCount = displayedMethods.length;
-    if (methodCount <= 2) {
-      return 'grid grid-cols-1 md:grid-cols-2 gap-4';
-    } else if (methodCount <= 4) {
-      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4';
-    } else {
-      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
-    }
+    // Always use horizontal layout (grid with multiple columns)
+    return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
   };
 
   const recommendedMethod = getRecommendedMethod();
@@ -181,28 +170,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         )}
       </div>
 
-      {/* Recommendations */}
-      {showRecommendations && prioritizationResult.recommendations.length > 0 && (
-        <div className="mb-6 p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-300 mb-2">
-            💡 Recommendations
-          </h3>
-          <div className="space-y-2">
-            {prioritizationResult.recommendations.map((rec, index) => (
-              <div key={index} className="text-sm text-blue-200">
-                <span className="font-medium">{rec.type.replace('_', ' ').toUpperCase()}:</span>{' '}
-                {rec.message}
-                {rec.potentialSavings && (
-                  <span className="ml-2 px-2 py-1 bg-green-500/20 text-green-300 rounded-full text-xs">
-                    Save ${rec.potentialSavings.toFixed(2)}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Warnings */}
       {showWarnings && prioritizationResult.warnings.length > 0 && (
         <div className="mb-6 p-4 bg-orange-500/20 border border-orange-400/30 rounded-lg">
@@ -240,7 +207,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 isRecommended={recommendedMethod?.method.id === method.method.id}
                 onSelect={handleMethodSelect}
                 showCostBreakdown={showCostBreakdown && (viewMode === 'detailed' || isMobile)}
-                className={isMobile ? 'w-full' : ''}
+                className={isMobile ? 'flex-shrink-0 w-80 snap-start' : ''}
               />
             ))}
           </div>
@@ -275,7 +242,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               }
             </button>
           </div>
-          
+
           <div className={getLayoutClasses()}>
             {unavailableMethods.map((method) => (
               <PaymentMethodCard
@@ -285,11 +252,11 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 isRecommended={false}
                 onSelect={() => {}} // Disabled
                 showCostBreakdown={
-                  showCostBreakdown && 
+                  showCostBreakdown &&
                   (viewMode === 'detailed' || isMobile) &&
                   expandedMethods.has(method.method.id)
                 }
-                className={isMobile ? 'w-full' : ''}
+                className={isMobile ? 'flex-shrink-0 w-80 snap-start' : ''}
               />
             ))}
           </div>

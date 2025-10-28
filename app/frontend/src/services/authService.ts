@@ -42,13 +42,21 @@ class AuthService {
    */
   async getNonce(address: string): Promise<{ nonce: string; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/auth/nonce/${address}`);
+      const response = await fetch(`${this.baseUrl}/api/auth/nonce`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: address
+        }),
+      });
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to get nonce');
       }
-      
+
       return { nonce: data.nonce, message: data.message };
     } catch (error) {
       // If backend is unavailable, return mock nonce

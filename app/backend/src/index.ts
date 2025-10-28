@@ -9,7 +9,6 @@ dotenv.config();
 // Import security configuration and middleware
 import { validateSecurityConfig } from './config/securityConfig';
 import {
-  corsMiddleware,
   helmetMiddleware,
   ddosProtection,
   requestFingerprinting,
@@ -19,6 +18,8 @@ import {
   fileUploadSecurity,
   apiRateLimit,
 } from './middleware/securityMiddleware';
+// Import proper CORS middleware with environment-aware configuration
+import { corsMiddleware } from './middleware/corsMiddleware';
 
 // Import new marketplace infrastructure
 import { 
