@@ -140,6 +140,13 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       const result = await prioritizationService.prioritizePaymentMethods(context);
       setPrioritizationResult(result);
 
+      console.log('💳 Prioritization result:', {
+        totalMethods: result.prioritizedMethods.length,
+        availableMethods: result.prioritizedMethods.filter(m => m.availabilityStatus === 'available').length,
+        fiatMethod: result.prioritizedMethods.find(m => m.method.type === PaymentMethodType.FIAT_STRIPE),
+        defaultMethod: result.defaultMethod?.method.name
+      });
+
       // Pre-select default method (but don't auto-advance)
       if (result.defaultMethod) {
         setSelectedPaymentMethod(result.defaultMethod);
@@ -198,16 +205,18 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       });
     });
 
-    // Add Fiat payment option - Ensure this is properly included
+    // Add Fiat payment option - Always available regardless of wallet connection
     methods.push({
       id: 'stripe-fiat',
       type: PaymentMethodType.FIAT_STRIPE,
       name: 'Credit/Debit Card',
-      description: 'Pay with your credit or debit card via Stripe',
+      description: 'Pay with credit or debit card - No crypto wallet needed',
       chainId: 0, // Not applicable for fiat
       enabled: true,
-      supportedNetworks: []
+      supportedNetworks: [1, 137, 42161, 8453, 11155111, 84532] // Available on all networks
     });
+
+    console.log('✅ Available payment methods including fiat:', methods.map(m => m.name));
 
     // Add native ETH options for supported networks
     methods.push({

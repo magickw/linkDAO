@@ -120,12 +120,8 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   };
 
   const getLayoutClasses = (): string => {
-    if (isMobile) {
-      return 'flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent';
-    }
-
-    // Always use horizontal layout (grid with multiple columns)
-    return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    // Always use vertical list layout - one method per row
+    return 'space-y-3';
   };
 
   const recommendedMethod = getRecommendedMethod();
@@ -207,7 +203,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                 isRecommended={recommendedMethod?.method.id === method.method.id}
                 onSelect={handleMethodSelect}
                 showCostBreakdown={showCostBreakdown && (viewMode === 'detailed' || isMobile)}
-                className={isMobile ? 'flex-shrink-0 w-80 snap-start' : ''}
+                className="w-full"
               />
             ))}
           </div>
@@ -256,7 +252,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                   (viewMode === 'detailed' || isMobile) &&
                   expandedMethods.has(method.method.id)
                 }
-                className={isMobile ? 'flex-shrink-0 w-80 snap-start' : ''}
+                className="w-full"
               />
             ))}
           </div>

@@ -429,7 +429,12 @@ export class PaymentMethodPrioritizationService implements IPaymentMethodPriorit
     costEstimate: CostEstimate
   ): AvailabilityStatus {
     const config = this.configs[method.type];
-    
+
+    // Fiat payments are always available (no wallet or gas fees required)
+    if (method.type === PaymentMethodType.FIAT_STRIPE) {
+      return AvailabilityStatus.AVAILABLE;
+    }
+
     // Check gas fee thresholds for crypto methods
     if (method.token && costEstimate.gasFee > config.gasFeeThreshold.maxAcceptableGasFeeUSD) {
       return AvailabilityStatus.UNAVAILABLE_HIGH_GAS_FEES;

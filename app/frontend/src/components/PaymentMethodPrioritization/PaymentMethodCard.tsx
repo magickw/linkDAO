@@ -117,10 +117,12 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
     <div
       className={`
         relative p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer
-        ${isSelected 
-          ? 'border-blue-500 bg-blue-500/10 shadow-md' 
-          : isAvailable 
-            ? 'border-white/20 bg-white/5 hover:border-white/30 hover:shadow-sm' 
+        flex items-center gap-4
+        ${warnings && warnings.length > 0 ? 'mb-4' : ''}
+        ${isSelected
+          ? 'border-blue-500 bg-blue-500/10 shadow-md'
+          : isAvailable
+            ? 'border-white/20 bg-white/5 hover:border-white/30 hover:shadow-sm'
             : 'border-white/10 bg-white/5 opacity-50 cursor-not-allowed'
         }
         ${isRecommended ? 'ring-2 ring-green-400 ring-opacity-50' : ''}
@@ -137,13 +139,56 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         }
       }}
     >
-      {/* Priority Badge */}
-      <div className="absolute -top-2 -left-2">
+      {/* Left side: Icon, Name, Network */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <img
+          src={getMethodIcon(method.type)}
+          alt={method.name}
+          className="w-10 h-10 rounded-full flex-shrink-0"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/icons/payment-default.svg';
+          }}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className={`font-semibold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+              {method.name}
+            </h3>
+            {/* Network Badge */}
+            {method.chainId !== undefined && method.chainId !== 0 && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10">
+                <div className={`w-2 h-2 rounded-full ${getNetworkColor(method.chainId)}`}></div>
+                <span className="text-xs text-white/80 font-medium">
+                  {getNetworkName(method.chainId)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right side: Cost and Time */}
+      <div className="flex items-center gap-6 flex-shrink-0">
+        <div className="text-right">
+          <div className="text-xs text-white/60 mb-1">Total Cost</div>
+          <div className={`text-lg font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
+            {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-xs text-white/60 mb-1">Est. Time</div>
+          <div className="text-sm font-medium text-white">
+            {isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}
+          </div>
+        </div>
+
+        {/* Status Indicator */}
         <div className={`
-          px-2 py-1 text-xs font-semibold rounded-full border
-          ${getPriorityBadgeColor(priority)}
+          px-3 py-1 text-xs font-medium rounded-full border flex-shrink-0
+          ${getStatusColor(availabilityStatus)}
         `}>
-          #{priority}
+          {availabilityStatus === 'available' ? 'Available' : 'Unavailable'}
         </div>
       </div>
 
@@ -156,66 +201,9 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <img
-            src={getMethodIcon(method.type)}
-            alt={method.name}
-            className="w-8 h-8 rounded-full"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = '/icons/payment-default.svg';
-            }}
-          />
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className={`font-semibold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
-                {method.name}
-              </h3>
-              {/* Network Badge */}
-              {method.chainId !== undefined && method.chainId !== 0 && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10">
-                  <div className={`w-2 h-2 rounded-full ${getNetworkColor(method.chainId)}`}></div>
-                  <span className="text-xs text-white/80 font-medium">
-                    {getNetworkName(method.chainId)}
-                  </span>
-                </div>
-              )}
-            </div>
-            <p className={`text-sm ${isDisabled ? 'text-white/40' : 'text-white/70'}`}>
-              {method.description}
-            </p>
-          </div>
-        </div>
-
-        {/* Status Indicator */}
-        <div className={`
-          px-2 py-1 text-xs font-medium rounded-full border
-          ${getStatusColor(availabilityStatus)}
-        `}>
-          {availabilityStatus === 'available' ? 'Available' : 'Unavailable'}
-        </div>
-      </div>
-
-      {/* Cost Information - Simplified */}
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <span className="text-sm text-white/60">Total Cost</span>
-          <div className={`text-xl font-bold ${isDisabled ? 'text-white/50' : 'text-white'}`}>
-            {formatCurrency(costEstimate.totalCost, costEstimate.currency)}
-          </div>
-        </div>
-        <div className="text-right">
-          <span className="text-sm text-white/60">Est. Time</span>
-          <div className="text-sm font-medium text-white">
-            {isFiat ? 'Instant' : formatTime(costEstimate.estimatedTime)}
-          </div>
-        </div>
-      </div>
-
-      {/* Warnings */}
+      {/* Warnings - Show below if present */}
       {warnings && warnings.length > 0 && (
-        <div className="mb-3">
+        <div className="absolute -bottom-2 left-4 right-4">
           <div className="flex flex-wrap gap-1">
             {warnings.map((warning, index) => (
               <span
