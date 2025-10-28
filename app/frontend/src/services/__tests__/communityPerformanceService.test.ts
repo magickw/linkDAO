@@ -68,11 +68,10 @@ jest.mock('../communityPostService', () => ({
         isLocked: false,
         upvotes: 10,
         downvotes: 2,
-        comments: [],
+        comments: Array(5).fill({}), // Create array with 5 comments
         depth: 0,
         sortOrder: 0,
         type: 'text',
-        commentCount: 5,
         viewCount: 50
       },
       {
@@ -86,11 +85,10 @@ jest.mock('../communityPostService', () => ({
         isLocked: false,
         upvotes: 15,
         downvotes: 1,
-        comments: [],
+        comments: Array(8).fill({}), // Create array with 8 comments
         depth: 0,
         sortOrder: 0,
         type: 'text',
-        commentCount: 8,
         viewCount: 75
       }
     ])

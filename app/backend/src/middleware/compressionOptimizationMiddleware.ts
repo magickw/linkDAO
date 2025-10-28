@@ -77,6 +77,7 @@ export class CompressionOptimizationMiddleware {
       const originalEnd = res.end;
       let originalSize = 0;
       let compressedSize = 0;
+      const self = this;
 
       res.write = function(chunk: any, encoding?: any) {
         if (chunk) {
@@ -97,8 +98,7 @@ export class CompressionOptimizationMiddleware {
         const compressionRatio = originalSize > 0 ? (originalSize - compressedSize) / originalSize : 0;
         
         if (compressionRatio > 0) {
-          CompressionOptimizationMiddleware.prototype.updateMetrics.call(
-            CompressionOptimizationMiddleware.prototype,
+          self.updateMetrics(
             compressionTime,
             originalSize,
             compressedSize,
