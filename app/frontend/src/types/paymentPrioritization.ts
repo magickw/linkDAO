@@ -9,7 +9,8 @@ export enum PaymentMethodType {
   STABLECOIN_USDC = 'STABLECOIN_USDC',
   STABLECOIN_USDT = 'STABLECOIN_USDT',
   FIAT_STRIPE = 'FIAT_STRIPE',
-  NATIVE_ETH = 'NATIVE_ETH'
+  NATIVE_ETH = 'NATIVE_ETH',
+  X402 = 'X402' // New x402 payment method
 }
 
 export interface PaymentMethod {
@@ -229,6 +230,11 @@ export const DEFAULT_GAS_FEE_THRESHOLDS: Record<PaymentMethodType, GasFeeThresho
     maxAcceptableGasFeeUSD: 0, // Disabled
     warningThresholdUSD: 0, // Disabled
     blockTransactionThresholdUSD: 0 // Disabled
+  },
+  [PaymentMethodType.X402]: {
+    maxAcceptableGasFeeUSD: 0, // x402 covers gas fees
+    warningThresholdUSD: 0,
+    blockTransactionThresholdUSD: 0
   }
 };
 
@@ -268,5 +274,14 @@ export const DEFAULT_PAYMENT_METHOD_CONFIGS: Record<PaymentMethodType, PaymentMe
     gasFeeThreshold: DEFAULT_GAS_FEE_THRESHOLDS[PaymentMethodType.NATIVE_ETH],
     displayOrder: 99, // Hidden from display
     enabled: false // Disabled as per requirements
+  },
+  [PaymentMethodType.X402]: {
+    basePriority: 1, // Highest priority as it reduces fees
+    costWeight: 0.5,
+    preferenceWeight: 0.3,
+    availabilityWeight: 0.2,
+    gasFeeThreshold: DEFAULT_GAS_FEE_THRESHOLDS[PaymentMethodType.X402],
+    displayOrder: 0, // Display first
+    enabled: true
   }
 };

@@ -242,12 +242,13 @@ export class TransactionCostCalculator {
     paymentMethod: PaymentMethod,
     networkConditions?: NetworkConditions
   ): number {
-    // Time estimates in minutes
+    // Base time estimates (in minutes) for different payment methods
     const baseTimeEstimates: Record<PaymentMethodType, number> = {
-      [PaymentMethodType.FIAT_STRIPE]: 0.5, // 30 seconds
-      [PaymentMethodType.STABLECOIN_USDC]: 2, // 2 minutes
-      [PaymentMethodType.STABLECOIN_USDT]: 2, // 2 minutes
-      [PaymentMethodType.NATIVE_ETH]: 3 // 3 minutes
+      [PaymentMethodType.FIAT_STRIPE]: 0, // Instant
+      [PaymentMethodType.STABLECOIN_USDC]: 2, // 2 minutes for blockchain confirmation
+      [PaymentMethodType.STABLECOIN_USDT]: 2, // 2 minutes for blockchain confirmation
+      [PaymentMethodType.NATIVE_ETH]: 2, // 2 minutes for blockchain confirmation
+      [PaymentMethodType.X402]: 1 // 1 minute with x402 protocol
     };
 
     let baseTime = baseTimeEstimates[paymentMethod.type] || 5;

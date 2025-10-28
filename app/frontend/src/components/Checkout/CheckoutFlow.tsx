@@ -330,81 +330,52 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     console.log('Payment method selected:', method.method.name);
   };
 
-  const handleProcessPayment = async () => {
-    if (!selectedPaymentMethod || !recommendation) return;
+  const handlePaymentSubmit = async () => {
+    if (!selectedPaymentMethod || !address) return;
 
-    setCurrentStep('processing');
     setLoading(true);
     setError(null);
 
     try {
-      // Prepare prioritized checkout request
+      // Create checkout request with selected payment method
       const request: PrioritizedCheckoutRequest = {
         orderId: `order_${Date.now()}`,
         listingId: cartState.items[0]?.id || '',
-        buyerAddress: address || '',
+        buyerAddress: address,
         sellerAddress: cartState.items[0]?.seller.id || '',
         amount: parseFloat(cartState.totals.total.fiat),
         currency: 'USD',
-        preferredMethod: selectedPaymentMethod.method.type === PaymentMethodType.FIAT_STRIPE ? 'fiat' : 'crypto',
         selectedPaymentMethod,
         paymentDetails: {
+          // For crypto payments
           walletAddress: address,
           tokenSymbol: selectedPaymentMethod.method.token?.symbol,
-          networkId: selectedPaymentMethod.method.chainId
+          networkId: selectedPaymentMethod.method.chainId,
         }
       };
 
-      // Process prioritized checkout
+      // Process checkout with selected payment method
       const result = await checkoutService.processPrioritizedCheckout(request);
 
-      setOrderData(result);
-      setCurrentStep('confirmation');
-
-      // User preference tracking is handled through order analytics
-
-      // Track payment method selection for analytics
-      // TODO: Re-enable when trackPaymentMethodSelection method is implemented in orderService
-      /* try {
-        const { orderService } = await import('@/services/orderService');
-        await orderService.trackPaymentMethodSelection(result.orderId, {
-          selectedMethodId: selectedPaymentMethod.method.id,
-          methodName: selectedPaymentMethod.method.name,
-          priority: selectedPaymentMethod.priority,
-          recommendationReason: selectedPaymentMethod.recommendationReason,
-          costEstimate: selectedPaymentMethod.costEstimate,
-          alternativeMethods: prioritizationResult?.prioritizedMethods
-            .filter(m => m.method.id !== selectedPaymentMethod.method.id)
-            .map(m => ({
-              id: m.method.id,
-              name: m.method.name,
-              costEstimate: m.costEstimate.totalCost,
-              priority: m.priority
-            }))
-        });
-      } catch (error) {
-        console.warn('Failed to track payment method selection:', error);
-      } */
-
-      // Clear cart on successful checkout
-      actions.clearCart();
-
-      toast.success('Order placed successfully!');
-
-      // Redirect to order tracking after delay
-      setTimeout(() => {
+      if (result.status === 'completed' || result.status === 'processing') {
+        setOrderData(result);
+        setCurrentStep('confirmation');
         onComplete(result.orderId);
-      }, 3000);
-
-    } catch (err: any) {
+      } else {
+        throw new Error('Payment processing failed');
+      }
+    } catch (err) {
       console.error('Checkout failed:', err);
-      setError(err.message || 'Checkout failed. Please try again.');
-      setCurrentStep('payment-details');
-
-      // User preference tracking for failed payments is handled through order analytics
+      setError(err instanceof Error ? err.message : 'Checkout failed. Please try again.');
+      toast.error('Checkout failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProcessPayment = () => {
+    setCurrentStep('processing');
+    handlePaymentSubmit();
   };
 
   const renderStepIndicator = () => {

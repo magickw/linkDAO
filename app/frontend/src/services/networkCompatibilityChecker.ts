@@ -659,7 +659,8 @@ export class NetworkCompatibilityChecker {
       [PaymentMethodType.STABLECOIN_USDC]: { 1: 95, 137: 85, 42161: 80, 11155111: 100 },
       [PaymentMethodType.STABLECOIN_USDT]: { 1: 98, 137: 90, 42161: 70, 11155111: 100 },
       [PaymentMethodType.NATIVE_ETH]: { 1: 100, 137: 85, 42161: 95, 11155111: 100 },
-      [PaymentMethodType.FIAT_STRIPE]: { 1: 100, 137: 100, 42161: 100, 11155111: 100 }
+      [PaymentMethodType.FIAT_STRIPE]: { 1: 100, 137: 100, 42161: 100, 11155111: 100 },
+      [PaymentMethodType.X402]: { 1: 90, 137: 90, 42161: 90, 11155111: 100 }
     };
     
     return scores[methodType]?.[chainId] || 50;

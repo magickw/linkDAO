@@ -589,8 +589,14 @@ import { orderEventListenerService } from './services/orderEventListenerService'
 // Import order event handler routes
 import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
 
+// Import x402 payment routes
+import x402PaymentRoutes from './routes/x402PaymentRoutes';
+
 // Order event handler routes
 app.use('/api/order-events', orderEventHandlerRoutes);
+
+// x402 payment routes
+app.use('/api/x402', x402PaymentRoutes);
 
 // Marketplace messaging routes
 import marketplaceMessagingRoutes from './routes/marketplaceMessagingRoutes';

@@ -1,6 +1,7 @@
 import { CryptoPaymentService } from './cryptoPaymentService';
 import { StripePaymentService } from './stripePaymentService';
 import { ExchangeRateService } from './exchangeRateService';
+import { x402PaymentService, type X402PaymentRequest } from './x402PaymentService';
 import {
   PrioritizedPaymentMethod,
   PaymentMethodType,
@@ -229,6 +230,57 @@ export class UnifiedCheckoutService {
   }
 
   /**
+   * Process checkout with x402 payment method
+   */
+  private async processX402Payment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
+    try {
+      // Prepare x402 payment request
+      const x402Request: X402PaymentRequest = {
+        orderId: request.orderId,
+        amount: request.amount.toString(),
+        currency: request.currency,
+        buyerAddress: request.buyerAddress,
+        sellerAddress: request.sellerAddress,
+        listingId: request.listingId,
+      };
+
+      // Process the x402 payment
+      const paymentResult = await x402PaymentService.processPayment(x402Request);
+
+      if (!paymentResult.success) {
+        throw new Error(paymentResult.error || 'X402 payment failed');
+      }
+
+      // Return result based on payment status
+      return {
+        orderId: request.orderId,
+        paymentPath: 'crypto',
+        escrowType: 'smart_contract',
+        transactionId: paymentResult.transactionId || 'pending',
+        status: paymentResult.status,
+        nextSteps: paymentResult.paymentUrl 
+          ? [`Complete payment at: ${paymentResult.paymentUrl}`] 
+          : ['Payment processed successfully'],
+        estimatedCompletionTime: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        prioritizationMetadata: {
+          selectedMethod: request.selectedPaymentMethod.method,
+          priority: request.selectedPaymentMethod.priority,
+          recommendationReason: 'X402 protocol with reduced fees',
+          costEstimate: {
+            totalFees: 0, // x402 covers gas fees
+            processingFee: 0,
+            networkFee: 0,
+          },
+          alternativeMethods: []
+        }
+      };
+    } catch (error) {
+      console.error('X402 payment processing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Process checkout with prioritized payment method
    */
   async processPrioritizedCheckout(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
@@ -244,7 +296,9 @@ export class UnifiedCheckoutService {
       // Process payment based on method type
       let result: UnifiedCheckoutResult;
       
-      if (paymentPath === 'crypto') {
+      if (selectedPaymentMethod.method.type === PaymentMethodType.X402) {
+        result = await this.processX402Payment(request);
+      } else if (paymentPath === 'crypto') {
         result = await this.processCryptoPayment(request);
       } else {
         result = await this.processFiatPayment(request);

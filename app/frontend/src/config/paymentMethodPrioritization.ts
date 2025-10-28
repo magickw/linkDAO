@@ -106,6 +106,18 @@ export const SUPPORTED_PAYMENT_METHODS: PaymentMethod[] = [
     icon: '/icons/credit-card.svg',
     enabled: true,
     supportedNetworks: [] // Available on all networks
+  },
+  
+  // x402 Payment Method
+  {
+    id: 'x402-payment',
+    type: PaymentMethodType.X402,
+    name: 'x402 Protocol',
+    description: 'Pay with reduced fees using Coinbase x402 protocol',
+    chainId: mainnet.id,
+    icon: '/icons/coinbase.svg',
+    enabled: true,
+    supportedNetworks: [mainnet.id, polygon.id, arbitrum.id, sepolia.id]
   }
 ];
 
@@ -168,43 +180,47 @@ export const NETWORK_PRIORITIZATION_RULES: {
 } = {
   [mainnet.id]: {
     preferredMethods: [
+      PaymentMethodType.X402, // Highest priority for x402
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
       // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 1.0,
-    description: 'Ethereum mainnet - prioritize stablecoins due to gas costs'
+    description: 'Ethereum mainnet - prioritize x402 for reduced fees'
   },
   [polygon.id]: {
     preferredMethods: [
+      PaymentMethodType.X402, // Highest priority for x402
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
       // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.1,
-    description: 'Polygon - prioritize stablecoins for consistent value'
+    description: 'Polygon - prioritize x402 for reduced fees'
   },
   [arbitrum.id]: {
     preferredMethods: [
+      PaymentMethodType.X402, // Highest priority for x402
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
       // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.2,
-    description: 'Arbitrum - prioritize stablecoins for consistent value'
+    description: 'Arbitrum - prioritize x402 for reduced fees'
   },
   [sepolia.id]: {
     preferredMethods: [
+      PaymentMethodType.X402, // Highest priority for x402
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
       // ETH payment method removed as per requirements
     ],
     gasFeeMultiplier: 0.01,
-    description: 'Sepolia testnet - prioritize stablecoins for testing'
+    description: 'Sepolia testnet - prioritize x402 for reduced fees'
   }
 };
 
@@ -215,6 +231,7 @@ export const USER_TIER_CONFIGS = {
     preferStablecoins: true,
     autoSelectBestOption: true,
     availablePaymentMethods: [
+      PaymentMethodType.X402, // Available for all users
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.FIAT_STRIPE
       // ETH payment method removed as per requirements
@@ -225,6 +242,7 @@ export const USER_TIER_CONFIGS = {
     preferStablecoins: true,
     autoSelectBestOption: true,
     availablePaymentMethods: [
+      PaymentMethodType.X402, // Available for all users
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
@@ -236,6 +254,7 @@ export const USER_TIER_CONFIGS = {
     preferStablecoins: true, // Changed to always prefer stablecoins
     autoSelectBestOption: false, // VIP users want control
     availablePaymentMethods: [
+      PaymentMethodType.X402, // Available for all users
       PaymentMethodType.STABLECOIN_USDC,
       PaymentMethodType.STABLECOIN_USDT,
       PaymentMethodType.FIAT_STRIPE
