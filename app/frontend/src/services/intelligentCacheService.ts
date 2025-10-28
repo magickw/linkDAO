@@ -96,27 +96,21 @@ export class IntelligentCacheService {
   }
 
   /**
-   * Cache exchange rates with fallback mechanisms
+   * Cache exchange rate as a number
    */
   async cacheExchangeRate(
-    fromCurrency: string,
-    toCurrency: string,
-    rate: ExchangeRate,
+    key: string,
+    rate: number,
     customTTL?: number
   ): Promise<void> {
-    const key = `${fromCurrency}_${toCurrency}`;
-    const ttl = customTTL || this.calculateDynamicTTL('exchange', rate.confidence);
+    const ttl = customTTL || CACHE_CONFIG.EXCHANGE_RATES.TTL;
     await this.set('exchange_rates', key, rate, ttl);
   }
 
   /**
-   * Get cached exchange rate
+   * Get cached exchange rate as a number
    */
-  async getCachedExchangeRate(
-    fromCurrency: string,
-    toCurrency: string
-  ): Promise<ExchangeRate | null> {
-    const key = `${fromCurrency}_${toCurrency}`;
+  async getCachedExchangeRate(key: string): Promise<number | null> {
     return this.get('exchange_rates', key);
   }
 

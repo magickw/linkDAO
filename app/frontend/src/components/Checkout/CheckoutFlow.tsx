@@ -223,7 +223,18 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       supportedNetworks: [1, 137, 42161, 8453, 11155111, 84532] // Available on all networks
     });
 
-    console.log('✅ Available payment methods including fiat:', methods.map(m => m.name));
+    // Add x402 payment option
+    methods.push({
+      id: 'x402-payment',
+      type: PaymentMethodType.X402,
+      name: 'x402 Protocol',
+      description: 'Pay with reduced fees using Coinbase x402 protocol',
+      chainId: 1, // Mainnet
+      enabled: true,
+      supportedNetworks: [1, 137, 42161, 11155111] // Supported networks
+    });
+
+    console.log('✅ Available payment methods including fiat and x402:', methods.map(m => m.name));
 
     // Add native ETH options for supported networks
     methods.push({

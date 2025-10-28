@@ -12,6 +12,7 @@ LinkDAO represents the next evolution in social networking, where users truly ow
 - **Real-time Interactions**: WebSocket-powered notifications and messaging
 - **Censorship Resistance**: IPFS-based content storage for permanent, decentralized media
 - **Reddit-Style Interface**: Familiar social media layout optimized for Web3 communities
+- **x402 Protocol Integration**: Reduced transaction fees for payments using Coinbase's x402 protocol
 
 ## 📋 Phase 1 Implementation Summary
 
@@ -30,6 +31,7 @@ All Phase 1 recommendations have been successfully implemented:
 - **IPFS Integration**: Decentralized content storage and retrieval
 - **AI Services**: OpenAI-powered bots for security, governance, moderation, and social assistance
 - **Reddit-Style UI**: Community-focused interface with familiar navigation patterns
+- **x402 Payment Protocol**: Integrated Coinbase x402 protocol for reduced transaction fees
 
 ## 🏗️ Architecture
 
@@ -47,6 +49,7 @@ All Phase 1 recommendations have been successfully implemented:
 - **Real-time**: Socket.IO
 - **AI Services**: OpenAI GPT-4 and Pinecone
 - **Storage**: IPFS and Arweave integration
+- **Payment Processing**: Coinbase CDP SDK for x402 protocol integration
 
 ### Smart Contracts
 - **Language**: Solidity ^0.8.20
@@ -72,6 +75,7 @@ LinkDAO/
 ├── API_SECURITY_AUDIT.md
 ├── API_DOCUMENTATION.md
 ├── FRONTEND_TESTING_SUMMARY.md
+├── X402_PROTOCOL_INTEGRATION.md
 └── README.md
 ```
 
@@ -104,6 +108,17 @@ LinkDAO/
    # Install smart contract dependencies
    cd ../contracts
    npm install
+   ```
+
+3. **Configure x402 Payment Protocol**:
+   ```bash
+   # Create a .env.local file in the backend directory
+   cd app/backend
+   cp .env.local .env.local.example
+   
+   # Edit the .env.local file to add your Coinbase API credentials
+   # COINBASE_API_KEY=your_api_key_here
+   # COINBASE_API_SECRET=your_api_secret_here
    ```
 
 ### Running the Application
@@ -158,6 +173,7 @@ npx hardhat test
 - Input validation for all endpoints
 - JWT-based authentication
 - Secure error handling
+- Coinbase CDP SDK integration for secure payment processing
 
 ### Frontend
 - Wallet-based authentication
@@ -172,6 +188,7 @@ The platform includes comprehensive testing at all levels:
 - **Integration Tests**: API and service integration tests
 - **End-to-End Tests**: Complete user flow tests
 - **Smart Contract Tests**: Thorough contract functionality tests
+- **Payment Protocol Tests**: x402 protocol integration tests
 
 ## 📚 Documentation
 
@@ -182,6 +199,7 @@ The platform includes comprehensive testing at all levels:
 - [Phase 1 Implementation Summary](PHASE1_IMPLEMENTATION_SUMMARY.md)
 - [Phase 2 Completion Summary](PHASE2_COMPLETION_SUMMARY.md)
 - [Reddit-Style UI Documentation](REDDIT_STYLE_UI_DOCS.md)
+- [x402 Protocol Integration](X402_PROTOCOL_INTEGRATION.md)
 
 ## 🤝 Contributing
 
@@ -202,3 +220,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Ethereum](https://ethereum.org/)
 - [OpenZeppelin](https://openzeppelin.com/)
 - [RainbowKit](https://www.rainbowkit.com/)
+- [Coinbase Developer Platform](https://www.coinbase.com/cloud/products/cdp)

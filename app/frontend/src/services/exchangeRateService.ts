@@ -88,15 +88,24 @@ export class ExchangeRateService {
     forceRefresh: boolean = false
   ): Promise<ExchangeRate | null> {
     if (!forceRefresh) {
-      // Try intelligent cache first
-      const cached = await intelligentCacheService.getCachedExchangeRate(fromCurrency, toCurrency);
+      // Try intelligent cache first using combined key
+      const cacheKey = `${fromCurrency}_${toCurrency}`;
+      const cached = await intelligentCacheService.getCachedExchangeRate(cacheKey);
       if (cached) {
-        return cached;
+        // Convert number to ExchangeRate format
+        return {
+          fromToken: fromCurrency,
+          toToken: toCurrency,
+          rate: cached,
+          source: 'cache',
+          confidence: 0.9,
+          lastUpdated: new Date()
+        };
       }
 
       // Fallback to local cache
-      const cacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
-      const localCached = this.getCachedRate(cacheKey, fromCurrency, toCurrency);
+      const localCacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
+      const localCached = this.getCachedRate(localCacheKey, fromCurrency, toCurrency);
       if (localCached) {
         return localCached;
       }
@@ -106,9 +115,10 @@ export class ExchangeRateService {
       const rate = await this.fetchExchangeRate(fromCurrency, toCurrency);
       if (rate) {
         // Cache in both intelligent cache and local cache
-        await intelligentCacheService.cacheExchangeRate(fromCurrency, toCurrency, rate);
-        const cacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
-        this.cacheRate(cacheKey, rate, fromCurrency, toCurrency);
+        const cacheKey = `${fromCurrency}_${toCurrency}`;
+        await intelligentCacheService.cacheExchangeRate(cacheKey, rate.rate);
+        const localCacheKey = `${CACHE_KEY_PREFIX}${fromCurrency}_${toCurrency}`;
+        this.cacheRate(localCacheKey, rate, fromCurrency, toCurrency);
       }
       return rate;
     } catch (error) {
