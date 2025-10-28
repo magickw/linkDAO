@@ -8,17 +8,61 @@ import {
   VoteInput,
   CommunityPostStats
 } from '../models/CommunityPost';
+import { CommunityOfflineCacheService } from './communityOfflineCacheService';
+import { fetchWithRetry, RetryOptions } from './retryUtils';
+import { communityPerformanceService } from './communityPerformanceService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+
+// Default retry options for community post API calls
+const COMMUNITY_POST_RETRY_OPTIONS: RetryOptions = {
+  maxRetries: 3,
+  initialDelay: 1000,
+  maxDelay: 10000,
+  shouldRetry: (error: any) => {
+    // Retry on network errors, 5xx errors, and 429 (rate limited)
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return true;
+    }
+    
+    if (error.response) {
+      const status = error.response.status;
+      return status >= 500 || status === 429 || status === 503;
+    }
+    
+    return false;
+  }
+};
 
 /**
  * Community Post API Service
  * Provides functions to interact with the backend community post API endpoints
  */
 export class CommunityPostService {
+  private static offlineCacheService = CommunityOfflineCacheService.getInstance();
+  
   /**
-   * Create a new community post
+   * Calculate engagement score for a post based on interactions
+   */
+  private static calculateEngagementScore(post: CommunityPost): number {
+    // Simple engagement score calculation based on views, comments, and votes
+    const viewScore = (post.viewCount || 0) * 0.1;
+    const commentScore = (post.comments?.length || 0) * 2;
+    const voteScore = (post.upvotes || 0) * 1.5 - (post.downvotes || 0) * 0.5;
+    
+    // Combine scores with diminishing returns
+    const totalScore = viewScore + commentScore + voteScore;
+    
+    // Apply trending factor based on recency
+    const hoursSinceCreation = (Date.now() - post.createdAt.getTime()) / (1000 * 60 * 60);
+    const trendingFactor = Math.max(0.1, 1 - (hoursSinceCreation / 168)); // 168 hours = 1 week
+    
+    return Math.round(totalScore * trendingFactor);
+  }
+
+  /**
+   * Create a new community post with offline support
    * @param data - Post data to create
    * @returns The created post
    */
@@ -27,14 +71,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${data.communityId}/posts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -43,9 +91,37 @@ export class CommunityPostService {
         throw new Error(error.error || 'Failed to create community post');
       }
       
-      return response.json();
+      const post = await response.json();
+      
+      // Track post creation event for performance metrics
+      if (post) {
+        communityPerformanceService.trackEvent({
+          eventType: 'post_created',
+          communityId: data.communityId,
+          userId: data.author,
+          timestamp: new Date(),
+          metadata: {
+            postId: post.id,
+            postType: post.type
+          }
+        });
+      }
+      
+      return post;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'create_post',
+          data: { communityId: data.communityId, postData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Post creation queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -65,13 +141,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -83,7 +163,31 @@ export class CommunityPostService {
         throw new Error(error.error || 'Failed to fetch community post');
       }
       
-      return response.json();
+      const post = await response.json();
+      
+      // Track post view for performance metrics
+      if (post) {
+        // Increment view count
+        post.viewCount = (post.viewCount || 0) + 1;
+        post.lastViewedAt = new Date();
+        
+        // Update engagement score based on views
+        post.engagementScore = this.calculateEngagementScore(post);
+        
+        // Track view event
+        communityPerformanceService.trackEvent({
+          eventType: 'view_recorded',
+          communityId: post.communityId,
+          userId: 'anonymous', // This would be the actual user ID in a real implementation
+          timestamp: new Date(),
+          metadata: {
+            postId: post.id,
+            viewCount: post.viewCount
+          }
+        });
+      }
+      
+      return post;
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -96,7 +200,7 @@ export class CommunityPostService {
   }
 
   /**
-   * Get posts for a community
+   * Get posts for a community with offline support
    * @param communityId - Community ID
    * @param params - Optional query parameters
    * @returns Array of community posts
@@ -132,13 +236,17 @@ export class CommunityPostService {
         url += `?${searchParams.toString()}`;
       }
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        url,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -147,9 +255,61 @@ export class CommunityPostService {
         throw new Error(error.error || 'Failed to fetch community posts');
       }
       
-      return response.json();
+      const posts = await response.json();
+      
+      return posts;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, try to get from cache
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        const cached = await this.offlineCacheService.getCachedCommunityPosts(communityId);
+        if (cached) {
+          console.warn('Offline mode, returning cached community posts');
+          // Convert CachedCommunityPost[] to CommunityPost[]
+          return cached.map(post => ({
+            // Properties from EnhancedPost
+            id: post.id,
+            author: post.author,
+            parentId: post.parentId,
+            title: post.title,
+            contentCid: post.contentCid,
+            mediaCids: post.mediaCids,
+            tags: post.tags,
+            createdAt: post.createdAt,
+            updatedAt: post.updatedAt,
+            onchainRef: post.onchainRef,
+            stakedValue: post.stakedValue,
+            reputationScore: post.reputationScore,
+            dao: post.dao,
+            reactions: post.reactions,
+            tips: post.tips,
+            comments: Array.isArray(post.comments) ? post.comments : [],
+            shares: post.shares,
+            views: post.views,
+            engagementScore: post.engagementScore || 0,
+            previews: post.previews,
+            socialProof: post.socialProof,
+            trendingStatus: post.trendingStatus,
+            trendingScore: post.trendingScore,
+            isBookmarked: post.isBookmarked,
+            communityId: post.communityId || communityId,
+            contentType: post.contentType,
+            
+            // Properties specific to CommunityPost
+            isPinned: false,
+            isLocked: false,
+            upvotes: 0,
+            downvotes: 0,
+            depth: 0,
+            sortOrder: 0,
+            
+            // Performance tracking fields
+            viewCount: post.views,
+            lastViewedAt: post.updatedAt,
+          }));
+        }
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -170,14 +330,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -189,6 +353,18 @@ export class CommunityPostService {
       return response.json();
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'update_post',
+          data: { postId, updateData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Post update queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -208,13 +384,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -230,6 +410,18 @@ export class CommunityPostService {
     } catch (error) {
       clearTimeout(timeoutId);
       
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'delete_post',
+          data: { postId },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Post deletion queued for when online');
+      }
+      
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
@@ -239,7 +431,7 @@ export class CommunityPostService {
   }
 
   /**
-   * Vote on a community post
+   * Vote on a community post with offline support
    * @param data - Vote data
    * @returns The updated post
    */
@@ -248,14 +440,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/vote`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/vote`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -264,9 +460,43 @@ export class CommunityPostService {
         throw new Error(error.error || 'Failed to vote on post');
       }
       
-      return response.json();
+      const post = await response.json();
+      
+      // Track vote event for performance metrics
+      if (post) {
+        // Update engagement score
+        post.engagementScore = this.calculateEngagementScore(post);
+        
+        // Track reaction event
+        communityPerformanceService.trackEvent({
+          eventType: 'reaction_added',
+          communityId: post.communityId,
+          userId: data.userId,
+          timestamp: new Date(),
+          metadata: {
+            postId: post.id,
+            voteType: data.voteType,
+            upvotes: post.upvotes,
+            downvotes: post.downvotes
+          }
+        });
+      }
+      
+      return post;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'react_to_post',
+          data: { postId: data.postId, voteData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Post reaction queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -286,14 +516,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${data.postId}/comments`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -308,7 +542,23 @@ export class CommunityPostService {
         throw new Error(error.error || 'Failed to create comment');
       }
       
-      return response.json();
+      const comment = await response.json();
+      
+      // Track comment event for performance metrics
+      if (comment) {
+        communityPerformanceService.trackEvent({
+          eventType: 'comment_added',
+          communityId: '', // This would be retrieved from the post
+          userId: data.author,
+          timestamp: new Date(),
+          metadata: {
+            postId: data.postId,
+            commentId: comment.id
+          }
+        });
+      }
+      
+      return comment;
     } catch (error: unknown) {
       clearTimeout(timeoutId);
       
@@ -378,13 +628,17 @@ export class CommunityPostService {
         url += `?${searchParams.toString()}`;
       }
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        url,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -416,14 +670,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/comments/${commentId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -454,13 +712,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/comments/${commentId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -495,14 +757,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/pin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/pin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sortOrder }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({ sortOrder }),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -533,13 +799,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/unpin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/unpin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -571,14 +841,18 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder-pinned`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/reorder-pinned`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ postIds }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({ postIds }),
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -609,13 +883,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/pinned`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/pinned`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -646,13 +924,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${communityId}/posts/stats`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -683,13 +965,17 @@ export class CommunityPostService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/community-posts/${postId}/stats`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_POST_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       

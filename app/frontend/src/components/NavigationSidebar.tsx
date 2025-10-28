@@ -102,7 +102,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     enabled: !!address, // Only run query when address is available
   });
 
-  const { getCommunityUnreadCount } = useNotifications();
+  // const { getCommunityUnreadCount } = useNotifications();
   
   const { 
     navigationState, 

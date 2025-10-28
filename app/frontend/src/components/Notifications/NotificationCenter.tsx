@@ -19,6 +19,8 @@ interface NotificationCenterProps {
   onMarkAllAsRead: () => void;
   onDelete: (id: string) => void;
   onOpenPreferences: () => void;
+  isOnline?: boolean;
+  pendingNotifications?: number;
 }
 
 type FilterType = 'all' | 'unread' | 'message' | 'reaction' | 'mention' | 'community' | 'governance';
@@ -32,7 +34,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   onMarkAsRead,
   onMarkAllAsRead,
   onDelete,
-  onOpenPreferences
+  onOpenPreferences,
+  isOnline = true,
+  pendingNotifications = 0
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,6 +186,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 {unreadCount}
               </span>
             )}
+            {!isOnline && (
+              <span className="bg-yellow-500 text-black text-xs rounded-full px-2 py-1" title="Offline mode">
+                Offline
+              </span>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -207,6 +216,20 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           </div>
         </div>
 
+        {/* Offline Banner */}
+        {!isOnline && (
+          <div className="bg-yellow-500 text-black text-center py-2 px-4 text-sm font-medium">
+            You are currently offline. Notifications will sync when you're back online.
+          </div>
+        )}
+
+        {/* Pending Notifications Indicator */}
+        {pendingNotifications > 0 && (
+          <div className="bg-blue-500 text-white text-center py-2 px-4 text-sm font-medium">
+            {pendingNotifications} notification{pendingNotifications > 1 ? 's' : ''} waiting to sync...
+          </div>
+        )}
+
         {/* Search and Actions */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2 mb-3">
@@ -217,6 +240,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                disabled={!isOnline && pendingNotifications > 0}
               />
               <svg className="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -226,7 +250,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             {unreadCount > 0 && (
               <button
                 onClick={onMarkAllAsRead}
-                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap"
+                className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 whitespace-nowrap disabled:opacity-50"
+                disabled={!isOnline && pendingNotifications > 0}
               >
                 Mark all read
               </button>
@@ -249,7 +274,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' 
                       : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                     }
+                    ${!isOnline && pendingNotifications > 0 ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
+                  disabled={!isOnline && pendingNotifications > 0}
                 >
                   {getFilterIcon(filter)}
                   <span className="capitalize">{filter}</span>
@@ -282,7 +309,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
               <p className="text-sm">
-                {searchQuery ? 'No notifications match your search' : 'No notifications yet'}
+                {searchQuery ? 'No notifications match your search' : 
+                 !isOnline && pendingNotifications > 0 ? 'Notifications will appear when synced' : 'No notifications yet'}
               </p>
             </div>
           ) : (
@@ -298,6 +326,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       notification={notification}
                       onMarkAsRead={() => onMarkAsRead(notification.id)}
                       onDelete={() => onDelete(notification.id)}
+                      isOnline={isOnline}
                     />
                   ))}
                 </div>

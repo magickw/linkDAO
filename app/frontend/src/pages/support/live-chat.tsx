@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { useLiveChat } from '@/hooks/useLiveChat';
 import { 
   Send, 
   Phone, 
@@ -16,32 +18,19 @@ import {
 } from 'lucide-react';
 
 const LiveChatPage: NextPage = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'support',
-      content: 'Hello! Welcome to LinkDAO Support. How can I help you today?',
-      timestamp: new Date(Date.now() - 300000),
-      read: true
-    },
-    {
-      id: 2,
-      sender: 'user',
-      content: 'Hi, I\'m having trouble connecting my wallet to the platform.',
-      timestamp: new Date(Date.now() - 240000),
-      read: true
-    },
-    {
-      id: 3,
-      sender: 'support',
-      content: 'I\'d be happy to help you with that. Could you tell me which wallet you\'re trying to connect and what error message you\'re seeing?',
-      timestamp: new Date(Date.now() - 180000),
-      read: true
-    }
-  ]);
+  const { isAuthenticated } = useAuth();
+  const { connected, messages, isTyping, agentName, error, connect, sendMessage, disconnect } = useLiveChat();
   const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && !connected) {
+      connect();
+    }
+    return () => {
+      if (connected) disconnect();
+    };
+  }, [isAuthenticated, connected, connect, disconnect]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,32 +42,10 @@ const LiveChatPage: NextPage = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !connected) return;
 
-    const userMessage = {
-      id: messages.length + 1,
-      sender: 'user',
-      content: newMessage,
-      timestamp: new Date(),
-      read: true
-    };
-
-    setMessages([...messages, userMessage]);
+    sendMessage(newMessage);
     setNewMessage('');
-    setIsTyping(true);
-
-    // Simulate support response after a delay
-    setTimeout(() => {
-      const supportResponse = {
-        id: messages.length + 2,
-        sender: 'support',
-        content: 'Thanks for that information. This is a common issue. Try refreshing the page and ensuring you\'re on the official LinkDAO website (https://linkdao.io). If that doesn\'t work, you may need to reset your wallet connection in your wallet settings.',
-        timestamp: new Date(),
-        read: false
-      };
-      setMessages(prev => [...prev, supportResponse]);
-      setIsTyping(false);
-    }, 2000);
   };
 
   const formatTime = (date: Date) => {
@@ -150,12 +117,29 @@ const LiveChatPage: NextPage = () => {
 
             {/* Chat Messages */}
             <div className="h-96 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900">
+              {!isAuthenticated ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-400">Please connect your wallet to start chatting</p>
+                  </div>
+                </div>
+              ) : !connected ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600 dark:text-gray-400">Connecting to support...</p>
+                    {error && <p className="text-red-600 mt-2">{error}</p>}
+                  </div>
+                </div>
+              ) : (
+              <>
               {messages.map((message) => (
                 <div 
                   key={message.id} 
                   className={`flex mb-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {message.sender === 'support' && (
+                  {message.sender === 'agent' && (
                     <div className="flex-shrink-0 mr-3">
                       <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                         <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -164,11 +148,8 @@ const LiveChatPage: NextPage = () => {
                   )}
                   <div className={`max-w-xs md:max-w-md lg:max-w-lg ${message.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white'} rounded-lg px-4 py-2 shadow`}>
                     <p>{message.content}</p>
-                    <div className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'} flex items-center`}>
-                      {message.sender === 'support' && message.read && (
-                        <Check className="w-3 h-3 mr-1" />
-                      )}
-                      {formatTime(message.timestamp)}
+                    <div className={`text-xs mt-1 ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {formatTime(new Date(message.timestamp))}
                     </div>
                   </div>
                   {message.sender === 'user' && (
@@ -196,6 +177,8 @@ const LiveChatPage: NextPage = () => {
                     </div>
                   </div>
                 </div>
+              )}
+              </>
               )}
               <div ref={messagesEndRef} />
             </div>

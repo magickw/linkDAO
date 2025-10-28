@@ -10,6 +10,8 @@ import { PostComposer } from '../Feed/PostComposer';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InfiniteScroll } from '../ui/InfiniteScroll';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { CommunityPostService } from '../../services/communityPostService';
+import { CommunityOfflineCacheService } from '../../services/communityOfflineCacheService';
 
 interface CommunityPostListProps {
   communityId: string;
@@ -48,11 +50,40 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
     postType: 'all',
     flair: null
   });
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Initialize offline cache service
+  const offlineCacheService = CommunityOfflineCacheService.getInstance();
 
   const { isConnected, on, off } = useWebSocket({
     walletAddress: '',
     autoConnect: true
   });
+
+  // Check network status
+  useEffect(() => {
+    const updateNetworkStatus = () => {
+      const onlineStatus = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      setIsOnline(onlineStatus);
+    };
+
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (isBrowser) {
+      window.addEventListener('online', updateNetworkStatus);
+      window.addEventListener('offline', updateNetworkStatus);
+    }
+
+    updateNetworkStatus();
+
+    return () => {
+      if (isBrowser) {
+        window.removeEventListener('online', updateNetworkStatus);
+        window.removeEventListener('offline', updateNetworkStatus);
+      }
+    };
+  }, []);
 
   // Load posts
   const loadPosts = useCallback(async (pageNum: number = 1, reset: boolean = true) => {
@@ -91,12 +122,33 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
       setPage(pageNum);
     } catch (err) {
       console.error('Error loading posts:', err);
+      
+      // If offline, try to get from cache
+      if (!isOnline) {
+        try {
+          const cachedPosts = await offlineCacheService.getCachedCommunityPosts(communityId);
+          if (cachedPosts.length > 0) {
+            if (reset || pageNum === 1) {
+              setPosts(cachedPosts);
+            } else {
+              setPosts(prev => [...prev, ...cachedPosts]);
+            }
+            setHasMore(false); // No more pages when using cached data
+            setPage(pageNum);
+            setError(null); // Clear error when using cached data
+            return;
+          }
+        } catch (cacheError) {
+          console.error('Error loading cached posts:', cacheError);
+        }
+      }
+      
       setError(err instanceof Error ? err.message : 'Failed to load posts');
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [communityId, sort, filters]);
+  }, [communityId, sort, filters, isOnline, offlineCacheService]);
 
   // Load more posts
   const loadMore = useCallback(() => {
@@ -202,11 +254,14 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
             <button
               onClick={() => setShowComposer(true)}
               className="create-post-button"
+              disabled={!isOnline}
             >
               <div className="create-post-avatar">
                 <div className="avatar-placeholder">+</div>
               </div>
-              <span>Create a post in this community...</span>
+              <span>
+                {isOnline ? 'Create a post in this community...' : 'Offline - Post creation unavailable'}
+              </span>
             </button>
           ) : (
             <PostComposer
@@ -243,6 +298,13 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
               onCancel={() => setShowComposer(false)}
             />
           )}
+        </div>
+      )}
+
+      {/* Offline Indicator */}
+      {!isOnline && (
+        <div className="offline-indicator">
+          <span>⚠️ You are currently offline. Displaying cached content.</span>
         </div>
       )}
 
@@ -307,8 +369,9 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
             <button
               onClick={() => setShowComposer(true)}
               className="btn btn-primary"
+              disabled={!isOnline}
             >
-              Create First Post
+              {isOnline ? 'Create First Post' : 'Offline - Post creation unavailable'}
             </button>
           )}
         </div>
@@ -370,6 +433,17 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           margin-bottom: 0.5rem;
         }
 
+        .offline-indicator {
+          background: #fff3cd;
+          border: 1px solid #ffeaa7;
+          color: #856404;
+          padding: 0.75rem;
+          border-radius: 0.5rem;
+          margin-bottom: 1rem;
+          text-align: center;
+          font-size: 0.9rem;
+        }
+
         .post-creation {
           margin-bottom: 2rem;
         }
@@ -388,9 +462,14 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           transition: all 0.2s ease;
         }
 
-        .create-post-button:hover {
+        .create-post-button:hover:not(:disabled) {
           background: var(--bg-tertiary);
           border-color: var(--border-medium);
+        }
+
+        .create-post-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .create-post-avatar {
@@ -503,9 +582,15 @@ export const CommunityPostList: React.FC<CommunityPostListProps> = ({
           color: white;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
           background: var(--primary-color-dark);
           transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          transform: none;
         }
 
         /* Responsive Design */

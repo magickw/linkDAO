@@ -13,6 +13,12 @@ export interface CommunityPost extends Omit<Post, 'parentId' | 'comments'> {
   parentId?: string; // For threaded discussions
   depth: number; // Thread depth for nested comments
   sortOrder: number; // For custom sorting
+  
+  // Performance tracking fields
+  viewCount?: number;
+  engagementScore: number;
+  lastViewedAt?: Date;
+  trendingScore?: number;
 }
 
 export interface Comment {

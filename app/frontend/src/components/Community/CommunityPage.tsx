@@ -10,7 +10,7 @@ import { Community } from '../../models/Community';
 import { CommunityService } from '../../services/communityService';
 import CommunityHeader from '../CommunityManagement/CommunityHeader';
 import { CommunityPostList } from './CommunityPostList';
-import { CommunitySidebar } from './CommunitySidebar';
+import CommunitySidebar from './CommunitySidebar';
 import { CommunityRules } from './CommunityRules';
 import { CommunityMembers } from './CommunityMembers';
 import CommunityJoinButton from './CommunityJoinButton';
@@ -20,6 +20,9 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorBoundary } from '../ErrorHandling/ErrorBoundary';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { useAuth } from '../../hooks/useAuth';
+import { CommunityOfflineCacheService } from '../../services/communityOfflineCacheService';
+import { communityPerformanceService } from '../../services/communityPerformanceService';
+import { CommunityPerformanceDashboard } from './CommunityPerformanceDashboard';
 
 interface CommunityPageProps {
   communityId: string;
@@ -57,17 +60,52 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   });
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'rules' | 'members' | 'moderation'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'rules' | 'members' | 'moderation' | 'performance'>('posts');
   const [postSort, setPostSort] = useState<'hot' | 'new' | 'top'>('hot');
   const [postFilter, setPostFilter] = useState<string>('all');
   const [showPostCreator, setShowPostCreator] = useState(false);
   const [showModerationDashboard, setShowModerationDashboard] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingActions, setPendingActions] = useState(0);
+
+  // Initialize offline cache service
+  const offlineCacheService = useMemo(() => CommunityOfflineCacheService.getInstance(), []);
 
   // WebSocket connection for real-time updates
   const { isConnected, send, on, off } = useWebSocket({
     walletAddress: user?.address || '',
     autoConnect: true
   });
+
+  // Check network status
+  useEffect(() => {
+    const updateNetworkStatus = () => {
+      const onlineStatus = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      setIsOnline(onlineStatus);
+      
+      // Get pending actions count
+      offlineCacheService.getCacheStats().then(stats => {
+        setPendingActions(stats.pendingActions);
+      });
+    };
+
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    
+    if (isBrowser) {
+      window.addEventListener('online', updateNetworkStatus);
+      window.addEventListener('offline', updateNetworkStatus);
+    }
+
+    updateNetworkStatus();
+
+    return () => {
+      if (isBrowser) {
+        window.removeEventListener('online', updateNetworkStatus);
+        window.removeEventListener('offline', updateNetworkStatus);
+      }
+    };
+  }, [offlineCacheService]);
 
   // Load community data
   const loadCommunityData = useCallback(async () => {
@@ -90,6 +128,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
       setCommunity(communityData);
       setStats(communityStats);
+      
+      // Track community performance metrics
+      if (communityData) {
+        communityPerformanceService.getCurrentMetrics(communityData.id)
+          .catch(error => console.warn('Failed to get community metrics:', error));
+      }
 
       // Check membership status if user is authenticated
       if (isAuthenticated && user) {
@@ -268,6 +312,21 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   return (
     <ErrorBoundary>
       <div className="community-page">
+        {/* Offline Banner */}
+        {!isOnline && (
+          <div className="offline-banner">
+            <div className="offline-banner-content">
+              <span className="offline-icon">⚠️</span>
+              <span>You are currently offline. Some features may be limited.</span>
+              {pendingActions > 0 && (
+                <span className="pending-actions">
+                  {pendingActions} action{pendingActions !== 1 ? 's' : ''} queued for sync
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Community Header */}
         <CommunityHeader
           community={{
@@ -316,8 +375,13 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                       <button
                         onClick={() => setShowPostCreator(true)}
                         className="w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                        disabled={!isOnline}
                       >
-                        Create a new post in {community.displayName}
+                        {isOnline ? (
+                          <>Create a new post in {community.displayName}</>
+                        ) : (
+                          <>Offline - Post creation unavailable</>
+                        )}
                       </button>
                     )}
                   </div>
@@ -361,6 +425,12 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
                 onClose={() => setActiveTab('posts')}
               />
             )}
+            
+            {activeTab === 'performance' && canUserModerate && (
+              <CommunityPerformanceDashboard
+                communityId={community.id}
+              />
+            )}
           </main>
         </div>
 
@@ -368,6 +438,34 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
           .community-page {
             min-height: 100vh;
             background: var(--bg-primary);
+          }
+
+          .offline-banner {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 0.75rem 1rem;
+            text-align: center;
+          }
+
+          .offline-banner-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .offline-icon {
+            font-size: 1.2rem;
+          }
+
+          .pending-actions {
+            background: #fff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: 500;
           }
 
           .community-page-loading,
@@ -460,6 +558,11 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
 
             .community-main {
               order: 1;
+            }
+            
+            .offline-banner-content {
+              flex-direction: column;
+              gap: 0.25rem;
             }
           }
         `}</style>

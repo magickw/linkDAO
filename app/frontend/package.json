@@ -25,6 +25,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@coinbase/onchainkit": "^1.1.2",
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@playwright/test": "^1.56.1",
@@ -53,6 +54,7 @@
     "ethers": "^5.8.0",
     "framer-motion": "^12.23.24",
     "ioredis": "^5.8.2",
+    "ipfs-http-client": "^60.0.1",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.548.0",

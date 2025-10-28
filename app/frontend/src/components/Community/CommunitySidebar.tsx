@@ -27,8 +27,8 @@ interface CommunitySidebarProps {
   community: Community;
   stats: CommunityStats | null;
   membershipStatus: MembershipStatus;
-  activeTab: 'posts' | 'rules' | 'members' | 'moderation';
-  onTabChange: (tab: 'posts' | 'rules' | 'members' | 'moderation') => void;
+  activeTab: 'posts' | 'rules' | 'members' | 'moderation' | 'performance';
+  onTabChange: (tab: 'posts' | 'rules' | 'members' | 'moderation' | 'performance') => void;
 }
 
 export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
@@ -127,6 +127,18 @@ export const CommunitySidebar: React.FC<CommunitySidebarProps> = ({
               <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
             </svg>
             <span>Moderation</span>
+          </button>
+        )}
+        
+        {membershipStatus.canModerate && (
+          <button
+            onClick={() => onTabChange('performance' as any)}
+            className={`nav-tab ${activeTab === 'performance' ? 'active' : ''}`}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+            </svg>
+            <span>Performance</span>
           </button>
         )}
       </nav>

@@ -1,8 +1,8 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, gte } from 'drizzle-orm';
 import { db } from '../db/connection';
-import { supportTickets, supportFAQ, supportCategories } from '../db/schema';
+import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
 import { sendEmail } from './emailService';
-import { createNotification } from './notificationService';
+import { createNotification } from './notificationHelper';
 
 export interface SupportTicket {
   id: string;
@@ -142,6 +142,7 @@ class LDAOSupportService {
     try {
       // Add response to ticket history
       await db.insert(ticketResponses).values({
+        id: `resp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         ticketId,
         response,
         isStaffResponse,
@@ -213,12 +214,15 @@ class LDAOSupportService {
     try {
       const updateField = isHelpful ? 'helpful' : 'notHelpful';
       
-      await db.update(supportFAQ)
-        .set({
-          [updateField]: db.raw(`${updateField} + 1`),
-          updatedAt: new Date()
-        })
-        .where(eq(supportFAQ.id, faqId));
+      const [faq] = await db.select().from(supportFAQ).where(eq(supportFAQ.id, faqId));
+      if (faq) {
+        await db.update(supportFAQ)
+          .set({
+            [updateField]: (faq[updateField] || 0) + 1,
+            updatedAt: new Date()
+          })
+          .where(eq(supportFAQ.id, faqId));
+      }
     } catch (error) {
       console.error('Error updating FAQ helpfulness:', error);
       throw new Error('Failed to update FAQ rating');
@@ -227,11 +231,14 @@ class LDAOSupportService {
 
   async incrementFAQViews(faqId: string): Promise<void> {
     try {
-      await db.update(supportFAQ)
-        .set({
-          views: db.raw('views + 1')
-        })
-        .where(eq(supportFAQ.id, faqId));
+      const [faq] = await db.select().from(supportFAQ).where(eq(supportFAQ.id, faqId));
+      if (faq) {
+        await db.update(supportFAQ)
+          .set({
+            views: (faq.views || 0) + 1
+          })
+          .where(eq(supportFAQ.id, faqId));
+      }
     } catch (error) {
       console.error('Error incrementing FAQ views:', error);
     }

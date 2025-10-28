@@ -1,139 +1,79 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { AppNotification as Notification, NotificationPreferences } from '@/types/notifications';
-import notificationService from '../services/notificationService';
-import { useWeb3 } from '@/context/Web3Context';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { supportNotificationService, SupportNotification } from '@/services/supportNotificationService';
+import { notificationService } from '@/services/notificationService';
+import type { NotificationPreferences } from '@/types/notifications';
 
-export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { address } = useWeb3();
+export const useNotifications = () => {
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<SupportNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Subscribe to notification updates
   useEffect(() => {
-    if (!address) {
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
+    if (!user?.address) return;
 
-    // For messaging notifications, we use event listeners
-    // This would be implemented differently in a real app
-    setLoading(false);
+    supportNotificationService.connect(user.address);
 
-    return () => {}; // Return cleanup function
-  }, [address]);
+    const unsubscribe = supportNotificationService.subscribe((newNotifications) => {
+      setNotifications(newNotifications);
+      setUnreadCount(supportNotificationService.getUnreadCount());
+    });
 
-  // Load initial notifications
-  useEffect(() => {
-    if (!address) return;
-
-    const loadNotifications = async () => {
-      try {
-        setLoading(true);
-        // For messaging notifications, we would get from messaging service
-        // This is a placeholder for the general notification system
-        setNotifications([]);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load notifications');
-      } finally {
-        setLoading(false);
-      }
+    return () => {
+      unsubscribe();
+      supportNotificationService.disconnect();
     };
+  }, [user]);
 
-    loadNotifications();
-  }, [address]);
+  const markAsRead = (notificationId: string) => {
+    supportNotificationService.markAsRead(notificationId);
+  };
 
-  const markAsRead = useCallback(async (notificationId: string) => {
-    try {
-      // This would be implemented for the general notification system
-      console.log('Mark as read:', notificationId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark notification as read');
-    }
-  }, []);
-
-  const markAllAsRead = useCallback(async () => {
-    try {
-      // This would be implemented for the general notification system
-      console.log('Mark all as read');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark all notifications as read');
-    }
-  }, []);
-
-  const markCommunityAsRead = useCallback(async (communityId: string) => {
-    try {
-      // This would be implemented for the general notification system
-      console.log('Mark community as read:', communityId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark community notifications as read');
-    }
-  }, []);
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-  
-  const getCommunityUnreadCount = useCallback((communityId: string) => {
-    return notifications.filter(n => 
-      !n.isRead && 'communityId' in n && (n as any).communityId === communityId
-    ).length;
-  }, [notifications]);
+  const markAllAsRead = () => {
+    supportNotificationService.markAllAsRead();
+  };
 
   return {
     notifications,
-    loading,
-    error,
     unreadCount,
     markAsRead,
     markAllAsRead,
-    markCommunityAsRead,
-    getCommunityUnreadCount
   };
-}
+};
 
-export function useNotificationPreferences() {
+export const useNotificationPreferences = () => {
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { address } = useWeb3();
 
   useEffect(() => {
-    if (!address) {
-      setPreferences(null);
-      setLoading(false);
-      return;
-    }
-
     const loadPreferences = async () => {
       try {
         setLoading(true);
-        // Get messaging notification preferences
         const prefs = await notificationService.getPreferences();
         setPreferences(prefs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load preferences');
+      } catch (error) {
+        console.error('Failed to load notification preferences:', error);
       } finally {
         setLoading(false);
       }
     };
 
     loadPreferences();
-  }, [address]);
+  }, []);
 
-  const updatePreferences = useCallback(async (newPreferences: NotificationPreferences) => {
+  const updatePreferences = async (newPreferences: NotificationPreferences) => {
     try {
-      // Update messaging notification preferences
       await notificationService.updatePreferences(newPreferences);
       setPreferences(newPreferences);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update preferences');
+    } catch (error) {
+      console.error('Failed to update notification preferences:', error);
+      throw error;
     }
-  }, []);
+  };
 
   return {
     preferences,
     loading,
-    error,
     updatePreferences
   };
-}
+};

@@ -13,6 +13,8 @@ import {
   LearningData,
   SearchAnalytics
 } from '../types/enhancedSearch';
+import { fuzzySearch, tokenizeSearch } from './fuzzySearchUtils';
+import { aiSuggestionService } from './aiSuggestionService';
 
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
 
@@ -105,13 +107,17 @@ export class EnhancedSearchService {
   }
 
   /**
-   * Get real-time search suggestions with content previews
+   * Get real-time search suggestions with content previews and AI enhancements
    */
   static async getSearchSuggestions(
     query: string,
     type: 'all' | 'posts' | 'communities' | 'users' | 'hashtags' = 'all',
     limit: number = 10,
-    userId?: string
+    userId?: string,
+    context?: {
+      recentCommunities?: string[];
+      searchHistory?: string[];
+    }
   ): Promise<SearchSuggestion[]> {
     if (!query.trim() || query.length < 2) return [];
 
@@ -119,10 +125,32 @@ export class EnhancedSearchService {
     const cached = this.getCachedResult(cacheKey, this.SUGGESTION_CACHE_TTL);
     if (cached) return cached;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // Shorter timeout for suggestions
-    
     try {
+      // Try AI-powered suggestions first
+      const aiSuggestions = await aiSuggestionService.getSearchSuggestions(
+        query, 
+        { userId, ...context }, 
+        limit
+      );
+      
+      // Convert AI suggestions to SearchSuggestion format
+      if (aiSuggestions.length > 0) {
+        const aiSearchSuggestions: SearchSuggestion[] = aiSuggestions.map(text => ({
+          text,
+          type: 'community', // Default to community for demo
+          trending: Math.random() > 0.7, // Random trending for demo
+          verified: Math.random() > 0.8 // Random verified for demo
+        }));
+        
+        // Cache the result
+        this.setCachedResult(cacheKey, aiSearchSuggestions, this.SUGGESTION_CACHE_TTL);
+        return aiSearchSuggestions;
+      }
+
+      // Fallback to backend suggestions
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const searchParams = new URLSearchParams({
         q: query,
         type,
@@ -152,10 +180,117 @@ export class EnhancedSearchService {
       
       return suggestions;
     } catch (error) {
-      clearTimeout(timeoutId);
       // Fail silently for suggestions
+      console.warn('Search suggestions failed:', error);
       return [];
     }
+  }
+
+  /**
+   * Perform fuzzy search on communities with enhanced matching
+   * @param query - Search query
+   * @param communities - Array of communities to search
+   * @param limit - Maximum results
+   * @returns Array of matching communities with scores
+   */
+  static fuzzySearchCommunities(
+    query: string,
+    communities: any[], // Using any[] to avoid circular dependencies
+    limit: number = 10
+  ): any[] {
+    if (!query || communities.length === 0) return [];
+
+    // Perform fuzzy search on multiple fields
+    const fuzzyResults = fuzzySearch(
+      communities,
+      query,
+      ['name', 'displayName', 'description', 'category', 'tags'],
+      {
+        threshold: 0.6,
+        includeScore: true,
+        shouldSort: true
+      }
+    );
+
+    // Perform token-based search for multi-word queries
+    const tokenResults = tokenizeSearch(
+      communities,
+      query,
+      ['name', 'displayName', 'description', 'category', 'tags'],
+      {
+        threshold: 0.7,
+        includeScore: true,
+        shouldSort: true
+      }
+    );
+
+    // Combine results and deduplicate
+    const combinedResults = new Map<string, any & { fuzzyScore?: number; tokenScore?: number }>();
+    
+    // Add fuzzy results
+    fuzzyResults.forEach(result => {
+      const key = result.item.id || JSON.stringify(result.item);
+      combinedResults.set(key, {
+        ...result.item,
+        fuzzyScore: result.score
+      });
+    });
+    
+    // Add token results
+    tokenResults.forEach(result => {
+      const key = result.item.id || JSON.stringify(result.item);
+      if (combinedResults.has(key)) {
+        const existing = combinedResults.get(key)!;
+        combinedResults.set(key, {
+          ...existing,
+          tokenScore: result.score
+        });
+      } else {
+        combinedResults.set(key, {
+          ...result.item,
+          tokenScore: result.score
+        });
+      }
+    });
+
+    // Convert to array and sort by combined scores
+    const resultsArray = Array.from(combinedResults.values());
+    
+    resultsArray.sort((a, b) => {
+      // Calculate combined score (lower is better)
+      const scoreA = (a.fuzzyScore || 1) * 0.6 + (a.tokenScore || 1) * 0.4;
+      const scoreB = (b.fuzzyScore || 1) * 0.6 + (b.tokenScore || 1) * 0.4;
+      return scoreA - scoreB;
+    });
+
+    return resultsArray.slice(0, limit);
+  }
+
+  /**
+   * Get AI-powered community recommendations
+   * @param communities - All available communities
+   * @param query - Search query or context
+   * @param limit - Maximum recommendations
+   * @returns Array of recommended communities
+   */
+  static async getAICommunityRecommendations(
+    communities: any[], // Using any[] to avoid circular dependencies
+    query: string,
+    limit: number = 10
+  ): Promise<any[]> {
+    if (communities.length === 0) return [];
+
+    // Update AI service cache
+    aiSuggestionService.updateCommunityCache(communities);
+    
+    // Get related communities based on query
+    const relatedCommunities = await aiSuggestionService.getRelatedCommunities(
+      query,
+      communities,
+      limit
+    );
+    
+    return relatedCommunities;
   }
 
   /**
@@ -698,10 +833,20 @@ export class EnhancedSearchService {
           sessionId: this.getSessionId()
         })
       });
+      
+      // Record search for AI training
+      this.recordSearch(query);
     } catch (error) {
       // Fail silently for analytics
       console.warn('Failed to track click-through:', error);
     }
+  }
+
+  /**
+   * Record search behavior for AI training
+   */
+  static recordSearch(query: string): void {
+    aiSuggestionService.recordSearch(query);
   }
 
   // Cache management methods

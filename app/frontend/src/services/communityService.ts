@@ -3,9 +3,32 @@ import {
   CreateCommunityInput, 
   UpdateCommunityInput 
 } from '../models/Community';
+import { CommunityOfflineCacheService } from './communityOfflineCacheService';
+import { fetchWithRetry, RetryOptions } from './retryUtils';
+import { communityPerformanceService } from './communityPerformanceService';
 
 // Get the backend API base URL from environment variables
 const BACKEND_API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000';
+
+// Default retry options for community API calls
+const COMMUNITY_RETRY_OPTIONS: RetryOptions = {
+  maxRetries: 3,
+  initialDelay: 1000,
+  maxDelay: 10000,
+  shouldRetry: (error: any) => {
+    // Retry on network errors, 5xx errors, and 429 (rate limited)
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return true;
+    }
+    
+    if (error.response) {
+      const status = error.response.status;
+      return status >= 500 || status === 429 || status === 503;
+    }
+    
+    return false;
+  }
+};
 
 /**
  * Community API Service
@@ -23,6 +46,8 @@ async function safeJson(response: Response): Promise<any> {
 }
 
 export class CommunityService {
+  private static offlineCacheService = CommunityOfflineCacheService.getInstance();
+
   /**
    * Create a new community
    * @param data - Community data to create
@@ -33,14 +58,18 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -53,6 +82,18 @@ export class CommunityService {
     } catch (error) {
       clearTimeout(timeoutId);
       
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'create_community',
+          data: { communityData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Community creation queued for when online');
+      }
+      
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
       }
@@ -62,7 +103,7 @@ export class CommunityService {
   }
 
   /**
-   * Get a community by its ID
+   * Get a community by its ID with offline support
    * @param id - Community ID
    * @returns The community or null if not found
    */
@@ -71,13 +112,17 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -91,12 +136,22 @@ export class CommunityService {
           return null;
         }
         if (response.status === 503) {
-          // Service unavailable - return null instead of throwing to prevent UI crashes
+          // Service unavailable - try to get from cache
+          const cached = await this.offlineCacheService.getCachedCommunity(id);
+          if (cached) {
+            console.warn('Community service unavailable (503), returning cached data');
+            return cached;
+          }
           console.warn('Community service unavailable (503), returning null');
           return null;
         }
         if (response.status === 429) {
-          // Rate limited - return null instead of throwing to prevent UI crashes
+          // Rate limited - try to get from cache
+          const cached = await this.offlineCacheService.getCachedCommunity(id);
+          if (cached) {
+            console.warn('Community service rate limited (429), returning cached data');
+            return cached;
+          }
           console.warn('Community service rate limited (429), returning null');
           return null;
         }
@@ -105,9 +160,41 @@ export class CommunityService {
       }
       
       const json = await safeJson(response);
-      return (json as Community) || null;
+      const community = (json as Community) || null;
+      
+      // Track community view for performance metrics
+      if (community) {
+        // Increment view count
+        community.viewCount = (community.viewCount || 0) + 1;
+        community.lastActiveAt = new Date();
+        
+        // Track view event
+        communityPerformanceService.trackEvent({
+          eventType: 'view_recorded',
+          communityId: community.id,
+          userId: 'anonymous', // This would be the actual user ID in a real implementation
+          timestamp: new Date(),
+          metadata: {
+            viewCount: community.viewCount
+          }
+        });
+        
+        // Cache the community for offline use
+        await this.offlineCacheService.cacheCommunity(community);
+      }
+      
+      return community;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, try to get from cache
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        const cached = await this.offlineCacheService.getCachedCommunity(id);
+        if (cached) {
+          console.warn('Offline mode, returning cached community data');
+          return cached;
+        }
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -118,7 +205,7 @@ export class CommunityService {
   }
 
   /**
-   * Get a community by its name
+   * Get a community by its name with offline support
    * @param name - Community name (unique identifier)
    * @returns The community or null if not found
    */
@@ -127,13 +214,17 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/name/${name}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/name/${name}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -174,7 +265,7 @@ export class CommunityService {
   }
 
   /**
-   * Get all communities
+   * Get all communities with offline support
    * @param params - Optional query parameters
    * @returns Array of communities
    */
@@ -204,13 +295,17 @@ export class CommunityService {
         url += `?${searchParams.toString()}`;
       }
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        url,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -236,13 +331,16 @@ export class CommunityService {
       
       const json = await safeJson(response);
       // Normalize payload to an array regardless of envelope shape
-      if (Array.isArray(json)) return json;
-      if (Array.isArray(json?.data)) return json.data;
-      if (Array.isArray(json?.communities)) return json.communities;
-      if (Array.isArray(json?.results)) return json.results;
-      if (Array.isArray(json?.items)) return json.items;
-      if (Array.isArray(json?.data?.items)) return json.data.items;
-      return [];
+      let communities: Community[] = [];
+      if (Array.isArray(json)) communities = json;
+      else if (Array.isArray(json?.data)) communities = json.data;
+      else if (Array.isArray(json?.communities)) communities = json.communities;
+      else if (Array.isArray(json?.results)) communities = json.results;
+      else if (Array.isArray(json?.items)) communities = json.items;
+      else if (Array.isArray(json?.data?.items)) communities = json.data.items;
+      else communities = [];
+      
+      return communities;
     } catch (error) {
       clearTimeout(timeoutId);
       
@@ -265,14 +363,18 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+          signal: controller.signal,
         },
-        body: JSON.stringify(data),
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -281,9 +383,29 @@ export class CommunityService {
         throw new Error((error && (error.error || error.message)) || 'Failed to update community');
       }
       
-      return response.json();
+      const json = await safeJson(response);
+      const community = json as Community;
+      
+      // Update cache
+      if (community) {
+        await this.offlineCacheService.cacheCommunity(community);
+      }
+      
+      return community;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'update_community',
+          data: { communityId: id, updateData: data },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Community update queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -303,13 +425,17 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/${id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -321,9 +447,24 @@ export class CommunityService {
         throw new Error((error && (error.error || error.message)) || 'Failed to delete community');
       }
       
+      // Clear cache
+      await this.offlineCacheService.clearCommunityCache(id);
+      
       return true;
     } catch (error) {
       clearTimeout(timeoutId);
+      
+      // If offline, queue the action
+      if (!this.offlineCacheService.isOnlineStatus()) {
+        await this.offlineCacheService.queueOfflineAction({
+          type: 'delete_community',
+          data: { communityId: id },
+          timestamp: new Date(),
+          retryCount: 0,
+          maxRetries: 3
+        });
+        throw new Error('Community deletion queued for when online');
+      }
       
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('Request timeout');
@@ -344,13 +485,17 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/search?q=${encodeURIComponent(query)}&limit=${limit}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       
@@ -404,13 +549,17 @@ export class CommunityService {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
     try {
-      const response = await fetch(`${BACKEND_API_BASE_URL}/api/communities/trending?limit=${limit}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithRetry(
+        `${BACKEND_API_BASE_URL}/api/communities/trending?limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
         },
-        signal: controller.signal,
-      });
+        COMMUNITY_RETRY_OPTIONS
+      );
       
       clearTimeout(timeoutId);
       

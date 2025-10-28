@@ -29,6 +29,8 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
   const [toastNotifications, setToastNotifications] = useState<AppNotification[]>([]);
   const [preferences, setPreferences] = useState<NotificationPrefs | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pendingNotifications, setPendingNotifications] = useState(0);
 
   // WebSocket connection for real-time notifications
   const { isConnected, on, off } = useWebSocket({
@@ -43,6 +45,40 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
       loadPreferences();
     }
   }, [address]);
+
+  // Set up network status listener
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Check initial network status
+    setIsOnline(navigator.onLine);
+    
+    // Set up periodic check for pending notifications
+    const interval = setInterval(async () => {
+      if (typeof localStorage !== 'undefined') {
+        const storedQueue = localStorage.getItem('notification_queue');
+        if (storedQueue) {
+          try {
+            const queue = JSON.parse(storedQueue);
+            const pendingCount = (queue.offline?.length || 0) + (queue.failed?.length || 0);
+            setPendingNotifications(pendingCount);
+          } catch (error) {
+            console.warn('Error parsing notification queue:', error);
+          }
+        }
+      }
+    }, 5000);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Set up real-time notification listeners
   useEffect(() => {
@@ -325,8 +361,22 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
+          
+          {/* Offline indicator */}
+          {!isOnline && (
+            <span className="absolute -top-1 -left-1 bg-yellow-500 text-black text-xs rounded-full h-5 w-5 flex items-center justify-center" title="Offline mode">
+              ⚠
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Pending notifications indicator */}
+      {pendingNotifications > 0 && (
+        <div className="fixed top-20 right-4 bg-blue-500 text-white text-xs rounded-full px-2 py-1 z-50">
+          {pendingNotifications} pending notification{pendingNotifications > 1 ? 's' : ''}
+        </div>
+      )}
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-50 space-y-2">
@@ -359,6 +409,8 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({ classNam
           setIsNotificationCenterOpen(false);
           setIsPreferencesOpen(true);
         }}
+        isOnline={isOnline}
+        pendingNotifications={pendingNotifications}
       />
 
       {/* Notification Preferences */}

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Message as ChatMessage, Conversation, ChatHistoryRequest } from '@/types/messaging';
+import { Message as ChatMessage, Conversation, ChatHistoryRequest, MessageReaction } from '@/types/messaging';
 import { chatHistoryService } from '@/services/chatHistoryService';
 import { OfflineManager } from '@/services/OfflineManager';
+import { useAuth } from '@/context/AuthContext';
 
 interface UseChatHistoryReturn {
   messages: ChatMessage[];
@@ -23,6 +24,7 @@ interface UseChatHistoryReturn {
 }
 
 export const useChatHistory = (): UseChatHistoryReturn => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,21 +36,22 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   const [nextCursor, setNextCursor] = useState<string | undefined>();
   const [conversationOffset, setConversationOffset] = useState(0);
   const [isOnline, setIsOnline] = useState(true);
+  const [messageReactions, setMessageReactions] = useState<Map<string, MessageReaction[]>>(new Map());
   const offlineManager = OfflineManager.getInstance();
-  const conversationLimit = 20; // Load 20 conversations at a time
+  const conversationLimit = 20;
 
-  // Load initial conversations on mount (only first page)
   useEffect(() => {
     loadConversations();
     
-    // Set up network status listener
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      offlineManager.syncQueuedActions();
+    };
     const handleOffline = () => setIsOnline(false);
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    // Check initial network status
     setIsOnline(navigator.onLine);
     
     return () => {
@@ -148,19 +151,23 @@ export const useChatHistory = (): UseChatHistoryReturn => {
   }, []);
 
   const markAsRead = useCallback(async (conversationId: string, messageIds: string[]) => {
+    if (!user?.address) return;
+    
     try {
-      await chatHistoryService.markMessagesAsRead(conversationId, messageIds);
+      if (isOnline) {
+        await chatHistoryService.markMessagesAsRead(conversationId, messageIds);
+      } else {
+        offlineManager.queueAction('MARK_MESSAGES_READ', { conversationId, messageIds }, { priority: 'medium' });
+      }
       
-      // Update conversation unread count locally
       setConversations(prev => prev.map(conv => {
         if (conv.id === conversationId) {
-          const currentUserAddress = ''; // This should be passed from the component or context
-          const currentCount = conv.unreadCounts[currentUserAddress] || 0;
+          const currentCount = conv.unreadCounts[user.address] || 0;
           return {
             ...conv,
             unreadCounts: {
               ...conv.unreadCounts,
-              [currentUserAddress]: Math.max(0, currentCount - messageIds.length)
+              [user.address]: Math.max(0, currentCount - messageIds.length)
             }
           };
         }
@@ -169,37 +176,62 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark messages as read');
     }
-  }, []);
+  }, [user, isOnline, offlineManager]);
 
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user?.address) return;
+    
     try {
-      await chatHistoryService.addReaction(messageId, emoji);
+      if (isOnline) {
+        await chatHistoryService.addReaction(messageId, emoji);
+      } else {
+        offlineManager.queueAction('ADD_REACTION', { messageId, emoji }, { priority: 'low' });
+      }
       
-      // Note: Message interface doesn't support reactions directly
-      // This would need to be handled by a separate reactions state or service
-      console.log(`Added reaction ${emoji} to message ${messageId}`);
+      setMessageReactions(prev => {
+        const reactions = prev.get(messageId) || [];
+        const newReaction: MessageReaction = {
+          id: `${messageId}_${emoji}_${Date.now()}`,
+          messageId,
+          fromAddress: user.address,
+          emoji,
+          timestamp: new Date()
+        };
+        return new Map(prev).set(messageId, [...reactions, newReaction]);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add reaction');
     }
-  }, []);
+  }, [user, isOnline, offlineManager]);
 
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user?.address) return;
+    
     try {
-      await chatHistoryService.removeReaction(messageId, emoji);
+      if (isOnline) {
+        await chatHistoryService.removeReaction(messageId, emoji);
+      } else {
+        offlineManager.queueAction('REMOVE_REACTION', { messageId, emoji }, { priority: 'low' });
+      }
       
-      // Note: Message interface doesn't support reactions directly
-      // This would need to be handled by a separate reactions state or service
-      console.log(`Removed reaction ${emoji} from message ${messageId}`);
+      setMessageReactions(prev => {
+        const reactions = prev.get(messageId) || [];
+        const filtered = reactions.filter(r => !(r.emoji === emoji && r.fromAddress === user.address));
+        return new Map(prev).set(messageId, filtered);
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove reaction');
     }
-  }, []);
+  }, [user, isOnline, offlineManager]);
 
   const deleteMessage = useCallback(async (messageId: string) => {
     try {
-      await chatHistoryService.deleteMessage(messageId);
+      if (isOnline) {
+        await chatHistoryService.deleteMessage(messageId);
+      } else {
+        offlineManager.queueAction('DELETE_MESSAGE', { messageId }, { priority: 'medium' });
+      }
       
-      // Mark message as deleted locally
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
           ? { ...msg, content: '[Message deleted]' }
@@ -208,7 +240,7 @@ export const useChatHistory = (): UseChatHistoryReturn => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete message');
     }
-  }, []);
+  }, [isOnline, offlineManager]);
 
   return {
     messages,

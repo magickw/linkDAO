@@ -16,6 +16,7 @@ class RealTimeNotificationService {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private batchTimeout: NodeJS.Timeout | null = null;
   private pendingBatch: RealTimeNotification[] = [];
+  private db: IDBDatabase | null = null;
   
   private listeners: Map<string, Set<Function>> = new Map();
   private notificationQueue: NotificationQueue = {
@@ -47,6 +48,50 @@ class RealTimeNotificationService {
   constructor() {
     this.loadSettings();
     this.setupEventListeners();
+    this.initializeDatabase();
+  }
+
+  // Initialize IndexedDB for offline storage
+  private async initializeDatabase(): Promise<void> {
+    if (typeof window === 'undefined' || !('indexedDB' in window)) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('NotificationQueueDB', 1);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        this.db = request.result;
+        this.loadQueueFromStorage();
+        resolve();
+      };
+
+      request.onupgradeneeded = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+
+        // Create object stores for different queue types
+        if (!db.objectStoreNames.contains('online')) {
+          const onlineStore = db.createObjectStore('online', { keyPath: 'id' });
+          onlineStore.createIndex('timestamp', 'timestamp');
+        }
+
+        if (!db.objectStoreNames.contains('offline')) {
+          const offlineStore = db.createObjectStore('offline', { keyPath: 'id' });
+          offlineStore.createIndex('timestamp', 'timestamp');
+        }
+
+        if (!db.objectStoreNames.contains('failed')) {
+          const failedStore = db.createObjectStore('failed', { keyPath: 'id' });
+          failedStore.createIndex('timestamp', 'timestamp');
+          failedStore.createIndex('retryCount', 'retryCount');
+        }
+
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      };
+    });
   }
 
   // Connection Management
@@ -77,9 +122,10 @@ class RealTimeNotificationService {
         };
 
         this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          this.emit('connection', { status: 'error', error });
-          reject(error);
+          const errorMsg = 'WebSocket connection error';
+          console.error('[RealTimeNotification] WebSocket error:', errorMsg);
+          this.emit('connection', { status: 'error', error: errorMsg });
+          reject(new Error(errorMsg));
         };
 
       } catch (error) {
@@ -151,7 +197,8 @@ class RealTimeNotificationService {
           console.warn('Unknown message type:', data.type);
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[RealTimeNotification] Parse error:', errorMsg);
     }
   }
 
@@ -339,11 +386,13 @@ class RealTimeNotificationService {
     try {
       const audio = new Audio(this.getNotificationSound(notification));
       audio.volume = 0.5;
-      audio.play().catch(error => {
-        console.warn('Could not play notification sound:', error);
+      audio.play().catch(err => {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        console.warn('[RealTimeNotification] Sound play failed:', errorMsg);
       });
     } catch (error) {
-      console.warn('Error playing notification sound:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('[RealTimeNotification] Sound error:', errorMsg);
     }
   }
 
@@ -362,47 +411,193 @@ class RealTimeNotificationService {
     return soundMap[notification.category] || '/sounds/default.mp3';
   }
 
-  // Offline Support
-  private queueNotification(notification: RealTimeNotification, queue: keyof NotificationQueue): void {
+  // Enhanced offline support with IndexedDB
+  private async queueNotification(notification: RealTimeNotification, queue: keyof NotificationQueue): Promise<void> {
     this.notificationQueue[queue].push(notification);
-    this.saveQueueToStorage();
+    await this.saveQueueToStorage();
   }
 
-  private syncOfflineNotifications(): void {
-    const offlineNotifications = [...this.notificationQueue.offline];
-    this.notificationQueue.offline = [];
-    
-    offlineNotifications.forEach(notification => {
-      this.handleNotification(notification);
-    });
-    
-    this.saveQueueToStorage();
-    this.emit('offline_sync', { count: offlineNotifications.length });
-  }
-
-  private saveQueueToStorage(): void {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+  private async syncOfflineNotifications(): Promise<void> {
+    if (!this.db) {
+      // Fallback to localStorage if IndexedDB is not available
+      const offlineNotifications = [...this.notificationQueue.offline];
+      this.notificationQueue.offline = [];
+      
+      offlineNotifications.forEach(notification => {
+        this.handleNotification(notification);
+      });
+      
+      this.saveQueueToStorage();
+      this.emit('offline_sync', { count: offlineNotifications.length });
       return;
     }
+
     try {
-      localStorage.setItem('notification_queue', JSON.stringify(this.notificationQueue));
+      // Get offline notifications from IndexedDB
+      const offlineNotifications = await this.getStoredNotifications('offline');
+      
+      // Process each notification with retry logic
+      for (const notification of offlineNotifications) {
+        try {
+          await this.processNotificationWithRetry(notification);
+        } catch (error) {
+          // If processing fails, move to failed queue
+          await this.moveToFailedQueue(notification);
+        }
+      }
+      
+      // Clear offline queue after processing
+      await this.clearStoredNotifications('offline');
+      
+      this.emit('offline_sync', { count: offlineNotifications.length });
     } catch (error) {
-      console.warn('Could not save notification queue to storage:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[RealTimeNotification] Sync error:', errorMsg);
     }
+  }
+
+  private async processNotificationWithRetry(notification: RealTimeNotification & { retryCount?: number }): Promise<void> {
+    const maxRetries = 3;
+    const retryCount = notification.retryCount || 0;
+    
+    try {
+      this.handleNotification(notification);
+    } catch (error) {
+      if (retryCount < maxRetries) {
+        // Schedule retry with exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        setTimeout(() => {
+          this.processNotificationWithRetry({ ...notification, retryCount: retryCount + 1 });
+        }, delay);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  private async moveToFailedQueue(notification: RealTimeNotification): Promise<void> {
+    if (!this.db) return;
+    
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['failed'], 'readwrite');
+      const store = transaction.objectStore('failed');
+      
+      const failedNotification = {
+        ...notification,
+        failedAt: new Date(),
+        retryCount: (notification as any).retryCount || 0
+      };
+      
+      const request = store.add(failedNotification);
+      
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  private async saveQueueToStorage(): Promise<void> {
+    if (!this.db) {
+      // Fallback to localStorage
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      try {
+        localStorage.setItem('notification_queue', JSON.stringify(this.notificationQueue));
+      } catch (error) {
+        console.warn('Could not save notification queue to storage:', error);
+      }
+      return;
+    }
+
+    try {
+      // Save each queue to its respective object store
+      await this.saveNotificationsToStore('online', this.notificationQueue.online);
+      await this.saveNotificationsToStore('offline', this.notificationQueue.offline);
+      await this.saveNotificationsToStore('failed', this.notificationQueue.failed);
+    } catch (error) {
+      console.warn('Could not save notification queue to IndexedDB:', error);
+    }
+  }
+
+  private async saveNotificationsToStore(storeName: string, notifications: RealTimeNotification[]): Promise<void> {
+    if (!this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      // Clear existing notifications
+      const clearRequest = store.clear();
+      
+      clearRequest.onsuccess = () => {
+        // Add all notifications
+        notifications.forEach(notification => {
+          store.add(notification);
+        });
+        resolve();
+      };
+      
+      clearRequest.onerror = () => reject(clearRequest.error);
+    });
+  }
+
+  private async getStoredNotifications(storeName: string): Promise<RealTimeNotification[]> {
+    if (!this.db) return [];
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  private async clearStoredNotifications(storeName: string): Promise<void> {
+    if (!this.db) return;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const request = store.clear();
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
   }
 
   private loadQueueFromStorage(): void {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    if (!this.db) {
+      // Fallback to localStorage
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      try {
+        const stored = localStorage.getItem('notification_queue');
+        if (stored) {
+          this.notificationQueue = JSON.parse(stored);
+        }
+      } catch (error) {
+        console.warn('Could not load notification queue from storage:', error);
+      }
       return;
     }
-    try {
-      const stored = localStorage.getItem('notification_queue');
-      if (stored) {
-        this.notificationQueue = JSON.parse(stored);
-      }
-    } catch (error) {
-      console.warn('Could not load notification queue from storage:', error);
-    }
+
+    // Load from IndexedDB
+    Promise.all([
+      this.getStoredNotifications('online'),
+      this.getStoredNotifications('offline'),
+      this.getStoredNotifications('failed')
+    ]).then(([online, offline, failed]) => {
+      this.notificationQueue = {
+        online,
+        offline,
+        failed
+      };
+    }).catch(error => {
+      console.warn('Could not load notification queue from IndexedDB:', error);
+    });
   }
 
   // Settings Management

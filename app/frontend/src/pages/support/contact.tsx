@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { 
   Mail, 
   Phone, 
@@ -14,13 +16,14 @@ import {
   Building,
   Tag,
   FileText,
-  Paperclip
+  Paperclip,
+  Shield
 } from 'lucide-react';
 
 const ContactPage: NextPage = () => {
+  const { user, isAuthenticated } = useAuth();
+  const { createTicket } = useSupportTickets();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
     subject: '',
     category: 'general',
     priority: 'medium',
@@ -28,6 +31,7 @@ const ContactPage: NextPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -39,26 +43,38 @@ const ContactPage: NextPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      setSubmitError('Please connect your wallet to submit a support ticket');
+      return;
+    }
+    
     setIsSubmitting(true);
+    setSubmitError(null);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    
-    // Reset form after 5 seconds
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        category: 'general',
-        priority: 'medium',
-        message: ''
+    try {
+      await createTicket({
+        subject: formData.subject,
+        description: formData.message,
+        category: formData.category,
+        priority: formData.priority,
       });
-    }, 5000);
+      
+      setIsSubmitted(true);
+      
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({
+          subject: '',
+          category: 'general',
+          priority: 'medium',
+          message: ''
+        });
+      }, 5000);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to submit ticket');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const supportChannels = [
@@ -199,7 +215,15 @@ const ContactPage: NextPage = () => {
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Send us a Message</h2>
                 
-                {isSubmitted ? (
+                {!isAuthenticated ? (
+                  <div className="text-center py-12">
+                    <Shield className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Authentication Required</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                      Please connect your wallet to submit a support ticket.
+                    </p>
+                  </div>
+                ) : isSubmitted ? (
                   <div className="text-center py-12">
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Message Sent!</h3>
@@ -215,49 +239,11 @@ const ContactPage: NextPage = () => {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Full Name
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <User className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type="text"
-                            id="name"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            required
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Your full name"
-                          />
-                        </div>
+                    {submitError && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                        <p className="text-red-800 dark:text-red-200">{submitError}</p>
                       </div>
-                      
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Email Address
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Mail className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="your.email@example.com"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    )}
                     
                     <div>
                       <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -296,13 +282,14 @@ const ContactPage: NextPage = () => {
                             onChange={handleChange}
                             className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           >
-                            <option value="tokens">LDAO Tokens</option>
-                            <option value="marketplace">Marketplace</option>
-                            <option value="wallet">Wallet Issues</option>
-                            <option value="governance">Governance</option>
+                            <option value="direct-purchase">Direct Purchase</option>
+                            <option value="dex-trading">DEX Trading</option>
+                            <option value="staking">Staking</option>
+                            <option value="earn-to-own">Earn-to-Own</option>
+                            <option value="cross-chain">Cross-Chain</option>
                             <option value="technical">Technical Issues</option>
-                            <option value="security">Security Concerns</option>
-                            <option value="general">General Inquiry</option>
+                            <option value="account">Account Issues</option>
+                            <option value="other">Other</option>
                           </select>
                         </div>
                       </div>

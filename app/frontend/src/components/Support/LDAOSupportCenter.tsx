@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MessageCircle, Book, Video, Mail, Phone, Clock, CheckCircle, Bot, Star, Bookmark } from 'lucide-react';
+import { Search, MessageCircle, Book, Video, Mail, Phone, Clock, CheckCircle, Bot, Star, Bookmark, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
+import { supportService } from '@/services/supportService';
 
 interface SupportTicket {
   id: string;
@@ -20,36 +23,34 @@ interface FAQItem {
 }
 
 const LDAOSupportCenter: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const { tickets, loading: ticketsLoading, error: ticketsError, fetchTickets } = useSupportTickets();
   const [activeTab, setActiveTab] = useState<'help' | 'tickets' | 'contact'>('help');
   const [searchQuery, setSearchQuery] = useState('');
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [faqLoading, setFaqLoading] = useState(false);
+  const [faqError, setFaqError] = useState<string | null>(null);
   const [isLiveChatOpen, setIsLiveChatOpen] = useState(false);
 
   useEffect(() => {
-    // Load user's support tickets
-    loadSupportTickets();
-    // Load FAQ items
-    loadFAQItems();
-  }, []);
-
-  const loadSupportTickets = async () => {
-    try {
-      const response = await fetch('/api/support/tickets');
-      const data = await response.json();
-      setTickets(data);
-    } catch (error) {
-      console.error('Failed to load support tickets:', error);
+    if (isAuthenticated) {
+      fetchTickets();
     }
-  };
+    loadFAQItems();
+  }, [isAuthenticated, fetchTickets]);
+
+
 
   const loadFAQItems = async () => {
+    setFaqLoading(true);
+    setFaqError(null);
     try {
-      const response = await fetch('/api/support/faq?category=ldao');
-      const data = await response.json();
+      const data = await supportService.getFAQ('ldao');
       setFaqs(data);
     } catch (error) {
-      console.error('Failed to load FAQ items:', error);
+      setFaqError('Failed to load FAQ items');
+    } finally {
+      setFaqLoading(false);
     }
   };
 
@@ -286,16 +287,39 @@ const LDAOSupportCenter: React.FC = () => {
       {/* My Tickets Tab */}
       {activeTab === 'tickets' && (
         <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              My Support Tickets
-            </h2>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              Create New Ticket
-            </button>
-          </div>
+          {!isAuthenticated ? (
+            <div className="text-center py-12">
+              <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Authentication Required
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Please connect your wallet to view support tickets
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  My Support Tickets
+                </h2>
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  Create New Ticket
+                </button>
+              </div>
 
-          {tickets.length === 0 ? (
+              {ticketsError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-red-800">{ticketsError}</p>
+                </div>
+              )}
+
+              {ticketsLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-600 mt-4">Loading tickets...</p>
+                </div>
+              ) : tickets.length === 0 ? (
             <div className="text-center py-12">
               <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -341,7 +365,7 @@ const LDAOSupportCenter: React.FC = () => {
                       </div>
                       <div className="flex items-center">
                         <CheckCircle className="w-4 h-4 mr-1" />
-                        Updated {ticket.lastUpdate.toLocaleDateString()}
+                        Updated {ticket.updatedAt.toLocaleDateString()}
                       </div>
                     </div>
                     <button className="text-blue-600 hover:text-blue-800">
@@ -351,6 +375,8 @@ const LDAOSupportCenter: React.FC = () => {
                 </div>
               ))}
             </div>
+              )}
+            </>
           )}
         </div>
       )}

@@ -12,12 +12,14 @@ interface NotificationItemProps {
   notification: Notification;
   onMarkAsRead: () => void;
   onDelete: () => void;
+  isOnline?: boolean;
 }
 
 export const NotificationItem: React.FC<NotificationItemProps> = ({
   notification,
   onMarkAsRead,
-  onDelete
+  onDelete,
+  isOnline = true
 }) => {
   const router = useRouter();
   const [showActions, setShowActions] = useState(false);
@@ -74,7 +76,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         return (
           <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
             <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
         );
@@ -82,7 +84,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         return (
           <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
             <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m-6 9l2 2 4-4" />
             </svg>
           </div>
         );
@@ -129,6 +131,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       className={`
         relative group p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors
         ${!notification.isRead ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+        ${!isOnline ? 'opacity-75' : ''}
       `}
       onClick={handleClick}
       onMouseEnter={() => setShowActions(true)}
@@ -153,6 +156,13 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
               {getPriorityIndicator()}
             </div>
           )}
+          
+          {/* Offline indicator */}
+          {!isOnline && (
+            <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center" title="Offline">
+              ⚠
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -161,6 +171,11 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {notification.title}
+                {!isOnline && (
+                  <span className="ml-2 text-xs bg-yellow-500 text-black px-1.5 py-0.5 rounded-full">
+                    Offline
+                  </span>
+                )}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                 {notification.message}
@@ -196,8 +211,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                   e.stopPropagation();
                   onMarkAsRead();
                 }}
-                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50"
                 title="Mark as read"
+                disabled={!isOnline}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -210,8 +226,9 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+              className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
               title="Delete notification"
+              disabled={!isOnline}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

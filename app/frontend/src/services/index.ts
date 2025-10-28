@@ -1,14 +1,17 @@
-// Existing services
+// Export all services
+export * from './adminService';
+export * from './authService';
+export * from './communityService';
+export * from './communityPostService';
+export * from './feedService';
+export * from './messagingService';
+export * from './notificationService';
 export * from './postService';
 export * from './profileService';
-export * from './followService';
-export * from './marketplaceService';
-export * from './webSocketService';
-
-// Community services
-export * from './communityService';
-export * from './communityMembershipService';
-export * from './communityPostService';
-
-// Admin services
-export * from './adminWebSocketService';
+export * from './searchService';
+export * from './walletService';
+export * from './communityOfflineCacheService';
+export * from './retryUtils';
+export * from './fuzzySearchUtils';
+export * from './aiSuggestionService';
+export * from './enhancedSearchService';
