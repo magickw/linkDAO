@@ -97,6 +97,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
+    { name: 'Docs', href: '/docs', icon: '📚' },
   ]), []);
 
   // User-specific navigation items (only for authenticated users)
