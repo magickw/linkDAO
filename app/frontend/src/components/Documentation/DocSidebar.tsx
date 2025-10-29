@@ -21,6 +21,7 @@ import {
   List
 } from 'lucide-react';
 
+// This component is publicly accessible and does not require authentication
 interface DocCategory {
   id: string;
   title: string;

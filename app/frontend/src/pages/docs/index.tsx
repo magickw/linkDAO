@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -39,6 +39,7 @@ import {
 import DocSidebar from '@/components/Documentation/DocSidebar';
 import DocViewer from '@/components/Documentation/DocViewer';
 
+// This page is publicly accessible and does not require authentication
 const DocsPage: NextPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
 
+// This component is publicly accessible and does not require authentication
 interface DocViewerProps {
   title: string;
   content: string;
