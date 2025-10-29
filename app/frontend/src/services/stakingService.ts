@@ -1,4 +1,4 @@
-import { TokenBalance } from './wallet';
+import { TokenBalance } from '../types/wallet';
 
 export interface StakingPool {
   id: string;
@@ -23,7 +23,7 @@ export interface UserStakingInfo {
   isActive: boolean;
 }
 
-export interface StakingServiceInterface {
+interface StakingServiceInterface {
   getAvailablePools(): Promise<StakingPool[]>;
   getUserStakingInfo(address: string): Promise<UserStakingInfo[]>;
   stakeTokens(poolId: string, amount: number, token: string): Promise<any>;
@@ -62,9 +62,9 @@ export class StakingService implements StakingServiceInterface {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting staking pools:', error);
-      throw new Error(`Failed to get staking pools: ${error.message}`);
+      throw new Error(`Failed to get staking pools: ${error.message || error}`);
     }
   }
 
@@ -88,9 +88,9 @@ export class StakingService implements StakingServiceInterface {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting user staking info:', error);
-      throw new Error(`Failed to get user staking info: ${error.message}`);
+      throw new Error(`Failed to get user staking info: ${error.message || error}`);
     }
   }
 
@@ -110,9 +110,9 @@ export class StakingService implements StakingServiceInterface {
         token: token,
         poolId: poolId
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error staking tokens:', error);
-      throw new Error(`Failed to stake tokens: ${error.message}`);
+      throw new Error(`Failed to stake tokens: ${error.message || error}`);
     }
   }
 
@@ -131,9 +131,9 @@ export class StakingService implements StakingServiceInterface {
         amount: amount,
         poolId: poolId
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error unstaking tokens:', error);
-      throw new Error(`Failed to unstake tokens: ${error.message}`);
+      throw new Error(`Failed to unstake tokens: ${error.message || error}`);
     }
   }
 
@@ -152,9 +152,9 @@ export class StakingService implements StakingServiceInterface {
         rewards: 10.5,
         poolId: poolId
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error claiming rewards:', error);
-      throw new Error(`Failed to claim rewards: ${error.message}`);
+      throw new Error(`Failed to claim rewards: ${error.message || error}`);
     }
   }
 
@@ -178,9 +178,9 @@ export class StakingService implements StakingServiceInterface {
       }
 
       return result.data.apr;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting pool APR:', error);
-      throw new Error(`Failed to get pool APR: ${error.message}`);
+      throw new Error(`Failed to get pool APR: ${error.message || error}`);
     }
   }
 
@@ -204,9 +204,9 @@ export class StakingService implements StakingServiceInterface {
       }
 
       return result.data.tvl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting pool TVL:', error);
-      throw new Error(`Failed to get pool TVL: ${error.message}`);
+      throw new Error(`Failed to get pool TVL: ${error.message || error}`);
     }
   }
 }

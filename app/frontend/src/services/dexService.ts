@@ -30,9 +30,9 @@ export class DEXService {
       }
 
       return result.data.quote;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting swap quote:', error);
-      throw new Error(`Failed to get swap quote: ${error.message}`);
+      throw new Error(`Failed to get swap quote: ${error.message || error}`);
     }
   }
 
@@ -55,9 +55,9 @@ export class DEXService {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting token price:', error);
-      throw new Error(`Failed to get token price: ${error.message}`);
+      throw new Error(`Failed to get token price: ${error.message || error}`);
     }
   }
 
@@ -80,9 +80,9 @@ export class DEXService {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting liquidity info:', error);
-      throw new Error(`Failed to get liquidity info: ${error.message}`);
+      throw new Error(`Failed to get liquidity info: ${error.message || error}`);
     }
   }
 
@@ -107,9 +107,9 @@ export class DEXService {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting gas estimate:', error);
-      throw new Error(`Failed to get gas estimate: ${error.message}`);
+      throw new Error(`Failed to get gas estimate: ${error.message || error}`);
     }
   }
 
@@ -132,9 +132,9 @@ export class DEXService {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error validating token:', error);
-      throw new Error(`Failed to validate token: ${error.message}`);
+      throw new Error(`Failed to validate token: ${error.message || error}`);
     }
   }
 
@@ -161,9 +161,9 @@ export class DEXService {
       }
 
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting gas fees:', error);
-      throw new Error(`Failed to get gas fees: ${error.message}`);
+      throw new Error(`Failed to get gas fees: ${error.message || error}`);
     }
   }
 }

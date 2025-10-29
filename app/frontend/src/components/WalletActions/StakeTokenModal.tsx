@@ -374,7 +374,7 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
                             // Implement claim rewards
                             addToast('Claim rewards functionality coming soon!', 'info');
                           }}
-                          className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                          className="px-33 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                         >
                           Claim Rewards
                         </button>

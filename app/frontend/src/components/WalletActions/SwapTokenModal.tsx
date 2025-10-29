@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { useToast } from '@/context/ToastContext';
-import { dexService, DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/services/dexService';
+import { dexService } from '@/services/dexService';
 import { formatUnits, parseUnits } from 'ethers/lib/utils';
 import { GasFeeService } from '@/services/gasFeeService';
 import { usePublicClient } from 'wagmi';
+import { DEFAULT_SLIPPAGE_OPTIONS, DEFAULT_SLIPPAGE } from '@/types/dex';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
