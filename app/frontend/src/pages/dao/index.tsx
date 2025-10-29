@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
@@ -6,101 +6,73 @@ import { useWeb3 } from '@/context/Web3Context';
 interface Community {
   id: string;
   name: string;
+  displayName: string;
   description: string;
-  members: number;
-  online: number;
-  icon: string;
-  bannerColor: string;
-  token?: string;
-  tokenPrice?: string;
-  treasuryBalance?: string;
+  memberCount: number;
+  postCount: number;
+  avatar?: string;
+  banner?: string;
+  category: string;
+  tags: string[];
+  governanceToken?: string;
+  treasuryAddress?: string;
+  trendingScore?: number;
+  growthRate?: number;
 }
 
 export default function CommunitiesPage() {
   const { isConnected } = useWeb3();
   const [searchTerm, setSearchTerm] = useState('');
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock data for communities
-  const communities: Community[] = [
-    {
-      id: 'ethereum-builders',
-      name: 'Ethereum Builders',
-      description: 'A community for Ethereum developers, builders, and researchers. Share your projects, ask questions, and collaborate on the future of Ethereum.',
-      members: 125000,
-      online: 1247,
-      icon: '🔗',
-      bannerColor: 'from-blue-500 to-purple-600',
-      token: 'ETHB',
-      tokenPrice: '$2.35',
-      treasuryBalance: '$294.7K'
-    },
-    {
-      id: 'defi-traders',
-      name: 'DeFi Traders',
-      description: 'Discuss trading strategies, new protocols, and market analysis in the decentralized finance space.',
-      members: 89000,
-      online: 892,
-      icon: '💱',
-      bannerColor: 'from-green-500 to-teal-600',
-      token: 'DEFI',
-      tokenPrice: '$1.85',
-      treasuryBalance: '$165.3K'
-    },
-    {
-      id: 'nft-collectors',
-      name: 'NFT Collectors',
-      description: 'Showcase your collections, discover new artists, and discuss the latest trends in the NFT space.',
-      members: 67000,
-      online: 543,
-      icon: '🎨',
-      bannerColor: 'from-pink-500 to-rose-600',
-      token: 'NFTC',
-      tokenPrice: '$0.42',
-      treasuryBalance: '$28.1K'
-    },
-    {
-      id: 'dao-governance',
-      name: 'DAO Governance',
-      description: 'Explore governance mechanisms, voting systems, and community decision-making in decentralized organizations.',
-      members: 45000,
-      online: 321,
-      icon: '🏛️',
-      bannerColor: 'from-indigo-500 to-blue-600',
-      token: 'GOV',
-      tokenPrice: '$3.75',
-      treasuryBalance: '$169.8K'
-    },
-    {
-      id: 'web3-developers',
-      name: 'Web3 Developers',
-      description: 'A place for developers building the decentralized web. Share resources, tools, and collaborate on projects.',
-      members: 38000,
-      online: 427,
-      icon: '💻',
-      bannerColor: 'from-gray-500 to-slate-600',
-      token: 'DEV',
-      tokenPrice: '$0.95',
-      treasuryBalance: '$36.2K'
-    },
-    {
-      id: 'layer2-enthusiasts',
-      name: 'Layer 2 Enthusiasts',
-      description: 'Discuss scaling solutions, rollups, and the latest developments in Layer 2 technologies.',
-      members: 31000,
-      online: 289,
-      icon: '⚡',
-      bannerColor: 'from-yellow-500 to-orange-600',
-      token: 'L2X',
-      tokenPrice: '$0.25',
-      treasuryBalance: '$7.8K'
-    },
-  ];
+  useEffect(() => {
+    fetchCommunities();
+  }, []);
 
-  // Filter communities based on search term
+  const fetchCommunities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/communities?page=1&limit=20&sort=members`);
+      if (!response.ok) throw new Error('Failed to fetch communities');
+      const data = await response.json();
+      setCommunities(data.communities || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load communities');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredCommunities = communities.filter(community => 
-    community.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    community.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     community.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      'technology': 'from-blue-500 to-purple-600',
+      'finance': 'from-green-500 to-teal-600',
+      'art': 'from-pink-500 to-rose-600',
+      'governance': 'from-indigo-500 to-blue-600',
+      'development': 'from-gray-500 to-slate-600',
+      'gaming': 'from-yellow-500 to-orange-600'
+    };
+    return colors[category] || 'from-gray-500 to-gray-600';
+  };
+
+  const getCategoryIcon = (category: string) => {
+    const icons: Record<string, string> = {
+      'technology': '🔗',
+      'finance': '💱',
+      'art': '🎨',
+      'governance': '🏛️',
+      'development': '💻',
+      'gaming': '⚡'
+    };
+    return icons[category] || '🌐';
+  };
 
   return (
     <Layout title="Communities - LinkDAO" fullWidth={true}>
@@ -130,95 +102,117 @@ export default function CommunitiesPage() {
           </div>
           
           {/* Stats Bar */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{communities.length}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Communities</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {communities.reduce((sum, community) => sum + community.members, 0).toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Members</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {communities.filter(c => c.token).length}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tokenized LDAOs</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ${communities.reduce((sum, community) => {
-                    if (community.treasuryBalance) {
-                      const value = parseFloat(community.treasuryBalance.replace(/[^0-9.-]+/g,""));
-                      return sum + (isNaN(value) ? 0 : value);
-                    }
-                    return sum;
-                  }, 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}K
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Treasury</p>
+          {!loading && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{communities.length}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Communities</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {communities.reduce((sum, c) => sum + c.memberCount, 0).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Members</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {communities.filter(c => c.governanceToken).length}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Tokenized DAOs</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {communities.reduce((sum, c) => sum + c.postCount, 0).toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Total Posts</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
-          {/* Communities Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCommunities.map((community) => (
-              <Link 
-                key={community.id} 
-                href={`/dao/${community.id}`}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="text-gray-600 dark:text-gray-400 mt-4">Loading communities...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+              <p className="text-red-800 dark:text-red-200">{error}</p>
+              <button 
+                onClick={fetchCommunities}
+                className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
-                <div className={`h-20 bg-gradient-to-r ${community.bannerColor}`}></div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start">
-                      <div className="text-2xl mr-3">{community.icon}</div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">{community.name}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">
-                          {community.description}
-                        </p>
-                      </div>
-                    </div>
-                    {community.token && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
-                        {community.token}
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="mt-4 flex text-sm text-gray-500 dark:text-gray-400">
-                    <span className="mr-4">
-                      <span className="font-medium text-gray-900 dark:text-white">{community.members.toLocaleString()}</span>
-                      <span className="ml-1">members</span>
-                    </span>
-                    <span>
-                      <span className="font-medium text-gray-900 dark:text-white">{community.online.toLocaleString()}</span>
-                      <span className="ml-1">online</span>
-                    </span>
-                  </div>
-                  
-                  {community.token && community.tokenPrice && (
-                    <div className="mt-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Token Price</p>
-                        <p className="font-medium text-gray-900 dark:text-white">{community.tokenPrice}</p>
-                      </div>
-                      {community.treasuryBalance && (
-                        <div className="text-right">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Treasury</p>
-                          <p className="font-medium text-gray-900 dark:text-white">{community.treasuryBalance}</p>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Communities Grid */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCommunities.map((community) => (
+                <Link 
+                  key={community.id} 
+                  href={`/dao/${community.id}`}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow duration-200 overflow-hidden"
+                >
+                  {community.banner ? (
+                    <div className="h-20" style={{ backgroundImage: `url(${community.banner})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                  ) : (
+                    <div className={`h-20 bg-gradient-to-r ${getCategoryColor(community.category)}`}></div>
+                  )}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start">
+                        {community.avatar ? (
+                          <img src={community.avatar} alt={community.displayName} className="w-8 h-8 rounded-full mr-3" />
+                        ) : (
+                          <div className="text-2xl mr-3">{getCategoryIcon(community.category)}</div>
+                        )}
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{community.displayName}</h3>
+                          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 line-clamp-2">
+                            {community.description}
+                          </p>
                         </div>
+                      </div>
+                      {community.governanceToken && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200">
+                          {community.governanceToken}
+                        </span>
                       )}
                     </div>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+                    
+                    <div className="mt-4 flex text-sm text-gray-500 dark:text-gray-400">
+                      <span className="mr-4">
+                        <span className="font-medium text-gray-900 dark:text-white">{community.memberCount.toLocaleString()}</span>
+                        <span className="ml-1">members</span>
+                      </span>
+                      <span>
+                        <span className="font-medium text-gray-900 dark:text-white">{community.postCount.toLocaleString()}</span>
+                        <span className="ml-1">posts</span>
+                      </span>
+                    </div>
+                    
+                    {community.tags && community.tags.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {community.tags.slice(0, 3).map((tag, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
           
           {filteredCommunities.length === 0 && searchTerm && (
             <div className="text-center py-12">

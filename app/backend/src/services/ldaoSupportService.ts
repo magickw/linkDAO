@@ -1,7 +1,7 @@
 import { eq, desc, and, gte } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
-import { sendEmail } from './emailService';
+import emailService from './emailService';
 import { createNotification } from './notificationHelper';
 
 export interface SupportTicket {
@@ -55,6 +55,10 @@ class LDAOSupportService {
         createdAt: new Date(),
         updatedAt: new Date()
       }).returning();
+
+      // Track metrics
+      const { supportMonitoring } = await import('./supportMonitoringService');
+      supportMonitoring.trackTicketCreated();
 
       // Send confirmation email to user
       await this.sendTicketConfirmation(ticket);
@@ -326,19 +330,14 @@ class LDAOSupportService {
   // Notification methods
   private async sendTicketConfirmation(ticket: SupportTicket): Promise<void> {
     try {
-      const emailTemplate = {
-        to: ticket.userId, // This would be resolved to email address
-        subject: `Support Ticket Created - ${ticket.id}`,
-        template: 'ticket-confirmation',
-        data: {
-          ticketId: ticket.id,
-          subject: ticket.subject,
-          priority: ticket.priority,
-          estimatedResponse: this.getEstimatedResponseTime(ticket.priority)
-        }
-      };
-
-      await sendEmail(emailTemplate);
+      // In production, resolve userId to email from user database
+      const userEmail = `${ticket.userId}@example.com`; // TODO: Get from user service
+      await emailService.sendTicketConfirmationEmail(
+        userEmail,
+        ticket.id,
+        ticket.subject,
+        ticket.priority
+      );
     } catch (error) {
       console.error('Error sending ticket confirmation:', error);
     }

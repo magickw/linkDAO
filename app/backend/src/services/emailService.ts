@@ -448,6 +448,90 @@ export class EmailService {
   }
 
   /**
+   * Send support ticket confirmation email
+   */
+  async sendTicketConfirmationEmail(
+    email: string,
+    ticketId: string,
+    subject: string,
+    priority: string
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px;">
+          <h2 style="color: #1a1a1a;">Support Ticket Created</h2>
+          <p>Your support ticket has been created successfully.</p>
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Ticket ID:</strong> ${ticketId}</p>
+            <p style="margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
+            <p style="margin: 5px 0;"><strong>Priority:</strong> ${priority}</p>
+          </div>
+          <p>We'll respond within ${this.getResponseTime(priority)}.</p>
+          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
+        </div>
+      </body>
+      </html>
+    `;
+    return this.sendEmail({ to: email, subject: `Ticket Created: ${ticketId}`, html });
+  }
+
+  /**
+   * Send ticket status update email
+   */
+  async sendTicketStatusEmail(
+    email: string,
+    ticketId: string,
+    status: string
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px;">
+          <h2 style="color: #1a1a1a;">Ticket Status Updated</h2>
+          <p>Your support ticket <strong>${ticketId}</strong> status has been updated to: <strong>${status}</strong></p>
+          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Ticket</a>
+        </div>
+      </body>
+      </html>
+    `;
+    return this.sendEmail({ to: email, subject: `Ticket Update: ${ticketId}`, html });
+  }
+
+  /**
+   * Send ticket response email
+   */
+  async sendTicketResponseEmail(
+    email: string,
+    ticketId: string,
+    response: string
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <body style="font-family: Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px;">
+          <h2 style="color: #1a1a1a;">New Response to Your Ticket</h2>
+          <p>Our support team has responded to ticket <strong>${ticketId}</strong>:</p>
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #667eea;">
+            <p>${response.substring(0, 200)}${response.length > 200 ? '...' : ''}</p>
+          </div>
+          <a href="${process.env.FRONTEND_URL}/support/tickets/${ticketId}" style="display: inline-block; background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">View Full Response</a>
+        </div>
+      </body>
+      </html>
+    `;
+    return this.sendEmail({ to: email, subject: `Response to Ticket: ${ticketId}`, html });
+  }
+
+  private getResponseTime(priority: string): string {
+    const times = { urgent: '1 hour', high: '4 hours', medium: '12 hours', low: '24 hours' };
+    return times[priority] || '24 hours';
+  }
+
+  /**
    * Check if email service is enabled
    */
   isEnabled(): boolean {
