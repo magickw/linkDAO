@@ -1,18 +1,21 @@
 import React, { useState, useCallback } from 'react';
 import WalletDashboard from './WalletDashboard';
 import TransactionMiniFeed from './TransactionMiniFeed';
-import QuickActionButtons from './QuickActionButtons';
 import PortfolioModal from './PortfolioModal';
 import TrendingContentWidget from './TrendingContentWidget';
 import { SendTokenModal, ReceiveTokenModal, SwapTokenModal, StakeTokenModal } from '../WalletActions';
 import { QuickAction, Transaction } from '../../types/wallet';
 import { useWalletData } from '../../hooks/useWalletData';
 import { useCryptoPayment } from '../../hooks/useCryptoPayment';
-import { useWritePaymentRouterSendTokenPayment, useWritePaymentRouterSendEthPayment } from '@/generated';
+import { 
+  useWritePaymentRouterSendTokenPayment,
+  useWritePaymentRouterSendEthPayment
+} from '@/generated';
 import { useChainId } from 'wagmi';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/router';
 import { paymentRouterAddress } from '../../generated';
+import { dexService } from '@/services/dexService';
 
 interface SmartRightSidebarProps {
   context: 'feed' | 'community';
@@ -117,16 +120,6 @@ export default function SmartRightSidebar({
   const handlePortfolioClick = useCallback(() => {
     setIsPortfolioModalOpen(true);
   }, []);
-
-  // Add a function to handle quick action clicks with better error handling
-  const handleQuickActionWithErrorHandling = useCallback(async (action: QuickAction) => {
-    try {
-      await handleQuickAction(action);
-    } catch (error) {
-      console.error('Quick action failed:', error);
-      addToast('Quick action failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
-    }
-  }, [handleQuickAction, addToast]);
 
   // Wallet action handlers
   const { processPayment, parseAmount, estimateGas } = useCryptoPayment();
@@ -242,11 +235,27 @@ export default function SmartRightSidebar({
   const handleSwapToken = useCallback(async (fromToken: string, toToken: string, amount: number) => {
     try {
       if (!walletData) throw new Error('Wallet data not available');
+      
+      // Get token addresses
+      const fromTokenData = walletData.balances.find(b => b.symbol === fromToken);
+      const toTokenData = walletData.balances.find(b => b.symbol === toToken);
+      
+      const fromTokenAddress = fromTokenData?.contractAddress || '0x0000000000000000000000000000000000000000'; // ETH
+      const toTokenAddress = toTokenData?.contractAddress || '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // USDC as example
+
+      // Get real swap quote from DEX service
+      const quote = await dexService.getSwapQuote({
+        tokenInAddress: fromTokenAddress,
+        tokenOutAddress: toTokenAddress,
+        amountIn: amount,
+        slippageTolerance: 0.5, // 0.5% slippage
+        recipient: walletData.address
+      });
+
       const decimals = fromToken === 'USDC' ? 6 : 18;
       const amountBigInt = parseAmount(amount.toString(), decimals);
-      const tokenBalance = walletData.balances.find(b => b.symbol === fromToken);
       const paymentToken = {
-        address: tokenBalance ? tokenBalance.contractAddress : '',
+        address: fromTokenData ? fromTokenData.contractAddress : '',
         symbol: fromToken,
         name: fromToken,
         decimals,
@@ -267,15 +276,15 @@ export default function SmartRightSidebar({
       if (!writeSendTokenAsync) throw new Error('Token write hook not available');
       const tokenAddr = paymentToken.address as `0x${string}`;
       await writeSendTokenAsync({ args: [tokenAddr, paymentRouterAddress as `0x${string}`, amountBigInt, `swap:${toToken}`] });
-  addToast('Swap submitted', 'success');
-  try { router.push('/wallet/transactions'); } catch {}
-  return;
+      addToast('Swap submitted', 'success');
+      try { router.push('/wallet/transactions'); } catch {}
+      return;
     } catch (err: any) {
       console.error('Swap failed', err);
       addToast(err?.message || 'Swap failed', 'error');
       throw err;
     }
-  }, [walletData, parseAmount, processPayment, estimateGas, chainId, router, addToast, writeSendEthAsync, writeSendTokenAsync]);
+  }, [walletData, parseAmount, chainId, router, addToast, writeSendEthAsync, writeSendTokenAsync]);
 
   const handleStakeToken = useCallback(async (poolId: string, token: string, amount: number) => {
     try {
@@ -370,12 +379,6 @@ export default function SmartRightSidebar({
 
         {/* Trending Now (moved here from left sidebar) */}
         <TrendingContentWidget context={context} />
-
-        {/* Quick Action Buttons */}
-        <QuickActionButtons
-          actions={walletData.quickActions}
-          onActionClick={handleQuickActionWithErrorHandling}
-        />
 
         {/* Transaction Mini Feed */}
         <TransactionMiniFeed

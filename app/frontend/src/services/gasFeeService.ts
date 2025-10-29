@@ -211,4 +211,17 @@ export class GasFeeService {
     
     return recommendations;
   }
+
+  /**
+   * Format gas fee in a user-friendly way
+   */
+  formatGasFeeUserFriendly(estimate: GasFeeEstimate): string {
+    const formatted = this.formatGasFee(estimate);
+    
+    if (formatted.totalCostUSD) {
+      return `${formatted.totalCost} ETH (~${formatted.totalCostUSD})`;
+    }
+    
+    return `${formatted.totalCost} ETH`;
+  }
 }

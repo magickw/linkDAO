@@ -452,6 +452,16 @@ import memberBehaviorRoutes from './routes/memberBehaviorRoutes';
 // Import content performance routes
 import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 
+// Import DEX trading routes
+import dexTradingRoutes from './routes/dexTradingRoutes';
+import stakingRoutes from './routes/stakingRoutes';
+
+// DEX trading routes
+app.use('/api/dex', dexTradingRoutes);
+
+// Staking routes
+app.use('/api/staking', stakingRoutes);
+
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());
 
