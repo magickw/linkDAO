@@ -1,378 +1,331 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Community } from '@/models/Community';
-import { CommunityMembership } from '@/models/CommunityMembership';
+import React, { useState, useEffect } from 'react';
+import { Search, X, Users, TrendingUp, Clock, Filter } from 'lucide-react';
 import { CommunityService } from '@/services/communityService';
-import { CommunityMembershipService } from '@/services/communityMembershipService';
-import { useWeb3 } from '@/context/Web3Context';
-import { useToast } from '@/context/ToastContext';
-import { LoadingSkeletons } from '@/components/LoadingSkeletons';
-import { EmptyState, RetryState } from '@/components/FallbackStates';
+import type { Community } from '@/models/Community';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 interface CommunityDiscoveryProps {
-  onCommunitySelect?: (community: Community) => void;
-  className?: string;
+  onCommunitySelect: (community: Community) => void;
+  onClose?: () => void;
 }
 
-type FilterOption = 'all' | 'trending' | 'new' | 'joined';
-type CategoryFilter = 'all' | string;
-
-export default function CommunityDiscovery({ onCommunitySelect, className = '' }: CommunityDiscoveryProps) {
-  const { address, isConnected } = useWeb3();
-  const { addToast } = useToast();
-
+const CommunityDiscovery: React.FC<CommunityDiscoveryProps> = ({ onCommunitySelect, onClose }) => {
+  const { isMobile } = useMobileOptimization();
+  const [searchTerm, setSearchTerm] = useState('');
   const [communities, setCommunities] = useState<Community[]>([]);
-  const [joinedCommunities, setJoinedCommunities] = useState<Set<string>>(new Set());
+  const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [error, setError] = useState<string | null>(null);
-  const [joinLoading, setJoinLoading] = useState<Set<string>>(new Set());
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'members' | 'engagement' | 'trending'>('members');
 
-  const categories = [
-    'all', 'Technology', 'Gaming', 'Art', 'Music', 'Sports', 
-    'Education', 'Business', 'Science', 'Politics', 'Entertainment', 'Lifestyle'
-  ];
+  useEffect(() => {
+    fetchCommunities();
+  }, []);
 
-  // Load communities based on current filters
-  const loadCommunities = useCallback(async () => {
+  useEffect(() => {
+    filterAndSortCommunities();
+  }, [communities, searchTerm, selectedCategory, sortBy]);
+
+  const fetchCommunities = async () => {
     try {
       setLoading(true);
-      setError(null);
+      // In a real implementation, this would fetch from your API
+      // For now, we'll use mock data
+      const mockCommunities: Community[] = [
+        {
+          id: '1',
+          name: 'ethereum-builders',
+          displayName: 'Ethereum Builders',
+          description: 'A community for Ethereum developers and builders',
+          rules: [],
+          memberCount: 12500,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: 'technology',
+          tags: ['ethereum', 'solidity', 'web3'],
+          isPublic: true,
+          moderators: [],
+          settings: {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: [],
+          },
+          viewCount: 15000,
+          engagementScore: 85,
+          trendingScore: 85,
+        },
+        {
+          id: '2',
+          name: 'defi-innovators',
+          displayName: 'DeFi Innovators',
+          description: 'Exploring the latest in decentralized finance',
+          rules: [],
+          memberCount: 8900,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: 'finance',
+          tags: ['defi', 'yield-farming', 'amm'],
+          isPublic: true,
+          moderators: [],
+          settings: {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: [],
+          },
+          viewCount: 12000,
+          engagementScore: 92,
+          trendingScore: 92,
+        },
+        {
+          id: '3',
+          name: 'nft-artists',
+          displayName: 'NFT Artists Collective',
+          description: 'Digital artists creating NFT masterpieces',
+          rules: [],
+          memberCount: 15600,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: 'art',
+          tags: ['nft', 'digital-art', 'creators'],
+          isPublic: true,
+          moderators: [],
+          settings: {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: [],
+          },
+          viewCount: 22000,
+          engagementScore: 78,
+          trendingScore: 78,
+        },
+        {
+          id: '4',
+          name: 'dao-governance',
+          displayName: 'DAO Governance Forum',
+          description: 'Discussing decentralized autonomous organization governance',
+          rules: [],
+          memberCount: 5400,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          category: 'governance',
+          tags: ['dao', 'governance', 'voting'],
+          isPublic: true,
+          moderators: [],
+          settings: {
+            allowedPostTypes: [],
+            requireApproval: false,
+            minimumReputation: 0,
+            stakingRequirements: [],
+          },
+          viewCount: 8000,
+          engagementScore: 65,
+          trendingScore: 65,
+        },
+      ];
       
-      let communitiesData: Community[] = [];
-      
-      if (searchQuery.trim()) {
-        // Search communities
-        communitiesData = await CommunityService.searchCommunities(searchQuery.trim());
-      } else if (activeFilter === 'trending') {
-        // Get trending communities
-        communitiesData = await CommunityService.getTrendingCommunities(20);
-      } else {
-        // Get all communities with filters
-        const params: any = { limit: 50 };
-        if (categoryFilter !== 'all') {
-          params.category = categoryFilter;
-        }
-        communitiesData = await CommunityService.getAllCommunities(params);
-      }
-
-      // Sort based on filter
-      if (activeFilter === 'new') {
-        communitiesData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      } else if (activeFilter === 'trending') {
-        communitiesData.sort((a, b) => b.memberCount - a.memberCount);
-      }
-
-      setCommunities(communitiesData);
-
-      // Load user's joined communities if connected
-      if (isConnected && address) {
-        try {
-          let memberships: CommunityMembership[] = [];
-          try {
-            memberships = await CommunityMembershipService.getUserMemberships(address);
-          } catch (err) {
-            // Handle 503 Service Unavailable specifically
-            if (err instanceof Error && err.message.includes('503')) {
-              console.warn('Backend service unavailable, using empty memberships');
-              // Continue with empty memberships instead of throwing
-              memberships = [];
-            } else {
-              // Re-throw other errors
-              throw err;
-            }
-          }
-          const joinedIds = new Set(memberships.map(m => m.communityId));
-          setJoinedCommunities(joinedIds);
-          
-          // Filter to show only joined communities if that filter is active
-          if (activeFilter === 'joined') {
-            setCommunities(communitiesData.filter(c => joinedIds.has(c.id)));
-          }
-        } catch (err) {
-          // User has no memberships, which is fine
-          setJoinedCommunities(new Set());
-        }
-      }
-    } catch (err) {
-      console.error('Error loading communities:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load communities');
+      setCommunities(mockCommunities);
+    } catch (error) {
+      console.error('Error fetching communities:', error);
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, activeFilter, categoryFilter, isConnected, address]);
-
-  // Initial load and reload when filters change
-  useEffect(() => {
-    loadCommunities();
-  }, [loadCommunities]);
-
-  // Handle joining/leaving community
-  const handleJoinCommunity = async (community: Community) => {
-    if (!isConnected || !address) {
-      addToast('Please connect your wallet to join communities', 'error');
-      return;
-    }
-
-    const isJoined = joinedCommunities.has(community.id);
-    
-    try {
-      setJoinLoading(prev => new Set(prev).add(community.id));
-      
-      if (isJoined) {
-        await CommunityMembershipService.leaveCommunity(community.id, address);
-        setJoinedCommunities(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(community.id);
-          return newSet;
-        });
-        addToast(`Left r/${community.name}`, 'success');
-      } else {
-        await CommunityMembershipService.joinCommunity({
-          userId: address,
-          communityId: community.id,
-          role: 'member'
-        });
-        setJoinedCommunities(prev => new Set(prev).add(community.id));
-        addToast(`Joined r/${community.name}!`, 'success');
-      }
-
-      // Update community member count
-      setCommunities(prev => prev.map(c => 
-        c.id === community.id 
-          ? { ...c, memberCount: c.memberCount + (isJoined ? -1 : 1) }
-          : c
-      ));
-    } catch (err) {
-      console.error('Error joining/leaving community:', err);
-      addToast(err instanceof Error ? err.message : 'Failed to update membership', 'error');
-    } finally {
-      setJoinLoading(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(community.id);
-        return newSet;
-      });
-    }
   };
 
-  const handleCommunityClick = (community: Community) => {
-    if (onCommunitySelect) {
-      onCommunitySelect(community);
+  const filterAndSortCommunities = () => {
+    let result = [...communities];
+    
+    // Apply search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(community => 
+        community.displayName.toLowerCase().includes(term) ||
+        community.description.toLowerCase().includes(term) ||
+        community.tags.some(tag => tag.toLowerCase().includes(term))
+      );
     }
+    
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      result = result.filter(community => community.category === selectedCategory);
+    }
+    
+    // Apply sorting
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'members':
+          return b.memberCount - a.memberCount;
+        case 'engagement':
+          return (b.engagementScore || 0) - (a.engagementScore || 0);
+        case 'trending':
+          return (b.trendingScore || 0) - (a.trendingScore || 0);
+        default:
+          return 0;
+      }
+    });
+    
+    setFilteredCommunities(result);
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      technology: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      finance: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      art: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
+      governance: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+      development: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+      gaming: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    };
+    return colors[category] || colors.technology;
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
   };
 
   if (loading) {
     return (
-      <div className={className}>
-        <LoadingSkeletons.CommunityGrid count={6} />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <RetryState
-        title="Failed to load communities"
-        message={error}
-        onRetry={loadCommunities}
-        className={className}
-      />
     );
   }
 
   return (
-    <div className={className}>
+    <div className={`flex flex-col ${isMobile ? 'h-[calc(100vh-200px)]' : 'h-full'}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Discover Communities</h2>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        )}
+      </div>
+
       {/* Search and Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-        {/* Search Bar */}
-        <div className="relative mb-4">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+      <div className="mb-6 space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search communities..."
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
           />
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex space-x-1">
-            {[
-              { id: 'all', label: 'All' },
-              { id: 'trending', label: 'Trending' },
-              { id: 'new', label: 'New' },
-              ...(isConnected ? [{ id: 'joined', label: 'Joined' }] : [])
-            ].map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => setActiveFilter(filter.id as FilterOption)}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                  activeFilter === filter.id
-                    ? 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="all">All Categories</option>
+              <option value="technology">Technology</option>
+              <option value="finance">Finance</option>
+              <option value="art">Art</option>
+              <option value="governance">Governance</option>
+              <option value="development">Development</option>
+              <option value="gaming">Gaming</option>
+            </select>
           </div>
 
-          {/* Category Filter */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="text-sm border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category === 'all' ? 'All Categories' : category}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-gray-500" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-800 dark:text-white"
+            >
+              <option value="members">Sort by Members</option>
+              <option value="engagement">Sort by Engagement</option>
+              <option value="trending">Sort by Trending</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Communities Grid */}
-      {communities.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {communities.map((community) => {
-            const isJoined = joinedCommunities.has(community.id);
-            const isJoinLoading = joinLoading.has(community.id);
-            
-            return (
+      {/* Communities List */}
+      <div className={`overflow-y-auto ${isMobile ? '-mx-6 px-6' : ''}`}>
+        {filteredCommunities.length === 0 ? (
+          <div className="text-center py-12">
+            <Users className="w-12 h-12 mx-auto text-gray-400" />
+            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No communities found</h3>
+            <p className="mt-1 text-gray-500 dark:text-gray-400">
+              Try adjusting your search or filters
+            </p>
+          </div>
+        ) : (
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {filteredCommunities.map((community) => (
               <div
                 key={community.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => onCommunitySelect(community)}
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
               >
-                {/* Community Banner */}
-                <div 
-                  className="h-20 bg-gradient-to-r from-primary-500 to-secondary-500 relative"
-                  onClick={() => handleCommunityClick(community)}
-                >
-                  {community.banner && (
-                    <img 
-                      src={community.banner} 
-                      alt={`${community.displayName} banner`}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-
-                <div className="p-4">
-                  {/* Community Avatar and Info */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div 
-                      className="flex items-center space-x-3 flex-1 cursor-pointer"
-                      onClick={() => handleCommunityClick(community)}
-                    >
-                      {community.avatar ? (
-                        <img 
-                          src={community.avatar} 
-                          alt={community.displayName}
-                          className="w-12 h-12 rounded-full border-2 border-white dark:border-gray-800 shadow-sm -mt-6"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-secondary-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm -mt-6 flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">
-                            {community.displayName.charAt(0).toUpperCase()}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center text-white font-bold">
+                      {community.displayName.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">{community.displayName}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                        {community.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(community.category)}`}>
+                          {community.category}
+                        </span>
+                        {community.tags.slice(0, 2).map((tag) => (
+                          <span key={tag} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                            {tag}
                           </span>
-                        </div>
-                      )}
-                      
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                          {community.displayName}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          r/{community.name}
-                        </p>
+                        ))}
                       </div>
                     </div>
-
-                    {/* Join/Leave Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleJoinCommunity(community);
-                      }}
-                      disabled={isJoinLoading}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                        isJoined
-                          ? 'border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                          : 'bg-primary-600 text-white hover:bg-primary-700'
-                      } disabled:opacity-50`}
-                    >
-                      {isJoinLoading ? '...' : isJoined ? 'Leave' : 'Join'}
-                    </button>
                   </div>
-
-                  {/* Description */}
-                  <p 
-                    className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2 cursor-pointer"
-                    onClick={() => handleCommunityClick(community)}
-                  >
-                    {community.description}
-                  </p>
-
-                  {/* Stats and Tags */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
-                      <span>{community.memberCount.toLocaleString()} members</span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                        {community.category}
-                      </span>
-                    </div>
+                </div>
+                
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      {formatNumber(community.memberCount)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      {formatNumber(community.viewCount || 0)}
+                    </span>
                   </div>
-
-                  {/* Tags */}
-                  {community.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {community.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {community.tags.length > 3 && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          +{community.tags.length - 3} more
-                        </span>
-                      )}
+                  
+                  {community.trendingScore && (
+                    <div className="flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{community.trendingScore}</span>
                     </div>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState
-          title={searchQuery ? 'No communities found' : 'No communities available'}
-          description={
-            searchQuery 
-              ? `No communities match "${searchQuery}". Try a different search term.`
-              : 'There are no communities to display with the current filters.'
-          }
-          icon={
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          }
-          action={searchQuery ? {
-            label: 'Clear Search',
-            onClick: () => setSearchQuery('')
-          } : undefined}
-        />
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
+
+export default CommunityDiscovery;

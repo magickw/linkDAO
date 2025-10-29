@@ -105,24 +105,6 @@ const QuickActionButtons = React.memo(function QuickActionButtons({
           </div>
         )}
 
-        {/* Additional Actions */}
-        <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
-          <div className="grid grid-cols-3 gap-2">
-            <button className="p-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors duration-200">
-              <div className="text-lg mb-1">🗳️</div>
-              Vote
-            </button>
-            <button className="p-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors duration-200">
-              <div className="text-lg mb-1">🎁</div>
-              Tip
-            </button>
-            <button className="p-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/30 rounded-lg transition-colors duration-200">
-              <div className="text-lg mb-1">📊</div>
-              Analytics
-            </button>
-          </div>
-        </div>
-
         {/* Network Status */}
         <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">

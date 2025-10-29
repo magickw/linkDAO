@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TokenBalance } from '../../types/wallet';
 import { GasFeeEstimate } from '../../types/payment';
+import { useToast } from '@/context/ToastContext';
 
 interface SendTokenModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface SendTokenModalProps {
 }
 
 export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, onSend, isPending, estimatedGas, onEstimate }: SendTokenModalProps) {
+  const { addToast } = useToast();
   const [selectedToken, setSelectedToken] = useState(tokens[0]?.symbol || 'ETH');
   const [localEstimatedGas, setLocalEstimatedGas] = useState<GasFeeEstimate | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
@@ -61,6 +63,11 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       return;
     }
 
+    if (parseFloat(amount) <= 0) {
+      setError('Amount must be greater than zero');
+      return;
+    }
+
     if (!recipient.match(/^0x[a-fA-F0-9]{40}$/)) {
       setError('Invalid recipient address');
       return;
@@ -77,8 +84,10 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
       onClose();
       setAmount('');
       setRecipient('');
+      addToast('Transaction submitted successfully!', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transaction failed');
+      addToast('Transaction failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -198,77 +207,52 @@ export default function SendTokenModal({ isOpen, onClose, tokens, initialToken, 
             />
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          {/* Estimated Gas */}
+          {(localEstimatedGas || isEstimating) && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-blue-700 dark:text-blue-300">Estimated Gas Fee:</span>
+                {isEstimating ? (
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                    {localEstimatedGas?.totalCost.toString()} wei
+                    {localEstimatedGas?.totalCostUSD && ` (~$${localEstimatedGas.totalCostUSD.toFixed(2)} USD)`}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Gas Fee Estimate */}
-          <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Estimated Gas Fee:</span>
-                <span className="text-gray-900 dark:text-white">
-                  {localEstimatedGas !== null ? (
-                    (() => {
-                      try {
-                        const wei = localEstimatedGas.totalCost;
-                        // Precise bigint-aware formatting to ETH string
-                        const formatWeiToEth = (value: bigint | number | string, decimals = 6) => {
-                          try {
-                            let v: bigint;
-                            if (typeof value === 'bigint') v = value;
-                            else if (typeof value === 'number') v = BigInt(Math.floor(value));
-                            else v = BigInt(value.toString());
-                            const WEI_PER_ETH = 10n ** 18n;
-                            const intPart = v / WEI_PER_ETH;
-                            const rem = v % WEI_PER_ETH;
-                            let frac = rem.toString().padStart(18, '0').slice(0, decimals);
-                            // trim trailing zeros
-                            frac = frac.replace(/0+$/, '');
-                            if (frac === '') return `${intPart.toString()}.0`;
-                            return `${intPart.toString()}.${frac}`;
-                          } catch (e) {
-                            return value.toString();
-                          }
-                        };
-
-                        const ethStr = formatWeiToEth(wei, 6);
-                        const usd = localEstimatedGas.totalCostUSD !== undefined ? ` • $${localEstimatedGas.totalCostUSD.toFixed(2)}` : '';
-                        return (<span title={`${wei.toString()} wei`}>{`${ethStr} ETH${usd}`}</span>);
-                      } catch (e) {
-                        return `${localEstimatedGas.totalCost.toString()} (wei)`;
-                      }
-                    })()
-                  ) : (isEstimating ? 'Estimating...' : '~$2.50')}
-                </span>
+          {/* Error */}
+          {error && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Footer */}
-        {txHash && (
-          <div className="p-3 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300">
-            In-flight transaction: <code className="font-mono text-xs">{txHash}</code>
-          </div>
-        )}
-        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            Cancel
-          </button>
+          {/* Transaction Hash */}
+          {txHash && (
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-sm text-green-700 dark:text-green-200">
+                Transaction submitted! Hash: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+              </p>
+            </div>
+          )}
+
+          {/* Submit Button */}
           <button
             onClick={handleSend}
-            disabled={isLoading || !amount || !recipient || !!isPending}
-            className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            disabled={isLoading || isPending || isEstimating}
+            className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            {isLoading || isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                Sending...
+              </>
             ) : (
-              'Send'
+              'Send Tokens'
             )}
           </button>
         </div>

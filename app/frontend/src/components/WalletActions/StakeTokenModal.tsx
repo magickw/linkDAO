@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TokenBalance } from '../../types/wallet';
+import { useToast } from '@/context/ToastContext';
 
 interface StakingPool {
   id: string;
@@ -63,6 +64,7 @@ const STAKING_POOLS: StakingPool[] = [
 ];
 
 export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: StakeTokenModalProps) {
+  const { addToast } = useToast();
   const [selectedPool, setSelectedPool] = useState<StakingPool | null>(null);
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -113,8 +115,10 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
       onClose();
       setAmount('');
       setSelectedPool(null);
+      addToast('Staking transaction submitted successfully!', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Staking failed');
+      addToast('Staking failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -199,62 +203,39 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
                         </span>
                       </div>
                     </div>
-                    
-                    {tokenData && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          Your Balance: {tokenData.balance.toFixed(4)} {pool.token}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {!hasBalance && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-sm text-red-600 dark:text-red-400">
-                          Insufficient balance (min: {pool.minStake} {pool.token})
-                        </span>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
           ) : (
-            /* Staking Form */
+            /* Amount Selection */
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between">
                 <button
                   onClick={() => setSelectedPool(null)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="flex items-center text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
+                  Back to pools
                 </button>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {selectedPool.name}
+                  Stake {selectedPool.token}
                 </h3>
               </div>
 
-              {/* Pool Info */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">APY: </span>
-                    <span className="text-primary-600 dark:text-primary-400 font-bold">
-                      {selectedPool.apy}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">Lock Period: </span>
-                    <span className="text-gray-900 dark:text-white font-medium">
-                      {selectedPool.lockPeriod}
-                    </span>
-                  </div>
+              <div className="p-4 bg-gradient-to-r from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-600 dark:text-gray-400">Selected Pool</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{selectedPool.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 dark:text-gray-400">APY</span>
+                  <span className="text-xl font-bold text-primary-600 dark:text-primary-400">{selectedPool.apy}%</span>
                 </div>
               </div>
 
-              {/* Amount Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Amount to Stake
@@ -265,39 +246,45 @@ export default function StakeTokenModal({ isOpen, onClose, tokens, onStake }: St
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
-                  <button
-                    onClick={() => setAmount(maxAmount.toString())}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
-                  >
-                    MAX
-                  </button>
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+                    <span className="text-gray-500 dark:text-gray-400">{selectedPool.token}</span>
+                    <button
+                      onClick={() => setAmount(maxAmount.toString())}
+                      className="text-primary-600 dark:text-primary-400 text-sm font-medium hover:underline"
+                    >
+                      MAX
+                    </button>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Available: {maxAmount.toFixed(4)} {selectedPool.token}
-                </p>
+                <div className="flex justify-between mt-2 text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Available: {maxAmount.toFixed(4)} {selectedPool.token}
+                  </span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Min: {selectedPool.minStake} {selectedPool.token}
+                  </span>
+                </div>
               </div>
 
-              {/* Rewards Estimate */}
               {amount && (
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                  <h4 className="font-medium text-green-900 dark:text-green-200 mb-2">
-                    Estimated Annual Rewards
-                  </h4>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {estimatedRewards.toFixed(4)} {selectedPool.token}
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <h4 className="font-medium text-blue-900 dark:text-blue-200 mb-2">Estimated Rewards</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700 dark:text-blue-300">Annual:</span>
+                      <span className="block font-semibold text-blue-900 dark:text-blue-200">
+                        {estimatedRewards.toFixed(4)} {selectedPool.token}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700 dark:text-blue-300">Monthly:</span>
+                      <span className="block font-semibold text-blue-900 dark:text-blue-200">
+                        {(estimatedRewards / 12).toFixed(4)} {selectedPool.token}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                    ≈ ${(estimatedRewards * (selectedTokenData?.valueUSD || 0) / (selectedTokenData?.balance || 1)).toFixed(2)} USD per year
-                  </p>
-                </div>
-              )}
-
-              {/* Error */}
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
                 </div>
               )}
 

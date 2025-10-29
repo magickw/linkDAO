@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TokenBalance } from '../../types/wallet';
+import { useToast } from '@/context/ToastContext';
 
 interface SwapTokenModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface SwapTokenModalProps {
 }
 
 export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: SwapTokenModalProps) {
+  const { addToast } = useToast();
   const [fromToken, setFromToken] = useState(tokens[0]?.symbol || 'ETH');
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
@@ -76,8 +78,10 @@ export default function SwapTokenModal({ isOpen, onClose, tokens, onSwap }: Swap
       onClose();
       setFromAmount('');
       setToAmount('');
+      addToast('Swap transaction submitted successfully!', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Swap failed');
+      addToast('Swap failed: ' + (err instanceof Error ? err.message : 'Unknown error'), 'error');
     } finally {
       setIsLoading(false);
     }

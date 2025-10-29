@@ -75,22 +75,58 @@ export default function SmartRightSidebar({
           setIsStakeModalOpen(true);
           break;
         default:
-          await action.action();
+          // For any other actions, we still want to trigger the modal
+          // But we should check if it's one of our known actions first
+          if (['send', 'receive', 'swap', 'stake'].includes(action.id)) {
+            // Handle known actions that might have been triggered differently
+            switch (action.id) {
+              case 'send':
+                setPrefillToken(null);
+                setIsSendModalOpen(true);
+                break;
+              case 'receive':
+                setIsReceiveModalOpen(true);
+                break;
+              case 'swap':
+                setIsSwapModalOpen(true);
+                break;
+              case 'stake':
+                setIsStakeModalOpen(true);
+                break;
+            }
+          } else {
+            // Execute the action directly if it has a custom action function
+            await action.action();
+          }
       }
     } catch (error) {
       console.error('Quick action failed:', error);
       // Handle error (show error toast, etc.)
+      addToast('Quick action failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
     }
-  }, []);
+  }, [addToast]);
 
   const handleTransactionClick = useCallback((transaction: Transaction) => {
     // Navigate to transaction details or open transaction modal
     console.log('Transaction clicked:', transaction);
-  }, []);
+    // In a real implementation, we might want to show transaction details
+    // For now, we'll just show a toast with the transaction info
+    addToast(`Transaction: ${transaction.type} ${transaction.amount} ${transaction.token}`, 'info');
+  }, [addToast]);
 
   const handlePortfolioClick = useCallback(() => {
     setIsPortfolioModalOpen(true);
   }, []);
+
+  // Add a function to handle quick action clicks with better error handling
+  const handleQuickActionWithErrorHandling = useCallback(async (action: QuickAction) => {
+    try {
+      await handleQuickAction(action);
+    } catch (error) {
+      console.error('Quick action failed:', error);
+      addToast('Quick action failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 'error');
+    }
+  }, [handleQuickAction, addToast]);
 
   // Wallet action handlers
   const { processPayment, parseAmount, estimateGas } = useCryptoPayment();
@@ -338,7 +374,7 @@ export default function SmartRightSidebar({
         {/* Quick Action Buttons */}
         <QuickActionButtons
           actions={walletData.quickActions}
-          onActionClick={handleQuickAction}
+          onActionClick={handleQuickActionWithErrorHandling}
         />
 
         {/* Transaction Mini Feed */}

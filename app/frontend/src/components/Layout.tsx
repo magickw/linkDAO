@@ -9,6 +9,7 @@ import { useChatHistory } from '@/hooks/useChatHistory';
 import { governanceService } from '@/services/governanceService';
 import { CommunityMembershipService } from '@/services/communityMembershipService';
 import type { CommunityMembership } from '@/models/CommunityMembership';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 const Analytics = dynamic(() => import('@vercel/analytics/react').then(mod => ({ default: mod.Analytics })), {
   ssr: false
@@ -35,6 +36,7 @@ type NavItem = {
 
 export default function Layout({ children, title = 'LinkDAO', hideFooter = false, fullWidth = false }: LayoutProps & { fullWidth?: boolean }) {
   const { address, isConnected } = useAccount();
+  const { isMobile } = useMobileOptimization();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
@@ -93,7 +95,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   // Navigation items with icons - Home now serves as the main Feed/Dashboard
   const navItems: NavItem[] = useMemo(() => ([
     { name: 'Home', href: '/', icon: '🏠' },
-    { name: 'Communities', href: '/communities', icon: '👥' },
+    { name: 'Communities', href: '/dao', icon: '👥' },
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
@@ -239,7 +241,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
             <nav>
               <ul className="flex space-x-2">
                 {allNavItems.map((item) => {
-                  const isActive = router.pathname === item.href;
+                  const isActive = router.pathname === item.href || 
+                    (item.href === '/dao' && router.pathname.startsWith('/dao/'));
                   const dynamicBadge = item.badge ?? (item.href === '/messaging' ? messagesUnread : item.href === '/governance' ? governancePending : 0);
                   return (
                     <li key={item.name}>
@@ -358,7 +361,8 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                   <li key={item.name}>
                     <Link
                       href={item.href}
-                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href
+                      className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${router.pathname === item.href || 
+                        (item.href === '/dao' && router.pathname.startsWith('/dao/'))
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-200'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700'
                         }`}
@@ -396,7 +400,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
         )}
       </header>
 
-      <main className={fullWidth ? "w-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
+      <main className={fullWidth ? (isMobile ? "w-full px-0" : "w-full") : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"}>
         {children}
       </main>
 
@@ -413,7 +417,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
                 <ul className="space-y-2">
                   <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
-                  <li><Link href="/dao/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
+                  <li><Link href="/dao" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
                   <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
                   <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
                   <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>

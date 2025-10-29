@@ -179,8 +179,8 @@ class WalletDataService {
         label: 'Send',
         icon: '📤',
         action: async () => {
+          // This will be handled by the UI components
           console.log('Send action triggered');
-          // Implement send functionality
         },
         tooltip: 'Send tokens to another address'
       },
@@ -189,8 +189,8 @@ class WalletDataService {
         label: 'Receive',
         icon: '📥',
         action: async () => {
+          // This will be handled by the UI components
           console.log('Receive action triggered');
-          // Show QR code or copy address
         },
         tooltip: 'Show receive address and QR code'
       },
@@ -199,8 +199,8 @@ class WalletDataService {
         label: 'Swap',
         icon: '🔄',
         action: async () => {
+          // This will be handled by the UI components
           console.log('Swap action triggered');
-          // Open swap interface
         },
         tooltip: 'Swap tokens on DEX'
       },
@@ -209,8 +209,8 @@ class WalletDataService {
         label: 'Stake',
         icon: '🏦',
         action: async () => {
+          // This will be handled by the UI components
           console.log('Stake action triggered');
-          // Open staking interface
         },
         tooltip: 'Stake tokens to earn rewards'
       }

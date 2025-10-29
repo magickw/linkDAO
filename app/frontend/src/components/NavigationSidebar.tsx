@@ -17,6 +17,9 @@ import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingConten
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
 import { useQuery } from '@tanstack/react-query'; // Add React Query import
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import { useWalletData } from '@/hooks/useWalletData';
+import { QuickAction } from '@/types/wallet';
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -38,7 +41,15 @@ interface NavigationSidebarProps {
 
 export default function NavigationSidebar({ className = '' }: NavigationSidebarProps) {
   const { address } = useAccount();
+  const { isMobile } = useMobileOptimization();
   const { data: profile } = useProfile(address);
+  const { 
+    walletData,
+    isLoading: isWalletLoading
+  } = useWalletData({
+    autoRefresh: true,
+    refreshInterval: 300000 // Refresh every 5 minutes
+  });
   const { userPreferences, updateUserPreferences, toggleFavoriteCommunity, setSidebarCollapsed } = useNavigation(); // Add user preferences and setSidebarCollapsed
   
   // Replace direct service calls with React Query
@@ -129,7 +140,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     handleCommunitySelect(communityId);
     navigateToCommunity(communityId);
     // Close sidebar on mobile after selection
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (isMobile) {
       toggleSidebar();
     }
   };
@@ -139,7 +150,33 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
     if (userPreferences.sidebarCollapsed !== navigationState.sidebarCollapsed) {
       setSidebarCollapsed(userPreferences.sidebarCollapsed);
     }
-  }, [userPreferences.sidebarCollapsed, navigationState.sidebarCollapsed, setSidebarCollapsed]);
+  }, [userPreferences.sidebarCollapsed, navigationState.sidebarCollapsed, setSidebarCollapsed, isMobile]);
+
+  // Handle quick actions
+  const handleQuickAction = async (action: QuickAction) => {
+    try {
+      // Handle different quick actions
+      switch (action.id) {
+        case 'send':
+          // In the navigation sidebar, we might want to redirect to the full wallet page
+          window.location.href = '/wallet';
+          break;
+        case 'receive':
+          window.location.href = '/wallet';
+          break;
+        case 'swap':
+          window.location.href = '/wallet';
+          break;
+        case 'stake':
+          window.location.href = '/wallet';
+          break;
+        default:
+          await action.action();
+      }
+    } catch (error) {
+      console.error('Quick action failed:', error);
+    }
+  };
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 overflow-y-auto ${className}`} data-tour="navigation">
@@ -251,49 +288,80 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 )}
               </div>
             </div>
+            
+            {/* Wallet Quick Actions - Only show when wallet is connected */}
+            {address && walletData && walletData.quickActions.length > 0 && (
+              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
+                <div className="p-4">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                    Wallet Quick Actions
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {walletData.quickActions.map((action) => (
+                      <button
+                        key={action.id}
+                        onClick={() => handleQuickAction(action)}
+                        className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+                        title={action.tooltip}
+                      >
+                        <div className="text-xl mb-1 group-hover:scale-110 transition-transform">
+                          {action.icon}
+                        </div>
+                        <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">
+                          {action.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Activity Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                   Activity
                 </div>
-                <div className="space-y-2">
-                  {/* New Posts */}
-                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">New Posts</span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">12</span>
+                {activityIndicators.length > 0 ? (
+                  <div className="space-y-2">
+                    {activityIndicators.slice(0, 4).map((indicator) => (
+                      <button
+                        key={indicator.id}
+                        onClick={() => handleActivityIndicatorClick(indicator)}
+                        className="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            indicator.type === 'notification' ? 'bg-blue-500' :
+                            indicator.type === 'transaction' ? 'bg-green-500' :
+                            indicator.type === 'community' ? 'bg-purple-500' :
+                            'bg-orange-500'
+                          }`}></div>
+                          <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">
+                            {indicator.type === 'notification' ? 'Notifications' :
+                             indicator.type === 'transaction' ? 'Transactions' :
+                             indicator.type === 'community' ? 'Community' :
+                             indicator.type === 'governance' ? 'Governance' :
+                             indicator.type}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {indicator.count}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-
-                  {/* Mentions */}
-                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Mentions</span>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                      </svg>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">3</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent activity</p>
                   </div>
-
-                  {/* Reactions */}
-                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Reactions</span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">8</span>
-                  </div>
-
-                  {/* Comments */}
-                  <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Comments</span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">5</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 

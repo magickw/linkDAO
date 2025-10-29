@@ -357,7 +357,48 @@ export function useWalletData({
         recentTransactions,
         portfolioValue,
         portfolioChange,
-        quickActions: []
+        quickActions: [
+          {
+            id: 'send',
+            label: 'Send',
+            icon: '📤',
+            action: async () => {
+              // This will be handled by the UI components
+              console.log('Send action triggered');
+            },
+            tooltip: 'Send tokens to another address'
+          },
+          {
+            id: 'receive',
+            label: 'Receive',
+            icon: '📥',
+            action: async () => {
+              // This will be handled by the UI components
+              console.log('Receive action triggered');
+            },
+            tooltip: 'Show receive address and QR code'
+          },
+          {
+            id: 'swap',
+            label: 'Swap',
+            icon: '🔄',
+            action: async () => {
+              // This will be handled by the UI components
+              console.log('Swap action triggered');
+            },
+            tooltip: 'Swap tokens on DEX'
+          },
+          {
+            id: 'stake',
+            label: 'Stake',
+            icon: '🏦',
+            action: async () => {
+              // This will be handled by the UI components
+              console.log('Stake action triggered');
+            },
+            tooltip: 'Stake tokens to earn rewards'
+          }
+        ]
       };
 
       setWalletData(data);

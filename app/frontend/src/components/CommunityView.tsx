@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Star
 } from 'lucide-react';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 interface CommunityViewProps {
   communityId: string;
@@ -95,6 +96,7 @@ const mockPosts = [
 ];
 
 export default function CommunityView({ communityId, highlightedPostId, className = '' }: CommunityViewProps) {
+  const { isMobile } = useMobileOptimization();
   const router = useRouter();
   const [posts, setPosts] = useState(mockPosts);
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top' | 'rising'>('hot');
@@ -117,7 +119,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
   return (
     <div className={`grid grid-cols-12 gap-6 max-w-7xl mx-auto ${className}`}>
       {/* Left Sidebar - Navigation */}
-      <div className="col-span-12 lg:col-span-3">
+      <div className={`col-span-12 ${isMobile ? 'order-3' : 'lg:col-span-3'}`}>
         <div className="sticky top-6 space-y-4">
           {/* Community Navigation */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
@@ -125,7 +127,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               r/{mockCommunityData.name}
             </h3>
             <Link 
-              href="/communities"
+              href="/dao"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               ← Back to Communities
@@ -160,7 +162,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
       </div>
 
       {/* Center Column - Community Feed */}
-      <div className="col-span-12 lg:col-span-6">
+      <div className={`col-span-12 ${isMobile ? '' : 'lg:col-span-6'}`}>
         {/* Community Header */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden">
           <div
@@ -343,7 +345,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
       </div>
 
       {/* Right Sidebar - Community Info */}
-      <div className="col-span-12 lg:col-span-3">
+      <div className={`col-span-12 ${isMobile ? 'order-2 mb-6' : 'lg:col-span-3'}`}>
         <div className="sticky top-6 space-y-4">
           {/* About Community */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">

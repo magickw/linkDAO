@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { useWeb3 } from '@/context/Web3Context';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 
 interface Community {
   id: string;
@@ -22,6 +23,7 @@ interface Community {
 
 export default function CommunitiesPage() {
   const { isConnected } = useWeb3();
+  const { isMobile } = useMobileOptimization();
   const [searchTerm, setSearchTerm] = useState('');
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function CommunitiesPage() {
   };
 
   return (
-    <Layout title="Communities - LinkDAO" fullWidth={true}>
+    <Layout title="Communities - LinkDAO" fullWidth={isMobile}>
       <div className="px-4 py-6 sm:px-0">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Web3 Communities</h1>
@@ -154,7 +156,7 @@ export default function CommunitiesPage() {
 
           {/* Communities Grid */}
           {!loading && !error && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className={`grid gap-6 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
               {filteredCommunities.map((community) => (
                 <Link 
                   key={community.id} 

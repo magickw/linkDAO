@@ -79,58 +79,58 @@ const LDAODashboard: React.FC = () => {
           </div>
 
           {/* Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <GlassPanel variant="secondary" className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center">
                   <Wallet className="text-white" size={20} />
                 </div>
                 <div>
                   <div className="text-white/70 text-sm">Balance</div>
-                  <div className="text-xl font-bold text-white">1,250.50 LDAO</div>
+                  <div className="text-xl font-bold text-white">0 LDAO</div>
                 </div>
               </div>
-              <div className="text-sm text-green-400">+$25.75 (24h)</div>
-            </GlassPanel>
+              <div className="text-sm text-white/50">Connect wallet to view</div>
+            </div>
             
-            <GlassPanel variant="secondary" className="p-6">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-teal-600 flex items-center justify-center">
                   <TrendingUp className="text-white" size={20} />
                 </div>
                 <div>
                   <div className="text-white/70 text-sm">Staked</div>
-                  <div className="text-xl font-bold text-white">500.00 LDAO</div>
+                  <div className="text-xl font-bold text-white">0 LDAO</div>
                 </div>
               </div>
-              <div className="text-sm text-green-400">+12.50 LDAO Rewards</div>
-            </GlassPanel>
+              <div className="text-sm text-white/50">No active stakes</div>
+            </div>
             
-            <GlassPanel variant="secondary" className="p-6">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 flex items-center justify-center">
                   <Share2 className="text-white" size={20} />
                 </div>
                 <div>
                   <div className="text-white/70 text-sm">Referrals</div>
-                  <div className="text-xl font-bold text-white">12</div>
+                  <div className="text-xl font-bold text-white">0</div>
                 </div>
               </div>
-              <div className="text-sm text-green-400">+50.00 LDAO Pending</div>
-            </GlassPanel>
+              <div className="text-sm text-white/50">Start referring</div>
+            </div>
             
-            <GlassPanel variant="secondary" className="p-6">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-orange-600 flex items-center justify-center">
                   <BarChart3 className="text-white" size={20} />
                 </div>
                 <div>
                   <div className="text-white/70 text-sm">Total Value</div>
-                  <div className="text-xl font-bold text-white">$875.35</div>
+                  <div className="text-xl font-bold text-white">$0.00</div>
                 </div>
               </div>
-              <div className="text-sm text-green-400">+$38.25 (24h)</div>
-            </GlassPanel>
+              <div className="text-sm text-white/50">No holdings</div>
+            </div>
           </div>
 
           {/* Navigation Tabs */}
@@ -188,7 +188,7 @@ const LDAODashboard: React.FC = () => {
           <div className="space-y-6">
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <GlassPanel variant="secondary" className="p-6">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to Your LDAO Dashboard</h2>
                   <p className="text-white/70 mb-6">
                     This dashboard allows you to manage all aspects of your LDAO token holdings. 
@@ -196,7 +196,7 @@ const LDAODashboard: React.FC = () => {
                     and track all your transactions in one place.
                   </p>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white/5 rounded-lg p-4">
                       <h3 className="font-bold text-white mb-2">Token Balance</h3>
                       <p className="text-white/70 text-sm">
@@ -225,9 +225,9 @@ const LDAODashboard: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                </GlassPanel>
+                </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <StakingInterface />
                   <ReferralSystem />
                 </div>
