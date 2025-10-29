@@ -77,13 +77,17 @@ class AuthController {
       const userData = user[0];
 
       // Generate JWT token
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret || jwtSecret.length < 32) {
+        throw new Error('JWT_SECRET not configured properly');
+      }
       const token = jwt.sign(
         {
           userId: userData.id,
           walletAddress: userData.walletAddress,
           timestamp: Date.now()
         },
-        process.env.JWT_SECRET || 'fallback-secret',
+        jwtSecret,
         { expiresIn: '24h' }
       );
 

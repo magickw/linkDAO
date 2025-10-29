@@ -146,11 +146,27 @@ const performanceOptimizer = new PerformanceOptimizationIntegration(dbPool, {
 
 // Performance optimizer will be set after routes are imported
 
+// Import security enhancements
+import { 
+  securityHeaders, 
+  csrfProtection,
+  requestSizeLimits, 
+  validateContentType, 
+  hideServerInfo, 
+  securityLogger 
+} from './middleware/securityEnhancementsMiddleware';
+
 // Core middleware stack (order matters!)
+app.use(securityHeaders);
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
 app.use(ddosProtection);
 app.use(requestFingerprinting);
+app.use(hideServerInfo);
+app.use(requestSizeLimits);
+app.use(csrfProtection);
+app.use(validateContentType);
+app.use(securityLogger);
 
 // Request tracking and monitoring
 app.use(metricsTrackingMiddleware);

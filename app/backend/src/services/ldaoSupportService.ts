@@ -1,8 +1,9 @@
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { eq, desc, and, gte, like } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { supportTickets, supportFAQ, supportCategories, ticketResponses } from '../db/schema/supportSchema';
 import emailService from './emailService';
 import { createNotification } from './notificationHelper';
+import { escapeLikePattern, generateSecureId } from '../utils/securityUtils';
 
 export interface SupportTicket {
   id: string;
@@ -47,7 +48,7 @@ class LDAOSupportService {
   // Ticket Management
   async createTicket(ticketData: Omit<SupportTicket, 'id' | 'createdAt' | 'updatedAt'>): Promise<SupportTicket> {
     try {
-      const ticketId = `LDAO-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const ticketId = generateSecureId('LDAO');
       
       const [ticket] = await db.insert(supportTickets).values({
         id: ticketId,
@@ -146,7 +147,7 @@ class LDAOSupportService {
     try {
       // Add response to ticket history
       await db.insert(ticketResponses).values({
-        id: `resp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: generateSecureId('resp'),
         ticketId,
         response,
         isStaffResponse,
@@ -192,6 +193,7 @@ class LDAOSupportService {
 
   async searchFAQ(query: string, category?: string): Promise<SupportFAQ[]> {
     try {
+      const escapedQuery = escapeLikePattern(query);
       let whereCondition = eq(supportFAQ.isPublished, true);
       
       if (category) {
@@ -202,11 +204,11 @@ class LDAOSupportService {
         .from(supportFAQ)
         .where(whereCondition);
 
-      // Simple text search (in production, use full-text search)
+      // Simple text search with escaped pattern
       return faqs.filter(faq => 
-        faq.question.toLowerCase().includes(query.toLowerCase()) ||
-        faq.answer.toLowerCase().includes(query.toLowerCase()) ||
-        faq.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+        faq.question.toLowerCase().includes(escapedQuery.toLowerCase()) ||
+        faq.answer.toLowerCase().includes(escapedQuery.toLowerCase()) ||
+        faq.tags.some(tag => tag.toLowerCase().includes(escapedQuery.toLowerCase()))
       );
     } catch (error) {
       console.error('Error searching FAQ:', error);
@@ -453,7 +455,7 @@ class LDAOSupportService {
   // Live chat integration
   async initiateLiveChat(userId: string, initialMessage?: string): Promise<string> {
     try {
-      const chatSessionId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const chatSessionId = generateSecureId('chat');
       
       // In production, this would integrate with a live chat service
       // like Intercom, Zendesk Chat, or custom WebSocket implementation
@@ -469,7 +471,7 @@ class LDAOSupportService {
   async createFAQItem(faqData: Omit<SupportFAQ, 'id' | 'createdAt' | 'updatedAt'>): Promise<SupportFAQ> {
     try {
       const [faq] = await db.insert(supportFAQ).values({
-        id: `faq-${Date.now()}`,
+        id: generateSecureId('faq'),
         ...faqData,
         createdAt: new Date(),
         updatedAt: new Date()

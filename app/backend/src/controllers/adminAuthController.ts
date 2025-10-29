@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator';
 import { AdminAuthService } from '../services/adminAuthService';
 import { successResponse, errorResponse, validationErrorResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { checkLoginAttempts, recordFailedLogin, resetLoginAttempts } from '../utils/securityUtils';
 
 interface AdminLoginRequest {
   email: string;
@@ -25,6 +26,12 @@ class AdminAuthController {
       const ipAddress = req.ip || req.socket.remoteAddress;
       const userAgent = req.get('user-agent');
 
+      // Check login attempts
+      const attemptCheck = checkLoginAttempts(email);
+      if (!attemptCheck.allowed) {
+        return errorResponse(res, 'ACCOUNT_LOCKED', attemptCheck.message || 'Account locked', 429);
+      }
+
       const result = await AdminAuthService.loginWithCredentials(
         email,
         password,
@@ -33,8 +40,11 @@ class AdminAuthController {
       );
 
       if (!result.success) {
+        recordFailedLogin(email);
         return errorResponse(res, 'LOGIN_FAILED', result.message || 'Login failed', 401);
       }
+
+      resetLoginAttempts(email);
 
       successResponse(
         res,

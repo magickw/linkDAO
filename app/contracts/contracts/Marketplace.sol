@@ -259,32 +259,43 @@ contract Marketplace is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice Buy an item with fixed price
+     * @notice Buy a fixed price item
      * @param listingId ID of the listing
      * @param quantity Quantity to buy
      */
-    function buyItem(uint256 listingId, uint256 quantity) 
+    function buyFixedPriceItem(uint256 listingId, uint256 quantity) 
         external 
         payable 
         nonReentrant 
         listingExists(listingId) 
+        hasMinReputation 
     {
         Listing storage listing = listings[listingId];
         require(listing.status == ListingStatus.ACTIVE, "Listing not active");
         require(listing.listingType == ListingType.FIXED_PRICE, "Not a fixed price listing");
         require(quantity > 0 && quantity <= listing.quantity, "Invalid quantity");
-        require(msg.sender != listing.seller, "Cannot buy own item");
+        require(listing.startTime <= block.timestamp, "Listing not started yet");
         
         uint256 totalPrice = listing.price * quantity;
         uint256 feeAmount = (totalPrice * platformFeePercentage) / 10000;
-        uint256 totalAmount = totalPrice + feeAmount;
+        uint256 sellerAmount = totalPrice - feeAmount;
         
-        // Handle payment
         if (listing.tokenAddress == address(0)) {
-            require(msg.value == totalAmount, "Incorrect ETH amount");
+            // ETH payment
+            require(msg.value == totalPrice, "Incorrect ETH amount");
+            
+            // Send ETH to seller and platform owner with proper error handling
+            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
+            require(sentToSeller, "Failed to send ETH to seller");
+            
+            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
         } else {
+            // ERC20 token payment
             require(msg.value == 0, "ETH not accepted for token payments");
-            IERC20(listing.tokenAddress).transferFrom(msg.sender, address(this), totalAmount);
+            IERC20(listing.tokenAddress).transferFrom(msg.sender, address(this), totalPrice);
+            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
+            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
         }
         
         // Update listing
@@ -302,21 +313,11 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.seller = listing.seller;
         order.amount = totalPrice;
         order.paymentToken = listing.tokenAddress;
-        order.status = OrderStatus.PENDING;
+        order.status = OrderStatus.CONFIRMED;
         order.createdAt = block.timestamp;
         order.updatedAt = block.timestamp;
         
         userOrders[msg.sender].push(orderId);
-        userOrders[listing.seller].push(orderId);
-        
-        // Transfer payment to seller (minus fee)
-        if (listing.tokenAddress == address(0)) {
-            payable(listing.seller).transfer(totalPrice);
-            payable(owner()).transfer(feeAmount);
-        } else {
-            IERC20(listing.tokenAddress).transfer(listing.seller, totalPrice);
-            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
-        }
         
         emit OrderCreated(orderId, listingId, msg.sender);
     }
@@ -374,51 +375,60 @@ contract Marketplace is ReentrancyGuard, Ownable {
     }
 
     /**
-     * @notice End an auction
+     * @notice Accept the highest bid for an auction
      * @param listingId ID of the listing
      */
-    function endAuction(uint256 listingId) external listingExists(listingId) {
+    function acceptHighestBid(uint256 listingId) 
+        external 
+        nonReentrant 
+        listingExists(listingId) 
+        onlyListingSeller(listingId) 
+    {
         Listing storage listing = listings[listingId];
         require(listing.status == ListingStatus.ACTIVE, "Listing not active");
-        require(listing.listingType == ListingType.AUCTION, "Not an auction");
-        require(block.timestamp >= listing.endTime, "Auction not ended");
+        require(listing.listingType == ListingType.AUCTION, "Not an auction listing");
+        require(block.timestamp >= listing.endTime, "Auction not ended yet");
+        require(listing.highestBid > 0, "No bids");
         
-        if (listing.highestBidder != address(0) && listing.highestBid >= listing.reservePrice) {
-            // Auction successful
-            listing.status = ListingStatus.SOLD;
+        address bidder = listing.highestBidder;
+        uint256 amount = listing.highestBid;
+        uint256 feeAmount = (amount * platformFeePercentage) / 10000;
+        uint256 sellerAmount = amount - feeAmount;
+        
+        if (listing.tokenAddress == address(0)) {
+            // ETH payment
+            // Send ETH to seller and platform owner with proper error handling
+            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
+            require(sentToSeller, "Failed to send ETH to seller");
             
-            uint256 feeAmount = (listing.highestBid * platformFeePercentage) / 10000;
-            uint256 sellerAmount = listing.highestBid - feeAmount;
-            
-            // Transfer payment
-            payable(listing.seller).transfer(sellerAmount);
-            payable(owner()).transfer(feeAmount);
-            
-            // Create order
-            uint256 orderId = nextOrderId++;
-            Order storage order = orders[orderId];
-            order.id = orderId;
-            order.listingId = listingId;
-            order.buyer = listing.highestBidder;
-            order.seller = listing.seller;
-            order.amount = listing.highestBid;
-            order.paymentToken = listing.tokenAddress;
-            order.status = OrderStatus.CONFIRMED;
-            order.createdAt = block.timestamp;
-            order.updatedAt = block.timestamp;
-            
-            userOrders[listing.highestBidder].push(orderId);
-            userOrders[listing.seller].push(orderId);
-            
-            emit AuctionEnded(listingId, listing.highestBidder, listing.highestBid);
-            emit OrderCreated(orderId, listingId, listing.highestBidder);
+            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
         } else {
-            // Auction failed - refund highest bidder if any
-            if (listing.highestBidder != address(0)) {
-                _refundBidder(listingId, listing.highestBidder, listing.highestBid);
-            }
-            listing.status = ListingStatus.EXPIRED;
+            // ERC20 token payment
+            IERC20(listing.tokenAddress).transfer(bidder, amount);
+            IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
+            IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
         }
+        
+        listing.status = ListingStatus.SOLD;
+        
+        // Create order
+        uint256 orderId = nextOrderId++;
+        Order storage order = orders[orderId];
+        order.id = orderId;
+        order.listingId = listingId;
+        order.buyer = bidder;
+        order.seller = listing.seller;
+        order.amount = amount;
+        order.paymentToken = listing.tokenAddress;
+        order.status = OrderStatus.CONFIRMED;
+        order.createdAt = block.timestamp;
+        order.updatedAt = block.timestamp;
+        
+        userOrders[bidder].push(orderId);
+        
+        emit AuctionEnded(listingId, bidder, amount);
+        emit OrderCreated(orderId, listingId, bidder);
     }
 
     /**
@@ -464,35 +474,57 @@ contract Marketplace is ReentrancyGuard, Ownable {
 
     /**
      * @notice Accept an offer
-     * @param listingId ID of the listing
-     * @param offerIndex Index of the offer in the offers array
+     * @param offerId ID of the offer
      */
-    function acceptOffer(uint256 listingId, uint256 offerIndex) 
-        external 
-        listingExists(listingId) 
-        onlyListingSeller(listingId) 
-    {
-        Listing storage listing = listings[listingId];
-        require(listing.status == ListingStatus.ACTIVE, "Listing not active");
-        require(offerIndex < listingOffers[listingId].length, "Invalid offer index");
+    function acceptOffer(uint256 offerId) external nonReentrant {
+        // Find the offer
+        Offer storage offer;
+        bool found = false;
+        uint256 listingId;
         
-        Offer storage offer = listingOffers[listingId][offerIndex];
+        // Search for the offer in all listings (inefficient but simple)
+        for (uint256 i = 1; i < nextListingId; i++) {
+            Offer[] storage offers = listingOffers[i];
+            for (uint256 j = 0; j < offers.length; j++) {
+                if (offers[j].id == offerId) {
+                    offer = offers[j];
+                    listingId = i;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+        
+        require(found, "Offer not found");
         require(!offer.accepted, "Offer already accepted");
         
-        offer.accepted = true;
-        listing.status = ListingStatus.SOLD;
+        Listing storage listing = listings[listingId];
+        require(listing.status == ListingStatus.ACTIVE, "Listing not active");
+        require(listing.seller == msg.sender, "Only seller can accept offer");
         
-        uint256 feeAmount = (offer.amount * platformFeePercentage) / 10000;
-        uint256 sellerAmount = offer.amount - feeAmount;
+        uint256 amount = offer.amount;
+        uint256 feeAmount = (amount * platformFeePercentage) / 10000;
+        uint256 sellerAmount = amount - feeAmount;
         
-        // Transfer payment
         if (listing.tokenAddress == address(0)) {
-            payable(listing.seller).transfer(sellerAmount);
-            payable(owner()).transfer(feeAmount);
+            // ETH payment
+            // Send ETH to seller and platform owner with proper error handling
+            (bool sentToSeller, ) = payable(listing.seller).call{value: sellerAmount}("");
+            require(sentToSeller, "Failed to send ETH to seller");
+            
+            (bool sentToOwner, ) = payable(owner()).call{value: feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
         } else {
+            // ERC20 token payment
+            IERC20(listing.tokenAddress).transferFrom(offer.buyer, address(this), amount);
             IERC20(listing.tokenAddress).transfer(listing.seller, sellerAmount);
             IERC20(listing.tokenAddress).transfer(owner(), feeAmount);
         }
+        
+        // Update offer and listing
+        offer.accepted = true;
+        listing.status = ListingStatus.SOLD;
         
         // Create order
         uint256 orderId = nextOrderId++;
@@ -501,16 +533,15 @@ contract Marketplace is ReentrancyGuard, Ownable {
         order.listingId = listingId;
         order.buyer = offer.buyer;
         order.seller = listing.seller;
-        order.amount = offer.amount;
+        order.amount = amount;
         order.paymentToken = listing.tokenAddress;
         order.status = OrderStatus.CONFIRMED;
         order.createdAt = block.timestamp;
         order.updatedAt = block.timestamp;
         
         userOrders[offer.buyer].push(orderId);
-        userOrders[listing.seller].push(orderId);
         
-        emit OfferAccepted(offer.id, listingId);
+        emit OfferAccepted(offerId, listingId);
         emit OrderCreated(orderId, listingId, offer.buyer);
     }
 
@@ -603,4 +634,26 @@ contract Marketplace is ReentrancyGuard, Ownable {
             IERC20(listing.tokenAddress).transfer(bidder, amount);
         }
     }
+    
+    /**
+     * @notice Refund a bid
+     * @param listingId ID of the listing
+     * @param bidder Address of the bidder
+     */
+    function refundBid(uint256 listingId, address bidder) internal {
+        Listing storage listing = listings[listingId];
+        uint256 amount = listing.highestBid;
+        
+        if (amount > 0) {
+            if (listing.tokenAddress == address(0)) {
+                // ETH refund
+                (bool sent, ) = payable(bidder).call{value: amount}("");
+                require(sent, "Failed to refund ETH to bidder");
+            } else {
+                // ERC20 token refund
+                IERC20(listing.tokenAddress).transfer(bidder, amount);
+            }
+        }
+    }
+
 }

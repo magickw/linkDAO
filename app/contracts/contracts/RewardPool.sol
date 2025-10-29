@@ -36,7 +36,8 @@ contract RewardPool is Ownable {
         uint256 amt = accounts[msg.sender].earned;
         require(amt > 0, "nothing");
         accounts[msg.sender].earned = 0;
-        require(ldao.transfer(msg.sender, amt), "transfer fail");
+        (bool sent, ) = ldao.transfer(msg.sender, amt);
+        require(sent, "transfer fail");
         emit Claimed(msg.sender, amt);
     }
 }

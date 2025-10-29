@@ -91,14 +91,14 @@ export interface SecurityConfig {
 
 export const securityConfig: SecurityConfig = {
   authentication: {
-    jwtSecret: process.env.JWT_SECRET || 'fallback-secret-change-in-production',
+    jwtSecret: process.env.JWT_SECRET || '', // Will be validated in validateSecurityConfig
     jwtExpirationTime: process.env.JWT_EXPIRATION || '24h',
     refreshTokenExpirationTime: process.env.REFRESH_TOKEN_EXPIRATION || '7d',
     maxLoginAttempts: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5'),
     lockoutDuration: parseInt(process.env.LOCKOUT_DURATION || '900000'), // 15 minutes
     sessionTimeout: parseInt(process.env.SESSION_TIMEOUT || '3600000'), // 1 hour
     requireMFA: process.env.REQUIRE_MFA === 'true',
-    allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://linkdao.io,https://linkdao.io').split(','),
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,https://linkdao.io,https://www.linkdao.io').split(','),
   },
   
   encryption: {
@@ -186,9 +186,9 @@ export const validateSecurityConfig = (): void => {
     throw new Error(`Missing required security environment variables: ${missingVars.join(', ')}`);
   }
 
-  // Validate JWT secret strength
-  if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
-    console.warn('JWT_SECRET should be at least 32 characters long for security');
+  // Validate JWT secret strength - now required to be at least 32 characters
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET is required and must be at least 32 characters long for security');
   }
 
   // Validate master encryption key

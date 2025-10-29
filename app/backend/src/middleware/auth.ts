@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { validateJWTSecret } from '../utils/securityUtils';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -21,7 +22,14 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
     return;
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', (err: any, user: any) => {
+  try {
+    validateJWTSecret(process.env.JWT_SECRET);
+  } catch (error) {
+    res.status(500).json({ error: 'Server configuration error' });
+    return;
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET!, (err: any, user: any) => {
     if (err) {
       res.status(403).json({ error: 'Invalid token' });
       return;

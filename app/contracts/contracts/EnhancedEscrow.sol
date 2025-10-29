@@ -521,8 +521,11 @@ contract EnhancedEscrow is ReentrancyGuard, Ownable {
         
         if (escrow.tokenAddress == address(0)) {
             // ETH payment
-            payable(recipient).transfer(escrow.amount);
-            payable(owner()).transfer(escrow.feeAmount);
+            (bool sentToRecipient, ) = payable(recipient).call{value: escrow.amount}("");
+            require(sentToRecipient, "Failed to send ETH to recipient");
+            
+            (bool sentToOwner, ) = payable(owner()).call{value: escrow.feeAmount}("");
+            require(sentToOwner, "Failed to send ETH to owner");
         } else {
             // ERC20 token payment
             IERC20(escrow.tokenAddress).transfer(recipient, escrow.amount);
