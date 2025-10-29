@@ -470,7 +470,7 @@ MAINNET_RPC_URL=https://eth.llamarpc.com
 - API Documentation: `/api/docs`
 - Health Check: `/health`
 - Marketplace Health: `/api/marketplace/health`
-- GitHub Issues: https://github.com/linkdao/marketplace/issues
+- GitHub Issues: https://github.com/magickw/marketplace/issues
 
 ---
 

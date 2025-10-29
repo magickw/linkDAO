@@ -120,10 +120,13 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
         setDexQuotes(quotes);
         if (quotes.length > 0) {
           setSelectedQuote(quotes[0]);
+        } else {
+          // If no quotes are returned, show a more specific error
+          setErrorMessage('No DEX quotes available. Please try a different amount or payment method.');
         }
       }
     } catch (error) {
-      setErrorMessage('Failed to fetch quotes');
+      setErrorMessage(`Failed to fetch quotes: ${error instanceof Error ? error.message : 'Unknown error'}`);
       console.error('Quote fetch error:', error);
     } finally {
       setIsLoadingQuotes(false);
@@ -192,16 +195,31 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           }, 2000);
         }, 2000);
       } else {
-        // Execute DEX swap
+        // Execute DEX swap using the real DEX service
         const quote = selectedQuote as DexSwapQuote;
         const fromToken = paymentMethod === 'eth' ? 'ETH' : 'USDC';
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20; // 20 minutes
         
-        // In a real implementation, this would execute the swap
-        // For now, we'll simulate a successful swap
-        console.log(`Executing ${quote.dex} swap: ${amount} ${fromToken} -> LDAO`);
+        let result;
+        if (quote.dex === 'uniswap') {
+          result = await dexService.swapOnUniswap(
+            fromToken,
+            'LDAO',
+            amount,
+            quote.toAmount,
+            deadline
+          );
+        } else {
+          result = await dexService.swapOnSushiswap(
+            fromToken,
+            'LDAO',
+            amount,
+            quote.toAmount,
+            deadline
+          );
+        }
         
-        // Simulate successful purchase
-        setTimeout(() => {
+        if (result.status === 'success') {
           setTransactionStatus('success');
           // Refresh user balance
           loadUserBalance();
@@ -214,11 +232,13 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
             onClose();
             setTransactionStatus('idle');
           }, 2000);
-        }, 2000);
+        } else {
+          throw new Error(result.error || 'Swap failed');
+        }
       }
     } catch (error) {
       setTransactionStatus('error');
-      setErrorMessage('An unexpected error occurred');
+      setErrorMessage(`Purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       console.error('Purchase error:', error);
     } finally {
       setIsProcessing(false);

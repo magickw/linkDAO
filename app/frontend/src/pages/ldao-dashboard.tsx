@@ -185,7 +185,7 @@ const LDAODashboard: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div>
+          <div className="space-y-6">
             {activeTab === 'overview' && (
               <div className="space-y-6">
                 <GlassPanel variant="secondary" className="p-6">

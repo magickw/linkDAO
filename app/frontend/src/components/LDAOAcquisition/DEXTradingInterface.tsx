@@ -206,6 +206,8 @@ export default function DEXTradingInterface({ userAddress, onClose }: DEXTrading
         slippageTolerance
       );
       
+      console.log('DEX Quotes received:', dexQuotes);
+      
       // Convert to our SwapQuote format
       const formattedQuotes = dexQuotes.map(quote => ({
         fromAmount: quote.fromAmount,
@@ -224,10 +226,13 @@ export default function DEXTradingInterface({ userAddress, onClose }: DEXTrading
       // Set the best quote as the default
       if (formattedQuotes.length > 0) {
         setToAmount(formattedQuotes[0].toAmount);
+      } else {
+        // If no quotes are available, show an error message
+        toast.error('No DEX quotes available. Please try a different amount or token pair.');
       }
     } catch (error) {
       console.error('Failed to get quotes:', error);
-      toast.error('Failed to get swap quotes');
+      toast.error(`Failed to get swap quotes: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setQuotes([]);
     } finally {
       setLoading(false);
@@ -439,10 +444,11 @@ export default function DEXTradingInterface({ userAddress, onClose }: DEXTrading
                     onClick={() => {
                       // In a real implementation, we would filter quotes by selected DEX
                       // For now, we'll just update the UI
+                      setSelectedDEX(dex);
                     }}
                     disabled={!dex.available}
                     className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                      true // Always show as available for now
+                      selectedDEX.name === dex.name
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:bg-gray-50'
                     } ${!dex.available ? 'opacity-50 cursor-not-allowed' : ''}`}

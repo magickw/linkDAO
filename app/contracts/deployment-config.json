@@ -225,7 +225,7 @@
     "deployer": "${DEPLOYER_NAME}",
     "organization": "LinkDAO",
     "license": "MIT",
-    "repository": "https://github.com/linkdao/contracts",
+    "repository": "https://github.com/magickw/contracts",
     "documentation": "https://docs.linkdao.io"
   }
 }

@@ -1369,7 +1369,7 @@ socket.on('message:read', (data) => {
 ## Support
 
 For issues or questions:
-- GitHub: https://github.com/linkdao/linkdao
+- GitHub: https://github.com/magickw
 - Documentation: https://docs.linkdao.io
 - Support Email: support@linkdao.io
 

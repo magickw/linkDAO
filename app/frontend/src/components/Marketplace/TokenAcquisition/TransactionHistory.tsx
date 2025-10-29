@@ -140,7 +140,7 @@ const TransactionHistory: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl font-bold text-white">Transaction History</h2>
@@ -213,7 +213,7 @@ const TransactionHistory: React.FC = () => {
 
       {/* Transaction List */}
       {!loading && transactions.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {transactions.map((tx, index) => (
             <GlassPanel key={index} variant="secondary" className="p-4">
               <div className="flex items-center justify-between">

@@ -233,7 +233,7 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
           <ul className="space-y-2">
             <li>
               <a
-                href="https://github.com/LinkDAO"
+                href="https://github.com/magickw"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"

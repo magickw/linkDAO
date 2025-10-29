@@ -47,7 +47,7 @@ export const generateOrganizationStructuredData = () => {
     'logo': `${SEO_CONFIG.DEFAULT_URL}/images/logo.png`,
     'sameAs': [
       'https://twitter.com/linkdao',
-      'https://github.com/linkdao',
+      'https://github.com/magickw',
       'https://discord.gg/linkdao'
     ],
     'description': SEO_CONFIG.DEFAULT_DESCRIPTION
