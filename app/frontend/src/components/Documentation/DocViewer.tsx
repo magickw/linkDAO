@@ -131,7 +131,7 @@ const DocViewer: React.FC<DocViewerProps> = ({
   }, []);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-full">
       {/* Header */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
@@ -156,7 +156,8 @@ const DocViewer: React.FC<DocViewerProps> = ({
         </div>
       </div>
       
-      <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+      {/* Content with indefinite scrolling */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-6 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

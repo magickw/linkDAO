@@ -432,7 +432,7 @@ We encountered an error while loading this document. Please try again later or c
         <meta name="description" content="Comprehensive documentation for LinkDAO platform, smart contracts, and development" />
       </Head>
       
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -452,7 +452,7 @@ We encountered an error while loading this document. Please try again later or c
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Documentation Center</h1>
@@ -461,7 +461,7 @@ We encountered an error while loading this document. Please try again later or c
             </p>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex flex-col lg:flex-row gap-8 h-full">
             {/* Sidebar Navigation */}
             <div className="lg:w-1/4">
               <DocSidebar
@@ -479,7 +479,7 @@ We encountered an error while loading this document. Please try again later or c
             </div>
 
             {/* Main Content */}
-            <div className="lg:w-3/4">
+            <div className="lg:w-3/4 h-full">
               {selectedDocument ? (
                 // Document Viewer
                 <DocViewer
