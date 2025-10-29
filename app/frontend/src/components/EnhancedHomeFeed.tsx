@@ -126,53 +126,9 @@ export default function EnhancedHomeFeed({
     triggerOnce: false,
   });
 
-  // Mock enhanced posts data
-  const mockEnhancedPosts: EnhancedPost[] = [
-    {
-      id: '1',
-      author: '0x1234567890123456789012345678901234567890',
-      authorProfile: {
-        handle: 'alexj',
-        ens: 'alex.eth',
-        avatar: 'https://placehold.co/40',
-        verified: true,
-        reputation: 750,
-        isOnline: true,
-      },
-      content: 'Just deployed a new yield farming strategy on Arbitrum! 🚀 Getting 15% APY so far. The risk profile looks solid with automated rebalancing. What do you think about the current DeFi landscape? #DeFi #Arbitrum #YieldFarming',
-      media: [
-        {
-          type: 'image',
-          url: 'https://placehold.co/600x300',
-          title: 'Yield Farming Dashboard',
-        }
-      ],
-      hashtags: ['DeFi', 'Arbitrum', 'YieldFarming'],
-      mentions: [],
-      timestamp: new Date(Date.now() - 3600000),
-      engagement: {
-        likes: 124,
-        comments: 24,
-        shares: 8,
-        views: 1250,
-        hasLiked: false,
-        hasBookmarked: true,
-      },
-      trending: {
-        score: 85,
-        velocity: 12,
-      },
-      web3Data: {
-        tokenAmount: '2.5',
-        tokenSymbol: 'ETH',
-        transactionHash: '0x1234...5678',
-      },
-    },
-    // Add more mock posts...
-  ];
-
+  // Initialize with empty posts array instead of mock data
   useEffect(() => {
-    setPosts(mockEnhancedPosts);
+    setPosts([]);
   }, []);
 
   // Infinite scroll
@@ -184,24 +140,15 @@ export default function EnhancedHomeFeed({
 
   const loadMorePosts = useCallback(async () => {
     setLoadingMore(true);
-    // Simulate API call
+    // Simulate API call - in a real implementation, this would fetch actual data
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Add more mock posts
-    const morePosts = mockEnhancedPosts.map((post, index) => ({
-      ...post,
-      id: `${post.id}_${Date.now()}_${index}`,
-      timestamp: new Date(Date.now() - (3600000 * (index + 2))),
-    }));
-    
-    setPosts(prev => [...prev, ...morePosts]);
+    // In a real implementation, we would fetch more posts from the API
+    // For now, we'll just stop loading more since we're not using mock data
     setLoadingMore(false);
+    setHasMore(false); // Stop infinite scroll since we're not adding mock data
     
-    // Simulate end of feed
-    if (posts.length > 20) {
-      setHasMore(false);
-    }
-  }, [posts.length]);
+  }, []);
 
   const handleLike = (postId: string) => {
     setPosts(prev => prev.map(post => 
@@ -233,6 +180,28 @@ export default function EnhancedHomeFeed({
         : post
     ));
   };
+
+  const handleShare = (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      navigator.clipboard.writeText(`Check out this post: ${window.location.origin}/post/${postId}`);
+    }
+  };
+
+  const filteredPosts = posts.filter(post => {
+    if (selectedFilter === 'following') {
+      // In a real implementation, this would check if the user follows the post author
+      return true;
+    }
+    if (selectedFilter === 'communities') {
+      // In a real implementation, this would check if the post is from a community the user belongs to
+      return true;
+    }
+    return true;
+  }).filter(post => 
+    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.hashtags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const showNewPosts = () => {
     setShowNewPostsBanner(false);
@@ -325,7 +294,7 @@ export default function EnhancedHomeFeed({
 
       {/* Enhanced Posts Feed */}
       <div className="space-y-6">
-        {posts.map((post, index) => (
+        {filteredPosts.map((post, index) => (
           <motion.div
             key={post.id}
             initial={{ opacity: 0, y: 20 }}

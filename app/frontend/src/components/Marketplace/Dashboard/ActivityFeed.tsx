@@ -67,70 +67,8 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ address }) => {
     refetchInterval: 30000, // 30 seconds
   });
 
-  // Mock data (replace with real data from your API)
-  const mockActivities = [
-    {
-      id: '1',
-      type: 'sale',
-      title: 'New Sale',
-      description: 'Your item "Vintage Camera" was purchased by 0x1a2b...3c4d for 0.5 ETH',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-      txHash: '0x123...456',
-      metadata: {
-        itemId: '123',
-        price: '500000000000000000', // 0.5 ETH in wei
-        buyer: '0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t',
-      },
-    },
-    {
-      id: '2',
-      type: 'offer',
-      title: 'New Offer Received',
-      description: 'New offer of 0.3 ETH for your item "Rare Collectible"',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      txHash: '0x789...012',
-      metadata: {
-        itemId: '456',
-        offerAmount: '300000000000000000', // 0.3 ETH in wei
-        offerFrom: '0x9a8b7c6d5e4f3g2h1i0j9k8l7m6n5o4p3q2r1s0t',
-      },
-    },
-    {
-      id: '3',
-      type: 'like',
-      title: 'Item Liked',
-      description: 'Your item "Digital Art #42" was liked by 3 new users',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      metadata: {
-        itemId: '789',
-        likeCount: 3,
-      },
-    },
-    {
-      id: '4',
-      type: 'comment',
-      title: 'New Comment',
-      description: 'New comment on your item "Handmade Necklace"',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-      metadata: {
-        itemId: '101',
-        comment: 'This is amazing! Do you have more colors?',
-        commenter: '0x5a4b3c2d1e0f9g8h7i6j5k4l3m2n1o0p9q8r7s6t',
-      },
-    },
-    {
-      id: '5',
-      type: 'follow',
-      title: 'New Follower',
-      description: 'You have a new follower',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      metadata: {
-        follower: '0x9z8y7x6w5v4u3t2s1r0q9p8o7n6m5l4k3j2i1h0g',
-      },
-    },
-  ];
-
-  const displayActivities: Activity[] = (Array.isArray(activities) ? activities : []).length > 0 ? (activities as Activity[]) : mockActivities;
+  // Use only real data from the API, no mock data
+  const displayActivities: Activity[] = Array.isArray(activities) ? (activities as Activity[]) : [];
 
   if (isLoading) {
     return (
@@ -261,6 +199,14 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ address }) => {
           </div>
         ))}
       </div>
+      
+      {displayActivities.length === 0 && !isLoading && (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">📭</div>
+          <p className="text-white/60">No recent activity</p>
+          <p className="text-sm text-white/40 mt-1">Your marketplace activities will appear here</p>
+        </div>
+      )}
       
       {displayActivities.length > 0 && (
         <div className="mt-6 text-center">
