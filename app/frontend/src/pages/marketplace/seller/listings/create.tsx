@@ -434,14 +434,11 @@ const CreateListingPage: React.FC = () => {
         walletAddress: address,
         title: formData.title,
         description: formData.description,
-        price: parseFloat(formData.price),
+        price: formData.price,
         categoryId: formData.category,
         currency: formData.currency,
         inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
-        itemType: formData.itemType,
-        condition: formData.condition,
         tags: formData.tags,
-        images: imagePreviews, // In a real implementation, these would be uploaded and replaced with URLs
         metadata: {
           itemType: formData.itemType,
           condition: formData.condition,
@@ -451,8 +448,7 @@ const CreateListingPage: React.FC = () => {
           primaryImageIndex: primaryImageIndex,
           seoTitle: formData.seoTitle || formData.title,
           seoDescription: formData.seoDescription || formData.description.substring(0, 160)
-        },
-        status: 'active'
+        }
       };
       
       await marketplaceService.createListing(listingData);

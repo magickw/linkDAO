@@ -188,16 +188,29 @@ export interface MockProduct {
 
 // Blockchain marketplace interfaces
 export interface CreateListingInput {
-  sellerWalletAddress: string;
-  tokenAddress: string;
+  // For blockchain marketplace
+  sellerWalletAddress?: string;
+  tokenAddress?: string;
   price: string;
-  quantity: number;
-  itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
-  listingType: 'FIXED_PRICE' | 'AUCTION';
+  quantity?: number;
+  itemType?: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
+  listingType?: 'FIXED_PRICE' | 'AUCTION';
   duration?: number;
-  metadataURI: string;
+  metadataURI?: string;
   nftStandard?: 'ERC721' | 'ERC1155';
   tokenId?: string;
+  
+  // For seller listing service
+  walletAddress?: string;
+  title?: string;
+  description?: string;
+  categoryId?: string;
+  currency?: string;
+  inventory?: number;
+  tags?: string[];
+  metadata?: any;
+  shipping?: any;
+  nft?: any;
 }
 
 export interface MarketplaceListing {
