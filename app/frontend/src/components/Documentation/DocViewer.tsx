@@ -24,14 +24,33 @@ const DocViewer: React.FC<DocViewerProps> = ({
   activeSection = '',
   onSectionChange
 }) => {
-  // Simple markdown renderer for the technical whitepaper
+  // Simple markdown renderer for the technical whitepaper with improved ID generation
   const renderMarkdown = (markdown: string) => {
-    // Convert headers
+    // Reset header counter for each document
+    let headerCounter = 0;
+    
+    // Convert headers with improved ID generation
     let html = markdown
-      .replace(/^# (.*$)/gm, '<h1 id="$1" class="text-3xl font-bold mt-8 mb-4 text-gray-900 dark:text-white">$1</h1>')
-      .replace(/^## (.*$)/gm, '<h2 id="$1" class="text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white">$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3 id="$1" class="text-xl font-bold mt-4 mb-2 text-gray-900 dark:text-white">$1</h3>')
-      .replace(/^#### (.*$)/gm, '<h4 id="$1" class="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-white">$1</h4>');
+      .replace(/^# (.*$)/gm, (match, title) => {
+        headerCounter++;
+        const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
+        return `<h1 id="${id}" class="text-3xl font-bold mt-8 mb-4 text-gray-900 dark:text-white">${title}</h1>`;
+      })
+      .replace(/^## (.*$)/gm, (match, title) => {
+        headerCounter++;
+        const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
+        return `<h2 id="${id}" class="text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white">${title}</h2>`;
+      })
+      .replace(/^### (.*$)/gm, (match, title) => {
+        headerCounter++;
+        const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
+        return `<h3 id="${id}" class="text-xl font-bold mt-4 mb-2 text-gray-900 dark:text-white">${title}</h3>`;
+      })
+      .replace(/^#### (.*$)/gm, (match, title) => {
+        headerCounter++;
+        const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
+        return `<h4 id="${id}" class="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-white">${title}</h4>`;
+      });
     
     // Convert lists
     html = html.replace(/^\s*-\s(.*)$/gm, '<li class="ml-6 text-gray-700 dark:text-gray-300">$1</li>');

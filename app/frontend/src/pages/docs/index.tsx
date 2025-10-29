@@ -350,16 +350,21 @@ We encountered an error while loading this document. Please try again later or c
     }
   };
 
-  // Generate table of contents from markdown content
+  // Generate table of contents from markdown content with better ID generation
   const generateToc = (content: string) => {
+    // Reset header counter for each document
+    let headerCounter = 0;
+    
     const headers = content.match(/^(#{1,4})\s+(.+)$/gm);
     if (headers) {
-      const tocItems = headers.map(header => {
+      const tocItems = headers.map((header) => {
         const match = header.match(/^(#{1,4})\s+(.+)$/);
         if (match) {
+          headerCounter++;
           const level = match[1].length;
           const title = match[2];
-          const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+          // Create a more unique ID by including the counter to prevent duplicates
+          const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
           return { id, title, level };
         }
         return null;

@@ -189,6 +189,33 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
                             <FileText className="w-3 h-3 mr-2" />
                             {doc.title}
                           </button>
+                          
+                          {/* Show document hierarchy below the document name when selected */}
+                          {selectedDocument === doc.id && toc && toc.length > 0 && (
+                            <ul className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-2">
+                              {toc.map((item) => (
+                                <li key={item.id}>
+                                  <button
+                                    onClick={() => {
+                                      onTocItemClick?.(item.id);
+                                      setMobileMenuOpen(false);
+                                    }}
+                                    className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${
+                                      activeSection === item.id
+                                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium'
+                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    }`}
+                                    style={{ paddingLeft: `${(item.level - 1) * 12}px` }}
+                                  >
+                                    <div className="flex items-center">
+                                      <Hash className="w-2 h-2 mr-1 flex-shrink-0" />
+                                      <span className="truncate">{item.title}</span>
+                                    </div>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -198,54 +225,6 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
             </ul>
           </nav>
         </div>
-
-        {/* Table of Contents - Shows when document is selected */}
-        {selectedDocument && toc && toc.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-            <button
-              onClick={() => setTocExpanded(!tocExpanded)}
-              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-center">
-                <List className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
-                <span className="font-semibold text-gray-900 dark:text-white text-sm">On This Page</span>
-              </div>
-              {tocExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              )}
-            </button>
-
-            {tocExpanded && (
-              <div className="px-6 pb-6 max-h-96 overflow-y-auto">
-                <ul className="space-y-1">
-                  {toc.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => {
-                          onTocItemClick?.(item.id);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${
-                          activeSection === item.id
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                        }`}
-                        style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
-                      >
-                        <div className="flex items-center">
-                          <Hash className="w-3 h-3 mr-1 flex-shrink-0" />
-                          <span className="truncate">{item.title}</span>
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Additional Resources */}
         <div className="p-6 pt-6 border-t border-gray-200 dark:border-gray-700">
