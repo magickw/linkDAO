@@ -73,4 +73,15 @@ const AlertDescription: React.FC<AlertDescriptionProps> = ({
   );
 };
 
-export { Alert, AlertDescription };
+const AlertTitle: React.FC<AlertDescriptionProps> = ({ 
+  className = '', 
+  children 
+}) => {
+  return (
+    <h5 className={`mb-1 font-medium leading-none tracking-tight ${className}`}>
+      {children}
+    </h5>
+  );
+};
+
+export { Alert, AlertDescription, AlertTitle };
