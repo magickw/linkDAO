@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Home, 
-  Code, 
-  GraduationCap, 
-  BookOpen, 
+import {
+  Home,
+  Code,
+  GraduationCap,
+  BookOpen,
   Search,
   Menu,
   X,
@@ -16,7 +16,9 @@ import {
   Shield,
   Database,
   Wrench,
-  Settings
+  Settings,
+  FileText,
+  List
 } from 'lucide-react';
 
 interface DocCategory {
@@ -29,6 +31,12 @@ interface DocCategory {
   }[];
 }
 
+interface TocItem {
+  id: string;
+  title: string;
+  level: number;
+}
+
 interface DocSidebarProps {
   categories: DocCategory[];
   selectedCategory: string;
@@ -37,6 +45,9 @@ interface DocSidebarProps {
   onSelectDocument: (documentId: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  toc?: TocItem[];
+  onTocItemClick?: (id: string) => void;
+  activeSection?: string;
 }
 
 const DocSidebar: React.FC<DocSidebarProps> = ({
@@ -46,10 +57,14 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
   onSelectCategory,
   onSelectDocument,
   searchQuery,
-  onSearchChange
+  onSearchChange,
+  toc = [],
+  onTocItemClick,
+  activeSection = ''
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['getting-started', 'user-guides', 'technical']);
+  const [tocExpanded, setTocExpanded] = useState(true);
 
   // Toggle category expansion
   const toggleCategory = (categoryId: string) => {
@@ -96,93 +111,150 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
       </div>
 
       {/* Sidebar */}
-      <div className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search documentation..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
+      <div className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden`}>
+        <div className="p-6">
+          {/* Search */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search documentation..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Navigation */}
-        <nav>
-          <ul className="space-y-1">
-            <li>
-              <button
-                onClick={() => onSelectCategory('all')}
-                className={`w-full flex items-center px-3 py-2 rounded-lg text-left ${
-                  selectedCategory === 'all' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                <BookOpen className="w-5 h-5 mr-3" />
-                All Documents
-              </button>
-            </li>
-            {categories.map((category) => (
-              <li key={category.id}>
+          {/* Navigation */}
+          <nav>
+            <ul className="space-y-1">
+              <li>
                 <button
                   onClick={() => {
-                    onSelectCategory(category.id);
-                    toggleCategory(category.id);
+                    onSelectCategory('all');
+                    setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${
-                    selectedCategory === category.id 
-                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  className={`w-full flex items-center px-3 py-2 rounded-lg text-left ${
+                    selectedCategory === 'all'
+                      ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <div className="flex items-center">
-                    <span className="mr-3">{getCategoryIcon(category.id)}</span>
-                    {category.title}
-                  </div>
-                  {expandedCategories.includes(category.id) ? (
-                    <ChevronDown className="w-4 h-4" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4" />
-                  )}
+                  <BookOpen className="w-5 h-5 mr-3" />
+                  All Documents
                 </button>
-                
-                {expandedCategories.includes(category.id) && (
-                  <ul className="ml-8 mt-1 space-y-1">
-                    {category.documents.map((doc) => (
-                      <li key={doc.id}>
-                        <button
-                          onClick={() => onSelectDocument(doc.id)}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center ${
-                            selectedDocument === doc.id
-                              ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          <Hash className="w-3 h-3 mr-2" />
-                          {doc.title}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
               </li>
-            ))}
-          </ul>
-        </nav>
+              {categories.map((category) => (
+                <li key={category.id}>
+                  <button
+                    onClick={() => {
+                      onSelectCategory(category.id);
+                      toggleCategory(category.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${
+                      selectedCategory === category.id
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-3">{getCategoryIcon(category.id)}</span>
+                      {category.title}
+                    </div>
+                    {expandedCategories.includes(category.id) ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {expandedCategories.includes(category.id) && (
+                    <ul className="ml-8 mt-1 space-y-1">
+                      {category.documents.map((doc) => (
+                        <li key={doc.id}>
+                          <button
+                            onClick={() => {
+                              onSelectDocument(doc.id);
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center ${
+                              selectedDocument === doc.id
+                                ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-medium'
+                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            <FileText className="w-3 h-3 mr-2" />
+                            {doc.title}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+
+        {/* Table of Contents - Shows when document is selected */}
+        {selectedDocument && toc && toc.length > 0 && (
+          <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+            <button
+              onClick={() => setTocExpanded(!tocExpanded)}
+              className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
+            >
+              <div className="flex items-center">
+                <List className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400" />
+                <span className="font-semibold text-gray-900 dark:text-white text-sm">On This Page</span>
+              </div>
+              {tocExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              )}
+            </button>
+
+            {tocExpanded && (
+              <div className="px-6 pb-6 max-h-96 overflow-y-auto">
+                <ul className="space-y-1">
+                  {toc.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => {
+                          onTocItemClick?.(item.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${
+                          activeSection === item.id
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                        style={{ paddingLeft: `${(item.level - 1) * 12 + 8}px` }}
+                      >
+                        <div className="flex items-center">
+                          <Hash className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{item.title}</span>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Additional Resources */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-6 pt-6 border-t border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Additional Resources</h3>
           <ul className="space-y-2">
             <li>
-              <a 
-                href="https://github.com/LinkDAO" 
-                target="_blank" 
+              <a
+                href="https://github.com/LinkDAO"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"
               >
@@ -191,8 +263,8 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
               </a>
             </li>
             <li>
-              <a 
-                href="/support" 
+              <a
+                href="/support"
                 className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"
               >
                 <Users className="w-4 h-4 mr-2" />
@@ -200,8 +272,8 @@ const DocSidebar: React.FC<DocSidebarProps> = ({
               </a>
             </li>
             <li>
-              <a 
-                href="/blog" 
+              <a
+                href="/blog"
                 className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm"
               >
                 <BookOpen className="w-4 h-4 mr-2" />

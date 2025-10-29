@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Menu, ChevronRight, ChevronDown } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 
 interface DocViewerProps {
   title: string;
@@ -9,6 +9,8 @@ interface DocViewerProps {
   isTechnicalWhitepaper?: boolean;
   isLoading?: boolean;
   toc?: {id: string, title: string, level: number}[];
+  activeSection?: string;
+  onSectionChange?: (id: string) => void;
 }
 
 const DocViewer: React.FC<DocViewerProps> = ({
@@ -18,11 +20,10 @@ const DocViewer: React.FC<DocViewerProps> = ({
   onDownload,
   isTechnicalWhitepaper = false,
   isLoading = false,
-  toc = []
+  toc = [],
+  activeSection = '',
+  onSectionChange
 }) => {
-  const [tocOpen, setTocOpen] = useState(true);
-  const [activeSection, setActiveSection] = useState('');
-
   // Simple markdown renderer for the technical whitepaper
   const renderMarkdown = (markdown: string) => {
     // Convert headers
@@ -73,7 +74,7 @@ const DocViewer: React.FC<DocViewerProps> = ({
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
-      setActiveSection(id);
+      onSectionChange?.(id);
     }
   };
 
@@ -91,13 +92,24 @@ const DocViewer: React.FC<DocViewerProps> = ({
       });
       
       if (currentSection !== activeSection) {
-        setActiveSection(currentSection);
+        onSectionChange?.(currentSection);
       }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [activeSection]);
+  }, [activeSection, onSectionChange]);
+
+  // Handle scrollToSection event from parent
+  useEffect(() => {
+    const handleScrollToSection = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      scrollToSection(customEvent.detail);
+    };
+
+    window.addEventListener('scrollToSection', handleScrollToSection);
+    return () => window.removeEventListener('scrollToSection', handleScrollToSection);
+  }, []);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -125,68 +137,26 @@ const DocViewer: React.FC<DocViewerProps> = ({
         </div>
       </div>
       
-      <div className="flex">
-        {/* Table of Contents */}
-        {toc && toc.length > 0 && (
-          <div className="hidden lg:block w-64 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-            <div className="p-4">
-              <button
-                onClick={() => setTocOpen(!tocOpen)}
-                className="flex items-center justify-between w-full text-left font-medium text-gray-900 dark:text-white mb-3"
-              >
-                <span>Table of Contents</span>
-                {tocOpen ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-              </button>
-              
-              {tocOpen && (
-                <ul className="space-y-1 max-h-[calc(100vh-250px)] overflow-y-auto">
-                  {toc.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => scrollToSection(item.id)}
-                        className={`w-full text-left px-2 py-1 rounded text-sm ${
-                          activeSection === item.id
-                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                        style={{ paddingLeft: `${item.level * 12}px` }}
-                      >
-                        {item.title}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+      <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+        {isLoading ? (
+          <div className="p-6 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-700 dark:text-gray-300">Loading document...</span>
+          </div>
+        ) : (
+          <div className="p-6">
+            {isTechnicalWhitepaper ? (
+              <div 
+                className="prose prose-blue dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
+              />
+            ) : (
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                {content}
+              </pre>
+            )}
           </div>
         )}
-        
-        {/* Content */}
-        <div className="flex-1 max-h-[calc(100vh-200px)] overflow-y-auto">
-          {isLoading ? (
-            <div className="p-6 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-700 dark:text-gray-300">Loading document...</span>
-            </div>
-          ) : (
-            <div className="p-6">
-              {isTechnicalWhitepaper ? (
-                <div 
-                  className="prose prose-blue dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
-                />
-              ) : (
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-                  {content}
-                </pre>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -97,7 +97,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
     { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
-    { name: 'Docs', href: '/docs', icon: '📚' },
+    // Docs removed from navbar - moved to footer
   ]), []);
 
   // User-specific navigation items (only for authenticated users)
@@ -402,74 +402,75 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
 
       {!hideFooter && (
         <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 mb-8">
-            <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
-            <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
+          <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 mb-8">
+              <img src="/logo.png" alt="LinkDAO Logo" className="h-12 w-12" />
+              <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">LinkDAO</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {/* Quick Links */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
+                  <li><Link href="/dao/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
+                  <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
+                  <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
+                  <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
+                  <li><Link href="/docs" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Documentation</Link></li>
+                </ul>
+              </div>
+
+              {/* Social Links */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Connect</h3>
+                <ul className="space-y-2">
+                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Twitter</a></li>
+                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Discord</a></li>
+                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Telegram</a></li>
+                  <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">GitHub</a></li>
+                </ul>
+              </div>
+
+              {/* Legal Links */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Legal</h3>
+                <ul className="space-y-2">
+                  <li><Link href="/terms" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Terms of Service</Link></li>
+                  <li><Link href="/privacy" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Privacy Policy</Link></li>
+                </ul>
+              </div>
+
+              {/* Newsletter Subscription */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
+                <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
+                <form className="flex flex-col sm:flex-row">
+                  <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
+                  <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
+                </form>
+              </div>
+            </div>
+
+            <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
+              <p className="text-base text-gray-500 dark:text-gray-400 text-center">
+                © {new Date().getFullYear()} LinkDAO. All rights reserved.
+              </p>
+              <p className="text-base text-gray-500 dark:text-gray-400 text-center">
+                Designed and powered by{" "}
+                <a
+                  href="https://bytestitch.us/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  ByteStitch
+                </a>
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {/* Quick Links */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
-              <ul className="space-y-2">
-                <li><Link href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</Link></li>
-                <li><Link href="/dao/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</Link></li>
-                <li><Link href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</Link></li>
-                <li><Link href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</Link></li>
-                <li><Link href="/support" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Support</Link></li>
-              </ul>
-            </div>
-
-            {/* Social Links */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Connect</h3>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Twitter</a></li>
-                <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Discord</a></li>
-                <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Telegram</a></li>
-                <li><a href="#" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">GitHub</a></li>
-              </ul>
-            </div>
-
-            {/* Legal Links */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Legal</h3>
-              <ul className="space-y-2">
-                <li><Link href="/terms" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Privacy Policy</Link></li>
-              </ul>
-            </div>
-
-            {/* Newsletter Subscription */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stay Updated</h3>
-              <p className="text-base text-gray-600 dark:text-gray-300">Join our newsletter to get the latest updates.</p>
-              <form className="flex flex-col sm:flex-row">
-                <input type="email" placeholder="Enter your email" className="w-full px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 focus:ring-primary-500 focus:border-primary-500" />
-                <button type="submit" className="mt-2 sm:mt-0 sm:ml-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Subscribe</button>
-              </form>
-            </div>
-          </div>
-
-          <div className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
-            <p className="text-base text-gray-500 dark:text-gray-400 text-center">
-              © {new Date().getFullYear()} LinkDAO. All rights reserved.
-            </p>
-            <p className="text-base text-gray-500 dark:text-gray-400 text-center">
-              Designed and powered by{" "}
-              <a
-                href="https://bytestitch.us/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                ByteStitch
-              </a>
-            </p>
-          </div>
-        </div>
-        <Analytics />
-      </footer>
+          <Analytics />
+        </footer>
       )}
 
       {/* {isConnected && <NotificationSystem />} */}

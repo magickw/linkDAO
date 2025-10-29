@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -46,6 +46,7 @@ const DocsPage: NextPage = () => {
   const [documentContent, setDocumentContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [toc, setToc] = useState<{id: string, title: string, level: number}[]>([]);
+  const [activeSection, setActiveSection] = useState('');
 
   // Documentation structure with enhanced categorization
   const documentationCategories = [
@@ -314,36 +315,36 @@ const DocsPage: NextPage = () => {
   const loadDocument = async (documentPath: string) => {
     setIsLoading(true);
     try {
-      // For the technical whitepaper, we'll load it from the API
+      // Extract document slug from path
+      let slug = '';
+
       if (documentPath === '/api/docs/technical-whitepaper') {
-        const response = await fetch('/api/docs/technical-whitepaper');
-        const data = await response.json();
-        setDocumentContent(data.content);
-        // Generate table of contents for the technical whitepaper
-        generateToc(data.content);
+        slug = 'technical-whitepaper';
       } else {
-        // For other documents, we'll use placeholder content for now
-        const placeholderContent = `# ${documentPath.replace('/docs/', '').replace('.md', '')}
-
-This is a placeholder for the document content. In a real implementation, this would contain the actual documentation.
-
-## Section 1
-
-Content for section 1...
-
-## Section 2
-
-Content for section 2...
-
-## Section 3
-
-Content for section 3...`;
-        setDocumentContent(placeholderContent);
-        generateToc(placeholderContent);
+        // Convert /docs/filename.md to filename
+        slug = documentPath.replace('/docs/', '').replace('.md', '');
       }
+
+      // Fetch document from API
+      const response = await fetch(`/api/docs/${slug}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to load document: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setDocumentContent(data.content);
+      generateToc(data.content);
     } catch (error) {
       console.error('Failed to load document:', error);
-      setDocumentContent('Failed to load document content. Please try again later.');
+      setDocumentContent(`# Error Loading Document
+
+We encountered an error while loading this document. Please try again later or contact support if the issue persists.
+
+**Error**: ${error instanceof Error ? error.message : 'Unknown error'}
+
+[Back to Documentation](/docs)`);
+      setToc([]);
     } finally {
       setIsLoading(false);
     }
@@ -378,11 +379,20 @@ Content for section 3...`;
     }
   };
 
+  // Handle TOC item click
+  const handleTocItemClick = (id: string) => {
+    setActiveSection(id);
+    // Scroll to the section in the DocViewer
+    const event = new CustomEvent('scrollToSection', { detail: id });
+    window.dispatchEvent(event);
+  };
+
   // Close document viewer
   const closeDocumentViewer = () => {
     setSelectedDocument(null);
     setDocumentContent('');
     setToc([]);
+    setActiveSection('');
   };
 
   // Download document
@@ -407,6 +417,7 @@ Content for section 3...`;
     setSelectedDocument(null);
     setDocumentContent('');
     setToc([]);
+    setActiveSection('');
   };
 
   return (
@@ -456,6 +467,9 @@ Content for section 3...`;
                 onSelectDocument={handleDocumentSelect}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
+                toc={toc}
+                onTocItemClick={handleTocItemClick}
+                activeSection={activeSection}
               />
             </div>
 
@@ -471,6 +485,8 @@ Content for section 3...`;
                   isTechnicalWhitepaper={selectedDocument === 'technical-whitepaper'}
                   isLoading={isLoading}
                   toc={toc}
+                  activeSection={activeSection}
+                  onSectionChange={setActiveSection}
                 />
               ) : (
                 // Document List
