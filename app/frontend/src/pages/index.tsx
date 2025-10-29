@@ -551,15 +551,12 @@ export default function Home() {
                   <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">
                     Get instant help from our support team. Available 24/7.
                   </p>
-                  <button
-                    onClick={() => {
-                      // In a real implementation, this would open a live chat widget
-                      alert('Live chat would open here in a real implementation');
-                    }}
+                  <Link
+                    href="/support/live-chat"
                     className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all"
                   >
                     Start Chat
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>

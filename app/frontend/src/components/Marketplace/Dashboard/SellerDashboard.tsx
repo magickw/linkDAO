@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useUnifiedSellerDashboard, useUnifiedSeller, useSellerTiers, useUnifiedSellerListings } from '../../../hooks/useUnifiedSeller';
 import { Button, GlassPanel, LoadingSkeleton } from '../../../design-system';
@@ -22,6 +22,88 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
   const { getTierById, getNextTier } = useSellerTiers();
   const { listings, loading: listingsLoading, refetch: fetchListings } = useUnifiedSellerListings(dashboardAddress);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Profile editing state
+  const [formData, setFormData] = useState({
+    displayName: '',
+    storeName: '',
+    bio: '',
+    description: '',
+    sellerStory: '',
+    location: '',
+    websiteUrl: '',
+    socialLinks: {
+      twitter: '',
+      linkedin: '',
+      website: ''
+    }
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Listen for tab navigation events from other pages
+  useEffect(() => {
+    const handleNavigateToTab = (event: CustomEvent) => {
+      if (event.detail && event.detail.tab) {
+        setActiveTab(event.detail.tab);
+      }
+    };
+
+    window.addEventListener('navigateToTab', handleNavigateToTab as EventListener);
+    return () => {
+      window.removeEventListener('navigateToTab', handleNavigateToTab as EventListener);
+    };
+  }, []);
+
+  // Initialize form data from profile
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        displayName: profile.displayName || '',
+        storeName: profile.storeName || '',
+        bio: profile.bio || '',
+        description: profile.description || '',
+        sellerStory: profile.sellerStory || '',
+        location: profile.location || '',
+        websiteUrl: profile.websiteUrl || '',
+        socialLinks: {
+          twitter: profile.socialLinks?.twitter || '',
+          linkedin: profile.socialLinks?.linkedin || '',
+          website: profile.socialLinks?.website || ''
+        }
+      });
+    }
+  }, [profile]);
+
+  // Save profile handler
+  const handleSaveProfile = async () => {
+    if (!dashboardAddress) return;
+
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const { sellerService } = await import('@/services/sellerService');
+      await sellerService.updateSellerProfile(dashboardAddress, formData);
+
+      // Trigger profile update event
+      window.dispatchEvent(new CustomEvent('sellerProfileUpdated', {
+        detail: { walletAddress: dashboardAddress }
+      }));
+
+      // Success feedback
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   // If no wallet address is available, show error
   if (!dashboardAddress && !mockWalletAddress) {
@@ -332,6 +414,7 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
             { id: 'analytics', label: 'Analytics', icon: '📈' },
             { id: 'messaging', label: 'Messaging', icon: '💬' },
             { id: 'notifications', label: 'Notifications', icon: '🔔' },
+            { id: 'profile', label: 'Profile', icon: '👤' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -555,6 +638,19 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
           {activeTab === 'profile' && profile && (
             <GlassPanel className="p-6">
               <h3 className="text-lg font-semibold text-white mb-4">Edit Seller Profile</h3>
+
+              {/* Success/Error Messages */}
+              {saveSuccess && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4 mb-4">
+                  <p className="text-green-400 font-medium">Profile updated successfully!</p>
+                </div>
+              )}
+              {saveError && (
+                <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+                  <p className="text-red-400 font-medium">Error: {saveError}</p>
+                </div>
+              )}
+
               <div className="space-y-6">
                 {/* Profile editing form - similar to SellerProfilePage but integrated */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -562,59 +658,164 @@ function SellerDashboardComponent({ mockWalletAddress }: SellerDashboardProps) {
                     <label className="block text-gray-400 text-sm mb-1">Display Name</label>
                     <input
                       type="text"
-                      defaultValue={profile.displayName || ''}
+                      value={formData.displayName}
+                      onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-gray-400 text-sm mb-1">Store Name</label>
                     <input
                       type="text"
-                      defaultValue={profile.storeName || ''}
+                      value={formData.storeName}
+                      onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-gray-400 text-sm mb-1">Bio</label>
                     <textarea
-                      defaultValue={profile.bio || ''}
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                       rows={3}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-gray-400 text-sm mb-1">Description</label>
                     <textarea
-                      defaultValue={profile.description || ''}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={3}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
-                  
+
                   <div className="md:col-span-2">
                     <label className="block text-gray-400 text-sm mb-1">Seller Story</label>
                     <textarea
-                      defaultValue={profile.sellerStory || ''}
+                      value={formData.sellerStory}
+                      onChange={(e) => setFormData({ ...formData, sellerStory: e.target.value })}
                       rows={4}
                       placeholder="Tell customers about your background, mission, and what makes you unique..."
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-1">Location</label>
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="City, Country"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-1">Website URL</label>
+                    <input
+                      type="url"
+                      value={formData.websiteUrl}
+                      onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+                      placeholder="https://yourwebsite.com"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-400 text-sm mb-2">Social Links</label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-gray-500 text-xs mb-1">Twitter</label>
+                        <input
+                          type="text"
+                          value={formData.socialLinks.twitter}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            socialLinks: { ...formData.socialLinks, twitter: e.target.value }
+                          })}
+                          placeholder="@username"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 text-xs mb-1">LinkedIn</label>
+                        <input
+                          type="text"
+                          value={formData.socialLinks.linkedin}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            socialLinks: { ...formData.socialLinks, linkedin: e.target.value }
+                          })}
+                          placeholder="linkedin.com/in/..."
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 text-xs mb-1">Website</label>
+                        <input
+                          type="text"
+                          value={formData.socialLinks.website}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            socialLinks: { ...formData.socialLinks, website: e.target.value }
+                          })}
+                          placeholder="yoursite.com"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
+
                 <div className="flex justify-end space-x-3">
-                  <Button variant="outline">Cancel</Button>
-                  <Button variant="primary">Save Changes</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // Reset form to original profile data
+                      if (profile) {
+                        setFormData({
+                          displayName: profile.displayName || '',
+                          storeName: profile.storeName || '',
+                          bio: profile.bio || '',
+                          description: profile.description || '',
+                          sellerStory: profile.sellerStory || '',
+                          location: profile.location || '',
+                          websiteUrl: profile.websiteUrl || '',
+                          socialLinks: {
+                            twitter: profile.socialLinks?.twitter || '',
+                            linkedin: profile.socialLinks?.linkedin || '',
+                            website: profile.socialLinks?.website || ''
+                          }
+                        });
+                      }
+                      setSaveError(null);
+                      setSaveSuccess(false);
+                    }}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveProfile}
+                    disabled={saving}
+                    loading={saving}
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 </div>
               </div>
             </GlassPanel>
           )}
 
           {/* Other tabs would be implemented similarly */}
-          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && (
+          {activeTab !== 'overview' && activeTab !== 'notifications' && activeTab !== 'listings' && activeTab !== 'messaging' && activeTab !== 'analytics' && activeTab !== 'profile' && (
             <GlassPanel className="p-6 text-center">
               <p className="text-gray-400">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} section coming soon...

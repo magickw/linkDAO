@@ -229,6 +229,8 @@ interface Review {
 interface SellerStorePageProps {
   sellerId: string;
   onProductClick?: (productId: string) => void;
+  // Add prop to indicate if this is for the seller's own store (editable)
+  isEditable?: boolean;
 }
 
 const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, onProductClick, isEditable = false }) => {
@@ -650,6 +652,46 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Seller Edit Banner - Only shown when seller views their own store */}
+        {isEditable && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-4 mb-6 border border-white/20"
+          >
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-white flex-shrink-0" />
+                <div>
+                  <h3 className="text-white font-semibold">Your Store</h3>
+                  <p className="text-white/80 text-sm">You're viewing your store as customers see it</p>
+                </div>
+              </div>
+              <div className="flex gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => router.push('/marketplace/seller/dashboard')}
+                  className="flex-1 md:flex-none px-4 py-2 bg-white text-purple-600 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    router.push('/marketplace/seller/dashboard');
+                    // Navigate to profile tab after dashboard loads
+                    setTimeout(() => {
+                      const event = new CustomEvent('navigateToTab', { detail: { tab: 'profile' } });
+                      window.dispatchEvent(event);
+                    }, 100);
+                  }}
+                  className="flex-1 md:flex-none px-4 py-2 bg-white/20 text-white rounded-lg font-medium hover:bg-white/30 transition-colors border border-white/20"
+                >
+                  Edit Profile
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Header Section with Cover Image */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}

@@ -1,0 +1,55 @@
+{
+  "executionId": "test-2025-10-29T01-02-35-955Z-cdhiif",
+  "startTime": "2025-10-29T01:02:35.956Z",
+  "endTime": "2025-10-29T01:02:40.956Z",
+  "duration": 5000,
+  "testSuites": {
+    "smartContracts": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    },
+    "apiIntegration": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    },
+    "database": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    },
+    "endToEnd": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    },
+    "performance": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    },
+    "security": {
+      "status": "skipped",
+      "reason": "CI environment - skipped for performance"
+    }
+  },
+  "coverage": {
+    "overall": 0,
+    "smartContracts": 0,
+    "backend": 0,
+    "frontend": 0
+  },
+  "qualityMetrics": {
+    "testsPassed": 0,
+    "testsTotal": 0,
+    "passRate": 0,
+    "criticalIssues": 0,
+    "securityScore": 0
+  },
+  "recommendations": [
+    "Run full test suite locally for complete coverage analysis",
+    "Enable comprehensive tests in CI when infrastructure is available"
+  ],
+  "artifacts": {
+    "coverageReport": "",
+    "performanceReport": "",
+    "securityReport": "",
+    "testResults": ""
+  }
+}

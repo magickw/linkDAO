@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-10-29T01:01:37.247Z",
+  "totalTests": 3,
+  "passedTests": 2,
+  "failedTests": 1,
+  "duration": 745,
+  "testSuites": [
+    {
+      "name": "BasicSystemTests",
+      "results": [
+        {
+          "name": "Node.js Environment Check",
+          "passed": true,
+          "duration": 1
+        },
+        {
+          "name": "File System Access",
+          "passed": true,
+          "duration": 0
+        },
+        {
+          "name": "Module Resolution",
+          "passed": false,
+          "error": "Test returned false",
+          "duration": 744
+        }
+      ],
+      "passed": 2,
+      "failed": 1,
+      "duration": 745
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // Core Seller Components
 export { MessagingAnalytics } from './MessagingAnalytics';
 export { SellerOnboarding } from './SellerOnboarding';
-export { SellerProfilePage } from './SellerProfilePage';
+// Removed SellerProfilePage export since it was deleted
 export { default as SellerStorePage } from './SellerStorePage';
 export { SellerQuickAccessPanel } from './SellerQuickAccessPanel';
 export { DAOEndorsementModal } from './DAOEndorsementModal';
