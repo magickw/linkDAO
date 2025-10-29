@@ -30,6 +30,10 @@ interface EnhancedFormData {
   category: string;
   tags: string[];
   
+  // SEO Metadata
+  seoTitle: string;
+  seoDescription: string;
+  
   // Item Details
   itemType: 'PHYSICAL' | 'DIGITAL' | 'NFT' | 'SERVICE';
   condition: string;
@@ -101,6 +105,8 @@ const CreateListingPage: React.FC = () => {
     description: '',
     category: '',
     tags: [],
+    seoTitle: '',
+    seoDescription: '',
     itemType: 'DIGITAL',
     condition: 'new',
     price: '',
@@ -126,6 +132,64 @@ const CreateListingPage: React.FC = () => {
   const [ethPrice, setEthPrice] = useState<number>(2400); // Mock ETH price
   const [newTag, setNewTag] = useState('');
   
+  // State for field-specific errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  // Real-time validation
+  const validateField = (field: keyof EnhancedFormData, value: any) => {
+    let error = '';
+    
+    switch (field) {
+      case 'title':
+        if (!value.trim()) {
+          error = 'Product title is required';
+        } else if (value.length < 5) {
+          error = 'Title must be at least 5 characters';
+        } else if (value.length > 100) {
+          error = 'Title must be less than 100 characters';
+        }
+        break;
+        
+      case 'description':
+        if (!value.trim()) {
+          error = 'Product description is required';
+        } else if (value.length < 20) {
+          error = 'Description must be at least 20 characters';
+        } else if (value.length > 2000) {
+          error = 'Description must be less than 2000 characters';
+        }
+        break;
+        
+      case 'category':
+        if (!value) {
+          error = 'Please select a category';
+        }
+        break;
+        
+      case 'price':
+        if (!value) {
+          error = 'Price is required';
+        } else {
+          const price = parseFloat(value);
+          if (isNaN(price) || price <= 0) {
+            error = 'Please enter a valid price';
+          }
+        }
+        break;
+        
+      case 'quantity':
+        if (value < 1) {
+          error = 'Quantity must be at least 1';
+        }
+        break;
+    }
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+  };
+  
   // Use the singleton marketplace service
   const service = useMemo(() => marketplaceService, []);
 
@@ -145,19 +209,79 @@ const CreateListingPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Enhanced form validation
+  const validateForm = (): { isValid: boolean; errors: Record<string, string> } => {
+    const errors: Record<string, string> = {};
+
+    // Basic info validation
+    if (!formData.title.trim()) {
+      errors.title = 'Product title is required';
+    } else if (formData.title.length < 5) {
+      errors.title = 'Title must be at least 5 characters';
+    } else if (formData.title.length > 100) {
+      errors.title = 'Title must be less than 100 characters';
+    }
+
+    if (!formData.description.trim()) {
+      errors.description = 'Product description is required';
+    } else if (formData.description.length < 20) {
+      errors.description = 'Description must be at least 20 characters';
+    } else if (formData.description.length > 2000) {
+      errors.description = 'Description must be less than 2000 characters';
+    }
+
+    if (!formData.category) {
+      errors.category = 'Please select a category';
+    }
+
+    // Item details validation
+    if (!formData.condition) {
+      errors.condition = 'Please select a condition';
+    }
+
+    // Pricing validation
+    if (!formData.price) {
+      errors.price = 'Price is required';
+    } else {
+      const price = parseFloat(formData.price);
+      if (isNaN(price) || price <= 0) {
+        errors.price = 'Please enter a valid price';
+      }
+    }
+
+    // Quantity validation
+    if (formData.quantity < 1) {
+      errors.quantity = 'Quantity must be at least 1';
+    }
+
+    // Images validation
+    if (images.length === 0) {
+      errors.images = 'At least one image is required';
+    } else if (images.length > 10) {
+      errors.images = 'Maximum 10 images allowed';
+    }
+
+    return {
+      isValid: Object.keys(errors).length === 0,
+      errors
+    };
+  };
+
   // Form validation by step
   const validateStep = (step: FormStep): boolean => {
+    const { isValid, errors } = validateForm();
+    
     switch (step) {
       case 'basic':
-        return !!(formData.title && formData.description && formData.category);
+        return !errors.title && !errors.description && !errors.category;
       case 'details':
-        return !!(formData.itemType && formData.condition);
+        return !errors.condition && !errors.quantity;
       case 'pricing':
-        return !!(formData.price && parseFloat(formData.price) > 0);
+        return !errors.price;
       case 'images':
-        return images.length > 0;
+        return !errors.images;
       case 'review':
-        return true;
+        return isValid;
       default:
         return false;
     }
@@ -184,9 +308,10 @@ const CreateListingPage: React.FC = () => {
     }
   };
 
-  // Form handlers
+  // Enhanced form handlers with real-time validation
   const handleFormChange = (field: keyof EnhancedFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
   };
 
   const handleAddTag = (tag: string) => {
@@ -304,31 +429,36 @@ const CreateListingPage: React.FC = () => {
       if (!formData.price || parseFloat(formData.price) <= 0) throw new Error('Valid price is required');
       if (images.length === 0) throw new Error('At least one image is required');
       
+      // Prepare data in the format expected by the backend
       const listingData = {
-        sellerWalletAddress: address,
-        tokenAddress: formData.tokenAddress || '0x0000000000000000000000000000000000000000',
-        price: formData.price,
-        quantity: formData.unlimitedQuantity ? 999999 : formData.quantity,
+        walletAddress: address,
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        categoryId: formData.category,
+        currency: formData.currency,
+        inventory: formData.unlimitedQuantity ? 999999 : formData.quantity,
         itemType: formData.itemType,
-        listingType: formData.listingType,
-        duration: formData.listingType === 'AUCTION' ? formData.duration : undefined,
-        metadataURI: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          tags: formData.tags,
+        condition: formData.condition,
+        tags: formData.tags,
+        images: imagePreviews, // In a real implementation, these would be uploaded and replaced with URLs
+        metadata: {
+          itemType: formData.itemType,
           condition: formData.condition,
-          images: imagePreviews,
-          primaryImageIndex,
+          listingType: formData.listingType,
           escrowEnabled: formData.escrowEnabled,
-          royalty: formData.royalty
-        })
+          royalty: formData.royalty,
+          primaryImageIndex: primaryImageIndex,
+          seoTitle: formData.seoTitle || formData.title,
+          seoDescription: formData.seoDescription || formData.description.substring(0, 160)
+        },
+        status: 'active'
       };
       
       await marketplaceService.createListing(listingData);
       
       addToast('🎉 Listing created successfully!', 'success');
-      router.push('/marketplace');
+      router.push('/marketplace/seller/dashboard');
     } catch (error: any) {
       addToast(error.message || 'Failed to create listing', 'error');
       console.error('Error creating listing:', error);
@@ -479,7 +609,9 @@ const CreateListingPage: React.FC = () => {
                       type="text"
                       value={formData.title}
                       onChange={(e) => handleFormChange('title', e.target.value)}
-                      className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                      className={`block w-full rounded-lg bg-white/10 border ${
+                        fieldErrors.title ? 'border-red-500' : 'border-white/20'
+                      } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                       placeholder="Give your item a clear, descriptive title"
                       maxLength={80}
                     />
@@ -491,6 +623,9 @@ const CreateListingPage: React.FC = () => {
                         {formData.title.length}/80
                       </p>
                     </div>
+                    {fieldErrors.title && (
+                      <p className="text-red-400 text-sm mt-1">{fieldErrors.title}</p>
+                    )}
                   </div>
 
                   {/* Category */}
@@ -501,7 +636,9 @@ const CreateListingPage: React.FC = () => {
                     <select
                       value={formData.category}
                       onChange={(e) => handleFormChange('category', e.target.value)}
-                      className="block w-full rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white"
+                      className={`block w-full rounded-lg bg-white/10 border ${
+                        fieldErrors.category ? 'border-red-500' : 'border-white/20'
+                      } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 [&>option]:bg-gray-800 [&>option]:text-white`}
                     >
                       <option value="">Select a category</option>
                       {CATEGORIES.map(cat => (
@@ -510,6 +647,9 @@ const CreateListingPage: React.FC = () => {
                         </option>
                       ))}
                     </select>
+                    {fieldErrors.category && (
+                      <p className="text-red-400 text-sm mt-1">{fieldErrors.category}</p>
+                    )}
                   </div>
 
                   {/* Description */}
@@ -521,7 +661,9 @@ const CreateListingPage: React.FC = () => {
                       value={formData.description}
                       onChange={(e) => handleFormChange('description', e.target.value)}
                       rows={6}
-                      className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                      className={`block w-full rounded-lg bg-white/10 border ${
+                        fieldErrors.description ? 'border-red-500' : 'border-white/20'
+                      } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                       placeholder="Describe your item in detail. Include key features, condition, and what makes it special...&#10;&#10;For physical items, mention materials, dimensions, weight, and any special care instructions."
                       maxLength={2000}
                     />
@@ -537,8 +679,62 @@ const CreateListingPage: React.FC = () => {
                         {formData.description.length}/2000
                       </p>
                     </div>
+                    {fieldErrors.description && (
+                      <p className="text-red-400 text-sm mt-1">{fieldErrors.description}</p>
+                    )}
                   </div>
 
+                  {/* SEO Metadata */}
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/20">
+                    <h4 className="text-lg font-medium text-white mb-4">SEO Optimization (Optional)</h4>
+                    
+                    {/* SEO Title */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-white/90 mb-2">
+                        SEO Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.seoTitle}
+                        onChange={(e) => handleFormChange('seoTitle', e.target.value)}
+                        className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        placeholder="Optimized title for search engines (defaults to product title)"
+                        maxLength={60}
+                      />
+                      <div className="flex justify-between mt-1">
+                        <p className="text-xs text-white/60">
+                          Keep under 60 characters for optimal search results
+                        </p>
+                        <p className="text-xs text-white/60">
+                          {formData.seoTitle.length}/60
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* SEO Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-white/90 mb-2">
+                        SEO Description
+                      </label>
+                      <textarea
+                        value={formData.seoDescription}
+                        onChange={(e) => handleFormChange('seoDescription', e.target.value)}
+                        rows={3}
+                        className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        placeholder="Brief description for search engines (defaults to product description)"
+                        maxLength={160}
+                      />
+                      <div className="flex justify-between mt-1">
+                        <p className="text-xs text-white/60">
+                          Keep under 160 characters for optimal search results
+                        </p>
+                        <p className="text-xs text-white/60">
+                          {formData.seoDescription.length}/160
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
                   {/* Tags */}
                   <div>
                     <label className="block text-sm font-medium text-white/90 mb-2">
@@ -718,7 +914,9 @@ const CreateListingPage: React.FC = () => {
                           min="1"
                           max={formData.unlimitedQuantity ? undefined : 999999}
                           disabled={formData.unlimitedQuantity}
-                          className="block w-32 rounded-lg bg-white/10 border border-white/20 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50"
+                          className={`block w-32 rounded-lg bg-white/10 border ${
+                            fieldErrors.quantity ? 'border-red-500' : 'border-white/20'
+                          } text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2 disabled:opacity-50`}
                         />
                         
                         {formData.itemType === 'DIGITAL' && (
@@ -733,6 +931,10 @@ const CreateListingPage: React.FC = () => {
                           </label>
                         )}
                       </div>
+                      
+                      {fieldErrors.quantity && (
+                        <p className="text-red-400 text-sm">{fieldErrors.quantity}</p>
+                      )}
                       
                       {formData.itemType === 'DIGITAL' && !formData.unlimitedQuantity && (
                         <p className="text-xs text-white/60">
@@ -792,10 +994,15 @@ const CreateListingPage: React.FC = () => {
                         step="0.001"
                         value={formData.price}
                         onChange={(e) => handleFormChange('price', e.target.value)}
-                        className="block w-full rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2"
+                        className={`block w-full rounded-lg bg-white/10 border ${
+                          fieldErrors.price ? 'border-red-500' : 'border-white/20'
+                        } text-white placeholder-white/60 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent px-3 py-2`}
                         placeholder="0.01"
                       />
                       {formData.price && <ETHPriceDisplay ethAmount={formData.price} />}
+                      {fieldErrors.price && (
+                        <p className="text-red-400 text-sm">{fieldErrors.price}</p>
+                      )}
                     </div>
                   </div>
 

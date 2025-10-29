@@ -699,7 +699,7 @@ export class UnifiedMarketplaceService {
 
   async createListing(input: CreateListingInput): Promise<MarketplaceListing> {
     try {
-      const response = await fetch(`${this.baseUrl}/marketplace/seller/listings`, {
+      const response = await fetch(`${this.baseUrl}/api/marketplace/seller/listings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
