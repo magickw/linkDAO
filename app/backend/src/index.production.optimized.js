@@ -104,26 +104,64 @@ app.use(compression({
 }));
 
 // CORS configuration - handle multiple origins properly
-const allowedOrigins = (process.env.FRONTEND_URL || '*').split(',').map(o => o.trim());
+const allowedOrigins = [
+  'https://www.linkdao.io',
+  'https://linkdao.io',
+  'https://app.linkdao.io',
+  'https://marketplace.linkdao.io',
+  'https://linkdao-backend.onrender.com',
+  // Add localhost for development
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001'
+];
+
+// Add any additional origins from environment variable
+const envOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [];
+const allAllowedOrigins = [...allowedOrigins, ...envOrigins];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
-    // Allow all origins if configured with '*'
-    if (allowedOrigins.includes('*')) return callback(null, true);
-
     // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
+    if (allAllowedOrigins.includes(origin) || allAllowedOrigins.includes('*')) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Also allow localhost with any port for development
+      if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization']
+  allowedHeaders: [
+    'Origin', 
+    'X-Requested-With', 
+    'Content-Type', 
+    'Accept', 
+    'Authorization',
+    'X-Request-ID',
+    'X-Correlation-ID',
+    'X-Session-ID',
+    'X-Wallet-Address',
+    'X-Chain-ID',
+    'X-API-Key',
+    'X-Client-Version',
+    'Cache-Control'
+  ],
+  exposedHeaders: [
+    'X-Request-ID',
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining',
+    'X-RateLimit-Reset',
+    'X-Total-Count'
+  ]
 }));
 
 // Rate limiting (memory efficient)

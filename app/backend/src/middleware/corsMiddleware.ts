@@ -60,7 +60,8 @@ const CORS_CONFIGS = {
       'https://linkdao.io',
       'https://www.linkdao.io',
       'https://app.linkdao.io',
-      'https://marketplace.linkdao.io'
+      'https://marketplace.linkdao.io',
+      'https://linkdao-backend.onrender.com' // Add Render backend URL
     ],
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -73,7 +74,10 @@ const CORS_CONFIGS = {
       'X-Correlation-ID',
       'X-Session-ID',
       'X-Wallet-Address',
-      'X-Chain-ID'
+      'X-Chain-ID',
+      'X-API-Key',
+      'X-Client-Version',
+      'Cache-Control'
     ],
     exposedHeaders: [
       'X-Request-ID',
@@ -83,7 +87,8 @@ const CORS_CONFIGS = {
       'RateLimit-Limit',
       'RateLimit-Remaining',
       'RateLimit-Reset',
-      'RateLimit-Policy'
+      'RateLimit-Policy',
+      'X-Total-Count'
     ],
     credentials: true,
     maxAge: 86400, // 24 hours
