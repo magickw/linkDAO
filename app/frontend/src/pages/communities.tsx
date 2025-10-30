@@ -38,6 +38,11 @@ import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPu
 import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
+// Contract service for deployed addresses
+import { getLDAOTokenAddress, getLDAOTreasuryAddress } from '@/services/contractService';
+// First post service for creating greeting posts
+import { createFirstGreetingPost } from '@/services/firstPostService';
+
 import {
   TrendingUp,
   Clock,
@@ -127,6 +132,7 @@ const CommunitiesPage: React.FC = () => {
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
 
 
+  
   // Load communities and enhanced Web3 data on component mount
   useEffect(() => {
     const loadEnhancedCommunities = async () => {
@@ -146,6 +152,53 @@ const CommunitiesPage: React.FC = () => {
           // Instead of using mock data, show empty array
           communitiesData = [];
         }
+        
+        // ✅ Create the first community "LinkDAO" if no communities exist
+        if (communitiesData.length === 0 && isConnected && address) {
+          try {
+            // Use the deployed addresses from the contract service
+            const treasuryAddress = getLDAOTreasuryAddress();
+            const governanceToken = getLDAOTokenAddress();
+            
+            const linkDAOCommunity = await CommunityService.createCommunity({
+              name: 'linkdao',
+              displayName: 'LinkDAO',
+              description: 'The official LinkDAO community - A decentralized social platform built on Ethereum combining blockchain technology with social networking.',
+              rules: [
+                'Be respectful to all community members',
+                'No spam or promotional content',
+                'Stay on topic and contribute meaningfully',
+                'No hate speech or harassment'
+              ],
+              category: 'dao',
+              tags: ['decentralized', 'social', 'ethereum', 'web3'],
+              isPublic: true,
+              treasuryAddress: treasuryAddress,
+              governanceToken: governanceToken,
+              settings: {
+                allowedPostTypes: [
+                  { id: 'discussion', name: 'Discussion', description: 'General discussion posts', enabled: true },
+                  { id: 'proposal', name: 'Proposal', description: 'Governance proposals', enabled: true },
+                  { id: 'announcement', name: 'Announcement', description: 'Community announcements', enabled: true }
+                ],
+                requireApproval: false,
+                minimumReputation: 0,
+                stakingRequirements: []
+              }
+            });
+            
+            // Add the newly created community to the list
+            communitiesData = [linkDAOCommunity];
+            
+            // Create the first greeting post
+            await createFirstGreetingPost(linkDAOCommunity.id);
+          } catch (createError) {
+            console.error('Failed to create LinkDAO community:', createError);
+            // Continue with empty array if creation fails
+            communitiesData = [];
+          }
+        }
+        
         setCommunities(communitiesData);
 
         // Load enhanced Web3 data
@@ -163,7 +216,7 @@ const CommunitiesPage: React.FC = () => {
     };
 
     loadEnhancedCommunities();
-  }, []);
+  }, [isConnected, address]);
 
   // Fetch trending communities from the service
   useEffect(() => {
