@@ -1,51 +1,66 @@
-import { UserProfile, CreateUserProfileInput, UpdateUserProfileInput } from '../models/UserProfile';
-import { databaseService } from './databaseService'; // Import the singleton instance
+import { databaseService } from './databaseService';
 import { users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq } from "drizzle-orm";
+import { DataEncryptionService } from './dataEncryptionService';
+import { 
+  UserProfile, 
+  CreateUserProfileInput, 
+  UpdateUserProfileInput
+} from '../models/UserProfile';
 
-// Use the singleton instance instead of creating a new one
-// const databaseService = new DatabaseService();
+// Initialize encryption service
+const encryptionService = new DataEncryptionService();
 
-export interface EnhancedCreateUserProfileInput extends CreateUserProfileInput {
-  email?: string;
-  preferences?: {
-    notifications?: {
-      email?: boolean;
-      push?: boolean;
-      inApp?: boolean;
-    };
-    privacy?: {
-      showEmail?: boolean;
-      showTransactions?: boolean;
-      allowDirectMessages?: boolean;
-    };
-    trading?: {
-      autoApproveSmallAmounts?: boolean;
-      defaultSlippage?: number;
-      preferredCurrency?: string;
-    };
-  };
-  privacySettings?: {
-    profileVisibility?: 'public' | 'private' | 'friends';
-    activityVisibility?: 'public' | 'private' | 'friends';
-    contactVisibility?: 'public' | 'private' | 'friends';
-  };
+// Helper function to encrypt address data
+async function encryptAddressData(addressData: any): Promise<string> {
+  if (!addressData || Object.keys(addressData).length === 0) {
+    return '';
+  }
+  
+  try {
+    const encryptedData = await encryptionService.encryptData(JSON.stringify(addressData), 'PII');
+    return JSON.stringify(encryptedData);
+  } catch (error) {
+    console.error('Error encrypting address data:', error);
+    // Return empty string if encryption fails to avoid storing unencrypted data
+    return '';
+  }
 }
 
-export interface EnhancedUserProfile extends UserProfile {
-  email?: string;
-  kycStatus?: string;
-  preferences?: any;
-  privacySettings?: any;
+// Helper function to decrypt address data
+async function decryptAddressData(encryptedData: string): Promise<any> {
+  if (!encryptedData) {
+    return {};
+  }
+  
+  try {
+    const encryptedObj = JSON.parse(encryptedData);
+    const decryptedData = await encryptionService.decryptData(encryptedObj);
+    return JSON.parse(decryptedData);
+  } catch (error) {
+    console.error('Error decrypting address data:', error);
+    return {};
+  }
 }
 
 export class UserProfileService {
-  async createProfile(input: EnhancedCreateUserProfileInput): Promise<EnhancedUserProfile> {
+  async createProfile(input: CreateUserProfileInput): Promise<UserProfile> {
     // Check if profile already exists
     const existingProfile = await databaseService.getUserByAddress(input.walletAddress);
     if (existingProfile) {
       throw new Error('Profile already exists for this address');
     }
+
+    // Prepare address data for encryption
+    const addressData = {
+      physicalAddress: input.physicalAddress,
+      email: (input as any).email,
+      preferences: (input as any).preferences,
+      privacySettings: (input as any).privacySettings
+    };
+
+    // Encrypt address data
+    const encryptedAddressData = await encryptAddressData(addressData);
 
     // Create user in database with enhanced data
     const db = databaseService.getDatabase();
@@ -53,11 +68,7 @@ export class UserProfileService {
       walletAddress: input.walletAddress,
       handle: input.handle,
       profileCid: input.bioCid || null,
-      physicalAddress: JSON.stringify({
-        email: input.email || null,
-        preferences: input.preferences || {},
-        privacySettings: input.privacySettings || {}
-      }),
+      physicalAddress: encryptedAddressData,
       createdAt: new Date()
     };
 
@@ -67,17 +78,14 @@ export class UserProfileService {
     const now = new Date();
     const createdAt = dbUser.createdAt || now;
 
-    const profile: EnhancedUserProfile = {
+    // Create profile object
+    const profile: UserProfile = {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
-      ens: input.ens || '',
-      avatarCid: input.avatarCid || '',
-      bioCid: input.bioCid || '',
-      email: input.email,
-      kycStatus: 'none',
-      preferences: input.preferences || {},
-      privacySettings: input.privacySettings || {},
+      ens: '',
+      avatarCid: '',
+      bioCid: dbUser.profileCid || '',
       createdAt,
       updatedAt: createdAt
     };
@@ -86,31 +94,45 @@ export class UserProfileService {
   }
 
   async getProfileById(id: string): Promise<UserProfile | undefined> {
-    const dbUser = await databaseService.getUserById(id);
+    const db = databaseService.getDatabase();
+    const [dbUser] = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    
     if (!dbUser) {
       return undefined;
+    }
+
+    // Decrypt address data
+    let additionalData: any = {};
+    try {
+      if (dbUser.physicalAddress) {
+        additionalData = await decryptAddressData(dbUser.physicalAddress);
+      }
+    } catch (error) {
+      console.error('Error decrypting user additional data, defaulting to empty object:', error);
     }
 
     // Handle potential null dates by providing default values
     const now = new Date();
     const createdAt = dbUser.createdAt || now;
-    const updatedAt = dbUser.createdAt || now; // Using createdAt for updatedAt in this case
+    const updatedAt = dbUser.updatedAt || now;
 
+    // Create profile object with decrypted data
     const profile: UserProfile = {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
-      ens: '', // Would need to be stored in database in full implementation
-      avatarCid: '', // Would need to be stored in database in full implementation
+      ens: additionalData.ens || '',
+      avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
-      createdAt, // Using the non-null value
-      updatedAt  // Using the non-null value
+      physicalAddress: additionalData.physicalAddress,
+      createdAt,
+      updatedAt
     };
 
     return profile;
   }
 
-  async getProfileByAddress(address: string): Promise<EnhancedUserProfile | undefined> {
+  async getProfileByAddress(address: string): Promise<UserProfile | undefined> {
     const db = databaseService.getDatabase();
     const [dbUser] = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
     
@@ -118,56 +140,72 @@ export class UserProfileService {
       return undefined;
     }
 
-    // Parse additional data from physicalAddress field
+    // Decrypt address data
     let additionalData: any = {};
     try {
       if (dbUser.physicalAddress) {
-        const parsed = JSON.parse(dbUser.physicalAddress);
-        if (typeof parsed === 'object' && parsed !== null) {
-          additionalData = parsed;
-        } else {
-          console.warn('physicalAddress field contains non-object JSON:', dbUser.physicalAddress);
-        }
+        additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error parsing user additional data, defaulting to empty object:', error);
-      // If parsing fails, additionalData remains an empty object
+      console.error('Error decrypting user additional data, defaulting to empty object:', error);
     }
 
     // Handle potential null dates by providing default values
     const now = new Date();
     const createdAt = dbUser.createdAt || now;
+    const updatedAt = dbUser.updatedAt || now;
 
-    const profile: EnhancedUserProfile = {
+    // Create profile object with decrypted data
+    const profile: UserProfile = {
       id: dbUser.id,
       walletAddress: dbUser.walletAddress,
       handle: dbUser.handle || '',
-      ens: '', // Would need to be stored in database in full implementation
-      avatarCid: '', // Would need to be stored in database in full implementation
+      ens: additionalData.ens || '',
+      avatarCid: additionalData.avatarCid || '',
       bioCid: dbUser.profileCid || '',
-      email: (additionalData as any).email,
-      kycStatus: (additionalData as any).kycStatus || 'none',
-      preferences: (additionalData as any).preferences || {},
-      privacySettings: (additionalData as any).privacySettings || {},
+      physicalAddress: additionalData.physicalAddress,
       createdAt,
-      updatedAt: createdAt
+      updatedAt
     };
 
     return profile;
   }
 
-  async getProfileByHandle(handle: string): Promise<EnhancedUserProfile | undefined> {
+  async updateProfile(id: string, input: UpdateUserProfileInput): Promise<UserProfile | undefined> {
     const db = databaseService.getDatabase();
-    const [dbUser] = await db.select().from(users).where(eq(users.handle, handle)).limit(1);
     
-    if (!dbUser) {
+    // Get existing profile to preserve existing address data
+    const existingProfile = await this.getProfileById(id);
+    if (!existingProfile) {
       return undefined;
     }
 
-    return this.getProfileByAddress(dbUser.walletAddress);
+    // Prepare updated address data
+    const addressData = {
+      physicalAddress: input.physicalAddress || existingProfile.physicalAddress,
+      email: (input as any).email || (existingProfile as any).email,
+      ens: input.ens || (existingProfile as any).ens,
+      avatarCid: input.avatarCid || existingProfile.avatarCid,
+      bioCid: input.bioCid || existingProfile.bioCid
+    };
+
+    // Encrypt updated address data
+    const encryptedAddressData = await encryptAddressData(addressData);
+
+    // Update in database
+    await db.update(users)
+      .set({ 
+        handle: input.handle ?? existingProfile.handle,
+        profileCid: input.bioCid ?? existingProfile.bioCid,
+        physicalAddress: encryptedAddressData,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, id));
+
+    return await this.getProfileById(id);
   }
 
-  async updatePreferences(address: string, preferences: any): Promise<EnhancedUserProfile> {
+  async updatePreferences(address: string, preferences: any): Promise<UserProfile> {
     const db = databaseService.getDatabase();
     const [dbUser] = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
     
@@ -179,10 +217,10 @@ export class UserProfileService {
     let additionalData = {};
     try {
       if (dbUser.physicalAddress) {
-        additionalData = JSON.parse(dbUser.physicalAddress);
+        additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error parsing user additional data:', error);
+      console.error('Error decrypting user additional data:', error);
     }
 
     // Update preferences
@@ -191,9 +229,12 @@ export class UserProfileService {
       preferences: { ...(additionalData as any).preferences, ...preferences }
     };
 
+    // Encrypt updated data
+    const encryptedAddressData = await encryptAddressData(updatedData);
+
     // Update in database
     await db.update(users)
-      .set({ physicalAddress: JSON.stringify(updatedData) })
+      .set({ physicalAddress: encryptedAddressData })
       .where(eq(users.walletAddress, address));
 
     // Return updated profile
@@ -205,7 +246,7 @@ export class UserProfileService {
     return updatedProfile;
   }
 
-  async updatePrivacySettings(address: string, privacySettings: any): Promise<EnhancedUserProfile> {
+  async updatePrivacySettings(address: string, privacySettings: any): Promise<UserProfile> {
     const db = databaseService.getDatabase();
     const [dbUser] = await db.select().from(users).where(eq(users.walletAddress, address)).limit(1);
     
@@ -217,10 +258,10 @@ export class UserProfileService {
     let additionalData = {};
     try {
       if (dbUser.physicalAddress) {
-        additionalData = JSON.parse(dbUser.physicalAddress);
+        additionalData = await decryptAddressData(dbUser.physicalAddress);
       }
     } catch (error) {
-      console.error('Error parsing user additional data:', error);
+      console.error('Error decrypting user additional data:', error);
     }
 
     // Update privacy settings
@@ -229,9 +270,12 @@ export class UserProfileService {
       privacySettings: { ...(additionalData as any).privacySettings, ...privacySettings }
     };
 
+    // Encrypt updated data
+    const encryptedAddressData = await encryptAddressData(updatedData);
+
     // Update in database
     await db.update(users)
-      .set({ physicalAddress: JSON.stringify(updatedData) })
+      .set({ physicalAddress: encryptedAddressData })
       .where(eq(users.walletAddress, address));
 
     // Return updated profile
@@ -241,20 +285,6 @@ export class UserProfileService {
     }
 
     return updatedProfile;
-  }
-
-  async updateProfile(id: string, input: UpdateUserProfileInput): Promise<EnhancedUserProfile | undefined> {
-    const db = databaseService.getDatabase();
-    
-    // Update basic profile fields
-    await db.update(users)
-      .set({
-        handle: input.handle,
-        profileCid: input.bioCid
-      })
-      .where(eq(users.id, id));
-
-    return await this.getProfileById(id);
   }
 
   async deleteProfile(id: string): Promise<boolean> {
@@ -269,11 +299,11 @@ export class UserProfileService {
     }
   }
 
-  async getAllProfiles(): Promise<EnhancedUserProfile[]> {
+  async getAllProfiles(): Promise<UserProfile[]> {
     const db = databaseService.getDatabase();
     const dbUsers = await db.select().from(users).limit(100); // Limit for performance
     
-    const profiles: EnhancedUserProfile[] = [];
+    const profiles: UserProfile[] = [];
     
     for (const dbUser of dbUsers) {
       const profile = await this.getProfileByAddress(dbUser.walletAddress);
@@ -284,4 +314,6 @@ export class UserProfileService {
     
     return profiles;
   }
-}export const userProfileService = new UserProfileService();
+}
+
+export const userProfileService = new UserProfileService();

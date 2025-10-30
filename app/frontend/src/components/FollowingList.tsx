@@ -2,6 +2,7 @@ import React from 'react';
 import ProfileCard from '@/components/ProfileCard';
 import { useWeb3 } from '@/context/Web3Context';
 import { useFollowing } from '@/hooks/useFollow';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface FollowingListProps {
   userAddress: string;
@@ -11,8 +12,9 @@ interface FollowingListProps {
 export default function FollowingList({ userAddress, className = '' }: FollowingListProps) {
   const { address: currentUserAddress } = useWeb3();
   const { data: following, isLoading, error } = useFollowing(userAddress);
+  const { data: followingProfiles, isLoading: isProfilesLoading } = useProfiles(following as string[] | undefined);
 
-  if (isLoading) {
+  if (isLoading || isProfilesLoading) {
     return (
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following</h2>
@@ -47,38 +49,13 @@ export default function FollowingList({ userAddress, className = '' }: Following
     );
   }
 
-  // In a real implementation, we would fetch profile data for each following
-  // For now, we'll use mock data
-  const mockProfiles: Record<string, any> = {
-    '0x1234567890123456789012345678901234567890': {
-      handle: 'alexj',
-      ens: 'alex.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-    '0x2345678901234567890123456789012345678901': {
-      handle: 'samc',
-      ens: 'sam.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-    '0x3456789012345678901234567890123456789012': {
-      handle: 'taylorr',
-      ens: 'taylor.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-  };
-
-  const followingProfiles = (following as string[]).map(address => ({
-    address,
-    ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/48' })
-  }));
-
   return (
     <div className={className}>
       <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Following ({(following as string[]).length})</h2>
       <div className="space-y-4">
-        {followingProfiles.map((profile) => (
+        {followingProfiles?.map((profile) => (
           <ProfileCard 
-            key={profile.address} 
+            key={profile.walletAddress} 
             profile={profile} 
             currentUserAddress={currentUserAddress}
           />

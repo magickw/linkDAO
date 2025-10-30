@@ -356,7 +356,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", stiffness: 360, damping: 22, mass: 0.9 }}
-            className={`fixed z-[60] ${getPositionClasses()} ${className}`} // Increased z-index to 60 to appear above MobileNavigation
+            className={`fixed z-[60] ${getPositionClasses()} ${className} hidden md:block`} // Increased z-index to 60 to appear above MobileNavigation
             style={{ 
               bottom: position.includes('bottom') ? '1.5rem' : undefined,
               top: position.includes('top') ? '1.5rem' : undefined,
@@ -409,7 +409,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ type: "spring", stiffness: 360, damping: 24, mass: 0.9 }}
-            className={`fixed z-[60] ${getPositionClasses()}`} // Increased z-index to 60 to appear above MobileNavigation
+            className={`fixed z-[60] ${getPositionClasses()} hidden md:block`} // Increased z-index to 60 to appear above MobileNavigation
             style={{ 
               width: '340px',
               height: isMinimized ? '50px' : '520px',

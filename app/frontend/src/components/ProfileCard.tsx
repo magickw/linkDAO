@@ -1,16 +1,17 @@
 import React from 'react';
 import Link from 'next/link';
 import FollowButton from '@/components/FollowButton';
+import { UserProfile } from '@/models/UserProfile';
 
 interface ProfileCardProps {
-  profile: any; // In a real implementation, this would be a typed UserProfile interface
+  profile: UserProfile;
   currentUserAddress?: string;
   className?: string;
 }
 
 export default function ProfileCard({ profile, currentUserAddress, className = '' }: ProfileCardProps) {
   // Don't show follow button for current user's own profile
-  const showFollowButton = currentUserAddress && profile.address !== currentUserAddress;
+  const showFollowButton = currentUserAddress && profile.walletAddress !== currentUserAddress;
 
   return (
     <div className={`bg-white dark:bg-gray-800 shadow rounded-lg p-4 ${className}`}>
@@ -25,7 +26,7 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
         <div className="ml-4 flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <Link href={`/profile/${profile.address}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
+              <Link href={`/profile/${profile.walletAddress}`} className="text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-400">
                 {profile.handle}
               </Link>
               {profile.ens && (
@@ -34,7 +35,7 @@ export default function ProfileCard({ profile, currentUserAddress, className = '
             </div>
             {showFollowButton && (
               <FollowButton 
-                targetUserAddress={profile.address} 
+                targetUserAddress={profile.walletAddress} 
                 className="text-xs px-2 py-1" 
               />
             )}

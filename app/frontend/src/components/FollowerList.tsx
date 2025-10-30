@@ -2,6 +2,7 @@ import React from 'react';
 import ProfileCard from '@/components/ProfileCard';
 import { useWeb3 } from '@/context/Web3Context';
 import { useFollowers } from '@/hooks/useFollow';
+import { useProfiles } from '@/hooks/useProfiles';
 
 interface FollowerListProps {
   userAddress: string;
@@ -11,8 +12,9 @@ interface FollowerListProps {
 export default function FollowerList({ userAddress, className = '' }: FollowerListProps) {
   const { address: currentUserAddress } = useWeb3();
   const { data: followers, isLoading, error } = useFollowers(userAddress);
+  const { data: followerProfiles, isLoading: isProfilesLoading } = useProfiles(followers as string[] | undefined);
 
-  if (isLoading) {
+  if (isLoading || isProfilesLoading) {
     return (
       <div className={className}>
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers</h2>
@@ -45,38 +47,13 @@ export default function FollowerList({ userAddress, className = '' }: FollowerLi
     );
   }
 
-  // In a real implementation, we would fetch profile data for each follower
-  // For now, we'll use mock data
-  const mockProfiles: Record<string, any> = {
-    '0x1234567890123456789012345678901234567890': {
-      handle: 'alexj',
-      ens: 'alex.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-    '0x2345678901234567890123456789012345678901': {
-      handle: 'samc',
-      ens: 'sam.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-    '0x3456789012345678901234567890123456789012': {
-      handle: 'taylorr',
-      ens: 'taylor.eth',
-      avatarCid: 'https://placehold.co/48',
-    },
-  };
-
-  const followerProfiles = (followers as string[]).map(address => ({
-    address,
-    ...(mockProfiles[address] || { handle: 'Unknown', ens: '', avatarCid: 'https://placehold.co/48' })
-  }));
-
   return (
     <div className={className}>
       <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Followers ({(followers as string[]).length})</h2>
       <div className="space-y-4">
-        {followerProfiles.map((profile) => (
+        {followerProfiles?.map((profile) => (
           <ProfileCard 
-            key={profile.address} 
+            key={profile.walletAddress} 
             profile={profile} 
             currentUserAddress={currentUserAddress}
           />

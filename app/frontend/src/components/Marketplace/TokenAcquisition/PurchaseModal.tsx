@@ -107,14 +107,14 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     
     try {
       if (paymentMethod === 'fiat') {
-        // Fetch fiat quotes
-        const quotes = await fiatPaymentService.getQuotes(parseFloat(amount));
+        // Fetch fiat quotes for LDAO tokens specifically
+        const quotes = await fiatPaymentService.getQuotes(parseFloat(amount), 'USD', 'LDAO');
         setFiatQuotes(quotes);
         if (quotes.length > 0) {
           setSelectedQuote(quotes[0]);
         }
       } else {
-        // Fetch DEX quotes
+        // Fetch DEX quotes for swapping ETH/USDC to LDAO
         const fromToken = paymentMethod === 'eth' ? 'ETH' : 'USDC';
         const quotes = await dexService.getSwapQuotes(fromToken, 'LDAO', amount);
         setDexQuotes(quotes);
@@ -140,7 +140,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
     if (isNaN(amountNum)) return '0.00';
     
     // Calculate cost based on token price
-    const cost = amountNum * tokenInfo.priceUSD;
+    const cost = amountNum * (tokenInfo.priceUSD || 0.5);
     return cost.toFixed(2);
   };
 
@@ -443,6 +443,20 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
               </div>
             )}
 
+            {/* No Quotes Available Message */}
+            {((paymentMethod !== 'fiat' && dexQuotes.length === 0) || 
+              (paymentMethod === 'fiat' && fiatQuotes.length === 0)) && 
+             !isLoadingQuotes && amount && parseFloat(amount) > 0 && (
+              <div className="bg-white/10 rounded-lg p-4 text-center">
+                <AlertCircle size={24} className="mx-auto text-white/50 mb-2" />
+                <p className="text-white/70 text-sm">
+                  {paymentMethod === 'fiat' 
+                    ? 'No fiat payment providers available at the moment. Please try another payment method.' 
+                    : 'No DEX quotes available. Showing estimated rates based on current market prices.'}
+                </p>
+              </div>
+            )}
+
             {/* Summary */}
             <GlassPanel variant="secondary" className="p-4">
               <div className="space-y-2">
@@ -459,6 +473,10 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
                     <div className="flex justify-between text-sm">
                       <span className="text-white/70">Fees</span>
                       <span className="text-white">${(selectedQuote as FiatPaymentQuote).fees.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-white/70">Subtotal</span>
+                      <span className="text-white">${((selectedQuote as FiatPaymentQuote).amount).toFixed(2)}</span>
                     </div>
                   </>
                 )}

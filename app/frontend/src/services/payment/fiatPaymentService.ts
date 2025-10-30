@@ -97,27 +97,53 @@ export class FiatPaymentService {
       // In a real implementation, this would call the MoonPay API
       // For now, we'll simulate a response
       
-      // Simulate fees (2.9% + $2.99 for amounts under $200, 1.9% for amounts over $200)
-      const baseFee = amount < 200 ? 2.99 : 0;
-      const percentageFee = amount < 200 ? 0.029 : 0.019;
-      const fees = baseFee + (amount * percentageFee);
-      const totalCost = amount + fees;
-      
-      // Simulate crypto amount (assuming $2000 per ETH)
-      const ethPrice = 2000;
-      const cryptoAmount = (amount / ethPrice) * 0.95; // 5% slippage buffer
+      // Calculate fees based on payment method
+      let fees = 0;
+      if (cryptoCurrency === 'LDAO') {
+        // For LDAO tokens, we have a fixed price of $0.50
+        // So for 1000 LDAO tokens, the base cost should be $500
+        const baseCost = amount * 0.5; // $0.50 per LDAO token
+        
+        // Apply fees (2.9% + $2.99 for amounts under $200, 1.9% for amounts over $200)
+        const baseFee = baseCost < 200 ? 2.99 : 0;
+        const percentageFee = baseCost < 200 ? 0.029 : 0.019;
+        fees = baseFee + (baseCost * percentageFee);
+        const totalCost = baseCost + fees;
+        
+        return {
+          provider: 'moonpay',
+          amount: baseCost,
+          currency,
+          cryptoAmount: amount, // This is the number of LDAO tokens
+          cryptoCurrency,
+          fees,
+          totalCost,
+          estimatedCompletionTime: '10-30 minutes',
+          url: `${this.moonPayConfig.widgetUrl}?apiKey=${this.moonPayConfig.apiKey}&currencyCode=${cryptoCurrency.toLowerCase()}&baseCurrencyCode=${currency.toLowerCase()}&baseCurrencyAmount=${baseCost}`
+        };
+      } else {
+        // For other cryptocurrencies like ETH
+        const baseFee = amount < 200 ? 2.99 : 0;
+        const percentageFee = amount < 200 ? 0.029 : 0.019;
+        fees = baseFee + (amount * percentageFee);
+        const totalCost = amount + fees;
+        
+        // Simulate crypto amount (assuming $2000 per ETH)
+        const ethPrice = 2000;
+        const cryptoAmount = (amount / ethPrice) * 0.95; // 5% slippage buffer
 
-      return {
-        provider: 'moonpay',
-        amount,
-        currency,
-        cryptoAmount,
-        cryptoCurrency,
-        fees,
-        totalCost,
-        estimatedCompletionTime: '10-30 minutes',
-        url: `${this.moonPayConfig.widgetUrl}?apiKey=${this.moonPayConfig.apiKey}&currencyCode=${cryptoCurrency.toLowerCase()}&baseCurrencyCode=${currency.toLowerCase()}&baseCurrencyAmount=${amount}`
-      };
+        return {
+          provider: 'moonpay',
+          amount,
+          currency,
+          cryptoAmount,
+          cryptoCurrency,
+          fees,
+          totalCost,
+          estimatedCompletionTime: '10-30 minutes',
+          url: `${this.moonPayConfig.widgetUrl}?apiKey=${this.moonPayConfig.apiKey}&currencyCode=${cryptoCurrency.toLowerCase()}&baseCurrencyCode=${currency.toLowerCase()}&baseCurrencyAmount=${amount}`
+        };
+      }
     } catch (error) {
       throw new Error(`MoonPay quote failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -135,25 +161,47 @@ export class FiatPaymentService {
       // In a real implementation, this would call the Stripe API
       // For now, we'll simulate a response
       
-      // Simulate fees (2.9% + $0.30 for card payments)
-      const fees = (amount * 0.029) + 0.30;
-      const totalCost = amount + fees;
-      
-      // Simulate crypto amount (assuming $2000 per ETH)
-      const ethPrice = 2000;
-      const cryptoAmount = (amount / ethPrice) * 0.97; // 3% slippage buffer
+      if (cryptoCurrency === 'LDAO') {
+        // For LDAO tokens, we have a fixed price of $0.50
+        // So for 1000 LDAO tokens, the base cost should be $500
+        const baseCost = amount * 0.5; // $0.50 per LDAO token
+        
+        // Apply fees (2.9% + $0.30 for card payments)
+        const fees = (baseCost * 0.029) + 0.30;
+        const totalCost = baseCost + fees;
+        
+        return {
+          provider: 'stripe',
+          amount: baseCost,
+          currency,
+          cryptoAmount: amount, // This is the number of LDAO tokens
+          cryptoCurrency,
+          fees,
+          totalCost,
+          estimatedCompletionTime: 'Instant',
+          url: `https://stripe.com?amount=${baseCost}&currency=${currency}&crypto=${cryptoCurrency}`
+        };
+      } else {
+        // For other cryptocurrencies like ETH
+        const fees = (amount * 0.029) + 0.30;
+        const totalCost = amount + fees;
+        
+        // Simulate crypto amount (assuming $2000 per ETH)
+        const ethPrice = 2000;
+        const cryptoAmount = (amount / ethPrice) * 0.97; // 3% slippage buffer
 
-      return {
-        provider: 'stripe',
-        amount,
-        currency,
-        cryptoAmount,
-        cryptoCurrency,
-        fees,
-        totalCost,
-        estimatedCompletionTime: 'Instant',
-        url: `https://stripe.com?amount=${amount}&currency=${currency}&crypto=${cryptoCurrency}`
-      };
+        return {
+          provider: 'stripe',
+          amount,
+          currency,
+          cryptoAmount,
+          cryptoCurrency,
+          fees,
+          totalCost,
+          estimatedCompletionTime: 'Instant',
+          url: `https://stripe.com?amount=${amount}&currency=${currency}&crypto=${cryptoCurrency}`
+        };
+      }
     } catch (error) {
       throw new Error(`Stripe quote failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

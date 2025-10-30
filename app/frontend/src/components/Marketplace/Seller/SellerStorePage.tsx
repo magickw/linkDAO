@@ -44,7 +44,8 @@ import {
   ExternalLink,
   BadgeCheck,
   Timer,
-  Repeat
+  Repeat,
+  X
 } from 'lucide-react';
 
 // Enhanced interfaces for Web3 seller profile
@@ -683,7 +684,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       window.dispatchEvent(event);
                     }, 100);
                   }}
-                  className="flex-1 md:flex-none px-4 py-2 bg-white/20 text-white rounded-lg font-medium hover:bg-white/30 transition-colors border border-white/20"
+                  className="flex-1 md:flex-none px-4 py-2 bg-white/20 text-white rounded-lg font-medium hover:bg-white/330 transition-colors border border-white/20"
                 >
                   Edit Profile
                 </button>
@@ -875,7 +876,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                 {/* Enhanced Stats with Trends */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   {/* Primary Trust Signals with Trends */}
-                  <div className="bg-white/15 rounded-xl p-6 text-center backdrop-blur-sm">
+                  <div className="bg-white/15 rounded-xl p-6 text-center backdrop-blur-sm hover:bg-white/20 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2 group relative">
                       <Star className="w-6 h-6 text-yellow-400 mr-1" />
                       <span className="text-2xl font-bold text-white">{seller.reputationScore.value}</span>
@@ -891,7 +892,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     </div>
                   </div>
                   
-                  <div className="bg-white/15 rounded-xl p-6 text-center backdrop-blur-sm">
+                  <div className="bg-white/15 rounded-xl p-6 text-center backdrop-blur-sm hover:bg-white/20 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2 group relative">
                       <CheckCircle className="w-6 h-6 text-green-400 mr-1" />
                       <span className="text-2xl font-bold text-white">{seller.successRate.value}</span>
@@ -907,7 +908,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   </div>
                   
                   {/* Performance Metrics */}
-                  <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm">
+                  <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm hover:bg-white/15 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2">
                       <Truck className="w-5 h-5 text-blue-400 mr-1" />
                       <span className="text-xl font-bold text-white">{seller.performanceMetrics.avgDeliveryTime}</span>
@@ -916,7 +917,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                     <span className="text-xs text-blue-400">Fast shipper</span>
                   </div>
                   
-                  <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm">
+                  <div className="bg-white/10 rounded-xl p-4 text-center backdrop-blur-sm hover:bg-white/15 transition-all duration-300 cursor-pointer">
                     <div className="flex items-center justify-center mb-2">
                       <Repeat className="w-5 h-5 text-purple-400 mr-1" />
                       <span className="text-xl font-bold text-white">{seller.performanceMetrics.repeatCustomerRate}%</span>
@@ -1084,7 +1085,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
+                  <div className="p-33">
                     <h3 className="text-white font-medium text-sm truncate">{listing.title}</h3>
                     <div className="text-lg font-bold text-white">{listing.price} {listing.currency}</div>
                   </div>
@@ -1122,19 +1123,22 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
         </motion.div>
 
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap gap-6 mb-8">
+        <div className="flex flex-wrap gap-2 md:gap-6 mb-8 overflow-x-auto pb-2">
           {['listings', 'reviews', 'activity', 'transactions', 'about'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all capitalize ${
+              className={`px-4 md:px-6 py-3 rounded-lg font-semibold transition-all capitalize whitespace-nowrap ${
                 activeTab === tab
-                  ? 'bg-white/20 text-white'
+                  ? 'bg-white/20 text-white shadow-lg'
                   : 'text-white/70 hover:text-white hover:bg-white/10'
               }`}
             >
               {tab === 'activity' && <Clock className="w-4 h-4 inline mr-2" />}
               {tab === 'transactions' && <TrendingUp className="w-4 h-4 inline mr-2" />}
+              {tab === 'listings' && <Package className="w-4 h-4 inline mr-2" />}
+              {tab === 'reviews' && <Star className="w-4 h-4 inline mr-2" />}
+              {tab === 'about' && <Info className="w-4 h-4 inline mr-2" />}
               {tab}
             </button>
           ))}
@@ -1151,43 +1155,67 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
             <div>
               {/* Enhanced Store Navigation */}
               <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-white/60 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <div className="flex items-center gap-4 w-full">
+                  <div className="relative w-full max-w-md">
+                    <Search className="w-5 h-5 text-white/60 absolute left-3 top-1/2 transform -translate-y-1/2" />
                     <input
                       type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search in store..."
-                      className="bg-white/10 text-white rounded-lg pl-10 pr-4 py-2 border border-white/20 placeholder-white/60 focus:border-white/40 focus:outline-none"
+                      className="w-full bg-white/10 text-white rounded-lg pl-10 pr-4 py-3 border border-white/20 placeholder-white/60 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
                     />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20"
-                  >
-                    <option value="all">All Categories</option>
-                    {seller.topCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </select>
-                  <select className="bg-white/10 text-white rounded-lg px-4 py-2 border border-white/20">
-                    <option value="newest">Newest First</option>
-                    <option value="price-low">Price: Low to High</option>
-                    <option value="price-high">Price: High to Low</option>
-                    <option value="popular">Most Popular</option>
-                  </select>
+                  <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="bg-white/10 text-white rounded-lg px-4 py-3 border border-white/20 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
+                    >
+                      <option value="all">All Categories</option>
+                      {seller.topCategories.map((category) => (
+                        <option key={category} value={category}>
+                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                    <select className="bg-white/10 text-white rounded-lg px-4 py-3 border border-white/20 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all">
+                      <option value="newest">Newest First</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                      <option value="popular">Most Popular</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70 hover:text-white'}`}
+                    className={`p-3 rounded-lg transition-colors ${
+                      viewMode === 'grid' 
+                        ? 'bg-white/20 text-white shadow-md' 
+                        : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
+                    }`}
+                    title="Grid view"
                   >
                     <Grid className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/70 hover:text-white'}`}
+                    className={`p-3 rounded-lg transition-colors ${
+                      viewMode === 'list' 
+                        ? 'bg-white/20 text-white shadow-md' 
+                        : 'bg-white/10 text-white/70 hover:text-white hover:bg-white/15'
+                    }`}
+                    title="List view"
                   >
                     <List className="w-5 h-5" />
                   </button>
@@ -1197,47 +1225,50 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
               {/* Listings Grid/List */}
               {filteredListings.length > 0 ? (
                 <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
-                  {filteredListings.map((listing) => (
+                  {filteredListings.map((listing, index) => (
                     <motion.div
                       key={listing.id}
-                      whileHover={{ scale: 1.02 }}
-                      className="bg-white/10 rounded-lg overflow-hidden cursor-pointer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ y: -5 }}
+                      className="bg-white/10 rounded-xl overflow-hidden cursor-pointer hover:bg-white/15 transition-all duration-300 border border-white/10 hover:border-white/30"
                       onClick={() => handleProductClick(listing.id)}
                     >
                       <div className="relative">
                         {listing.images && listing.images.length > 0 ? (
-                          <Image
-                            src={listing.images[0]}
-                            alt={listing.title}
-                            width={400}
-                            height={300}
-                            className="w-full h-48 object-cover"
-                          />
+                          <div className="relative h-48 overflow-hidden">
+                            <Image
+                              src={listing.images[0]}
+                              alt={listing.title}
+                              fill
+                              className="object-cover transition-transform duration-500 hover:scale-110"
+                            />
+                          </div>
                         ) : (
                           <div className="w-full h-48 bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center text-white">
                             <span className="text-lg font-medium">No Image</span>
                           </div>
                         )}
                         {listing.isEscrowProtected && (
-                          <div className="absolute top-2 right-2 bg-green-500 rounded-full p-1">
+                          <div className="absolute top-3 right-3 bg-green-500 rounded-full p-2 shadow-lg">
                             <Shield className="w-4 h-4 text-white" />
                           </div>
                         )}
+                        <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-1 text-white text-sm">
+                          {listing.likes} likes
+                        </div>
                       </div>
                       <div className="p-4">
                         <h3 className="text-white font-semibold mb-2 truncate">{listing.title}</h3>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-lg font-bold text-white">
+                        <div className="flex justify-between items-center mb-3">
+                          <span className="text-xl font-bold text-white">
                             {listing.price} {listing.currency}
                           </span>
-                          <div className="flex items-center gap-2 text-white/70 text-sm">
-                            <Heart className="w-4 h-4" />
-                            <span>{listing.likes}</span>
-                          </div>
                         </div>
                         <div className="flex items-center justify-between text-xs text-white/60">
-                          <span>{listing.views} views</span>
-                          <span className={`px-2 py-1 rounded-full ${
+                          <span>{listing.views || 0} views</span>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
                             listing.status === 'active' ? 'bg-green-500/20 text-green-400' :
                             listing.status === 'sold' ? 'bg-red-500/20 text-red-400' :
                             'bg-gray-500/20 text-gray-400'
@@ -1250,12 +1281,12 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Package className="w-8 h-8 text-white/60" />
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Package className="w-10 h-10 text-white/60" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No listings found</h3>
-                  <p className="text-white/70 mb-6">
+                  <h3 className="text-2xl font-semibold text-white mb-3">No listings found</h3>
+                  <p className="text-white/70 mb-8 max-w-md mx-auto">
                     {searchQuery || selectedCategory !== 'all' 
                       ? 'Try adjusting your search or filters to find more products.'
                       : 'This seller hasn\'t listed any products yet.'}
@@ -1266,7 +1297,7 @@ const SellerStorePageComponent: React.FC<SellerStorePageProps> = ({ sellerId, on
                         setSearchQuery('');
                         setSelectedCategory('all');
                       }}
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-xl"
                     >
                       Clear Filters
                     </button>
