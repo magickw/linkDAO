@@ -8,9 +8,10 @@ import AddContactModal from './AddContactModal';
 
 interface ContactListProps {
   className?: string;
+  flat?: boolean; // render single-column without group sections
 }
 
-const ContactList: React.FC<ContactListProps> = ({ className = '' }) => {
+const ContactList: React.FC<ContactListProps> = ({ className = '', flat = false }) => {
   const { contacts, groups, searchFilters } = useContacts();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['favorites', 'friends']));
   const [showAddModal, setShowAddModal] = useState(false);
@@ -55,18 +56,17 @@ const ContactList: React.FC<ContactListProps> = ({ className = '' }) => {
     });
   }, [contacts, searchFilters]);
 
-  // Group contacts by their groups
+  // Group contacts by their groups (only when not flat)
   const groupedContacts = useMemo(() => {
+    if (flat) return {} as Record<string, Contact[]>;
     const grouped: Record<string, Contact[]> = {};
-    
     groups.forEach(group => {
       grouped[group.id] = filteredContacts.filter(contact =>
         contact.groups.some(contactGroup => contactGroup.id === group.id)
       );
     });
-
     return grouped;
-  }, [filteredContacts, groups]);
+  }, [filteredContacts, groups, flat]);
 
   const toggleGroup = (groupId: string) => {
     const newExpanded = new Set(expandedGroups);
@@ -95,9 +95,20 @@ const ContactList: React.FC<ContactListProps> = ({ className = '' }) => {
         </button>
       </div>
 
-      {/* Contact Groups */}
+      {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {groups.map(group => {
+        {flat ? (
+          <div className="space-y-1 p-2">
+            {filteredContacts.length === 0 ? (
+              <div className="p-4 text-center text-gray-500 text-sm">No contacts found</div>
+            ) : (
+              filteredContacts.map(contact => (
+                <ContactCard key={contact.id} contact={contact} className="mx-1" />
+              ))
+            )}
+          </div>
+        ) : (
+          groups.map(group => {
           const groupContacts = groupedContacts[group.id] || [];
           const isExpanded = expandedGroups.has(group.id);
 
@@ -156,10 +167,11 @@ const ContactList: React.FC<ContactListProps> = ({ className = '' }) => {
               </AnimatePresence>
             </div>
           );
-        })}
+          })
+        )}
 
         {/* Empty State */}
-        {contacts.length === 0 && (
+        {!flat && contacts.length === 0 && (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mb-6">
               <span className="text-3xl">📱</span>

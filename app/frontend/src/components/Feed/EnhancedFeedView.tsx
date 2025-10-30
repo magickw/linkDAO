@@ -12,6 +12,9 @@ import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { analyticsService } from '@/services/analyticsService';
 import FeedErrorBoundary from './FeedErrorBoundary';
 import { FeedSkeleton } from '@/components/animations/LoadingSkeletons';
+import { useAccount } from 'wagmi';
+import { useFollowing } from '@/hooks/useFollow';
+import { CommunityMembershipService } from '@/services/communityMembershipService';
 
 interface EnhancedPost {
   id: string;
@@ -68,6 +71,43 @@ const EnhancedFeedView = React.memo(({
 }: EnhancedFeedViewProps) => {
   const { addToast } = useToast();
   const { isMobile } = useMobileOptimization();
+  const { address } = useAccount();
+  const { data: following = [], isLoading: followingLoading } = useFollowing(address);
+  const [userCommunityIds, setUserCommunityIds] = useState<string[]>([]);
+  const [userInterestTags, setUserInterestTags] = useState<string[]>([]);
+
+  // Load user's joined communities (ids)
+  useEffect(() => {
+    let cancelled = false;
+    const loadMemberships = async () => {
+      if (!address) {
+        setUserCommunityIds([]);
+        return;
+      }
+      try {
+        const memberships = await CommunityMembershipService.getUserMemberships(address);
+        if (!cancelled) {
+          const ids = (memberships || []).map((m: any) => m.communityId).filter(Boolean);
+          setUserCommunityIds(Array.from(new Set(ids)));
+        }
+      } catch (err) {
+        if (!cancelled) setUserCommunityIds([]);
+      }
+    };
+    loadMemberships();
+    return () => { cancelled = true; };
+  }, [address]);
+
+  // Load user's interest tags from local storage as a lightweight heuristic
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('user_favorite_topics');
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setUserInterestTags(parsed.map((t: string) => t.toLowerCase()));
+      }
+    } catch {}
+  }, []);
   
   // Preferences hooks
   const { currentSort, currentTimeRange, updateSort, updateTimeRange } = useFeedSortingPreferences();
@@ -198,10 +238,25 @@ const EnhancedFeedView = React.memo(({
 
   // Handle posts loading - memoized
   const handlePostsLoad = useCallback((newPosts: FeedEnhancedPost[]) => {
-    const convertedPosts = newPosts.map(convertFeedPostToCardPost);
+    let convertedPosts = newPosts.map(convertFeedPostToCardPost);
+    // Client-side fallback: if feedSource is following and we have following list, filter authors
+    if (filter.feedSource === 'following' && following && following.length > 0) {
+      const followingSet = new Set(following.map(a => a.toLowerCase()));
+      convertedPosts = convertedPosts.filter(p => followingSet.has(p.author.toLowerCase()));
+    }
+    // Client-side community filter: if user has joined communities, prioritize/show those
+    if (userCommunityIds.length > 0) {
+      const communitySet = new Set(userCommunityIds);
+      convertedPosts = convertedPosts.filter(p => !p.communityId || communitySet.has(p.communityId));
+    }
+    // Client-side topics filter: if user has interest tags, include posts matching any
+    if (userInterestTags.length > 0) {
+      const tagSet = new Set(userInterestTags);
+      convertedPosts = convertedPosts.filter(p => (p.tags || []).some(t => tagSet.has(String(t).toLowerCase())) || (p.communityId ? true : false));
+    }
     setPosts(convertedPosts);
     setError(null); // Clear any previous errors
-  }, [convertFeedPostToCardPost]);
+  }, [convertFeedPostToCardPost, filter.feedSource, following, userCommunityIds, userInterestTags]);
 
   // Handle trending updates - memoized
   const handleTrendingUpdate = useCallback((trending: EnhancedPost[]) => {

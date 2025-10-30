@@ -19,7 +19,10 @@ export default function FeedView({
       <EnhancedFeedView
         communityId={communityId}
         showCommunityMetrics={showCommunityMetrics}
-        initialFilter={highlightedPostId ? { author: highlightedPostId } : undefined}
+        initialFilter={highlightedPostId 
+          ? { author: highlightedPostId, feedSource: 'following' }
+          : { feedSource: 'following' }
+        }
       />
     </div>
   );

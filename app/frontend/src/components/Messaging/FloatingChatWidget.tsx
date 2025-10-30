@@ -333,6 +333,17 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
+  // Sort conversations by last activity (desc) for WhatsApp/Telegram feel
+  const sortedConversations = React.useMemo(() => {
+    if (!hookConversations) return [] as Conversation[];
+    const toTime = (v: any) => {
+      if (!v) return 0;
+      const t = typeof v === 'string' || typeof v === 'number' ? new Date(v).getTime() : (v as Date).getTime?.() || 0;
+      return isNaN(t) ? 0 : t;
+    };
+    return [...hookConversations].sort((a, b) => toTime(b.lastActivity) - toTime(a.lastActivity));
+  }, [hookConversations]);
+
   if (!isConnected) return null;
 
   return (
@@ -341,10 +352,10 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       <AnimatePresence>
         {!isOpen && (
           <motion.div
-            initial={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 360, damping: 22, mass: 0.9 }}
             className={`fixed z-[60] ${getPositionClasses()} ${className}`} // Increased z-index to 60 to appear above MobileNavigation
             style={{ 
               bottom: position.includes('bottom') ? '1.5rem' : undefined,
@@ -361,8 +372,8 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                 flex items-center justify-center
                 ${hasNewMessage ? 'animate-pulse' : ''}
               `}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.96 }}
               aria-label="Open chat"
             >
               <MessageCircle size={20} className="text-white" />
@@ -394,20 +405,20 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            initial={{ opacity: 0, scale: 0.92, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ type: "spring", stiffness: 360, damping: 24, mass: 0.9 }}
             className={`fixed z-[60] ${getPositionClasses()}`} // Increased z-index to 60 to appear above MobileNavigation
             style={{ 
-              width: '320px',
-              height: isMinimized ? '50px' : '500px',
+              width: '340px',
+              height: isMinimized ? '50px' : '520px',
               maxWidth: '95vw',
               maxHeight: '80vh'
             }}
           >
             <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col h-full">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 h-12 bg-gradient-to-r from-gray-800 to-gray-800/80">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-700 h-12 bg-gradient-to-r from-gray-800 to-gray-800/80">
                 <div className="flex items-center">
                   <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-2">
                     <MessageCircle size={14} className="text-white" />
@@ -418,18 +429,18 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                 </div>
                 <div className="flex items-center">
                   {activeTab === 'messages' && (
-                    <button
+                  <button
                       onClick={() => setShowNewConversationModal(true)}
-                      className="mr-1 opacity-70 hover:opacity-100"
+                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                       aria-label="Start new conversation"
                     >
                       <Plus size={16} className="text-white" />
                     </button>
                   )}
                   {activeTab === 'chat' && (
-                    <button
+                  <button
                       onClick={handleBackToList}
-                      className="mr-1 opacity-70 hover:opacity-100"
+                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                       aria-label="Back to messages"
                     >
                       <ArrowLeft size={16} className="text-white" />
@@ -437,14 +448,14 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   )}
                   <button
                     onClick={() => setIsMinimized(!isMinimized)}
-                    className="mr-1 opacity-70 hover:opacity-100"
+                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                     aria-label={isMinimized ? "Maximize chat" : "Minimize chat"}
                   >
                     {isMinimized ? <Maximize2 size={16} className="text-white" /> : <Minimize2 size={16} className="text-white" />}
                   </button>
                   <button
                     onClick={closeChat}
-                    className="mr-1 opacity-70 hover:opacity-100"
+                    className="mr-1 opacity-70 hover:opacity-100 active:scale-[0.98] transition-transform"
                     aria-label="Close chat"
                   >
                     <X size={16} className="text-white" />
@@ -459,7 +470,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   <div className="flex border-b border-gray-700 bg-gray-800">
                     <button
                       onClick={() => setActiveTab('messages')}
-                      className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
                         activeTab === 'messages'
                           ? 'text-blue-400 border-b-2 border-blue-400'
                           : 'text-gray-400 hover:text-white'
@@ -470,7 +481,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                     </button>
                     <button
                       onClick={() => setActiveTab('contacts')}
-                      className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
+                      className={`flex items-center gap-1 px-4 py-2 text-xs font-medium transition-colors flex-1 justify-center ${
                         activeTab === 'contacts'
                           ? 'text-blue-400 border-b-2 border-blue-400'
                           : 'text-gray-400 hover:text-white'
@@ -482,154 +493,125 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   </div>
                   
                   {activeTab === 'messages' && (
-                    <div className="flex">
-                      {/* Compact Sidebar */}
-                      <div className="w-52 flex flex-col border-r border-gray-700 bg-gray-800">
-                        <div className="p-2 border-b border-gray-700 flex items-center justify-between">
-                          <div className="relative flex-1">
-                            <input
-                              type="text"
-                              placeholder="Search chats..."
-                              className="w-full px-2 py-1 text-xs bg-gray-700 text-white rounded placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                            <Search className="absolute right-1.5 top-1.5 w-3 h-3 text-gray-400" />
+                    <div className="flex flex-col h-full">
+                      {/* Search and connection status */}
+                      <div className="p-2.5 border-b border-gray-700 flex items-center justify-between bg-gray-800">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            placeholder="Search chats..."
+                            className="w-full px-3 py-1.5 text-xs bg-gray-700 text-white rounded placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <Search className="absolute right-2 top-2 w-3 h-3 text-gray-400" />
+                        </div>
+                        {/* Connection Status Indicator */}
+                        {connectionState.status === 'connected' ? (
+                          <div title="Connected">
+                            <Wifi size={12} className="ml-2 text-green-400" />
                           </div>
-                          {/* Connection Status Indicator */}
-                          {connectionState.status === 'connected' ? (
-                            <div title="Connected">
-                              <Wifi size={12} className="ml-2 text-green-400" />
-                            </div>
-                          ) : connectionState.status === 'connecting' || connectionState.status === 'reconnecting' ? (
-                            <div title="Connecting...">
-                              <Loader2 size={12} className="ml-2 text-yellow-400 animate-spin" />
-                            </div>
-                          ) : (
-                            <div title="Disconnected">
-                              <WifiOff size={12} className="ml-2 text-red-400" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* ✅ PHASE 1 FIX: Loading, Error, and Empty States */}
-                        <div className="flex-1 overflow-y-auto">
-                          {conversationsLoading ? (
-                            // Loading State
-                            <div className="flex flex-col items-center justify-center p-4 text-center">
-                              <Loader2 size={20} className="text-blue-400 animate-spin mb-2" />
-                              <p className="text-xs text-gray-400">Loading conversations...</p>
-                            </div>
-                          ) : conversationsError ? (
-                            // Error State
-                            <div className="flex flex-col items-center justify-center p-4 text-center">
-                              <AlertCircle size={20} className="text-red-400 mb-2" />
-                              <p className="text-xs text-red-400 mb-2">{conversationsError}</p>
-                              <button
-                                onClick={() => loadConversations()}
-                                className="text-xs text-blue-400 hover:underline"
-                              >
-                                Retry
-                              </button>
-                            </div>
-                          ) : !hookConversations || hookConversations.length === 0 ? (
-                            // Empty State
-                            <div className="flex flex-col items-center justify-center p-4 text-center">
-                              <MessageCircle size={20} className="text-gray-500 mb-2" />
-                              <p className="text-xs text-gray-400 mb-2">No conversations yet</p>
-                              <button
-                                onClick={() => setShowNewConversationModal(true)}
-                                className="text-xs text-blue-400 hover:underline"
-                              >
-                                Start your first chat
-                              </button>
-                            </div>
-                          ) : (
-                            // Conversation List
-                            hookConversations.map((conversation) => {
-                              const otherParticipant = getOtherParticipant(conversation);
-                              const isUserOnline = onlineUsers.has(otherParticipant);
-                              const conversationTyping = typingUsers.get(conversation.id) || [];
-                              const isTyping = conversationTyping.length > 0;
-
-                              return (
-                                <div
-                                  key={conversation.id}
-                                  className="flex items-center px-2 py-2 hover:bg-gray-700 rounded cursor-pointer text-xs transition-colors duration-150 group relative"
-                                  onClick={() => handleConversationSelect(conversation)}
-                                >
-                                  {/* Avatar with Online Status */}
-                                  <div className="relative mr-2 flex-shrink-0">
-                                    <div className="w-6 h-6 bg-gray-600 rounded-full"></div>
-                                    {/* ✅ PHASE 2: Online status indicator */}
-                                    <div className="absolute bottom-0 right-0">
-                                      <OnlineStatus isOnline={isUserOnline} size={8} />
-                                    </div>
-                                  </div>
-
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-medium text-white truncate flex items-center">
-                                      {otherParticipant}
-                                      {/* ✅ PHASE 2: Typing indicator */}
-                                      {isTyping && (
-                                        <span className="ml-2 text-blue-400 text-xs">typing...</span>
-                                      )}
-                                    </div>
-                                    <div className="text-gray-400 truncate">
-                                      {conversation.lastMessage?.content || 'No messages yet'}
-                                    </div>
-                                  </div>
-
-                                  {/* ✅ PHASE 2: Unread badge */}
-                                  {conversation.unreadCounts?.[address || ''] && (
-                                    <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
-                                      {conversation.unreadCounts?.[address || ''] > 9
-                                        ? '9+'
-                                        : conversation.unreadCounts?.[address || '']}
-                                    </div>
-                                  )}
-
-                                  {/* Tooltip for long names */}
-                                  <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
-                                    {otherParticipant}
-                                    {isUserOnline && <span className="ml-2 text-green-400">● Online</span>}
-                                  </div>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Chat View */}
-                      <div className="flex-1 flex flex-col relative">
-                        {selectedConversation ? (
-                          <div className="flex flex-col h-full">
-                            <div className="px-3 py-2 border-b border-gray-700">
-                              <div className="flex items-center">
-                                <div className="w-6 h-6 bg-gray-600 rounded-full mr-2"></div>
-                                <div className="font-medium text-white text-sm">
-                                  {getOtherParticipant(selectedConversation)}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-2">
-                              <DiscordStyleMessagingInterface className="h-full" onClose={handleBackToList} />
-                            </div>
+                        ) : connectionState.status === 'connecting' || connectionState.status === 'reconnecting' ? (
+                          <div title="Connecting...">
+                            <Loader2 size={12} className="ml-2 text-yellow-400 animate-spin" />
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
-                            <MessageCircle size={32} className="mb-2 opacity-50" />
-                            <p className="text-sm text-center">Select a conversation to start chatting</p>
+                          <div title="Disconnected">
+                            <WifiOff size={12} className="ml-2 text-red-400" />
                           </div>
                         )}
-                        
-                        {/* Floating "+" button for new conversation */}
-                        <button
-                          onClick={() => setShowNewConversationModal(true)}
-                          className="absolute bottom-4 right-4 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-colors"
-                          aria-label="Start new conversation"
-                        >
-                          <Plus size={20} className="text-white" />
-                        </button>
+                      </div>
+
+                      {/* Conversation List */}
+                      <div className="flex-1 overflow-y-auto bg-gray-800">
+                        {conversationsLoading ? (
+                          <div className="flex flex-col items-center justify-center p-4 text-center">
+                            <Loader2 size={20} className="text-blue-400 animate-spin mb-2" />
+                            <p className="text-xs text-gray-400">Loading conversations...</p>
+                          </div>
+                        ) : conversationsError ? (
+                          <div className="flex flex-col items-center justify-center p-4 text-center">
+                            <AlertCircle size={20} className="text-red-400 mb-2" />
+                            <p className="text-xs text-red-400 mb-2">{conversationsError}</p>
+                            <button
+                              onClick={() => loadConversations()}
+                              className="text-xs text-blue-400 hover:underline"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : !hookConversations || hookConversations.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center p-4 text-center">
+                            <MessageCircle size={20} className="text-gray-500 mb-2" />
+                            <p className="text-xs text-gray-400 mb-2">No conversations yet</p>
+                            <button
+                              onClick={() => setShowNewConversationModal(true)}
+                              className="text-xs text-blue-400 hover:underline"
+                            >
+                              Start your first chat
+                            </button>
+                          </div>
+                        ) : (
+                          <AnimatePresence initial={false}>
+                            {sortedConversations.map((conversation) => {
+                            const otherParticipant = getOtherParticipant(conversation);
+                            const isUserOnline = onlineUsers.has(otherParticipant);
+                            const conversationTyping = typingUsers.get(conversation.id) || [];
+                            const isTyping = conversationTyping.length > 0;
+
+                            return (
+                              <motion.div
+                                key={conversation.id}
+                                layout
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 8 }}
+                                transition={{ duration: 0.16, ease: 'easeOut' }}
+                                whileTap={{ scale: 0.99, backgroundColor: 'rgba(55,65,81,1)' }}
+                                className="relative overflow-hidden flex items-center px-3 py-2.5 hover:bg-gray-700 rounded cursor-pointer text-xs transition-colors group"
+                                onClick={() => handleConversationSelect(conversation)}
+                              >
+                                {/* Centered ripple */}
+                                <motion.span
+                                  aria-hidden
+                                  className="pointer-events-none absolute inset-0"
+                                  initial={false}
+                                  animate={{ background: ['radial-gradient(circle at 50% 50%, rgba(255,255,255,0.08), transparent 40%)', 'transparent'] }}
+                                  transition={{ duration: 0.35 }}
+                                />
+                                {/* Avatar with Online Status */}
+                                <div className="relative mr-2 flex-shrink-0">
+                                  <div className="w-7 h-7 bg-gray-600 rounded-full"></div>
+                                  <div className="absolute bottom-0 right-0">
+                                    <OnlineStatus isOnline={isUserOnline} size={8} />
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-white truncate flex items-center text-sm leading-5">
+                                    {otherParticipant}
+                                    {isTyping && (
+                                      <span className="ml-2 text-blue-400 text-[11px] leading-4">typing...</span>
+                                    )}
+                                  </div>
+                                  <div className="text-gray-400 truncate text-[11px] leading-4">
+                                    {conversation.lastMessage?.content || 'No messages yet'}
+                                  </div>
+                                </div>
+
+                                {conversation.unreadCounts?.[address || ''] && (
+                                  <div className="bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center flex-shrink-0">
+                                    {conversation.unreadCounts?.[address || ''] > 9 ? '9+' : conversation.unreadCounts?.[address || '']}
+                                  </div>
+                                )}
+
+                                <div className="absolute left-0 top-full mt-1 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap">
+                                  {otherParticipant}
+                                  {isUserOnline && <span className="ml-2 text-green-400">● Online</span>}
+                                </div>
+                              </motion.div>
+                            );
+                            })}
+                          </AnimatePresence>
+                        )}
                       </div>
                     </div>
                   )}
@@ -711,12 +693,10 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
 // Contacts Tab Content Component
 const ContactsTabContent: React.FC = () => {
-  const { selectedContact } = useContacts();
-
   return (
     <div className="flex h-full">
-      {/* Left Panel - Contact List */}
-      <div className="w-40 flex flex-col border-r border-gray-700 bg-gray-800">
+      {/* Single-column contact list without categories */}
+      <div className="flex-1 flex flex-col bg-gray-800">
         {/* Search */}
         <div className="p-2 border-b border-gray-700">
           <div className="relative">
@@ -729,48 +709,18 @@ const ContactsTabContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Contact List */}
-        <ContactList className="flex-1" />
-      </div>
+        {/* Flat Contact List */}
+        <ContactList className="flex-1" flat />
 
-      {/* Right Panel - Contact Detail or Empty State */}
-      <div className="flex-1 flex flex-col relative">
-        {selectedContact ? (
-          <ContactDetail contact={selectedContact} />
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-xs"
-            >
-              {/* Icon */}
-              <div className="w-12 h-12 mx-auto mb-3 bg-gray-800 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-gray-400" />
-              </div>
-
-              {/* Title */}
-              <h2 className="text-sm font-semibold text-white mb-1">
-                Manage Your Contacts
-              </h2>
-
-              {/* Description */}
-              <p className="text-gray-400 text-xs leading-relaxed">
-                Organize your Web3 connections with custom nicknames and tags.
-              </p>
-            </motion.div>
-          </div>
-        )}
-        
-        {/* Floating "+" button for new contact */}
-        <button
-          onClick={() => alert('Add new contact functionality to be implemented')}
-          className="absolute bottom-4 right-4 w-10 h-10 bg-blue-600 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition-colors"
-          aria-label="Add new contact"
-        >
-          <Plus size={20} className="text-white" />
-        </button>
+        {/* Add Contact */}
+        <div className="p-2 border-t border-gray-700">
+          <button
+            onClick={() => alert('Add new contact functionality to be implemented')}
+            className="w-full py-2 bg-blue-600 rounded-lg text-white text-xs hover:bg-blue-700 transition-colors"
+          >
+            Add Contact
+          </button>
+        </div>
       </div>
     </div>
   );
