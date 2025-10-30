@@ -37,6 +37,7 @@ import TokenPriceSparkline, { generateMockPriceHistory } from '@/components/Comm
 import GovernanceActivityPulse from '@/components/Community/GovernanceActivityPulse';
 import KeyboardShortcutsModal from '@/components/Community/KeyboardShortcutsModal';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { RecentAndFollowedCommunities } from '@/components/CommunityEnhancements/EnhancedLeftSidebar/RecentAndFollowedCommunities';
 
 // Contract service for deployed addresses
 import { getLDAOTokenAddress, getLDAOTreasuryAddress } from '@/services/contractService';
@@ -191,7 +192,16 @@ const CommunitiesPage: React.FC = () => {
             communitiesData = [linkDAOCommunity];
             
             // Create the first greeting post
-            await createFirstGreetingPost(linkDAOCommunity.id);
+            try {
+              const greetingPost = await createFirstGreetingPost(linkDAOCommunity.id);
+              if (!greetingPost) {
+                console.warn('Failed to create greeting post for new community');
+              } else {
+                console.log('Successfully created greeting post for new community');
+              }
+            } catch (postError) {
+              console.error('Error creating greeting post:', postError);
+            }
           } catch (createError) {
             console.error('Failed to create LinkDAO community:', createError);
             // Continue with empty array if creation fails
@@ -853,6 +863,12 @@ const CommunitiesPage: React.FC = () => {
                     <span>Discover Trending Communities</span>
                   </Link>
                 </div>
+
+                {/* Recent and Followed Communities */}
+                <RecentAndFollowedCommunities 
+                  allCommunities={communityList} 
+                  joinedCommunityIds={joinedCommunities} 
+                />
 
                 {/* Trending Communities Section */}
                 {trendingCommunities.length > 0 && (
