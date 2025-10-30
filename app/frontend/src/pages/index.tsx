@@ -315,13 +315,6 @@ export default function Home() {
                 }}
               </ConnectButton.Custom>
               
-              <Link
-                href="/messaging"
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-white/20 backdrop-blur-lg border border-white/30 hover:bg-white/30 transition-all duration-300"
-              >
-                💬 Try Messaging Demo
-              </Link>
-              
               <button
                 onClick={scrollToFeatures}
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-xl text-white bg-transparent border-2 border-white/50 hover:bg-white/10 transition-all duration-300"

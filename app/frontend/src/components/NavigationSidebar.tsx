@@ -289,34 +289,6 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </div>
             </div>
             
-            {/* Wallet Quick Actions - Only show when wallet is connected */}
-            {address && walletData && walletData.quickActions.length > 0 && (
-              <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
-                <div className="p-4">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                    Wallet Quick Actions
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {walletData.quickActions.map((action) => (
-                      <button
-                        key={action.id}
-                        onClick={() => handleQuickAction(action)}
-                        className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
-                        title={action.tooltip}
-                      >
-                        <div className="text-xl mb-1 group-hover:scale-110 transition-transform">
-                          {action.icon}
-                        </div>
-                        <span className="text-xs text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">
-                          {action.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            
             {/* Activity Card */}
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/50 overflow-hidden">
               <div className="p-4">
@@ -399,7 +371,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 </button>
                 
                 {/* Wallet-to-Wallet Messaging */}
-                <Link
+                {/* <Link
                   href="/messaging"
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-50 hover:to-primary-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-blue-900/30 dark:hover:to-primary-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
@@ -408,7 +380,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   </svg>
                   <span>Messages</span>
                   {/* Notification count will be loaded from real data */}
-                </Link>
+                {/* </Link> */}
 
                 {/* Governance */}
                 <Link
@@ -536,7 +508,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
               </svg>
             </Link>
             
-            <Link
+            {/* <Link
               href="/messaging"
               className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700 relative"
               title="Messages"
@@ -545,7 +517,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               {/* Message notification indicator will be loaded from real data */}
-            </Link>
+            {/* </Link> */}
 
             {/* Collapsed joined communities with favorites */}
             {enhancedCommunities.filter((c: any) => c.isJoined).slice(0, 5).map((community: any) => (

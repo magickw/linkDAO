@@ -108,16 +108,16 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({
       label: 'Communities',
       icon: UserGroupIcon,
       iconSolid: UserGroupIconSolid,
-      path: '/dao/ethereum-builders'
+      path: '/communities'
     },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: ChatBubbleLeftRightIcon,
-      iconSolid: ChatBubbleLeftRightIconSolid,
-      path: '/messaging',
-      badge: messagesUnread
-    },
+    // {
+    //   id: 'messaging',
+    //   label: 'Messages',
+    //   icon: ChatBubbleLeftRightIcon,
+    //   iconSolid: ChatBubbleLeftRightIconSolid,
+    //   path: '/messaging',
+    //   badge: messagesUnread
+    // },
     {
       id: 'marketplace',
       label: 'Marketplace',

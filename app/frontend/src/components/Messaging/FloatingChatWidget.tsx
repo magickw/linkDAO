@@ -136,11 +136,11 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const getPositionClasses = () => {
     switch (position) {
-      case 'bottom-right': return 'bottom-4 right-4';
-      case 'bottom-left': return 'bottom-4 left-4';
-      case 'top-right': return 'top-4 right-4';
-      case 'top-left': return 'top-4 left-4';
-      default: return 'bottom-4 right-4';
+      case 'bottom-right': return 'bottom-6 right-6';
+      case 'bottom-left': return 'bottom-6 left-6';
+      case 'top-right': return 'top-6 right-6';
+      case 'top-left': return 'top-6 left-6';
+      default: return 'bottom-6 right-6';
     }
   };
 
@@ -294,9 +294,9 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
             className={`fixed z-50 ${getPositionClasses()}`}
             style={{ 
               width: '380px',
-              height: isMinimized ? '60px' : '580px',
-              maxWidth: '90vw',
-              maxHeight: '80vh'
+              height: isMinimized ? '60px' : '600px',
+              maxWidth: '95vw',
+              maxHeight: '85vh'
             }}
           >
             <div className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 overflow-hidden flex flex-col h-full">

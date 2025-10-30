@@ -547,7 +547,6 @@ const CommunitiesPage: React.FC = () => {
               <div className="flex overflow-x-auto py-2 px-2 hide-scrollbar">
                 {[
                   { name: 'Home', href: '/', icon: '🏠' },
-                  { name: 'Messages', href: '/messaging', icon: '💬' },
                   { name: 'Governance', href: '/governance', icon: '🗳️' },
                   { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
                   { name: 'Profile', href: '/profile', icon: '👤' }

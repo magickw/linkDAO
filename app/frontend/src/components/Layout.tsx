@@ -96,7 +96,6 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
   const navItems: NavItem[] = useMemo(() => ([
     { name: 'Home', href: '/', icon: '🏠' },
     { name: 'Communities', href: '/communities', icon: '👥' },
-    { name: 'Messages', href: '/messaging', icon: '💬' },
     { name: 'Governance', href: '/governance', icon: '🗳️' },
     { name: 'Marketplace', href: '/marketplace', icon: '🛒' },
     // Docs removed from navbar - moved to footer
@@ -243,7 +242,7 @@ export default function Layout({ children, title = 'LinkDAO', hideFooter = false
                 {allNavItems.map((item) => {
                   const isActive = router.pathname === item.href || 
                     (item.href === '/communities' && router.pathname.startsWith('/communities/'));
-                  const dynamicBadge = item.badge ?? (item.href === '/messaging' ? messagesUnread : item.href === '/governance' ? governancePending : 0);
+                  const dynamicBadge = item.badge ?? (item.href === '/governance' ? governancePending : 0);
                   return (
                     <li key={item.name}>
                       <Link

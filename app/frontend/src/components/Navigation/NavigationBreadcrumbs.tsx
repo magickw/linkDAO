@@ -116,12 +116,8 @@ export const generateBreadcrumbs = (
       icon: '🔍'
     });
   } else if (pathname.startsWith('/messaging')) {
-    breadcrumbs.push({
-      label: 'Messages',
-      href: '/messaging',
-      isActive: pathname === '/messaging',
-      icon: '💬'
-    });
+    // Removed messaging breadcrumb as we now use FloatingChatWidget
+
   } else if (pathname.startsWith('/profile')) {
     breadcrumbs.push({
       label: 'Profile',
