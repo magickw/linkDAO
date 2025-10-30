@@ -68,6 +68,7 @@ import {
 import { CommunityService } from '@/services/communityService';
 import { CommunityPostService } from '@/services/communityPostService';
 import { CommunityInteractionService } from '@/services/communityInteractionService';
+import { CommunityMembershipService } from '@/services/communityMembershipService';
 import { CommunityRankingService } from '@/services/communityRankingService';
 import { FeedService } from '@/services/feedService';
 import { Community } from '@/models/Community';
@@ -154,14 +155,16 @@ const CommunitiesPage: React.FC = () => {
           communitiesData = [];
         }
         
-        // ✅ Create the first community "LinkDAO" if no communities exist
-        if (communitiesData.length === 0 && isConnected && address) {
+        // ✅ Ensure the LinkDAO community exists
+        let linkDAOCommunity = communitiesData.find(c => c.name === 'linkdao');
+        
+        if (!linkDAOCommunity && isConnected && address) {
           try {
             // Use the deployed addresses from the contract service
             const treasuryAddress = getLDAOTreasuryAddress();
             const governanceToken = getLDAOTokenAddress();
             
-            const linkDAOCommunity = await CommunityService.createCommunity({
+            linkDAOCommunity = await CommunityService.createCommunity({
               name: 'linkdao',
               displayName: 'LinkDAO',
               description: 'The official LinkDAO community - A decentralized social platform built on Ethereum combining blockchain technology with social networking.',
@@ -188,10 +191,12 @@ const CommunitiesPage: React.FC = () => {
               }
             });
             
-            // Add the newly created community to the list
-            communitiesData = [linkDAOCommunity];
+            // Add the newly created community to the list if it's not already there
+            if (!communitiesData.find(c => c.id === linkDAOCommunity.id)) {
+              communitiesData = [...communitiesData, linkDAOCommunity];
+            }
             
-            // Create the first greeting post
+            // Create the first greeting post if this is a new community
             try {
               const greetingPost = await createFirstGreetingPost(linkDAOCommunity.id);
               if (!greetingPost) {
@@ -204,8 +209,48 @@ const CommunitiesPage: React.FC = () => {
             }
           } catch (createError) {
             console.error('Failed to create LinkDAO community:', createError);
-            // Continue with empty array if creation fails
-            communitiesData = [];
+            // Continue with existing communities if creation fails
+          }
+        } else if (linkDAOCommunity) {
+          // Ensure the LinkDAO community is at the beginning of the list
+          communitiesData = [
+            linkDAOCommunity,
+            ...communitiesData.filter(c => c.name !== 'linkdao')
+          ];
+          
+          // Automatically join new users to LinkDAO community if they haven't joined any communities yet
+          // and they're connected with a wallet
+          if (isConnected && address && joinedCommunities.length === 0) {
+            try {
+              // Check if user is already a member
+              const membership = await CommunityMembershipService.getMembership(
+                linkDAOCommunity.id,
+                address
+              );
+              
+              const isMember = !!membership;
+              
+              if (!isMember) {
+                // Join the user to the LinkDAO community
+                const result = await CommunityInteractionService.joinCommunity({
+                  communityId: linkDAOCommunity.id,
+                  userAddress: address
+                });
+                
+                if (result.success && result.data) {
+                  setJoinedCommunities(prev => [...prev, linkDAOCommunity.id]);
+                  setUserRoles(prev => ({ ...prev, [linkDAOCommunity.id]: result.data!.role }));
+                }
+              } else {
+                // User is already a member, add to joined communities if not already there
+                if (!joinedCommunities.includes(linkDAOCommunity.id)) {
+                  setJoinedCommunities(prev => [...prev, linkDAOCommunity.id]);
+                  setUserRoles(prev => ({ ...prev, [linkDAOCommunity.id]: membership.role }));
+                }
+              }
+            } catch (joinError) {
+              console.error('Error joining user to LinkDAO community:', joinError);
+            }
           }
         }
         
@@ -249,11 +294,21 @@ const CommunitiesPage: React.FC = () => {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
 
+      // Ensure we're showing posts from the LinkDAO community if no communities are joined
+      let effectiveCommunities = joinedCommunities;
+      if (joinedCommunities.length === 0 && communities.length > 0) {
+        // Find the LinkDAO community
+        const linkDAOCommunity = communities.find(c => c.name === 'linkdao');
+        if (linkDAOCommunity) {
+          effectiveCommunities = [linkDAOCommunity.id];
+        }
+      }
+
       const feedFilter: FeedFilter = {
         sortBy: sortBy as FeedSortType,
         timeRange: timeFilter,
-        communities: joinedCommunities.length > 0 ? joinedCommunities : undefined,
-        feedSource: joinedCommunities.length > 0 ? 'all' : 'all'
+        communities: effectiveCommunities.length > 0 ? effectiveCommunities : undefined,
+        feedSource: effectiveCommunities.length > 0 ? 'all' : 'all'
       };
 
       const response = await FeedService.getEnhancedFeed(feedFilter, pageNum, 20);
@@ -545,7 +600,9 @@ const CommunitiesPage: React.FC = () => {
   const filteredPosts = posts.filter(post => 
     joinedCommunities.includes(post.communityId) || // Posts from joined communities
     post.upvotes > 100 || // Popular posts (suggested)
-    post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) // Interest-based suggestions
+    post.tags.some(tag => ['ethereum', 'defi', 'nft'].includes(tag)) || // Interest-based suggestions
+    // Show posts from LinkDAO community when no communities are joined
+    (joinedCommunities.length === 0 && communityList.find(c => c.name === 'linkdao')?.id === post.communityId)
   );
 
   // Defensive: normalize communities to array for rendering
@@ -868,6 +925,7 @@ const CommunitiesPage: React.FC = () => {
                 <RecentAndFollowedCommunities 
                   allCommunities={communityList} 
                   joinedCommunityIds={joinedCommunities} 
+                  onLeaveCommunity={handleJoinCommunity}
                 />
 
                 {/* Trending Communities Section */}
@@ -1278,7 +1336,7 @@ const CommunitiesPage: React.FC = () => {
                                       </button>
                                       <button
                                         onClick={() => handleBoost(post.id, 10)}
-                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        className="w-full px-3 py-2 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"
                                       >
                                         🚀 Boost Post
                                       </button>
