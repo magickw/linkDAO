@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Search, X, Filter, Calendar, User, FileText, Image, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, X, Filter, User, FileText, Image, Clock, ChevronDown, ChevronRight, Link } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Message } from '@/types/messaging';
 
@@ -432,7 +432,7 @@ const SearchResultCard: React.FC<SearchResultCardProps> = ({
     const type = result.message.contentType;
     if (type === 'image') return <Image size={14} className="text-blue-400" />;
     if (type === 'file') return <FileText size={14} className="text-green-400" />;
-    if (type === 'post_share') return <LinkIcon size={14} className="text-purple-400" />;
+    if (type === 'post_share') return <Link size={14} className="text-purple-400" />;
     return <FileText size={14} className="text-gray-400" />;
   };
 
