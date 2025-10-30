@@ -294,7 +294,7 @@ export default function DashboardLayout({
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quick Links</h3>
                 <ul className="space-y-2">
                   <li><a href="/" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Home</a></li>
-                  <li><a href="/dao/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</a></li>
+                  <li><a href="/communities/ethereum-builders" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Communities</a></li>
                   <li><a href="/marketplace" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Marketplace</a></li>
                   <li><a href="/governance" className="text-base text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400">Governance</a></li>
                 </ul>

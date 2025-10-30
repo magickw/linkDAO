@@ -127,7 +127,7 @@ export default function CommunityView({ communityId, highlightedPostId, classNam
               r/{mockCommunityData.name}
             </h3>
             <Link 
-              href="/dao"
+              href="/communities"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               ← Back to Communities

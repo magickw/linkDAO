@@ -5,13 +5,27 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Bell, Minimize2, Maximize2, Send, Plus, Search, MoreVertical } from 'lucide-react';
+import { 
+  MessageCircle, X, Bell, Minimize2, Maximize2, Send, Plus, Search, MoreVertical,
+  User, Hash, ThumbsUp, Heart, Zap, Rocket, Globe, Users, ChevronDown, ChevronRight,
+  Image, Link as LinkIcon, Wallet, Vote, Calendar, Tag, Settings, ArrowLeftRight,
+  Phone, Video, Shield, ArrowLeft
+} from 'lucide-react';
+import { ChatBubbleLeftIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { useAccount } from 'wagmi';
 import { useChatHistory } from '@/hooks/useChatHistory';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useMobileOptimization } from '@/hooks/useMobileOptimization';
+import useENSIntegration from '@/hooks/useENSIntegration';
 import { Conversation, Message } from '@/types/messaging';
 import notificationService from '@/services/notificationService';
+import { ContactProvider, useContacts } from '@/contexts/ContactContext';
+import ContactSearch from './Contacts/ContactSearch';
+import ContactList from './Contacts/ContactList';
+import ContactDetail from './Contacts/ContactDetail';
+import { GlassPanel } from '@/design-system';
+import DiscordStyleMessagingInterface from './DiscordStyleMessagingInterface';
 
 interface FloatingChatWidgetProps {
   className?: string;
@@ -28,7 +42,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewMessage, setHasNewMessage] = useState(false);
-  const [activeTab, setActiveTab] = useState<'conversations' | 'chat'>('conversations');
+  const [activeTab, setActiveTab] = useState<'messages' | 'contacts' | 'chat'>('messages');
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -118,7 +132,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
         socket.off('conversation_updated', handleConversationUpdate);
       };
     }
-  }, [socket, isWebSocketConnected, isOpen, isMinimized]);
+  }, [socket, isWebSocketConnected, isOpen, isMinimized, hookConversations, address]);
 
   const getPositionClasses = () => {
     switch (position) {
@@ -143,7 +157,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
     setIsOpen(false);
     setIsMinimized(false);
     setSelectedConversation(null);
-    setActiveTab('conversations');
+    setActiveTab('messages');
   };
 
   const handleConversationSelect = (conversation: Conversation) => {
@@ -158,7 +172,7 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
 
   const handleBackToList = () => {
     setSelectedConversation(null);
-    setActiveTab('conversations');
+    setActiveTab('messages');
     
     // Leave conversation room
     if (isWebSocketConnected && selectedConversation?.id) {
@@ -319,46 +333,35 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
                   {/* Tabs */}
                   <div className="flex border-b border-gray-700">
                     <button
-                      onClick={() => setActiveTab('conversations')}
-                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
-                        activeTab === 'conversations'
-                          ? 'text-blue-400 border-b-2 border-blue-400'
-                          : 'text-gray-400 hover:text-gray-300'
+                      onClick={() => setActiveTab('messages')}
+                      className={`flex items-center gap-1 px-3 py-3 text-xs font-medium transition-colors flex-1 justify-center ${
+                        activeTab === 'messages'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-800'
                       }`}
                     >
-                      Conversations
+                      <ChatBubbleLeftIcon className="w-4 h-4" />
+                      <span className="hidden xs:inline">Messages</span>
                     </button>
                     <button
-                      onClick={() => setActiveTab('chat')}
-                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
-                        activeTab === 'chat'
-                          ? 'text-blue-400 border-b-2 border-blue-400'
-                          : 'text-gray-400 hover:text-gray-300'
+                      onClick={() => setActiveTab('contacts')}
+                      className={`flex items-center gap-1 px-3 py-3 text-xs font-medium transition-colors flex-1 justify-center ${
+                        activeTab === 'contacts'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-gray-800'
+                          : 'text-gray-400 hover:text-white hover:bg-gray-800'
                       }`}
-                      disabled={!selectedConversation}
                     >
-                      Chat
+                      <UserGroupIcon className="w-4 h-4" />
+                      <span className="hidden xs:inline">Contacts</span>
                     </button>
                   </div>
 
                   {/* Content Area */}
                   <div className="flex-1 overflow-hidden">
-                    {activeTab === 'conversations' ? (
-                      <ConversationList 
-                        conversations={hookConversations || []}
-                        onSelectConversation={handleConversationSelect}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        onShowNewConversation={() => setShowNewConversationModal(true)}
-                        currentUserAddress={address || ''}
-                      />
-                    ) : selectedConversation ? (
-                      <ChatPanel 
-                        conversation={selectedConversation}
-                        onSendMessage={handleSendMessage}
-                        onBackToList={handleBackToList}
-                        currentUserAddress={address || ''}
-                      />
+                    {activeTab === 'messages' ? (
+                      <DiscordStyleMessagingInterface className="h-full" />
+                    ) : activeTab === 'contacts' ? (
+                      <ContactsTabContent />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
                         <MessageCircle size={48} className="mb-4 opacity-50" />
@@ -439,288 +442,64 @@ const FloatingChatWidget: React.FC<FloatingChatWidgetProps> = ({
   );
 };
 
-// Conversation List Component
-const ConversationList: React.FC<{
-  conversations: Conversation[];
-  onSelectConversation: (conversation: Conversation) => void;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  onShowNewConversation: () => void;
-  currentUserAddress: string;
-}> = ({ conversations, onSelectConversation, searchQuery, setSearchQuery, onShowNewConversation, currentUserAddress }) => {
-  // Filter conversations based on search query
-  const filteredConversations = conversations.filter(conversation => {
-    const otherParticipant = conversation.participants.find(p => p !== currentUserAddress);
-    const lastMessageContent = conversation.lastMessage?.content || '';
-    
-    return (
-      otherParticipant?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lastMessageContent.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
-
-  const getOtherParticipant = (conversation: Conversation) => {
-    return conversation.participants.find(p => p !== currentUserAddress) || 'Unknown';
-  };
-
-  const getUnreadCount = (conversation: Conversation) => {
-    return conversation.unreadCounts?.[currentUserAddress] || 0;
-  };
-
-  const formatLastMessageTime = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
-
-  const truncateAddress = (address: string) => {
-    if (address.length <= 10) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+// Contacts Tab Content Component
+const ContactsTabContent: React.FC = () => {
+  const { selectedContact } = useContacts();
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Search and New Chat Header */}
-      <div className="p-3 border-b border-gray-700">
-        <div className="flex items-center space-x-2 mb-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg 
-                       text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            onClick={onShowNewConversation}
-            className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
-            title="Start new conversation"
-          >
-            <Plus size={16} />
-          </button>
+    <div className="flex h-full">
+      {/* Left Panel - Contact List */}
+      <div className="w-64 flex flex-col border-r border-gray-700 bg-gray-900">
+        {/* Search */}
+        <div className="p-3 border-b border-gray-700">
+          <ContactSearch />
         </div>
+
+        {/* Contact List */}
+        <ContactList className="flex-1" />
       </div>
 
-      {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
-            <MessageCircle size={48} className="mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">No conversations yet</p>
-            <p className="text-sm text-center mb-4">Start a new conversation to begin chatting</p>
-            <button
-              onClick={onShowNewConversation}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Start New Chat
-            </button>
-          </div>
+      {/* Right Panel - Contact Detail or Empty State */}
+      <div className="flex-1 flex flex-col">
+        {selectedContact ? (
+          <ContactDetail contact={selectedContact} />
         ) : (
-          <div className="divide-y divide-gray-800">
-            {filteredConversations.map((conversation) => {
-              const otherParticipant = getOtherParticipant(conversation);
-              const unreadCount = getUnreadCount(conversation);
-
-              return (
-                <motion.div
-                  key={conversation.id}
-                  whileHover={{ backgroundColor: 'rgba(55, 65, 81, 0.5)' }}
-                  className="p-3 hover:bg-gray-800 cursor-pointer"
-                  onClick={() => onSelectConversation(conversation)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="relative flex-shrink-0">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium">
-                          {otherParticipant.slice(0, 2).toUpperCase() || 'U'}
-                        </span>
-                      </div>
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-white truncate">
-                          {truncateAddress(otherParticipant)}
-                        </p>
-                        {conversation.lastMessage && (
-                          <span className="text-xs text-gray-400">
-                            {formatLastMessageTime(new Date(conversation.lastMessage.timestamp))}
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-400 truncate">
-                          {conversation.lastMessage?.content || 'No messages yet'}
-                        </p>
-                        {unreadCount > 0 && (
-                          <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] text-center">
-                            {unreadCount > 99 ? '99+' : unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Chat Panel Component
-const ChatPanel: React.FC<{
-  conversation: Conversation;
-  onSendMessage: (content: string) => void;
-  onBackToList: () => void;
-  currentUserAddress: string;
-}> = ({ conversation, onSendMessage, onBackToList, currentUserAddress }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const messagesEndRef = React.useRef<HTMLDivElement>(null);
-
-  const { messages: hookMessages, loadMessages } = useChatHistory();
-
-  // Load messages when conversation changes
-  useEffect(() => {
-    if (conversation.id) {
-      loadMessages({ conversationId: conversation.id });
-    }
-  }, [conversation.id, loadMessages]);
-
-  // Update messages when hookMessages changes
-  useEffect(() => {
-    setMessages(hookMessages);
-    setLoading(false);
-  }, [hookMessages]);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    onSendMessage(newMessage);
-    setNewMessage('');
-  };
-
-  const getOtherParticipant = () => {
-    return conversation.participants.find(p => p !== currentUserAddress) || 'Unknown';
-  };
-
-  const truncateAddress = (address: string) => {
-    if (address.length <= 10) return address;
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="p-3 border-b border-gray-700 bg-gray-800">
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={onBackToList}
-            className="p-1.5 text-gray-300 hover:bg-gray-700 rounded-lg"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <span className="text-white font-medium text-sm">
-              {getOtherParticipant().slice(0, 2).toUpperCase()}
-            </span>
-          </div>
-
-          <div className="flex-1">
-            <h3 className="font-medium text-white">
-              {truncateAddress(getOtherParticipant())}
-            </h3>
-            <p className="text-xs text-gray-400">Online</p>
-          </div>
-
-          <button className="p-1.5 text-gray-300 hover:bg-gray-700 rounded-lg">
-            <MoreVertical size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <MessageCircle size={48} className="mb-4 opacity-50" />
-            <p className="text-lg font-medium mb-2">No messages yet</p>
-            <p className="text-sm text-center">Send a message to start the conversation</p>
-          </div>
-        ) : (
-          [...messages].reverse().map((message) => (
-            <div 
-              key={message.id} 
-              className={`flex ${message.fromAddress === currentUserAddress ? 'justify-end' : 'justify-start'}`}
+          <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-xs"
             >
-              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                message.fromAddress === currentUserAddress 
-                  ? 'bg-blue-600 text-white rounded-br-none' 
-                  : 'bg-gray-700 text-white rounded-bl-none'
-              }`}>
-                <p className="text-sm">{message.content}</p>
-                <p className="text-xs opacity-70 mt-1">
-                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+              {/* Icon */}
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-800 rounded-full flex items-center justify-center">
+                <span className="text-2xl">📱</span>
               </div>
-            </div>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Message Input */}
-      <div className="p-3 border-t border-gray-700">
-        <div className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Type a message..."
-            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim()}
-            className="p-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-full text-white transition-colors"
-          >
-            <Send size={16} />
-          </button>
-        </div>
+              {/* Title */}
+              <h2 className="text-lg font-semibold text-white mb-2">
+                Manage Your Contacts
+              </h2>
+
+              {/* Description */}
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Organize your Web3 connections with custom nicknames, groups, 
+                and tags. Click on any contact to start a conversation or edit their 
+                details.
+              </p>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default FloatingChatWidget;
+const FloatingChatWidgetWithProvider: React.FC<FloatingChatWidgetProps> = (props) => {
+  return (
+    <ContactProvider>
+      <FloatingChatWidget {...props} />
+    </ContactProvider>
+  );
+};
+
+export default FloatingChatWidgetWithProvider;

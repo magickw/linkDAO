@@ -527,7 +527,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
             {/* Collapsed Navigation Items */}
             <div className="space-y-2">
             <Link
-              href="/dao"
+              href="/communities"
               className="block w-full p-2 rounded-lg transition-colors text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
               title="Communities"
             >
