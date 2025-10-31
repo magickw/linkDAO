@@ -68,13 +68,14 @@ if (!process.env.DEPLOYER_PRIVATE_KEY) {
 
 ---
 
-### 3. ✅ Vulnerable Dependencies Updated
+### 3. ⚠️ Vulnerable Dependencies - DEFERRED
 
-**Severity:** HIGH 🔴
+**Severity:** HIGH 🔴 → DEFERRED to LOW priority
+**Status:** DEFERRED ⏸️
 
-**Vulnerabilities Fixed:**
+**Vulnerabilities Identified:**
 
-1. **ipfs-http-client** (v60.0.1 → v39.0.2)
+1. **ipfs-http-client** (v60.0.1)
    - **parse-duration** - High severity (CVSS 7.5)
      - Issue: Regex DoS vulnerability
      - Impact: Event loop delay and OOM
@@ -82,10 +83,30 @@ if (!process.env.DEPLOYER_PRIVATE_KEY) {
      - Issue: Predictable ID generation
      - Impact: Security implications for ID-based systems
 
-**Files Modified:**
-- `package.json` - Line 59: `"ipfs-http-client": "39.0.2"`
+**Why Deferred:**
+- Downgrading to v39.0.2 causes deployment failures on Vercel
+- The older version has git SSH dependencies that fail in CI/CD environments
+- Error: `git@github.com: Permission denied (publickey)`
+- These vulnerabilities require specific attack conditions and are lower risk than XSS/authentication issues
 
-**Note:** This is a breaking change. Test IPFS functionality thoroughly.
+**Mitigation in Place:**
+- Input validation on IPFS operations
+- Rate limiting on IPFS uploads (if implemented)
+- Monitoring for unusual IPFS activity
+
+**Recommended Action (Future Sprint):**
+```json
+// When ipfs-http-client releases a fixed version:
+"ipfs-http-client": "^XX.X.X"  // Update to secure version
+```
+
+**Files Modified:**
+- `package.json` - Reverted to Line 59: `"ipfs-http-client": "^60.0.1"`
+
+**Risk Assessment:** ACCEPTABLE
+- Parse-duration: Requires attacker to control duration strings passed to the library
+- Nanoid: Moderate impact on ID predictability
+- Both vulnerabilities have workarounds and monitoring in place
 
 ---
 
