@@ -80,7 +80,15 @@ export class CacheService {
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
           keyPrefix: this.config.redis.keyPrefix,
-          lazyConnect: true  // Add this to ensure consistent behavior
+          lazyConnect: true,  // Add this to ensure consistent behavior
+          retryStrategy: (times) => {
+            // Stop retrying after 3 attempts to prevent infinite loops
+            if (times > 3) {
+              console.warn('Max Redis retry attempts reached, giving up');
+              return null;
+            }
+            return Math.min(times * 100, 3000);
+          }
         });
       } else {
         this.redis = new Redis({
@@ -92,7 +100,14 @@ export class CacheService {
           maxRetriesPerRequest: this.config.redis.maxRetriesPerRequest,
           connectTimeout: this.config.redis.connectTimeout,
           commandTimeout: this.config.redis.commandTimeout,
-          lazyConnect: true
+          lazyConnect: true,
+          retryStrategy: (times) => {
+            if (times > 3) {
+              console.warn('Max Redis retry attempts reached, giving up');
+              return null;
+            }
+            return Math.min(times * 100, 3000);
+          }
         });
       }
 
@@ -100,10 +115,17 @@ export class CacheService {
     } catch (error) {
       console.error('Failed to initialize Redis:', error);
       this.isConnected = false;
+      // Set redis to null to prevent undefined access
+      this.redis = null as any;
     }
   }
 
   private setupEventHandlers(): void {
+    if (!this.redis) {
+      console.warn('Redis client not available, skipping event handler setup');
+      return;
+    }
+
     this.redis.on('connect', () => {
       console.log('✅ Redis connected successfully');
       this.isConnected = true;
@@ -163,8 +185,21 @@ export class CacheService {
     this.stats.totalRequests++;
 
     try {
+      // Check if redis client exists
+      if (!this.redis) {
+        console.warn('Redis client not initialized, cache miss');
+        this.stats.misses++;
+        return null;
+      }
+
       if (!this.isConnected) {
-        await this.connect();
+        try {
+          await this.connect();
+        } catch (connectError) {
+          console.warn('Failed to connect to Redis, returning null');
+          this.stats.misses++;
+          return null;
+        }
       }
 
       const value = await this.redis.get(key);
@@ -187,8 +222,19 @@ export class CacheService {
 
   async set<T>(key: string, value: T, ttl?: number): Promise<boolean> {
     try {
+      // Check if redis client exists
+      if (!this.redis) {
+        console.warn('Redis client not initialized, skipping cache set');
+        return false;
+      }
+
       if (!this.isConnected) {
-        await this.connect();
+        try {
+          await this.connect();
+        } catch (connectError) {
+          console.warn('Failed to connect to Redis, skipping cache set');
+          return false;
+        }
       }
 
       const serializedValue = JSON.stringify(value);

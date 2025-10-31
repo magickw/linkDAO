@@ -208,7 +208,11 @@ const GasFeeWarning: React.FC<GasFeeWarningProps> = ({
                         alt={alternative.method.name}
                         className="w-6 h-6 rounded-full"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/icons/payment-default.svg';
+                          const img = e.target as HTMLImageElement;
+                          // Prevent infinite loop by checking if we're already using the fallback
+                          if (!img.src.includes('payment-default.svg')) {
+                            img.src = '/icons/payment-default.svg';
+                          }
                         }}
                       />
                       <div>

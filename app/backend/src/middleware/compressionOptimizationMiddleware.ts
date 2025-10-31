@@ -450,8 +450,13 @@ export class CompressionOptimizationMiddleware {
     compressedSize: number,
     wasCompressed: boolean
   ): void {
+    // Ensure compressionTimes array exists (defensive programming)
+    if (!this.compressionTimes) {
+      this.compressionTimes = [];
+    }
+
     this.compressionTimes.push(compressionTime);
-    
+
     // Keep only recent compression times
     if (this.compressionTimes.length > 1000) {
       this.compressionTimes = this.compressionTimes.slice(-1000);

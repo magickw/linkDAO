@@ -146,7 +146,11 @@ const PaymentMethodCard: React.FC<PaymentMethodCardProps> = ({
           alt={method.name}
           className="w-10 h-10 rounded-full flex-shrink-0"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/icons/payment-default.svg';
+            const img = e.target as HTMLImageElement;
+            // Prevent infinite loop by checking if we're already using the fallback
+            if (!img.src.includes('payment-default.svg')) {
+              img.src = '/icons/payment-default.svg';
+            }
           }}
         />
         <div className="flex-1 min-w-0">

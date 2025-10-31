@@ -281,7 +281,11 @@ const CostComparisonTable: React.FC<CostComparisonTableProps> = ({
                         alt={method.method.name}
                         className="w-8 h-8 rounded-full mr-3"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/icons/payment-default.svg';
+                          const img = e.target as HTMLImageElement;
+                          // Prevent infinite loop by checking if we're already using the fallback
+                          if (!img.src.includes('payment-default.svg')) {
+                            img.src = '/icons/payment-default.svg';
+                          }
                         }}
                       />
                       <div>
