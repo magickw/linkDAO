@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 // This component is publicly accessible and does not require authentication
 interface DocViewerProps {
@@ -26,10 +27,11 @@ const DocViewer: React.FC<DocViewerProps> = ({
   onSectionChange
 }) => {
   // Simple markdown renderer for the technical whitepaper with improved ID generation
+  // SECURITY: Sanitizes HTML output with DOMPurify to prevent XSS attacks
   const renderMarkdown = (markdown: string) => {
     // Reset header counter for each document
     let headerCounter = 0;
-    
+
     // Convert headers with improved ID generation
     let html = markdown
       .replace(/^# (.*$)/gm, (match, title) => {
@@ -52,41 +54,46 @@ const DocViewer: React.FC<DocViewerProps> = ({
         const id = `${title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '')}-${headerCounter}`;
         return `<h4 id="${id}" class="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-white">${title}</h4>`;
       });
-    
+
     // Convert lists
     html = html.replace(/^\s*-\s(.*)$/gm, '<li class="ml-6 text-gray-700 dark:text-gray-300">$1</li>');
     html = html.replace(/(<li class="ml-6 text-gray-700 dark:text-gray-300">.*<\/li>)+/g, '<ul class="list-disc my-4">$&</ul>');
-    
+
     // Convert ordered lists
     html = html.replace(/^\s*\d+\.\s(.*)$/gm, '<li class="ml-6 text-gray-700 dark:text-gray-300">$1</li>');
     html = html.replace(/(<li class="ml-6 text-gray-700 dark:text-gray-300">.*<\/li>)+/g, '<ol class="list-decimal my-4 ml-4">$&</ol>');
-    
+
     // Convert bold and italic
     html = html
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900 dark:text-white">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="italic text-gray-700 dark:text-gray-300">$1</em>');
-    
+
     // Convert links
     html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
-    
+
     // Convert code blocks
     html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-4 overflow-x-auto"><code class="text-sm text-gray-800 dark:text-gray-200">$1</code></pre>');
-    
+
     // Convert inline code
     html = html.replace(/`(.*?)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm text-gray-800 dark:text-gray-200">$1</code>');
-    
+
     // Convert blockquotes
     html = html.replace(/^>\s(.*)$/gm, '<blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 my-4 text-gray-600 dark:text-gray-400">$1</blockquote>');
-    
+
     // Convert tables
     html = html.replace(/\|(.*?)\|/g, '<td class="border border-gray-300 dark:border-gray-600 px-4 py-2">$1</td>');
     html = html.replace(/<td.*?<\/td>/g, (match) => `<tr>${match}</tr>`);
     html = html.replace(/<tr>.*?<\/tr>/g, (match) => `<table class="table-auto border-collapse border border-gray-300 dark:border-gray-600 my-4">${match}</table>`);
-    
+
     // Convert paragraphs
     html = html.replace(/^\s*(.+?)$/gm, '<p class="mb-4 text-gray-700 dark:text-gray-300">$1</p>');
-    
-    return html;
+
+    // Sanitize the HTML to prevent XSS attacks
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'tr', 'td'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'id', 'class'],
+      ALLOW_DATA_ATTR: false
+    });
   };
 
   // Scroll to section

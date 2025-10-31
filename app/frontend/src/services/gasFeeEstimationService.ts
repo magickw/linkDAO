@@ -98,11 +98,17 @@ export class GasFeeEstimationService {
     try {
       const gasPrices = await this.getGasPrices(chainId);
       const gasLimit = customGasLimit || STANDARD_GAS_LIMITS[transactionType];
-      
+
+      // Check if we have any gas prices
+      if (!gasPrices || gasPrices.length === 0) {
+        console.warn('No gas prices available, using fallback');
+        return this.getFallbackGasEstimate(chainId, transactionType, customGasLimit);
+      }
+
       // Use the most reliable gas price (highest confidence)
-      const bestGasPrice = gasPrices.reduce((best, current) => 
+      const bestGasPrice = gasPrices.reduce((best, current) =>
         current.confidence > best.confidence ? current : best
-      );
+      , gasPrices[0]); // Provide initial value to prevent reduce error
 
       const totalCost = gasLimit * bestGasPrice.gasPrice;
       const totalCostUSD = await this.convertToUSD(totalCost, chainId);
@@ -119,7 +125,7 @@ export class GasFeeEstimationService {
 
       // Cache the result with intelligent caching
       await intelligentCacheService.cacheGasEstimate(cacheKey, estimate);
-      
+
       return estimate;
     } catch (error) {
       console.error('Gas estimation failed:', error);
@@ -188,6 +194,13 @@ export class GasFeeEstimationService {
 
     try {
       const gasPrices = await this.getGasPrices(chainId);
+
+      // Check if we have any gas prices
+      if (!gasPrices || gasPrices.length === 0) {
+        console.warn('No gas prices available for network conditions, using fallback');
+        return this.getFallbackNetworkConditions(chainId);
+      }
+
       const averageGasPrice = gasPrices.reduce((sum, price) => sum + Number(price.gasPrice), 0) / gasPrices.length;
       const gasPriceUSD = await this.convertToUSD(BigInt(Math.round(averageGasPrice)), chainId);
 
