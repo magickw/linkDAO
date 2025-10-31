@@ -1,5 +1,4 @@
 import React from 'react';
-import { TrendingCommunitiesSection } from '@/components/CommunityDiscovery/TrendingCommunitiesSection';
 import { LiveGovernanceWidget } from '@/components/RealTimeUpdates/LiveGovernanceWidget';
 import { RealTimeStakingUpdates } from '@/components/Staking/RealTimeStakingUpdates';
 import { LiveTokenPriceDisplay } from '@/components/RealTimeUpdates/LiveTokenPriceDisplay';
@@ -32,14 +31,6 @@ export default function CommunityRightSidebar({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Trending Communities Section */}
-      <TrendingCommunitiesSection
-        onCommunitySelect={handleTrendingCommunitySelect}
-        onViewAll={() => {}}
-        maxItems={5}
-        showComparison={true}
-      />
-
       {/* Live Governance Widget */}
       <LiveGovernanceWidget
         communityId="global"

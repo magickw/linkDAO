@@ -897,38 +897,14 @@ const CommunitiesPage: React.FC = () => {
             {/* Enhanced Left Sidebar - Discovery + Actions */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-6">
-                {/* Your Communities Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Your Communities</h3>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Joined: {joinedCommunities.length}</span>
-                  </div>
-                  
-                  <button 
-                    onClick={handleCreateCommunityClick}
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded mb-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Create Community</span>
-                  </button>
-                  
-                  <Link
-                    href="/communities?sort=trending"
-                    className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 rounded"
-                  >
-                    <span>✨</span>
-                    <span>Discover Trending Communities</span>
-                  </Link>
-                </div>
-
-                {/* Recent and Followed Communities */}
+                {/* Recent and Followed Communities - This replaces the "Your Communities" section */}
                 <RecentAndFollowedCommunities 
                   allCommunities={communityList} 
                   joinedCommunityIds={joinedCommunities} 
                   onLeaveCommunity={handleJoinCommunity}
                 />
 
-                {/* Trending Communities Section */}
+                {/* Trending Communities Section - Moved from center content to sidebar */}
                 {trendingCommunities.length > 0 && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -1060,6 +1036,190 @@ const CommunitiesPage: React.FC = () => {
                   onFilterToggle={handleQuickFilterToggle}
                   className="py-2"
                 />
+              </div>
+
+              {/* Loading State */}
+              {loading && (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                        <div className="flex-1 space-y-1">
+                          <div className="h-3 bg-gray-200 rounded w-1/3" />
+                          <div className="h-2 bg-gray-200 rounded w-1/4" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4" />
+                        <div className="h-12 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading && filteredPosts.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <Users className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Welcome to LinkDAO
+                  </h3>
+                  <p className="text-gray-500 mb-6 px-4">
+                    Start your DAO journey — explore, vote, and connect.
+                  </p>
+                  <button
+                    onClick={() => router.push('/communities?sort=trending')}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
+                  >
+                    <Users className="w-5 h-5 mr-2" />
+                    Explore Communities
+                  </button>
+                </div>
+              )}
+
+              {/* Web3-Native Community Enhancement Components */}
+              <LivePostUpdates communityIds={joinedCommunities} />
+
+              {/* Posts Feed */}
+              <div className="space-y-4">
+                {filteredPosts.map(post => {
+                  const community = communityList.find(c => c.id === post.communityId);
+                  const stakingInfo = stakingData[post.communityId];
+                  
+                  return (
+                    <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full" />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {post.authorName}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {community?.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                              <span>•</span>
+                              <span>{post.upvotes} upvotes</span>
+                              <span>•</span>
+                              <span>{post.commentCount} comments</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <BoostButton
+                            postId={post.id}
+                            amount={10}
+                            onBoost={handleBoost}
+                            className="p-2 text-gray-600 hover:text-gray-900"
+                          />
+                          <button className="p-2 text-gray-600 hover:text-gray-900">
+                            <Bookmark className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        {post.title}
+                      </h2>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        {post.content}
+                      </p>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleUpvote(post.id)}
+                        >
+                          <ArrowUp className="w-5 h-5" />
+                          <span>{post.upvotes}</span>
+                        </button>
+                        <button
+                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleVote(post.id, 'down', 1)}
+                        >
+                          <ArrowDown className="w-5 h-5" />
+                          <span>{post.downvotes}</span>
+                        </button>
+                        <button
+                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleComment(post.id)}
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                          <span>{post.commentCount}</span>
+                        </button>
+                        <button
+                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleShare(post.id)}
+                        >
+                          <Share className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleViewPost(post.id)}
+                        >
+                          <Clock className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            className="p-2 text-gray-600 hover:text-gray-900"
+                            onClick={() => handleTokenReaction(post.id, 'like')}
+                          >
+                            <Flame className="w-5 h-5" />
+                          </button>
+                          <button
+                            className="p-2 text-gray-600 hover:text-gray-900"
+                            onClick={() => handleTokenReaction(post.id, 'love')}
+                          >
+                            <Heart className="w-5 h-5" />
+                          </button>
+                          <button
+                            className="p-2 text-gray-600 hover:text-gray-900"
+                            onClick={() => handleTokenReaction(post.id, 'support')}
+                          >
+                            <Coins className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <TokenReactionSystem
+                          postId={post.id}
+                          onTokenReaction={handleTokenReaction}
+                        />
+                        <EnhancedTipButton
+                          postId={post.id}
+                          onTip={handleTip}
+                          className="p-2 text-gray-600 hover:text-gray-900"
+                        />
+                        <StakingIndicator
+                          stakingInfo={stakingInfo}
+                          className="p-2 text-gray-600 hover:text-gray-900"
+                        />
+                        <button
+                          className="p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleStake(post.id)}
+                        >
+                          <Shield className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleVoteClick(post.id)}
+                        >
+                          <Vote className="w-5 h-5" />
+                        </button>
+                        <button
+                          className="p-2 text-gray-600 hover:text-gray-900"
+                          onClick={() => handleViewTransaction(post.transactionHash)}
+                        >
+                          <ExplorerLinkButton />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               
               {/* Dynamic, Contextual Onboarding */}

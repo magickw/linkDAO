@@ -5,7 +5,7 @@ import { useNavigation } from '@/context/NavigationContext';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
+import { CommunityCreationModal } from '@/components/CommunityManagement';
 import {
   CommunityIconList,
   EnhancedUserCard,
@@ -16,10 +16,11 @@ import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
-import { useQuery } from '@tanstack/react-query'; // Add React Query import
+import { useQuery } from '@tanstack/react-query';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useWalletData } from '@/hooks/useWalletData';
 import { QuickAction } from '@/types/wallet';
+import { SearchService } from '@/services/searchService'; // Add SearchService import
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -30,6 +31,11 @@ interface SidebarCommunity {
   avatar?: string;
   isJoined: boolean;
   unreadCount?: number;
+  icon?: string;
+  growthMetrics?: {
+    trendingScore: number;
+    memberGrowthPercentage: number;
+  };
 }
 
 import { CommunityService } from '../services/communityService';
@@ -134,6 +140,40 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
+
+  // Add state for trending communities
+  const [trendingCommunities, setTrendingCommunities] = useState<SidebarCommunity[]>([]);
+  
+  // Fetch trending communities
+  useEffect(() => {
+    const fetchTrendingCommunities = async () => {
+      try {
+        const trendingData = await SearchService.getTrendingContent('day', 5);
+        // Transform trending communities to SidebarCommunity format
+        const sidebarTrending = trendingData.communities.map((community: any) => ({
+          id: community.id,
+          name: community.name,
+          displayName: community.displayName,
+          memberCount: community.memberCount,
+          avatar: community.avatar,
+          icon: community.icon,
+          isJoined: communities.some((c: any) => c.id === community.id),
+          growthMetrics: {
+            trendingScore: Math.floor(Math.random() * 100), // Mock data for now
+            memberGrowthPercentage: Math.floor(Math.random() * 20) // Mock data for now
+          }
+        }));
+        setTrendingCommunities(sidebarTrending);
+      } catch (error) {
+        console.error('Failed to fetch trending communities:', error);
+        setTrendingCommunities([]);
+      }
+    };
+
+    if (communities.length > 0) {
+      fetchTrendingCommunities();
+    }
+  }, [communities]);
 
   // Handle community selection with navigation context
   const handleCommunitySelectWithContext = (communityId: string) => {
@@ -442,6 +482,54 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   favoriteCommunities={userPreferences.favoriteCommunities}
                   onToggleFavorite={toggleFavoriteCommunity}
                 />
+
+                {/* Trending Communities Section */}
+                {trendingCommunities.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Trending Communities
+                      </h3>
+                      <button 
+                        onClick={() => setShowDiscoveryModal(true)}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        View All
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {trendingCommunities.slice(0, 3).map((community, index) => (
+                        <div
+                          key={community.id}
+                          onClick={() => handleCommunitySelectWithContext(community.id)}
+                          className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-r from-orange-400 to-pink-500 text-white text-xs font-bold">
+                            #{index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {community.icon} {community.displayName}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                              <span>{community.memberCount.toLocaleString()} members</span>
+                              {community.growthMetrics && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center text-orange-500">
+                                    🔥 {Math.round(community.growthMetrics.trendingScore)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Create Post action moved up from footer to reduce whitespace */}
                 <div className="mt-4">
