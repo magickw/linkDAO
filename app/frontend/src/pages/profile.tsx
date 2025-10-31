@@ -854,13 +854,85 @@ export default function Profile() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <p className="text-gray-700 dark:text-gray-300">Reputation Score</p>
-                        <p className="text-gray-900 dark:text-white">{reputation}</p>
+                        <p className="text-gray-900 dark:text-white">{reputation?.totalScore || 0}</p>
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-gray-700 dark:text-gray-300">Events</p>
                         <p className="text-gray-900 dark:text-white">{reputationEvents.length}</p>
                       </div>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'wallet' && (
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Wallet Portfolio</h3>
+                  {isWalletLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl p-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500 dark:text-gray-400">Total Balance</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {portfolio ? `$${portfolio.totalValueUSD.toFixed(2)}` : '$0.00'}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex justify-between text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {portfolio ? `$${(portfolio.totalValueUSD * (1 + portfolio.change24hPercent / 100)).toFixed(2)}` : '$0.00'} USD
+                            </span>
+                            <span className={portfolio && portfolio.change24hPercent >= 0 ? "text-green-500" : "text-red-500"}>
+                              {portfolio ? `${portfolio.change24hPercent >= 0 ? '+' : ''}${portfolio.change24hPercent.toFixed(2)}%` : '0.00%'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/30 dark:to-teal-900/30 rounded-xl p-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500 dark:text-gray-400">LDAO Tokens</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {tokens.find(t => t.symbol === 'LDAO') ? tokens.find(t => t.symbol === 'LDAO')?.balanceFormatted.split(' ')[0] : '0'}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex justify-between text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {tokens.find(t => t.symbol === 'LDAO') ? `$${tokens.find(t => t.symbol === 'LDAO')?.valueUSD.toFixed(2)}` : '$0.00'} USD
+                            </span>
+                            <span className={tokens.find(t => t.symbol === 'LDAO')?.change24h >= 0 ? "text-green-500" : "text-red-500"}>
+                              {tokens.find(t => t.symbol === 'LDAO') ? `${tokens.find(t => t.symbol === 'LDAO')?.change24h >= 0 ? '+' : ''}${tokens.find(t => t.symbol === 'LDAO')?.change24h.toFixed(2)}%` : '0.00%'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-6">
+                        <h4 className="font-medium text-gray-900 dark:text-white mb-3">Token Balances</h4>
+                        <div className="space-y-3">
+                          {tokens.map((token, index) => (
+                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <div className="flex items-center">
+                                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
+                                  <span className="text-xs font-medium">{token.symbol.substring(0, 3)}</span>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900 dark:text-white">{token.symbol}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">{token.symbol}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium text-gray-900 dark:text-white">{token.balanceFormatted.split(' ')[0]}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">${token.valueUSD.toFixed(2)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -937,436 +1009,6 @@ export default function Profile() {
                 </div>
               )}
 
-              {activeTab === 'reputation' && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Reputation</h3>
-                  {isReputationLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
-                  ) : reputation ? (
-                    <>
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h4 className="text-2xl font-bold text-gray-900 dark:text-white">{reputation.totalScore}</h4>
-                          <p className="text-gray-600 dark:text-gray-400">Reputation Score</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {reputation.level?.name || 'Newcomer'}
-                          </span>
-                          <p className="text-gray-600 dark:text-gray-400 mt-1">Level</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        {reputation.progress?.map((item, index) => (
-                          <div key={index} className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/20 dark:to-gray-800/20 rounded-lg">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium text-gray-900 dark:text-white capitalize">{item.category}</h4>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                                {item.current}/{item.target}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                              Next reward: {item.reward}
-                            </p>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div 
-                                className="bg-blue-500 h-2 rounded-full" 
-                                style={{ width: `${item.progress}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-3">Recent Activity</h4>
-                        <div className="space-y-3">
-                          {reputationEvents.slice(0, 5).map((event, index) => (
-                            <div key={index} className="flex items-start p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                              <div className="flex-shrink-0 mt-1">
-                                <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                  <svg className="h-4 w-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                <p className="text-sm text-gray-700 dark:text-gray-300">{event.description}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(event.timestamp).toLocaleDateString()}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500 dark:text-gray-400">No reputation data available</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'tips' && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Tips & Rewards</h3>
-                  {isTipsLoading ? (
-                    <div className="flex justify-center items-center h-32">
-                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                                <svg className="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Tips Received</p>
-                              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {earnings ? `${earnings.totalEarned} LDAO` : '0.00 LDAO'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl p-5">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <div className="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center">
-                                <svg className="h-6 w-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                </svg>
-                              </div>
-                            </div>
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Claimable Rewards</p>
-                              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {earnings ? `${earnings.claimable} LDAO` : '0.00 LDAO'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-3">Top Supporters</h4>
-                        <div className="space-y-3">
-                          {tips.slice(0, 5).map((tip) => (
-                            <div key={tip.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                              <div className="flex items-center">
-                                <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                                  <span className="text-xs font-medium">
-                                    {tip.from.substring(0, 6)}...{tip.from.substring(tip.from.length - 4)}
-                                  </span>
-                                </div>
-                                <div className="ml-3">
-                                  <p className="font-medium text-gray-900 dark:text-white">{tip.from}</p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    {tip.message || 'No message'}
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                {tip.amount} LDAO
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-6">
-                        <button className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
-                          Claim Rewards
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'followers' && address && (
-                <FollowerList userAddress={address} />
-              )}
-
-              {activeTab === 'following' && address && (
-                <FollowingList userAddress={address} />
-              )}
-
-              {activeTab === 'payments' && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Payment Methods</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">Manage your secure payment methods for marketplace purchases.</p>
-                  <PaymentMethodsTab />
-                </div>
-              )}
-
-              {activeTab === 'addresses' && (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">Billing & Shipping Addresses</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">This information is private and only used for marketplace transactions.</p>
-                  
-                  <form onSubmit={handleAddressSubmit} className="space-y-8">
-                    {/* Billing Address */}
-                    <div>
-                      <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Billing Address</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.firstName}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, firstName: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.lastName}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, lastName: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company (Optional)</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.company}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, company: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.address1}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, address1: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2 (Optional)</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.address2}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, address2: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.city}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, city: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State/Province</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.state}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, state: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ZIP/Postal Code</label>
-                          <input
-                            type="text"
-                            value={addresses.billing.zipCode}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, zipCode: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
-                          <select
-                            value={addresses.billing.country}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, country: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          >
-                            <option value="">Select Country</option>
-                            {countries.map((country) => (
-                              <option key={country.code} value={country.code}>
-                                {country.flag} {country.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                          <input
-                            type="tel"
-                            value={addresses.billing.phone}
-                            onChange={(e) => setAddresses(prev => ({ ...prev, billing: { ...prev.billing, phone: e.target.value } }))}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Shipping Address */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-md font-medium text-gray-900 dark:text-white">Shipping Address</h4>
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={addresses.shipping.sameAsBilling}
-                            onChange={(e) => {
-                              const sameAsBilling = e.target.checked;
-                              setAddresses(prev => ({
-                                ...prev,
-                                shipping: {
-                                  ...prev.shipping,
-                                  sameAsBilling,
-                                  ...(sameAsBilling ? {
-                                    firstName: prev.billing.firstName,
-                                    lastName: prev.billing.lastName,
-                                    company: prev.billing.company,
-                                    address1: prev.billing.address1,
-                                    address2: prev.billing.address2,
-                                    city: prev.billing.city,
-                                    state: prev.billing.state,
-                                    zipCode: prev.billing.zipCode,
-                                    country: prev.billing.country,
-                                    phone: prev.billing.phone
-                                  } : {})
-                                }
-                              }));
-                            }}
-                            className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
-                          />
-                          <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Same as billing address</span>
-                        </label>
-                      </div>
-                      
-                      {!addresses.shipping.sameAsBilling && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.firstName}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, firstName: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.lastName}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, lastName: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company (Optional)</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.company}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, company: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.address1}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, address1: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2 (Optional)</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.address2}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, address2: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.city}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, city: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State/Province</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.state}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, state: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ZIP/Postal Code</label>
-                            <input
-                              type="text"
-                              value={addresses.shipping.zipCode}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, zipCode: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country</label>
-                            <select
-                              value={addresses.shipping.country}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, country: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            >
-                              <option value="">Select Country</option>
-                              {countries.map((country) => (
-                                <option key={country.code} value={country.code}>
-                                  {country.flag} {country.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                            <input
-                              type="tel"
-                              value={addresses.shipping.phone}
-                              onChange={(e) => setAddresses(prev => ({ ...prev, shipping: { ...prev.shipping, phone: e.target.value } }))}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all"
-                      >
-                        Save Addresses
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
             </div>
           )}
         </div>

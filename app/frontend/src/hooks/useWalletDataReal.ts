@@ -51,17 +51,28 @@ export function useWalletDataReal({
       setError(null);
 
       // Fetch token balances
-      const balances = await walletService.getTokenBalances(address as `0x${string}`);
+      const serviceBalances = await walletService.getTokenBalances(address as `0x${string}`);
 
       // Calculate portfolio value and change
-      const portfolioValue = balances.reduce((sum, b) => sum + (b.valueUSD || 0), 0);
-      const portfolioChange = balances.length > 0
-        ? balances.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (portfolioValue || 1))), 0)
+      const portfolioValue = serviceBalances.reduce((sum, b) => sum + (b.valueUSD || 0), 0);
+      const portfolioChange = serviceBalances.length > 0
+        ? serviceBalances.reduce((sum, b) => sum + (b.change24h * (b.valueUSD / (portfolioValue || 1))), 0)
         : 0;
+
+      // Transform service TokenBalance to types TokenBalance
+      const transformedBalances: TokenBalance[] = serviceBalances.map(balance => ({
+        symbol: balance.symbol,
+        name: balance.name,
+        balance: parseFloat(balance.balanceFormatted),
+        valueUSD: balance.valueUSD,
+        change24h: balance.change24h,
+        contractAddress: balance.address || '0x0000000000000000000000000000000000000000',
+        // Add chains and chainBreakdown if needed
+      }));
 
       const data: EnhancedWalletData = {
         address,
-        balances,
+        balances: transformedBalances,
         recentTransactions: [], // Transactions would need to be fetched separately
         portfolioValue,
         portfolioChange,
