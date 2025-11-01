@@ -458,11 +458,17 @@ import contentPerformanceRoutes from './routes/contentPerformanceRoutes';
 import dexTradingRoutes from './routes/dexTradingRoutes';
 import stakingRoutes from './routes/stakingRoutes';
 
+// Import LDAO post-launch monitoring routes
+import { ldaoPostLaunchMonitoringRoutes } from './routes/ldaoPostLaunchMonitoringRoutes';
+
 // DEX trading routes
 app.use('/api/dex', dexTradingRoutes);
 
 // Staking routes
 app.use('/api/staking', stakingRoutes);
+
+// LDAO post-launch monitoring routes
+app.use('/api/ldao/monitoring', ldaoPostLaunchMonitoringRoutes);
 
 // Legacy authentication routes
 app.use('/api/auth', createDefaultAuthRoutes());

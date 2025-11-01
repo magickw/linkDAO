@@ -1,44 +1,5 @@
-export interface MonitoringConfig {
-  alerts: {
-    enabled: boolean;
-    webhookUrl?: string;
-    emailEnabled: boolean;
-    emailRecipients: string[];
-    slackWebhook?: string;
-    cooldownMinutes: number;
-  };
-  metrics: {
-    collectionInterval: number; // seconds
-    historySize: number; // number of data points to keep
-    performanceThresholds: {
-      responseTime: {
-        warning: number; // ms
-        critical: number; // ms
-      };
-      errorRate: {
-        warning: number; // percentage
-        critical: number; // percentage
-      };
-      memoryUsage: {
-        warning: number; // percentage
-        critical: number; // percentage
-      };
-      throughput: {
-        minimum: number; // requests per second
-      };
-    };
-  };
-  dashboard: {
-    enabled: boolean;
-    refreshInterval: number; // seconds
-    retentionDays: number;
-  };
-  external: {
-    prometheusEnabled: boolean;
-    grafanaEnabled: boolean;
-    elasticsearchEnabled: boolean;
-  };
-}
+import { MonitoringConfig } from '../types/monitoring';
+import { safeLogger } from '../utils/safeLogger';
 
 export const defaultMonitoringConfig: MonitoringConfig = {
   alerts: {

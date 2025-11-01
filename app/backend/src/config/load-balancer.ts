@@ -204,7 +204,7 @@ class LoadBalancerManager {
     // Set sticky session if enabled
     if (this.config.sticky.enabled) {
       const sessionId = this.getSessionId(req) || this.generateSessionId();
-      this.stickySession.set(sessionId, selectedServer.id);
+      this.stickySessions.set(sessionId, selectedServer.id);
       
       // Clean up expired sessions
       this.cleanupExpiredSessions();
@@ -276,7 +276,7 @@ class LoadBalancerManager {
     const now = Date.now();
     const expiredSessions: string[] = [];
     
-    this.stickySession.forEach((serverId, sessionId) => {
+    this.stickySessions.forEach((serverId, sessionId) => {
       // This is simplified - in production, you'd track session timestamps
       if (Math.random() < 0.01) { // Randomly clean up 1% of sessions
         expiredSessions.push(sessionId);
@@ -284,7 +284,7 @@ class LoadBalancerManager {
     });
     
     expiredSessions.forEach(sessionId => {
-      this.stickySession.delete(sessionId);
+      this.stickySessions.delete(sessionId);
     });
   }
 
@@ -328,7 +328,7 @@ class LoadBalancerManager {
       totalServers: this.servers.length,
       healthyServers: healthyServers.length,
       totalConnections,
-      stickySession: this.stickySession.size,
+      stickySession: this.stickySessions.size,
       servers: this.servers.map(server => ({
         id: server.id,
         host: server.host,

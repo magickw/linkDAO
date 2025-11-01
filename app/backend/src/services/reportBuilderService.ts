@@ -1,13 +1,5 @@
-import { 
-  ReportTemplate, 
-  ReportSection, 
-  ReportParameter, 
-  DataSourceConnection, 
-  QueryResult, 
-  ValidationError,
-  ComponentDefinition,
-  ReportExecution
-} from '../types/reporting';
+import { ReportTemplate, ReportSection, ReportParameter, ValidationError, ComponentDefinition, QueryResult } from '../types/reporting';
+import { safeLogger } from '../utils/safeLogger';
 
 export class ReportBuilderService {
   private templates: Map<string, ReportTemplate> = new Map();

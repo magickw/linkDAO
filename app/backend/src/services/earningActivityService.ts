@@ -5,7 +5,6 @@ import {
   earningActivities, 
   earningConfig, 
   dailyEarningLimits, 
-  userEarningStats,
   activityFeed,
   earningAbusePrevention,
   users,

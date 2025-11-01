@@ -1,12 +1,9 @@
 import { db } from '../db/index';
 import { safeLogger } from '../utils/safeLogger';
-import { eq, and, desc, sum, count, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, sum, count, gte, lte, sql } from 'drizzle-orm';
 import { 
-  referrals, 
-  referralRewards, 
   earningActivities,
   users,
-  userEarningStats
 } from '../db/schema';
 import { earningActivityService } from './earningActivityService';
 import { earningNotificationService } from './earningNotificationService';
