@@ -75,6 +75,7 @@ export const disputeJudges = pgTable("dispute_judges", {
 export const marketplaceVerifications = pgTable("marketplace_verifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  sellerVerificationId: uuid("seller_verification_id").references(() => sellerVerifications.id, { onDelete: "set null" }),
   verificationLevel: varchar("verification_level", { length: 20 }).default("basic").notNull(), // 'basic' | 'verified' | 'premium'
   sellerTier: varchar("seller_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
   riskScore: numeric("risk_score", { precision: 3, scale: 2 }).default("0").notNull(),
@@ -90,9 +91,40 @@ export const marketplaceVerifications = pgTable("marketplace_verifications", {
 export const sellerVerifications = pgTable("seller_verifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-  currentTier: varchar("current_tier", { length: 20 }).default("unverified").notNull(), // 'unverified' | 'standard' | 'verified' | 'premium'
-  kycVerified: boolean("kyc_verified").default(false),
-  kycVerifiedAt: timestamp("kyc_verified_at"),
+  status: varchar("status", { 
+    enum: ['pending', 'verified', 'rejected', 'expired'] 
+  }).notNull().default('pending'),
+  
+  // Legal information
+  legalName: varchar("legal_name", { length: 255 }),
+  ein: varchar("ein", { length: 10 }), // Format: ##-#######
+  businessAddress: text("business_address"),
+  
+  // Document storage references
+  einDocumentId: uuid("ein_document_id"), // Reference to encrypted document
+  businessLicenseId: uuid("business_license_id"), // Reference to encrypted document
+  addressProofId: uuid("address_proof_id"), // Reference to encrypted document
+  
+  // Verification metadata
+  verificationMethod: varchar("verification_method", { 
+    enum: ['irs_tin_match', 'trulioo', 'manual_review', 'open_corporates'] 
+  }),
+  verificationReference: varchar("verification_reference", { length: 255 }), // External reference ID
+  
+  // Risk assessment
+  riskScore: varchar("risk_score", { enum: ['low', 'medium', 'high'] }),
+  riskFactors: text("risk_factors"), // JSON array of risk factors
+  
+  // Timestamps
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  verifiedAt: timestamp("verified_at"),
+  expiresAt: timestamp("expires_at"), // For periodic re-verification
+  
+  // Audit trail
+  reviewedBy: uuid("reviewed_by"), // Admin user ID for manual reviews
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  
   reputationScore: integer("reputation_score").default(0),
   totalVolume: numeric("total_volume", { precision: 20, scale: 8 }).default("0"),
   successfulTransactions: integer("successful_transactions").default(0),
@@ -100,6 +132,12 @@ export const sellerVerifications = pgTable("seller_verifications", {
   lastTierUpdate: timestamp("last_tier_update").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdx: index("seller_verifications_user_idx").on(table.userId),
+    statusIdx: index("seller_verifications_status_idx").on(table.status),
+    einIdx: index("seller_verifications_ein_idx").on(table.ein),
+  };
 });
 
 // Reviews for marketplace transactions

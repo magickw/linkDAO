@@ -396,6 +396,8 @@ import sellerListingRoutes from './routes/sellerListingRoutes';
 import sellerImageUploadRoutes from './routes/sellerImageUploadRoutes';
 // Import unified seller image routes
 import { sellerImageRoutes } from './routes/sellerImageRoutes';
+// Import seller verification routes
+import sellerVerificationRoutes from './routes/sellerVerificationRoutes';
 // Import ENS validation routes
 import ensValidationRoutes from './routes/ensValidationRoutes';
 // Import user profile API routes
@@ -535,6 +537,9 @@ app.use('/api/marketplace', sellerImageUploadRoutes);
 
 // Unified seller image routes
 app.use('/api/marketplace/seller/images', sellerImageRoutes);
+
+// Seller verification routes
+app.use('/api/marketplace', sellerVerificationRoutes);
 
 // ENS validation routes
 app.use('/api/marketplace', ensValidationRoutes);

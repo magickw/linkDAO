@@ -56,13 +56,7 @@ const CORS_CONFIGS = {
   },
   
   production: {
-    allowedOrigins: [
-      'https://linkdao.io',
-      'https://www.linkdao.io',
-      'https://app.linkdao.io',
-      'https://marketplace.linkdao.io',
-      'https://linkdao-backend.onrender.com' // Add Render backend URL
-    ],
+    allowedOrigins: ['*'],
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
       'Origin',
