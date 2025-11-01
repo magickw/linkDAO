@@ -51,6 +51,7 @@ import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USD
 import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler';
 import { PaymentErrorModal } from '@/components/Payment/PaymentErrorModal';
 import { WalletConnectionPrompt } from '@/components/Payment/WalletConnectionPrompt';
+import { StripeCheckout } from '@/components/Payment/StripeCheckout';
 import Link from 'next/link';
 
 interface CheckoutFlowProps {
@@ -946,80 +947,11 @@ const FiatPaymentDetails: React.FC<{
   paymentMethod: PrioritizedPaymentMethod;
   onProceed: () => void;
 }> = ({ paymentMethod, onProceed }) => {
+  const { state: cartState } = useCart();
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
-      <GlassPanel variant="secondary" className="p-6">
-        <h3 className="font-semibold text-white mb-4">Payment Information</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-white/70 text-sm mb-2">Card Number</label>
-            <input
-              type="text"
-              placeholder="1234 5678 9012 3456"
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white/70 text-sm mb-2">Expiry</label>
-              <input
-                type="text"
-                placeholder="MM/YY"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-              />
-            </div>
-            <div>
-              <label className="block text-white/70 text-sm mb-2">CVC</label>
-              <input
-                type="text"
-                placeholder="123"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-              />
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
-
-      <GlassPanel variant="secondary" className="p-6">
-        <h3 className="font-semibold text-white mb-4">Billing Address</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-white/70 text-sm mb-2">Full Name</label>
-            <input
-              type="text"
-              placeholder="John Doe"
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-            />
-          </div>
-          <div>
-            <label className="block text-white/70 text-sm mb-2">Address</label>
-            <input
-              type="text"
-              placeholder="123 Main St"
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white/70 text-sm mb-2">City</label>
-              <input
-                type="text"
-                placeholder="New York"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-              />
-            </div>
-            <div>
-              <label className="block text-white/70 text-sm mb-2">ZIP Code</label>
-              <input
-                type="text"
-                placeholder="10001"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50"
-              />
-            </div>
-          </div>
-        </div>
-      </GlassPanel>
-
       {/* Payment Method Benefits */}
       {paymentMethod.benefits && paymentMethod.benefits.length > 0 && (
         <GlassPanel variant="secondary" className="p-4">
@@ -1054,9 +986,34 @@ const FiatPaymentDetails: React.FC<{
         </div>
       </GlassPanel>
 
-      <Button variant="primary" onClick={onProceed} className="w-full">
-        Complete Payment with {paymentMethod.method.name}
-      </Button>
+      {/* Stripe Checkout Integration */}
+      <GlassPanel variant="secondary" className="p-6">
+        <h3 className="font-semibold text-white mb-4">Payment Information</h3>
+
+        <StripeCheckout
+          amount={paymentMethod.costEstimate.totalCost}
+          currency="USD"
+          orderId={`order_${Date.now()}`}
+          metadata={{
+            cartItems: cartState.items.map(item => item.id).join(','),
+            itemCount: cartState.items.length.toString(),
+            paymentMethod: paymentMethod.method.name,
+          }}
+          onSuccess={(paymentIntentId) => {
+            console.log('Stripe payment successful!', paymentIntentId);
+            // Call the parent onProceed to update checkout state
+            onProceed();
+          }}
+          onError={(error) => {
+            console.error('Stripe payment failed:', error);
+            // Error is already handled by StripeCheckout component
+          }}
+          onCancel={() => {
+            // User can go back to payment method selection
+            console.log('Payment cancelled by user');
+          }}
+        />
+      </GlassPanel>
     </div>
   );
 };

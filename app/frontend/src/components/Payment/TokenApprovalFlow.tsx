@@ -199,7 +199,7 @@ export const TokenApprovalFlow: React.FC<TokenApprovalFlowProps> = ({
         <Button
           variant="primary"
           onClick={onApprove}
-          disabled={approvalStatus === 'checking' || approvalStatus === 'approving'}
+          disabled={approvalStatus === 'checking'}
           className="w-full"
         >
           {approvalStatus === 'checking'

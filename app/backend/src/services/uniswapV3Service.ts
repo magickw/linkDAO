@@ -6,7 +6,7 @@ import { IUniswapV3Service, SwapQuote, SwapParams, SwapResult, LiquidityInfo } f
 
 export class UniswapV3Service implements IUniswapV3Service {
   private provider: ethers.JsonRpcProvider;
-  private alphaRouter: AlphaRouter;
+  private alphaRouter: AlphaRouter | null = null;
   private chainId: number;
   private quoterAddress: string;
   private routerAddress: string;
@@ -22,16 +22,27 @@ export class UniswapV3Service implements IUniswapV3Service {
     this.quoterAddress = quoterAddress;
     this.routerAddress = routerAddress;
     
-    this.alphaRouter = new AlphaRouter({
-      chainId: this.chainId,
-      provider: this.provider,
-    });
+    // Try to initialize AlphaRouter, but handle compatibility issues gracefully
+    try {
+      this.alphaRouter = new AlphaRouter({
+        chainId: this.chainId,
+        provider: this.provider,
+      });
+    } catch (error) {
+      console.warn('Failed to initialize AlphaRouter, DEX swap functionality will be limited:', error);
+      this.alphaRouter = null;
+    }
   }
 
   /**
    * Get a quote for swapping tokens
    */
   async getSwapQuote(params: SwapParams): Promise<SwapQuote> {
+    // If AlphaRouter is not available, throw an error
+    if (!this.alphaRouter) {
+      throw new Error('DEX swap functionality is not available due to initialization issues');
+    }
+
     try {
       const { tokenIn, tokenOut, amountIn, slippageTolerance = 0.5 } = params;
 
@@ -188,6 +199,12 @@ export class UniswapV3Service implements IUniswapV3Service {
    * Handle swap failures and provide alternatives
    */
   async handleSwapFailure(params: SwapParams, error: Error): Promise<SwapQuote[]> {
+    // If AlphaRouter is not available, return empty array
+    if (!this.alphaRouter) {
+      console.warn('DEX swap functionality not available, cannot provide alternatives');
+      return [];
+    }
+
     console.log('Handling swap failure, looking for alternatives...');
     
     const alternatives: SwapQuote[] = [];

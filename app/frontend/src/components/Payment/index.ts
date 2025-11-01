@@ -23,5 +23,9 @@ export {
   TokenApprovalStatus
 } from './TokenApprovalFlow';
 
+export { StripeProvider, useStripeConfigured } from './StripeProvider';
+export { StripePaymentForm, StandaloneStripePaymentForm } from './StripePaymentForm';
+export { StripeCheckout } from './StripeCheckout';
+
 // Re-export types
 export type { UserFriendlyError } from '../../services/paymentErrorMessages';
