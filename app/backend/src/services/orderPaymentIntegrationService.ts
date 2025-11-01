@@ -4,6 +4,7 @@ import { NotificationService } from './notificationService';
 import { PaymentValidationService } from './paymentValidationService';
 import { EnhancedEscrowService } from './enhancedEscrowService';
 import { EnhancedFiatPaymentService } from './enhancedFiatPaymentService';
+import { ReceiptService } from './receiptService';
 import { ethers } from 'ethers';
 
 export interface PaymentTransaction {
@@ -101,6 +102,7 @@ export class OrderPaymentIntegrationService {
   private paymentValidationService: PaymentValidationService;
   private enhancedEscrowService: EnhancedEscrowService;
   private enhancedFiatPaymentService: EnhancedFiatPaymentService;
+  private receiptService: ReceiptService;
   private provider: ethers.JsonRpcProvider;
 
   constructor() {
@@ -113,6 +115,7 @@ export class OrderPaymentIntegrationService {
       process.env.MARKETPLACE_CONTRACT_ADDRESS || ''
     );
     this.enhancedFiatPaymentService = new EnhancedFiatPaymentService();
+    this.receiptService = new ReceiptService();
     this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://localhost:8545');
   }
 
@@ -439,47 +442,61 @@ export class OrderPaymentIntegrationService {
   /**
    * Generate payment receipt
    */
-  async generatePaymentReceipt(transactionId: string): Promise<PaymentReceipt> {
+  async generatePaymentReceipt(transactionId: string): Promise<any> {
     try {
       const transaction = await this.getPaymentTransaction(transactionId);
       if (!transaction) {
         throw new Error('Payment transaction not found');
       }
 
-      const receiptNumber = `RCP-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      // Get order details for receipt generation
+      const order = await this.databaseService.getOrderById(parseInt(transaction.orderId));
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      // Get order items for receipt
+      const orderItems = await this.databaseService.getOrderItems(parseInt(transaction.orderId));
       
-      const receipt: PaymentReceipt = {
-        id: `receipt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        transactionId,
+      // Format items for receipt
+      const receiptItems = orderItems.map(item => ({
+        id: item.id.toString(),
+        name: item.title || `Order #${transaction.orderId}`,
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || transaction.amount,
+        totalPrice: item.totalPrice || transaction.amount
+      }));
+
+      // Generate marketplace receipt
+      const receipt = await this.receiptService.generateMarketplaceReceipt({
         orderId: transaction.orderId,
-        receiptNumber,
-        paymentMethod: transaction.paymentMethod,
+        transactionId: transaction.id,
+        buyerAddress: order.buyerAddress || '',
         amount: transaction.amount,
         currency: transaction.currency,
+        paymentMethod: transaction.paymentMethod,
+        transactionHash: transaction.transactionHash,
+        status: 'completed',
+        items: receiptItems,
         fees: {
           processing: transaction.processingFee,
           platform: transaction.platformFee,
+          gas: transaction.metadata?.gasFee,
           total: transaction.totalFees
         },
-        transactionDetails: {
-          hash: transaction.transactionHash,
-          paymentIntentId: transaction.paymentIntentId,
-          escrowAddress: transaction.escrowId
-        },
-        timestamp: new Date(),
-        receiptUrl: await this.generateReceiptUrl(receiptNumber),
+        sellerAddress: order.sellerAddress,
+        sellerName: order.sellerName,
+        createdAt: new Date(),
+        completedAt: new Date(),
         metadata: transaction.metadata
-      };
-
-      // Store receipt
-      await this.storePaymentReceipt(receipt);
+      });
 
       // Update transaction with receipt URL
       await this.updateStoredPaymentTransaction(transactionId, {
-        receiptUrl: receipt.receiptUrl
+        receiptUrl: receipt.downloadUrl
       });
 
-      safeLogger.info(`🧾 Payment receipt ${receiptNumber} generated for transaction ${transactionId}`);
+      safeLogger.info(`🧾 Payment receipt ${receipt.receiptNumber} generated for transaction ${transactionId}`);
       return receipt;
 
     } catch (error) {

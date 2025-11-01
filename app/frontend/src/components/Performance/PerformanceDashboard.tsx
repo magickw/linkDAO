@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { performanceMonitoringService } from '../../services/performanceMonitoringService';
+import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 
 interface CoreWebVitals {
   lcp: number | null;
@@ -49,9 +50,11 @@ const PerformanceDashboard: React.FC = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'1h' | '24h' | '7d'>('24h');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [cacheStats, setCacheStats] = useState<any>(null);
+  const [cachePerformanceMetrics, setCachePerformanceMetrics] = useState<any>(null);
 
   // Update performance data
-  const updatePerformanceData = useCallback(() => {
+  const updatePerformanceData = useCallback(async () => {
     try {
       const vitals = performanceMonitoringService.getCoreWebVitals();
       setCoreWebVitals(vitals);
@@ -61,6 +64,17 @@ const PerformanceDashboard: React.FC = () => {
 
       const summary = performanceMonitoringService.getPerformanceSummary();
       setPerformanceSummary(summary);
+
+      // Get enhanced cache performance metrics
+      try {
+        const cacheMetrics = serviceWorkerCacheService.getPerformanceMetrics();
+        setCachePerformanceMetrics(cacheMetrics);
+
+        const stats = await serviceWorkerCacheService.getCacheStats();
+        setCacheStats(stats);
+      } catch (cacheError) {
+        console.warn('Failed to get cache performance metrics:', cacheError);
+      }
 
       setIsLoading(false);
     } catch (error) {
@@ -233,6 +247,34 @@ const PerformanceDashboard: React.FC = () => {
           >
             Refresh
           </button>
+          <button
+            onClick={async () => {
+              try {
+                await serviceWorkerCacheService.flushOfflineQueue();
+                updatePerformanceData();
+              } catch (error) {
+                console.error('Failed to flush offline queue:', error);
+              }
+            }}
+            className="px-3 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+          >
+            Sync Queue
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm('Are you sure you want to clear all caches? This will remove all cached data.')) {
+                try {
+                  await serviceWorkerCacheService.clearAllCaches();
+                  updatePerformanceData();
+                } catch (error) {
+                  console.error('Failed to clear caches:', error);
+                }
+              }
+            }}
+            className="px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
+          >
+            Clear Cache
+          </button>
         </div>
       </div>
 
@@ -269,6 +311,66 @@ const PerformanceDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Cache Performance Metrics */}
+      {cachePerformanceMetrics && (
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Cache Performance</h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {(cachePerformanceMetrics.summary.hitRates.overall?.ratio * 100 || 0).toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-500">Overall Hit Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {cachePerformanceMetrics.summary.preload.successRate.toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-500">Preload Success</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {cacheStats?.sync?.queueSize || 0}
+                </div>
+                <div className="text-sm text-gray-500">Sync Queue</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {formatBytes(cacheStats?.storage?.used || 0)}
+                </div>
+                <div className="text-sm text-gray-500">Cache Storage</div>
+              </div>
+            </div>
+            
+            {/* Cache Hit Rates by Type */}
+            <div className="mt-6">
+              <h4 className="font-medium text-gray-900 mb-3">Hit Rates by Cache Type</h4>
+              <div className="space-y-2">
+                {Object.entries(cachePerformanceMetrics.summary.hitRates).map(([cacheType, stats]: [string, any]) => (
+                  <div key={cacheType} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 capitalize">{cacheType}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full" 
+                          style={{ width: `${(stats.ratio || 0) * 100}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium w-12 text-right">
+                        {((stats.ratio || 0) * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Performance Summary */}
       {performanceSummary && (

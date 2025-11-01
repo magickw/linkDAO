@@ -1714,6 +1714,156 @@ export class DatabaseService {
     }
   }
 
+  /**
+   * Create receipt record
+   */
+  async createReceipt(receiptData: {
+    id: string;
+    type: string;
+    orderId?: string;
+    transactionId?: string;
+    buyerAddress: string;
+    amount: string;
+    currency: string;
+    paymentMethod: string;
+    transactionHash?: string;
+    status: string;
+    items?: string;
+    fees?: string;
+    sellerAddress?: string;
+    sellerName?: string;
+    receiptNumber: string;
+    downloadUrl: string;
+    createdAt: Date;
+    completedAt?: Date;
+    metadata?: string;
+  }): Promise<any> {
+    try {
+      // In a real implementation with a database, this would insert into the receipts table
+      // For now, we'll store in memory for demonstration
+      const receipt = {
+        id: receiptData.id,
+        type: receiptData.type,
+        orderId: receiptData.orderId,
+        transactionId: receiptData.transactionId,
+        buyerAddress: receiptData.buyerAddress,
+        amount: receiptData.amount,
+        currency: receiptData.currency,
+        paymentMethod: receiptData.paymentMethod,
+        transactionHash: receiptData.transactionHash,
+        status: receiptData.status,
+        items: receiptData.items,
+        fees: receiptData.fees,
+        sellerAddress: receiptData.sellerAddress,
+        sellerName: receiptData.sellerName,
+        receiptNumber: receiptData.receiptNumber,
+        downloadUrl: receiptData.downloadUrl,
+        createdAt: receiptData.createdAt,
+        completedAt: receiptData.completedAt,
+        metadata: receiptData.metadata
+      };
+      
+      // Store in a mock database (in real implementation, this would be an actual DB insert)
+      if (!(global as any).mockReceipts) {
+        (global as any).mockReceipts = [];
+      }
+      (global as any).mockReceipts.push(receipt);
+      
+      safeLogger.info(`Created receipt ${receiptData.receiptNumber} of type ${receiptData.type}`);
+      return receipt;
+    } catch (error) {
+      safeLogger.error('Error creating receipt:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get receipt by ID
+   */
+  async getReceiptById(receiptId: string): Promise<any | null> {
+    try {
+      // In a real implementation, this would query the database
+      const mockReceipts = (global as any).mockReceipts || [];
+      const receipt = mockReceipts.find((r: any) => r.id === receiptId);
+      
+      if (receipt) {
+        safeLogger.info(`Retrieved receipt ${receiptId}`);
+        return receipt;
+      }
+      
+      safeLogger.info(`Receipt ${receiptId} not found`);
+      return null;
+    } catch (error) {
+      safeLogger.error('Error getting receipt by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get receipts by user address
+   */
+  async getReceiptsByUser(userAddress: string, limit: number = 50, offset: number = 0): Promise<any[]> {
+    try {
+      // In a real implementation, this would query the database
+      const mockReceipts = (global as any).mockReceipts || [];
+      const userReceipts = mockReceipts
+        .filter((r: any) => r.buyerAddress === userAddress)
+        .slice(offset, offset + limit);
+      
+      safeLogger.info(`Retrieved ${userReceipts.length} receipts for user ${userAddress}`);
+      return userReceipts;
+    } catch (error) {
+      safeLogger.error('Error getting receipts by user:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get receipts by order ID
+   */
+  async getReceiptsByOrderId(orderId: string): Promise<any[]> {
+    try {
+      // In a real implementation, this would query the database
+      const mockReceipts = (global as any).mockReceipts || [];
+      const orderReceipts = mockReceipts.filter((r: any) => r.orderId === orderId);
+      
+      safeLogger.info(`Retrieved ${orderReceipts.length} receipts for order ${orderId}`);
+      return orderReceipts;
+    } catch (error) {
+      safeLogger.error('Error getting receipts by order ID:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update receipt status
+   */
+  async updateReceiptStatus(receiptId: string, status: string, metadata?: any): Promise<boolean> {
+    try {
+      // In a real implementation, this would update the database record
+      const mockReceipts = (global as any).mockReceipts || [];
+      const receiptIndex = mockReceipts.findIndex((r: any) => r.id === receiptId);
+      
+      if (receiptIndex !== -1) {
+        mockReceipts[receiptIndex].status = status;
+        if (metadata) {
+          mockReceipts[receiptIndex].metadata = {
+            ...mockReceipts[receiptIndex].metadata,
+            ...metadata
+          };
+        }
+        safeLogger.info(`Updated receipt ${receiptId} status to ${status}`);
+        return true;
+      }
+      
+      safeLogger.warn(`Receipt ${receiptId} not found for status update`);
+      return false;
+    } catch (error) {
+      safeLogger.error('Error updating receipt status:', error);
+      return false;
+    }
+  }
+
   async createAdminNotification(notification: any) {
     try {
       const [created] = await this.db.insert(schema.admin_notifications).values({

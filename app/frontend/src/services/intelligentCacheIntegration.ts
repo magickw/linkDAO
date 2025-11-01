@@ -3,6 +3,7 @@ import { IntelligentSellerCache, createIntelligentSellerCache } from './intellig
 import { CachePerformanceMonitor, createCachePerformanceMonitor } from './cachePerformanceMonitor';
 import { CacheOptimizationService, createCacheOptimizationService } from './cacheOptimizationService';
 import { SellerCacheManager, createSellerCacheManager } from './sellerCacheManager';
+import { serviceWorkerCacheService } from './serviceWorkerCacheService';
 
 // Integration configuration
 export interface IntelligentCacheConfig {
@@ -141,6 +142,9 @@ export class IntelligentCacheIntegration {
     }
 
     try {
+      // Initialize enhanced service worker cache service
+      await serviceWorkerCacheService.initialize();
+
       // Start performance monitoring
       if (this.config.monitoring?.enabled) {
         this.performanceMonitor.startMonitoring(this.config.monitoring.intervalMs);
@@ -192,7 +196,28 @@ export class IntelligentCacheIntegration {
     fallbackFn?: () => Promise<T>
   ): Promise<T | null> {
     try {
-      // Try intelligent cache first
+      // Try enhanced service worker cache first
+      const cacheUrl = `/api/seller/${dataType}/${walletAddress}`;
+      try {
+        const response = await serviceWorkerCacheService.fetchWithStrategy(
+          cacheUrl,
+          'NetworkFirst',
+          {
+            tags: ['seller', dataType, walletAddress],
+            userScope: walletAddress,
+            maxAge: 300000 // 5 minutes
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          return data;
+        }
+      } catch (swError) {
+        console.warn('[IntelligentCacheIntegration] Service worker cache failed, falling back:', swError);
+      }
+
+      // Try intelligent cache
       const cachedData = await this.intelligentCache.get<T>(dataType, walletAddress);
       
       if (cachedData) {
@@ -213,6 +238,16 @@ export class IntelligentCacheIntegration {
         const freshData = await fallbackFn();
         if (freshData) {
           await this.intelligentCache.set(`${dataType}:${walletAddress}`, freshData);
+          
+          // Also store in service worker cache
+          const response = new Response(JSON.stringify(freshData), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+          await serviceWorkerCacheService.putWithMetadata(cacheUrl, response, {
+            tags: ['seller', dataType, walletAddress],
+            userScope: walletAddress,
+            ttl: 300000
+          });
         }
         return freshData;
       }
@@ -256,6 +291,21 @@ export class IntelligentCacheIntegration {
    */
   async invalidateSellerCache(walletAddress: string, dataTypes?: string[]): Promise<void> {
     try {
+      // Invalidate in enhanced service worker cache using tags
+      const tagsToInvalidate = ['seller', walletAddress];
+      if (dataTypes) {
+        tagsToInvalidate.push(...dataTypes);
+      }
+      
+      await serviceWorkerCacheService.invalidateByTag('seller');
+      await serviceWorkerCacheService.invalidateByTag(walletAddress);
+      
+      if (dataTypes) {
+        for (const dataType of dataTypes) {
+          await serviceWorkerCacheService.invalidateByTag(dataType);
+        }
+      }
+
       // Invalidate in intelligent cache
       if (dataTypes) {
         for (const dataType of dataTypes) {

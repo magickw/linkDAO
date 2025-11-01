@@ -8,14 +8,29 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
-  // Webpack configuration
-  webpack: (config) => {
+  // Webpack configuration with Workbox integration
+  webpack: (config, { isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
     };
+
+    // Add Workbox webpack plugin for service worker generation
+    if (!isServer) {
+      const WorkboxPlugin = require('workbox-webpack-plugin');
+      
+      config.plugins.push(
+        new WorkboxPlugin.InjectManifest({
+          swSrc: './public/sw-simple.js',
+          swDest: '../public/sw-precache.js',
+          exclude: [/\.map$/, /manifest$/, /\.htaccess$/],
+          maximumFileSizeToCacheInBytes: 5000000, // 5MB
+        })
+      );
+    }
+
     return config;
   },
 

@@ -3,6 +3,7 @@ import { ServiceWorkerUtil } from '../utils/serviceWorker';
 import { performanceMonitor } from '../utils/performanceMonitor';
 import { lighthouseOptimizer } from '../utils/lighthouseOptimization';
 import { cdnService } from '../services/cdnService';
+import { serviceWorkerCacheService } from '../services/serviceWorkerCacheService';
 import PWAInstallPrompt from './PWAInstallPrompt';
 
 interface PWAContextType {
@@ -14,6 +15,8 @@ interface PWAContextType {
   install: () => Promise<boolean>;
   updateAvailable: boolean;
   updateApp: () => void;
+  cacheUpdateAvailable: boolean;
+  refreshCache: () => void;
 }
 
 const PWAContext = createContext<PWAContextType | undefined>(undefined);
@@ -37,8 +40,10 @@ export function PWAProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [performanceScore, setPerformanceScore] = useState(0);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [cacheUpdateAvailable, setCacheUpdateAvailable] = useState(false);
   const [swUtil, setSwUtil] = useState<ServiceWorkerUtil | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [broadcastChannel, setBroadcastChannel] = useState<BroadcastChannel | null>(null);
 
   useEffect(() => {
     initializePWA();
@@ -47,6 +52,9 @@ export function PWAProvider({
   const initializePWA = async () => {
     try {
       setIsLoading(true);
+
+      // Initialize enhanced service worker cache service
+      await serviceWorkerCacheService.initialize();
 
       // Initialize service worker
       const serviceWorkerUtil = new ServiceWorkerUtil({
@@ -64,6 +72,9 @@ export function PWAProvider({
 
       await serviceWorkerUtil.init();
       setSwUtil(serviceWorkerUtil);
+
+      // Set up BroadcastChannel for cache update notifications
+      setupBroadcastChannel();
 
       // Check installation status
       checkInstallationStatus();
@@ -126,6 +137,39 @@ export function PWAProvider({
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+  };
+
+  const setupBroadcastChannel = () => {
+    if ('BroadcastChannel' in window) {
+      const channel = new BroadcastChannel('pwa-updates');
+      setBroadcastChannel(channel);
+
+      channel.addEventListener('message', (event) => {
+        const { type, data } = event.data;
+        
+        switch (type) {
+          case 'CACHE_UPDATED':
+            setCacheUpdateAvailable(true);
+            console.log('Cache update available:', data);
+            break;
+          case 'CACHE_INVALIDATED':
+            console.log('Cache invalidated:', data);
+            break;
+          case 'SW_UPDATE_AVAILABLE':
+            setUpdateAvailable(true);
+            console.log('Service worker update available');
+            break;
+          case 'CONTENT_UPDATED':
+            setCacheUpdateAvailable(true);
+            console.log('Content updated:', data);
+            break;
+        }
+      });
+
+      return () => {
+        channel.close();
+      };
+    }
   };
 
   const setupInstallPrompt = () => {
@@ -234,6 +278,22 @@ export function PWAProvider({
     }
   };
 
+  const refreshCache = () => {
+    // Notify service worker to refresh cache
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({
+        type: 'REFRESH_CACHE',
+        timestamp: Date.now()
+      });
+    }
+    
+    // Clear cache update notification
+    setCacheUpdateAvailable(false);
+    
+    // Reload the page to get fresh content
+    window.location.reload();
+  };
+
   const contextValue: PWAContextType = {
     isOnline,
     isInstalled,
@@ -242,7 +302,9 @@ export function PWAProvider({
     performanceScore,
     install,
     updateAvailable,
-    updateApp
+    updateApp,
+    cacheUpdateAvailable,
+    refreshCache
   };
 
   return (
@@ -260,6 +322,11 @@ export function PWAProvider({
       {/* Update Available Notification */}
       {updateAvailable && (
         <UpdateNotification onUpdate={updateApp} />
+      )}
+
+      {/* Cache Update Available Notification */}
+      {cacheUpdateAvailable && (
+        <CacheUpdateNotification onRefresh={refreshCache} />
       )}
 
       {/* Offline Indicator */}
@@ -293,6 +360,38 @@ function UpdateNotification({ onUpdate }: { onUpdate: () => void }) {
             className="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100"
           >
             Update
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Cache update notification component
+function CacheUpdateNotification({ onRefresh }: { onRefresh: () => void }) {
+  const [show, setShow] = useState(true);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96">
+      <div className="bg-green-600 text-white p-4 rounded-lg shadow-lg flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium">New content available</span>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShow(false)}
+            className="text-white/80 hover:text-white text-sm"
+          >
+            Later
+          </button>
+          <button
+            onClick={onRefresh}
+            className="bg-white text-green-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100"
+          >
+            Refresh
           </button>
         </div>
       </div>

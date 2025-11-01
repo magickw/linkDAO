@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { receiptService } from '../../services/receiptService';
 
 interface SuccessConfirmationProps {
   isVisible: boolean;
@@ -234,7 +235,34 @@ export const PaymentSuccess: React.FC<{
   onViewReceipt: () => void;
   paymentMethod: string;
   amount: string;
-}> = ({ isVisible, onClose, onViewReceipt, paymentMethod, amount }) => {
+  receiptId?: string;
+}> = ({ isVisible, onClose, onViewReceipt, paymentMethod, amount, receiptId }) => {
+  const handleViewReceipt = async () => {
+    if (receiptId) {
+      try {
+        // Try to get the receipt and open it in a new tab
+        const receipt = await receiptService.getReceiptById(receiptId);
+        if (receipt) {
+          // Open receipt in new tab
+          const newWindow = window.open(receipt.downloadUrl, '_blank');
+          if (!newWindow) {
+            // Fallback to callback if popup blocked
+            onViewReceipt();
+          }
+        } else {
+          // Fallback to callback if receipt not found
+          onViewReceipt();
+        }
+      } catch (error) {
+        // Fallback to callback if there's an error
+        onViewReceipt();
+      }
+    } else {
+      // Fallback to callback if no receipt ID
+      onViewReceipt();
+    }
+  };
+
   return (
     <SuccessConfirmation
       isVisible={isVisible}
@@ -243,7 +271,7 @@ export const PaymentSuccess: React.FC<{
       nextSteps={[
         {
           label: 'View Receipt',
-          action: onViewReceipt,
+          action: handleViewReceipt,
           primary: true
         }
       ]}

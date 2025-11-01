@@ -1,9 +1,13 @@
-// Service Worker registration and management utilities
+// Service Worker registration and management utilities with Workbox compatibility
+
+import { serviceWorkerCacheService } from '../services/serviceWorkerCacheService';
 
 interface ServiceWorkerConfig {
   onUpdate?: (registration: ServiceWorkerRegistration) => void;
   onSuccess?: (registration: ServiceWorkerRegistration) => void;
   onError?: (error: Error) => void;
+  useEnhanced?: boolean;
+  enableWorkbox?: boolean;
 }
 
 class ServiceWorkerManager {
@@ -14,19 +18,30 @@ class ServiceWorkerManager {
     this.config = config;
   }
 
-  // Register the service worker
-  async register(): Promise<ServiceWorkerRegistration | null> {
+  // Register the enhanced service worker with Workbox support
+  async register(useEnhanced: boolean = true): Promise<ServiceWorkerRegistration | null> {
     if (!('serviceWorker' in navigator)) {
       console.log('Service Worker not supported');
       return null;
     }
 
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
+      // Use enhanced service worker with Workbox by default
+      const swPath = useEnhanced && this.config.enableWorkbox !== false ? '/sw-enhanced.js' : '/sw.js';
+      const registration = await navigator.serviceWorker.register(swPath, {
         scope: '/'
       });
 
       this.registration = registration;
+
+      // Initialize enhanced cache service if using enhanced SW
+      if (useEnhanced && this.config.enableWorkbox !== false) {
+        try {
+          await serviceWorkerCacheService.initialize();
+        } catch (cacheError) {
+          console.warn('Enhanced cache service initialization failed:', cacheError);
+        }
+      }
 
       // Handle updates
       registration.addEventListener('updatefound', () => {
@@ -38,6 +53,15 @@ class ServiceWorkerManager {
             if (navigator.serviceWorker.controller) {
               // New content available
               this.config.onUpdate?.(registration);
+              
+              // Notify via BroadcastChannel if available
+              if ('BroadcastChannel' in window) {
+                const updateChannel = new BroadcastChannel('pwa-updates');
+                updateChannel.postMessage({
+                  type: 'SW_UPDATE_AVAILABLE',
+                  timestamp: Date.now()
+                });
+              }
             } else {
               // Content cached for first time
               this.config.onSuccess?.(registration);
@@ -50,6 +74,11 @@ class ServiceWorkerManager {
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         window.location.reload();
       });
+
+      // Set up message handling for enhanced features
+      if (useEnhanced && this.config.enableWorkbox !== false) {
+        this.setupEnhancedMessageHandling();
+      }
 
       console.log('Service Worker registered successfully');
       return registration;
@@ -110,6 +139,74 @@ class ServiceWorkerManager {
   // Get current registration
   getRegistration(): ServiceWorkerRegistration | null {
     return this.registration;
+  }
+
+  // Set up enhanced message handling for Workbox features
+  private setupEnhancedMessageHandling(): void {
+    if (!navigator.serviceWorker) return;
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      const { type, data } = event.data;
+
+      switch (type) {
+        case 'CACHE_UPDATED':
+          // Notify about cache updates
+          if ('BroadcastChannel' in window) {
+            const cacheChannel = new BroadcastChannel('pwa-updates');
+            cacheChannel.postMessage({
+              type: 'CACHE_UPDATED',
+              data
+            });
+          }
+          break;
+        case 'OFFLINE_FALLBACK':
+          console.log('Offline fallback activated:', data);
+          break;
+        case 'BACKGROUND_SYNC':
+          console.log('Background sync event:', data);
+          break;
+      }
+    });
+  }
+
+  // Send message to service worker
+  async sendMessage(message: any): Promise<any> {
+    if (!this.registration?.active) {
+      throw new Error('No active service worker');
+    }
+
+    return new Promise((resolve, reject) => {
+      const messageChannel = new MessageChannel();
+      
+      messageChannel.port1.onmessage = (event) => {
+        if (event.data.error) {
+          reject(new Error(event.data.error));
+        } else {
+          resolve(event.data);
+        }
+      };
+
+      this.registration!.active!.postMessage(message, [messageChannel.port2]);
+    });
+  }
+
+  // Get cache statistics from enhanced service worker
+  async getCacheStats(): Promise<any> {
+    try {
+      return await this.sendMessage({ type: 'GET_CACHE_STATS' });
+    } catch (error) {
+      console.warn('Failed to get cache stats from service worker:', error);
+      return null;
+    }
+  }
+
+  // Trigger cache cleanup
+  async cleanupCache(): Promise<void> {
+    try {
+      await this.sendMessage({ type: 'CLEANUP_CACHE' });
+    } catch (error) {
+      console.warn('Failed to trigger cache cleanup:', error);
+    }
   }
 }
 
@@ -408,34 +505,46 @@ export class ServiceWorkerUtil {
   private networkStatus: NetworkStatusManager;
 
   constructor(config: ServiceWorkerConfig = {}) {
-    this.swManager = new ServiceWorkerManager(config);
+    this.swManager = new ServiceWorkerManager({
+      ...config,
+      enableWorkbox: config.enableWorkbox !== false // Default to true
+    });
     this.offlineStorage = new OfflineStorageManager();
     this.networkStatus = new NetworkStatusManager();
   }
 
-  // Initialize all services
+  // Initialize all services with enhanced cache integration
   async init(): Promise<void> {
     try {
       // Initialize offline storage
       await this.offlineStorage.init();
 
-      // Register service worker
-      const registration = await this.swManager.register();
+      // Register service worker (enhanced by default)
+      const registration = await this.swManager.register(true);
       
       if (registration) {
         this.backgroundSync = new BackgroundSyncManager(registration);
       }
 
-      // Setup network status monitoring
-      this.networkStatus.addListener((isOnline) => {
-        if (isOnline && this.backgroundSync) {
-          // Trigger sync when back online
-          this.backgroundSync.registerPostSync();
-          this.backgroundSync.registerReactionSync();
+      // Setup network status monitoring with enhanced sync
+      this.networkStatus.addListener(async (isOnline) => {
+        if (isOnline) {
+          // Trigger enhanced offline queue flush
+          try {
+            await serviceWorkerCacheService.flushOfflineQueue();
+          } catch (error) {
+            console.warn('Enhanced offline queue flush failed:', error);
+          }
+
+          // Fallback to traditional background sync
+          if (this.backgroundSync) {
+            this.backgroundSync.registerPostSync();
+            this.backgroundSync.registerReactionSync();
+          }
         }
       });
 
-      console.log('Service Worker utilities initialized');
+      console.log('Service Worker utilities initialized with enhanced features');
     } catch (error) {
       console.error('Service Worker initialization failed:', error);
       throw error;

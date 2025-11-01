@@ -118,7 +118,7 @@ try {
 
 const app = express();
 const httpServer = createServer(app);
-const PORT = process.env.PORT || 10000;
+const PORT = parseInt(process.env.PORT || '10000', 10);
 
 // Reduce database pool size for memory-constrained environments
 const maxConnections = process.env.RENDER ? 3 : 20; // Render free tier gets minimal pool
@@ -515,8 +515,6 @@ app.use('/api/shipping', daoShippingPartnersRouter);
 // Advanced analytics routes
 app.use('/api/analytics', advancedAnalyticsRouter);
 
-
-
 // Listing routes
 app.use('/api/listings', listingRoutes);
 
@@ -584,7 +582,26 @@ app.use('/api/support', supportTicketingRoutes);
 // Cache management routes
 app.use('/api/cache', cacheRoutes);
 
+// Import order event listener service
+import { orderEventListenerService } from './services/orderEventListenerService';
 
+// Import order event handler routes
+import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
+
+// Import x402 payment routes
+import x402PaymentRoutes from './routes/x402PaymentRoutes';
+
+// Import receipt routes
+import receiptRoutes from './routes/receiptRoutes';
+
+// Order event handler routes
+app.use('/api/order-events', orderEventHandlerRoutes);
+
+// x402 payment routes
+app.use('/api/x402', x402PaymentRoutes);
+
+// Receipt routes
+app.use('/api', receiptRoutes);
 
 // Marketplace search routes
 app.use('/api/marketplace/search', marketplaceSearchRoutes);
@@ -619,21 +636,6 @@ app.use('/api/member-behavior', memberBehaviorRoutes);
 
 // Use content performance routes
 app.use('/api/content-performance', contentPerformanceRoutes);
-
-// Import order event listener service
-import { orderEventListenerService } from './services/orderEventListenerService';
-
-// Import order event handler routes
-import orderEventHandlerRoutes from './routes/orderEventHandlerRoutes';
-
-// Import x402 payment routes
-import x402PaymentRoutes from './routes/x402PaymentRoutes';
-
-// Order event handler routes
-app.use('/api/order-events', orderEventHandlerRoutes);
-
-// x402 payment routes
-app.use('/api/x402', x402PaymentRoutes);
 
 // Marketplace messaging routes
 import marketplaceMessagingRoutes from './routes/marketplaceMessagingRoutes';

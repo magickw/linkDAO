@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { serviceWorkerCacheService } from '../../services/serviceWorkerCacheService';
 
 interface SyncAction {
   id: string;
@@ -71,9 +72,10 @@ export function OfflineSyncManager({
   const [syncQueue, setSyncQueue] = useState<SyncAction[]>([]);
   const [conflictResolution, setConflictResolution] = useState<Map<string, any>>(new Map());
 
-  // Initialize IndexedDB
+  // Initialize IndexedDB and enhanced cache service
   useEffect(() => {
     initializeDB();
+    initializeEnhancedSync();
   }, []);
 
   // Network status monitoring
@@ -136,6 +138,47 @@ export function OfflineSyncManager({
       updateSyncStats(existingActions);
     } catch (error) {
       console.error('Failed to initialize sync database:', error);
+    }
+  };
+
+  const initializeEnhancedSync = async () => {
+    try {
+      // Initialize enhanced service worker cache service if not already done
+      await serviceWorkerCacheService.initialize();
+      
+      // Set up BroadcastChannel for sync coordination
+      if ('BroadcastChannel' in window) {
+        const syncChannel = new BroadcastChannel('offline-sync');
+        
+        syncChannel.addEventListener('message', (event) => {
+          const { type, data } = event.data;
+          
+          switch (type) {
+            case 'SYNC_COMPLETED':
+              // Update sync stats when background sync completes
+              setSyncStats(prev => ({
+                ...prev,
+                lastSyncTime: Date.now(),
+                syncInProgress: false
+              }));
+              break;
+            case 'SYNC_FAILED':
+              console.warn('Background sync failed:', data);
+              break;
+            case 'QUEUE_UPDATED':
+              // Refresh queue when updated from service worker
+              if (db) {
+                loadSyncQueue(db).then(actions => {
+                  setSyncQueue(actions);
+                  updateSyncStats(actions);
+                });
+              }
+              break;
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to initialize enhanced sync:', error);
     }
   };
 
@@ -248,6 +291,9 @@ export function OfflineSyncManager({
     setSyncStats(prev => ({ ...prev, syncInProgress: true }));
 
     try {
+      // Use enhanced service worker cache service for offline queue management
+      await serviceWorkerCacheService.flushOfflineQueue();
+
       // Get actions to sync (respecting batch size)
       const actionsToSync = syncQueue
         .filter(action => action.status === 'pending')
@@ -318,8 +364,30 @@ export function OfflineSyncManager({
       // Store sync history
       await storeSyncHistory(completedActions.length, failedActions.length);
 
+      // Notify other tabs about sync completion
+      if ('BroadcastChannel' in window) {
+        const syncChannel = new BroadcastChannel('offline-sync');
+        syncChannel.postMessage({
+          type: 'SYNC_COMPLETED',
+          data: {
+            completed: completedActions.length,
+            failed: failedActions.length,
+            timestamp: Date.now()
+          }
+        });
+      }
+
     } catch (error) {
       console.error('Sync operation failed:', error);
+      
+      // Notify other tabs about sync failure
+      if ('BroadcastChannel' in window) {
+        const syncChannel = new BroadcastChannel('offline-sync');
+        syncChannel.postMessage({
+          type: 'SYNC_FAILED',
+          data: { error: error instanceof Error ? error.message : 'Unknown error', timestamp: Date.now() }
+        });
+      }
     } finally {
       setSyncStats(prev => ({ 
         ...prev, 

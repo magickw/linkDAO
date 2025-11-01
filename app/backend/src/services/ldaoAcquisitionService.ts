@@ -12,6 +12,8 @@ import {
   StakingPosition
 } from '../types/ldaoAcquisition';
 import { LDAOAcquisitionConfigManager } from '../config/ldaoAcquisitionConfig';
+import { LDAOReceiptService } from './ldaoReceiptService';
+import { safeLogger } from '../utils/safeLogger';
 
 export interface IPaymentProcessor {
   processPayment(request: PurchaseRequest): Promise<PurchaseResult>;
@@ -53,6 +55,7 @@ export class LDAOAcquisitionService {
   private earningEngine?: IEarningEngine;
   private stakingService?: IStakingService;
   private pricingEngine?: IPricingEngine;
+  private receiptService: LDAOReceiptService;
 
   constructor(
     configManager: LDAOAcquisitionConfigManager,
@@ -72,6 +75,7 @@ export class LDAOAcquisitionService {
     this.earningEngine = dependencies.earningEngine;
     this.stakingService = dependencies.stakingService;
     this.pricingEngine = dependencies.pricingEngine;
+    this.receiptService = new LDAOReceiptService();
   }
 
   // Dependency injection setters
@@ -117,6 +121,30 @@ export class LDAOAcquisitionService {
 
     try {
       const result = await this.paymentProcessor.processPayment(request);
+      
+      // Generate receipt if purchase was successful
+      if (result.success && result.transactionId) {
+        try {
+          const quote = await this.getPriceQuote(request.amount, 'USD');
+          await this.receiptService.generateLDAOPurchaseReceipt({
+            transactionId: result.transactionId,
+            buyerAddress: request.userAddress,
+            amount: request.amount.toString(),
+            currency: 'USD',
+            paymentMethod: 'fiat',
+            tokensPurchased: result.estimatedTokens?.toString() || '0',
+            pricePerToken: quote.pricePerToken.toString(),
+            fees: {
+              processing: '0.30', // Standard Stripe fee
+              platform: (request.amount * 0.005).toString(), // 0.5% platform fee
+              total: (0.30 + (request.amount * 0.005)).toString()
+            }
+          });
+        } catch (receiptError) {
+          safeLogger.error('Error generating LDAO purchase receipt:', receiptError);
+        }
+      }
+      
       return result;
     } catch (error) {
       return {
@@ -139,12 +167,38 @@ export class LDAOAcquisitionService {
       
       // Here we would interact with the treasury contract
       // For now, return a mock successful result
-      return {
+      const result: PurchaseResult = {
         success: true,
         transactionId: `tx_${Date.now()}`,
         estimatedTokens: request.amount,
         finalPrice: quote.totalPrice,
       };
+      
+      // Generate receipt if purchase was successful
+      if (result.success && result.transactionId) {
+        try {
+          await this.receiptService.generateLDAOPurchaseReceipt({
+            transactionId: result.transactionId,
+            buyerAddress: request.userAddress,
+            amount: request.amount.toString(),
+            currency: request.paymentToken || 'ETH',
+            paymentMethod: 'crypto',
+            transactionHash: result.txHash,
+            tokensPurchased: result.estimatedTokens?.toString() || '0',
+            pricePerToken: quote.pricePerToken.toString(),
+            fees: {
+              processing: '0', // Crypto transactions don't have processing fees
+              platform: (request.amount * 0.005).toString(), // 0.5% platform fee
+              gas: '0.01', // Estimated gas fee
+              total: (request.amount * 0.005 + 0.01).toString()
+            }
+          });
+        } catch (receiptError) {
+          safeLogger.error('Error generating LDAO purchase receipt:', receiptError);
+        }
+      }
+      
+      return result;
     } catch (error) {
       return {
         success: false,

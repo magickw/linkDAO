@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useWeb3 } from '../../context/Web3Context';
 import { useToast } from '../../context/ToastContext';
+import { useCacheInvalidation } from '../../hooks/useCacheInvalidation';
 import { InlinePreviewRenderer } from '../InlinePreviews/InlinePreviewRenderer';
 import SocialProofIndicator from '../SocialProof/SocialProofIndicator';
 import TrendingBadge from '../TrendingBadge/TrendingBadge';
@@ -38,6 +39,7 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
 
   const { isConnected } = useWeb3();
   const { addToast } = useToast();
+  const { invalidateFeedCache, invalidateUserCache, invalidateCommunityCache } = useCacheInvalidation();
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -55,6 +57,14 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onTip) {
         await onTip(post.id, amount, token, message);
         addToast(`Successfully tipped ${amount} ${token}!`, 'success');
+        
+        // Invalidate feed cache to reflect updated tip counts
+        await invalidateFeedCache();
+        
+        // Invalidate user cache for tip history
+        if (post.author) {
+          await invalidateUserCache(post.author, ['tips', 'earnings']);
+        }
       }
       setShowTipModal(false);
     } catch (error) {
@@ -67,6 +77,14 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
       if (onShare) {
         await onShare(post.id, shareType, target);
         addToast('Post shared successfully!', 'success');
+        
+        // Invalidate feed cache to reflect updated share counts
+        await invalidateFeedCache();
+        
+        // If sharing to a community, invalidate community cache
+        if (shareType === 'community' && target) {
+          await invalidateCommunityCache(target, ['posts', 'activity']);
+        }
       }
       setShowShareModal(false);
     } catch (error) {
@@ -77,6 +95,13 @@ export const EnhancedPostCard: React.FC<EnhancedPostCardProps> = ({
   const handleBookmark = async () => {
     setIsBookmarked(!isBookmarked);
     addToast(isBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks', 'success');
+    
+    // Invalidate user cache for bookmarks
+    try {
+      await invalidateUserCache('current', ['bookmarks']);
+    } catch (error) {
+      console.warn('Failed to invalidate bookmark cache:', error);
+    }
   };
 
   const copyToClipboard = async () => {
