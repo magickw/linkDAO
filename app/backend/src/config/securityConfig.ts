@@ -5,6 +5,8 @@
  * covering authentication, authorization, encryption, and compliance settings.
  */
 
+import { safeLogger } from '../utils/safeLogger';
+
 export interface SecurityConfig {
   authentication: {
     jwtSecret: string;
