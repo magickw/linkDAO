@@ -1,13 +1,14 @@
-import { 
-  FiatPaymentRequest, 
-  FiatPaymentTransaction, 
-  FiatPaymentStatus, 
+import {
+  FiatPaymentRequest,
+  FiatPaymentTransaction,
+  FiatPaymentStatus,
   FiatPaymentMethod,
   PaymentMethodSetup,
   FiatPaymentReceipt,
   ComplianceData,
   ExchangeRate
 } from '../types/fiatPayment';
+import { PaymentError } from './paymentErrorHandler';
 import { ExchangeRateService } from './exchangeRateService';
 
 // Mock Stripe types (in real implementation, use @stripe/stripe-js)
@@ -91,8 +92,7 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Stripe payment processing failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Payment processing failed: ${errorMessage}`);
+      throw PaymentError.fromError(error);
     }
   }
 
@@ -142,8 +142,7 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Payment confirmation failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Payment confirmation failed: ${errorMessage}`);
+      throw PaymentError.fromError(error);
     }
   }
 
@@ -167,8 +166,7 @@ export class StripePaymentService {
       };
     } catch (error) {
       console.error('Payment method setup failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Payment method setup failed: ${errorMessage}`);
+      throw PaymentError.fromError(error);
     }
   }
 
@@ -185,8 +183,7 @@ export class StripePaymentService {
       return response.data.map((pm: StripePaymentMethod) => this.mapStripePaymentMethod(pm));
     } catch (error) {
       console.error('Failed to fetch payment methods:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to fetch payment methods: ${errorMessage}`);
+      throw PaymentError.fromError(error);
     }
   }
 
@@ -233,8 +230,7 @@ export class StripePaymentService {
       return transaction;
     } catch (error) {
       console.error('Refund failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Refund failed: ${errorMessage}`);
+      throw PaymentError.fromError(error);
     }
   }
 

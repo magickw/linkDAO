@@ -45,8 +45,13 @@ import {
   MarketConditions
 } from '@/types/paymentPrioritization';
 import { useDebounce } from '@/hooks/useDebounce';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/context/ToastContext';
+import { getNetworkName } from '@/config/escrowConfig';
 import { USDC_MAINNET, USDC_POLYGON, USDC_ARBITRUM, USDC_SEPOLIA, USDC_BASE, USDC_BASE_SEPOLIA } from '@/config/payment';
+import { PaymentError as PaymentErrorType } from '@/services/paymentErrorHandler';
+import { PaymentErrorModal } from '@/components/Payment/PaymentErrorModal';
+import { WalletConnectionPrompt } from '@/components/Payment/WalletConnectionPrompt';
+import Link from 'next/link';
 
 interface CheckoutFlowProps {
   onBack: () => void;
@@ -72,6 +77,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const chainId = useChainId();
+  const { addToast } = useToast();
 
   // State management
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('review');
@@ -81,6 +87,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderData, setOrderData] = useState<any>(null);
+  const [paymentError, setPaymentError] = useState<PaymentErrorType | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [useEscrow, setUseEscrow] = useState(true);
 
   // Services
   const [checkoutService] = useState(() => {
@@ -318,20 +327,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
     };
   };
 
-  const getNetworkName = (chainId: number): string => {
-    switch (chainId) {
-      case 1: return 'Ethereum';
-      case 137: return 'Polygon';
-      case 56: return 'BSC';
-      case 42161: return 'Arbitrum';
-      case 10: return 'Optimism';
-      case 8453: return 'Base';
-      case 11155111: return 'Sepolia';
-      case 84532: return 'Base Sepolia';
-      default: return `Chain ${chainId}`;
-    }
-  };
-
   const handlePaymentMethodSelect = async (method: PrioritizedPaymentMethod) => {
     setSelectedPaymentMethod(method);
     // Don't auto-advance - let user confirm their choice with Continue button
@@ -347,6 +342,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 
     setLoading(true);
     setError(null);
+    setPaymentError(null);
 
     try {
       // Create checkout request with selected payment method
@@ -367,7 +363,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       };
 
       // Process checkout with selected payment method
-      const result = await checkoutService.processPrioritizedCheckout(request);
+      const result = useEscrow && selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE
+        ? await checkoutService.processEscrowPayment(request)
+        : await checkoutService.processPrioritizedCheckout(request);
 
       if (result.status === 'completed' || result.status === 'processing') {
         setOrderData(result);
@@ -378,8 +376,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
       }
     } catch (err) {
       console.error('Checkout failed:', err);
-      setError(err instanceof Error ? err.message : 'Checkout failed. Please try again.');
-      toast.error('Checkout failed. Please try again.');
+
+      // Use PaymentError.fromError for intelligent error handling
+      const paymentErr = PaymentErrorType.fromError(err);
+      setPaymentError(paymentErr);
+      setShowErrorModal(true);
+
+      // Also show toast for immediate feedback
+      addToast(paymentErr.userMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -388,6 +392,68 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const handleProcessPayment = () => {
     setCurrentStep('processing');
     handlePaymentSubmit();
+  };
+
+  const handleRecoveryAction = async (action: string) => {
+    console.log('Recovery action:', action);
+    setShowErrorModal(false);
+
+    switch (action) {
+      case 'retry':
+        // Retry the payment
+        await handlePaymentSubmit();
+        break;
+
+      case 'connect_wallet':
+        // Navigate back to payment method selection
+        setCurrentStep('payment-method');
+        break;
+
+      case 'switch_to_fiat':
+        // Switch to fiat payment method
+        const fiatMethod = prioritizationResult?.prioritizedMethods.find(
+          m => m.method.type === PaymentMethodType.FIAT_STRIPE
+        );
+        if (fiatMethod) {
+          setSelectedPaymentMethod(fiatMethod);
+          setCurrentStep('payment-details');
+        }
+        break;
+
+      case 'switch_to_crypto':
+        // Switch to crypto payment method
+        const cryptoMethod = prioritizationResult?.prioritizedMethods.find(
+          m => m.method.type !== PaymentMethodType.FIAT_STRIPE && m.availabilityStatus === 'available'
+        );
+        if (cryptoMethod) {
+          setSelectedPaymentMethod(cryptoMethod);
+          setCurrentStep('payment-details');
+        }
+        break;
+
+      case 'add_funds':
+      case 'switch_token':
+        // Navigate back to payment method selection
+        setCurrentStep('payment-method');
+        addToast('Please select a different payment method', 'info');
+        break;
+
+      case 'contact_support':
+        // Open support in new tab
+        window.open('/support', '_blank');
+        break;
+
+      case 'wait_retry':
+        // Wait and retry after a delay
+        addToast('Please wait a few minutes before retrying', 'info');
+        setTimeout(() => {
+          handlePaymentSubmit();
+        }, 5 * 60 * 1000); // 5 minutes
+        break;
+
+      default:
+        console.warn('Unknown recovery action:', action);
+    }
   };
 
   const renderStepIndicator = () => {
@@ -580,90 +646,34 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
   const renderPaymentDetails = () => {
     if (!selectedPaymentMethod) return null;
 
-    const isCrypto = selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE;
+    const handleConnected = () => {
+      addToast('Wallet connected successfully!', 'success');
+    };
 
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Details</h2>
-          <p className="text-white/70">
-            Complete your {selectedPaymentMethod.method.name} payment
-          </p>
-        </div>
+    const handleError = (error: Error) => {
+      addToast(`Wallet connection failed: ${error.message}`, 'error');
+    };
 
-        {/* Selected Method Summary */}
-        <GlassPanel variant="secondary" className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${isCrypto ? 'bg-orange-500/20' : 'bg-blue-500/20'
-                }`}>
-                {isCrypto ? (
-                  <Wallet className="w-5 h-5 text-orange-400" />
-                ) : (
-                  <CreditCard className="w-5 h-5 text-blue-400" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-semibold text-white">{selectedPaymentMethod.method.name}</h3>
-                <p className="text-white/70 text-sm">{selectedPaymentMethod.method.description}</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="small"
-              onClick={() => setCurrentStep('payment-method')}
-              className="text-white border-white/30 hover:bg-white/10"
-            >
-              Change
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-white/60">Estimated Cost:</span>
-              <span className="text-white ml-2">${selectedPaymentMethod.costEstimate.totalCost.toFixed(2)}</span>
-            </div>
-            <div>
-              <span className="text-white/60">Confirmation Time:</span>
-              <span className="text-white ml-2">~{selectedPaymentMethod.costEstimate.estimatedTime} min</span>
-            </div>
-          </div>
-
-          {selectedPaymentMethod.warnings && selectedPaymentMethod.warnings.length > 0 && (
-            <div className="mt-3 p-3 bg-orange-500/20 border border-orange-500/30 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="w-4 h-4 text-orange-400" />
-                <span className="text-orange-400 text-sm font-medium">Warnings</span>
-              </div>
-              <ul className="text-orange-300 text-xs space-y-1">
-                {selectedPaymentMethod.warnings?.map((warning, index) => (
-                  <li key={index}>• {warning}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </GlassPanel>
-
-        {isCrypto ? (
-          <CryptoPaymentDetails
-            paymentMethod={selectedPaymentMethod}
-            onProceed={handleProcessPayment}
-          />
-        ) : (
-          <FiatPaymentDetails
-            paymentMethod={selectedPaymentMethod}
-            onProceed={handleProcessPayment}
-          />
-        )}
-
-        {error && (
-          <div className="flex items-center gap-3 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            <p className="text-red-400">{error}</p>
-          </div>
-        )}
-      </div>
-    );
+    if (selectedPaymentMethod.method.type !== PaymentMethodType.FIAT_STRIPE) {
+      return (
+        <CryptoPaymentDetails
+          paymentMethod={selectedPaymentMethod}
+          onProceed={handlePaymentSubmit}
+          useEscrow={useEscrow}
+          setUseEscrow={setUseEscrow}
+          onConnected={handleConnected}
+          onError={handleError}
+          isConnected={isConnected}
+        />
+      );
+    } else {
+      return (
+        <FiatPaymentDetails
+          paymentMethod={selectedPaymentMethod}
+          onProceed={handlePaymentSubmit}
+        />
+      );
+    }
   };
 
   const renderProcessing = () => (
@@ -720,6 +730,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
               <span className="text-white/70">Status:</span>
               <span className="text-green-400 capitalize">{orderData.status}</span>
             </div>
+            {orderData.escrowType === 'smart_contract' && orderData.transactionId && (
+              <div className="flex justify-between">
+                <span className="text-white/70">Escrow ID:</span>
+                <Link href={`/escrow/${orderData.transactionId}`}>
+                  <a className="text-blue-400 hover:underline">{orderData.transactionId}</a>
+                </Link>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-white/70">Estimated Completion:</span>
               <span className="text-white">
@@ -823,6 +841,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
           {renderOrderSummary()}
         </div>
       </div>
+
+      {/* Payment Error Modal */}
+      <PaymentErrorModal
+        error={paymentError}
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        onRecoveryAction={handleRecoveryAction}
+      />
     </div>
   );
 };
@@ -831,52 +857,23 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({ onBack, onComplete }
 const CryptoPaymentDetails: React.FC<{
   paymentMethod: PrioritizedPaymentMethod;
   onProceed: () => void;
-}> = ({ paymentMethod, onProceed }) => {
-  const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
-
-  const getNetworkName = (chainId: number): string => {
-    switch (chainId) {
-      case 1: return 'Ethereum';
-      case 137: return 'Polygon';
-      case 56: return 'BSC';
-      case 42161: return 'Arbitrum';
-      case 10: return 'Optimism';
-      default: return `Chain ${chainId}`;
-    }
-  };
-
+  useEscrow: boolean;
+  setUseEscrow: (use: boolean) => void;
+  onConnected: () => void;
+  onError: (error: Error) => void;
+  isConnected: boolean;
+}> = ({ paymentMethod, onProceed, useEscrow, setUseEscrow, onConnected, onError, isConnected }) => {
   return (
     <div className="space-y-6">
       <GlassPanel variant="secondary" className="p-6">
         <h3 className="font-semibold text-white mb-4">Wallet Connection</h3>
 
-        {isConnected ? (
-          <div className="flex items-center gap-3 p-4 bg-green-500/20 border border-green-500/30 rounded-lg">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            <div>
-              <p className="text-green-400 font-medium">Wallet Connected</p>
-              <p className="text-white/70 text-sm font-mono">{address}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-white/70">Connect your wallet to proceed with crypto payment</p>
-            <div className="grid grid-cols-1 gap-3">
-              {connectors.map((connector) => (
-                <Button
-                  key={connector.id}
-                  variant="outline"
-                  onClick={() => connect({ connector })}
-                  className="flex items-center gap-3"
-                >
-                  <Wallet className="w-4 h-4" />
-                  Connect {connector.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
+        <WalletConnectionPrompt
+          onConnected={onConnected}
+          onError={onError}
+          requiredNetwork={paymentMethod.method.chainId}
+          showNetworkWarning={true}
+        />
       </GlassPanel>
 
       <GlassPanel variant="secondary" className="p-6">
@@ -901,6 +898,18 @@ const CryptoPaymentDetails: React.FC<{
           <div className="flex justify-between">
             <span className="text-white/70">Escrow Type:</span>
             <span className="text-white">Smart Contract</span>
+          </div>
+          <div className="flex items-center justify-between mt-4">
+            <label htmlFor="useEscrow" className="text-white/70 flex items-center">
+              <input
+                id="useEscrow"
+                type="checkbox"
+                checked={useEscrow}
+                onChange={(e) => setUseEscrow(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600 bg-gray-800 border-gray-600 rounded focus:ring-blue-500 mr-2"
+              />
+              Use Escrow
+            </label>
           </div>
         </div>
       </GlassPanel>

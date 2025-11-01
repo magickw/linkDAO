@@ -2,11 +2,10 @@ import { EnhancedPost, FeedFilter, CommunityEngagementMetrics, LeaderboardEntry,
 import { requestManager } from './requestManager';
 import { convertBackendPostToPost } from '../models/Post';
 import { analyticsService } from './analyticsService';
+import { ENV_CONFIG } from '@/config/environment';
 
-// Use localhost:3004 for local development (backend port), fallback to environment variable or default
-const BACKEND_API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-  ? 'http://localhost:3004' 
-  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:10000');
+// Use centralized environment config to ensure consistent backend URL
+const BACKEND_API_BASE_URL = ENV_CONFIG.BACKEND_URL;
 
 // In-memory cache for feed data
 const feedCache = new Map<string, { data: any; timestamp: number; expiresAt: number }>();
@@ -179,6 +178,16 @@ export class FeedService {
           timestamp: new Date(),
           retryable: response.status >= 500 || response.status === 429
         };
+        
+        // For server errors, return empty feed instead of throwing
+        if (response.status >= 500) {
+          console.warn('Backend unavailable for feed, returning empty feed');
+          return {
+            posts: [],
+            hasMore: false,
+            totalPages: 0
+          };
+        }
         
         throw error;
       }

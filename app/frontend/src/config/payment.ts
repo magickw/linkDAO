@@ -177,6 +177,11 @@ export const getChainConfig = (chainId: number): ChainConfig | undefined => {
 
 // Payment configuration
 export const PAYMENT_CONFIG = {
+  // Escrow contract address
+  ESCROW_CONTRACT_ADDRESS: {
+    [sepolia.id]: '0xa5c2126de8CC1a998833E97CdE6d185aDb4B3AD1',
+  },
+
   // Transaction confirmation requirements
   CONFIRMATION_BLOCKS: {
     [mainnet.id]: 12,

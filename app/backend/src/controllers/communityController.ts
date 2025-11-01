@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { communityService } from '../services/communityService';
 import { apiResponse, createSuccessResponse, createErrorResponse } from '../utils/apiResponse';
+import { openaiService } from '../services/ai/openaiService';
 
 // Extend Request type to include user property
 interface AuthenticatedRequest extends Request {
@@ -280,6 +281,198 @@ export class CommunityController {
     } catch (error) {
       console.error('Error creating community post:', error);
       res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create post'));
+    }
+  }
+
+  // AI-assisted post creation
+  async createAIAssistedPost(req: Request, res: Response): Promise<void> {
+    try {
+      const userAddress = (req as AuthenticatedRequest).user?.address;
+      if (!userAddress) {
+        res.status(401).json(createErrorResponse('UNAUTHORIZED', 'Authentication required', 401));
+        return;
+      }
+
+      const { id } = req.params;
+      const { 
+        title, 
+        content, 
+        mediaUrls = [], 
+        tags = [], 
+        postType,
+        aiAction,
+        communityContext 
+      } = req.body;
+
+      // Validate required fields
+      if (!content) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', 'Content is required', 400));
+        return;
+      }
+
+      // If this is an AI assistance request (not actual post creation)
+      if (aiAction) {
+        // Handle AI assistance requests
+        const aiResult = await this.handleAIPostAssistance({
+          aiAction,
+          title,
+          content,
+          communityId: id,
+          userAddress,
+          communityContext
+        });
+
+        if (!aiResult.success) {
+          res.status(400).json(createErrorResponse('BAD_REQUEST', aiResult.message || 'Failed to process AI request', 400));
+          return;
+        }
+
+        res.json(createSuccessResponse(aiResult.data, {}));
+        return;
+      }
+
+      // Regular post creation
+      const post = await communityService.createCommunityPost({
+        communityId: id,
+        authorAddress: userAddress,
+        content,
+        mediaUrls,
+        tags,
+        pollData: undefined // Not supported in this endpoint
+      });
+
+      if (!post.success) {
+        res.status(400).json(createErrorResponse('BAD_REQUEST', post.message || 'Failed to create post', 400));
+        return;
+      }
+
+      res.status(201).json(createSuccessResponse(post.data, {}));
+    } catch (error) {
+      console.error('Error creating AI-assisted post:', error);
+      res.status(500).json(createErrorResponse('INTERNAL_ERROR', 'Failed to create post'));
+    }
+  }
+
+  // Handle AI post assistance requests
+  private async handleAIPostAssistance(data: {
+    aiAction: string;
+    title?: string;
+    content?: string;
+    communityId: string;
+    userAddress: string;
+    communityContext?: any;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      // Get community details for context
+      const community = await communityService.getCommunityDetails(data.communityId, data.userAddress);
+      
+      if (!community) {
+        return { success: false, message: 'Community not found' };
+      }
+
+      // Prepare context for AI
+      const context = {
+        communityName: community.name,
+        communityDescription: community.description,
+        communityCategory: community.category,
+        userAddress: data.userAddress,
+        action: data.aiAction,
+        title: data.title,
+        content: data.content,
+        ...data.communityContext
+      };
+
+      // Call AI service based on action
+      let aiResponse: any;
+
+      switch (data.aiAction) {
+        case 'generate_title':
+          if (!data.content) {
+            return { success: false, message: 'Content is required to generate title' };
+          }
+          aiResponse = await openaiService.generateInsight({
+            type: 'content_trends',
+            context: {
+              action: 'generate_title',
+              content: data.content,
+              communityName: community.name,
+              communityDescription: community.description
+            }
+          });
+          break;
+          
+        case 'generate_content':
+          if (!data.title) {
+            return { success: false, message: 'Title is required to generate content' };
+          }
+          aiResponse = await openaiService.generateInsight({
+            type: 'content_trends',
+            context: {
+              action: 'generate_content',
+              title: data.title,
+              communityName: community.name,
+              communityDescription: community.description
+            }
+          });
+          break;
+          
+        case 'generate_tags':
+          if (!data.content) {
+            return { success: false, message: 'Content is required to generate tags' };
+          }
+          aiResponse = await openaiService.generateInsight({
+            type: 'content_trends',
+            context: {
+              action: 'generate_tags',
+              content: data.content,
+              communityName: community.name,
+              communityDescription: community.description
+            }
+          });
+          break;
+          
+        case 'improve_content':
+          if (!data.content) {
+            return { success: false, message: 'Content is required to improve' };
+          }
+          aiResponse = await openaiService.generateInsight({
+            type: 'content_trends',
+            context: {
+              action: 'improve_content',
+              content: data.content,
+              communityName: community.name,
+              communityDescription: community.description
+            }
+          });
+          break;
+          
+        default:
+          return { success: false, message: 'Invalid AI action' };
+      }
+
+      return { 
+        success: true, 
+        data: {
+          action: data.aiAction,
+          result: aiResponse
+        }
+      };
+    } catch (error) {
+      console.error('Error handling AI post assistance:', error);
+      return { success: false, message: 'Failed to process AI request' };
+    }
+  }
+
+  // Call AI insights service
+  private async callAIInsightsService(
+    type: string, 
+    context: any
+  ): Promise<any> {
+    try {
+      return await openaiService.generateInsight({ type, context });
+    } catch (error) {
+      console.error('Error calling AI insights service:', error);
+      throw error;
     }
   }
 

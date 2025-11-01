@@ -25,6 +25,8 @@ interface UseCryptoPaymentReturn {
   cancelPayment: (transactionId: string) => Promise<void>;
   generateReceipt: (transaction: PaymentTransaction) => PaymentReceipt;
   clearError: () => void;
+  releaseFromEscrow: (escrowId: number, chainId: number) => Promise<void>;
+  refundFromEscrow: (escrowId: number, chainId: number) => Promise<void>;
   
   // Utils
   formatAmount: (amount: bigint, decimals: number) => string;
@@ -237,6 +239,20 @@ export function useCryptoPayment(): UseCryptoPaymentReturn {
     return BigInt(whole + paddedFraction);
   }, []);
 
+  const releaseFromEscrow = useCallback(async (escrowId: number, chainId: number): Promise<void> => {
+    if (!paymentService) {
+      throw new Error('Payment service not initialized');
+    }
+    await paymentService.releaseFromEscrow(escrowId, chainId);
+  }, [paymentService]);
+
+  const refundFromEscrow = useCallback(async (escrowId: number, chainId: number): Promise<void> => {
+    if (!paymentService) {
+      throw new Error('Payment service not initialized');
+    }
+    await paymentService.refundFromEscrow(escrowId, chainId);
+  }, [paymentService]);
+
   return {
     // State
     isProcessing,
@@ -251,6 +267,8 @@ export function useCryptoPayment(): UseCryptoPaymentReturn {
     cancelPayment,
     generateReceipt,
     clearError,
+    releaseFromEscrow,
+    refundFromEscrow,
     
     // Utils
     formatAmount,

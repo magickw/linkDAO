@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useNavigation } from '@/context/NavigationContext';
 import { useWeb3 } from '@/context/Web3Context';
 import { useProfile } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
-import { CommunityCreationModal } from '@/components/CommunityManagement';
+import { CommunityCreationModal, CommunityDiscovery } from '@/components/CommunityManagement';
 import {
   CommunityIconList,
   EnhancedUserCard,
@@ -14,13 +14,14 @@ import {
 } from '@/components/Navigation';
 import { useEnhancedNavigation } from '@/hooks/useEnhancedNavigation';
 import TrendingContentWidget from '@/components/SmartRightSidebar/TrendingContentWidget';
+import { AICommunityRecommendations } from '@/components/Community'; // Add this import
 import type { Community as CommunityModel } from '@/models/Community';
 import type { CommunityMembership, CommunityRole } from '@/models/CommunityMembership';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileOptimization } from '@/hooks/useMobileOptimization';
 import { useWalletData } from '@/hooks/useWalletData';
 import { QuickAction } from '@/types/wallet';
-import { SearchService } from '@/services/searchService'; // Add SearchService import
+import { SearchService } from '@/services/searchService';
 
 // Local sidebar community view model (separate from domain model)
 interface SidebarCommunity {
@@ -36,6 +37,12 @@ interface SidebarCommunity {
     trendingScore: number;
     memberGrowthPercentage: number;
   };
+}
+
+// Add AI recommendation interface
+interface AIRecommendation extends SidebarCommunity {
+  reason?: string;
+  confidence?: number;
 }
 
 import { CommunityService } from '../services/communityService';
@@ -143,7 +150,60 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
   // Add state for trending communities
   const [trendingCommunities, setTrendingCommunities] = useState<SidebarCommunity[]>([]);
+
+  // Add state for AI recommendations
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendation[]>([]);
+  const [loadingAiRecommendations, setLoadingAiRecommendations] = useState(false);
   
+  // Fetch AI-powered community recommendations
+  const fetchAIRecommendations = useCallback(async () => {
+    if (!address || communities.length === 0) return;
+    
+    setLoadingAiRecommendations(true);
+    try {
+      const response = await fetch('/api/admin/ai/insights/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'community_recommendations',
+          context: {
+            userId: address,
+            joinedCommunities: communities.map(c => c.id),
+            interests: [], // Would be populated from user profile
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Transform AI recommendations to SidebarCommunity format
+        const recommendations = data.data?.insights?.recommendedCommunities || [];
+        const aiRecs = recommendations.map((rec: any) => ({
+          id: rec.id,
+          name: rec.name,
+          displayName: rec.displayName,
+          memberCount: rec.memberCount,
+          avatar: rec.avatar,
+          icon: rec.icon,
+          isJoined: communities.some(c => c.id === rec.id),
+          reason: rec.reason,
+          confidence: rec.confidence,
+          growthMetrics: {
+            trendingScore: rec.trendingScore || 0,
+            memberGrowthPercentage: rec.growthRate || 0
+          }
+        }));
+        setAiRecommendations(aiRecs);
+      }
+    } catch (error) {
+      console.error('Failed to fetch AI recommendations:', error);
+    } finally {
+      setLoadingAiRecommendations(false);
+    }
+  }, [address, communities]);
+
   // Fetch trending communities
   useEffect(() => {
     const fetchTrendingCommunities = async () => {
@@ -172,8 +232,9 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
 
     if (communities.length > 0) {
       fetchTrendingCommunities();
+      fetchAIRecommendations(); // Also fetch AI recommendations
     }
-  }, [communities]);
+  }, [communities, fetchAIRecommendations]);
 
   // Handle community selection with navigation context
   const handleCommunitySelectWithContext = (communityId: string) => {
@@ -428,7 +489,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   className="group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gradient-to-r dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm relative"
                 >
                   <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   <span>Governance</span>
                   {/* Governance notification count will be loaded from real data */}
@@ -461,7 +522,7 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                     </svg>
                     <span>Create Community</span>
                   </button>
-                  
+                
                   {/* User Preferences Controls */}
                   <div className="flex space-x-1">
                     <button
@@ -481,6 +542,14 @@ export default function NavigationSidebar({ className = '' }: NavigationSidebarP
                   onCommunitySelect={handleCommunitySelectWithContext}
                   favoriteCommunities={userPreferences.favoriteCommunities}
                   onToggleFavorite={toggleFavoriteCommunity}
+                />
+
+                {/* AI-Powered Community Recommendations */}
+                <AICommunityRecommendations
+                  joinedCommunities={communities.map(c => c.id)}
+                  allCommunities={communities}
+                  onJoinCommunity={handleCommunitySelectWithContext}
+                  className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
                 />
 
                 {/* Trending Communities Section */}

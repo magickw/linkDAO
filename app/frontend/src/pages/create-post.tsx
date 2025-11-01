@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import { ErrorBoundary } from '@/components/ErrorHandling/ErrorBoundary';
 import { ArrowLeft, Hash } from 'lucide-react';
 import RichTextEditor from '@/components/EnhancedPostComposer/RichTextEditor';
+import { useCommunities } from '@/hooks/useCommunities';
 
 const CreatePostPage: React.FC = () => {
   const router = useRouter();
@@ -15,12 +16,7 @@ const CreatePostPage: React.FC = () => {
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock communities - replace with actual data
-  const communities = [
-    { id: 'ethereum-builders', name: 'Ethereum Builders' },
-    { id: 'defi-traders', name: 'DeFi Traders' },
-    { id: 'nft-collectors', name: 'NFT Collectors' }
-  ];
+  const { data: communities, isLoading } = useCommunities();
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -98,9 +94,10 @@ const CreatePostPage: React.FC = () => {
                 onChange={(e) => setSelectedCommunity(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
+                disabled={isLoading}
               >
-                <option value="">Select a community</option>
-                {communities.map(community => (
+                <option value="">{isLoading ? 'Loading communities...' : 'Select a community'}</option>
+                {communities?.map(community => (
                   <option key={community.id} value={community.id}>
                     {community.name}
                   </option>

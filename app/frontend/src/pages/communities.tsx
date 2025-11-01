@@ -897,6 +897,65 @@ const CommunitiesPage: React.FC = () => {
             {/* Enhanced Left Sidebar - Discovery + Actions */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24 space-y-6">
+                {/* Dynamic Onboarding Flow - Show when no communities joined */}
+                {joinedCommunities.length === 0 && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="text-center">
+                      <div className="text-4xl mb-4">👋</div>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Welcome to LinkDAO</h2>
+                      <p className="text-gray-600 dark:text-gray-300 mb-6">
+                        Start your DAO journey — explore, vote, and connect.
+                      </p>
+                      
+                      <div className="space-y-4 mb-6">
+                        {/* Step 1: Select Interests */}
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl">🪐</span>
+                            <div className="text-left">
+                              <h3 className="font-medium text-gray-900 dark:text-white">Step 1: Select Interests</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Choose what you're passionate about</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Step 2: Join or Create a DAO */}
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl">🗳</span>
+                            <div className="text-left">
+                              <h3 className="font-medium text-gray-900 dark:text-white">Step 2: Join or Create a DAO</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Connect with like-minded people</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Step 3: Post or Vote */}
+                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl">💬</span>
+                            <div className="text-left">
+                              <h3 className="font-medium text-gray-900 dark:text-white">Step 3: Post or Vote</h3>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Share ideas and participate in governance</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => router.push('/communities?sort=trending')}
+                        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all w-full"
+                      >
+                        Explore Communities
+                      </button>
+                      
+                      <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
+                        Start your DAO journey — explore, vote, and connect.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Recent and Followed Communities - This replaces the "Your Communities" section */}
                 <RecentAndFollowedCommunities 
                   allCommunities={communityList} 
@@ -967,7 +1026,7 @@ const CommunitiesPage: React.FC = () => {
                       <span className="text-lg">✏️</span>
                       <span className="text-xs mt-1">New Post</span>
                     </button>
-                    
+                  
                     <button 
                       onClick={handleCreateCommunityClick}
                       className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -976,7 +1035,7 @@ const CommunitiesPage: React.FC = () => {
                       <span className="text-lg">🏗️</span>
                       <span className="text-xs mt-1">New Community</span>
                     </button>
-                    
+                  
                     <button 
                       onClick={() => router.push('/notifications')}
                       className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -985,7 +1044,7 @@ const CommunitiesPage: React.FC = () => {
                       <span className="text-lg">🔔</span>
                       <span className="text-xs mt-1">Notifications</span>
                     </button>
-                    
+                  
                     <button 
                       onClick={() => router.push('/bookmarks')}
                       className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -994,7 +1053,7 @@ const CommunitiesPage: React.FC = () => {
                       <span className="text-lg">⭐</span>
                       <span className="text-xs mt-1">Bookmarks</span>
                     </button>
-                    
+                  
                     <button 
                       onClick={() => router.push('/activity')}
                       className="flex flex-col items-center justify-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors col-span-2"
@@ -1037,247 +1096,7 @@ const CommunitiesPage: React.FC = () => {
                   className="py-2"
                 />
               </div>
-
-              {/* Loading State */}
-              {loading && (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-xl border-l-4 border-gray-200 shadow-sm p-4 animate-pulse">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                        <div className="flex-1 space-y-1">
-                          <div className="h-3 bg-gray-200 rounded w-1/3" />
-                          <div className="h-2 bg-gray-200 rounded w-1/4" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="h-4 bg-gray-200 rounded w-3/4" />
-                        <div className="h-12 bg-gray-200 rounded" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Empty State */}
-              {!loading && filteredPosts.length === 0 && (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                    <Users className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Welcome to LinkDAO
-                  </h3>
-                  <p className="text-gray-500 mb-6 px-4">
-                    Start your DAO journey — explore, vote, and connect.
-                  </p>
-                  <button
-                    onClick={() => router.push('/communities?sort=trending')}
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium"
-                  >
-                    <Users className="w-5 h-5 mr-2" />
-                    Explore Communities
-                  </button>
-                </div>
-              )}
-
-              {/* Web3-Native Community Enhancement Components */}
-              <LivePostUpdates communityIds={joinedCommunities} />
-
-              {/* Posts Feed */}
-              <div className="space-y-4">
-                {filteredPosts.map(post => {
-                  const community = communityList.find(c => c.id === post.communityId);
-                  const stakingInfo = stakingData[post.communityId];
-                  
-                  return (
-                    <div key={post.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center space-x-1">
-                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {post.authorName}
-                              </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {community?.name}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                              <span>•</span>
-                              <span>{post.upvotes} upvotes</span>
-                              <span>•</span>
-                              <span>{post.commentCount} comments</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <BoostButton
-                            postId={post.id}
-                            amount={10}
-                            onBoost={handleBoost}
-                            className="p-2 text-gray-600 hover:text-gray-900"
-                          />
-                          <button className="p-2 text-gray-600 hover:text-gray-900">
-                            <Bookmark className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </div>
-                      <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                        {post.title}
-                      </h2>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        {post.content}
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleUpvote(post.id)}
-                        >
-                          <ArrowUp className="w-5 h-5" />
-                          <span>{post.upvotes}</span>
-                        </button>
-                        <button
-                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleVote(post.id, 'down', 1)}
-                        >
-                          <ArrowDown className="w-5 h-5" />
-                          <span>{post.downvotes}</span>
-                        </button>
-                        <button
-                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleComment(post.id)}
-                        >
-                          <MessageCircle className="w-5 h-5" />
-                          <span>{post.commentCount}</span>
-                        </button>
-                        <button
-                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleShare(post.id)}
-                        >
-                          <Share className="w-5 h-5" />
-                        </button>
-                        <button
-                          className="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleViewPost(post.id)}
-                        >
-                          <Clock className="w-5 h-5" />
-                        </button>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className="p-2 text-gray-600 hover:text-gray-900"
-                            onClick={() => handleTokenReaction(post.id, 'like')}
-                          >
-                            <Flame className="w-5 h-5" />
-                          </button>
-                          <button
-                            className="p-2 text-gray-600 hover:text-gray-900"
-                            onClick={() => handleTokenReaction(post.id, 'love')}
-                          >
-                            <Heart className="w-5 h-5" />
-                          </button>
-                          <button
-                            className="p-2 text-gray-600 hover:text-gray-900"
-                            onClick={() => handleTokenReaction(post.id, 'support')}
-                          >
-                            <Coins className="w-5 h-5" />
-                          </button>
-                        </div>
-                        <TokenReactionSystem
-                          postId={post.id}
-                          onTokenReaction={handleTokenReaction}
-                        />
-                        <EnhancedTipButton
-                          postId={post.id}
-                          onTip={handleTip}
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                        />
-                        <StakingIndicator
-                          stakingInfo={stakingInfo}
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                        />
-                        <button
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleStake(post.id)}
-                        >
-                          <Shield className="w-5 h-5" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleVoteClick(post.id)}
-                        >
-                          <Vote className="w-5 h-5" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-600 hover:text-gray-900"
-                          onClick={() => handleViewTransaction(post.transactionHash)}
-                        >
-                          <ExplorerLinkButton />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Dynamic, Contextual Onboarding */}
-              {joinedCommunities.length === 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-                  <div className="text-center">
-                    <div className="text-4xl mb-4">👋</div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome to LinkDAO</h2>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">
-                      Join communities that match your interests and start earning rewards.
-                    </p>
-                    
-                    <div className="space-y-4 mb-6">
-                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">🪐</span>
-                          <div className="text-left">
-                            <h3 className="font-medium text-gray-900 dark:text-white">Step 1: Select Interests</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Choose what you're passionate about</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">🗳</span>
-                          <div className="text-left">
-                            <h3 className="font-medium text-gray-900 dark:text-white">Step 2: Join or Create a DAO</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Connect with like-minded people</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">💬</span>
-                          <div className="text-left">
-                            <h3 className="font-medium text-gray-900 dark:text-white">Step 3: Post or Vote</h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Share ideas and participate in governance</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <button
-                      onClick={() => router.push('/communities?sort=trending')}
-                      className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
-                    >
-                      Explore Communities
-                    </button>
-                    
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">
-                      Start your DAO journey — explore, vote, and connect.
-                    </p>
-                  </div>
-                </div>
-              )}
-              
+            
               {/* Show feed when user has joined communities */}
               {joinedCommunities.length > 0 && (
                 <>
@@ -1413,7 +1232,7 @@ const CommunitiesPage: React.FC = () => {
                                 <span>•</span>
                                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                               </div>
-                              
+                            
                               {/* Consolidated Web3 Status */}
                               {post.isStaked && (
                                 <div className="flex items-center space-x-1 text-xs">
@@ -1460,7 +1279,7 @@ const CommunitiesPage: React.FC = () => {
                                   <MessageCircle className="w-4 h-4" />
                                   <span>{post.commentCount}</span>
                                 </button>
-                                
+                              
                                 <button 
                                   onClick={(e) => e.stopPropagation()}
                                   className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
@@ -1468,7 +1287,7 @@ const CommunitiesPage: React.FC = () => {
                                   <Share className="w-4 h-4" />
                                   <span>Share</span>
                                 </button>
-                                
+                              
                                 <button 
                                   onClick={(e) => e.stopPropagation()}
                                   className="flex items-center space-x-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
@@ -1544,102 +1363,11 @@ const CommunitiesPage: React.FC = () => {
             {/* Community-Focused Right Sidebar with Tabs */}
             <div className="col-span-12 lg:col-span-3">
               <div className="sticky top-24">
-                {/* Tabbed Interface for Data Widgets */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  {/* Tab Headers */}
-                  <div className="flex border-b border-gray-200 dark:border-gray-700">
-                    <button className="flex-1 py-3 px-4 text-center text-sm font-medium text-primary-600 dark:text-primary-400 border-b-2 border-primary-500">
-                      Live Governance
-                    </button>
-                    <button className="flex-1 py-3 px-4 text-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                      Token Prices
-                    </button>
-                    <button className="flex-1 py-3 px-4 text-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                      Stats
-                    </button>
-                    <button className="p-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 relative group">
-                      <span className="text-xs">?</span>
-                      <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 w-48 z-10">
-                        <p>Proposal = A vote to decide community actions</p>
-                        <p>APR = Annual Percentage Rate of returns</p>
-                      </div>
-                    </button>
-                  </div>
-                  
-                  {/* Tab Content - Live Governance */}
-                  <div className="p-4">
-                    {/* Auto-refresh toggle */}
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-medium text-gray-900 dark:text-white">Active Proposals</h3>
-                        <div className="group relative">
-                          <span className="text-xs text-gray-400 cursor-help">?</span>
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 w-48 z-10">
-                            <p>Proposal = A vote to decide community actions</p>
-                          </div>
-                        </div>
-                      </div>
-                      <button className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                        Auto-refresh
-                      </button>
-                    </div>
-                    
-                    {/* Sample Proposal */}
-                    <div className="space-y-3">
-                      <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm">Proposal #5nbzms</h4>
-                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded">Active</span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">Increase community treasury allocation for Q2 development initiatives</p>
-                        <div className="flex space-x-2">
-                          <button className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
-                            Vote now
-                          </button>
-                          <button className="text-xs bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
-                            View details
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* More proposals would be listed here */}
-                      <div className="text-center py-2">
-                        <button className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
-                          View all proposals
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Community Recommendations */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Recommended for You</h3>
-                  <div className="space-y-3">
-                    {communityList.slice(0, 3).map(community => (
-                      <div 
-                        key={community.id} 
-                        className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-                        onClick={() => router.push(`/dao/${community.name}`)}
-                      >
-                        <div className="text-xl">{community.avatar}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{community.displayName}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{community.memberCount.toLocaleString()} members</p>
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleJoinCommunity(community.id);
-                          }}
-                          className="text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-2 py-1 rounded transition-colors"
-                        >
-                          {joinedCommunities.includes(community.id) ? 'Joined' : 'Join'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <CommunityRightSidebar 
+                  communities={communityList}
+                  joinedCommunityIds={joinedCommunities}
+                  onCommunitySelect={(community) => router.push(`/dao/${community.name}`)}
+                />
               </div>
             </div>
           </div>
@@ -1662,13 +1390,13 @@ const CommunitiesPage: React.FC = () => {
               position={hoverPosition}
             />
           )}
-          
+        
           {/* Keyboard Shortcuts Modal */}
           <KeyboardShortcutsModal
             isOpen={showKeyboardHelp}
             onClose={() => setShowKeyboardHelp(false)}
           />
-          
+        
           {/* Create Community Modal */}
           <CreateCommunityModal
             isOpen={showCreateCommunityModal}

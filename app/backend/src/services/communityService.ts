@@ -647,6 +647,55 @@ export class CommunityService {
     }
   }
 
+  /**
+   * Get all communities with basic information
+   * This method is used for AI recommendations and other services that need access to all communities
+   */
+  async getAllCommunities(): Promise<any[]> {
+    try {
+      // Get all public communities with basic information
+      const communitiesList = await db
+        .select({
+          id: communities.id,
+          name: communities.name,
+          displayName: communities.displayName,
+          description: communities.description,
+          category: communities.category,
+          tags: communities.tags,
+          avatar: communities.avatar,
+          memberCount: communities.memberCount,
+          postCount: communities.postCount,
+          isPublic: communities.isPublic,
+          createdAt: communities.createdAt,
+          trendingScore: communityStats.trendingScore,
+          growthRate7d: communityStats.growthRate7d,
+        })
+        .from(communities)
+        .leftJoin(communityStats, eq(communities.id, communityStats.communityId))
+        .where(eq(communities.isPublic, true));
+
+      // Transform to expected format
+      return communitiesList.map(community => ({
+        id: community.id,
+        name: community.name,
+        displayName: community.displayName,
+        description: community.description || '',
+        category: community.category,
+        tags: community.tags ? JSON.parse(community.tags) : [],
+        avatar: community.avatar,
+        memberCount: community.memberCount,
+        postCount: community.postCount,
+        isPublic: community.isPublic,
+        createdAt: community.createdAt,
+        trendingScore: community.trendingScore ? Number(community.trendingScore) : 0,
+        growthRate: community.growthRate7d ? Number(community.growthRate7d) : 0,
+      }));
+    } catch (error) {
+      console.error('Error getting all communities:', error);
+      throw new Error('Failed to get all communities');
+    }
+  }
+
   // Join community with real membership tracking
   async joinCommunity(data: JoinCommunityData) {
     try {

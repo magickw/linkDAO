@@ -93,7 +93,7 @@ class AccessibilityService {
    * Initialize speech synthesis
    */
   private initializeSpeechSynthesis(): void {
-    if ('speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       this.speechSynthesis = window.speechSynthesis;
     }
   }
@@ -102,19 +102,21 @@ class AccessibilityService {
    * Initialize speech recognition
    */
   private initializeSpeechRecognition(): void {
+    if (typeof window === 'undefined') return;
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
+
     if (SpeechRecognition) {
       this.speechRecognition = new SpeechRecognition();
       this.speechRecognition.continuous = true;
       this.speechRecognition.interimResults = false;
       this.speechRecognition.lang = 'en-US';
-      
+
       this.speechRecognition.onresult = (event: any) => {
         const command = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
         this.processVoiceCommand(command);
       };
-      
+
       this.speechRecognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
       };
@@ -125,6 +127,8 @@ class AccessibilityService {
    * Set up voice commands
    */
   private setupVoiceCommands(): void {
+    if (typeof window === 'undefined') return;
+
     const commands: VoiceCommand[] = [
       // Navigation commands
       {
@@ -239,6 +243,8 @@ class AccessibilityService {
    * Load saved preferences
    */
   private loadPreferences(): void {
+    if (typeof window === 'undefined') return;
+
     try {
       const saved = localStorage.getItem('accessibility-preferences');
       if (saved) {
@@ -254,6 +260,8 @@ class AccessibilityService {
    * Save preferences
    */
   private savePreferences(): void {
+    if (typeof window === 'undefined') return;
+
     try {
       localStorage.setItem('accessibility-preferences', JSON.stringify(this.preferences));
     } catch (error) {
@@ -265,6 +273,8 @@ class AccessibilityService {
    * Apply accessibility preferences to the page
    */
   private applyPreferences(): void {
+    if (typeof window === 'undefined') return;
+
     const root = document.documentElement;
     
     // High contrast
@@ -324,11 +334,13 @@ class AccessibilityService {
     this.preferences = { ...this.preferences, ...updates };
     this.applyPreferences();
     this.savePreferences();
-    
+
     // Dispatch event for components to react to changes
-    window.dispatchEvent(new CustomEvent('accessibility-preferences-changed', {
-      detail: this.preferences
-    }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('accessibility-preferences-changed', {
+        detail: this.preferences
+      }));
+    }
   }
 
   /**
@@ -647,6 +659,8 @@ class AccessibilityService {
    * Open accessibility settings
    */
   private openAccessibilitySettings(): void {
+    if (typeof window === 'undefined') return;
+
     // Dispatch event to open accessibility settings modal
     window.dispatchEvent(new CustomEvent('open-accessibility-settings'));
   }

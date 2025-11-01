@@ -377,6 +377,15 @@ class AuthService {
         },
       });
       
+      // If backend is unavailable, return null without throwing
+      if (!response.ok) {
+        if (response.status >= 500) {
+          console.warn('Backend unavailable for KYC status, returning null');
+          return null;
+        }
+        // For other errors, still try to parse the response
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -386,6 +395,7 @@ class AuthService {
       return null;
     } catch (error) {
       console.error('Failed to get KYC status:', error);
+      // Return null instead of throwing to prevent app crashes
       return null;
     }
   }

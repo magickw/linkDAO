@@ -1,23 +1,26 @@
-import { 
-  PublicClient, 
-  WalletClient, 
-  parseUnits, 
-  formatUnits, 
-  
+import {
+  PublicClient,
+  WalletClient,
+  parseUnits,
+  formatUnits,
+
   erc20Abi,
   Hash
 } from 'viem';
-import { 
-  PaymentRequest, 
-  PaymentTransaction, 
-  PaymentStatus, 
-  PaymentReceipt, 
-  PaymentError,
+import {
+  PaymentRequest,
+  PaymentTransaction,
+  PaymentStatus,
+  PaymentReceipt,
+  PaymentError as OldPaymentError,
   PaymentToken,
-  GasFeeEstimate 
+  GasFeeEstimate
 } from '../types/payment';
+import { PaymentError } from './paymentErrorHandler';
 import { GasFeeService } from './gasFeeService';
 import { PAYMENT_CONFIG } from '../config/payment';
+import { enhancedEscrowABI } from '../contracts/EnhancedEscrow';
+
 
 export class CryptoPaymentService {
   private gasFeeService?: GasFeeService;
@@ -64,8 +67,131 @@ export class CryptoPaymentService {
       return transaction;
     } catch (error) {
       console.error('Payment processing failed:', error);
-      throw this.handlePaymentError(error);
+      // Use PaymentError.fromError for intelligent error handling
+      throw PaymentError.fromError(error);
     }
+  }
+
+  /**
+   * Process an escrow payment
+   */
+  async processEscrowPayment(request: PaymentRequest): Promise<PaymentTransaction> {
+    try {
+      // Validate payment request
+      await this.validatePaymentRequest(request);
+
+      // Create transaction record
+      const transaction = await this.createTransactionRecord(request);
+      this.activeTransactions.set(transaction.id, transaction);
+
+      // Check token balance
+      await this.checkTokenBalance(request.token, request.amount);
+
+      // Estimate gas fees
+      const gasEstimate = await this.estimateTransactionGas(request);
+
+      // Execute the escrow payment
+      const hash = await this.executeEscrowPayment(request, gasEstimate);
+
+      // Update transaction with hash
+      transaction.hash = hash;
+      transaction.status = PaymentStatus.CONFIRMING;
+      transaction.updatedAt = new Date();
+
+      // Start monitoring transaction
+      this.monitorTransaction(transaction);
+
+      return transaction;
+    } catch (error) {
+      console.error('Escrow payment processing failed:', error);
+      // Use PaymentError.fromError for intelligent error handling
+      throw PaymentError.fromError(error);
+    }
+  }
+
+  /**
+   * Execute the actual escrow payment transaction
+   */
+  private async executeEscrowPayment(
+    request: PaymentRequest,
+    gasEstimate: GasFeeEstimate
+  ): Promise<Hash> {
+    const { token, amount, recipient, orderId, chainId } = request;
+
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+
+    const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[chainId];
+    if (!escrowAddress) {
+      throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
+    }
+
+    const accounts = await this.walletClient.getAddresses();
+    const buyerAddress = accounts[0];
+
+    return await this.walletClient.writeContract({
+      address: escrowAddress as `0x${string}`,
+      abi: enhancedEscrowABI,
+      functionName: "createEscrow",
+      args: [
+        BigInt(orderId),
+        recipient as `0x${string}`,
+        token.address as `0x${string}`,
+        amount,
+        0n, // deliveryDeadline, 0 for now
+        0, // resolutionMethod, 0 for now
+      ],
+      value: token.isNative ? amount : 0n,
+      chain: undefined,
+      account: buyerAddress,
+    });
+  }
+
+  /**
+   * Release funds from escrow
+   */
+  async releaseFromEscrow(escrowId: number, chainId: number): Promise<void> {
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+
+    const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[chainId];
+    if (!escrowAddress) {
+      throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
+    }
+
+    await this.walletClient.writeContract({
+      address: escrowAddress as `0x${string}`,
+      abi: enhancedEscrowABI,
+      functionName: "confirmDelivery",
+      args: [BigInt(escrowId), "Delivery confirmed"],
+      chain: undefined,
+      account: undefined,
+    });
+  }
+
+  /**
+   * Refund funds from escrow
+   */
+  async refundFromEscrow(escrowId: number, chainId: number): Promise<void> {
+    if (!this.walletClient) {
+      throw new Error('Wallet client not initialized');
+    }
+
+    const escrowAddress = (PAYMENT_CONFIG.ESCROW_CONTRACT_ADDRESS as Record<number, string>)[chainId];
+    if (!escrowAddress) {
+      throw new Error(`Escrow contract not deployed on chain ID ${chainId}`);
+    }
+
+    await this.walletClient.writeContract({
+      address: escrowAddress as `0x${string}`,
+      abi: enhancedEscrowABI,
+      functionName: "executeEmergencyRefund",
+      args: [BigInt(escrowId)],
+      chain: undefined,
+      account: undefined,
+    });
   }
 
   /**
@@ -401,40 +527,6 @@ export class CryptoPaymentService {
       updatedAt: new Date(),
       retryCount: 0,
       maxRetries: PAYMENT_CONFIG.MAX_RETRY_ATTEMPTS
-    };
-  }
-
-  /**
-   * Handle payment errors
-   */
-  private handlePaymentError(error: any): PaymentError {
-    let code = 'UNKNOWN_ERROR';
-    let message = 'An unknown error occurred';
-    let retryable = false;
-
-    if (error.message?.includes('insufficient funds')) {
-      code = 'INSUFFICIENT_FUNDS';
-      message = 'Insufficient funds for transaction';
-      retryable = false;
-    } else if (error.message?.includes('gas')) {
-      code = 'GAS_ERROR';
-      message = 'Gas estimation or execution failed';
-      retryable = true;
-    } else if (error.message?.includes('network')) {
-      code = 'NETWORK_ERROR';
-      message = 'Network connection failed';
-      retryable = true;
-    } else if (error.message?.includes('rejected')) {
-      code = 'USER_REJECTED';
-      message = 'Transaction rejected by user';
-      retryable = false;
-    }
-
-    return {
-      code,
-      message,
-      details: error,
-      retryable
     };
   }
 }

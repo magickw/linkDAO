@@ -4,6 +4,7 @@ import { contentModerationAI } from '../../services/ai/contentModerationAI';
 import { predictiveAnalyticsService } from '../../services/ai/predictiveAnalyticsService';
 import { aiCacheService } from '../../services/ai/aiCacheService';
 import { aiUsageMonitor } from '../../services/ai/aiUsageMonitorService';
+import { communityRecommendationController } from '../../controllers/communityRecommendationController';
 
 const router = express.Router();
 
@@ -276,6 +277,11 @@ router.post('/insights/generate', async (req, res) => {
       });
     }
 
+    // Handle community recommendation requests
+    if (type === 'community_recommendations' || type === 'community_engagement') {
+      return await communityRecommendationController.generateAIRecommendations(req, res);
+    }
+
     const validTypes = ['user_behavior', 'content_trends', 'seller_performance', 'platform_health'];
     if (!validTypes.includes(type)) {
       return res.status(400).json({
@@ -302,6 +308,18 @@ router.post('/insights/generate', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/admin/ai/community-recommendations
+ * Get personalized community recommendations for a user
+ */
+router.post('/community-recommendations', communityRecommendationController.getRecommendations);
+
+/**
+ * POST /api/admin/ai/community-engagement-insights
+ * Get community engagement insights
+ */
+router.post('/community-engagement-insights', communityRecommendationController.getEngagementInsights);
 
 /**
  * GET /api/admin/ai/usage

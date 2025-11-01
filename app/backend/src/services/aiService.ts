@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
 import { DatabaseService } from './databaseService';
-import { MarketplaceService } from './marketplaceService';
+import { BlockchainMarketplaceService } from './marketplaceService';
 
 const databaseService = new DatabaseService();
-const marketplaceService = new MarketplaceService();
+const marketplaceService = new BlockchainMarketplaceService();
 
 export interface AIBotConfig {
   name: string;

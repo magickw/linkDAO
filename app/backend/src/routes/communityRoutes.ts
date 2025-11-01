@@ -151,6 +151,26 @@ router.post('/:id/posts',
   communityController.createCommunityPost
 );
 
+// AI-assisted post creation in community (auth required)
+router.post('/:id/posts/ai-assisted',
+  authRequired,
+  validateRequest({
+    params: {
+      id: { type: 'string', required: true }
+    },
+    body: {
+      title: { type: 'string', optional: true, maxLength: 200 },
+      content: { type: 'string', optional: true, maxLength: 5000 },
+      mediaUrls: { type: 'array', optional: true },
+      tags: { type: 'array', optional: true },
+      postType: { type: 'string', optional: true },
+      aiAction: { type: 'string', optional: true, enum: ['generate_title', 'generate_content', 'generate_tags', 'improve_content'] },
+      communityContext: { type: 'object', optional: true }
+    }
+  }),
+  communityController.createAIAssistedPost
+);
+
 // Get community members (public)
 router.get('/:id/members',
   validateRequest({

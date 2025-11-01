@@ -280,6 +280,45 @@ export class UnifiedCheckoutService {
     }
   }
 
+  async processEscrowPayment(request: PrioritizedCheckoutRequest): Promise<UnifiedCheckoutResult> {
+    try {
+      const { selectedPaymentMethod, paymentDetails } = request;
+
+      // Prepare crypto payment request
+      const cryptoRequest = {
+        orderId: request.orderId,
+        amount: BigInt(Math.floor(request.amount * 10**selectedPaymentMethod.method.token.decimals)),
+        token: selectedPaymentMethod.method.token,
+        recipient: request.sellerAddress,
+        chainId: selectedPaymentMethod.method.chainId,
+      };
+
+      // Process the escrow payment
+      const transaction = await this.cryptoPaymentService.processEscrowPayment(cryptoRequest);
+
+      // Return result based on payment status
+      return {
+        orderId: request.orderId,
+        paymentPath: 'crypto',
+        escrowType: 'smart_contract',
+        transactionId: transaction.id,
+        status: 'pending',
+        nextSteps: ['Complete the transaction in your wallet.'],
+        estimatedCompletionTime: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+        prioritizationMetadata: {
+          selectedMethod: selectedPaymentMethod.method,
+          priority: selectedPaymentMethod.priority,
+          recommendationReason: 'Escrow payment selected',
+          costEstimate: selectedPaymentMethod.costEstimate,
+          alternativeMethods: []
+        }
+      };
+    } catch (error) {
+      console.error('Escrow payment processing failed:', error);
+      throw error;
+    }
+  }
+
   /**
    * Process checkout with prioritized payment method
    */

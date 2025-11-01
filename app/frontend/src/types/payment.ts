@@ -49,6 +49,21 @@ export interface TransactionResult {
   gasUsed?: string;
 }
 
+export interface EscrowInfo {
+  escrowContractAddress: string;
+  arbiter: string;
+  status: EscrowStatus;
+  disputeResolver: string;
+}
+
+export enum EscrowStatus {
+  CREATED = 'created',
+  FUNDED = 'funded',
+  RELEASED = 'released',
+  REFUNDED = 'refunded',
+  DISPUTE = 'dispute',
+}
+
 export interface PaymentTransaction {
   id: string;
   hash?: string;
@@ -68,6 +83,7 @@ export interface PaymentTransaction {
   failureReason?: string;
   retryCount: number;
   maxRetries: number;
+  escrowInfo?: EscrowInfo;
 }
 
 export enum PaymentStatus {
